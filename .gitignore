@@ -1,6 +1,10 @@
 # Dependencies
 node_modules
 
+# Package manager lockfiles from other package managers
+pnpm-lock.yaml
+yarn.lock
+
 # Next.js / build output
 .next
 out
@@ -12,6 +16,7 @@ build
 
 # Test / coverage
 coverage
+*.tsbuildinfo
 
 # Environment files
 .env
