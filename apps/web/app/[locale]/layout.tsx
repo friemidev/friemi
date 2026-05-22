@@ -23,17 +23,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const messages = await getMessages();
   const content = (
-    <html lang={locale}>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <div className="min-h-screen pb-20 md:pb-0">
-            <AppHeader locale={locale} />
-            {children}
-            <MobileNav locale={locale} />
-          </div>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <div className="min-h-screen pb-20 md:pb-0">
+        <AppHeader locale={locale} />
+        {children}
+        <MobileNav locale={locale} />
+      </div>
+    </NextIntlClientProvider>
   );
 
   return hasClerkKeys() ? <ClerkProvider>{content}</ClerkProvider> : content;
