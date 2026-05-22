@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ActivityType {
+  PUBLIC_EVENT
+  USER_HOSTED
+}
+
+enum ActivityCategory {
+  BOARD_GAME
+  MOVIE
+  MUSIC
+  SPORTS
+  TRAVEL
+  FOOD
+  EXHIBITION
+  OTHER
+}
+
+enum PriceType {
+  FREE
+  AA
+  FIXED
+  RANGE
+}
+
+enum ActivityStatus {
+  OPEN
+  FULL
+  ENDED
+  CANCELLED
+}
+
+enum ActivityVisibility {
+  PUBLIC
+  LINK_ONLY
+  PRIVATE
+}
+
+enum ParticipantStatus {
+  JOINED
+  CANCELLED
+}
+
+model UserProfile {
+  id             String                @id @default(cuid())
+  clerkUserId    String                @unique
+  nickname       String
+  avatarUrl      String?
+  bio            String?
+  interests      String[]              @default([])
+  activities     Activity[]            @relation("ActivityOrganizer")
+  participations ActivityParticipant[]
+  following      UserFollow[]          @relation("UserFollowing")
+  followers      UserFollow[]          @relation("UserFollowers")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+
+model Activity {
+  id             String                @id @default(cuid())
+  title          String
+  description    String
+  type           ActivityType          @default(USER_HOSTED)
+  category       ActivityCategory      @default(OTHER)
+  city           String                @default("Paris")
+  address        String
+  startAt        DateTime
+  endAt          DateTime?
+  capacity       Int
+  priceType      PriceType             @default(FREE)
+  priceText      String
+  coverImageUrl  String?
+  status         ActivityStatus        @default(OPEN)
+  visibility     ActivityVisibility    @default(PUBLIC)
+  organizerId    String
+  organizer      UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  participants   ActivityParticipant[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([city, startAt])
+  @@index([organizerId])
+}
+
+model ActivityParticipant {
+  id            String            @id @default(cuid())
+  activityId    String
+  userProfileId String
+  status        ParticipantStatus @default(JOINED)
+  joinedAt      DateTime          @default(now())
+  cancelledAt   DateTime?
+  activity      Activity          @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userProfile   UserProfile       @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([activityId, userProfileId])
+  @@index([userProfileId])
+}
+
+model UserFollow {
+  id          String      @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    UserProfile @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   UserProfile @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}

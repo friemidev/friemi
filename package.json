@@ -1,0 +1,26 @@
+{
+  "name": "chill-club",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20 <21",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@chill-club/web",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @chill-club/web db:generate",
+    "db:push": "pnpm --filter @chill-club/web db:push",
+    "db:migrate": "pnpm --filter @chill-club/web db:migrate",
+    "db:seed": "pnpm --filter @chill-club/web db:seed"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.5.2",
+    "typescript": "^5.6.3"
+  }
+}

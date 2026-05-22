@@ -1,0 +1,15 @@
+{
+  "navigation": {
+    "home": "首页",
+    "activities": "活动",
+    "newActivity": "发起活动",
+    "profile": "个人空间",
+    "signIn": "登录"
+  },
+  "home": {
+    "title": "Next Fun Club",
+    "tagline": "下一场，Fun 开场",
+    "description": "面向海外中文用户的活动组织与找搭子平台，从巴黎开始。",
+    "browseActivities": "浏览活动"
+  }
+}

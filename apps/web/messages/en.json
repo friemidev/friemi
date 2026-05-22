@@ -1,0 +1,15 @@
+{
+  "navigation": {
+    "home": "Home",
+    "activities": "Activities",
+    "newActivity": "Create",
+    "profile": "Profile",
+    "signIn": "Sign in"
+  },
+  "home": {
+    "title": "Next Fun Club",
+    "tagline": "What's next? Fun begins.",
+    "description": "An activity planning and buddy-finding platform for Chinese-speaking users overseas, starting in Paris.",
+    "browseActivities": "Browse activities"
+  }
+}

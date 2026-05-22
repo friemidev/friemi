@@ -1,0 +1,45 @@
+import Link from "next/link";
+import { CalendarPlus, CircleUserRound, Compass } from "lucide-react";
+import { Button } from "@chill-club/ui";
+import { withLocale } from "@/lib/routes";
+import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
+import { UserMenu } from "@/components/navigation/UserMenu";
+
+type AppHeaderProps = {
+  locale: string;
+};
+
+export function AppHeader({ locale }: AppHeaderProps) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-paper/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href={withLocale(locale, "/")} className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-ink text-sm font-bold text-white">NF</span>
+          <span className="hidden text-sm font-semibold tracking-normal sm:inline">Next Fun Club</span>
+        </Link>
+
+        <nav className="hidden items-center gap-2 md:flex">
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/activities")}>
+            <Compass className="h-4 w-4" />
+            活动
+          </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/profile")}>
+            <CircleUserRound className="h-4 w-4" />
+            个人空间
+          </Link>
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <LocaleSwitcher locale={locale} />
+          <Link href={withLocale(locale, "/activities/new")} className="hidden sm:block">
+            <Button className="gap-2">
+              <CalendarPlus className="h-4 w-4" />
+              发起活动
+            </Button>
+          </Link>
+          <UserMenu locale={locale} />
+        </div>
+      </div>
+    </header>
+  );
+}
