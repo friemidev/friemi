@@ -14,8 +14,8 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@chill-club/shared": "workspace:*",
-    "@chill-club/ui": "workspace:*",
+    "@chill-club/shared": "file:../../packages/shared",
+    "@chill-club/ui": "file:../../packages/ui",
     "@clerk/nextjs": "^6.12.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.2.1",

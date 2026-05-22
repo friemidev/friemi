@@ -2,24 +2,23 @@
 
 ## 环境要求
 
-- Node.js 20
-- pnpm 9
+- Node.js 20.19+
+- npm 10
 - Git
 - PostgreSQL，或 Neon / Supabase 远程开发库
 
-启用 pnpm：
+检查 npm：
 
 ```bash
-corepack enable
-corepack prepare pnpm@9.15.4 --activate
+npm --version
 ```
 
 ## 安装和启动
 
 ```bash
-pnpm install
+npm install
 cp .env.example .env.local
-pnpm dev
+npm run dev
 ```
 
 ## 分支命名
@@ -41,7 +40,7 @@ pnpm dev
 
 1. 从主分支拉新分支。
 2. 完成单一范围的改动。
-3. 本地运行 `pnpm typecheck` 和 `pnpm build`。
+3. 本地运行 `npm run typecheck` 和 `npm run build`。
 4. 提交 PR，说明改动范围、验证方式和未完成事项。
 5. 至少一人 review 后合并。
 
@@ -57,15 +56,15 @@ pnpm dev
 开发阶段：
 
 ```bash
-pnpm db:generate
-pnpm db:push
-pnpm db:seed
+npm run db:generate
+npm run db:push
+npm run db:seed
 ```
 
 正式进入多人协作后：
 
 ```bash
-pnpm db:migrate
+npm run db:migrate
 ```
 
 ## 代码风格

@@ -8,7 +8,7 @@ Next Fun Club 是一个面向海外中文用户的活动组织与找搭子平台
 
 ## 技术栈
 
-- Monorepo：Turborepo + pnpm workspace
+- Monorepo：Turborepo + npm workspaces
 - Web：Next.js App Router + TypeScript
 - UI：Tailwind CSS + 基础共享 UI 包
 - 图标：lucide-react
@@ -31,18 +31,20 @@ chill-club/
 │   └── ui/                  # 基础 UI 组件
 ├── docs/                    # 产品、架构、开发文档
 ├── package.json
-├── pnpm-workspace.yaml
+├── package-lock.json
 └── turbo.json
 ```
 
 ## 本地启动
 
+完整团队环境搭建说明见 [docs/team-setup.md](/home/ubuntu23/Bureau/chill-club/docs/team-setup.md)。
+
+需要 Node.js `20.19+` 和 npm `10+`。
+
 ```bash
-corepack enable
-corepack prepare pnpm@9.15.4 --activate
-pnpm install
+npm install
 cp .env.example .env.local
-pnpm dev
+npm run dev
 ```
 
 访问：
@@ -68,14 +70,14 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## 常用命令
 
 ```bash
-pnpm dev
-pnpm build
-pnpm typecheck
-pnpm lint
-pnpm db:generate
-pnpm db:push
-pnpm db:migrate
-pnpm db:seed
+npm run dev
+npm run build
+npm run typecheck
+npm run lint
+npm run db:generate
+npm run db:push
+npm run db:migrate
+npm run db:seed
 ```
 
 ## MVP 范围
