@@ -41,7 +41,7 @@ npm install
 复制环境变量模板：
 
 ```bash
-cp .env.example .env.local
+cp .env.example apps/web/.env.local
 ```
 
 当前框架支持 Clerk 未配置时本地预览，所以第一次可以先不填 Clerk key。
