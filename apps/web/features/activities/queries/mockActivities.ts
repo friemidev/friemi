@@ -12,7 +12,7 @@ export const mockActivities: ActivityCardViewModel[] = [
     capacity: 8,
     participantCount: 5,
     priceText: "AA 预计 8-12 欧",
-    status: "OPEN",
+    status: "RECRUITING",
     coverTone: "moss"
   },
   {
@@ -26,7 +26,7 @@ export const mockActivities: ActivityCardViewModel[] = [
     capacity: 6,
     participantCount: 6,
     priceText: "门票自理",
-    status: "FULL",
+    status: "CONFIRMED",
     coverTone: "clay"
   },
   {
@@ -40,7 +40,7 @@ export const mockActivities: ActivityCardViewModel[] = [
     capacity: 10,
     participantCount: 3,
     priceText: "免费",
-    status: "OPEN",
+    status: "RECRUITING",
     coverTone: "sky"
   }
 ];

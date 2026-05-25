@@ -2,7 +2,7 @@
   "name": "chill-club",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@10.8.1",
+  "packageManager": "npm@10.8.2",
   "engines": {
     "node": ">=20.19 <21",
     "npm": ">=10"
@@ -26,5 +26,9 @@
     "prettier": "^3.3.3",
     "turbo": "^2.5.2",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.1"
   }
 }

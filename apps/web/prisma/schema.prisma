@@ -10,6 +10,8 @@ datasource db {
 enum ActivityType {
   PUBLIC_EVENT
   USER_HOSTED
+  LOCAL
+  TRIP
 }
 
 enum ActivityCategory {
@@ -33,6 +35,9 @@ enum PriceType {
 enum ActivityStatus {
   OPEN
   FULL
+  DRAFT
+  RECRUITING
+  CONFIRMED
   ENDED
   CANCELLED
 }
@@ -45,16 +50,34 @@ enum ActivityVisibility {
 
 enum ParticipantStatus {
   JOINED
+  PENDING
+  APPROVED
+  REJECTED
   CANCELLED
+}
+
+enum UserProfileStatus {
+  ACTIVE
+  DELETED
 }
 
 model UserProfile {
   id             String                @id @default(cuid())
   clerkUserId    String                @unique
+  email          String?
   nickname       String
+  firstName      String?
+  lastName       String?
+  username       String?
   avatarUrl      String?
   bio            String?
   interests      String[]              @default([])
+  status         UserProfileStatus     @default(ACTIVE)
+  lastSignInAt   DateTime?
+  clerkCreatedAt DateTime?
+  clerkUpdatedAt DateTime?
+  clerkDeletedAt DateTime?
+  syncedAt       DateTime?
   activities     Activity[]            @relation("ActivityOrganizer")
   participations ActivityParticipant[]
   following      UserFollow[]          @relation("UserFollowing")
@@ -67,17 +90,21 @@ model Activity {
   id             String                @id @default(cuid())
   title          String
   description    String
-  type           ActivityType          @default(USER_HOSTED)
+  itinerary      String?
+  type           ActivityType          @default(LOCAL)
   category       ActivityCategory      @default(OTHER)
   city           String                @default("Paris")
+  destination    String?
   address        String
   startAt        DateTime
   endAt          DateTime?
   capacity       Int
+  minParticipants Int?
+  requiresApproval Boolean             @default(false)
   priceType      PriceType             @default(FREE)
   priceText      String
   coverImageUrl  String?
-  status         ActivityStatus        @default(OPEN)
+  status         ActivityStatus        @default(RECRUITING)
   visibility     ActivityVisibility    @default(PUBLIC)
   organizerId    String
   organizer      UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
@@ -93,7 +120,8 @@ model ActivityParticipant {
   id            String            @id @default(cuid())
   activityId    String
   userProfileId String
-  status        ParticipantStatus @default(JOINED)
+  status        ParticipantStatus @default(APPROVED)
+  message       String?
   joinedAt      DateTime          @default(now())
   cancelledAt   DateTime?
   activity      Activity          @relation(fields: [activityId], references: [id], onDelete: Cascade)

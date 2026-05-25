@@ -37,7 +37,7 @@ chill-club/
 
 ## 本地启动
 
-完整团队环境搭建说明见 [docs/team-setup.md](/home/ubuntu23/Bureau/chill-club/docs/team-setup.md)。
+完整团队环境搭建说明见 [docs/team-setup.md](/home/ubuntu23/Bureau/nextfunclub/docs/team-setup.md)。
 
 需要 Node.js `20.19+` 和 npm `10+`。
 
@@ -60,11 +60,56 @@ npm run dev
 DATABASE_URL=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
+CLERK_WEBHOOK_SIGNING_SECRET=
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/zh-CN/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/zh-CN/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/zh-CN
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/zh-CN
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+## 数据库与 Prisma 操作
+
+Prisma schema 位于：
+
+```text
+apps/web/prisma/schema.prisma
+```
+
+数据库连接串需要放在 `apps/web/.env` 中，Prisma CLI 会从这里读取：
+
+```bash
+DATABASE_URL="postgresql://..."
+```
+
+推荐使用根目录 npm scripts：
+
+```bash
+npm run db:generate   # 生成 Prisma Client
+npm run db:push       # 将 schema 同步到数据库
+npm run db:migrate    # 创建并执行开发迁移
+npm run db:seed       # 写入测试种子数据
+```
+
+如果习惯直接使用 Prisma CLI，也可以进入 web 应用目录运行：
+
+```bash
+cd apps/web
+npx prisma generate
+npx prisma db push
+```
+
+如果在项目根目录运行 `npx prisma`，必须显式指定 schema 路径：
+
+```bash
+npx prisma generate --schema apps/web/prisma/schema.prisma
+npx prisma db push --schema apps/web/prisma/schema.prisma
+```
+
+当前项目使用 Clerk 登录。用户密码不存入数据库；`UserProfile` 只保存 Clerk 用户资料快照和业务关系。Clerk webhook 需要在 `.env.local` 和生产环境中配置：
+
+```bash
+CLERK_WEBHOOK_SIGNING_SECRET=
 ```
 
 ## 常用命令
