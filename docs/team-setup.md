@@ -10,6 +10,7 @@
 - Node.js 20.19+
 - VS Code
 - 一个 PostgreSQL 数据库，本地或远程都可以
+- （可选）`just`，用于更短命令启动和清理
 
 检查版本：
 
@@ -24,6 +25,12 @@ git --version
 npm --version
 ```
 
+如果安装了 `just`，也可以检查：
+
+```bash
+just --version
+```
+
 期望 `node --version` 输出 `v20.19.x` 或更高的 Node 20 版本，`npm --version` 输出 `10.x`。npm 会随 Node.js 一起安装，不需要额外启用。
 
 ## 2. 拉取项目
@@ -34,11 +41,23 @@ cd chill-club
 npm install
 ```
 
+如果你使用 `just`，也可以：
+
+```bash
+just install
+```
+
 `package-lock.json` 必须提交到 Git。不要删除或忽略它。
 
 ## 3. 先本地跑通
 
 复制环境变量模板：
+
+```bash
+just env-init
+```
+
+等价命令（不使用 `just` 时）：
 
 ```bash
 cp .env.example apps/web/.env.local
@@ -47,6 +66,12 @@ cp .env.example apps/web/.env.local
 当前框架支持 Clerk 未配置时本地预览，所以第一次可以先不填 Clerk key。
 
 启动：
+
+```bash
+just run
+```
+
+等价命令：
 
 ```bash
 npm run dev
@@ -75,6 +100,8 @@ Clerk 用于登录、注册和用户会话。
 
 ### 写入 `.env.local`
 
+请写入 `apps/web/.env.local`：
+
 ```bash
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
 CLERK_SECRET_KEY=sk_test_xxx
@@ -86,6 +113,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 重启 dev server：
+
+```bash
+just run
+```
+
+等价命令：
 
 ```bash
 npm run dev
@@ -127,13 +160,21 @@ https://your-project.vercel.app/zh-CN
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
 ```
 
-写入 `.env.local`：
+写入 `apps/web/.env.local`：
 
 ```bash
 DATABASE_URL="postgresql://..."
 ```
 
 初始化 Prisma：
+
+```bash
+just db-generate
+just db-push
+just db-seed
+```
+
+等价命令：
 
 ```bash
 npm run db:generate
@@ -149,7 +190,7 @@ npm run db:seed
 createdb chill_club_dev
 ```
 
-`.env.local` 示例：
+`apps/web/.env.local` 示例：
 
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/chill_club_dev"
@@ -158,9 +199,9 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/chill_club_dev"
 然后执行：
 
 ```bash
-npm run db:generate
-npm run db:push
-npm run db:seed
+just db-generate
+just db-push
+just db-seed
 ```
 
 ### 方案 C：使用 Docker 本地数据库
@@ -176,7 +217,7 @@ docker run --name chill-club-postgres \
   -d postgres:16
 ```
 
-`.env.local`：
+`apps/web/.env.local`：
 
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/chill_club_dev"
@@ -185,9 +226,9 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/chill_club_dev"
 初始化：
 
 ```bash
-npm run db:generate
-npm run db:push
-npm run db:seed
+just db-generate
+just db-push
+just db-seed
 ```
 
 ## 6. 连接 Vercel
@@ -235,30 +276,54 @@ NEXT_PUBLIC_APP_URL=https://your-project.vercel.app
 ```bash
 npx vercel login
 npx vercel link
-npx vercel env pull .env.local
+npx vercel env pull apps/web/.env.local
 ```
 
 拉取环境变量后，本地运行：
 
 ```bash
-npm run dev
+just run
 ```
 
 ## 7. 常用命令
 
+优先推荐 `just`：
+
 ```bash
-npm run dev          # 启动本地开发
-npm run lint         # 当前等价于类型级检查
-npm run typecheck    # TypeScript 检查
-npm run build        # 生产构建
-npm run db:generate  # 生成 Prisma Client
-npm run db:push      # 将 schema 推到开发数据库
-npm run db:seed      # 写入 seed 数据
+just run          # 启动本地开发
+just clean        # 清理 .next / .turbo 缓存
+just env-init     # 初始化 apps/web/.env.local
+just lint         # 当前等价于类型级检查
+just typecheck    # TypeScript 检查
+just build        # 生产构建
+just db-generate  # 生成 Prisma Client
+just db-push      # 将 schema 推到开发数据库
+just db-seed      # 写入 seed 数据
+```
+
+等价 npm 命令：
+
+```bash
+npm run dev
+npm run lint
+npm run typecheck
+npm run build
+npm run db:generate
+npm run db:push
+npm run db:seed
 ```
 
 ## 8. 提交前检查
 
 提交 PR 前至少运行：
+
+```bash
+just lint
+just typecheck
+just build
+```
+
+等价命令：
 
 ```bash
 npm run lint
@@ -291,14 +356,14 @@ npm run build
 
 ### 登录页显示 Clerk 未配置
 
-这是正常的本地占位状态。填写 `.env.local` 中的 Clerk key 后重启 `npm run dev`。
+这是正常的本地占位状态。填写 `apps/web/.env.local` 中的 Clerk key 后重启 `just run`（或 `npm run dev`）。
 
 ### 数据库命令失败
 
 先检查 `DATABASE_URL` 是否存在：
 
 ```bash
-cat .env.local
+cat apps/web/.env.local
 ```
 
 再确认数据库服务可连接。远程数据库通常需要 `sslmode=require`。
