@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -23,9 +24,15 @@ import {
   createActivityAction,
   type CreateActivityState,
 } from "../actions/createActivity";
+import type { ActivityFormValues } from "../actions/activityActionUtils";
+import { updateActivityAction } from "../actions/updateActivity";
 
 type NewActivityFormProps = {
+  activityId?: string;
+  cancelHref?: string;
+  initialValues?: ActivityFormValues;
   locale: string;
+  mode?: "create" | "edit";
 };
 
 const initialState: CreateActivityState = {};
@@ -80,26 +87,72 @@ function FieldError({ errors }: { errors?: string[] }) {
     return null;
   }
 
-  return <p className="text-xs font-medium text-red-600">{errors[0]}</p>;
+  return (
+    <p className="text-xs font-medium text-red-600" role="alert">
+      {errors[0]}
+    </p>
+  );
 }
 
-function SubmitButton({ locale }: { locale: string }) {
+function SubmitButton({
+  locale,
+  mode,
+}: {
+  locale: string;
+  mode: "create" | "edit";
+}) {
   const { pending } = useFormStatus();
   const t = getCopy(locale).form;
 
   return (
     <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? t.creating : t.create}
+      {pending
+        ? mode === "edit"
+          ? t.saving
+          : t.creating
+        : mode === "edit"
+          ? t.save
+          : t.create}
     </Button>
   );
 }
 
-export function NewActivityForm({ locale }: NewActivityFormProps) {
-  const [state, formAction] = useActionState(
-    createActivityAction,
-    initialState,
+function FormActions({
+  cancelHref,
+  locale,
+  mode,
+}: {
+  cancelHref?: string;
+  locale: string;
+  mode: "create" | "edit";
+}) {
+  const t = getCopy(locale).form;
+
+  return (
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      {mode === "edit" && cancelHref ? (
+        <Link
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
+          href={cancelHref}
+        >
+          {t.cancelEdit}
+        </Link>
+      ) : null}
+      <SubmitButton locale={locale} mode={mode} />
+    </div>
   );
-  const values = state.values;
+}
+
+export function NewActivityForm({
+  activityId,
+  cancelHref,
+  initialValues,
+  locale,
+  mode = "create",
+}: NewActivityFormProps) {
+  const action = mode === "edit" ? updateActivityAction : createActivityAction;
+  const [state, formAction] = useActionState(action, initialState);
+  const values = state.values ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
   const t = getCopy(locale);
@@ -117,9 +170,15 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
           noValidate
         >
           <input name="locale" type="hidden" value={locale} />
+          {activityId ? (
+            <input name="activityId" type="hidden" value={activityId} />
+          ) : null}
 
           {state.formError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              role="alert"
+            >
               {state.formError}
             </div>
           ) : null}
@@ -129,6 +188,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               {t.form.title}
               <Input
                 name="title"
+                aria-invalid={Boolean(state.fieldErrors?.title)}
                 defaultValue={values?.title}
                 placeholder={t.form.titlePlaceholder}
                 required
@@ -140,6 +200,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               {t.form.description}
               <Textarea
                 name="description"
+                aria-invalid={Boolean(state.fieldErrors?.description)}
                 defaultValue={values?.description}
                 placeholder={t.form.descriptionPlaceholder}
                 required
@@ -151,6 +212,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               {t.form.itinerary}
               <Textarea
                 name="itinerary"
+                aria-invalid={Boolean(state.fieldErrors?.itinerary)}
                 defaultValue={values?.itinerary}
                 placeholder={t.form.itineraryPlaceholder}
               />
@@ -162,6 +224,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.type}
                 <Select
                   name="type"
+                  aria-invalid={Boolean(state.fieldErrors?.type)}
                   onChange={(event) => setActivityType(event.target.value)}
                   required
                   value={activityType}
@@ -179,6 +242,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.category}
                 <Select
                   name="category"
+                  aria-invalid={Boolean(state.fieldErrors?.category)}
                   onChange={(event) => setCategory(event.target.value)}
                   required
                   value={category}
@@ -201,6 +265,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.otherCategory}
                 <Input
                   name="otherCategoryText"
+                  aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
                   defaultValue={values?.otherCategoryText}
                   maxLength={40}
                   placeholder={t.form.otherCategoryPlaceholder}
@@ -219,6 +284,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               {t.form.city}
               <Input
                 name="city"
+                aria-invalid={Boolean(state.fieldErrors?.city)}
                 defaultValue={values?.city ?? "Paris"}
                 required
               />
@@ -230,6 +296,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.destination}
                 <Input
                   name="destination"
+                  aria-invalid={Boolean(state.fieldErrors?.destination)}
                   defaultValue={values?.destination}
                   placeholder={t.form.destinationPlaceholder}
                   required
@@ -245,6 +312,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               {t.form.address}
               <Input
                 name="address"
+                aria-invalid={Boolean(state.fieldErrors?.address)}
                 defaultValue={values?.address}
                 placeholder="République, Paris"
                 required
@@ -257,6 +325,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.startAt}
                 <Input
                   name="startAt"
+                  aria-invalid={Boolean(state.fieldErrors?.startAt)}
                   defaultValue={values?.startAt}
                   type="datetime-local"
                   required
@@ -271,6 +340,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.endAt}
                 <Input
                   name="endAt"
+                  aria-invalid={Boolean(state.fieldErrors?.endAt)}
                   defaultValue={values?.endAt}
                   type="datetime-local"
                 />
@@ -288,6 +358,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.capacity}
                 <Input
                   name="capacity"
+                  aria-invalid={Boolean(state.fieldErrors?.capacity)}
                   type="number"
                   min={2}
                   max={100}
@@ -301,6 +372,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.minParticipants}
                 <Input
                   name="minParticipants"
+                  aria-invalid={Boolean(state.fieldErrors?.minParticipants)}
                   type="number"
                   min={1}
                   max={100}
@@ -316,6 +388,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.priceType}
                 <Select
                   name="priceType"
+                  aria-invalid={Boolean(state.fieldErrors?.priceType)}
                   defaultValue={values?.priceType}
                   required
                 >
@@ -332,6 +405,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 {t.form.priceText}
                 <Input
                   name="priceText"
+                  aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
                   placeholder={t.form.priceTextPlaceholder}
                   required
@@ -358,7 +432,7 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
             </label>
           </FormSection>
 
-          <SubmitButton locale={locale} />
+          <FormActions cancelHref={cancelHref} locale={locale} mode={mode} />
         </form>
       </CardContent>
     </Card>
