@@ -12,12 +12,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true,
-    "paths": {
-      "@chill-club/shared": ["packages/shared/src"],
-      "@chill-club/shared/*": ["packages/shared/src/*"],
-      "@chill-club/ui": ["packages/ui/src"],
-      "@chill-club/ui/*": ["packages/ui/src/*"]
-    }
+    "incremental": true
   }
 }
