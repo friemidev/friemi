@@ -82,7 +82,9 @@ export async function cancelParticipationAction(
     if (!cancellableParticipantStatuses.includes(participation.status)) {
       if (participation.status === "CANCELLED") {
         alreadyCancelled = true;
-        return;
+        return {
+          formError: undefined,
+        };
       }
 
       return {
