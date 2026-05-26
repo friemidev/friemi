@@ -50,7 +50,7 @@ function normalizeLimit(limit: number | undefined) {
   return Math.min(Math.max(Math.floor(limit), 1), 50);
 }
 
-function getCoverTone(activityId: string) {
+export function getActivityCoverTone(activityId: string) {
   const charTotal = [...activityId].reduce((total, char) => total + char.charCodeAt(0), 0);
   return coverTones[charTotal % coverTones.length];
 }
@@ -82,6 +82,9 @@ export function getVisibleActivityWhere(options: VisibleActivityWhereOptions = {
     },
     visibility: {
       in: publicActivityVisibility
+    },
+    organizer: {
+      status: "ACTIVE"
     }
   };
 }
@@ -100,7 +103,7 @@ export function getActivityCardViewModel(activity: ActivityQueryResult): Activit
     participantCount: activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
-    coverTone: getCoverTone(activity.id)
+    coverTone: getActivityCoverTone(activity.id)
   };
 }
 

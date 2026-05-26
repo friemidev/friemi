@@ -1,15 +1,27 @@
 import { notFound } from "next/navigation";
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  MapPin,
+  Route,
+  UserRound,
+  UsersRound,
+  WalletCards
+} from "lucide-react";
 import { Button } from "@chill-club/ui";
-import { activityCategories } from "@chill-club/shared";
+import { activityCategories, activityTypes } from "@chill-club/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
+  getActivityItineraryItems,
   getActivityLocationLabel,
+  getActivityOrganizerInitial,
   getActivityParticipantPercent,
+  getActivityPriceLabel,
   getActivitySeatLabel
 } from "@/features/activities/utils/activityDisplay";
 
@@ -32,41 +44,109 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
 
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
+  const itineraryItems = getActivityItineraryItems(activity);
 
   return (
     <PageContainer className="space-y-6">
-      <div className="h-56 rounded-lg bg-moss md:h-72" />
+      <div className="flex min-h-52 items-end rounded-lg bg-moss p-4 sm:p-5 md:min-h-72">
+        <div className="max-w-3xl space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
+              {activityCategories[activity.category]}
+            </span>
+            <ActivityStatusBadge status={displayStatus} />
+          </div>
+          <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl md:text-5xl">
+            {activity.title}
+          </h1>
+        </div>
+      </div>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <article className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-zinc-500">{activityCategories[activity.category]}</span>
-              <ActivityStatusBadge status={displayStatus} />
-            </div>
-            <h1 className="text-4xl font-semibold tracking-normal text-ink">{activity.title}</h1>
-          </div>
-
-          <div className="rounded-lg border border-black/10 bg-white/70 p-5">
+        <article className="space-y-6 lg:order-1">
+          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
             <h2 className="text-lg font-semibold text-ink">活动说明</h2>
             <p className="mt-3 text-sm leading-7 text-zinc-600">{activity.description}</p>
           </div>
+
+          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+            <div className="flex items-center gap-2">
+              <Route className="h-5 w-5 text-moss" />
+              <h2 className="text-lg font-semibold text-ink">活动行程</h2>
+            </div>
+            {itineraryItems.length > 0 ? (
+              <ol className="mt-4 space-y-3">
+                {itineraryItems.map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex gap-3 text-sm leading-6 text-zinc-600">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-moss text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-sm leading-7 text-zinc-500">发起人暂未填写详细行程。</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-5 w-5 text-moss" />
+              <h2 className="text-lg font-semibold text-ink">发起人</h2>
+            </div>
+            <div className="mt-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-ink">
+                {getActivityOrganizerInitial(activity)}
+              </div>
+              <div>
+                <p className="font-medium text-ink">{activity.organizer.nickname}</p>
+                <p className="mt-1 text-sm leading-6 text-zinc-600">
+                  {activity.organizer.bio ?? "这个发起人还没有填写简介。"}
+                </p>
+              </div>
+            </div>
+          </div>
         </article>
 
-        <aside className="h-fit rounded-lg border border-black/10 bg-white/80 p-5 shadow-sm">
+        <aside className="order-first h-fit rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:order-2">
           <div className="space-y-4 text-sm text-zinc-700">
-            <p className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              {getActivityDateLabel(activity, locale)}
+            <p className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-zinc-500">
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                活动类型
+              </span>
+              <span className="text-right font-medium text-ink">{activityTypes[activity.type]}</span>
             </p>
-            <p className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {getActivityLocationLabel(activity)}
+            <p className="flex items-start gap-2">
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0">{getActivityDateLabel(activity, locale)}</span>
             </p>
-            <p className="flex items-center gap-2">
-              <UsersRound className="h-4 w-4" />
-              {activity.participantCount}/{activity.capacity} 人
+            <p className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0">{getActivityLocationLabel(activity)}</span>
             </p>
+            {activity.destination ? (
+              <p className="flex items-center justify-between gap-3">
+                <span className="text-zinc-500">目的地</span>
+                <span className="min-w-0 text-right font-medium text-ink">{activity.destination}</span>
+              </p>
+            ) : null}
+            <p className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-zinc-500">
+                <UsersRound className="h-4 w-4 shrink-0" />
+                已报名
+              </span>
+              <span className="text-right font-medium text-ink">
+                {activity.participantCount}/{activity.capacity} 人
+              </span>
+            </p>
+            {activity.minParticipants ? (
+              <p className="flex items-center justify-between gap-3">
+                <span className="text-zinc-500">最少成团</span>
+                <span className="text-right font-medium text-ink">{activity.minParticipants} 人</span>
+              </p>
+            ) : null}
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-zinc-500">名额状态</span>
@@ -76,7 +156,17 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 <div className="h-full rounded-full bg-moss" style={{ width: `${participantPercent}%` }} />
               </div>
             </div>
-            <p className="font-medium text-ink">{activity.priceText}</p>
+            <p className="flex items-start justify-between gap-3">
+              <span className="flex items-center gap-2 text-zinc-500">
+                <WalletCards className="h-4 w-4 shrink-0" />
+                费用
+              </span>
+              <span className="min-w-0 text-right font-medium text-ink">{getActivityPriceLabel(activity)}</span>
+            </p>
+            <p className="flex items-start gap-2 text-zinc-600">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{activity.requiresApproval ? "报名后需发起人确认" : "报名后自动确认"}</span>
+            </p>
           </div>
           <Button className="mt-6 w-full" disabled>
             报名功能开发中

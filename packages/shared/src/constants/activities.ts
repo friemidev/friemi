@@ -1,4 +1,6 @@
 export const activityTypes = {
+  PUBLIC_EVENT: "公共活动",
+  USER_HOSTED: "用户发起",
   LOCAL: "本地局",
   TRIP: "旅游搭子"
 } as const;
