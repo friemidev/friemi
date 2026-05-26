@@ -7,13 +7,14 @@ import {
   Route,
   UserRound,
   UsersRound,
-  WalletCards
+  WalletCards,
 } from "lucide-react";
-import { Button } from "@chill-club/ui";
 import { activityCategories, activityTypes } from "@chill-club/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
+import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
+import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
@@ -22,8 +23,9 @@ import {
   getActivityOrganizerInitial,
   getActivityParticipantPercent,
   getActivityPriceLabel,
-  getActivitySeatLabel
+  getActivitySeatLabel,
 } from "@/features/activities/utils/activityDisplay";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 
 type ActivityDetailPageProps = {
   params: Promise<{
@@ -34,17 +36,32 @@ type ActivityDetailPageProps = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ActivityDetailPage({ params }: ActivityDetailPageProps) {
+export default async function ActivityDetailPage({
+  params,
+}: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
-  const activity = await getActivityById(activityId);
+  const [activity, viewerProfile] = await Promise.all([
+    getActivityById(activityId),
+    getOptionalCurrentUserProfile(),
+  ]);
 
   if (!activity) {
     notFound();
   }
 
+  const viewerParticipation = await getActivityViewerParticipation(
+    activity.id,
+    viewerProfile?.id,
+  );
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
+  const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+  const isClosed =
+    !["RECRUITING", "CONFIRMED"].includes(activity.status) ||
+    activityEndBoundary <= new Date();
+  const isFull = activity.participantCount >= activity.capacity;
+  const isOrganizer = viewerProfile?.id === activity.organizer.id;
 
   return (
     <PageContainer className="space-y-6">
@@ -66,7 +83,9 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
         <article className="space-y-6 lg:order-1">
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
             <h2 className="text-lg font-semibold text-ink">活动说明</h2>
-            <p className="mt-3 text-sm leading-7 text-zinc-600">{activity.description}</p>
+            <p className="mt-3 text-sm leading-7 text-zinc-600">
+              {activity.description}
+            </p>
           </div>
 
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
@@ -77,7 +96,10 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
             {itineraryItems.length > 0 ? (
               <ol className="mt-4 space-y-3">
                 {itineraryItems.map((item, index) => (
-                  <li key={`${item}-${index}`} className="flex gap-3 text-sm leading-6 text-zinc-600">
+                  <li
+                    key={`${item}-${index}`}
+                    className="flex gap-3 text-sm leading-6 text-zinc-600"
+                  >
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-moss text-xs font-semibold text-white">
                       {index + 1}
                     </span>
@@ -86,7 +108,9 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 ))}
               </ol>
             ) : (
-              <p className="mt-3 text-sm leading-7 text-zinc-500">发起人暂未填写详细行程。</p>
+              <p className="mt-3 text-sm leading-7 text-zinc-500">
+                发起人暂未填写详细行程。
+              </p>
             )}
           </div>
 
@@ -100,7 +124,9 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 {getActivityOrganizerInitial(activity)}
               </div>
               <div>
-                <p className="font-medium text-ink">{activity.organizer.nickname}</p>
+                <p className="font-medium text-ink">
+                  {activity.organizer.nickname}
+                </p>
                 <p className="mt-1 text-sm leading-6 text-zinc-600">
                   {activity.organizer.bio ?? "这个发起人还没有填写简介。"}
                 </p>
@@ -116,20 +142,28 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 <ClipboardList className="h-4 w-4 shrink-0" />
                 活动类型
               </span>
-              <span className="text-right font-medium text-ink">{activityTypes[activity.type]}</span>
+              <span className="text-right font-medium text-ink">
+                {activityTypes[activity.type]}
+              </span>
             </p>
             <p className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">{getActivityDateLabel(activity, locale)}</span>
+              <span className="min-w-0">
+                {getActivityDateLabel(activity, locale)}
+              </span>
             </p>
             <p className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">{getActivityLocationLabel(activity)}</span>
+              <span className="min-w-0">
+                {getActivityLocationLabel(activity)}
+              </span>
             </p>
             {activity.destination ? (
               <p className="flex items-center justify-between gap-3">
                 <span className="text-zinc-500">目的地</span>
-                <span className="min-w-0 text-right font-medium text-ink">{activity.destination}</span>
+                <span className="min-w-0 text-right font-medium text-ink">
+                  {activity.destination}
+                </span>
               </p>
             ) : null}
             <p className="flex items-center justify-between gap-3">
@@ -144,16 +178,23 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
             {activity.minParticipants ? (
               <p className="flex items-center justify-between gap-3">
                 <span className="text-zinc-500">最少成团</span>
-                <span className="text-right font-medium text-ink">{activity.minParticipants} 人</span>
+                <span className="text-right font-medium text-ink">
+                  {activity.minParticipants} 人
+                </span>
               </p>
             ) : null}
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-zinc-500">名额状态</span>
-                <span className="font-medium text-ink">{getActivitySeatLabel(activity)}</span>
+                <span className="font-medium text-ink">
+                  {getActivitySeatLabel(activity)}
+                </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                <div className="h-full rounded-full bg-moss" style={{ width: `${participantPercent}%` }} />
+                <div
+                  className="h-full rounded-full bg-moss"
+                  style={{ width: `${participantPercent}%` }}
+                />
               </div>
             </div>
             <p className="flex items-start justify-between gap-3">
@@ -161,17 +202,31 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                 <WalletCards className="h-4 w-4 shrink-0" />
                 费用
               </span>
-              <span className="min-w-0 text-right font-medium text-ink">{getActivityPriceLabel(activity)}</span>
+              <span className="min-w-0 text-right font-medium text-ink">
+                {getActivityPriceLabel(activity)}
+              </span>
             </p>
             <p className="flex items-start gap-2 text-zinc-600">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{activity.requiresApproval ? "报名后需发起人确认" : "报名后自动确认"}</span>
+              <span>
+                {activity.requiresApproval
+                  ? "报名后需发起人确认"
+                  : "报名后自动确认"}
+              </span>
             </p>
           </div>
-          <Button className="mt-6 w-full" disabled>
-            报名功能开发中
-          </Button>
-          <p className="mt-3 text-center text-xs text-zinc-500">报名逻辑将在下一阶段接入数据库。</p>
+          <div className="mt-6">
+            <JoinActivityForm
+              activityId={activity.id}
+              locale={locale}
+              requiresApproval={activity.requiresApproval}
+              isFull={isFull}
+              isClosed={isClosed}
+              isOrganizer={isOrganizer}
+              isAuthenticated={Boolean(viewerProfile)}
+              viewerParticipationStatus={viewerParticipation?.status ?? null}
+            />
+          </div>
         </aside>
       </section>
     </PageContainer>
