@@ -9,6 +9,7 @@ import {
   joinActivityAction,
   type JoinActivityState,
 } from "../actions/joinActivity";
+import { CancelParticipationForm } from "./CancelParticipationForm";
 
 type ViewerParticipationStatus =
   | "JOINED"
@@ -111,7 +112,12 @@ export function JoinActivityForm({
   ) {
     const copy = getParticipationCopy(viewerParticipationStatus);
 
-    return <DisabledAction title={copy.title} description={copy.description} />;
+    return (
+      <div className="grid gap-3">
+        <DisabledAction title={copy.title} description={copy.description} />
+        <CancelParticipationForm activityId={activityId} locale={locale} />
+      </div>
+    );
   }
 
   if (isClosed) {
