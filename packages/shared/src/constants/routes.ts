@@ -4,8 +4,8 @@ export const routes = {
   newActivity: "/activities/new",
   profile: "/profile",
   signIn: "/sign-in",
-  signUp: "/sign-up"
+  signUp: "/sign-up",
 } as const;
 
 export const defaultLocale = "zh-CN";
-export const locales = ["zh-CN", "en"] as const;
+export const locales = ["zh-CN", "en", "fr"] as const;

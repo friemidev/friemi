@@ -1,0 +1,15 @@
+{
+  "navigation": {
+    "home": "Accueil",
+    "activities": "Activités",
+    "newActivity": "Créer",
+    "profile": "Profil",
+    "signIn": "Connexion"
+  },
+  "home": {
+    "title": "Next Fun Club",
+    "tagline": "La prochaine sortie commence ici.",
+    "description": "Une plateforme pour organiser des activités et trouver des compagnons parmi les utilisateurs sinophones à l'étranger, en commençant par Paris.",
+    "browseActivities": "Voir les activités"
+  }
+}
