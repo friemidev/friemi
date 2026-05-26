@@ -98,18 +98,18 @@ feature/activity-create-db
 
 小功能：
 
-- [ ] 创建活动表单改为真实提交
-- [ ] 使用 zod 校验字段
-- [ ] 使用 `ensureCurrentUserProfile` 获取当前用户
-- [ ] 创建 `Activity`
-- [ ] 支持 `LOCAL / TRIP`
-- [ ] 支持标题、描述、行程、城市、目的地、地址、开始时间、结束时间
-- [ ] 支持人数上限 `capacity`
-- [ ] 支持最少成团人数 `minParticipants`
-- [ ] 支持是否需要审核 `requiresApproval`
-- [ ] 支持费用说明 `priceText`
-- [ ] 创建成功后跳转详情页
-- [ ] 创建失败显示错误提示
+- [x] 创建活动表单改为真实提交
+- [x] 使用 zod 校验字段
+- [x] 使用 `ensureCurrentUserProfile` 获取当前用户
+- [x] 创建 `Activity`
+- [x] 支持 `LOCAL / TRIP`
+- [x] 支持标题、描述、行程、城市、目的地、地址、开始时间、结束时间
+- [x] 支持人数上限 `capacity`
+- [x] 支持最少成团人数 `minParticipants`
+- [x] 支持是否需要审核 `requiresApproval`
+- [x] 支持费用说明 `priceText`
+- [x] 创建成功后跳转详情页
+- [x] 创建失败显示错误提示
 
 验收标准：
 
