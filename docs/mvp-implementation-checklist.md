@@ -156,12 +156,12 @@ feature/cancel-participation
 
 小功能：
 
-- [ ] 增加取消报名 action
-- [ ] 只允许本人取消自己的报名
-- [ ] 把状态改为 `CANCELLED`
-- [ ] 写入 `cancelledAt`
-- [ ] 活动人数统计排除已取消报名
-- [ ] 取消后详情页按钮状态更新
+- [x] 增加取消报名 action
+- [x] 只允许本人取消自己的报名
+- [x] 把状态改为 `CANCELLED`
+- [x] 写入 `cancelledAt`
+- [x] 活动人数统计排除已取消报名
+- [x] 取消后详情页按钮状态更新
 
 验收标准：
 
