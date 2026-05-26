@@ -1,5 +1,11 @@
-import { formatActivityDate, formatActivityDateOnly, formatActivityTime, type ActivityStatus } from "@chill-club/shared";
-import type { ActivityCardViewModel } from "../types";
+import {
+  formatActivityDate,
+  formatActivityDateOnly,
+  formatActivityTime,
+  priceTypes,
+  type ActivityStatus
+} from "@chill-club/shared";
+import type { ActivityCardViewModel, ActivityDetailViewModel } from "../types";
 
 export function getActivityLocationLabel(activity: ActivityCardViewModel) {
   return activity.address.includes(activity.city) ? activity.address : `${activity.city} · ${activity.address}`;
@@ -37,4 +43,28 @@ export function getActivityParticipantPercent(activity: ActivityCardViewModel) {
   }
 
   return Math.min(100, Math.round((activity.participantCount / activity.capacity) * 100));
+}
+
+export function getActivityPriceLabel(activity: ActivityDetailViewModel) {
+  const priceTypeLabel = priceTypes[activity.priceType];
+  const priceText = activity.priceText.trim();
+
+  if (priceText === priceTypeLabel || priceText.startsWith(`${priceTypeLabel} `)) {
+    return priceText;
+  }
+
+  return `${priceTypeLabel} · ${priceText}`;
+}
+
+export function getActivityItineraryItems(activity: ActivityDetailViewModel) {
+  return activity.itinerary
+    ? activity.itinerary
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+}
+
+export function getActivityOrganizerInitial(activity: ActivityDetailViewModel) {
+  return activity.organizer.nickname.trim().slice(0, 1) || "N";
 }
