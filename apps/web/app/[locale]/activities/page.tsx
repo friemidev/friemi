@@ -1,8 +1,8 @@
-import { SlidersHorizontal } from "lucide-react";
-import { Button } from "@chill-club/ui";
+import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { mockActivities } from "@/features/activities/queries/mockActivities";
+import { getActivities } from "@/features/activities/queries/getActivities";
 
 type ActivitiesPageProps = {
   params: Promise<{
@@ -10,8 +10,16 @@ type ActivitiesPageProps = {
   }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ActivitiesPage({ params }: ActivitiesPageProps) {
   const { locale } = await params;
+  const activitiesResult = await getActivities()
+    .then((activities) => ({ activities, error: null }))
+    .catch((error: unknown) => {
+      console.error("Failed to load activities", error);
+      return { activities: [], error };
+    });
 
   return (
     <PageContainer className="space-y-6">
@@ -22,20 +30,26 @@ export default async function ActivitiesPage({ params }: ActivitiesPageProps) {
 
       <section className="flex flex-col gap-3 rounded-lg border border-black/10 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-ink">筛选区域占位</p>
-          <p className="text-sm text-zinc-500">后续接入关键词、分类、日期和人数筛选。</p>
+          <p className="text-sm font-medium text-ink">当前展示范围</p>
+          <p className="text-sm text-zinc-500">只展示公开、招募中或已成团的活动，并按开始时间从近到远排序。</p>
         </div>
-        <Button variant="secondary" className="gap-2">
-          <SlidersHorizontal className="h-4 w-4" />
-          筛选
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Badge>招募中</Badge>
+          <Badge>已成团</Badge>
+        </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {mockActivities.map((activity) => (
-          <ActivityCard key={activity.id} activity={activity} locale={locale} />
-        ))}
-      </div>
+      {activitiesResult.error ? (
+        <EmptyState title="活动加载失败" description="请稍后刷新重试，或检查数据库连接是否可用。" />
+      ) : activitiesResult.activities.length === 0 ? (
+        <EmptyState title="暂无活动" description="当前没有招募中或已成团的活动，创建新活动后会显示在这里。" />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {activitiesResult.activities.map((activity) => (
+            <ActivityCard key={activity.id} activity={activity} locale={locale} />
+          ))}
+        </div>
+      )}
     </PageContainer>
   );
 }

@@ -7,6 +7,8 @@ type ActivityStatusBadgeProps = {
 };
 
 const colors: Record<ActivityStatus, string> = {
+  OPEN: "bg-emerald-100 text-emerald-800",
+  FULL: "bg-amber-100 text-amber-800",
   DRAFT: "bg-zinc-100 text-zinc-700",
   RECRUITING: "bg-emerald-100 text-emerald-800",
   CONFIRMED: "bg-sky-100 text-sky-800",

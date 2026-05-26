@@ -48,14 +48,14 @@ feature/activity-list-db
 
 小功能：
 
-- [ ] 新建活动查询函数 `getActivities`
-- [ ] 从 Prisma 读取 `Activity`
-- [ ] 按 `status = RECRUITING / CONFIRMED` 展示活动
-- [ ] 按 `startAt` 从近到远排序
-- [ ] 计算参与人数 `participants.count`
-- [ ] 替换当前 mock 数据
-- [ ] 空状态展示
-- [ ] 加载失败兜底
+- [x] 新建活动查询函数 `getActivities`
+- [x] 从 Prisma 读取 `Activity`
+- [x] 按 `status = RECRUITING / CONFIRMED` 展示活动
+- [x] 按 `startAt` 从近到远排序
+- [x] 计算参与人数 `participants.count`
+- [x] 替换当前 mock 数据
+- [x] 空状态展示
+- [x] 加载失败兜底
 
 验收标准：
 
@@ -508,4 +508,3 @@ npm run build
 ```
 
 `feature/join-activity` 建议等详情页接数据库后再做。
-

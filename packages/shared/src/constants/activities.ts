@@ -15,6 +15,8 @@ export const activityCategories = {
 } as const;
 
 export const activityStatuses = {
+  OPEN: "招募中",
+  FULL: "已满",
   DRAFT: "草稿",
   RECRUITING: "招募中",
   CONFIRMED: "已成团",

@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
-import { activityCategories, formatActivityDate } from "@chill-club/shared";
+import { activityCategories } from "@chill-club/shared";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
+import {
+  getActivityDateLabel,
+  getActivityDisplayStatus,
+  getActivityLocationLabel,
+  getActivityParticipantPercent,
+  getActivitySeatLabel
+} from "../utils/activityDisplay";
 import { ActivityStatusBadge } from "./ActivityStatusBadge";
 
 type ActivityCardProps = {
@@ -19,32 +26,46 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
 };
 
 export function ActivityCard({ activity, locale }: ActivityCardProps) {
+  const participantPercent = getActivityParticipantPercent(activity);
+  const displayStatus = getActivityDisplayStatus(activity);
+  const activityLabel = `${activity.title}，${getActivityDateLabel(activity, locale)}，${getActivityLocationLabel(activity)}`;
+
   return (
-    <Link href={withLocale(locale, `/activities/${activity.id}`)}>
-      <Card className="h-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
-        <div className={cn("h-28", coverTones[activity.coverTone])} />
+    <Link href={withLocale(locale, `/activities/${activity.id}`)} aria-label={activityLabel}>
+      <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+        <div className={cn("flex h-28 items-end justify-between p-4", coverTones[activity.coverTone])}>
+          <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
+            {activityCategories[activity.category]}
+          </span>
+          <ActivityStatusBadge status={displayStatus} />
+        </div>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-medium text-zinc-500">{activityCategories[activity.category]}</span>
-            <ActivityStatusBadge status={activity.status} />
-          </div>
-          <CardTitle>{activity.title}</CardTitle>
+          <CardTitle className="line-clamp-2">{activity.title}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-1 flex-col space-y-4">
           <p className="line-clamp-2 text-sm leading-6 text-zinc-600">{activity.description}</p>
           <div className="grid gap-2 text-sm text-zinc-600">
             <span className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4" />
-              {formatActivityDate(activity.startAt, locale)}
+              {getActivityDateLabel(activity, locale)}
             </span>
             <span className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              {activity.address}
+              {getActivityLocationLabel(activity)}
             </span>
-            <span className="flex items-center gap-2">
-              <UsersRound className="h-4 w-4" />
-              {activity.participantCount}/{activity.capacity} 人 · {activity.priceText}
-            </span>
+          </div>
+          <div className="mt-auto space-y-2 pt-1">
+            <div className="flex items-center justify-between gap-3 text-sm text-zinc-600">
+              <span className="flex items-center gap-2">
+                <UsersRound className="h-4 w-4" />
+                {activity.participantCount}/{activity.capacity} 人
+              </span>
+              <span className="font-medium text-ink">{getActivitySeatLabel(activity)}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+              <div className="h-full rounded-full bg-moss" style={{ width: `${participantPercent}%` }} />
+            </div>
+            <p className="text-sm font-medium text-ink">{activity.priceText}</p>
           </div>
         </CardContent>
       </Card>

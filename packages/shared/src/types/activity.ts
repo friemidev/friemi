@@ -20,6 +20,7 @@ export type ActivitySummary = {
   city: string;
   address: string;
   startAt: string;
+  endAt: string | null;
   capacity: number;
   participantCount: number;
   priceText: string;
