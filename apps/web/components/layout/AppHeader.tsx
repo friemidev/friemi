@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, CircleUserRound, Compass } from "lucide-react";
+import { CalendarPlus, CircleUserRound, Compass, LayoutDashboard } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -22,6 +22,10 @@ export function AppHeader({ locale }: AppHeaderProps) {
           <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/activities")}>
             <Compass className="h-4 w-4" />
             活动
+          </Link>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/admin")}>
+            <LayoutDashboard className="h-4 w-4" />
+            后台
           </Link>
           <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/profile")}>
             <CircleUserRound className="h-4 w-4" />
