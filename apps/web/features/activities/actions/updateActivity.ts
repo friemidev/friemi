@@ -5,6 +5,7 @@ import { createActivitySchema } from "@/features/activities/schemas/activitySche
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import type { ParticipantStatus } from "@prisma/client";
 import {
   buildActivityErrorState,
   formatStoredDescription,
@@ -14,14 +15,55 @@ import {
   type ActivityFormState,
 } from "./activityActionUtils";
 
-export type CreateActivityState = ActivityFormState;
+export type UpdateActivityState = ActivityFormState;
 
-export async function createActivityAction(
-  previousState: CreateActivityState,
+const countedParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
+
+export async function updateActivityAction(
+  previousState: UpdateActivityState,
   formData: FormData,
-): Promise<CreateActivityState> {
+): Promise<UpdateActivityState> {
   const locale = getString(formData, "locale") || "zh-CN";
+  const activityId = getString(formData, "activityId");
   const rawInput = getActivityFormValues(formData);
+
+  if (!activityId) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "缺少活动信息，请返回详情页后重试。",
+    );
+  }
+
+  const profile = await ensureCurrentUserProfile(locale);
+  const editableActivity = await prisma.activity.findFirst({
+    where: {
+      id: activityId,
+      organizerId: profile.id,
+    },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          participants: {
+            where: {
+              status: {
+                in: countedParticipantStatuses,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!editableActivity) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "你没有权限编辑这个活动。",
+    );
+  }
 
   const result = createActivitySchema.safeParse(rawInput);
 
@@ -31,7 +73,7 @@ export async function createActivityAction(
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "请检查表单内容后再提交。",
+      "请检查表单内容后再保存。",
       flattened.fieldErrors,
     );
   }
@@ -85,15 +127,27 @@ export async function createActivityAction(
     );
   }
 
-  let activityId: string;
-  const profile = await ensureCurrentUserProfile(locale);
-  const description = formatStoredDescription(result.data);
+  if (result.data.capacity < editableActivity._count.participants) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "人数上限不能低于当前已报名人数。",
+      {
+        capacity: [
+          `当前已有 ${editableActivity._count.participants} 人报名，请设置不低于该人数的上限。`,
+        ],
+      },
+    );
+  }
 
   try {
-    const activity = await prisma.activity.create({
+    await prisma.activity.update({
+      where: {
+        id: activityId,
+      },
       data: {
         title: result.data.title,
-        description,
+        description: formatStoredDescription(result.data),
         itinerary: result.data.itinerary,
         type: result.data.type,
         category: result.data.category,
@@ -107,23 +161,15 @@ export async function createActivityAction(
         requiresApproval: result.data.requiresApproval,
         priceType: result.data.priceType,
         priceText: result.data.priceText,
-        status: "RECRUITING",
-        visibility: "PUBLIC",
-        organizerId: profile.id,
-      },
-      select: {
-        id: true,
       },
     });
-
-    activityId = activity.id;
   } catch (error) {
-    console.error("Failed to create activity", error);
+    console.error("Failed to update activity", error);
 
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "创建活动失败，请稍后重试。",
+      "保存活动失败，请稍后重试。",
     );
   }
 

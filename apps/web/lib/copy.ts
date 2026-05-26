@@ -44,6 +44,7 @@ const copy = {
       loadFailed: "加载失败",
       retryDatabase: "请稍后刷新重试，或检查数据库连接是否可用。",
       people: "人",
+      switchLanguage: (nextLanguage: string) => `切换到 ${nextLanguage}`,
     },
     auth: {
       clerkMissingTitle: "Clerk 尚未配置",
@@ -91,10 +92,17 @@ const copy = {
       price: "费用",
       approvalRequired: "报名后需发起人确认",
       approvalAuto: "报名后自动确认",
+      editActivity: "编辑活动",
     },
     newActivity: {
       title: "发起活动",
       description: "填写活动信息后会写入数据库，并跳转到新活动详情页。",
+    },
+    editActivity: {
+      title: "编辑活动",
+      description: "只允许发起人修改活动信息，保存后会回到活动详情页。",
+      forbiddenTitle: "无权编辑",
+      forbiddenDescription: "只有活动发起人可以编辑这个活动。",
     },
     profile: {
       title: "个人空间",
@@ -193,6 +201,9 @@ const copy = {
       requiresApprovalHint: "开启后，用户报名后需要发起人确认。",
       creating: "创建中...",
       create: "创建活动",
+      saving: "保存中...",
+      save: "保存修改",
+      cancelEdit: "返回详情页",
     },
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>
@@ -260,6 +271,7 @@ const copy = {
       retryDatabase:
         "Refresh later, or check whether the database connection is available.",
       people: "people",
+      switchLanguage: (nextLanguage: string) => `Switch to ${nextLanguage}`,
     },
     auth: {
       clerkMissingTitle: "Clerk is not configured",
@@ -312,11 +324,19 @@ const copy = {
       price: "Cost",
       approvalRequired: "Organizer approval required",
       approvalAuto: "Auto-confirmed after joining",
+      editActivity: "Edit activity",
     },
     newActivity: {
       title: "Create activity",
       description:
         "Fill in the activity details, save them to the database, then go to the new detail page.",
+    },
+    editActivity: {
+      title: "Edit activity",
+      description:
+        "Only the organizer can update this activity. You will return to the detail page after saving.",
+      forbiddenTitle: "No edit access",
+      forbiddenDescription: "Only the organizer can edit this activity.",
     },
     profile: {
       title: "Profile",
@@ -426,6 +446,9 @@ const copy = {
         "When enabled, the organizer confirms requests manually.",
       creating: "Creating...",
       create: "Create activity",
+      saving: "Saving...",
+      save: "Save changes",
+      cancelEdit: "Back to detail",
     },
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>
@@ -493,6 +516,7 @@ const copy = {
       retryDatabase:
         "Réessayez plus tard ou vérifiez la connexion à la base de données.",
       people: "pers.",
+      switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
     },
     auth: {
       clerkMissingTitle: "Clerk n'est pas configuré",
@@ -545,11 +569,19 @@ const copy = {
       price: "Coût",
       approvalRequired: "Validation par l'organisateur requise",
       approvalAuto: "Confirmation automatique après inscription",
+      editActivity: "Modifier",
     },
     newActivity: {
       title: "Créer une activité",
       description:
         "Renseignez les informations, enregistrez l'activité en base, puis ouvrez sa page détail.",
+    },
+    editActivity: {
+      title: "Modifier l'activité",
+      description:
+        "Seul l'organisateur peut modifier cette activité. Après enregistrement, vous reviendrez au détail.",
+      forbiddenTitle: "Accès refusé",
+      forbiddenDescription: "Seul l'organisateur peut modifier cette activité.",
     },
     profile: {
       title: "Profil",
@@ -666,6 +698,9 @@ const copy = {
         "Si activé, l'organisateur confirme manuellement les demandes.",
       creating: "Création...",
       create: "Créer l'activité",
+      saving: "Enregistrement...",
+      save: "Enregistrer",
+      cancelEdit: "Retour au détail",
     },
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>

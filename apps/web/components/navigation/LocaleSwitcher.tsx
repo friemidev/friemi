@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { locales } from "@chill-club/shared";
-import { localeMeta, getSupportedLocale } from "@/lib/copy";
-import { cn } from "@/lib/utils";
+import { localeMeta, getCopy, getSupportedLocale } from "@/lib/copy";
 
 type LocaleSwitcherProps = {
   locale: string;
@@ -13,6 +12,11 @@ type LocaleSwitcherProps = {
 export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
   const pathname = usePathname();
   const currentLocale = getSupportedLocale(locale);
+  const currentIndex = locales.indexOf(currentLocale);
+  const nextLocale = locales[(currentIndex + 1) % locales.length];
+  const currentMeta = localeMeta[currentLocale];
+  const nextMeta = localeMeta[nextLocale];
+  const t = getCopy(currentLocale);
 
   function getLocaleHref(nextLocale: string) {
     const segments = pathname.split("/");
@@ -30,26 +34,13 @@ export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-black/10 bg-white/70 p-1">
-      {locales.map((item) => {
-        const meta = localeMeta[item];
-
-        return (
-          <Link
-            key={item}
-            href={getLocaleHref(item)}
-            aria-label={meta.label}
-            title={meta.label}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full text-base leading-none transition hover:bg-zinc-100",
-              item === currentLocale &&
-                "bg-paper shadow-sm ring-1 ring-black/10",
-            )}
-          >
-            <span aria-hidden="true">{meta.flag}</span>
-          </Link>
-        );
-      })}
-    </div>
+    <Link
+      href={getLocaleHref(nextLocale)}
+      aria-label={t.common.switchLanguage(nextMeta.label)}
+      title={`${currentMeta.label} -> ${nextMeta.label}`}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/80 text-base leading-none shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-300"
+    >
+      <span aria-hidden="true">{currentMeta.flag}</span>
+    </Link>
   );
 }

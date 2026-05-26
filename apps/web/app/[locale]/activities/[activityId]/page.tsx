@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   MapPin,
+  Pencil,
   Route,
   UserRound,
   UsersRound,
@@ -26,6 +28,7 @@ import {
 } from "@/features/activities/utils/activityDisplay";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 type ActivityDetailPageProps = {
   params: Promise<{
@@ -230,6 +233,15 @@ export default async function ActivityDetailPage({
             </p>
           </div>
           <div className="mt-6">
+            {isOrganizer ? (
+              <Link
+                className="mb-3 inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                href={withLocale(locale, `/activities/${activity.id}/edit`)}
+              >
+                <Pencil className="h-4 w-4" />
+                {t.activityDetail.editActivity}
+              </Link>
+            ) : null}
             <JoinActivityForm
               activityId={activity.id}
               locale={locale}
