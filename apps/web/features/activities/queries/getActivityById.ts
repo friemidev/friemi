@@ -29,6 +29,12 @@ const activityDetailSelect = {
       id: true,
       nickname: true,
       bio: true,
+      _count: {
+        select: {
+          followers: true,
+          following: true,
+        },
+      },
     },
   },
 } satisfies Prisma.ActivitySelect;
@@ -60,7 +66,13 @@ function getActivityDetailViewModel(
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
-    organizer: activity.organizer,
+    organizer: {
+      id: activity.organizer.id,
+      nickname: activity.organizer.nickname,
+      bio: activity.organizer.bio,
+      followerCount: activity.organizer._count.followers,
+      followingCount: activity.organizer._count.following,
+    },
   };
 }
 
