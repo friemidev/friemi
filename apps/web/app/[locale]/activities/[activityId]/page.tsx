@@ -28,6 +28,9 @@ import {
   getActivityPriceLabel,
   getActivitySeatLabel,
 } from "@/features/activities/utils/activityDisplay";
+import { FollowButton } from "@/features/follow/components/FollowButton";
+import { getFollowCopy } from "@/features/follow/copy";
+import { getViewerFollowState } from "@/features/follow/queries/getViewerFollowState";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -46,6 +49,7 @@ export default async function ActivityDetailPage({
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
   const t = getCopy(locale);
+  const followLabels = getFollowCopy(locale);
   const [activity, viewerProfile] = await Promise.all([
     getActivityById(activityId),
     getOptionalCurrentUserProfile(),
@@ -55,10 +59,10 @@ export default async function ActivityDetailPage({
     notFound();
   }
 
-  const viewerParticipation = await getActivityViewerParticipation(
-    activity.id,
-    viewerProfile?.id,
-  );
+  const [viewerParticipation, isFollowingOrganizer] = await Promise.all([
+    getActivityViewerParticipation(activity.id, viewerProfile?.id),
+    getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+  ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -141,11 +145,31 @@ export default async function ActivityDetailPage({
                 <p className="font-medium text-ink">
                   {activity.organizer.nickname}
                 </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                  <span>
+                    {followLabels.followers} {activity.organizer.followerCount}
+                  </span>
+                  <span>
+                    {followLabels.followingCount}{" "}
+                    {activity.organizer.followingCount}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm leading-6 text-zinc-600">
                   {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
                 </p>
               </div>
             </div>
+            {!isOrganizer ? (
+              <div className="mt-4">
+                <FollowButton
+                  isAuthenticated={Boolean(viewerProfile)}
+                  isFollowing={isFollowingOrganizer}
+                  locale={locale}
+                  redirectPath={`/activities/${activity.id}`}
+                  targetUserProfileId={activity.organizer.id}
+                />
+              </div>
+            ) : null}
           </div>
         </article>
 
