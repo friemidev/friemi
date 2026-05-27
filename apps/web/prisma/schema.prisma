@@ -87,33 +87,41 @@ model UserProfile {
 }
 
 model Activity {
-  id             String                @id @default(cuid())
-  title          String
-  description    String
-  itinerary      String?
-  type           ActivityType          @default(LOCAL)
-  category       ActivityCategory      @default(OTHER)
-  city           String                @default("Paris")
-  destination    String?
-  address        String
-  startAt        DateTime
-  endAt          DateTime?
-  capacity       Int
-  minParticipants Int?
-  requiresApproval Boolean             @default(false)
-  priceType      PriceType             @default(FREE)
-  priceText      String
-  coverImageUrl  String?
-  status         ActivityStatus        @default(RECRUITING)
-  visibility     ActivityVisibility    @default(PUBLIC)
-  organizerId    String
-  organizer      UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
-  participants   ActivityParticipant[]
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  id               String                @id @default(cuid())
+  title            String
+  description      String
+  itinerary        String?
+  type             ActivityType          @default(LOCAL)
+  category         ActivityCategory      @default(OTHER)
+  city             String                @default("Paris")
+  destination      String?
+  address          String
+  startAt          DateTime
+  endAt            DateTime?
+  capacity         Int
+  minParticipants  Int?
+  requiresApproval Boolean               @default(false)
+  priceType        PriceType             @default(FREE)
+  priceText        String
+  coverImageUrl    String?
+  externalSource   String?
+  externalId       String?
+  externalUrl      String?
+  sourcePayload    Json?
+  importedAt       DateTime?
+  status           ActivityStatus        @default(RECRUITING)
+  visibility       ActivityVisibility    @default(PUBLIC)
+  organizerId      String
+  organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  participants     ActivityParticipant[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([city, startAt])
   @@index([organizerId])
+  @@index([externalSource, externalId])
+  @@index([externalUrl])
+  @@index([importedAt])
 }
 
 model ActivityParticipant {
