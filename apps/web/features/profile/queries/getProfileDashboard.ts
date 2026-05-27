@@ -7,6 +7,7 @@ import {
 import type { ActivityCardViewModel } from "@/features/activities/types";
 
 export const profileActivityListLimit = 12;
+export const profileFollowListLimit = 12;
 
 const profileParticipationSelect = {
   id: true,
@@ -33,8 +34,19 @@ export type ProfileParticipationViewModel = {
 export type ProfileDashboardViewModel = {
   createdActivityCount: number;
   participationCount: number;
+  followersCount: number;
+  followingCount: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
+  followers: ProfileFollowUserViewModel[];
+  following: ProfileFollowUserViewModel[];
+};
+
+export type ProfileFollowUserViewModel = {
+  id: string;
+  nickname: string;
+  bio: string | null;
+  avatarUrl: string | null;
 };
 
 function mapParticipation(
@@ -49,14 +61,32 @@ function mapParticipation(
   };
 }
 
+function mapFollowUser(user: {
+  id: string;
+  nickname: string;
+  bio: string | null;
+  avatarUrl: string | null;
+}): ProfileFollowUserViewModel {
+  return {
+    id: user.id,
+    nickname: user.nickname,
+    bio: user.bio,
+    avatarUrl: user.avatarUrl,
+  };
+}
+
 export async function getProfileDashboard(
   profileId: string,
 ): Promise<ProfileDashboardViewModel> {
   const [
     createdActivityCount,
     participationCount,
+    followersCount,
+    followingCount,
     createdActivities,
     participations,
+    followers,
+    following,
   ] = await Promise.all([
     prisma.activity.count({
       where: {
@@ -66,6 +96,16 @@ export async function getProfileDashboard(
     prisma.activityParticipant.count({
       where: {
         userProfileId: profileId,
+      },
+    }),
+    prisma.userFollow.count({
+      where: {
+        followingId: profileId,
+      },
+    }),
+    prisma.userFollow.count({
+      where: {
+        followerId: profileId,
       },
     }),
     prisma.activity.findMany({
@@ -84,12 +124,50 @@ export async function getProfileDashboard(
       take: profileActivityListLimit,
       select: profileParticipationSelect,
     }),
+    prisma.userFollow.findMany({
+      where: {
+        followingId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        follower: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    }),
+    prisma.userFollow.findMany({
+      where: {
+        followerId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        following: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    }),
   ]);
 
   return {
     createdActivityCount,
     participationCount,
+    followersCount,
+    followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: participations.map(mapParticipation),
+    followers: followers.map((item) => mapFollowUser(item.follower)),
+    following: following.map((item) => mapFollowUser(item.following)),
   };
 }

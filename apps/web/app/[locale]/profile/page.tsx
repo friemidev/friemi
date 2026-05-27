@@ -2,6 +2,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
+import { ProfileOverviewPanel } from "@/features/profile/components/ProfileOverviewPanel";
 import { ProfileParticipationCard } from "@/features/profile/components/ProfileParticipationCard";
 import {
   getProfileDashboard,
@@ -29,8 +30,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         dashboard: {
           createdActivityCount: 0,
           participationCount: 0,
+          followersCount: 0,
+          followingCount: 0,
           createdActivities: [],
           participations: [],
+          followers: [],
+          following: [],
         },
         error,
       };
@@ -77,24 +82,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:min-w-56">
-            <div className="rounded-lg bg-zinc-50 p-3">
-              <p className="text-2xl font-semibold text-ink">
-                {dashboardResult.dashboard.createdActivityCount}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                {t.profile.createdCount}
-              </p>
-            </div>
-            <div className="rounded-lg bg-zinc-50 p-3">
-              <p className="text-2xl font-semibold text-ink">
-                {dashboardResult.dashboard.participationCount}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                {t.profile.participationCount}
-              </p>
-            </div>
-          </div>
+          <ProfileOverviewPanel
+            createdCount={dashboardResult.dashboard.createdActivityCount}
+            joinedCount={dashboardResult.dashboard.participationCount}
+            followers={dashboardResult.dashboard.followers}
+            followersCount={dashboardResult.dashboard.followersCount}
+            following={dashboardResult.dashboard.following}
+            followingCount={dashboardResult.dashboard.followingCount}
+            locale={locale}
+            createdLabel={t.profile.createdCount}
+            joinedLabel={t.profile.participationCount}
+          />
         </div>
       </section>
 
