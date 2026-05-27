@@ -3,7 +3,7 @@ import type {
   activityStatuses,
   activityTypes,
   priceTypes,
-  visibilityTypes
+  visibilityTypes,
 } from "../constants/activities";
 
 export type ActivityType = keyof typeof activityTypes;
@@ -16,6 +16,7 @@ export type ActivitySummary = {
   id: string;
   title: string;
   description: string;
+  type: ActivityType;
   category: ActivityCategory;
   city: string;
   address: string;

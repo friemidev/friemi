@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
-import { getCategoryLabel, getCopy } from "@/lib/copy";
+import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
@@ -43,13 +43,18 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
       <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
         <div
           className={cn(
-            "flex h-28 items-end justify-between p-4",
+            "flex h-28 items-end justify-between gap-2 p-4",
             coverTones[activity.coverTone],
           )}
         >
-          <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
-            {getCategoryLabel(activity.category, locale)}
-          </span>
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
+              {getCategoryLabel(activity.category, locale)}
+            </span>
+            <span className="rounded-md bg-white/75 px-2.5 py-1 text-xs font-medium text-zinc-700">
+              {getTypeLabel(activity.type, locale)}
+            </span>
+          </div>
           <ActivityStatusBadge status={displayStatus} locale={locale} />
         </div>
         <CardHeader>

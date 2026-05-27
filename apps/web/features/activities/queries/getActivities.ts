@@ -1,16 +1,29 @@
 import { prisma } from "@/lib/prisma";
-import type { ActivityStatus, ActivityVisibility, ParticipantStatus, Prisma } from "@prisma/client";
+import type {
+  ActivityStatus,
+  ActivityVisibility,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import type { ActivityCardViewModel } from "../types";
 
-export const visibleActivityStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
+export const visibleActivityStatuses: ActivityStatus[] = [
+  "RECRUITING",
+  "CONFIRMED",
+];
 const participantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 export const publicActivityVisibility: ActivityVisibility[] = ["PUBLIC"];
-const coverTones: ActivityCardViewModel["coverTone"][] = ["moss", "clay", "sky"];
+const coverTones: ActivityCardViewModel["coverTone"][] = [
+  "moss",
+  "clay",
+  "sky",
+];
 
 export const activityCardSelect = {
   id: true,
   title: true,
   description: true,
+  type: true,
   category: true,
   city: true,
   address: true,
@@ -24,12 +37,12 @@ export const activityCardSelect = {
       participants: {
         where: {
           status: {
-            in: participantStatuses
-          }
-        }
-      }
-    }
-  }
+            in: participantStatuses,
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.ActivitySelect;
 
 type GetActivitiesOptions = {
@@ -51,13 +64,20 @@ function normalizeLimit(limit: number | undefined) {
 }
 
 export function getActivityCoverTone(activityId: string) {
-  const charTotal = [...activityId].reduce((total, char) => total + char.charCodeAt(0), 0);
+  const charTotal = [...activityId].reduce(
+    (total, char) => total + char.charCodeAt(0),
+    0,
+  );
   return coverTones[charTotal % coverTones.length];
 }
 
-type ActivityQueryResult = Prisma.ActivityGetPayload<{ select: typeof activityCardSelect }>;
+type ActivityQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof activityCardSelect;
+}>;
 
-export function getVisibleActivityWhere(options: VisibleActivityWhereOptions = {}): Prisma.ActivityWhereInput {
+export function getVisibleActivityWhere(
+  options: VisibleActivityWhereOptions = {},
+): Prisma.ActivityWhereInput {
   const now = options.now ?? new Date();
 
   return {
@@ -67,33 +87,36 @@ export function getVisibleActivityWhere(options: VisibleActivityWhereOptions = {
           OR: [
             {
               startAt: {
-                gte: now
-              }
+                gte: now,
+              },
             },
             {
               endAt: {
-                gte: now
-              }
-            }
-          ]
+                gte: now,
+              },
+            },
+          ],
         }),
     status: {
-      in: visibleActivityStatuses
+      in: visibleActivityStatuses,
     },
     visibility: {
-      in: publicActivityVisibility
+      in: publicActivityVisibility,
     },
     organizer: {
-      status: "ACTIVE"
-    }
+      status: "ACTIVE",
+    },
   };
 }
 
-export function getActivityCardViewModel(activity: ActivityQueryResult): ActivityCardViewModel {
+export function getActivityCardViewModel(
+  activity: ActivityQueryResult,
+): ActivityCardViewModel {
   return {
     id: activity.id,
     title: activity.title,
     description: activity.description,
+    type: activity.type,
     category: activity.category,
     city: activity.city,
     address: activity.address,
@@ -103,17 +126,19 @@ export function getActivityCardViewModel(activity: ActivityQueryResult): Activit
     participantCount: activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
-    coverTone: getActivityCoverTone(activity.id)
+    coverTone: getActivityCoverTone(activity.id),
   };
 }
 
-export async function getActivities(options: GetActivitiesOptions = {}): Promise<ActivityCardViewModel[]> {
+export async function getActivities(
+  options: GetActivitiesOptions = {},
+): Promise<ActivityCardViewModel[]> {
   const now = new Date();
   const activities = await prisma.activity.findMany({
     where: getVisibleActivityWhere({ includePast: options.includePast, now }),
     orderBy: [{ startAt: "asc" }, { id: "asc" }],
     take: normalizeLimit(options.limit),
-    select: activityCardSelect
+    select: activityCardSelect,
   });
 
   return activities.map(getActivityCardViewModel);
