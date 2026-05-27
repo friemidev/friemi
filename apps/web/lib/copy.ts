@@ -109,6 +109,24 @@ const copy = {
       conflictError: "活动状态刚刚发生变化，请刷新后重试。",
       failedError: "取消活动失败，请稍后重试。",
     },
+    approval: {
+      title: "报名审核",
+      description: "只显示待审核的报名申请，通过后会计入活动人数。",
+      pendingCount: (count: number) => `${count} 个待审核`,
+      empty: "暂无待审核报名。",
+      emptyMessage: "报名者没有填写留言。",
+      approve: "通过",
+      reject: "拒绝",
+      reviewing: "处理中...",
+      refreshError: "请刷新页面后重试。",
+      missingError: "报名记录不存在或已更新。",
+      permissionError: "只有活动发起人可以审核报名。",
+      statusError: "当前报名状态不能审核。",
+      closedError: "活动已结束或已取消，不能继续审核。",
+      fullError: "活动名额已满，不能继续通过报名。",
+      conflictError: "报名人数刚刚发生变化，请刷新后重试。",
+      failedError: "审核报名失败，请稍后重试。",
+    },
     newActivity: {
       title: "发起活动",
       description: "填写活动信息后会写入数据库，并跳转到新活动详情页。",
@@ -359,6 +377,26 @@ const copy = {
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status just changed. Refresh and try again.",
       failedError: "Failed to cancel the activity. Try again later.",
+    },
+    approval: {
+      title: "Participation review",
+      description:
+        "Only pending requests are shown. Approved requests count toward seats.",
+      pendingCount: (count: number) => `${count} pending`,
+      empty: "No pending requests.",
+      emptyMessage: "The participant did not leave a message.",
+      approve: "Approve",
+      reject: "Reject",
+      reviewing: "Reviewing...",
+      refreshError: "Refresh the page and try again.",
+      missingError: "This request no longer exists or was updated.",
+      permissionError: "Only the organizer can review participation requests.",
+      statusError: "This request status cannot be reviewed.",
+      closedError:
+        "This activity has ended or been cancelled, so requests cannot be reviewed.",
+      fullError: "This activity is full. No more requests can be approved.",
+      conflictError: "Seat availability just changed. Refresh and try again.",
+      failedError: "Failed to review this request. Try again later.",
     },
     newActivity: {
       title: "Create activity",
@@ -626,6 +664,29 @@ const copy = {
       conflictError:
         "Le statut de l'activité vient de changer. Actualisez puis réessayez.",
       failedError: "Échec de l'annulation. Réessayez plus tard.",
+    },
+    approval: {
+      title: "Validation des inscriptions",
+      description:
+        "Seules les demandes en attente sont affichées. Les demandes validées comptent dans les places.",
+      pendingCount: (count: number) => `${count} en attente`,
+      empty: "Aucune demande en attente.",
+      emptyMessage: "Le participant n'a pas laissé de message.",
+      approve: "Valider",
+      reject: "Refuser",
+      reviewing: "Traitement...",
+      refreshError: "Actualisez la page puis réessayez.",
+      missingError: "Cette demande n'existe plus ou a été modifiée.",
+      permissionError:
+        "Seul l'organisateur peut valider les demandes d'inscription.",
+      statusError: "Ce statut d'inscription ne peut pas être validé.",
+      closedError:
+        "Cette activité est terminée ou annulée, les demandes ne peuvent plus être validées.",
+      fullError:
+        "Cette activité est complète. Aucune demande supplémentaire ne peut être validée.",
+      conflictError:
+        "Le nombre de places vient de changer. Actualisez puis réessayez.",
+      failedError: "Échec de la validation. Réessayez plus tard.",
     },
     newActivity: {
       title: "Créer une activité",
