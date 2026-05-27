@@ -76,14 +76,16 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 
 ## Vercel Production Cron
 
-`vercel.json` 已配置每 6 小时同步一次：
+`vercel.json` 已配置每天同步一次，满足 Vercel Hobby 计划的 Cron 限制：
 
 ```json
 {
   "path": "/api/cron/import-public-activities",
-  "schedule": "0 */6 * * *"
+  "schedule": "0 3 * * *"
 }
 ```
+
+如果后续升级到 Pro 计划，可以再把频率调高，例如每 6 小时一次。
 
 需要在 Vercel 的 Preview 和 Production 环境变量中配置：
 
