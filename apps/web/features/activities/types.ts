@@ -8,6 +8,8 @@ export type ActivityOrganizerViewModel = {
   id: string;
   nickname: string;
   bio: string | null;
+  followerCount: number;
+  followingCount: number;
 };
 
 export type ActivityDetailViewModel = ActivityCardViewModel & {
