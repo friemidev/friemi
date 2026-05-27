@@ -42,6 +42,17 @@ export default async function EditActivityPage({
     );
   }
 
+  if (editableActivity.status === "locked") {
+    return (
+      <PageContainer className="max-w-3xl">
+        <EmptyState
+          title={t.editActivity.lockedTitle}
+          description={t.editActivity.lockedDescription}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer className="max-w-3xl space-y-6">
       <div>

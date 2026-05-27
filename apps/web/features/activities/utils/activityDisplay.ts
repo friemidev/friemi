@@ -16,6 +16,20 @@ export function getActivityLocationLabel(activity: ActivityCardViewModel) {
 export function getActivityDisplayStatus(
   activity: ActivityCardViewModel,
 ): ActivityStatus {
+  if (activity.status === "CANCELLED") {
+    return "CANCELLED";
+  }
+
+  if (activity.status === "ENDED") {
+    return "ENDED";
+  }
+
+  const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+
+  if (activityEndBoundary <= new Date()) {
+    return "ENDED";
+  }
+
   const canBecomeFull = ["OPEN", "RECRUITING", "CONFIRMED"].includes(
     activity.status,
   );

@@ -43,6 +43,9 @@ export async function updateActivityAction(
     },
     select: {
       id: true,
+      endAt: true,
+      startAt: true,
+      status: true,
       _count: {
         select: {
           participants: {
@@ -62,6 +65,18 @@ export async function updateActivityAction(
       previousState,
       rawInput,
       "你没有权限编辑这个活动。",
+    );
+  }
+
+  if (
+    editableActivity.status === "CANCELLED" ||
+    editableActivity.status === "ENDED" ||
+    (editableActivity.endAt ?? editableActivity.startAt) <= new Date()
+  ) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "活动已结束或已取消，不能继续编辑。",
     );
   }
 

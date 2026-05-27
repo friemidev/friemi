@@ -94,6 +94,21 @@ const copy = {
       approvalAuto: "报名后自动确认",
       editActivity: "编辑活动",
     },
+    activityOwner: {
+      title: "发起人操作",
+      cancel: "取消活动",
+      cancelling: "取消中...",
+      cancelDescription: "取消后活动会从列表隐藏，用户不能继续报名。",
+      cancelConfirm: "确定要取消这个活动吗？取消后用户将不能继续报名。",
+      cancelledHint: "活动已取消，用户无法继续报名。",
+      endedHint: "活动已结束，不能再取消。",
+      refreshError: "请刷新页面后重试。",
+      permissionError: "只有活动发起人可以取消这个活动。",
+      statusError: "当前活动状态不能取消。",
+      endedError: "活动已结束，不能再取消。",
+      conflictError: "活动状态刚刚发生变化，请刷新后重试。",
+      failedError: "取消活动失败，请稍后重试。",
+    },
     newActivity: {
       title: "发起活动",
       description: "填写活动信息后会写入数据库，并跳转到新活动详情页。",
@@ -103,6 +118,8 @@ const copy = {
       description: "只允许发起人修改活动信息，保存后会回到活动详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人可以编辑这个活动。",
+      lockedTitle: "活动不可编辑",
+      lockedDescription: "已结束或已取消的活动不能继续编辑。",
     },
     profile: {
       title: "个人空间",
@@ -326,6 +343,23 @@ const copy = {
       approvalAuto: "Auto-confirmed after joining",
       editActivity: "Edit activity",
     },
+    activityOwner: {
+      title: "Organizer actions",
+      cancel: "Cancel activity",
+      cancelling: "Cancelling...",
+      cancelDescription:
+        "After cancellation, the activity is hidden from lists and users cannot join.",
+      cancelConfirm:
+        "Cancel this activity? Users will no longer be able to join.",
+      cancelledHint: "This activity is cancelled. Users can no longer join.",
+      endedHint: "This activity has ended and can no longer be cancelled.",
+      refreshError: "Refresh the page and try again.",
+      permissionError: "Only the organizer can cancel this activity.",
+      statusError: "This activity status cannot be cancelled.",
+      endedError: "This activity has ended and can no longer be cancelled.",
+      conflictError: "The activity status just changed. Refresh and try again.",
+      failedError: "Failed to cancel the activity. Try again later.",
+    },
     newActivity: {
       title: "Create activity",
       description:
@@ -337,6 +371,9 @@ const copy = {
         "Only the organizer can update this activity. You will return to the detail page after saving.",
       forbiddenTitle: "No edit access",
       forbiddenDescription: "Only the organizer can edit this activity.",
+      lockedTitle: "Activity cannot be edited",
+      lockedDescription:
+        "Ended or cancelled activities can no longer be edited.",
     },
     profile: {
       title: "Profile",
@@ -571,6 +608,25 @@ const copy = {
       approvalAuto: "Confirmation automatique après inscription",
       editActivity: "Modifier",
     },
+    activityOwner: {
+      title: "Actions organisateur",
+      cancel: "Annuler l'activité",
+      cancelling: "Annulation...",
+      cancelDescription:
+        "Après annulation, l'activité est masquée des listes et les utilisateurs ne peuvent plus la rejoindre.",
+      cancelConfirm:
+        "Annuler cette activité ? Les utilisateurs ne pourront plus la rejoindre.",
+      cancelledHint:
+        "Cette activité est annulée. Les utilisateurs ne peuvent plus la rejoindre.",
+      endedHint: "Cette activité est terminée et ne peut plus être annulée.",
+      refreshError: "Actualisez la page puis réessayez.",
+      permissionError: "Seul l'organisateur peut annuler cette activité.",
+      statusError: "Ce statut d'activité ne peut pas être annulé.",
+      endedError: "Cette activité est terminée et ne peut plus être annulée.",
+      conflictError:
+        "Le statut de l'activité vient de changer. Actualisez puis réessayez.",
+      failedError: "Échec de l'annulation. Réessayez plus tard.",
+    },
     newActivity: {
       title: "Créer une activité",
       description:
@@ -582,6 +638,9 @@ const copy = {
         "Seul l'organisateur peut modifier cette activité. Après enregistrement, vous reviendrez au détail.",
       forbiddenTitle: "Accès refusé",
       forbiddenDescription: "Seul l'organisateur peut modifier cette activité.",
+      lockedTitle: "Activité non modifiable",
+      lockedDescription:
+        "Les activités terminées ou annulées ne peuvent plus être modifiées.",
     },
     profile: {
       title: "Profil",

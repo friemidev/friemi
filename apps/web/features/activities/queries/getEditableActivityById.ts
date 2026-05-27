@@ -18,6 +18,7 @@ const editableActivitySelect = {
   address: true,
   startAt: true,
   endAt: true,
+  status: true,
   capacity: true,
   minParticipants: true,
   requiresApproval: true,
@@ -38,6 +39,9 @@ export type EditableActivityResult =
     }
   | {
       status: "forbidden";
+    }
+  | {
+      status: "locked";
     }
   | {
       status: "not-found";
@@ -93,6 +97,16 @@ export async function getEditableActivityById(
   if (activity.organizerId !== organizerId) {
     return {
       status: "forbidden",
+    };
+  }
+
+  if (
+    activity.status === "CANCELLED" ||
+    activity.status === "ENDED" ||
+    (activity.endAt ?? activity.startAt) <= new Date()
+  ) {
+    return {
+      status: "locked",
     };
   }
 

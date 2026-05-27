@@ -6,6 +6,7 @@ import {
   ClipboardList,
   MapPin,
   Pencil,
+  ShieldAlert,
   Route,
   UserRound,
   UsersRound,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
+import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
@@ -61,11 +63,13 @@ export default async function ActivityDetailPage({
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
   const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+  const isEndedByTime = activityEndBoundary <= new Date();
   const isClosed =
-    !["RECRUITING", "CONFIRMED"].includes(activity.status) ||
-    activityEndBoundary <= new Date();
+    !["RECRUITING", "CONFIRMED"].includes(activity.status) || isEndedByTime;
+  const isCancelled = activity.status === "CANCELLED";
   const isFull = activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
 
   return (
     <PageContainer className="space-y-6">
@@ -234,13 +238,40 @@ export default async function ActivityDetailPage({
           </div>
           <div className="mt-6">
             {isOrganizer ? (
-              <Link
-                className="mb-3 inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                href={withLocale(locale, `/activities/${activity.id}/edit`)}
-              >
-                <Pencil className="h-4 w-4" />
-                {t.activityDetail.editActivity}
-              </Link>
+              <div className="mb-3 grid gap-2 rounded-md border border-zinc-200 bg-white/70 p-3">
+                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <ShieldAlert className="h-4 w-4 text-moss" />
+                  {t.activityOwner.title}
+                </p>
+                {canEditActivity ? (
+                  <Link
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                    href={withLocale(locale, `/activities/${activity.id}/edit`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    {t.activityDetail.editActivity}
+                  </Link>
+                ) : null}
+                {!isCancelled && !isEndedByTime ? (
+                  <p className="text-xs leading-5 text-zinc-500">
+                    {t.activityOwner.cancelDescription}
+                  </p>
+                ) : null}
+                <CancelActivityForm
+                  activityId={activity.id}
+                  disabled={isCancelled || isEndedByTime}
+                  locale={locale}
+                />
+                {isCancelled ? (
+                  <p className="text-xs leading-5 text-zinc-500">
+                    {t.activityOwner.cancelledHint}
+                  </p>
+                ) : isEndedByTime ? (
+                  <p className="text-xs leading-5 text-zinc-500">
+                    {t.activityOwner.endedHint}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
             <JoinActivityForm
               activityId={activity.id}

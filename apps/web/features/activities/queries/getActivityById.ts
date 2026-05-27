@@ -1,11 +1,20 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { ActivityStatus, Prisma } from "@prisma/client";
 import type { ActivityDetailViewModel } from "../types";
 import {
   activityCardSelect,
   getActivityCoverTone,
-  getVisibleActivityWhere
+  publicActivityVisibility,
 } from "./getActivities";
+
+const detailActivityStatuses: ActivityStatus[] = [
+  "OPEN",
+  "FULL",
+  "RECRUITING",
+  "CONFIRMED",
+  "ENDED",
+  "CANCELLED",
+];
 
 const activityDetailSelect = {
   ...activityCardSelect,
@@ -19,14 +28,18 @@ const activityDetailSelect = {
     select: {
       id: true,
       nickname: true,
-      bio: true
-    }
-  }
+      bio: true,
+    },
+  },
 } satisfies Prisma.ActivitySelect;
 
-type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{ select: typeof activityDetailSelect }>;
+type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof activityDetailSelect;
+}>;
 
-function getActivityDetailViewModel(activity: ActivityDetailQueryResult): ActivityDetailViewModel {
+function getActivityDetailViewModel(
+  activity: ActivityDetailQueryResult,
+): ActivityDetailViewModel {
   return {
     id: activity.id,
     title: activity.title,
@@ -47,17 +60,27 @@ function getActivityDetailViewModel(activity: ActivityDetailQueryResult): Activi
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
-    organizer: activity.organizer
+    organizer: activity.organizer,
   };
 }
 
-export async function getActivityById(activityId: string): Promise<ActivityDetailViewModel | null> {
+export async function getActivityById(
+  activityId: string,
+): Promise<ActivityDetailViewModel | null> {
   const activity = await prisma.activity.findFirst({
     where: {
       id: activityId,
-      ...getVisibleActivityWhere()
+      status: {
+        in: detailActivityStatuses,
+      },
+      visibility: {
+        in: publicActivityVisibility,
+      },
+      organizer: {
+        status: "ACTIVE",
+      },
     },
-    select: activityDetailSelect
+    select: activityDetailSelect,
   });
 
   return activity ? getActivityDetailViewModel(activity) : null;

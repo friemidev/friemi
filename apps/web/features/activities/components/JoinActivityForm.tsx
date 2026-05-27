@@ -124,6 +124,12 @@ export function JoinActivityForm({
   const [state, formAction] = useActionState(joinActivityAction, initialState);
   const t = getCopy(locale).join;
 
+  if (isClosed) {
+    return (
+      <DisabledAction title={t.closedTitle} description={t.closedDescription} />
+    );
+  }
+
   if (
     viewerParticipationStatus &&
     viewerParticipationStatus !== "REJECTED" &&
@@ -136,12 +142,6 @@ export function JoinActivityForm({
         <DisabledAction title={copy.title} description={copy.description} />
         <CancelParticipationForm activityId={activityId} locale={locale} />
       </div>
-    );
-  }
-
-  if (isClosed) {
-    return (
-      <DisabledAction title={t.closedTitle} description={t.closedDescription} />
     );
   }
 
