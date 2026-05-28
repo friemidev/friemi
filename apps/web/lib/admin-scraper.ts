@@ -22,6 +22,7 @@ export type AdminActivityListItem = {
   priceText: string;
   status: string;
   visibility: string;
+  source: string | null;
   sourceUrl: string | null;
   participantCount: number;
   organizerId: string;
@@ -49,6 +50,19 @@ export type ScraperPreviewRequest = {
   from?: string | null;
   to?: string | null;
   maxPages?: number;
+};
+
+export type ScraperImportMode = "create_only" | "update_only" | "upsert" | "skip_existing";
+
+export type ScraperImportOptions = {
+  mode: ScraperImportMode;
+  mergeDuplicates: boolean;
+};
+
+export type ScraperImportResult = {
+  imported: number;
+  skipped: number;
+  merged: number;
 };
 
 function hashFingerprint(title: string, startAt: string, address: string) {
@@ -80,7 +94,8 @@ export function serializeAdminActivity(activity: Prisma.ActivityGetPayload<{
     priceText: activity.priceText,
     status: activity.status,
     visibility: activity.visibility,
-    sourceUrl: null,
+    source: activity.source,
+    sourceUrl: activity.sourceUrl,
     participantCount: activity._count.participants,
     organizerId: activity.organizer.id,
     organizerNickname: activity.organizer.nickname,
@@ -141,10 +156,13 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
   });
 
   const existing = await prisma.activity.findMany({
-    select: { id: true, title: true, startAt: true, address: true },
+    select: { id: true, title: true, startAt: true, address: true, sourceUrl: true },
   });
   const byId = new Map(existing.map((item) => [item.id, item]));
   const byFingerprint = new Map(existing.map((item) => [hashFingerprint(item.title, item.startAt.toISOString(), item.address), item]));
+  const bySourceUrl = new Map(
+    existing.filter((item) => item.sourceUrl).map((item) => [item.sourceUrl as string, item]),
+  );
 
   return scraped.map((activity) => {
     const fingerprint = buildFingerprint({
@@ -155,7 +173,8 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
     });
     const lookupFingerprint = hashFingerprint(activity.title, activity.startAt, activity.address);
     const sameId = byId.get(activity.id);
-    const duplicate = sameId ?? byFingerprint.get(lookupFingerprint) ?? null;
+    const sameSourceUrl = bySourceUrl.get(activity.sourceUrl);
+    const duplicate = sameId ?? sameSourceUrl ?? byFingerprint.get(lookupFingerprint) ?? null;
 
     return {
       ...activity,
@@ -167,7 +186,75 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
   });
 }
 
-export async function importScraperActivities(items: ScraperPreviewItem[]) {
+function scraperActivityFields(activity: ScraperPreviewItem, organizerId: string) {
+  return {
+    title: activity.title,
+    description: activity.description,
+    itinerary: activity.itinerary,
+    type: activity.type,
+    category: activity.category,
+    city: activity.city,
+    destination: activity.destination,
+    address: activity.address,
+    startAt: new Date(activity.startAt),
+    endAt: activity.endAt ? new Date(activity.endAt) : null,
+    capacity: activity.capacity,
+    minParticipants: activity.minParticipants,
+    requiresApproval: activity.requiresApproval,
+    priceType: activity.priceType,
+    priceText: activity.priceText,
+    coverImageUrl: activity.coverImageUrl,
+    status: activity.status,
+    visibility: activity.visibility,
+    source: activity.source,
+    sourceUrl: activity.sourceUrl,
+    organizerId,
+  };
+}
+
+async function upsertActivitySourceLink(activityId: string, source: string, sourceUrl: string) {
+  await prisma.activitySourceLink.upsert({
+    where: { sourceUrl },
+    update: { activityId, source },
+    create: { activityId, source, sourceUrl },
+  });
+}
+
+function resolveImportTarget(activity: ScraperPreviewItem, mergeDuplicates: boolean) {
+  if (mergeDuplicates && activity.duplicateStatus === "duplicate" && activity.duplicateOfId) {
+    return activity.duplicateOfId;
+  }
+
+  if (activity.duplicateStatus === "existing") {
+    return activity.id;
+  }
+
+  return activity.id;
+}
+
+function shouldImportItem(activity: ScraperPreviewItem, options: ScraperImportOptions) {
+  const { mode, mergeDuplicates } = options;
+
+  if (activity.duplicateStatus === "existing") {
+    if (mode === "create_only") return false;
+    if (mode === "skip_existing") return false;
+    return true;
+  }
+
+  if (activity.duplicateStatus === "duplicate") {
+    if (mode === "create_only" && !mergeDuplicates) return false;
+    if (mode === "update_only" && !mergeDuplicates) return false;
+    return true;
+  }
+
+  if (mode === "update_only") return false;
+  return true;
+}
+
+export async function importScraperActivities(
+  items: ScraperPreviewItem[],
+  options: ScraperImportOptions = { mode: "create_only", mergeDuplicates: false },
+): Promise<ScraperImportResult> {
   const importer = await prisma.userProfile.upsert({
     where: { clerkUserId: "scraper-import-bot" },
     update: { nickname: "Imported Paris Events", status: "ACTIVE", syncedAt: new Date() },
@@ -182,57 +269,42 @@ export async function importScraperActivities(items: ScraperPreviewItem[]) {
   });
 
   let imported = 0;
+  let skipped = 0;
+  let merged = 0;
+
   for (const activity of items) {
-    await prisma.activity.upsert({
-      where: { id: activity.id },
-      update: {
-        title: activity.title,
-        description: activity.description,
-        itinerary: activity.itinerary,
-        type: activity.type,
-        category: activity.category,
-        city: activity.city,
-        destination: activity.destination,
-        address: activity.address,
-        startAt: new Date(activity.startAt),
-        endAt: activity.endAt ? new Date(activity.endAt) : null,
-        capacity: activity.capacity,
-        minParticipants: activity.minParticipants,
-        requiresApproval: activity.requiresApproval,
-        priceType: activity.priceType,
-        priceText: activity.priceText,
-        coverImageUrl: activity.coverImageUrl,
-        status: activity.status,
-        visibility: activity.visibility,
-        organizerId: importer.id,
-      },
-      create: {
-        id: activity.id,
-        title: activity.title,
-        description: activity.description,
-        itinerary: activity.itinerary,
-        type: activity.type,
-        category: activity.category,
-        city: activity.city,
-        destination: activity.destination,
-        address: activity.address,
-        startAt: new Date(activity.startAt),
-        endAt: activity.endAt ? new Date(activity.endAt) : null,
-        capacity: activity.capacity,
-        minParticipants: activity.minParticipants,
-        requiresApproval: activity.requiresApproval,
-        priceType: activity.priceType,
-        priceText: activity.priceText,
-        coverImageUrl: activity.coverImageUrl,
-        status: activity.status,
-        visibility: activity.visibility,
-        organizerId: importer.id,
-      },
-    });
+    if (!shouldImportItem(activity, options)) {
+      skipped += 1;
+      continue;
+    }
+
+    const targetId = resolveImportTarget(activity, options.mergeDuplicates);
+    const fields = scraperActivityFields(activity, importer.id);
+    const isMerge =
+      options.mergeDuplicates && activity.duplicateStatus === "duplicate" && activity.duplicateOfId === targetId;
+
+    if (activity.duplicateStatus === "new" || options.mode === "upsert") {
+      await prisma.activity.upsert({
+        where: { id: targetId },
+        update: fields,
+        create: { id: targetId, ...fields },
+      });
+    } else {
+      await prisma.activity.update({
+        where: { id: targetId },
+        data: fields,
+      });
+    }
+
+    if (isMerge) {
+      await upsertActivitySourceLink(targetId, activity.source, activity.sourceUrl);
+      merged += 1;
+    }
+
     imported += 1;
   }
 
-  return imported;
+  return { imported, skipped, merged };
 }
 
 export async function createAdminActivity(data: {

@@ -2,7 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { hasClerkKeys } from "@/lib/clerk";
 import { withLocale } from "@/lib/routes";
-import { isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
+import { hasAdminConfig, isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
 
 function isAdminUser(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
   return isAdminByFields({
@@ -11,6 +11,24 @@ function isAdminUser(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>)
     publicRole: readRoleFromMetadata(user.publicMetadata),
     privateRole: readRoleFromMetadata(user.privateMetadata),
   });
+}
+
+export async function isCurrentUserAdmin() {
+  if (!hasClerkKeys() || !hasAdminConfig()) {
+    return false;
+  }
+
+  const { userId } = await auth();
+  if (!userId) {
+    return false;
+  }
+
+  const user = await currentUser();
+  if (!user) {
+    return false;
+  }
+
+  return isAdminUser(user);
 }
 
 export async function requireAdminPageAccess(locale: string) {

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -21,10 +22,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   }
 
   const messages = await getMessages();
+  const showAdminNav = await isCurrentUserAdmin();
   const content = (
     <NextIntlClientProvider messages={messages}>
       <div className="min-h-screen pb-20 md:pb-0">
-        <AppHeader locale={locale} />
+        <AppHeader locale={locale} showAdminNav={showAdminNav} />
         {children}
         <MobileNav locale={locale} />
       </div>

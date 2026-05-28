@@ -107,14 +107,29 @@ model Activity {
   coverImageUrl  String?
   status         ActivityStatus        @default(RECRUITING)
   visibility     ActivityVisibility    @default(PUBLIC)
+  source         String?
+  sourceUrl      String?               @unique
   organizerId    String
   organizer      UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
   participants   ActivityParticipant[]
+  sourceLinks    ActivitySourceLink[]
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
   @@index([city, startAt])
   @@index([organizerId])
+  @@index([source])
+}
+
+model ActivitySourceLink {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  source     String
+  sourceUrl  String   @unique
+  createdAt  DateTime @default(now())
+
+  @@index([activityId])
 }
 
 model ActivityParticipant {

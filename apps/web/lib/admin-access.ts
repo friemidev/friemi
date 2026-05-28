@@ -48,6 +48,12 @@ export function extractAdminContextFromSessionClaims(sessionClaims: unknown) {
   };
 }
 
+export function hasAdminConfig() {
+  const adminUserIds = splitToSet(process.env.ADMIN_CLERK_USER_IDS);
+  const adminEmails = splitToSet(process.env.ADMIN_EMAILS, true);
+  return adminUserIds.size > 0 || adminEmails.size > 0;
+}
+
 export function isAdminByFields(fields: AdminFields) {
   if (!fields.userId) {
     return false;

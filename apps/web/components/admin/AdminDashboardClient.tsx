@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea } from "@chill-club/ui";
-import type { AdminActivityListItem, AdminOrganizerOption, ScraperPreviewItem } from "@/lib/admin-scraper";
+import type { AdminActivityListItem, AdminOrganizerOption } from "@/lib/admin-scraper";
+import { ScraperImportSection } from "@/components/admin/ScraperImportSection";
 
 type AdminDashboardClientProps = {
   initialActivities: AdminActivityListItem[];
@@ -30,15 +31,6 @@ type ActivityFormState = {
   status: "OPEN" | "FULL" | "DRAFT" | "RECRUITING" | "CONFIRMED" | "ENDED" | "CANCELLED";
   visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
   organizerId: string;
-};
-
-type ScraperFormState = {
-  sources: Record<"sortiraparis" | "playinparis", boolean>;
-  mode: "recent" | "range" | "database";
-  from: string;
-  to: string;
-  limit: number;
-  maxPages: number;
 };
 
 type DashboardTab = "activities" | "scraper";
@@ -77,21 +69,9 @@ function toDatetimeLocal(value?: string | null) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function todayPlusDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return toDatetimeLocal(date.toISOString());
-}
-
 function dateOnly(value?: string | null) {
   if (!value) return "";
   return value.slice(0, 10);
-}
-
-function statusColor(status: ScraperPreviewItem["duplicateStatus"]) {
-  if (status === "existing") return "text-zinc-500";
-  if (status === "duplicate") return "text-amber-600";
-  return "text-emerald-600";
 }
 
 export function AdminDashboardClient({ initialActivities, initialOrganizers, locale }: AdminDashboardClientProps) {
@@ -99,24 +79,9 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
   const [activities, setActivities] = useState(initialActivities);
   const [organizers] = useState(initialOrganizers);
   const [activityForm, setActivityForm] = useState<ActivityFormState>(emptyActivityForm(defaultOrganizerId));
-  const [scraperForm, setScraperForm] = useState<ScraperFormState>({
-    sources: { sortiraparis: true, playinparis: true },
-    mode: "database",
-    from: todayPlusDays(-7),
-    to: todayPlusDays(30),
-    limit: 20,
-    maxPages: 3,
-  });
-  const [previewItems, setPreviewItems] = useState<ScraperPreviewItem[]>([]);
-  const [selectedPreviewIds, setSelectedPreviewIds] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("activities");
-
-  const selectedPreviewItems = useMemo(
-    () => previewItems.filter((item) => selectedPreviewIds.includes(item.id)),
-    [previewItems, selectedPreviewIds],
-  );
 
   async function refreshActivities() {
     const response = await fetch("/api/admin/activities", { cache: "no-store" });
@@ -174,48 +139,6 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
     setBusy(null);
     setMessage("活动已删除。");
   }
-
-  async function previewScraper() {
-    setBusy("preview");
-    setMessage("");
-    const sources = Object.entries(scraperForm.sources).filter(([, enabled]) => enabled).map(([source]) => source);
-    const response = await fetch("/api/admin/scraper/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sources,
-        mode: scraperForm.mode,
-        from: scraperForm.from || null,
-        to: scraperForm.to || null,
-        limit: scraperForm.limit,
-        maxPages: scraperForm.maxPages,
-      }),
-    });
-    const json = await response.json();
-    setPreviewItems(json.items ?? []);
-    setSelectedPreviewIds((json.items ?? []).filter((item: ScraperPreviewItem) => item.duplicateStatus === "new").map((item: ScraperPreviewItem) => item.id));
-    setBusy(null);
-    setMessage(`已抓取 ${json.items?.length ?? 0} 条候选活动。`);
-  }
-
-  async function importSelected() {
-    setBusy("import");
-    setMessage("");
-    const items = selectedPreviewItems;
-    const response = await fetch("/api/admin/scraper/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
-    });
-    const json = await response.json();
-    await refreshActivities();
-    setMessage(`已导入 ${json.imported ?? 0} 条活动。`);
-    setBusy(null);
-  }
-
-  const previewCount = previewItems.length;
-  const newCount = previewItems.filter((item) => item.duplicateStatus === "new").length;
-  const duplicateCount = previewItems.filter((item) => item.duplicateStatus !== "new").length;
 
   return (
     <div className="space-y-8">
@@ -345,7 +268,16 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
                       </td>
                       <td className="px-3 py-2 text-zinc-600">{dateOnly(activity.startAt)}</td>
                       <td className="px-3 py-2 text-zinc-600">{activity.status}</td>
-                      <td className="px-3 py-2 text-zinc-600">{activity.organizerNickname}</td>
+                      <td className="px-3 py-2 text-zinc-600">
+                        {activity.source ? <span>{activity.source} </span> : null}
+                        {activity.sourceUrl ? (
+                          <a className="text-sky-700 underline" href={activity.sourceUrl} target="_blank" rel="noreferrer">
+                            原文
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex gap-2">
                           <Button
@@ -393,74 +325,12 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
       ) : null}
 
       {activeTab === "scraper" ? (
-      <Card>
-        <CardHeader>
-          <CardTitle>爬虫导入</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
-            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="checkbox" checked={scraperForm.sources.sortiraparis} onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, sortiraparis: e.target.checked } })} /> Sortir à Paris</label>
-            <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="checkbox" checked={scraperForm.sources.playinparis} onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, playinparis: e.target.checked } })} /> Play in Paris</label>
-            <select className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm" value={scraperForm.mode} onChange={(e) => setScraperForm({ ...scraperForm, mode: e.target.value as ScraperFormState["mode"] })}>
-              <option value="database">从数据库最后记录后开始</option>
-              <option value="recent">最近区间</option>
-              <option value="range">自定义范围</option>
-            </select>
-            <Input type="number" min={1} max={100} value={scraperForm.limit} onChange={(e) => setScraperForm({ ...scraperForm, limit: Number(e.target.value) })} />
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Input type="datetime-local" value={scraperForm.from} onChange={(e) => setScraperForm({ ...scraperForm, from: e.target.value })} />
-            <Input type="datetime-local" value={scraperForm.to} onChange={(e) => setScraperForm({ ...scraperForm, to: e.target.value })} />
-            <Input type="number" min={1} value={scraperForm.maxPages} onChange={(e) => setScraperForm({ ...scraperForm, maxPages: Number(e.target.value) })} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={previewScraper} disabled={busy === "preview"}>开始抓取</Button>
-            <Button type="button" variant="secondary" onClick={() => setPreviewItems([])}>清空结果</Button>
-            <Button type="button" variant="secondary" onClick={importSelected} disabled={busy === "import" || previewItems.length === 0}>导入新活动</Button>
-          </div>
-          <div className="text-sm text-zinc-600">结果：{previewCount} 条，新增 {newCount} 条，重复 {duplicateCount} 条。</div>
-          <div className="overflow-auto rounded-md border border-black/10">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-zinc-50 text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2">选择</th>
-                  <th className="px-3 py-2">状态</th>
-                  <th className="px-3 py-2">标题</th>
-                  <th className="px-3 py-2">日期</th>
-                  <th className="px-3 py-2">来源</th>
-                  <th className="px-3 py-2">重复命中</th>
-                </tr>
-              </thead>
-              <tbody>
-                {previewItems.map((item) => (
-                  <tr key={item.id} className={item.duplicateStatus === "duplicate" ? "border-t border-black/5 bg-amber-50" : item.duplicateStatus === "existing" ? "border-t border-black/5 bg-zinc-50" : "border-t border-black/5"}>
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedPreviewIds.includes(item.id)}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setSelectedPreviewIds((current) =>
-                            checked ? [...current, item.id] : current.filter((id) => id !== item.id),
-                          );
-                        }}
-                      />
-                    </td>
-                    <td className={`px-3 py-2 font-medium ${statusColor(item.duplicateStatus)}`}>{item.duplicateStatus}</td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-zinc-950">{item.title}</div>
-                      <div className="text-xs text-zinc-500">{item.address}</div>
-                    </td>
-                    <td className="px-3 py-2 text-zinc-600">{dateOnly(item.startAt)} {item.endAt ? `~ ${dateOnly(item.endAt)}` : ""}</td>
-                    <td className="px-3 py-2 text-zinc-600">{item.source}</td>
-                    <td className="px-3 py-2 text-zinc-600">{item.duplicateOfTitle ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+        <ScraperImportSection
+          busy={busy}
+          onBusyChange={setBusy}
+          onMessage={setMessage}
+          onImported={refreshActivities}
+        />
       ) : null}
     </div>
   );
