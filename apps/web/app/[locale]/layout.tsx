@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
-import { hasClerkKeys } from "@/lib/clerk";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -32,5 +31,5 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     </NextIntlClientProvider>
   );
 
-  return hasClerkKeys() ? <ClerkProvider>{content}</ClerkProvider> : content;
+  return <ClerkProvider>{content}</ClerkProvider>;
 }

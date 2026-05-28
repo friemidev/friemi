@@ -51,4 +51,3 @@ export function resolveRelativeUrl(baseUrl: string, href: string) {
 export function cleanHtmlText(input: string) {
   return normalizeWhitespace(decodeHtmlEntities(input));
 }
-

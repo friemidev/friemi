@@ -78,4 +78,3 @@ export function getScraperConfig() {
     dryRun: getBoolSetting("SCRAPER_DRY_RUN", false),
   };
 }
-

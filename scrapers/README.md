@@ -102,4 +102,3 @@ npm run sync -- --dry-run
 5. 运行 `npm run sync`
 
 如果你的新仓库不再和主项目共用数据库配置，也可以直接把 `DATABASE_URL` 写进 `scrapers/.env.local`。
-
