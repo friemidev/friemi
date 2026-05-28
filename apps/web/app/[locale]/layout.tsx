@@ -24,7 +24,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   const messages = await getMessages();
   const content = (
     <NextIntlClientProvider messages={messages}>
-      <div className="min-h-screen pb-20 md:pb-0">
+      <div className="min-h-screen pb-24 md:pb-0">
         <AppHeader locale={locale} />
         {children}
         <MobileNav locale={locale} />

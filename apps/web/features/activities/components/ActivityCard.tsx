@@ -43,28 +43,30 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
       <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
         <div
           className={cn(
-            "flex h-28 items-end justify-between gap-2 p-4",
+            "flex h-20 items-end justify-between gap-2 p-3 sm:h-24 sm:p-4",
             coverTones[activity.coverTone],
           )}
         >
           <div className="flex min-w-0 flex-wrap gap-2">
-            <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
+            <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold leading-none text-ink">
               {getCategoryLabel(activity.category, locale)}
             </span>
-            <span className="rounded-md bg-white/75 px-2.5 py-1 text-xs font-medium text-zinc-700">
+            <span className="rounded-md bg-white/75 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700">
               {getTypeLabel(activity.type, locale)}
             </span>
           </div>
           <ActivityStatusBadge status={displayStatus} locale={locale} />
         </div>
-        <CardHeader>
-          <CardTitle className="line-clamp-2">{activity.title}</CardTitle>
+        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+          <CardTitle className="line-clamp-2 text-base leading-snug sm:text-lg">
+            {activity.title}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col space-y-4">
-          <p className="line-clamp-2 text-sm leading-6 text-zinc-600">
+        <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
+          <p className="line-clamp-2 text-sm leading-5 text-zinc-600">
             {activity.description}
           </p>
-          <div className="grid gap-2 text-sm text-zinc-600">
+          <div className="grid gap-1.5 text-sm text-zinc-600">
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0">

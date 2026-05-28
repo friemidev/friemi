@@ -57,14 +57,14 @@ const copy = {
       eyebrow: "Paris first · 中文活动搭子",
       title: "Next Fun Club",
       tagline: "下一场，Fun 开场",
-      description: "面向海外中文用户的活动组织与找搭子平台，从巴黎开始。",
+      description: "发现巴黎附近活动，约上朋友或认识新搭子一起出发。",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "请检查数据库连接后刷新页面。",
       emptyPreviewTitle: "暂无活动",
       emptyPreviewDescription: "数据库新增招募中活动后会显示在这里。",
       recentTitle: "最近活动",
-      recentDescription: "展示数据库中最近公开招募或已成团的活动。",
+      recentDescription: "按开始时间展示最近可参加的公开活动。",
       emptyRecentDescription:
         "数据库新增公开的招募中活动后，刷新页面即可看到。",
     },
@@ -93,6 +93,31 @@ const copy = {
       approvalRequired: "报名后需发起人确认",
       approvalAuto: "报名后自动确认",
       editActivity: "编辑活动",
+    },
+    activityComments: {
+      title: "评论与提问",
+      description: "可以向发起人提问、补充建议，或活动后留下评价。",
+      signInTitle: "登录后评论",
+      signInDescription: "登录后可以在活动详情页提问或发表建议。",
+      emptyTitle: "暂无评论",
+      emptyDescription: "成为第一个提问或补充信息的人。",
+      typeLabel: "类型",
+      contentLabel: "内容",
+      contentPlaceholder: "写下你的问题、建议或活动评价",
+      contentHint: "最多 500 个字，公开显示在活动详情页。",
+      submit: "发布评论",
+      submitting: "发布中...",
+      pinned: "发起人置顶",
+      justNow: "刚刚",
+      formError: "请检查评论内容后再提交。",
+      authError: "请登录后再评论。",
+      activityError: "活动不存在或暂不可评论。",
+      failedError: "评论发布失败，请稍后重试。",
+      types: {
+        QUESTION: "提问",
+        SUGGESTION: "建议",
+        REVIEW: "评价",
+      },
     },
     activityOwner: {
       title: "发起人操作",
@@ -320,7 +345,7 @@ const copy = {
       title: "Next Fun Club",
       tagline: "What's next? Fun begins.",
       description:
-        "An activity planning and buddy-finding platform for Chinese-speaking users overseas, starting in Paris.",
+        "Discover nearby Paris activities, bring friends, or meet new activity buddies.",
       browseActivities: "Browse activities",
       homeActivityFailedTitle: "Activities failed to load",
       homeActivityFailedDescription:
@@ -330,7 +355,7 @@ const copy = {
         "Recruiting activities will appear here once they are added.",
       recentTitle: "Recent activities",
       recentDescription:
-        "Recently published public recruiting or confirmed activities from the database.",
+        "Upcoming public activities sorted by the nearest start time.",
       emptyRecentDescription:
         "Add a public recruiting activity, then refresh to see it here.",
     },
@@ -360,6 +385,32 @@ const copy = {
       approvalRequired: "Organizer approval required",
       approvalAuto: "Auto-confirmed after joining",
       editActivity: "Edit activity",
+    },
+    activityComments: {
+      title: "Comments and questions",
+      description:
+        "Ask the organizer, add suggestions, or leave a review later.",
+      signInTitle: "Sign in to comment",
+      signInDescription: "Sign in to ask questions or share suggestions.",
+      emptyTitle: "No comments yet",
+      emptyDescription: "Be the first to ask a question or add useful context.",
+      typeLabel: "Type",
+      contentLabel: "Message",
+      contentPlaceholder: "Write your question, suggestion, or review",
+      contentHint: "Up to 500 characters, visible on the activity detail page.",
+      submit: "Post comment",
+      submitting: "Posting...",
+      pinned: "Pinned by organizer",
+      justNow: "Just now",
+      formError: "Check your comment before posting.",
+      authError: "Sign in before commenting.",
+      activityError: "This activity does not exist or cannot receive comments.",
+      failedError: "Failed to post comment. Try again later.",
+      types: {
+        QUESTION: "Question",
+        SUGGESTION: "Suggestion",
+        REVIEW: "Review",
+      },
     },
     activityOwner: {
       title: "Organizer actions",
@@ -605,7 +656,7 @@ const copy = {
       title: "Next Fun Club",
       tagline: "La prochaine sortie commence ici.",
       description:
-        "Une plateforme pour organiser des activités et trouver des compagnons parmi les utilisateurs sinophones à l'étranger, en commençant par Paris.",
+        "Découvrez des activités à Paris, venez avec vos amis ou rencontrez de nouveaux compagnons de sortie.",
       browseActivities: "Voir les activités",
       homeActivityFailedTitle: "Échec du chargement",
       homeActivityFailedDescription:
@@ -614,7 +665,7 @@ const copy = {
       emptyPreviewDescription: "Les activités en recrutement apparaîtront ici.",
       recentTitle: "Activités récentes",
       recentDescription:
-        "Activités publiques en recrutement ou confirmées, chargées depuis la base de données.",
+        "Activités publiques à venir, triées par date de début proche.",
       emptyRecentDescription:
         "Ajoutez une activité publique en recrutement puis actualisez la page.",
     },
@@ -645,6 +696,35 @@ const copy = {
       approvalRequired: "Validation par l'organisateur requise",
       approvalAuto: "Confirmation automatique après inscription",
       editActivity: "Modifier",
+    },
+    activityComments: {
+      title: "Commentaires et questions",
+      description:
+        "Posez une question à l'organisateur, ajoutez une suggestion ou laissez un avis.",
+      signInTitle: "Connectez-vous pour commenter",
+      signInDescription:
+        "Connectez-vous pour poser une question ou partager une suggestion.",
+      emptyTitle: "Aucun commentaire",
+      emptyDescription:
+        "Soyez la première personne à poser une question ou ajouter une information utile.",
+      typeLabel: "Type",
+      contentLabel: "Message",
+      contentPlaceholder: "Écrivez votre question, suggestion ou avis",
+      contentHint: "500 caractères maximum, visible sur la page de l'activité.",
+      submit: "Publier",
+      submitting: "Publication...",
+      pinned: "Épinglé par l'organisateur",
+      justNow: "À l'instant",
+      formError: "Vérifiez votre commentaire avant de publier.",
+      authError: "Connectez-vous avant de commenter.",
+      activityError:
+        "Cette activité n'existe pas ou ne peut pas recevoir de commentaires.",
+      failedError: "Échec de publication. Réessayez plus tard.",
+      types: {
+        QUESTION: "Question",
+        SUGGESTION: "Suggestion",
+        REVIEW: "Avis",
+      },
     },
     activityOwner: {
       title: "Actions organisateur",

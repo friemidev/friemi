@@ -27,21 +27,21 @@ export default async function HomePage({ params }: HomePageProps) {
     });
 
   return (
-    <PageContainer className="space-y-12">
-      <section className="grid gap-8 py-8 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-12 lg:gap-12">
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm text-zinc-600 ring-1 ring-black/10">
+    <PageContainer className="space-y-9 pb-6 md:space-y-12">
+      <section className="grid gap-6 py-3 md:grid-cols-[1.05fr_0.95fr] md:items-center md:py-10 lg:gap-12">
+        <div className="space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-xs text-zinc-600 ring-1 ring-black/10 sm:text-sm">
             <Sparkles className="h-4 w-4 text-clay" />
             {t.home.eyebrow}
           </div>
-          <div className="space-y-4">
-            <h1 className="max-w-2xl text-4xl font-semibold tracking-normal text-ink sm:text-5xl lg:text-6xl">
+          <div className="space-y-3 sm:space-y-4">
+            <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-ink sm:text-5xl lg:text-6xl">
               {t.home.title}
             </h1>
-            <p className="text-xl font-medium text-moss sm:text-2xl">
+            <p className="text-xl font-medium leading-snug text-moss sm:text-2xl">
               {t.home.tagline}
             </p>
-            <p className="max-w-xl text-base leading-7 text-zinc-650">
+            <p className="max-w-xl text-base leading-7 text-zinc-650 sm:text-lg">
               {t.home.description}
             </p>
           </div>
@@ -53,10 +53,10 @@ export default async function HomePage({ params }: HomePageProps) {
           </Link>
         </div>
 
-        <div className="rounded-lg border border-black/10 bg-white/65 p-4 shadow-sm">
-          <div className="grid gap-3">
+        <div className="rounded-lg border border-black/10 bg-white/70 p-3 shadow-sm sm:p-4">
+          <div className="grid gap-2.5 sm:gap-3">
             {activitiesResult.error ? (
-              <div className="rounded-md bg-paper p-4">
+              <div className="rounded-md bg-paper px-3 py-3 sm:px-4">
                 <p className="font-semibold text-ink">
                   {t.home.homeActivityFailedTitle}
                 </p>
@@ -65,7 +65,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 </p>
               </div>
             ) : activitiesResult.activities.length === 0 ? (
-              <div className="rounded-md bg-paper p-4">
+              <div className="rounded-md bg-paper px-3 py-3 sm:px-4">
                 <p className="font-semibold text-ink">
                   {t.home.emptyPreviewTitle}
                 </p>
@@ -75,9 +75,11 @@ export default async function HomePage({ params }: HomePageProps) {
               </div>
             ) : (
               activitiesResult.activities.slice(0, 2).map((activity) => (
-                <div key={activity.id} className="rounded-md bg-paper p-4">
-                  <p className="font-semibold text-ink">{activity.title}</p>
-                  <p className="mt-1 text-sm text-zinc-600">
+                <div key={activity.id} className="rounded-md bg-paper px-3 py-3 sm:px-4">
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
+                    {activity.title}
+                  </p>
+                  <p className="mt-1 line-clamp-1 text-xs text-zinc-600 sm:text-sm">
                     {activity.address}
                   </p>
                 </div>
@@ -87,7 +89,7 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-3 sm:space-y-4">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-normal text-ink">
@@ -115,7 +117,7 @@ export default async function HomePage({ params }: HomePageProps) {
             description={t.home.emptyRecentDescription}
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activitiesResult.activities.map((activity) => (
               <ActivityCard
                 key={activity.id}
