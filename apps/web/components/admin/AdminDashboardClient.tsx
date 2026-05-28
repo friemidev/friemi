@@ -41,6 +41,8 @@ type ScraperFormState = {
   maxPages: number;
 };
 
+type DashboardTab = "activities" | "scraper";
+
 const emptyActivityForm = (organizerId = "") : ActivityFormState => ({
   title: "",
   description: "",
@@ -109,6 +111,7 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
   const [selectedPreviewIds, setSelectedPreviewIds] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("activities");
 
   const selectedPreviewItems = useMemo(
     () => previewItems.filter((item) => selectedPreviewIds.includes(item.id)),
@@ -218,7 +221,17 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
     <div className="space-y-8">
       {message ? <div className="rounded-md border border-black/10 bg-white px-4 py-3 text-sm text-zinc-700">{message}</div> : null}
 
-      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant={activeTab === "activities" ? "primary" : "secondary"} onClick={() => setActiveTab("activities")}>
+          活动数据库
+        </Button>
+        <Button type="button" variant={activeTab === "scraper" ? "primary" : "secondary"} onClick={() => setActiveTab("scraper")}>
+          爬虫导入
+        </Button>
+      </div>
+
+      {activeTab === "activities" ? (
+      <section className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>活动管理</CardTitle>
@@ -312,7 +325,7 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
             <CardTitle>数据库活动列表</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="overflow-auto rounded-md border border-black/10">
+            <div className="max-h-[70vh] overflow-auto rounded-md border border-black/10">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-zinc-50 text-zinc-500">
                   <tr>
@@ -377,7 +390,9 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
           </CardContent>
         </Card>
       </section>
+      ) : null}
 
+      {activeTab === "scraper" ? (
       <Card>
         <CardHeader>
           <CardTitle>爬虫导入</CardTitle>
@@ -446,9 +461,13 @@ export function AdminDashboardClient({ initialActivities, initialOrganizers, loc
           </div>
         </CardContent>
       </Card>
+      ) : null}
     </div>
   );
 }
+
+
+
 
 
 

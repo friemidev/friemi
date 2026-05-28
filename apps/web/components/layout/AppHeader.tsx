@@ -23,7 +23,7 @@ export function AppHeader({ locale }: AppHeaderProps) {
             <Compass className="h-4 w-4" />
             活动
           </Link>
-          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/admin")}>
+          <Link className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70" href={withLocale(locale, "/admin/data-scraper")}>
             <LayoutDashboard className="h-4 w-4" />
             后台
           </Link>
