@@ -61,12 +61,22 @@ DATABASE_URL=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 CLERK_WEBHOOK_SIGNING_SECRET=
+ADMIN_CLERK_USER_IDS=
+ADMIN_EMAILS=
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/zh-CN/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/zh-CN/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/zh-CN
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/zh-CN
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+管理员后台访问控制支持三种方式（任意命中即可）：
+
+- `ADMIN_CLERK_USER_IDS`：Clerk `user.id` 列表（逗号分隔）
+- `ADMIN_EMAILS`：管理员邮箱列表（逗号分隔）
+- Clerk metadata 中设置 `role=admin`（`publicMetadata` 或 `privateMetadata`）
+
+管理员页面入口：`/{locale}/admin/data-scraper`（例如 `/zh-CN/admin/data-scraper`）。
 
 ## 数据库与 Prisma 操作
 

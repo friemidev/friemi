@@ -35,4 +35,3 @@ export async function fetchText(url: string, options: FetchOptions = {}) {
 
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
-

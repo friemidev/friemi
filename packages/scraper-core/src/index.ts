@@ -371,4 +371,3 @@ export function buildStableActivityId(source: string, url: string) {
   return makeStableId(source, url);
 }
 
-

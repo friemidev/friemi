@@ -160,10 +160,21 @@ https://your-project.vercel.app/zh-CN
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
 ```
 
-写入 `apps/web/.env.local`：
+Supabase 需要两条连接（`db push` 不能用 Transaction pooler `:6543`，否则会一直卡住）：
+
+```bash
+# 应用运行时（Transaction pooler，端口 6543）
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Prisma 迁移（Direct connection，端口 5432）
+DIRECT_URL="postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres?sslmode=require"
+```
+
+写入 `apps/web/.env`（Prisma CLI 只读 `.env`，不读 `.env.local`）：
 
 ```bash
 DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 ```
 
 初始化 Prisma：

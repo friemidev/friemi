@@ -44,4 +44,3 @@ export type ScrapeSummary = {
   count: number;
   activities: NormalizedActivity[];
 };
-
