@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea } from "@chill-club/ui";
 import type { ScraperImportMode, ScraperPreviewItem } from "@/lib/admin-scraper";
+import { FormField, selectClassName } from "@/components/admin/FormField";
 
 type ScraperFormState = {
   sources: Record<"sortiraparis" | "playinparis", boolean>;
@@ -16,7 +19,6 @@ type ScraperFormState = {
 type ScraperImportSectionProps = {
   busy: string | null;
   onBusyChange: (value: string | null) => void;
-  onMessage: (message: string) => void;
   onImported: () => Promise<void>;
 };
 
@@ -58,7 +60,17 @@ const importModeLabels: Record<ScraperImportMode, string> = {
   skip_existing: "忽略已有",
 };
 
-export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported }: ScraperImportSectionProps) {
+function LoadingLabel({ loading, loadingText, children }: { loading: boolean; loadingText: string; children: string }) {
+  if (!loading) return children;
+  return (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+      {loadingText}
+    </>
+  );
+}
+
+export function ScraperImportSection({ busy, onBusyChange, onImported }: ScraperImportSectionProps) {
   const [scraperForm, setScraperForm] = useState<ScraperFormState>({
     sources: { sortiraparis: true, playinparis: true },
     mode: "database",
@@ -73,6 +85,10 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
   const [importMode, setImportMode] = useState<ScraperImportMode>("create_only");
   const [mergeDuplicates, setMergeDuplicates] = useState(true);
   const [editingItem, setEditingItem] = useState<ScraperPreviewItem | null>(null);
+
+  const isPreviewing = busy === "preview";
+  const isImporting = busy === "import";
+  const isBusy = isPreviewing || isImporting;
 
   const resolvedPreviewItems = useMemo(
     () => previewItems.map((item) => itemOverrides[item.id] ?? item),
@@ -114,56 +130,81 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
 
   async function previewScraper() {
     onBusyChange("preview");
-    onMessage("");
-    const sources = Object.entries(scraperForm.sources)
-      .filter(([, enabled]) => enabled)
-      .map(([source]) => source);
-    const response = await fetch("/api/admin/scraper/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sources,
-        mode: scraperForm.mode,
-        from: scraperForm.from || null,
-        to: scraperForm.to || null,
-        limit: scraperForm.limit,
-        maxPages: scraperForm.maxPages,
-      }),
-    });
-    const json = await response.json();
-    const items = (json.items ?? []) as ScraperPreviewItem[];
-    setPreviewItems(items);
-    setItemOverrides({});
-    applySelection(items.filter((item) => item.duplicateStatus === "new").map((item) => item.id));
-    onBusyChange(null);
-    onMessage(`已抓取 ${items.length} 条候选活动。`);
+    try {
+      const sources = Object.entries(scraperForm.sources)
+        .filter(([, enabled]) => enabled)
+        .map(([source]) => source);
+
+      if (sources.length === 0) {
+        toast.error("请至少选择一个抓取来源");
+        return;
+      }
+
+      const response = await fetch("/api/admin/scraper/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sources,
+          mode: scraperForm.mode,
+          from: scraperForm.from || null,
+          to: scraperForm.to || null,
+          limit: scraperForm.limit,
+          maxPages: scraperForm.maxPages,
+        }),
+      });
+
+      const json = await response.json();
+      if (!response.ok) {
+        toast.error(json.error ?? "抓取失败，请稍后重试");
+        return;
+      }
+
+      const items = (json.items ?? []) as ScraperPreviewItem[];
+      setPreviewItems(items);
+      setItemOverrides({});
+      applySelection(items.filter((item) => item.duplicateStatus === "new").map((item) => item.id));
+      toast.success(`抓取完成：共 ${items.length} 条（新增 ${items.filter((i) => i.duplicateStatus === "new").length} 条）`);
+    } catch {
+      toast.error("抓取失败，请检查网络或稍后重试");
+    } finally {
+      onBusyChange(null);
+    }
   }
 
   async function importSelected() {
     onBusyChange("import");
-    onMessage("");
-    const response = await fetch("/api/admin/scraper/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: selectedPreviewItems,
-        mode: importMode,
-        mergeDuplicates,
-      }),
-    });
-    const json = await response.json();
-    await onImported();
-    onBusyChange(null);
-    onMessage(
-      `导入完成：成功 ${json.imported ?? 0} 条，跳过 ${json.skipped ?? 0} 条${json.merged ? `，合并来源 ${json.merged} 条` : ""}。`,
-    );
+    try {
+      const response = await fetch("/api/admin/scraper/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: selectedPreviewItems,
+          mode: importMode,
+          mergeDuplicates,
+        }),
+      });
+
+      const json = await response.json();
+      if (!response.ok) {
+        toast.error(json.error ?? "导入失败，请稍后重试");
+        return;
+      }
+
+      await onImported();
+      const mergedText = json.merged ? `，合并来源 ${json.merged} 条` : "";
+      toast.success(`导入完成：成功 ${json.imported ?? 0} 条，跳过 ${json.skipped ?? 0} 条${mergedText}`);
+    } catch {
+      toast.error("导入失败，请检查网络或稍后重试");
+    } finally {
+      onBusyChange(null);
+    }
   }
 
   function saveEditedItem() {
     if (!editingItem) return;
     setItemOverrides((current) => ({ ...current, [editingItem.id]: editingItem }));
     setEditingItem(null);
-    onMessage("已保存本条编辑，导入时将使用修改后的内容。");
+    toast.success("已保存本条编辑");
   }
 
   return (
@@ -172,81 +213,107 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
         <CardTitle>爬虫导入</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <input
-              type="checkbox"
-              checked={scraperForm.sources.sortiraparis}
-              onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, sortiraparis: e.target.checked } })}
-            />
-            Sortir à Paris
-          </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-700">
-            <input
-              type="checkbox"
-              checked={scraperForm.sources.playinparis}
-              onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, playinparis: e.target.checked } })}
-            />
-            Play in Paris
-          </label>
-          <select
-            className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm"
-            value={scraperForm.mode}
-            onChange={(e) => setScraperForm({ ...scraperForm, mode: e.target.value as ScraperFormState["mode"] })}
-          >
-            <option value="database">从数据库最后记录后开始</option>
-            <option value="recent">最近区间</option>
-            <option value="range">自定义范围</option>
-          </select>
-          <Input type="number" min={1} max={100} value={scraperForm.limit} onChange={(e) => setScraperForm({ ...scraperForm, limit: Number(e.target.value) })} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label="抓取来源">
+            <div className="flex flex-wrap gap-4 pt-1">
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={scraperForm.sources.sortiraparis}
+                  onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, sortiraparis: e.target.checked } })}
+                />
+                Sortir à Paris
+              </label>
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={scraperForm.sources.playinparis}
+                  onChange={(e) => setScraperForm({ ...scraperForm, sources: { ...scraperForm.sources, playinparis: e.target.checked } })}
+                />
+                Play in Paris
+              </label>
+            </div>
+          </FormField>
+          <FormField label="时间策略" hint="决定从什么时间范围开始抓取">
+            <select
+              className={selectClassName}
+              value={scraperForm.mode}
+              onChange={(e) => setScraperForm({ ...scraperForm, mode: e.target.value as ScraperFormState["mode"] })}
+            >
+              <option value="database">从数据库最后记录后开始</option>
+              <option value="recent">最近区间</option>
+              <option value="range">自定义范围</option>
+            </select>
+          </FormField>
         </div>
+
         <div className="grid gap-4 md:grid-cols-3">
-          <Input type="datetime-local" value={scraperForm.from} onChange={(e) => setScraperForm({ ...scraperForm, from: e.target.value })} />
-          <Input type="datetime-local" value={scraperForm.to} onChange={(e) => setScraperForm({ ...scraperForm, to: e.target.value })} />
-          <Input type="number" min={1} value={scraperForm.maxPages} onChange={(e) => setScraperForm({ ...scraperForm, maxPages: Number(e.target.value) })} />
+          <FormField label="最多抓取条数" hint="合并各来源后的总上限">
+            <Input type="number" min={1} max={100} value={scraperForm.limit} onChange={(e) => setScraperForm({ ...scraperForm, limit: Number(e.target.value) })} />
+          </FormField>
+          <FormField label="开始时间">
+            <Input type="datetime-local" value={scraperForm.from} onChange={(e) => setScraperForm({ ...scraperForm, from: e.target.value })} />
+          </FormField>
+          <FormField label="结束时间">
+            <Input type="datetime-local" value={scraperForm.to} onChange={(e) => setScraperForm({ ...scraperForm, to: e.target.value })} />
+          </FormField>
         </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField label="每个来源最大列表页数" hint="防止翻页过多，例如 3 表示最多抓 3 页列表">
+            <Input type="number" min={1} max={20} value={scraperForm.maxPages} onChange={(e) => setScraperForm({ ...scraperForm, maxPages: Number(e.target.value) })} />
+          </FormField>
+        </div>
+
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={previewScraper} disabled={busy === "preview"}>
-            开始抓取
+          <Button type="button" onClick={previewScraper} disabled={isBusy} className="min-w-[8.5rem]">
+            <LoadingLabel loading={isPreviewing} loadingText="抓取中…">
+              开始抓取
+            </LoadingLabel>
           </Button>
-          <Button type="button" variant="secondary" onClick={() => { setPreviewItems([]); setItemOverrides({}); selectNone(); }}>
+          <Button type="button" variant="secondary" disabled={isBusy} onClick={() => { setPreviewItems([]); setItemOverrides({}); selectNone(); }}>
             清空结果
           </Button>
-          <Button type="button" variant="secondary" onClick={importSelected} disabled={busy === "import" || selectedPreviewItems.length === 0}>
-            导入选中 ({selectedPreviewItems.length})
+          <Button
+            type="button"
+            variant="success"
+            onClick={importSelected}
+            disabled={isBusy || selectedPreviewItems.length === 0}
+            className="min-w-[9.5rem]"
+          >
+            <LoadingLabel loading={isImporting} loadingText="导入中…">
+              {`导入选中 (${selectedPreviewItems.length})`}
+            </LoadingLabel>
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-black/10 bg-zinc-50 px-3 py-3 text-sm">
-          <span className="font-medium text-zinc-700">导入选项</span>
-          <select
-            className="h-9 rounded-md border border-zinc-200 bg-white px-2"
-            value={importMode}
-            onChange={(e) => setImportMode(e.target.value as ScraperImportMode)}
-          >
-            {(Object.keys(importModeLabels) as ScraperImportMode[]).map((mode) => (
-              <option key={mode} value={mode}>
-                {importModeLabels[mode]}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 text-zinc-700">
+          <FormField label="导入模式" className="min-w-[10rem]">
+            <select className={selectClassName} value={importMode} onChange={(e) => setImportMode(e.target.value as ScraperImportMode)}>
+              {(Object.keys(importModeLabels) as ScraperImportMode[]).map((mode) => (
+                <option key={mode} value={mode}>
+                  {importModeLabels[mode]}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <label className="flex items-center gap-2 pt-6 text-zinc-700">
             <input type="checkbox" checked={mergeDuplicates} onChange={(e) => setMergeDuplicates(e.target.checked)} />
             相似内容合并到已有活动
           </label>
         </div>
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <Button type="button" variant="secondary" onClick={selectAll} disabled={previewCount === 0}>
+          <Button type="button" variant="secondary" onClick={selectAll} disabled={previewCount === 0 || isBusy}>
             全选
           </Button>
-          <Button type="button" variant="secondary" onClick={selectNewOnly} disabled={previewCount === 0}>
+          <Button type="button" variant="secondary" onClick={selectNewOnly} disabled={previewCount === 0 || isBusy}>
             只选新增
           </Button>
-          <Button type="button" variant="secondary" onClick={selectUpdatable} disabled={previewCount === 0}>
+          <Button type="button" variant="secondary" onClick={selectUpdatable} disabled={previewCount === 0 || isBusy}>
             只选可更新
           </Button>
-          <Button type="button" variant="secondary" onClick={selectNone} disabled={previewCount === 0}>
+          <Button type="button" variant="secondary" onClick={selectNone} disabled={previewCount === 0 || isBusy}>
             清空选择
           </Button>
         </div>
@@ -255,7 +322,13 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
           结果：{previewCount} 条，新增 {newCount} 条，重复/相似 {duplicateCount} 条。
         </div>
 
-        <div className="overflow-auto rounded-md border border-black/10">
+        <div className="relative overflow-auto rounded-md border border-black/10">
+          {isBusy ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-white/80 text-sm text-zinc-700">
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+              {isPreviewing ? "正在抓取，请稍候…" : "正在导入，请稍候…"}
+            </div>
+          ) : null}
           <table className="min-w-full text-left text-sm">
             <thead className="bg-zinc-50 text-zinc-500">
               <tr>
@@ -285,6 +358,7 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
                     <input
                       type="checkbox"
                       checked={selectedPreviewIds.includes(item.id)}
+                      disabled={isBusy}
                       onChange={(event) => {
                         const checked = event.target.checked;
                         setSelectedPreviewIds((current) =>
@@ -310,7 +384,7 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
                   </td>
                   <td className="px-3 py-2 text-zinc-600">{item.duplicateOfTitle ?? "-"}</td>
                   <td className="px-3 py-2">
-                    <Button type="button" variant="secondary" onClick={() => setEditingItem(itemOverrides[item.id] ?? item)}>
+                    <Button type="button" variant="secondary" disabled={isBusy} onClick={() => setEditingItem(itemOverrides[item.id] ?? item)}>
                       编辑
                     </Button>
                   </td>
@@ -326,17 +400,35 @@ export function ScraperImportSection({ busy, onBusyChange, onMessage, onImported
               <h3 className="text-lg font-semibold text-zinc-950">导入前编辑</h3>
               <p className="mt-1 text-sm text-zinc-500">修改仅影响本次导入，不会写回爬虫源站。</p>
               <div className="mt-4 grid gap-3">
-                <Input placeholder="标题" value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} />
-                <Textarea placeholder="描述" value={editingItem.description} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} />
-                <Textarea placeholder="行程" value={editingItem.itinerary ?? ""} onChange={(e) => setEditingItem({ ...editingItem, itinerary: e.target.value || null })} />
-                <Input placeholder="地址" value={editingItem.address} onChange={(e) => setEditingItem({ ...editingItem, address: e.target.value })} />
-                <Input placeholder="原文链接" value={editingItem.sourceUrl} onChange={(e) => setEditingItem({ ...editingItem, sourceUrl: e.target.value })} />
+                <FormField label="标题">
+                  <Input value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} />
+                </FormField>
+                <FormField label="描述">
+                  <Textarea value={editingItem.description} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} />
+                </FormField>
+                <FormField label="行程（可选）">
+                  <Textarea value={editingItem.itinerary ?? ""} onChange={(e) => setEditingItem({ ...editingItem, itinerary: e.target.value || null })} />
+                </FormField>
+                <FormField label="地址">
+                  <Input value={editingItem.address} onChange={(e) => setEditingItem({ ...editingItem, address: e.target.value })} />
+                </FormField>
+                <FormField label="原文链接">
+                  <Input value={editingItem.sourceUrl} onChange={(e) => setEditingItem({ ...editingItem, sourceUrl: e.target.value })} />
+                </FormField>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <Input type="datetime-local" value={toDatetimeLocal(editingItem.startAt)} onChange={(e) => setEditingItem({ ...editingItem, startAt: new Date(e.target.value).toISOString() })} />
-                  <Input type="datetime-local" value={toDatetimeLocal(editingItem.endAt)} onChange={(e) => setEditingItem({ ...editingItem, endAt: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                  <FormField label="开始时间">
+                    <Input type="datetime-local" value={toDatetimeLocal(editingItem.startAt)} onChange={(e) => setEditingItem({ ...editingItem, startAt: new Date(e.target.value).toISOString() })} />
+                  </FormField>
+                  <FormField label="结束时间">
+                    <Input type="datetime-local" value={toDatetimeLocal(editingItem.endAt)} onChange={(e) => setEditingItem({ ...editingItem, endAt: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                  </FormField>
                 </div>
-                <Input type="number" min={1} placeholder="人数上限" value={editingItem.capacity} onChange={(e) => setEditingItem({ ...editingItem, capacity: Number(e.target.value) })} />
-                <Input placeholder="费用说明" value={editingItem.priceText} onChange={(e) => setEditingItem({ ...editingItem, priceText: e.target.value })} />
+                <FormField label="人数上限">
+                  <Input type="number" min={1} value={editingItem.capacity} onChange={(e) => setEditingItem({ ...editingItem, capacity: Number(e.target.value) })} />
+                </FormField>
+                <FormField label="费用说明">
+                  <Input value={editingItem.priceText} onChange={(e) => setEditingItem({ ...editingItem, priceText: e.target.value })} />
+                </FormField>
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button type="button" variant="secondary" onClick={() => setEditingItem(null)}>
