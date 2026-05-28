@@ -61,6 +61,12 @@ enum UserProfileStatus {
   DELETED
 }
 
+enum CommentType {
+  QUESTION
+  SUGGESTION
+  REVIEW
+}
+
 model UserProfile {
   id             String                @id @default(cuid())
   clerkUserId    String                @unique
@@ -80,6 +86,7 @@ model UserProfile {
   syncedAt       DateTime?
   activities     Activity[]            @relation("ActivityOrganizer")
   participations ActivityParticipant[]
+  comments       Comment[]
   following      UserFollow[]          @relation("UserFollowing")
   followers      UserFollow[]          @relation("UserFollowers")
   createdAt      DateTime              @default(now())
@@ -114,6 +121,7 @@ model Activity {
   organizerId      String
   organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
   participants     ActivityParticipant[]
+  comments         Comment[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
@@ -139,6 +147,22 @@ model ActivityParticipant {
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+}
+
+model Comment {
+  id                String      @id @default(cuid())
+  activityId        String
+  authorId          String
+  type              CommentType @default(QUESTION)
+  content           String
+  pinnedByOrganizer Boolean     @default(false)
+  activity          Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author            UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([activityId, pinnedByOrganizer, createdAt])
+  @@index([authorId])
 }
 
 model UserFollow {
