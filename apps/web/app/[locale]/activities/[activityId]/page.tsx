@@ -15,8 +15,10 @@ import {
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
+import { getActivityComments } from "@/features/activities/queries/getActivityComments";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import {
   getActivityDateLabel,
@@ -59,10 +61,12 @@ export default async function ActivityDetailPage({
     notFound();
   }
 
-  const [viewerParticipation, isFollowingOrganizer] = await Promise.all([
-    getActivityViewerParticipation(activity.id, viewerProfile?.id),
-    getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-  ]);
+  const [viewerParticipation, isFollowingOrganizer, comments] =
+    await Promise.all([
+      getActivityViewerParticipation(activity.id, viewerProfile?.id),
+      getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+      getActivityComments(activity.id),
+    ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -171,6 +175,13 @@ export default async function ActivityDetailPage({
               </div>
             ) : null}
           </div>
+
+          <ActivityCommentsSection
+            activityId={activity.id}
+            comments={comments}
+            isAuthenticated={Boolean(viewerProfile)}
+            locale={locale}
+          />
         </article>
 
         <aside className="order-first h-fit rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:order-2">
