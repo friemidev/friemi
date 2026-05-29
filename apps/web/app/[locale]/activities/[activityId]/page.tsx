@@ -18,8 +18,10 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
+import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
+import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
@@ -82,6 +84,11 @@ export default async function ActivityDetailPage({
   const isFull = activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
   const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
+  const activityCategoryLabel = getCategoryLabel(activity.category, locale);
+  const activityDateLabel = getActivityDateLabel(activity, locale);
+  const activityLocationLabel = getActivityLocationLabel(activity);
+  const activityParticipantLabel = `${activity.participantCount}/${activity.capacity} ${t.common.people}`;
+  const activityPriceLabel = getActivityPriceLabel(activity, locale);
 
   return (
     <PageContainer className="space-y-6">
@@ -93,7 +100,7 @@ export default async function ActivityDetailPage({
         <div className="relative max-w-3xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
-              {getCategoryLabel(activity.category, locale)}
+              {activityCategoryLabel}
             </span>
             <ActivityStatusBadge status={displayStatus} locale={locale} />
           </div>
@@ -103,8 +110,8 @@ export default async function ActivityDetailPage({
         </div>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <article className="space-y-6 lg:order-1">
+      <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <article className="min-w-0 space-y-6 lg:order-1">
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
             <h2 className="text-lg font-semibold text-ink">
               {t.activityDetail.descriptionTitle}
@@ -144,7 +151,7 @@ export default async function ActivityDetailPage({
 
           {activity.latitude !== null && activity.longitude !== null ? (
             <ActivityMapPreview
-              address={getActivityLocationLabel(activity)}
+              address={activityLocationLabel}
               latitude={activity.latitude}
               longitude={activity.longitude}
               openLabel={t.activityDetail.openMap}
@@ -233,65 +240,74 @@ export default async function ActivityDetailPage({
           />
         </article>
 
-        <aside className="order-first h-fit rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:order-2">
+        <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:order-2">
           <div className="space-y-4 text-sm text-zinc-700">
-            <p className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-zinc-500">
+            <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <ClipboardList className="h-4 w-4 shrink-0" />
                 {t.activityDetail.type}
               </span>
-              <span className="text-right font-medium text-ink">
+              <span className="min-w-0 break-words text-right font-medium text-ink">
                 {getTypeLabel(activity.type, locale)}
               </span>
             </p>
-            <p className="flex items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
-                {getActivityDateLabel(activity, locale)}
-              </span>
+              <span className="min-w-0 break-words">{activityDateLabel}</span>
+              <ActivityCopyButton
+                failedLabel={t.activityShare.copyFailed}
+                label={t.activityShare.copyTime}
+                successLabel={t.activityShare.copied}
+                value={activityDateLabel}
+              />
             </p>
-            <p className="flex items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
-                {getActivityLocationLabel(activity)}
+              <span className="min-w-0 break-words">
+                {activityLocationLabel}
               </span>
+              <ActivityCopyButton
+                failedLabel={t.activityShare.copyFailed}
+                label={t.activityShare.copyLocation}
+                successLabel={t.activityShare.copied}
+                value={activityLocationLabel}
+              />
             </p>
             {activity.destination ? (
-              <p className="flex items-center justify-between gap-3">
-                <span className="text-zinc-500">
+              <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+                <span className="min-w-0 text-zinc-500">
                   {t.activityDetail.destination}
                 </span>
-                <span className="min-w-0 text-right font-medium text-ink">
+                <span className="min-w-0 break-words text-right font-medium text-ink">
                   {activity.destination}
                 </span>
               </p>
             ) : null}
-            <p className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-zinc-500">
+            <p className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <UsersRound className="h-4 w-4 shrink-0" />
                 {t.activityDetail.participants}
               </span>
-              <span className="text-right font-medium text-ink">
-                {activity.participantCount}/{activity.capacity}{" "}
-                {t.common.people}
+              <span className="shrink-0 text-right font-medium text-ink">
+                {activityParticipantLabel}
               </span>
             </p>
             {activity.minParticipants ? (
-              <p className="flex items-center justify-between gap-3">
-                <span className="text-zinc-500">
+              <p className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <span className="min-w-0 text-zinc-500">
                   {t.activityDetail.minParticipants}
                 </span>
-                <span className="text-right font-medium text-ink">
+                <span className="shrink-0 text-right font-medium text-ink">
                   {activity.minParticipants} {t.common.people}
                 </span>
               </p>
             ) : null}
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-zinc-500">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <span className="min-w-0 text-zinc-500">
                   {t.activityDetail.seatStatus}
                 </span>
-                <span className="font-medium text-ink">
+                <span className="shrink-0 font-medium text-ink">
                   {getActivitySeatLabel(activity, locale)}
                 </span>
               </div>
@@ -302,18 +318,24 @@ export default async function ActivityDetailPage({
                 />
               </div>
             </div>
-            <p className="flex items-start justify-between gap-3">
-              <span className="flex items-center gap-2 text-zinc-500">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <WalletCards className="h-4 w-4 shrink-0" />
                 {t.activityDetail.price}
               </span>
-              <span className="min-w-0 text-right font-medium text-ink">
-                {getActivityPriceLabel(activity, locale)}
+              <span className="min-w-0 break-words text-right font-medium text-ink">
+                {activityPriceLabel}
               </span>
+              <ActivityCopyButton
+                failedLabel={t.activityShare.copyFailed}
+                label={t.activityShare.copyPrice}
+                successLabel={t.activityShare.copied}
+                value={activityPriceLabel}
+              />
             </p>
-            <p className="flex items-start gap-2 text-zinc-600">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 text-zinc-600">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
+              <span className="min-w-0">
                 {activity.requiresApproval
                   ? t.activityDetail.approvalRequired
                   : t.activityDetail.approvalAuto}
@@ -366,6 +388,18 @@ export default async function ActivityDetailPage({
               isOrganizer={isOrganizer}
               isAuthenticated={Boolean(viewerProfile)}
               viewerParticipationStatus={viewerParticipation?.status ?? null}
+            />
+          </div>
+          <div className="mt-4">
+            <ActivityShareTools
+              activityTitle={activity.title}
+              categoryLabel={activityCategoryLabel}
+              coverImageUrl={activity.coverImageUrl}
+              dateLabel={activityDateLabel}
+              description={activity.description}
+              locationLabel={activityLocationLabel}
+              locale={locale}
+              priceLabel={activityPriceLabel}
             />
           </div>
         </aside>
