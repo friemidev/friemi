@@ -21,6 +21,15 @@ const optionalShortText = z
   .trim()
   .max(40, "最多 40 个字")
   .transform((value) => (value.length > 0 ? value : null));
+const optionalImageUrl = z
+  .string()
+  .trim()
+  .max(1000, "图片地址过长")
+  .refine(
+    (value) => value.length === 0 || /^https?:\/\/.+/i.test(value),
+    "图片地址无效",
+  )
+  .transform((value) => (value.length > 0 ? value : null));
 const optionalNumber = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,
@@ -37,6 +46,7 @@ export const createActivitySchema = z
     title: nonEmptyString.max(80, "标题最多 80 个字"),
     description: nonEmptyString.max(2000, "描述最多 2000 个字"),
     itinerary: optionalText,
+    coverImageUrl: optionalImageUrl,
     type: z.enum(createActivityTypes),
     category: z.enum(activityCategoryValues),
     otherCategoryText: optionalShortText,

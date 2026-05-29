@@ -71,6 +71,21 @@ function normalizeText(value: string | number | null | undefined) {
   return String(value ?? "").trim();
 }
 
+function normalizeExternalImageUrl(value: string | null | undefined) {
+  const rawUrl = normalizeText(value);
+
+  if (!rawUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -223,7 +238,7 @@ function toActivityData(
     requiresApproval: false,
     priceType: price.priceType,
     priceText: price.priceText,
-    coverImageUrl: normalizeText(record.cover_url) || null,
+    coverImageUrl: normalizeExternalImageUrl(record.cover_url),
     externalSource: parisOpenDataSource,
     externalId,
     externalUrl: normalizeText(record.url) || null,

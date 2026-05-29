@@ -26,6 +26,7 @@ import {
 } from "../actions/createActivity";
 import type { ActivityFormValues } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
+import { ActivityCoverUpload } from "./ActivityCoverUpload";
 
 type NewActivityFormProps = {
   activityId?: string;
@@ -95,9 +96,11 @@ function FieldError({ errors }: { errors?: string[] }) {
 }
 
 function SubmitButton({
+  disabled = false,
   locale,
   mode,
 }: {
+  disabled?: boolean;
   locale: string;
   mode: "create" | "edit";
 }) {
@@ -105,24 +108,32 @@ function SubmitButton({
   const t = getCopy(locale).form;
 
   return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending
-        ? mode === "edit"
-          ? t.saving
-          : t.creating
-        : mode === "edit"
-          ? t.save
-          : t.create}
+    <Button
+      type="submit"
+      className="w-full sm:w-auto"
+      disabled={pending || disabled}
+    >
+      {disabled && !pending
+        ? t.coverUploading
+        : pending
+          ? mode === "edit"
+            ? t.saving
+            : t.creating
+          : mode === "edit"
+            ? t.save
+            : t.create}
     </Button>
   );
 }
 
 function FormActions({
   cancelHref,
+  isCoverUploading,
   locale,
   mode,
 }: {
   cancelHref?: string;
+  isCoverUploading: boolean;
   locale: string;
   mode: "create" | "edit";
 }) {
@@ -138,7 +149,7 @@ function FormActions({
           {t.cancelEdit}
         </Link>
       ) : null}
-      <SubmitButton locale={locale} mode={mode} />
+      <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
     </div>
   );
 }
@@ -155,6 +166,7 @@ export function NewActivityForm({
   const values = state.values ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
 
   return (
@@ -184,6 +196,16 @@ export function NewActivityForm({
           ) : null}
 
           <FormSection title={t.form.activityContent}>
+            <div className="grid gap-2 text-sm font-medium text-zinc-700">
+              <span>{t.form.coverImage}</span>
+              <ActivityCoverUpload
+                initialUrl={values?.coverImageUrl}
+                locale={locale}
+                onUploadingChange={setIsCoverUploading}
+              />
+              <FieldError errors={state.fieldErrors?.coverImageUrl} />
+            </div>
+
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
               {t.form.title}
               <Input
@@ -432,7 +454,12 @@ export function NewActivityForm({
             </label>
           </FormSection>
 
-          <FormActions cancelHref={cancelHref} locale={locale} mode={mode} />
+          <FormActions
+            cancelHref={cancelHref}
+            isCoverUploading={isCoverUploading}
+            locale={locale}
+            mode={mode}
+          />
         </form>
       </CardContent>
     </Card>

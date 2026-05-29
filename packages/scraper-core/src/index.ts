@@ -11,7 +11,15 @@ export type ScrapedActivity = {
   description: string;
   itinerary: string | null;
   type: "PUBLIC_EVENT";
-  category: "BOARD_GAME" | "MOVIE" | "MUSIC" | "SPORTS" | "TRAVEL" | "FOOD" | "EXHIBITION" | "OTHER";
+  category:
+    | "BOARD_GAME"
+    | "MOVIE"
+    | "MUSIC"
+    | "SPORTS"
+    | "TRAVEL"
+    | "FOOD"
+    | "EXHIBITION"
+    | "OTHER";
   city: string;
   destination: string | null;
   address: string;
@@ -65,32 +73,49 @@ function decodeHtmlEntities(input: string) {
     nbsp: " ",
   };
 
-  return input.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
-    if (entity.startsWith("#x") || entity.startsWith("#X")) {
-      return String.fromCodePoint(Number.parseInt(entity.slice(2), 16));
-    }
-    if (entity.startsWith("#")) {
-      return String.fromCodePoint(Number.parseInt(entity.slice(1), 10));
-    }
-    return entityMap[entity] ?? _;
-  });
+  return input.replace(
+    /&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g,
+    (_, entity: string) => {
+      if (entity.startsWith("#x") || entity.startsWith("#X")) {
+        return String.fromCodePoint(Number.parseInt(entity.slice(2), 16));
+      }
+      if (entity.startsWith("#")) {
+        return String.fromCodePoint(Number.parseInt(entity.slice(1), 10));
+      }
+      return entityMap[entity] ?? _;
+    },
+  );
 }
 
 function stripHtml(input: string) {
-  const decoded = decodeHtmlEntities(input).replace(/\\[rn]/g, " ").replace(/\\t/g, " ");
-  return normalizeWhitespace(decoded.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
+  const decoded = decodeHtmlEntities(input)
+    .replace(/\\[rn]/g, " ")
+    .replace(/\\t/g, " ");
+  return normalizeWhitespace(
+    decoded
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+  );
 }
 
 function extractMetaContent(html: string, keys: string[]) {
-  const escaped = keys.map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  const regex = new RegExp(`<meta[^>]+(?:name|property)=["'](?:${escaped})["'][^>]+content=["']([^"']+)["'][^>]*>`, "i");
+  const escaped = keys
+    .map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const regex = new RegExp(
+    `<meta[^>]+(?:name|property)=["'](?:${escaped})["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i",
+  );
   const match = html.match(regex);
   return match ? decodeHtmlEntities(match[1]) : null;
 }
 
 function parseJsonLdBlocks(html: string) {
   const blocks: unknown[] = [];
-  for (const match of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const match of html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )) {
     const raw = match[1].trim();
     if (!raw) continue;
     try {
@@ -111,11 +136,20 @@ function guessCategory(text: string): ScrapedActivity["category"] {
   const value = text.toLowerCase();
   if (/(桌游|board\s*game|jenga|狼人杀|卡牌)/i.test(value)) return "BOARD_GAME";
   if (/(电影|cinema|movie|film)/i.test(value)) return "MOVIE";
-  if (/(音乐|concert|live|dj|k-pop|kpop|festival|show|opera)/i.test(value)) return "MUSIC";
-  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value)) return "SPORTS";
-  if (/(旅行|walk|city\s*walk|tour|travel|hike|voyage|漫步|散步)/i.test(value)) return "TRAVEL";
-  if (/(美食|food|wine|drink|restaurant|café|cafe|brunch|dinner|cooking|餐|吃)/i.test(value)) return "FOOD";
-  if (/(展|exhibition|museum|gallery|art|博物馆|艺术)/i.test(value)) return "EXHIBITION";
+  if (/(音乐|concert|live|dj|k-pop|kpop|festival|show|opera)/i.test(value))
+    return "MUSIC";
+  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value))
+    return "SPORTS";
+  if (/(旅行|walk|city\s*walk|tour|travel|hike|voyage|漫步|散步)/i.test(value))
+    return "TRAVEL";
+  if (
+    /(美食|food|wine|drink|restaurant|café|cafe|brunch|dinner|cooking|餐|吃)/i.test(
+      value,
+    )
+  )
+    return "FOOD";
+  if (/(展|exhibition|museum|gallery|art|博物馆|艺术)/i.test(value))
+    return "EXHIBITION";
   return "OTHER";
 }
 
@@ -131,8 +165,49 @@ function clean(text: unknown) {
   return typeof text === "string" ? stripHtml(text) : "";
 }
 
-function fingerprintOf(item: Pick<ScrapedActivity, "title" | "startAt" | "address" | "source">) {
-  return sha1(`${item.source}|${item.title.toLowerCase()}|${item.startAt}|${item.address.toLowerCase()}`);
+function normalizeExternalImageUrl(value: unknown): string | null {
+  if (typeof value === "string") {
+    const rawUrl = value.trim();
+
+    if (!rawUrl) {
+      return null;
+    }
+
+    try {
+      const url = new URL(rawUrl);
+      return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const url = normalizeExternalImageUrl(item);
+
+      if (url) {
+        return url;
+      }
+    }
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return (
+      normalizeExternalImageUrl(record.url) ??
+      normalizeExternalImageUrl(record.contentUrl)
+    );
+  }
+
+  return null;
+}
+
+function fingerprintOf(
+  item: Pick<ScrapedActivity, "title" | "startAt" | "address" | "source">,
+) {
+  return sha1(
+    `${item.source}|${item.title.toLowerCase()}|${item.startAt}|${item.address.toLowerCase()}`,
+  );
 }
 
 async function fetchText(url: string, timeoutMs = 30000) {
@@ -142,12 +217,16 @@ async function fetchText(url: string, timeoutMs = 30000) {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText} for ${url}`,
+      );
     }
     return await response.text();
   } finally {
@@ -155,27 +234,52 @@ async function fetchText(url: string, timeoutMs = 30000) {
   }
 }
 
-function parseChineseDate(text: string, referenceYear = new Date().getFullYear()) {
-  const normalized = text.replace(/\s+/g, "").replace(/\uFF0F/g, "/").replace(/\u2013|\u2014|\u2212/g, "-");
-  const rangeMatch = normalized.match(/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/);
+function parseChineseDate(
+  text: string,
+  referenceYear = new Date().getFullYear(),
+) {
+  const normalized = text
+    .replace(/\s+/g, "")
+    .replace(/\uFF0F/g, "/")
+    .replace(/\u2013|\u2014|\u2212/g, "-");
+  const rangeMatch = normalized.match(
+    /(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/,
+  );
   if (rangeMatch) {
     const [, yearA, monthA, dayA, yearB, monthB, dayB] = rangeMatch;
     const startYear = Number(yearA ?? yearB ?? referenceYear);
     const endYear = Number(yearB ?? yearA ?? startYear);
     const endMonth = Number(monthB ?? monthA) - 1;
-    const start = new Date(Date.UTC(startYear, Number(monthA) - 1, Number(dayA), 9, 0, 0));
+    const start = new Date(
+      Date.UTC(startYear, Number(monthA) - 1, Number(dayA), 9, 0, 0),
+    );
     const end = new Date(Date.UTC(endYear, endMonth, Number(dayB), 18, 0, 0));
     return { start, end };
   }
   const singleMatch = normalized.match(/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日/);
   if (singleMatch) {
     const [, year, month, day] = singleMatch;
-    return { start: new Date(Date.UTC(Number(year ?? referenceYear), Number(month) - 1, Number(day), 9, 0, 0)), end: null };
+    return {
+      start: new Date(
+        Date.UTC(
+          Number(year ?? referenceYear),
+          Number(month) - 1,
+          Number(day),
+          9,
+          0,
+          0,
+        ),
+      ),
+      end: null,
+    };
   }
   return null;
 }
 
-async function scrapePlayInParis(limit: number, timeoutMs = 30000): Promise<ScrapedActivity[]> {
+async function scrapePlayInParis(
+  limit: number,
+  timeoutMs = 30000,
+): Promise<ScrapedActivity[]> {
   const html = await fetchText("https://playinparis.com/events/", timeoutMs);
   const events: Record<string, unknown>[] = [];
   for (const block of parseJsonLdBlocks(html)) {
@@ -193,25 +297,53 @@ async function scrapePlayInParis(limit: number, timeoutMs = 30000): Promise<Scra
 
   return events
     .map<ScrapedActivity | null>((event) => {
-      const url = typeof event.url === "string" ? event.url : "https://playinparis.com/events/";
-      const title = typeof event.name === "string" ? clean(event.name) : "未命名活动";
+      const url =
+        typeof event.url === "string"
+          ? event.url
+          : "https://playinparis.com/events/";
+      const title =
+        typeof event.name === "string" ? clean(event.name) : "未命名活动";
       const description = clean(event.description) || title;
-      const startAt = typeof event.startDate === "string" ? parseDateTimeString(event.startDate) : null;
-      const endAt = typeof event.endDate === "string" ? parseDateTimeString(event.endDate) : null;
+      const startAt =
+        typeof event.startDate === "string"
+          ? parseDateTimeString(event.startDate)
+          : null;
+      const endAt =
+        typeof event.endDate === "string"
+          ? parseDateTimeString(event.endDate)
+          : null;
       if (!startAt) return null;
       const location = event.location as Record<string, unknown> | undefined;
-      const address = location?.address && typeof location.address === "object"
-        ? [
-            (location.address as Record<string, unknown>).streetAddress,
-            (location.address as Record<string, unknown>).addressLocality,
-            (location.address as Record<string, unknown>).postalCode,
-            (location.address as Record<string, unknown>).addressCountry,
-          ].filter(Boolean).join(", ")
-        : [location?.name, location?.description].filter(Boolean).join(" - ");
-      const offer = Array.isArray(event.offers) ? event.offers[0] : event.offers;
-      const price = offer && typeof offer === "object" ? (offer as Record<string, unknown>).price : undefined;
-      const currency = offer && typeof offer === "object" ? (offer as Record<string, unknown>).priceCurrency : undefined;
-      const priceText = price === undefined || price === null || price === "" ? "查看原文" : String(price) === "0" ? "免费" : currency ? `${price} ${currency}` : String(price);
+      const address =
+        location?.address && typeof location.address === "object"
+          ? [
+              (location.address as Record<string, unknown>).streetAddress,
+              (location.address as Record<string, unknown>).addressLocality,
+              (location.address as Record<string, unknown>).postalCode,
+              (location.address as Record<string, unknown>).addressCountry,
+            ]
+              .filter(Boolean)
+              .join(", ")
+          : [location?.name, location?.description].filter(Boolean).join(" - ");
+      const offer = Array.isArray(event.offers)
+        ? event.offers[0]
+        : event.offers;
+      const price =
+        offer && typeof offer === "object"
+          ? (offer as Record<string, unknown>).price
+          : undefined;
+      const currency =
+        offer && typeof offer === "object"
+          ? (offer as Record<string, unknown>).priceCurrency
+          : undefined;
+      const priceText =
+        price === undefined || price === null || price === ""
+          ? "查看原文"
+          : String(price) === "0"
+            ? "免费"
+            : currency
+              ? `${price} ${currency}`
+              : String(price);
       return {
         id: makeStableId("playinparis", url),
         source: "playinparis",
@@ -231,7 +363,7 @@ async function scrapePlayInParis(limit: number, timeoutMs = 30000): Promise<Scra
         requiresApproval: false,
         priceType: guessPriceType(priceText),
         priceText,
-        coverImageUrl: typeof event.image === "string" ? event.image : null,
+        coverImageUrl: normalizeExternalImageUrl(event.image),
         status: "RECRUITING",
         visibility: "PUBLIC",
       } satisfies ScrapedActivity;
@@ -241,8 +373,13 @@ async function scrapePlayInParis(limit: number, timeoutMs = 30000): Promise<Scra
     .slice(0, limit);
 }
 
-async function scrapeSortirAParis(limit: number, timeoutMs = 30000, maxPages = 3): Promise<ScrapedActivity[]> {
-  const listUrl = "https://www.sortiraparis.com/zh/zai-bali-wan-shenme/jiaoyi-hui-he-zhanlan";
+async function scrapeSortirAParis(
+  limit: number,
+  timeoutMs = 30000,
+  maxPages = 3,
+): Promise<ScrapedActivity[]> {
+  const listUrl =
+    "https://www.sortiraparis.com/zh/zai-bali-wan-shenme/jiaoyi-hui-he-zhanlan";
   const prefix = `${listUrl}/articles/`;
   const found = new Map<string, ScrapedActivity>();
 
@@ -260,14 +397,18 @@ async function scrapeSortirAParis(limit: number, timeoutMs = 30000, maxPages = 3
     const links = new Set<string>();
     for (const match of html.matchAll(/href=["']([^"']+)["']/gi)) {
       const href = match[1];
-      if (!href || href.startsWith("#") || href.startsWith("javascript:")) continue;
+      if (!href || href.startsWith("#") || href.startsWith("javascript:"))
+        continue;
       const absolute = normalizeUrl(new URL(href, baseUrl).toString());
       if (absolute.startsWith(prefix)) links.add(absolute);
     }
     return [...links];
   };
 
-  const parseArticlePage = (html: string, sourceUrl: string): ScrapedActivity | null => {
+  const parseArticlePage = (
+    html: string,
+    sourceUrl: string,
+  ): ScrapedActivity | null => {
     const jsonLdBlocks = parseJsonLdBlocks(html);
     let articleData: Record<string, unknown> | null = null;
     for (const block of jsonLdBlocks) {
@@ -286,22 +427,36 @@ async function scrapeSortirAParis(limit: number, timeoutMs = 30000, maxPages = 3
       if (!match) return "未命名活动";
       return stripHtml(match.replace(/\s*-\s*Sortiraparis\.com.*/i, ""));
     })();
-    const title = articleData && typeof articleData.headline === "string" ? stripHtml(articleData.headline) : pageTitle;
-    const descriptionRaw = articleData && typeof articleData.description === "string"
-      ? articleData.description
-      : extractMetaContent(html, ["description", "og:description"]) ?? "";
+    const title =
+      articleData && typeof articleData.headline === "string"
+        ? stripHtml(articleData.headline)
+        : pageTitle;
+    const descriptionRaw =
+      articleData && typeof articleData.description === "string"
+        ? articleData.description
+        : (extractMetaContent(html, ["description", "og:description"]) ?? "");
     const description = stripHtml(descriptionRaw) || title;
-    const explicitDateHint = parseChineseDate(`${title} ${description}`, new Date().getUTCFullYear());
-    const fallbackDateHint = parseChineseDate(`${title} ${description} ${bodyText}`, new Date().getUTCFullYear());
-    const datePublished = articleData && typeof articleData.datePublished === "string"
-      ? parseDateTimeString(articleData.datePublished)
-      : null;
+    const explicitDateHint = parseChineseDate(
+      `${title} ${description}`,
+      new Date().getUTCFullYear(),
+    );
+    const fallbackDateHint = parseChineseDate(
+      `${title} ${description} ${bodyText}`,
+      new Date().getUTCFullYear(),
+    );
+    const datePublished =
+      articleData && typeof articleData.datePublished === "string"
+        ? parseDateTimeString(articleData.datePublished)
+        : null;
     const dateHint = explicitDateHint ?? fallbackDateHint;
     const startAt = dateHint?.start ?? datePublished ?? new Date();
     const endAt = dateHint?.end ?? null;
-    const image = articleData?.image;
-    const coverImageUrl = typeof image === "string" ? image : Array.isArray(image) ? (typeof image[0] === "string" ? image[0] : null) : null;
-    const priceText = /免费|gratuit|free/i.test(`${title} ${description} ${bodyText}`) ? "免费" : "查看原文";
+    const coverImageUrl = normalizeExternalImageUrl(articleData?.image);
+    const priceText = /免费|gratuit|free/i.test(
+      `${title} ${description} ${bodyText}`,
+    )
+      ? "免费"
+      : "查看原文";
 
     return {
       id: makeStableId("sortiraparis", sourceUrl),
@@ -339,15 +494,26 @@ async function scrapeSortirAParis(limit: number, timeoutMs = 30000, maxPages = 3
     }
   }
 
-  return [...found.values()].sort((a, b) => a.startAt.localeCompare(b.startAt)).slice(0, limit);
+  return [...found.values()]
+    .sort((a, b) => a.startAt.localeCompare(b.startAt))
+    .slice(0, limit);
 }
 
-export async function scrapeActivities(request: ScrapeRequest): Promise<ScrapedActivity[]> {
+export async function scrapeActivities(
+  request: ScrapeRequest,
+): Promise<ScrapedActivity[]> {
   const { sources, limit, timeoutMs = 30000, maxPages = 3, from, to } = request;
-  const perSourceLimit = Math.max(Math.ceil(limit / Math.max(sources.length, 1)) + 4, limit);
+  const perSourceLimit = Math.max(
+    Math.ceil(limit / Math.max(sources.length, 1)) + 4,
+    limit,
+  );
   const [play, sortir] = await Promise.all([
-    sources.includes("playinparis") ? scrapePlayInParis(perSourceLimit, timeoutMs) : Promise.resolve([]),
-    sources.includes("sortiraparis") ? scrapeSortirAParis(perSourceLimit, timeoutMs, maxPages) : Promise.resolve([]),
+    sources.includes("playinparis")
+      ? scrapePlayInParis(perSourceLimit, timeoutMs)
+      : Promise.resolve([]),
+    sources.includes("sortiraparis")
+      ? scrapeSortirAParis(perSourceLimit, timeoutMs, maxPages)
+      : Promise.resolve([]),
   ]);
 
   const merged = [...play, ...sortir]
@@ -363,11 +529,12 @@ export async function scrapeActivities(request: ScrapeRequest): Promise<ScrapedA
   return merged;
 }
 
-export function buildFingerprint(activity: Pick<ScrapedActivity, "source" | "title" | "startAt" | "address">) {
+export function buildFingerprint(
+  activity: Pick<ScrapedActivity, "source" | "title" | "startAt" | "address">,
+) {
   return fingerprintOf(activity);
 }
 
 export function buildStableActivityId(source: string, url: string) {
   return makeStableId(source, url);
 }
-
