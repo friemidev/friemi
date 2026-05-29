@@ -4,10 +4,12 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  ExternalLink,
   MapPin,
   Pencil,
   ShieldAlert,
   Route,
+  Store,
   UserRound,
   UsersRound,
   WalletCards,
@@ -133,6 +135,37 @@ export default async function ActivityDetailPage({
               </p>
             )}
           </div>
+
+          {activity.merchant ? (
+            <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-moss" />
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.merchant.detailTitle}
+                </h2>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 rounded-md bg-paper/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-ink">
+                    {activity.merchant.name}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    {activity.merchant.city}
+                  </p>
+                </div>
+                <Link
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  href={withLocale(
+                    locale,
+                    `/merchants/${activity.merchant.slug}`,
+                  )}
+                >
+                  {t.merchant.viewProfile}
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          ) : null}
 
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
             <div className="flex items-center gap-2">

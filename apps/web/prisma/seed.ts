@@ -10,8 +10,32 @@ async function main() {
       clerkUserId: "seed_user_next_fun_club",
       nickname: "Next Fun Club",
       bio: "巴黎首批活动运营账号",
-      interests: ["桌游", "展览", "City walk"]
-    }
+      interests: ["桌游", "展览", "City walk"],
+    },
+  });
+
+  const merchant = await prisma.merchant.upsert({
+    where: { slug: "paris-community-cafe" },
+    update: {
+      name: "Paris Community Café",
+      description: "适合小型聚会、语言交换和桌游活动的巴黎本地合作空间。",
+      city: "Paris",
+      address: "République, Paris",
+      latitude: 48.8674,
+      longitude: 2.363,
+      websiteUrl: "https://example.com",
+      isActive: true,
+    },
+    create: {
+      slug: "paris-community-cafe",
+      name: "Paris Community Café",
+      description: "适合小型聚会、语言交换和桌游活动的巴黎本地合作空间。",
+      city: "Paris",
+      address: "République, Paris",
+      latitude: 48.8674,
+      longitude: 2.363,
+      websiteUrl: "https://example.com",
+    },
   });
 
   await prisma.activity.createMany({
@@ -31,7 +55,8 @@ async function main() {
         requiresApproval: false,
         priceType: "AA",
         priceText: "AA 预计 8-12 欧",
-        organizerId: organizer.id
+        organizerId: organizer.id,
+        merchantId: merchant.id,
       },
       {
         title: "奥赛博物馆周末看展",
@@ -48,7 +73,7 @@ async function main() {
         requiresApproval: false,
         priceType: "FIXED",
         priceText: "门票自理",
-        organizerId: organizer.id
+        organizerId: organizer.id,
       },
       {
         title: "巴黎 City Walk 摄影小队",
@@ -66,10 +91,20 @@ async function main() {
         requiresApproval: true,
         priceType: "FREE",
         priceText: "免费",
-        organizerId: organizer.id
-      }
+        organizerId: organizer.id,
+      },
     ],
-    skipDuplicates: true
+    skipDuplicates: true,
+  });
+
+  await prisma.activity.updateMany({
+    where: {
+      organizerId: organizer.id,
+      title: "周五下班后桌游局",
+    },
+    data: {
+      merchantId: merchant.id,
+    },
   });
 }
 

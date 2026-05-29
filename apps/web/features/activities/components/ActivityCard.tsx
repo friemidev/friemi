@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import { CalendarDays, MapPin, Store, UsersRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -67,6 +67,14 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
             {activity.description}
           </p>
           <div className="grid gap-1.5 text-sm text-zinc-600">
+            {activity.merchant ? (
+              <span className="flex items-start gap-2 text-zinc-700">
+                <Store className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 line-clamp-1">
+                  {t.merchant.cardLabel(activity.merchant.name)}
+                </span>
+              </span>
+            ) : null}
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0">

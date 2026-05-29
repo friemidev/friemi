@@ -66,6 +66,15 @@ function getActivityDetailViewModel(
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
+    merchant: activity.merchant
+      ? {
+          id: activity.merchant.id,
+          slug: activity.merchant.slug,
+          name: activity.merchant.name,
+          logoUrl: activity.merchant.logoUrl,
+          city: activity.merchant.city,
+        }
+      : null,
     organizer: {
       id: activity.organizer.id,
       nickname: activity.organizer.nickname,
