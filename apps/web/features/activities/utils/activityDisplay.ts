@@ -7,10 +7,33 @@ import {
 import { getCopy, getPriceTypeLabel } from "@/lib/copy";
 import type { ActivityCardViewModel, ActivityDetailViewModel } from "../types";
 
+export type ActivityDisplayTimeState = "UPCOMING" | "ONGOING" | "ENDED";
+
 export function getActivityLocationLabel(activity: ActivityCardViewModel) {
   return activity.address.includes(activity.city)
     ? activity.address
     : `${activity.city} · ${activity.address}`;
+}
+
+export function getActivityTimeState(
+  activity: ActivityCardViewModel,
+  now = new Date(),
+): ActivityDisplayTimeState {
+  if (activity.status === "ENDED" || activity.status === "CANCELLED") {
+    return "ENDED";
+  }
+
+  const startAt = new Date(activity.startAt);
+
+  if (startAt > now) {
+    return "UPCOMING";
+  }
+
+  if (activity.endAt && new Date(activity.endAt) > now) {
+    return "ONGOING";
+  }
+
+  return "ENDED";
 }
 
 export function getActivityDisplayStatus(
@@ -40,6 +63,10 @@ export function getActivityDisplayStatus(
     activity.participantCount >= activity.capacity
   ) {
     return "FULL";
+  }
+
+  if (canBecomeFull) {
+    return "OPEN";
   }
 
   return activity.status;

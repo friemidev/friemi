@@ -11,6 +11,7 @@ import {
   getActivityLocationLabel,
   getActivityParticipantPercent,
   getActivitySeatLabel,
+  getActivityTimeState,
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ActivityStatusBadge } from "./ActivityStatusBadge";
@@ -30,6 +31,7 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
   const t = getCopy(locale);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
+  const timeState = getActivityTimeState(activity);
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -57,8 +59,11 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
               {getTypeLabel(activity.type, locale)}
             </span>
           </div>
-          <div className="relative">
+          <div className="relative flex shrink-0 flex-col items-end gap-2">
             <ActivityStatusBadge status={displayStatus} locale={locale} />
+            <span className="rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700">
+              {t.activityLabels.timeStates[timeState]}
+            </span>
           </div>
         </div>
         <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
