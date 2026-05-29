@@ -3,9 +3,9 @@ export function getFriendsCopy(locale: string) {
     return {
       title: "Amis",
       description:
-        "Ajoutez des amis pour voir ensuite les activités où vos proches participent.",
+        "Gérez vos demandes et voyez les activités récentes de vos amis.",
       entryTitle: "Amis",
-      entryDescription: "Demandes et liste d'amis",
+      entryDescription: "Demandes, amis et activités",
       openFriends: "Voir les amis",
       addTitle: "Ajouter un ami",
       addDescription:
@@ -21,9 +21,14 @@ export function getFriendsCopy(locale: string) {
       friendsTitle: "Mes amis",
       friendsDescription: (count: number) =>
         `${count} ami${count > 1 ? "s" : ""} accepte${count > 1 ? "s" : ""}.`,
+      friendActivitySummary: (date: string, title: string) =>
+        `${date} participe à « ${title} »`,
+      moreActivities: (count: number) => `+${count}`,
+      showMoreActivitiesLabel: (count: number) =>
+        `Voir ${count} activité${count > 1 ? "s" : ""} en plus`,
+      collapseActivities: "Réduire",
       friendsEmptyTitle: "Aucun ami pour le moment",
-      friendsEmptyDescription:
-        "Les amis acceptés apparaîtront ici. Les signaux d'activité viendront ensuite.",
+      friendsEmptyDescription: "Les amis acceptés apparaîtront ici.",
       incomingTitle: "Demandes reçues",
       incomingEmpty: "Aucune demande reçue.",
       outgoingTitle: "Demandes envoyées",
@@ -54,9 +59,9 @@ export function getFriendsCopy(locale: string) {
     return {
       title: "Friends",
       description:
-        "Add friends now so activity pages can later show familiar participation signals.",
+        "Manage friend requests and see recent activities your friends joined.",
       entryTitle: "Friends",
-      entryDescription: "Requests and accepted friends",
+      entryDescription: "Requests, friends, and activities",
       openFriends: "Open friends",
       addTitle: "Add a friend",
       addDescription: "First version: search by an exact email or nickname.",
@@ -70,9 +75,14 @@ export function getFriendsCopy(locale: string) {
       friendsTitle: "My friends",
       friendsDescription: (count: number) =>
         `${count} accepted friend${count === 1 ? "" : "s"}.`,
+      friendActivitySummary: (date: string, title: string) =>
+        `${date} joined “${title}”`,
+      moreActivities: (count: number) => `+${count}`,
+      showMoreActivitiesLabel: (count: number) =>
+        `Show ${count} more activit${count === 1 ? "y" : "ies"}`,
+      collapseActivities: "Collapse",
       friendsEmptyTitle: "No friends yet",
-      friendsEmptyDescription:
-        "Accepted friends will appear here. Activity signals come next.",
+      friendsEmptyDescription: "Accepted friends will appear here.",
       incomingTitle: "Incoming requests",
       incomingEmpty: "No incoming requests.",
       outgoingTitle: "Sent requests",
@@ -101,9 +111,9 @@ export function getFriendsCopy(locale: string) {
 
   return {
     title: "好友",
-    description: "先建立好友关系，之后活动页会显示熟人报名信号。",
+    description: "管理好友申请，查看好友最近参加的活动。",
     entryTitle: "好友",
-    entryDescription: "好友申请和好友列表",
+    entryDescription: "好友申请、好友列表和近期活动",
     openFriends: "查看好友",
     addTitle: "添加好友",
     addDescription: "第一版只支持通过邮箱或昵称精确查找。",
@@ -116,9 +126,13 @@ export function getFriendsCopy(locale: string) {
     sending: "发送中...",
     friendsTitle: "我的好友",
     friendsDescription: (count: number) => `已接受 ${count} 位好友。`,
+    friendActivitySummary: (date: string, title: string) =>
+      `${date}参加了「${title}」`,
+    moreActivities: (count: number) => `+${count}`,
+    showMoreActivitiesLabel: (count: number) => `查看另外 ${count} 个活动`,
+    collapseActivities: "收起",
     friendsEmptyTitle: "还没有好友",
-    friendsEmptyDescription:
-      "接受好友申请后会显示在这里，活动熟人信号后续接入。",
+    friendsEmptyDescription: "接受好友申请后会显示在这里。",
     incomingTitle: "收到的申请",
     incomingEmpty: "暂无收到的好友申请。",
     outgoingTitle: "发出的申请",
