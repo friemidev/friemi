@@ -18,6 +18,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
+import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
@@ -83,8 +84,12 @@ export default async function ActivityDetailPage({
 
   return (
     <PageContainer className="space-y-6">
-      <div className="flex min-h-52 items-end rounded-lg bg-moss p-4 sm:p-5 md:min-h-72">
-        <div className="max-w-3xl space-y-3">
+      <div className="relative flex min-h-52 items-end overflow-hidden rounded-lg bg-moss p-4 sm:p-5 md:min-h-72">
+        <ActivityCoverImage
+          src={activity.coverImageUrl}
+          overlayClassName="bg-black/35"
+        />
+        <div className="relative max-w-3xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
               {getCategoryLabel(activity.category, locale)}

@@ -5,6 +5,7 @@ export type ActivityFormValues = {
   title: string;
   description: string;
   itinerary: string;
+  coverImageUrl: string;
   type: string;
   category: string;
   otherCategoryText: string;
@@ -117,6 +118,7 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     title: getString(formData, "title"),
     description: getString(formData, "description"),
     itinerary: getString(formData, "itinerary"),
+    coverImageUrl: getString(formData, "coverImageUrl"),
     type: getString(formData, "type"),
     category: getString(formData, "category"),
     otherCategoryText: getString(formData, "otherCategoryText"),

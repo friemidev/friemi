@@ -21,6 +21,7 @@ export type AdminActivityListItem = {
   startAt: string;
   endAt: string | null;
   capacity: number;
+  coverImageUrl: string | null;
   minParticipants: number | null;
   requiresApproval: boolean;
   priceType: "FREE" | "AA" | "FIXED" | "RANGE";
@@ -219,6 +220,7 @@ export function serializeAdminActivity(
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: activity.capacity,
+    coverImageUrl: activity.coverImageUrl,
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
@@ -553,6 +555,7 @@ export async function createAdminActivity(data: {
   startAt: string;
   endAt?: string | null;
   capacity: number;
+  coverImageUrl?: string | null;
   minParticipants?: number | null;
   requiresApproval: boolean;
   priceType: "FREE" | "AA" | "FIXED" | "RANGE";

@@ -6,6 +6,7 @@ import type {
 import type { CommentType } from "@prisma/client";
 
 export type ActivityCardViewModel = ActivitySummary & {
+  coverImageUrl: string | null;
   coverTone: "moss" | "clay" | "sky";
   merchant: ActivityMerchantViewModel | null;
 };

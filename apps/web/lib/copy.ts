@@ -256,6 +256,19 @@ const copy = {
     form: {
       basicInfo: "基础信息",
       activityContent: "活动内容",
+      coverImage: "封面图片",
+      coverDefault: "使用默认活动封面",
+      coverImageHint: "上传后会展示在活动卡片和详情页顶部。",
+      coverFileHint: "支持 JPG、PNG、WebP，最大 4MB。",
+      coverUpload: "上传封面",
+      coverDropHere: "松开即可上传",
+      coverUploading: "上传中...",
+      coverRemove: "移除",
+      coverUploadFailed: "封面上传失败，请稍后重试。",
+      coverTypeError: "只支持 JPG、PNG 或 WebP 图片。",
+      coverSizeError: "图片不能超过 4MB。",
+      coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
+      coverStorageConfigError: "图片上传尚未配置，请联系管理员。",
       title: "标题",
       titlePlaceholder: "例如：周五下班后桌游局",
       description: "描述",
@@ -592,6 +605,22 @@ const copy = {
     form: {
       basicInfo: "Basic information",
       activityContent: "Activity content",
+      coverImage: "Cover image",
+      coverDefault: "Use the default activity cover",
+      coverImageHint:
+        "Uploaded images appear on activity cards and detail pages.",
+      coverFileHint: "JPG, PNG, or WebP. Max 4MB.",
+      coverUpload: "Upload cover",
+      coverDropHere: "Drop to upload",
+      coverUploading: "Uploading...",
+      coverRemove: "Remove",
+      coverUploadFailed: "Cover upload failed. Please try again later.",
+      coverTypeError: "Only JPG, PNG, or WebP images are supported.",
+      coverSizeError: "Image must be 4MB or smaller.",
+      coverInvalidContentError:
+        "The image content is invalid. Please choose the original image file.",
+      coverStorageConfigError:
+        "Image upload is not configured. Please contact an admin.",
       title: "Title",
       titlePlaceholder: "Example: Friday board game night",
       description: "Description",
@@ -944,6 +973,23 @@ const copy = {
     form: {
       basicInfo: "Informations de base",
       activityContent: "Contenu",
+      coverImage: "Image de couverture",
+      coverDefault: "Utiliser la couverture par défaut",
+      coverImageHint:
+        "L'image s'affiche sur les cartes d'activité et la page détail.",
+      coverFileHint: "JPG, PNG ou WebP. 4 Mo maximum.",
+      coverUpload: "Importer",
+      coverDropHere: "Relâchez pour importer",
+      coverUploading: "Import...",
+      coverRemove: "Retirer",
+      coverUploadFailed:
+        "Échec de l'import de la couverture. Réessayez plus tard.",
+      coverTypeError: "Seules les images JPG, PNG ou WebP sont acceptées.",
+      coverSizeError: "L'image ne doit pas dépasser 4 Mo.",
+      coverInvalidContentError:
+        "Le contenu de l'image est invalide. Choisissez le fichier original.",
+      coverStorageConfigError:
+        "L'import d'images n'est pas configuré. Contactez un administrateur.",
       title: "Titre",
       titlePlaceholder: "Exemple : soirée jeux de société vendredi",
       description: "Description",

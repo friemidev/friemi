@@ -12,6 +12,7 @@ import {
   getActivityParticipantPercent,
   getActivitySeatLabel,
 } from "../utils/activityDisplay";
+import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ActivityStatusBadge } from "./ActivityStatusBadge";
 
 type ActivityCardProps = {
@@ -43,11 +44,12 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
       <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
         <div
           className={cn(
-            "flex h-20 items-end justify-between gap-2 p-3 sm:h-24 sm:p-4",
+            "relative flex h-28 items-end justify-between gap-2 overflow-hidden p-3 sm:h-36 sm:p-4",
             coverTones[activity.coverTone],
           )}
         >
-          <div className="flex min-w-0 flex-wrap gap-2">
+          <ActivityCoverImage src={activity.coverImageUrl} />
+          <div className="relative flex min-w-0 flex-wrap gap-2">
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold leading-none text-ink">
               {getCategoryLabel(activity.category, locale)}
             </span>
@@ -55,7 +57,9 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
               {getTypeLabel(activity.type, locale)}
             </span>
           </div>
-          <ActivityStatusBadge status={displayStatus} locale={locale} />
+          <div className="relative">
+            <ActivityStatusBadge status={displayStatus} locale={locale} />
+          </div>
         </div>
         <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
           <CardTitle className="line-clamp-2 text-base leading-snug sm:text-lg">

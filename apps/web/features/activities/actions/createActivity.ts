@@ -95,6 +95,7 @@ export async function createActivityAction(
         title: result.data.title,
         description,
         itinerary: result.data.itinerary,
+        coverImageUrl: result.data.coverImageUrl,
         type: result.data.type,
         category: result.data.category,
         city: result.data.city,

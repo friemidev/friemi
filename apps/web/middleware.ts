@@ -7,19 +7,26 @@ import { hasClerkKeys } from "./lib/clerk";
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale,
-  localePrefix: "always"
+  localePrefix: "always",
 });
 
-const isProtectedRoute = createRouteMatcher(["/:locale/activities/new(.*)", "/:locale/profile(.*)"]);
+const isProtectedRoute = createRouteMatcher([
+  "/:locale/activities/new(.*)",
+  "/:locale/profile(.*)",
+]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
+const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   if (hasClerkKeys() && isProtectedRoute(request)) {
     await auth.protect();
   }
 
-  if (hasClerkKeys() && (isAdminPageRoute(request) || isAdminApiRoute(request))) {
+  if (
+    hasClerkKeys() &&
+    (isAdminPageRoute(request) || isAdminApiRoute(request))
+  ) {
     let authState = await auth();
 
     if (!authState.userId) {
@@ -31,7 +38,9 @@ export default clerkMiddleware(async (auth, request) => {
       authState = await auth();
 
       if (!authState.userId) {
-        return NextResponse.redirect(new URL(`/${defaultLocale}/sign-in`, request.url));
+        return NextResponse.redirect(
+          new URL(`/${defaultLocale}/sign-in`, request.url),
+        );
       }
     }
 
@@ -40,9 +49,25 @@ export default clerkMiddleware(async (auth, request) => {
     }
   }
 
+  if (isUploadApiRoute(request)) {
+    if (hasClerkKeys()) {
+      const { userId } = await auth();
+
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
+    return NextResponse.next();
+  }
+
   return intlMiddleware(request);
 });
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)", "/api/admin/:path*"]
+  matcher: [
+    "/((?!api|_next|_vercel|.*\\..*).*)",
+    "/api/admin/:path*",
+    "/api/uploads/:path*",
+  ],
 };

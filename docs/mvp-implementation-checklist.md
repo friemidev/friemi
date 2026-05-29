@@ -400,10 +400,10 @@ feature/activity-images
 
 小功能：
 
-- [ ] 活动封面上传
-- [ ] Cloudinary 或 Supabase Storage
-- [ ] 图片 URL 写入 `coverImageUrl`
-- [ ] 默认占位图
+- [x] 活动封面上传
+- [x] Cloudinary 或 Supabase Storage
+- [x] 图片 URL 写入 `coverImageUrl`
+- [x] 默认占位图
 
 ### 17. 地图和地点
 

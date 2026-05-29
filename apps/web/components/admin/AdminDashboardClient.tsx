@@ -19,6 +19,7 @@ import type {
 } from "@/lib/admin-scraper";
 import { ScraperImportSection } from "@/components/admin/ScraperImportSection";
 import { FormField, selectClassName } from "@/components/admin/FormField";
+import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
 
 type AdminDashboardClientProps = {
   initialActivities: AdminActivityListItem[];
@@ -48,6 +49,7 @@ type ActivityFormState = {
   startAt: string;
   endAt: string;
   capacity: string;
+  coverImageUrl: string;
   minParticipants: string;
   requiresApproval: boolean;
   priceType: "FREE" | "AA" | "FIXED" | "RANGE";
@@ -82,6 +84,7 @@ const emptyActivityForm = (
   startAt: "",
   endAt: "",
   capacity: "100",
+  coverImageUrl: "",
   minParticipants: "",
   requiresApproval: false,
   priceType: "FREE",
@@ -170,6 +173,7 @@ export function AdminDashboardClient({
   initialActivities,
   initialOrganizers,
   initialMerchants,
+  locale,
 }: AdminDashboardClientProps) {
   const defaultOrganizerId = initialOrganizers[0]?.id ?? "";
   const [activities, setActivities] = useState(initialActivities);
@@ -179,9 +183,11 @@ export function AdminDashboardClient({
     emptyActivityForm(defaultOrganizerId),
   );
   const [busy, setBusy] = useState<string | null>(null);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("activities");
 
   const isSavingActivity = busy === "activity";
+  const isActivitySubmitDisabled = isSavingActivity || isCoverUploading;
 
   async function refreshActivities() {
     const response = await fetch("/api/admin/activities", {
@@ -201,6 +207,7 @@ export function AdminDashboardClient({
         itinerary: activityForm.itinerary.trim() || null,
         destination: activityForm.destination.trim() || null,
         endAt: activityForm.endAt.trim() || null,
+        coverImageUrl: activityForm.coverImageUrl.trim() || null,
         minParticipants: activityForm.minParticipants.trim()
           ? Number(activityForm.minParticipants)
           : null,
@@ -325,6 +332,16 @@ export function AdminDashboardClient({
                         description: e.target.value,
                       })
                     }
+                  />
+                </FormField>
+                <FormField label="封面图片（可选）">
+                  <ActivityCoverUpload
+                    initialUrl={activityForm.coverImageUrl}
+                    locale={locale}
+                    onChange={(coverImageUrl) =>
+                      setActivityForm({ ...activityForm, coverImageUrl })
+                    }
+                    onUploadingChange={setIsCoverUploading}
                   />
                 </FormField>
                 <FormField label="行程安排（可选）">
@@ -599,12 +616,12 @@ export function AdminDashboardClient({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="submit"
-                    disabled={isSavingActivity}
+                    disabled={isActivitySubmitDisabled}
                     className="min-w-[7rem]"
                   >
                     <LoadingLabel
-                      loading={isSavingActivity}
-                      loadingText="保存中…"
+                      loading={isActivitySubmitDisabled}
+                      loadingText={isCoverUploading ? "上传中…" : "保存中…"}
                     >
                       {activityForm.id ? "保存修改" : "创建活动"}
                     </LoadingLabel>
@@ -612,7 +629,7 @@ export function AdminDashboardClient({
                   <Button
                     type="button"
                     variant="secondary"
-                    disabled={isSavingActivity}
+                    disabled={isActivitySubmitDisabled}
                     onClick={() =>
                       setActivityForm(emptyActivityForm(defaultOrganizerId))
                     }
@@ -703,6 +720,7 @@ export function AdminDashboardClient({
                                   startAt: toDatetimeLocal(activity.startAt),
                                   endAt: toDatetimeLocal(activity.endAt),
                                   capacity: String(activity.capacity),
+                                  coverImageUrl: activity.coverImageUrl ?? "",
                                   minParticipants: activity.minParticipants
                                     ? String(activity.minParticipants)
                                     : "",

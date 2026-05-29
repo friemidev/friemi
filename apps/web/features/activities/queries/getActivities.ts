@@ -30,6 +30,7 @@ export const activityCardSelect = {
   startAt: true,
   endAt: true,
   capacity: true,
+  coverImageUrl: true,
   priceText: true,
   status: true,
   merchant: {
@@ -133,6 +134,7 @@ export function getActivityCardViewModel(
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: activity.capacity,
+    coverImageUrl: activity.coverImageUrl,
     participantCount: activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
