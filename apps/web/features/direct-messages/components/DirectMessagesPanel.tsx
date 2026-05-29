@@ -1,17 +1,22 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  CalendarDays,
   ChevronDown,
   MessageCircle,
   UsersRound,
 } from "lucide-react";
-import { formatActivityDate } from "@chill-club/shared";
+import {
+  formatActivityDate,
+  formatActivityDateOnly,
+} from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
+  DirectConversationActivitySignalViewModel,
   DirectConversationListItemViewModel,
   DirectConversationThreadViewModel,
   DirectMessageUserViewModel,
@@ -109,44 +114,149 @@ function ConversationListItem({
   const time = lastMessage?.createdAt ?? conversation.createdAt;
 
   return (
-    <Link
+    <article
       aria-current={isActive ? "page" : undefined}
-      aria-label={t.openConversation(conversation.peer.nickname)}
       className={cn(
-        "grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-lg p-2.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+        "rounded-lg p-2.5 transition",
         isActive
           ? "bg-ink text-white shadow-sm"
           : "text-ink hover:bg-white hover:shadow-sm",
       )}
-      href={withLocale(locale, `/messages/${conversation.id}`)}
     >
-      <MessageAvatar
-        avatarUrl={conversation.peer.avatarUrl}
-        name={conversation.peer.nickname}
-      />
-      <span className="min-w-0">
-        <span className="flex min-w-0 items-start gap-2">
-          <span className="truncate text-sm font-semibold">
-            {conversation.peer.nickname}
+      <Link
+        aria-label={t.openConversation(conversation.peer.nickname)}
+        className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+        href={withLocale(locale, `/messages/${conversation.id}`)}
+      >
+        <MessageAvatar
+          avatarUrl={conversation.peer.avatarUrl}
+          name={conversation.peer.nickname}
+        />
+        <span className="min-w-0">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="truncate text-sm font-semibold">
+              {conversation.peer.nickname}
+            </span>
+            <span
+              className={cn(
+                "ml-auto shrink-0 whitespace-nowrap text-xs",
+                isActive ? "text-white/65" : "text-zinc-400",
+              )}
+            >
+              {formatActivityDate(time, locale)}
+            </span>
           </span>
           <span
             className={cn(
-              "ml-auto shrink-0 whitespace-nowrap text-xs",
-              isActive ? "text-white/65" : "text-zinc-400",
+              "mt-1 block truncate text-xs leading-5",
+              isActive ? "text-white/75" : "text-zinc-500",
             )}
           >
-            {formatActivityDate(time, locale)}
+            {preview}
           </span>
         </span>
-        <span
-          className={cn(
-            "mt-1 block truncate text-xs leading-5",
-            isActive ? "text-white/75" : "text-zinc-500",
-          )}
-        >
-          {preview}
-        </span>
-      </span>
+      </Link>
+      <ConversationActivitySignals
+        activities={conversation.recentActivities}
+        isActive={isActive}
+        locale={locale}
+      />
+    </article>
+  );
+}
+
+function ConversationActivitySignals({
+  activities,
+  isActive,
+  locale,
+}: {
+  activities: DirectConversationActivitySignalViewModel[];
+  isActive: boolean;
+  locale: string;
+}) {
+  const t = getDirectMessagesCopy(locale);
+  const [firstActivity, ...remainingActivities] = activities;
+
+  if (!firstActivity) {
+    return null;
+  }
+
+  return (
+    <div className="ml-[3.55rem] mt-2 grid min-w-0 gap-1">
+      <ActivitySignalRow
+        activity={firstActivity}
+        isActive={isActive}
+        locale={locale}
+      />
+      {remainingActivities.length > 0 ? (
+        <details className="group min-w-0">
+          <summary
+            className={cn(
+              "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden",
+              isActive
+                ? "bg-white/10 text-white/80 hover:bg-white/15"
+                : "bg-moss/10 text-moss hover:bg-moss/15",
+            )}
+            aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
+          >
+            <span className="group-open:hidden">
+              {t.moreActivities(remainingActivities.length)}
+            </span>
+            <span className="hidden group-open:inline">
+              {t.collapseActivities}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
+          </summary>
+          <div className="mt-1 grid max-h-28 gap-1 overflow-y-auto pr-1">
+            {remainingActivities.map((activity) => (
+              <ActivitySignalRow
+                key={activity.id}
+                activity={activity}
+                isActive={isActive}
+                locale={locale}
+              />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function ActivitySignalRow({
+  activity,
+  isActive,
+  locale,
+}: {
+  activity: DirectConversationActivitySignalViewModel;
+  isActive: boolean;
+  locale: string;
+}) {
+  const t = getDirectMessagesCopy(locale);
+  const label = t.activitySignal(
+    formatActivityDateOnly(activity.startAt, locale),
+    activity.title,
+  );
+
+  return (
+    <Link
+      aria-label={t.openActivity(activity.title)}
+      className={cn(
+        "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-md px-2 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+        isActive
+          ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
+          : "bg-moss/5 text-zinc-600 hover:bg-moss/10 hover:text-ink",
+      )}
+      href={withLocale(locale, `/activities/${activity.id}`)}
+      title={label}
+    >
+      <CalendarDays
+        className={cn(
+          "h-3.5 w-3.5 shrink-0",
+          isActive ? "text-white/60" : "text-moss",
+        )}
+      />
+      <span className="truncate">{label}</span>
     </Link>
   );
 }

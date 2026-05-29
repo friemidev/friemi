@@ -23,6 +23,11 @@ type DirectMessagesCopy = {
   openFriends: string;
   openConversation: (name: string) => string;
   startConversation: string;
+  activitySignal: (date: string, title: string) => string;
+  openActivity: (title: string) => string;
+  moreActivities: (count: number) => string;
+  showMoreActivitiesLabel: (count: number) => string;
+  collapseActivities: string;
   youPrefix: string;
   invalidRequest: string;
   failed: string;
@@ -59,6 +64,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
       startConversation: "Message",
+      activitySignal: (date: string, title: string) =>
+        `Participe à « ${title} » le ${date}`,
+      openActivity: (title: string) => `Voir l'activité : ${title}`,
+      moreActivities: (count: number) => `+${count}`,
+      showMoreActivitiesLabel: (count: number) =>
+        `Afficher ${count} activité(s) récente(s) de plus`,
+      collapseActivities: "Réduire",
       youPrefix: "Vous :",
       invalidRequest: "Requête invalide. Actualisez puis réessayez.",
       failed: "Message impossible à envoyer pour le moment.",
@@ -102,6 +114,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
       startConversation: "Message",
+      activitySignal: (date: string, title: string) =>
+        `Joined "${title}" on ${date}`,
+      openActivity: (title: string) => `Open activity: ${title}`,
+      moreActivities: (count: number) => `+${count}`,
+      showMoreActivitiesLabel: (count: number) =>
+        `Show ${count} more recent activities`,
+      collapseActivities: "Collapse",
       youPrefix: "You:",
       invalidRequest: "Invalid request. Refresh and try again.",
       failed: "Message could not be sent right now.",
@@ -140,6 +159,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
     startConversation: "发消息",
+    activitySignal: (date: string, title: string) =>
+      `${date} 参加了「${title}」`,
+    openActivity: (title: string) => `查看活动：${title}`,
+    moreActivities: (count: number) => `+${count}`,
+    showMoreActivitiesLabel: (count: number) => `展开 ${count} 个近期活动`,
+    collapseActivities: "收起",
     youPrefix: "你：",
     invalidRequest: "请求无效，请刷新后重试。",
     failed: "消息暂时无法发送，请稍后重试。",

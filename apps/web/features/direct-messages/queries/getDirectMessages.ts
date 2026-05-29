@@ -1,9 +1,27 @@
-import type { Prisma } from "@prisma/client";
+import type {
+  ActivityStatus,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   getConversationPair,
   getConversationPeerId,
 } from "../utils/conversation";
+
+const friendActivityWindowDays = 30;
+const friendActivitySignalLimitPerFriend = 4;
+const dayInMs = 24 * 60 * 60 * 1000;
+const effectiveParticipantStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+];
+const visibleFriendActivityStatuses: ActivityStatus[] = [
+  "OPEN",
+  "FULL",
+  "RECRUITING",
+  "CONFIRMED",
+];
 
 const userSummarySelect = {
   id: true,
@@ -75,12 +93,19 @@ export type DirectMessagePreviewViewModel = {
   createdAt: string;
 };
 
+export type DirectConversationActivitySignalViewModel = {
+  id: string;
+  title: string;
+  startAt: string;
+};
+
 export type DirectConversationListItemViewModel = {
   id: string;
   peer: DirectMessageUserViewModel;
   lastMessage: DirectMessagePreviewViewModel | null;
   lastMessageAt: string | null;
   createdAt: string;
+  recentActivities: DirectConversationActivitySignalViewModel[];
 };
 
 export type DirectMessageThreadItemViewModel = {
@@ -137,6 +162,7 @@ function mapLastMessage(
 function mapConversationListItem(
   conversation: ConversationListResult,
   currentUserProfileId: string,
+  recentActivities: DirectConversationActivitySignalViewModel[] = [],
 ): DirectConversationListItemViewModel {
   return {
     id: conversation.id,
@@ -144,6 +170,7 @@ function mapConversationListItem(
     lastMessage: mapLastMessage(conversation),
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
+    recentActivities,
   };
 }
 
@@ -164,6 +191,105 @@ function mapConversationThread(
       isMine: message.senderId === currentUserProfileId,
     })),
   };
+}
+
+async function getFriendPeerIds(
+  currentUserProfileId: string,
+  peerIds: string[],
+) {
+  const uniquePeerIds = [...new Set(peerIds)].filter(
+    (peerId) => peerId !== currentUserProfileId,
+  );
+
+  if (uniquePeerIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      OR: uniquePeerIds.map((peerId) =>
+        getConversationPair(currentUserProfileId, peerId),
+      ),
+    },
+    select: {
+      userAId: true,
+      userBId: true,
+    },
+  });
+
+  return new Set(
+    friendships.map((friendship) =>
+      getConversationPeerId(friendship, currentUserProfileId),
+    ),
+  );
+}
+
+async function getFriendActivitySignals(friendIds: string[]) {
+  if (friendIds.length === 0) {
+    return new Map<string, DirectConversationActivitySignalViewModel[]>();
+  }
+
+  const now = new Date();
+  const windowEnd = new Date(
+    now.getTime() + friendActivityWindowDays * dayInMs,
+  );
+  const participations = await prisma.activityParticipant.findMany({
+    where: {
+      userProfileId: {
+        in: friendIds,
+      },
+      status: {
+        in: effectiveParticipantStatuses,
+      },
+      activity: {
+        startAt: {
+          gte: now,
+          lte: windowEnd,
+        },
+        status: {
+          in: visibleFriendActivityStatuses,
+        },
+        visibility: "PUBLIC",
+        organizer: {
+          status: "ACTIVE",
+        },
+      },
+    },
+    orderBy: [{ activity: { startAt: "asc" } }, { id: "asc" }],
+    take: 250,
+    select: {
+      userProfileId: true,
+      activity: {
+        select: {
+          id: true,
+          title: true,
+          startAt: true,
+        },
+      },
+    },
+  });
+  const activitiesByFriendId = new Map<
+    string,
+    DirectConversationActivitySignalViewModel[]
+  >();
+
+  for (const participation of participations) {
+    const activities =
+      activitiesByFriendId.get(participation.userProfileId) ?? [];
+
+    if (activities.length >= friendActivitySignalLimitPerFriend) {
+      continue;
+    }
+
+    activities.push({
+      id: participation.activity.id,
+      title: participation.activity.title,
+      startAt: participation.activity.startAt.toISOString(),
+    });
+    activitiesByFriendId.set(participation.userProfileId, activities);
+  }
+
+  return activitiesByFriendId;
 }
 
 export async function getDirectConversations(currentUserProfileId: string) {
@@ -192,9 +318,29 @@ export async function getDirectConversations(currentUserProfileId: string) {
     take: 50,
     select: conversationListSelect,
   });
+  const peerIds = conversations.map((conversation) =>
+    getConversationPeerId(conversation, currentUserProfileId),
+  );
+  let activitiesByFriendId = new Map<
+    string,
+    DirectConversationActivitySignalViewModel[]
+  >();
+
+  try {
+    const friendPeerIds = await getFriendPeerIds(currentUserProfileId, peerIds);
+    activitiesByFriendId = await getFriendActivitySignals([...friendPeerIds]);
+  } catch (error) {
+    console.error("Failed to load direct conversation activity signals", error);
+  }
 
   return conversations.map((conversation) =>
-    mapConversationListItem(conversation, currentUserProfileId),
+    mapConversationListItem(
+      conversation,
+      currentUserProfileId,
+      activitiesByFriendId.get(
+        getConversationPeerId(conversation, currentUserProfileId),
+      ) ?? [],
+    ),
   );
 }
 
