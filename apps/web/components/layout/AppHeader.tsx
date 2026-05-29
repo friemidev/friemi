@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   CalendarPlus,
   CircleUserRound,
@@ -25,8 +26,15 @@ export function AppHeader({ locale, showAdminNav = false }: AppHeaderProps) {
           href={withLocale(locale, "/")}
           className="flex items-center gap-2"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-ink text-sm font-bold text-white">
-            NF
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
+            <Image
+              src="/logo-icon.png"
+              alt="Next Fun Club"
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+              priority
+            />
           </span>
           <span className="hidden text-sm font-semibold tracking-normal sm:inline">
             Next Fun Club

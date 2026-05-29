@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "Next Fun Club",
   description:
     "Next Fun Club helps overseas Chinese-speaking users discover, create, and join local activities.",
+  icons: {
+    icon: "/logo-icon.png",
+    apple: "/logo-icon.png",
+  },
 };
 
 export default function RootLayout({
