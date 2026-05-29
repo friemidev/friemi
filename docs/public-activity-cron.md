@@ -95,3 +95,10 @@ DATABASE_URL
 ```
 
 首次部署前，需要把 Prisma schema 同步到对应数据库。
+
+
+数据库调取
+```
+curl -H "x-cron-secret: $CRON_SECRET" \
+  "http://localhost:3000/api/cron/import-public-activities?limit=30"
+```

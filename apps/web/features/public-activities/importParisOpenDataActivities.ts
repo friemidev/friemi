@@ -322,6 +322,40 @@ function toActivityData(
   };
 }
 
+function getSemanticDedupeCondition(
+  activityData: Prisma.ActivityCreateInput,
+): Prisma.ActivityWhereInput | null {
+  const title =
+    typeof activityData.title === "string" ? activityData.title.trim() : "";
+  const city =
+    typeof activityData.city === "string" ? activityData.city.trim() : "";
+  const address =
+    typeof activityData.address === "string" ? activityData.address.trim() : "";
+  const startAt =
+    activityData.startAt instanceof Date ? activityData.startAt : null;
+
+  if (!title || !city || !address || !startAt) {
+    return null;
+  }
+
+  return {
+    type: "PUBLIC_EVENT",
+    title: {
+      equals: title,
+      mode: "insensitive",
+    },
+    city: {
+      equals: city,
+      mode: "insensitive",
+    },
+    address: {
+      equals: address,
+      mode: "insensitive",
+    },
+    startAt,
+  };
+}
+
 async function ensurePublicActivityOrganizer() {
   return prisma.userProfile.upsert({
     where: {
@@ -403,6 +437,13 @@ export async function importParisOpenDataActivities(
       dedupeConditions.push({
         externalUrl: activityData.externalUrl,
       });
+    }
+
+    const semanticDedupeCondition =
+      getSemanticDedupeCondition(activityData);
+
+    if (semanticDedupeCondition) {
+      dedupeConditions.push(semanticDedupeCondition);
     }
 
     const existingActivity = await prisma.activity.findFirst({
