@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -12,34 +13,43 @@ import {
   Input,
   Textarea,
 } from "@chill-club/ui";
+import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 import {
-  activityCategories,
-  activityTypes,
-  priceTypes,
-} from "@chill-club/shared";
+  getCategoryLabel,
+  getCopy,
+  getPriceTypeLabel,
+  getTypeLabel,
+} from "@/lib/copy";
 import {
   createActivityAction,
   type CreateActivityState,
 } from "../actions/createActivity";
+import type { ActivityFormValues } from "../actions/activityActionUtils";
+import { updateActivityAction } from "../actions/updateActivity";
 
 type NewActivityFormProps = {
+  activityId?: string;
+  cancelHref?: string;
+  initialValues?: ActivityFormValues;
   locale: string;
+  mode?: "create" | "edit";
 };
 
 const initialState: CreateActivityState = {};
-const categoryOptions = Object.entries(activityCategories).sort(
-  ([left], [right]) => {
-    if (left === "OTHER") {
-      return 1;
-    }
+const priceTypeOptions = ["FREE", "AA", "FIXED", "RANGE"] as const;
+const categoryOptions = (
+  Object.keys(activityCategories) as ActivityCategory[]
+).sort((left, right) => {
+  if (left === "OTHER") {
+    return 1;
+  }
 
-    if (right === "OTHER") {
-      return -1;
-    }
+  if (right === "OTHER") {
+    return -1;
+  }
 
-    return 0;
-  },
-);
+  return 0;
+});
 const selectClassName =
   "h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
 
@@ -77,32 +87,80 @@ function FieldError({ errors }: { errors?: string[] }) {
     return null;
   }
 
-  return <p className="text-xs font-medium text-red-600">{errors[0]}</p>;
+  return (
+    <p className="text-xs font-medium text-red-600" role="alert">
+      {errors[0]}
+    </p>
+  );
 }
 
-function SubmitButton() {
+function SubmitButton({
+  locale,
+  mode,
+}: {
+  locale: string;
+  mode: "create" | "edit";
+}) {
   const { pending } = useFormStatus();
+  const t = getCopy(locale).form;
 
   return (
     <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? "创建中..." : "创建活动"}
+      {pending
+        ? mode === "edit"
+          ? t.saving
+          : t.creating
+        : mode === "edit"
+          ? t.save
+          : t.create}
     </Button>
   );
 }
 
-export function NewActivityForm({ locale }: NewActivityFormProps) {
-  const [state, formAction] = useActionState(
-    createActivityAction,
-    initialState,
+function FormActions({
+  cancelHref,
+  locale,
+  mode,
+}: {
+  cancelHref?: string;
+  locale: string;
+  mode: "create" | "edit";
+}) {
+  const t = getCopy(locale).form;
+
+  return (
+    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      {mode === "edit" && cancelHref ? (
+        <Link
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
+          href={cancelHref}
+        >
+          {t.cancelEdit}
+        </Link>
+      ) : null}
+      <SubmitButton locale={locale} mode={mode} />
+    </div>
   );
-  const values = state.values;
+}
+
+export function NewActivityForm({
+  activityId,
+  cancelHref,
+  initialValues,
+  locale,
+  mode = "create",
+}: NewActivityFormProps) {
+  const action = mode === "edit" ? updateActivityAction : createActivityAction;
+  const [state, formAction] = useActionState(action, initialState);
+  const values = state.values ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const t = getCopy(locale);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>基础信息</CardTitle>
+        <CardTitle>{t.form.basicInfo}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -112,80 +170,91 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
           noValidate
         >
           <input name="locale" type="hidden" value={locale} />
+          {activityId ? (
+            <input name="activityId" type="hidden" value={activityId} />
+          ) : null}
 
           {state.formError ? (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              role="alert"
+            >
               {state.formError}
             </div>
           ) : null}
 
-          <FormSection title="活动内容">
+          <FormSection title={t.form.activityContent}>
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              标题
+              {t.form.title}
               <Input
                 name="title"
+                aria-invalid={Boolean(state.fieldErrors?.title)}
                 defaultValue={values?.title}
-                placeholder="例如：周五下班后桌游局"
+                placeholder={t.form.titlePlaceholder}
                 required
               />
               <FieldError errors={state.fieldErrors?.title} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              描述
+              {t.form.description}
               <Textarea
                 name="description"
+                aria-invalid={Boolean(state.fieldErrors?.description)}
                 defaultValue={values?.description}
-                placeholder="介绍活动内容、适合人群、注意事项"
+                placeholder={t.form.descriptionPlaceholder}
                 required
               />
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              行程
+              {t.form.itinerary}
               <Textarea
                 name="itinerary"
+                aria-invalid={Boolean(state.fieldErrors?.itinerary)}
                 defaultValue={values?.itinerary}
-                placeholder={"18:30 集合\n19:00 开始活动\n21:30 自由交流"}
+                placeholder={t.form.itineraryPlaceholder}
               />
               <FieldError errors={state.fieldErrors?.itinerary} />
             </label>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                活动形式
+                {t.form.type}
                 <Select
                   name="type"
+                  aria-invalid={Boolean(state.fieldErrors?.type)}
                   onChange={(event) => setActivityType(event.target.value)}
                   required
                   value={activityType}
                 >
-                  <option value="LOCAL">{activityTypes.LOCAL}</option>
-                  <option value="TRIP">{activityTypes.TRIP}</option>
+                  <option value="LOCAL">{getTypeLabel("LOCAL", locale)}</option>
+                  <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
                 </Select>
                 <span className="text-xs font-normal text-zinc-500">
-                  本地活动或旅行搭子，创建后会影响列表标签。
+                  {t.form.typeHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.type} />
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                活动主题
+                {t.form.category}
                 <Select
                   name="category"
+                  aria-invalid={Boolean(state.fieldErrors?.category)}
                   onChange={(event) => setCategory(event.target.value)}
                   required
                   value={category}
                 >
-                  {categoryOptions.map(([value, label]) => (
+                  {categoryOptions.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {getCategoryLabel(value, locale)}
                     </option>
                   ))}
                 </Select>
                 <span className="text-xs font-normal text-zinc-500">
-                  优先选择平台预设主题；没有合适选项时选“其他”。
+                  {t.form.categoryHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.category} />
               </label>
@@ -193,27 +262,29 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
 
             {category === "OTHER" ? (
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                其他主题
+                {t.form.otherCategory}
                 <Input
                   name="otherCategoryText"
+                  aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
                   defaultValue={values?.otherCategoryText}
                   maxLength={40}
-                  placeholder="例如：读书会、语言交换、摄影约拍"
+                  placeholder={t.form.otherCategoryPlaceholder}
                   required
                 />
                 <span className="text-xs font-normal text-zinc-500">
-                  会保存到活动说明中，方便参与者理解活动内容。
+                  {t.form.otherCategoryHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.otherCategoryText} />
               </label>
             ) : null}
           </FormSection>
 
-          <FormSection title="时间和地点">
+          <FormSection title={t.form.timeLocation}>
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              城市
+              {t.form.city}
               <Input
                 name="city"
+                aria-invalid={Boolean(state.fieldErrors?.city)}
                 defaultValue={values?.city ?? "Paris"}
                 required
               />
@@ -222,24 +293,26 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
 
             {activityType === "TRIP" ? (
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                目的地
+                {t.form.destination}
                 <Input
                   name="destination"
+                  aria-invalid={Boolean(state.fieldErrors?.destination)}
                   defaultValue={values?.destination}
-                  placeholder="例如：Nice / Amsterdam / London"
+                  placeholder={t.form.destinationPlaceholder}
                   required
                 />
                 <span className="text-xs font-normal text-zinc-500">
-                  旅行搭子需要填写目的地，方便用户判断是否感兴趣。
+                  {t.form.destinationHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.destination} />
               </label>
             ) : null}
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              地址
+              {t.form.address}
               <Input
                 name="address"
+                aria-invalid={Boolean(state.fieldErrors?.address)}
                 defaultValue={values?.address}
                 placeholder="République, Paris"
                 required
@@ -249,40 +322,43 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                开始时间
+                {t.form.startAt}
                 <Input
                   name="startAt"
+                  aria-invalid={Boolean(state.fieldErrors?.startAt)}
                   defaultValue={values?.startAt}
                   type="datetime-local"
                   required
                 />
                 <span className="text-xs font-normal text-zinc-500">
-                  按巴黎时间保存，需晚于当前时间。
+                  {t.form.startAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.startAt} />
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                结束时间
+                {t.form.endAt}
                 <Input
                   name="endAt"
+                  aria-invalid={Boolean(state.fieldErrors?.endAt)}
                   defaultValue={values?.endAt}
                   type="datetime-local"
                 />
                 <span className="text-xs font-normal text-zinc-500">
-                  可选；填写时必须晚于开始时间。
+                  {t.form.endAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.endAt} />
               </label>
             </div>
           </FormSection>
 
-          <FormSection title="人数和费用">
+          <FormSection title={t.form.peoplePrice}>
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                人数上限
+                {t.form.capacity}
                 <Input
                   name="capacity"
+                  aria-invalid={Boolean(state.fieldErrors?.capacity)}
                   type="number"
                   min={2}
                   max={100}
@@ -293,14 +369,15 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                最少成团人数
+                {t.form.minParticipants}
                 <Input
                   name="minParticipants"
+                  aria-invalid={Boolean(state.fieldErrors?.minParticipants)}
                   type="number"
                   min={1}
                   max={100}
                   defaultValue={values?.minParticipants}
-                  placeholder="例如：4"
+                  placeholder={t.form.minParticipantsPlaceholder}
                 />
                 <FieldError errors={state.fieldErrors?.minParticipants} />
               </label>
@@ -308,15 +385,16 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                费用类型
+                {t.form.priceType}
                 <Select
                   name="priceType"
+                  aria-invalid={Boolean(state.fieldErrors?.priceType)}
                   defaultValue={values?.priceType}
                   required
                 >
-                  {Object.entries(priceTypes).map(([value, label]) => (
+                  {priceTypeOptions.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {getPriceTypeLabel(value, locale)}
                     </option>
                   ))}
                 </Select>
@@ -324,11 +402,12 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                费用说明
+                {t.form.priceText}
                 <Input
                   name="priceText"
+                  aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
-                  placeholder="免费 / AA 预计 10 欧 / 门票自理"
+                  placeholder={t.form.priceTextPlaceholder}
                   required
                 />
                 <FieldError errors={state.fieldErrors?.priceText} />
@@ -343,15 +422,17 @@ export function NewActivityForm({ locale }: NewActivityFormProps) {
                 defaultChecked={values?.requiresApproval}
               />
               <span>
-                <span className="font-medium text-ink">报名需要审核</span>
+                <span className="font-medium text-ink">
+                  {t.form.requiresApproval}
+                </span>
                 <span className="mt-1 block text-zinc-500">
-                  开启后，用户报名后需要发起人确认。
+                  {t.form.requiresApprovalHint}
                 </span>
               </span>
             </label>
           </FormSection>
 
-          <SubmitButton />
+          <FormActions cancelHref={cancelHref} locale={locale} mode={mode} />
         </form>
       </CardContent>
     </Card>

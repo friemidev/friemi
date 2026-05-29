@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button, Textarea } from "@chill-club/ui";
+import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import {
   joinActivityAction,
@@ -32,12 +33,19 @@ type JoinActivityFormProps = {
 
 const initialState: JoinActivityState = {};
 
-function SubmitButton({ requiresApproval }: { requiresApproval: boolean }) {
+function SubmitButton({
+  locale,
+  requiresApproval,
+}: {
+  locale: string;
+  requiresApproval: boolean;
+}) {
   const { pending } = useFormStatus();
+  const t = getCopy(locale).join;
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "提交中..." : requiresApproval ? "提交报名申请" : "立即报名"}
+      {pending ? t.submitting : requiresApproval ? t.submitApproval : t.submit}
     </Button>
   );
 }
@@ -59,30 +67,40 @@ function DisabledAction({
 
 function getParticipationCopy(
   status: Exclude<ViewerParticipationStatus, null>,
+  locale: string,
 ) {
+  const t = getCopy(locale).join;
+
   if (status === "PENDING") {
     return {
-      title: "报名申请已提交",
-      description: "这个活动需要发起人审核，通过后会计入报名人数。",
+      title: t.pendingTitle,
+      description: t.pendingDescription,
     };
   }
 
   return {
-    title: "你已报名",
-    description: "你已经在这个活动的参与名单中。",
+    title: t.joinedTitle,
+    description: t.joinedDescription,
   };
 }
 
-function RejoinNotice({ status }: { status: "REJECTED" | "CANCELLED" }) {
+function RejoinNotice({
+  locale,
+  status,
+}: {
+  locale: string;
+  status: "REJECTED" | "CANCELLED";
+}) {
+  const t = getCopy(locale).join;
   const copy =
     status === "REJECTED"
       ? {
-          title: "报名未通过",
-          description: "如需重新沟通，可以修改留言后再次提交报名。",
+          title: t.rejectedTitle,
+          description: t.rejectedDescription,
         }
       : {
-          title: "你已取消报名",
-          description: "如计划有变，也可以重新提交报名。",
+          title: t.cancelledTitle,
+          description: t.cancelledDescription,
         };
 
   return (
@@ -104,13 +122,20 @@ export function JoinActivityForm({
   viewerParticipationStatus,
 }: JoinActivityFormProps) {
   const [state, formAction] = useActionState(joinActivityAction, initialState);
+  const t = getCopy(locale).join;
+
+  if (isClosed) {
+    return (
+      <DisabledAction title={t.closedTitle} description={t.closedDescription} />
+    );
+  }
 
   if (
     viewerParticipationStatus &&
     viewerParticipationStatus !== "REJECTED" &&
     viewerParticipationStatus !== "CANCELLED"
   ) {
-    const copy = getParticipationCopy(viewerParticipationStatus);
+    const copy = getParticipationCopy(viewerParticipationStatus, locale);
 
     return (
       <div className="grid gap-3">
@@ -120,21 +145,9 @@ export function JoinActivityForm({
     );
   }
 
-  if (isClosed) {
-    return (
-      <DisabledAction
-        title="活动已结束"
-        description="这个活动已经结束或暂不可报名。"
-      />
-    );
-  }
-
   if (isFull) {
     return (
-      <DisabledAction
-        title="名额已满"
-        description="当前活动名额已满，不能继续报名。"
-      />
+      <DisabledAction title={t.fullTitle} description={t.fullDescription} />
     );
   }
 
@@ -142,14 +155,14 @@ export function JoinActivityForm({
     return (
       <div className="grid gap-3">
         <DisabledAction
-          title="登录后报名"
-          description="登录后可以提交报名，并让发起人看到你的报名信息。"
+          title={t.signInTitle}
+          description={t.signInDescription}
         />
         <Link
-          className="inline-flex h-10 w-full items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
           href={withLocale(locale, "/sign-in")}
         >
-          登录后报名
+          {t.signInTitle}
         </Link>
       </div>
     );
@@ -158,8 +171,8 @@ export function JoinActivityForm({
   if (isOrganizer) {
     return (
       <DisabledAction
-        title="你是活动发起人"
-        description="发起人不需要报名自己的活动。"
+        title={t.organizerTitle}
+        description={t.organizerDescription}
       />
     );
   }
@@ -171,7 +184,7 @@ export function JoinActivityForm({
 
       {viewerParticipationStatus === "REJECTED" ||
       viewerParticipationStatus === "CANCELLED" ? (
-        <RejoinNotice status={viewerParticipationStatus} />
+        <RejoinNotice locale={locale} status={viewerParticipationStatus} />
       ) : null}
 
       {state.formError ? (
@@ -181,18 +194,16 @@ export function JoinActivityForm({
       ) : null}
 
       <label className="grid gap-2 text-sm font-medium text-zinc-700">
-        报名留言
+        {t.messageLabel}
         <Textarea
           className="min-h-24"
           name="message"
           defaultValue={state.values?.message}
           maxLength={300}
-          placeholder="简单介绍一下你想参加的原因，可选"
+          placeholder={t.messagePlaceholder}
         />
         <span className="text-xs font-normal text-zinc-500">
-          {requiresApproval
-            ? "发起人会看到这段留言，用于判断是否通过报名。"
-            : "留言会随报名记录保存，方便发起人了解你。"}
+          {requiresApproval ? t.messageHintApproval : t.messageHint}
         </span>
         {state.fieldErrors?.message?.[0] ? (
           <span className="text-xs font-medium text-red-600">
@@ -201,7 +212,7 @@ export function JoinActivityForm({
         ) : null}
       </label>
 
-      <SubmitButton requiresApproval={requiresApproval} />
+      <SubmitButton locale={locale} requiresApproval={requiresApproval} />
     </form>
   );
 }

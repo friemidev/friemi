@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
+import { getCopy } from "@/lib/copy";
 import {
   cancelParticipationAction,
   type CancelParticipationState,
@@ -14,11 +15,10 @@ type CancelParticipationFormProps = {
 };
 
 const initialState: CancelParticipationState = {};
-const cancelConfirmationMessage =
-  "确定要取消报名吗？取消后你的名额会释放给其他人。";
 
-function CancelButton() {
+function CancelButton({ locale }: { locale: string }) {
   const { pending } = useFormStatus();
+  const t = getCopy(locale).join;
 
   return (
     <Button
@@ -27,7 +27,7 @@ function CancelButton() {
       className="w-full"
       disabled={pending}
     >
-      {pending ? "取消中..." : "取消报名"}
+      {pending ? t.cancelPending : t.cancel}
     </Button>
   );
 }
@@ -40,6 +40,7 @@ export function CancelParticipationForm({
     cancelParticipationAction,
     initialState,
   );
+  const t = getCopy(locale).join;
 
   return (
     <form
@@ -47,7 +48,7 @@ export function CancelParticipationForm({
       className="grid gap-3"
       noValidate
       onSubmit={(event) => {
-        if (!window.confirm(cancelConfirmationMessage)) {
+        if (!window.confirm(t.cancelConfirm)) {
           event.preventDefault();
         }
       }}
@@ -61,7 +62,7 @@ export function CancelParticipationForm({
         </div>
       ) : null}
 
-      <CancelButton />
+      <CancelButton locale={locale} />
     </form>
   );
 }

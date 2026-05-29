@@ -2,39 +2,96 @@ import {
   formatActivityDate,
   formatActivityDateOnly,
   formatActivityTime,
-  priceTypes,
-  type ActivityStatus
+  type ActivityStatus,
 } from "@chill-club/shared";
+import { getCopy, getPriceTypeLabel } from "@/lib/copy";
 import type { ActivityCardViewModel, ActivityDetailViewModel } from "../types";
 
 export function getActivityLocationLabel(activity: ActivityCardViewModel) {
-  return activity.address.includes(activity.city) ? activity.address : `${activity.city} · ${activity.address}`;
+  return activity.address.includes(activity.city)
+    ? activity.address
+    : `${activity.city} · ${activity.address}`;
 }
 
-export function getActivityDisplayStatus(activity: ActivityCardViewModel): ActivityStatus {
-  if (activity.capacity > 0 && activity.participantCount >= activity.capacity) {
+export function getActivityDisplayStatus(
+  activity: ActivityCardViewModel,
+): ActivityStatus {
+  if (activity.status === "CANCELLED") {
+    return "CANCELLED";
+  }
+
+  if (activity.status === "ENDED") {
+    return "ENDED";
+  }
+
+  const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+
+  if (activityEndBoundary <= new Date()) {
+    return "ENDED";
+  }
+
+  const canBecomeFull = ["OPEN", "RECRUITING", "CONFIRMED"].includes(
+    activity.status,
+  );
+
+  if (
+    canBecomeFull &&
+    activity.capacity > 0 &&
+    activity.participantCount >= activity.capacity
+  ) {
     return "FULL";
   }
 
   return activity.status;
 }
 
-export function getActivityDateLabel(activity: ActivityCardViewModel, locale: string) {
+export function getActivityDateLabel(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
   if (!activity.endAt) {
     return formatActivityDate(activity.startAt, locale);
   }
 
-  if (formatActivityDateOnly(activity.startAt, locale) === formatActivityDateOnly(activity.endAt, locale)) {
+  if (
+    formatActivityDateOnly(activity.startAt, locale) ===
+    formatActivityDateOnly(activity.endAt, locale)
+  ) {
     return `${formatActivityDate(activity.startAt, locale)}-${formatActivityTime(activity.endAt, locale)}`;
   }
 
   return `${formatActivityDate(activity.startAt, locale)} - ${formatActivityDate(activity.endAt, locale)}`;
 }
 
-export function getActivitySeatLabel(activity: ActivityCardViewModel) {
-  const remainingSeats = Math.max(activity.capacity - activity.participantCount, 0);
+export function getActivitySeatLabel(
+  activity: ActivityCardViewModel,
+  locale = "zh-CN",
+) {
+  const labels = getCopy(locale).activityLabels.seats;
+  const displayStatus = getActivityDisplayStatus(activity);
 
-  return remainingSeats > 0 ? `剩 ${remainingSeats} 位` : "已满";
+  if (displayStatus === "CANCELLED") {
+    return labels.cancelled;
+  }
+
+  if (displayStatus === "ENDED") {
+    return labels.ended;
+  }
+
+  if (displayStatus === "DRAFT") {
+    return labels.draft;
+  }
+
+  if (displayStatus === "FULL") {
+    return labels.full;
+  }
+
+  const remainingSeats = Math.max(
+    activity.capacity - activity.participantCount,
+    0,
+  );
+
+  return labels.remaining(remainingSeats);
 }
 
 export function getActivityParticipantPercent(activity: ActivityCardViewModel) {
@@ -42,14 +99,23 @@ export function getActivityParticipantPercent(activity: ActivityCardViewModel) {
     return 0;
   }
 
-  return Math.min(100, Math.round((activity.participantCount / activity.capacity) * 100));
+  return Math.min(
+    100,
+    Math.round((activity.participantCount / activity.capacity) * 100),
+  );
 }
 
-export function getActivityPriceLabel(activity: ActivityDetailViewModel) {
-  const priceTypeLabel = priceTypes[activity.priceType];
+export function getActivityPriceLabel(
+  activity: ActivityDetailViewModel,
+  locale = "zh-CN",
+) {
+  const priceTypeLabel = getPriceTypeLabel(activity.priceType, locale);
   const priceText = activity.priceText.trim();
 
-  if (priceText === priceTypeLabel || priceText.startsWith(`${priceTypeLabel} `)) {
+  if (
+    priceText === priceTypeLabel ||
+    priceText.startsWith(`${priceTypeLabel} `)
+  ) {
     return priceText;
   }
 

@@ -14,13 +14,17 @@ const variants: Record<ButtonVariant, string> = {
   success: "bg-emerald-600 text-white hover:bg-emerald-700",
 };
 
-export function Button({ className, variant = "primary", ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant = "primary",
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md px-4 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
-        className
+        className,
       )}
       {...props}
     />

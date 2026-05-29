@@ -3,10 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Next Fun Club",
-  description: "下一场，Fun 开场。面向海外中文用户的活动组织与找搭子平台。"
+  description:
+    "Next Fun Club helps overseas Chinese-speaking users discover, create, and join local activities.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body suppressHydrationWarning>{children}</body>

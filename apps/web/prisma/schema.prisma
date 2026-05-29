@@ -62,6 +62,12 @@ enum UserProfileStatus {
   DELETED
 }
 
+enum CommentType {
+  QUESTION
+  SUGGESTION
+  REVIEW
+}
+
 model UserProfile {
   id             String                @id @default(cuid())
   clerkUserId    String                @unique
@@ -81,6 +87,7 @@ model UserProfile {
   syncedAt       DateTime?
   activities     Activity[]            @relation("ActivityOrganizer")
   participations ActivityParticipant[]
+  comments       Comment[]
   following      UserFollow[]          @relation("UserFollowing")
   followers      UserFollow[]          @relation("UserFollowers")
   createdAt      DateTime              @default(now())
@@ -88,37 +95,46 @@ model UserProfile {
 }
 
 model Activity {
-  id             String                @id @default(cuid())
-  title          String
-  description    String
-  itinerary      String?
-  type           ActivityType          @default(LOCAL)
-  category       ActivityCategory      @default(OTHER)
-  city           String                @default("Paris")
-  destination    String?
-  address        String
-  startAt        DateTime
-  endAt          DateTime?
-  capacity       Int
-  minParticipants Int?
-  requiresApproval Boolean             @default(false)
-  priceType      PriceType             @default(FREE)
-  priceText      String
-  coverImageUrl  String?
-  status         ActivityStatus        @default(RECRUITING)
-  visibility     ActivityVisibility    @default(PUBLIC)
-  source         String?
-  sourceUrl      String?               @unique
-  organizerId    String
-  organizer      UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
-  participants   ActivityParticipant[]
-  sourceLinks    ActivitySourceLink[]
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  id               String                @id @default(cuid())
+  title            String
+  description      String
+  itinerary        String?
+  type             ActivityType          @default(LOCAL)
+  category         ActivityCategory      @default(OTHER)
+  city             String                @default("Paris")
+  destination      String?
+  address          String
+  startAt          DateTime
+  endAt            DateTime?
+  capacity         Int
+  minParticipants  Int?
+  requiresApproval Boolean               @default(false)
+  priceType        PriceType             @default(FREE)
+  priceText        String
+  coverImageUrl    String?
+  source           String?
+  sourceUrl        String?               @unique
+  externalSource   String?
+  externalId       String?
+  externalUrl      String?
+  sourcePayload    Json?
+  importedAt       DateTime?
+  status           ActivityStatus        @default(RECRUITING)
+  visibility       ActivityVisibility    @default(PUBLIC)
+  organizerId      String
+  organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  participants     ActivityParticipant[]
+  comments         Comment[]
+  sourceLinks      ActivitySourceLink[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([city, startAt])
   @@index([organizerId])
   @@index([source])
+  @@index([externalSource, externalId])
+  @@index([externalUrl])
+  @@index([importedAt])
 }
 
 model ActivitySourceLink {
@@ -147,6 +163,22 @@ model ActivityParticipant {
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+}
+
+model Comment {
+  id                String      @id @default(cuid())
+  activityId        String
+  authorId          String
+  type              CommentType @default(QUESTION)
+  content           String
+  pinnedByOrganizer Boolean     @default(false)
+  activity          Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author            UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([activityId, pinnedByOrganizer, createdAt])
+  @@index([authorId])
 }
 
 model UserFollow {
