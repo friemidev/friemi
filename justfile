@@ -45,4 +45,3 @@ db-push:
 
 db-seed:
   npm run db:seed
-

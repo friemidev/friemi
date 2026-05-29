@@ -1,0 +1,24 @@
+{
+  "name": "@nextfunclub/scrapers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent event scrapers for Sortir a Paris and Play in Paris",
+  "scripts": {
+    "doctor": "node --import tsx src/index.ts doctor",
+    "scrape": "node --import tsx src/index.ts scrape",
+    "scrape:sortir": "node --import tsx src/index.ts scrape sortir",
+    "scrape:play": "node --import tsx src/index.ts scrape play",
+    "sync": "node --import tsx src/index.ts sync",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

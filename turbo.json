@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL", "CLERK_SECRET_KEY"],
+  "globalEnv": ["DATABASE_URL", "DIRECT_URL", "CLERK_SECRET_KEY"],
   "tasks": {
     "dev": {
       "cache": false,

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ActivityType {
@@ -111,6 +112,8 @@ model Activity {
   priceType        PriceType             @default(FREE)
   priceText        String
   coverImageUrl    String?
+  source           String?
+  sourceUrl        String?               @unique
   externalSource   String?
   externalId       String?
   externalUrl      String?
@@ -122,14 +125,27 @@ model Activity {
   organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
   participants     ActivityParticipant[]
   comments         Comment[]
+  sourceLinks      ActivitySourceLink[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
   @@index([city, startAt])
   @@index([organizerId])
+  @@index([source])
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])
+}
+
+model ActivitySourceLink {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  source     String
+  sourceUrl  String   @unique
+  createdAt  DateTime @default(now())
+
+  @@index([activityId])
 }
 
 model ActivityParticipant {
