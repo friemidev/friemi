@@ -3,16 +3,25 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { FilterX, Search, SlidersHorizontal, X } from "lucide-react";
+import {
+  ChevronDown,
+  FilterX,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import {
   activityCategoryOptions,
   activityFilterTypes,
+  activityTimeStates,
   getActivityFilterHref,
+  getDefaultActivitySort,
   hasActiveActivityFilters,
   normalizeActivityFilterFormData,
+  normalizeActivityFilterValues,
   type ActivityFilters,
 } from "../utils/activityFilters";
 
@@ -45,16 +54,21 @@ export function ActivityFilters({
     ? Array.from(new Set([selectedCity, ...cities]))
     : cities;
   const hasActiveFilters = hasActiveActivityFilters(filters);
-  const hasCustomFilterState = hasActiveFilters || filters.sort !== "soonest";
+  const defaultSort = getDefaultActivitySort(filters);
+  const hasCustomFilterState =
+    hasActiveFilters || filters.sort !== defaultSort || filters.page > 1;
 
   function buildFilterHref(nextFilters: Partial<ActivityFilters>) {
-    const mergedFilters: ActivityFilters = {
+    const mergedFilters = {
       ...filters,
       ...nextFilters,
-      sort: nextFilters.sort ?? filters.sort,
+      page: 1,
     };
 
-    return getActivityFilterHref(activitiesHref, mergedFilters);
+    return getActivityFilterHref(
+      activitiesHref,
+      normalizeActivityFilterValues(mergedFilters),
+    );
   }
 
   const activeFilterChips: ActiveFilterChip[] = [
@@ -90,11 +104,24 @@ export function ActivityFilters({
           },
         ]
       : []),
-    ...(filters.sort === "latest"
+    ...(filters.timeState
       ? [
           {
-            href: buildFilterHref({ sort: "soonest" }),
-            label: t.activityFilters.sortLatest,
+            href: buildFilterHref({ timeState: undefined }),
+            label: t.activityLabels.timeStates[filters.timeState],
+          },
+        ]
+      : []),
+    ...(filters.sort !== defaultSort
+      ? [
+          {
+            href: buildFilterHref({ sort: undefined }),
+            label:
+              filters.sort === "latest"
+                ? t.activityFilters.sortLatest
+                : filters.sort === "recommended"
+                  ? t.activityFilters.sortRecommended
+                : t.activityFilters.sortSoonest,
           },
         ]
       : []),
@@ -112,26 +139,11 @@ export function ActivityFilters({
     );
   }
 
-  return (
-    <section className="rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <SlidersHorizontal className="h-4 w-4 shrink-0" />
-            {t.activityFilters.title}
-          </p>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">
-            {t.activityFilters.description}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-moss/10 px-3 py-1 text-xs font-medium text-moss">
-          {t.activityFilters.resultCount(resultCount)}
-        </span>
-      </div>
-
+  function FilterForm({ className }: { className: string }) {
+    return (
       <form
         action={activitiesHref}
-        className="mt-4 grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_repeat(4,minmax(130px,1fr))_auto_auto]"
+        className={className}
         method="get"
         onSubmit={handleSubmit}
       >
@@ -195,19 +207,38 @@ export function ActivityFilters({
         </label>
 
         <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
+          {t.activityFilters.timeStateLabel}
+          <select
+            className={selectClassName}
+            defaultValue={filters.timeState ?? ""}
+            name="time"
+          >
+            <option value="">{t.activityFilters.allTimeStates}</option>
+            {activityTimeStates.map((timeState) => (
+              <option key={timeState} value={timeState}>
+                {t.activityLabels.timeStates[timeState]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
           {t.activityFilters.sortLabel}
           <select
             className={selectClassName}
             defaultValue={filters.sort}
             name="sort"
           >
+            <option value="recommended">
+              {t.activityFilters.sortRecommended}
+            </option>
             <option value="soonest">{t.activityFilters.sortSoonest}</option>
             <option value="latest">{t.activityFilters.sortLatest}</option>
           </select>
         </label>
 
         <div className="flex items-end">
-          <Button className="w-full gap-2 px-3 lg:w-auto" type="submit">
+          <Button className="w-full gap-2 px-3 xl:w-auto" type="submit">
             <Search className="h-4 w-4 shrink-0" />
             {t.activityFilters.apply}
           </Button>
@@ -216,7 +247,7 @@ export function ActivityFilters({
         <div className="flex items-end">
           <Link
             aria-disabled={!hasCustomFilterState}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 xl:w-auto"
             href={activitiesHref}
           >
             <FilterX className="h-4 w-4 shrink-0" />
@@ -224,6 +255,42 @@ export function ActivityFilters({
           </Link>
         </div>
       </form>
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-black/10 bg-white/80 p-3 shadow-sm sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <SlidersHorizontal className="h-4 w-4 shrink-0" />
+            {t.activityFilters.title}
+          </p>
+          <p className="mt-1 hidden text-sm leading-6 text-zinc-500 sm:block">
+            {t.activityFilters.description}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-medium text-moss sm:px-3">
+          {t.activityFilters.resultCount(resultCount)}
+        </span>
+      </div>
+
+      <details className="mt-3 rounded-md border border-zinc-200 bg-white md:hidden">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="truncate">{t.activityFilters.mobileSummary}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
+        </summary>
+        <div className="border-t border-zinc-100 p-3">
+          <FilterForm className="grid gap-3" />
+        </div>
+      </details>
+
+      <div className="hidden md:block">
+        <FilterForm className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(180px,1.35fr)_repeat(5,minmax(116px,1fr))_auto_auto]" />
+      </div>
 
       {activeFilterChips.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
