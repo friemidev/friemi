@@ -5,6 +5,10 @@ import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { UserMenu } from "@/components/navigation/UserMenu";
+import {
+  GlobalSearchForm,
+  GlobalSearchIconLink,
+} from "@/features/search/components/GlobalSearchForm";
 import { getCopy } from "@/lib/copy";
 
 type AppHeaderProps = {
@@ -68,6 +72,12 @@ export function AppHeader({
         </nav>
 
         <div className="flex min-w-0 items-center gap-2">
+          <GlobalSearchForm
+            locale={locale}
+            className="hidden xl:flex"
+            variant="header"
+          />
+          <GlobalSearchIconLink locale={locale} />
           <LocaleSwitcher locale={locale} />
           <Link
             href={withLocale(locale, "/activities/new")}

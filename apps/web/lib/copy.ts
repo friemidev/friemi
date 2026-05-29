@@ -59,6 +59,32 @@ const copy = {
       people: "人",
       switchLanguage: (nextLanguage: string) => `切换到 ${nextLanguage}`,
     },
+    globalSearch: {
+      eyebrow: "全站搜索",
+      title: "搜索 Next Fun Club",
+      description: "从一个入口查找活动和商家，适合快速定位站内内容。",
+      inputLabel: "搜索关键词",
+      placeholder: "搜索活动、地点或商家",
+      mobileOpen: "打开全站搜索",
+      submit: "搜索",
+      emptyTitle: "输入关键词开始搜索",
+      emptyDescription: "可以搜索活动标题、描述、城市、地址和商家信息。",
+      noResultsTitle: "没有找到结果",
+      noResultsDescription: (query: string) =>
+        `没有找到与「${query}」匹配的活动或商家。`,
+      loadFailedTitle: "搜索加载失败",
+      loadFailedDescription: "请稍后刷新重试，或检查数据库连接是否可用。",
+      resultSummary: (count: number, query: string) =>
+        `找到 ${count} 个与「${query}」相关的结果。`,
+      viewMoreActivities: (_shown: number, total: number) =>
+        `查看全部 ${total} 个活动`,
+      activitiesTitle: "活动",
+      merchantsTitle: "商家",
+      noActivityResults: "没有匹配的活动。",
+      noMerchantResults: "没有匹配的商家。",
+      merchantActivityCount: (count: number) => `${count} 个可展示活动`,
+      openMerchant: (name: string) => `查看商家：${name}`,
+    },
     auth: {
       clerkMissingTitle: "Clerk 尚未配置",
       signInMissingDescription:
@@ -522,6 +548,36 @@ const copy = {
         "Refresh later, or check whether the database connection is available.",
       people: "people",
       switchLanguage: (nextLanguage: string) => `Switch to ${nextLanguage}`,
+    },
+    globalSearch: {
+      eyebrow: "Site search",
+      title: "Search Next Fun Club",
+      description:
+        "Find activities and merchants from one entry point when you need to jump directly to content.",
+      inputLabel: "Search keyword",
+      placeholder: "Search activities, places, or merchants",
+      mobileOpen: "Open site search",
+      submit: "Search",
+      emptyTitle: "Enter a keyword to search",
+      emptyDescription:
+        "Search activity titles, descriptions, cities, addresses, and merchant information.",
+      noResultsTitle: "No results found",
+      noResultsDescription: (query: string) =>
+        `No activities or merchants matched "${query}".`,
+      loadFailedTitle: "Search failed to load",
+      loadFailedDescription:
+        "Refresh later, or check whether the database connection is available.",
+      resultSummary: (count: number, query: string) =>
+        `${count} result${count === 1 ? "" : "s"} found for "${query}".`,
+      viewMoreActivities: (_shown: number, total: number) =>
+        `View all ${total} activities`,
+      activitiesTitle: "Activities",
+      merchantsTitle: "Merchants",
+      noActivityResults: "No matching activities.",
+      noMerchantResults: "No matching merchants.",
+      merchantActivityCount: (count: number) =>
+        `${count} visible activit${count === 1 ? "y" : "ies"}`,
+      openMerchant: (name: string) => `Open merchant: ${name}`,
     },
     auth: {
       clerkMissingTitle: "Clerk is not configured",
@@ -1025,6 +1081,36 @@ const copy = {
         "Réessayez plus tard ou vérifiez la connexion à la base de données.",
       people: "pers.",
       switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
+    },
+    globalSearch: {
+      eyebrow: "Recherche globale",
+      title: "Rechercher dans Next Fun Club",
+      description:
+        "Trouvez activités et partenaires depuis une seule entrée pour accéder vite au bon contenu.",
+      inputLabel: "Mot-clé de recherche",
+      placeholder: "Activités, lieux ou partenaires",
+      mobileOpen: "Ouvrir la recherche globale",
+      submit: "Rechercher",
+      emptyTitle: "Saisissez un mot-clé",
+      emptyDescription:
+        "Recherchez dans les titres, descriptions, villes, adresses et informations partenaires.",
+      noResultsTitle: "Aucun résultat",
+      noResultsDescription: (query: string) =>
+        `Aucune activité ni partenaire ne correspond à « ${query} ».`,
+      loadFailedTitle: "Échec de la recherche",
+      loadFailedDescription:
+        "Réessayez plus tard ou vérifiez la connexion à la base de données.",
+      resultSummary: (count: number, query: string) =>
+        `${count} résultat${count > 1 ? "s" : ""} pour « ${query} ».`,
+      viewMoreActivities: (_shown: number, total: number) =>
+        `Voir les ${total} activités`,
+      activitiesTitle: "Activités",
+      merchantsTitle: "Partenaires",
+      noActivityResults: "Aucune activité correspondante.",
+      noMerchantResults: "Aucun partenaire correspondant.",
+      merchantActivityCount: (count: number) =>
+        `${count} activité${count > 1 ? "s" : ""} visible${count > 1 ? "s" : ""}`,
+      openMerchant: (name: string) => `Voir le partenaire : ${name}`,
     },
     auth: {
       clerkMissingTitle: "Clerk n'est pas configuré",
