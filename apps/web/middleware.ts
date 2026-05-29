@@ -12,6 +12,7 @@ const intlMiddleware = createMiddleware({
 
 const isProtectedRoute = createRouteMatcher([
   "/:locale/activities/new(.*)",
+  "/:locale/friends(.*)",
   "/:locale/profile(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);

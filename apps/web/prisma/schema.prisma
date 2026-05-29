@@ -62,6 +62,13 @@ enum UserProfileStatus {
   DELETED
 }
 
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 enum CommentType {
   QUESTION
   SUGGESTION
@@ -77,31 +84,35 @@ enum NotificationType {
 }
 
 model UserProfile {
-  id                String                @id @default(cuid())
-  clerkUserId       String                @unique
-  email             String?
-  nickname          String
-  firstName         String?
-  lastName          String?
-  username          String?
-  avatarUrl         String?
-  bio               String?
-  interests         String[]              @default([])
-  status            UserProfileStatus     @default(ACTIVE)
-  lastSignInAt      DateTime?
-  clerkCreatedAt    DateTime?
-  clerkUpdatedAt    DateTime?
-  clerkDeletedAt    DateTime?
-  syncedAt          DateTime?
-  activities        Activity[]            @relation("ActivityOrganizer")
-  participations    ActivityParticipant[]
-  comments          Comment[]
-  notifications     Notification[]        @relation("NotificationRecipient")
-  sentNotifications Notification[]        @relation("NotificationActor")
-  following         UserFollow[]          @relation("UserFollowing")
-  followers         UserFollow[]          @relation("UserFollowers")
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id                     String                @id @default(cuid())
+  clerkUserId            String                @unique
+  email                  String?
+  nickname               String
+  firstName              String?
+  lastName               String?
+  username               String?
+  avatarUrl              String?
+  bio                    String?
+  interests              String[]              @default([])
+  status                 UserProfileStatus     @default(ACTIVE)
+  lastSignInAt           DateTime?
+  clerkCreatedAt         DateTime?
+  clerkUpdatedAt         DateTime?
+  clerkDeletedAt         DateTime?
+  syncedAt               DateTime?
+  activities             Activity[]            @relation("ActivityOrganizer")
+  participations         ActivityParticipant[]
+  comments               Comment[]
+  notifications          Notification[]        @relation("NotificationRecipient")
+  sentNotifications      Notification[]        @relation("NotificationActor")
+  following              UserFollow[]          @relation("UserFollowing")
+  followers              UserFollow[]          @relation("UserFollowers")
+  sentFriendRequests     FriendRequest[]       @relation("FriendRequestRequester")
+  receivedFriendRequests FriendRequest[]       @relation("FriendRequestReceiver")
+  friendshipsAsUserA     Friendship[]          @relation("FriendshipUserA")
+  friendshipsAsUserB     Friendship[]          @relation("FriendshipUserB")
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 }
 
 model Activity {
@@ -253,4 +264,35 @@ model UserFollow {
 
   @@unique([followerId, followingId])
   @@index([followingId])
+}
+
+model FriendRequest {
+  id             String              @id @default(cuid())
+  requesterId    String
+  receiverId     String
+  pendingPairKey String?             @unique
+  status         FriendRequestStatus @default(PENDING)
+  message        String?
+  requester      UserProfile         @relation("FriendRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver       UserProfile         @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  respondedAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([requesterId, status, createdAt])
+  @@index([receiverId, status, createdAt])
+  @@index([requesterId, receiverId, status])
+}
+
+model Friendship {
+  id        String      @id @default(cuid())
+  userAId   String
+  userBId   String
+  userA     UserProfile @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB     UserProfile @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
 }

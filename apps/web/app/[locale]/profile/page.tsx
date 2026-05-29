@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { UsersRound } from "lucide-react";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
+import { getFriendsCopy } from "@/features/friends/copy";
 import { ProfileOverviewPanel } from "@/features/profile/components/ProfileOverviewPanel";
 import { ProfileParticipationCard } from "@/features/profile/components/ProfileParticipationCard";
 import {
@@ -9,6 +12,7 @@ import {
   profileActivityListLimit,
 } from "@/features/profile/queries/getProfileDashboard";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -21,6 +25,7 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const t = getCopy(locale);
+  const friendsCopy = getFriendsCopy(locale);
   const profile = await ensureCurrentUserProfile(locale);
   const dashboardResult = await getProfileDashboard(profile.id)
     .then((dashboard) => ({ dashboard, error: null }))
@@ -82,17 +87,26 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </div>
 
-          <ProfileOverviewPanel
-            createdCount={dashboardResult.dashboard.createdActivityCount}
-            joinedCount={dashboardResult.dashboard.participationCount}
-            followers={dashboardResult.dashboard.followers}
-            followersCount={dashboardResult.dashboard.followersCount}
-            following={dashboardResult.dashboard.following}
-            followingCount={dashboardResult.dashboard.followingCount}
-            locale={locale}
-            createdLabel={t.profile.createdCount}
-            joinedLabel={t.profile.participationCount}
-          />
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
+            <ProfileOverviewPanel
+              createdCount={dashboardResult.dashboard.createdActivityCount}
+              joinedCount={dashboardResult.dashboard.participationCount}
+              followers={dashboardResult.dashboard.followers}
+              followersCount={dashboardResult.dashboard.followersCount}
+              following={dashboardResult.dashboard.following}
+              followingCount={dashboardResult.dashboard.followingCount}
+              locale={locale}
+              createdLabel={t.profile.createdCount}
+              joinedLabel={t.profile.participationCount}
+            />
+            <Link
+              href={withLocale(locale, "/friends")}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-fit"
+            >
+              <UsersRound className="h-4 w-4" />
+              {friendsCopy.openFriends}
+            </Link>
+          </div>
         </div>
       </section>
 

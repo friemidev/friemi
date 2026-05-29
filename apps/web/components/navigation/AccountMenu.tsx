@@ -12,6 +12,7 @@ import {
   Settings,
   type LucideIcon,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -44,6 +45,7 @@ export function AccountMenu({
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
+  const friendsHref = withLocale(locale, "/friends");
   const notificationsHref = withLocale(locale, "/notifications");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
@@ -126,6 +128,14 @@ export function AccountMenu({
               icon={UserRound}
               label={t.profile}
               active={pathname === profileHref}
+              onClick={closeMenu}
+            />
+            <MenuLink
+              href={friendsHref}
+              icon={UsersRound}
+              label={t.friends}
+              description={t.friendsDescription}
+              active={pathname === friendsHref}
               onClick={closeMenu}
             />
             <MenuLink
