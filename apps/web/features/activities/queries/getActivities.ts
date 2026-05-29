@@ -31,6 +31,7 @@ export const activityCardSelect = {
   endAt: true,
   capacity: true,
   priceText: true,
+  isPromoted: true,
   status: true,
   _count: {
     select: {
@@ -125,6 +126,7 @@ export function getActivityCardViewModel(
     capacity: activity.capacity,
     participantCount: activity._count.participants,
     priceText: activity.priceText,
+    isPromoted: activity.isPromoted,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
   };
@@ -136,7 +138,7 @@ export async function getActivities(
   const now = new Date();
   const activities = await prisma.activity.findMany({
     where: getVisibleActivityWhere({ includePast: options.includePast, now }),
-    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    orderBy: [{ isPromoted: "desc" }, { startAt: "asc" }, { id: "asc" }],
     take: normalizeLimit(options.limit),
     select: activityCardSelect,
   });

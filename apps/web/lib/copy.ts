@@ -70,10 +70,10 @@ const copy = {
     },
     activities: {
       title: "活动发现",
-      description: "MVP 阶段先展示手动运营和用户发起的活动。",
+      description:
+        "发现巴黎近期可参加的活动，公共活动和用户发起活动都会展示在这里。",
       scopeTitle: "当前展示范围",
-      scopeDescription:
-        "只展示公开、招募中或已成团的活动，并按开始时间从近到远排序。",
+      scopeDescription: "展示公开、招募中或已成团的活动，并按开始时间排序。",
       emptyTitle: "暂无活动",
       emptyDescription:
         "当前没有招募中或已成团的活动，创建新活动后会显示在这里。",
@@ -173,16 +173,15 @@ const copy = {
       errorDescription:
         "用户资料已读取，但活动数据暂时加载失败，请稍后刷新重试。",
       createdTitle: "我发起的活动",
-      createdDescription: "展示你创建的活动，点击卡片可以进入活动详情页。",
+      createdDescription: "你发起的活动会显示在这里。",
       createdEmptyTitle: "还没有发起活动",
       createdEmptyDescription:
-        "创建第一场活动后，它会显示在这里，方便你从个人空间回到详情页。",
+        "发起第一场活动后，可以在这里快速回到详情页。",
       participationTitle: "我参与的活动",
-      participationDescription:
-        "报名状态会区分待审核、已确认和已取消，点击卡片可以查看活动详情。",
+      participationDescription: "你报名过的活动和状态会显示在这里。",
       participationEmptyTitle: "还没有报名记录",
       participationEmptyDescription:
-        "报名参加活动后，你可以在这里查看报名状态和活动详情。",
+        "报名参加活动后，可以在这里查看状态和活动详情。",
       hiddenCreated: (limit: number, count: number) =>
         `当前显示最近 ${limit} 个发起活动，另有 ${count} 个更早的活动暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -268,6 +267,7 @@ const copy = {
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>
         `${title}，${date}，${location}`,
+      promoted: "推荐",
       categories: {
         BOARD_GAME: "桌游",
         MOVIE: "电影",
@@ -362,10 +362,10 @@ const copy = {
     activities: {
       title: "Activity discovery",
       description:
-        "MVP focuses on curated activities and activities created by users.",
+        "Discover upcoming Paris activities from public sources and local organizers.",
       scopeTitle: "Current scope",
       scopeDescription:
-        "Showing public recruiting or confirmed activities, sorted by the nearest start time.",
+        "Public recruiting or confirmed activities, sorted by start time.",
       emptyTitle: "No activities",
       emptyDescription:
         "There are no recruiting or confirmed activities right now. New activities will appear here.",
@@ -473,16 +473,16 @@ const copy = {
       errorDescription:
         "Your profile loaded, but activity data failed to load. Refresh later.",
       createdTitle: "Created by me",
-      createdDescription:
-        "Activities you created. Open a card to review the detail page.",
+      createdDescription: "Activities you create will appear here.",
       createdEmptyTitle: "No created activities",
-      createdEmptyDescription: "Your first created activity will appear here.",
+      createdEmptyDescription:
+        "Create your first activity, then return to its detail page from here.",
       participationTitle: "Activities I joined",
       participationDescription:
-        "Track pending, confirmed, and cancelled participation records.",
+        "Activities you joined and their status will appear here.",
       participationEmptyTitle: "No participation records",
       participationEmptyDescription:
-        "Activities you join will appear here with their status.",
+        "Join an activity, then check its status and detail page here.",
       hiddenCreated: (limit: number, count: number) =>
         `Showing the latest ${limit} created activities. ${count} earlier activities are not shown yet.`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -579,6 +579,7 @@ const copy = {
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>
         `${title}. ${date}. ${location}.`,
+      promoted: "Featured",
       categories: {
         BOARD_GAME: "Board games",
         MOVIE: "Movies",
@@ -672,10 +673,10 @@ const copy = {
     activities: {
       title: "Découvrir des activités",
       description:
-        "Le MVP affiche d'abord les activités éditorialisées et celles créées par les utilisateurs.",
+        "Découvrez les prochaines activités à Paris, issues de sources publiques et d'organisateurs locaux.",
       scopeTitle: "Périmètre affiché",
       scopeDescription:
-        "Activités publiques en recrutement ou confirmées, triées par date de début proche.",
+        "Activités publiques en recrutement ou confirmées, triées par date de début.",
       emptyTitle: "Aucune activité",
       emptyDescription:
         "Aucune activité en recrutement ou confirmée pour le moment. Les nouvelles activités apparaîtront ici.",
@@ -792,16 +793,16 @@ const copy = {
       errorDescription:
         "Le profil est chargé, mais les activités n'ont pas pu être récupérées. Réessayez plus tard.",
       createdTitle: "Activités créées",
-      createdDescription:
-        "Activités que vous avez créées. Ouvrez une carte pour revoir le détail.",
+      createdDescription: "Les activités que vous créez apparaîtront ici.",
       createdEmptyTitle: "Aucune activité créée",
-      createdEmptyDescription: "Votre première activité créée apparaîtra ici.",
+      createdEmptyDescription:
+        "Créez votre première activité, puis retrouvez sa page de détail ici.",
       participationTitle: "Activités rejointes",
       participationDescription:
-        "Suivez les inscriptions en attente, confirmées et annulées.",
+        "Les activités rejointes et leur statut apparaîtront ici.",
       participationEmptyTitle: "Aucune participation",
       participationEmptyDescription:
-        "Les activités rejointes apparaîtront ici avec leur statut.",
+        "Rejoignez une activité, puis consultez son statut et sa page de détail ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -905,6 +906,7 @@ const copy = {
     activityLabels: {
       activityAria: (title: string, date: string, location: string) =>
         `${title}. ${date}. ${location}.`,
+      promoted: "À la une",
       categories: {
         BOARD_GAME: "Jeux",
         MOVIE: "Cinéma",

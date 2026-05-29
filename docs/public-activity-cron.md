@@ -19,6 +19,8 @@
 
 `externalId` 优先使用 Paris OpenData record `id`，其次使用 `event_id` 或 `url`。这样可以更好地区分同一公共活动的不同记录，同时保留 `externalUrl` 作为兜底查重。
 
+定时同步不会修改 `isPromoted`，运营手动置顶的公共活动不会因为下一次 Paris OpenData 更新而丢失推荐状态。
+
 ## 数据库字段
 
 `Activity` 预留了外部活动字段：
@@ -38,6 +40,35 @@
 当前只接入 Paris OpenData Events API。`docs/paris_open_apis_summary.md` 中的 OSM、Nominatim、Overpass 暂不直接接入前端，后续如需扩展，也应继续走后端 API Route 并增加缓存或限流。
 
 导入的活动会使用 `Activity.type = PUBLIC_EVENT`，列表卡片会展示“公共活动”类型标签，用于和用户发起活动区分。
+
+## 手动推荐公共活动
+
+MVP 阶段不做后台推荐位管理。运营可以先在 Supabase SQL Editor 手动修改 `isPromoted`。
+
+按活动 ID 置顶：
+
+```sql
+UPDATE "Activity"
+SET "isPromoted" = true
+WHERE "id" = '活动ID';
+```
+
+按 Paris OpenData 外部 ID 置顶：
+
+```sql
+UPDATE "Activity"
+SET "isPromoted" = true
+WHERE "externalSource" = 'paris-opendata:que-faire-a-paris'
+  AND "externalId" = 'Paris OpenData 记录 ID';
+```
+
+取消置顶：
+
+```sql
+UPDATE "Activity"
+SET "isPromoted" = false
+WHERE "id" = '活动ID';
+```
 
 ## API Route
 

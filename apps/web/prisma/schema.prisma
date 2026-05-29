@@ -116,6 +116,7 @@ model Activity {
   externalUrl      String?
   sourcePayload    Json?
   importedAt       DateTime?
+  isPromoted       Boolean               @default(false)
   status           ActivityStatus        @default(RECRUITING)
   visibility       ActivityVisibility    @default(PUBLIC)
   organizerId      String
@@ -130,6 +131,7 @@ model Activity {
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])
+  @@index([isPromoted, startAt])
 }
 
 model ActivityParticipant {

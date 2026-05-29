@@ -62,6 +62,7 @@ function getActivityDetailViewModel(
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
+    isPromoted: activity.isPromoted,
     participantCount: activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,

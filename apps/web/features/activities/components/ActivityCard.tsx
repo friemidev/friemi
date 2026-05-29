@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import { CalendarDays, MapPin, Sparkles, UsersRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -17,6 +17,7 @@ import { ActivityStatusBadge } from "./ActivityStatusBadge";
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
   locale: string;
+  compact?: boolean;
 };
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
@@ -25,15 +26,22 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   sky: "bg-sky",
 };
 
-export function ActivityCard({ activity, locale }: ActivityCardProps) {
+export function ActivityCard({
+  activity,
+  locale,
+  compact = false,
+}: ActivityCardProps) {
   const t = getCopy(locale);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
-  const activityLabel = t.activityLabels.activityAria(
+  const baseActivityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
     getActivityLocationLabel(activity),
   );
+  const activityLabel = activity.isPromoted
+    ? `${t.activityLabels.promoted}. ${baseActivityLabel}`
+    : baseActivityLabel;
 
   return (
     <Link
@@ -43,11 +51,18 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
       <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
         <div
           className={cn(
-            "flex h-20 items-end justify-between gap-2 p-3 sm:h-24 sm:p-4",
+            "flex items-end justify-between gap-2",
+            compact ? "h-20 p-3 sm:h-20" : "h-24 p-3 sm:h-28 sm:p-4",
             coverTones[activity.coverTone],
           )}
         >
           <div className="flex min-w-0 flex-wrap gap-2">
+            {activity.isPromoted ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold leading-none text-amber-800">
+                <Sparkles className="h-3 w-3" />
+                {t.activityLabels.promoted}
+              </span>
+            ) : null}
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold leading-none text-ink">
               {getCategoryLabel(activity.category, locale)}
             </span>
@@ -57,25 +72,45 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
           </div>
           <ActivityStatusBadge status={displayStatus} locale={locale} />
         </div>
-        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
-          <CardTitle className="line-clamp-2 text-base leading-snug sm:text-lg">
+        <CardHeader
+          className={cn(
+            "p-4 pb-2",
+            compact ? "sm:p-4 sm:pb-2" : "sm:p-5 sm:pb-2",
+          )}
+        >
+          <CardTitle
+            className={cn(
+              "line-clamp-2 text-base leading-snug",
+              compact ? "sm:text-base" : "sm:text-lg",
+            )}
+          >
             {activity.title}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-          <p className="line-clamp-2 text-sm leading-5 text-zinc-600">
+        <CardContent
+          className={cn(
+            "flex flex-1 flex-col p-4 pt-0",
+            compact ? "space-y-2.5 sm:p-4 sm:pt-0" : "space-y-3 sm:p-5 sm:pt-0",
+          )}
+        >
+          <p
+            className={cn(
+              "text-sm leading-5 text-zinc-600",
+              compact ? "line-clamp-2" : "line-clamp-2",
+            )}
+          >
             {activity.description}
           </p>
           <div className="grid gap-1.5 text-sm text-zinc-600">
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
+              <span className="min-w-0 line-clamp-1">
                 {getActivityDateLabel(activity, locale)}
               </span>
             </span>
             <span className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
+              <span className="min-w-0 line-clamp-1">
                 {getActivityLocationLabel(activity)}
               </span>
             </span>

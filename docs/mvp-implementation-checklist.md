@@ -362,10 +362,10 @@ feature/promoted-activities
 
 小功能：
 
-- [ ] Prisma 增加 `isPromoted`
-- [ ] 列表优先展示置顶活动
-- [ ] 后台暂时手动改数据库
-- [ ] 为后续商家推广预留
+- [x] Prisma 增加 `isPromoted`
+- [x] 列表优先展示置顶活动
+- [x] 后台暂时手动改数据库
+- [x] 为后续商家推广预留
 
 ### 15. 商家主页 MVP
 

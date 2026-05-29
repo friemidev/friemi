@@ -25,5 +25,6 @@ export type ActivitySummary = {
   capacity: number;
   participantCount: number;
   priceText: string;
+  isPromoted: boolean;
   status: ActivityStatus;
 };
