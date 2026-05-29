@@ -3,7 +3,6 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import { defaultLocale, locales } from "@chill-club/shared";
 import { hasClerkKeys } from "./lib/clerk";
-import { extractAdminContextFromSessionClaims, isAdminByFields } from "./lib/admin-access";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -34,23 +33,6 @@ export default clerkMiddleware(async (auth, request) => {
       if (!authState.userId) {
         return NextResponse.redirect(new URL(`/${defaultLocale}/sign-in`, request.url));
       }
-    }
-
-    const context = extractAdminContextFromSessionClaims(authState.sessionClaims);
-    const isAdmin = isAdminByFields({
-      userId: authState.userId,
-      email: context.email,
-      publicRole: context.publicRole,
-      privateRole: context.privateRole,
-    });
-
-    if (!isAdmin) {
-      if (isAdminApiRoute(request)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-
-      const localeFromPath = request.nextUrl.pathname.split("/").filter(Boolean)[0] ?? defaultLocale;
-      return NextResponse.redirect(new URL(`/${localeFromPath}`, request.url));
     }
 
     if (isAdminApiRoute(request)) {
