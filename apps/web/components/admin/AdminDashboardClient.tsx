@@ -138,10 +138,10 @@ function LoadingLabel({
 const compactSelectClassName = `${selectClassName} h-9`;
 
 const statusLabels: Record<ActivityFormState["status"], string> = {
-  OPEN: "招募中",
-  FULL: "已满",
+  OPEN: "可参与",
+  FULL: "已满员",
   DRAFT: "草稿",
-  RECRUITING: "招募中",
+  RECRUITING: "可参与",
   CONFIRMED: "已成团",
   ENDED: "已结束",
   CANCELLED: "已取消",

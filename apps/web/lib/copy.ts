@@ -75,43 +75,54 @@ const copy = {
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "请检查数据库连接后刷新页面。",
       emptyPreviewTitle: "暂无活动",
-      emptyPreviewDescription: "数据库新增招募中活动后会显示在这里。",
+      emptyPreviewDescription: "数据库新增可参与活动后会显示在这里。",
       recentTitle: "最近活动",
       recentDescription: "按开始时间展示最近可参加的公开活动。",
       emptyRecentDescription:
-        "数据库新增公开的招募中活动后，刷新页面即可看到。",
+        "数据库新增公开的可参与活动后，刷新页面即可看到。",
     },
     activities: {
       title: "活动发现",
-      description: "MVP 阶段先展示手动运营和用户发起的活动。",
+      description:
+        "优先展示正在进行和即将开始的活动，需要时再用搜索和筛选缩小范围。",
       scopeTitle: "当前展示范围",
       scopeDescription:
-        "只展示公开、招募中或已成团的活动，并按开始时间从近到远排序。",
+        "展示公开活动，默认优先显示进行中和未开始的可参与活动，已结束活动靠后。",
       emptyTitle: "暂无活动",
       emptyDescription:
-        "当前没有招募中或已成团的活动，创建新活动后会显示在这里。",
+        "当前没有可展示的公开活动，创建新活动后会显示在这里。",
       emptyFilteredTitle: "没有匹配活动",
-      emptyFilteredDescription: "请放宽关键词、分类或城市条件后再试。",
+      emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
     },
     activityFilters: {
       title: "搜索和筛选",
-      description: "按关键词、主题、城市和活动形式快速缩小活动范围。",
+      description: "按关键词、主题、城市、活动形式和进度快速缩小活动范围。",
+      mobileSummary: "搜索 / 筛选",
       keywordLabel: "关键词",
       keywordPlaceholder: "搜索标题或描述，例如：电影 Paris",
       categoryLabel: "主题",
       cityLabel: "城市",
       typeLabel: "活动形式",
+      timeStateLabel: "活动进度",
       sortLabel: "日期排序",
       allCategories: "全部主题",
       allCities: "全部城市",
       allTypes: "全部形式",
+      allTimeStates: "全部进度",
+      sortRecommended: "推荐排序",
       sortSoonest: "从近到远",
       sortLatest: "从远到近",
-      apply: "筛选",
+      apply: "搜索",
       reset: "重置",
       activeKeyword: (keyword: string) => `关键词：${keyword}`,
       removeFilter: (label: string) => `移除筛选：${label}`,
       resultCount: (count: number) => `${count} 个结果`,
+    },
+    activityPagination: {
+      previous: "上一页",
+      next: "下一页",
+      pageSummary: (page: number, totalPages: number) =>
+        `第 ${page} / ${totalPages} 页`,
     },
     activityDetail: {
       descriptionTitle: "活动说明",
@@ -421,13 +432,18 @@ const copy = {
         OTHER: "其他",
       },
       statuses: {
-        OPEN: "招募中",
-        FULL: "已满",
+        OPEN: "可参与",
+        FULL: "已满员",
         DRAFT: "草稿",
-        RECRUITING: "招募中",
-        CONFIRMED: "已成团",
+        RECRUITING: "可参与",
+        CONFIRMED: "可参与",
         ENDED: "已结束",
         CANCELLED: "已取消",
+      },
+      timeStates: {
+        ONGOING: "进行中",
+        UPCOMING: "未开始",
+        ENDED: "已结束",
       },
       types: {
         PUBLIC_EVENT: "公共活动",
@@ -507,7 +523,7 @@ const copy = {
         "Check the database connection and refresh the page.",
       emptyPreviewTitle: "No activities yet",
       emptyPreviewDescription:
-        "Recruiting activities will appear here once they are added.",
+        "Joinable activities will appear here once they are added.",
       recentTitle: "Recent activities",
       recentDescription:
         "Upcoming public activities sorted by the nearest start time.",
@@ -517,38 +533,48 @@ const copy = {
     activities: {
       title: "Activity discovery",
       description:
-        "MVP focuses on curated activities and activities created by users.",
+        "Ongoing and upcoming activities come first. Search or filter when you need a narrower list.",
       scopeTitle: "Current scope",
       scopeDescription:
-        "Showing public recruiting or confirmed activities, sorted by the nearest start time.",
+        "Showing public activities, with ongoing and upcoming joinable activities first and ended activities later.",
       emptyTitle: "No activities",
       emptyDescription:
-        "There are no recruiting or confirmed activities right now. New activities will appear here.",
+        "There are no public activities to show right now. New activities will appear here.",
       emptyFilteredTitle: "No matching activities",
       emptyFilteredDescription:
-        "Try a broader keyword, category, or city filter.",
+        "Try a broader keyword, topic, city, or status filter.",
     },
     activityFilters: {
       title: "Search and filters",
       description:
-        "Narrow activities by keyword, topic, city, and activity format.",
+        "Narrow activities by keyword, topic, city, format, and timing.",
+      mobileSummary: "Search / Filter",
       keywordLabel: "Keyword",
       keywordPlaceholder: "Search title or description, e.g. film Paris",
       categoryLabel: "Topic",
       cityLabel: "City",
       typeLabel: "Format",
+      timeStateLabel: "Timing",
       sortLabel: "Date order",
       allCategories: "All topics",
       allCities: "All cities",
       allTypes: "All formats",
+      allTimeStates: "All timing",
+      sortRecommended: "Recommended",
       sortSoonest: "Soonest first",
       sortLatest: "Latest first",
-      apply: "Filter",
+      apply: "Search",
       reset: "Reset",
       activeKeyword: (keyword: string) => `Keyword: ${keyword}`,
       removeFilter: (label: string) => `Remove filter: ${label}`,
       resultCount: (count: number) =>
         `${count} result${count === 1 ? "" : "s"}`,
+    },
+    activityPagination: {
+      previous: "Previous",
+      next: "Next",
+      pageSummary: (page: number, totalPages: number) =>
+        `Page ${page} / ${totalPages}`,
     },
     activityDetail: {
       descriptionTitle: "About this activity",
@@ -887,13 +913,18 @@ const copy = {
         OTHER: "Other",
       },
       statuses: {
-        OPEN: "Recruiting",
+        OPEN: "Joinable",
         FULL: "Full",
         DRAFT: "Draft",
-        RECRUITING: "Recruiting",
-        CONFIRMED: "Confirmed",
+        RECRUITING: "Joinable",
+        CONFIRMED: "Joinable",
         ENDED: "Ended",
         CANCELLED: "Cancelled",
+      },
+      timeStates: {
+        ONGOING: "Ongoing",
+        UPCOMING: "Upcoming",
+        ENDED: "Ended",
       },
       types: {
         PUBLIC_EVENT: "Public event",
@@ -983,37 +1014,48 @@ const copy = {
     activities: {
       title: "Découvrir des activités",
       description:
-        "Le MVP affiche d'abord les activités éditorialisées et celles créées par les utilisateurs.",
+        "Les activités en cours et à venir passent d'abord. Recherchez ou filtrez pour affiner.",
       scopeTitle: "Périmètre affiché",
       scopeDescription:
-        "Activités publiques en recrutement ou confirmées, triées par date de début proche.",
+        "Activités publiques, avec les activités en cours ou à venir d'abord, puis les activités terminées.",
       emptyTitle: "Aucune activité",
       emptyDescription:
-        "Aucune activité en recrutement ou confirmée pour le moment. Les nouvelles activités apparaîtront ici.",
+        "Aucune activité publique à afficher pour le moment. Les nouvelles activités apparaîtront ici.",
       emptyFilteredTitle: "Aucune activité trouvée",
       emptyFilteredDescription:
-        "Essayez un mot-clé, un thème ou une ville plus large.",
+        "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
     },
     activityFilters: {
       title: "Recherche et filtres",
-      description: "Affinez les activités par mot-clé, thème, ville et format.",
+      description:
+        "Affinez les activités par mot-clé, thème, ville, format et avancement.",
+      mobileSummary: "Recherche / Filtre",
       keywordLabel: "Mot-clé",
       keywordPlaceholder: "Titre ou description, ex. film Paris",
       categoryLabel: "Thème",
       cityLabel: "Ville",
       typeLabel: "Format",
+      timeStateLabel: "Avancement",
       sortLabel: "Tri par date",
       allCategories: "Tous les thèmes",
       allCities: "Toutes les villes",
       allTypes: "Tous les formats",
+      allTimeStates: "Tous les états",
+      sortRecommended: "Recommandé",
       sortSoonest: "Plus proche",
       sortLatest: "Plus lointain",
-      apply: "Filtrer",
+      apply: "Rechercher",
       reset: "Réinitialiser",
       activeKeyword: (keyword: string) => `Mot-clé : ${keyword}`,
       removeFilter: (label: string) => `Retirer le filtre : ${label}`,
       resultCount: (count: number) =>
         `${count} résultat${count > 1 ? "s" : ""}`,
+    },
+    activityPagination: {
+      previous: "Précédent",
+      next: "Suivant",
+      pageSummary: (page: number, totalPages: number) =>
+        `Page ${page} / ${totalPages}`,
     },
     activityDetail: {
       descriptionTitle: "Présentation",
@@ -1372,13 +1414,18 @@ const copy = {
         OTHER: "Autre",
       },
       statuses: {
-        OPEN: "Recrutement",
+        OPEN: "Ouvert",
         FULL: "Complet",
         DRAFT: "Brouillon",
-        RECRUITING: "Recrutement",
-        CONFIRMED: "Confirmé",
+        RECRUITING: "Ouvert",
+        CONFIRMED: "Ouvert",
         ENDED: "Terminé",
         CANCELLED: "Annulé",
+      },
+      timeStates: {
+        ONGOING: "En cours",
+        UPCOMING: "À venir",
+        ENDED: "Terminé",
       },
       types: {
         PUBLIC_EVENT: "Événement public",
