@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { buildFingerprint, scrapeActivities, type ScraperSource, type ScrapedActivity } from "@chill-club/scraper-core";
+import {
+  buildFingerprint,
+  scrapeActivities,
+  type ScraperSource,
+  type ScrapedActivity,
+} from "@chill-club/scraper-core";
 
 export type AdminActivityListItem = {
   id: string;
@@ -16,6 +21,7 @@ export type AdminActivityListItem = {
   startAt: string;
   endAt: string | null;
   capacity: number;
+  coverImageUrl: string | null;
   minParticipants: number | null;
   requiresApproval: boolean;
   priceType: "FREE" | "AA" | "FIXED" | "RANGE";
@@ -52,7 +58,11 @@ export type ScraperPreviewRequest = {
   maxPages?: number;
 };
 
-export type ScraperImportMode = "create_only" | "update_only" | "upsert" | "skip_existing";
+export type ScraperImportMode =
+  | "create_only"
+  | "update_only"
+  | "upsert"
+  | "skip_existing";
 
 export type ScraperImportOptions = {
   mode: ScraperImportMode;
@@ -66,15 +76,19 @@ export type ScraperImportResult = {
 };
 
 function hashFingerprint(title: string, startAt: string, address: string) {
-  return createHash("sha1").update(`${title.toLowerCase()}|${startAt}|${address.toLowerCase()}`).digest("hex");
+  return createHash("sha1")
+    .update(`${title.toLowerCase()}|${startAt}|${address.toLowerCase()}`)
+    .digest("hex");
 }
 
-export function serializeAdminActivity(activity: Prisma.ActivityGetPayload<{
-  include: {
-    organizer: { select: { id: true; nickname: true } };
-    _count: { select: { participants: true } };
-  };
-}>): AdminActivityListItem {
+export function serializeAdminActivity(
+  activity: Prisma.ActivityGetPayload<{
+    include: {
+      organizer: { select: { id: true; nickname: true } };
+      _count: { select: { participants: true } };
+    };
+  }>,
+): AdminActivityListItem {
   return {
     id: activity.id,
     title: activity.title,
@@ -88,6 +102,7 @@ export function serializeAdminActivity(activity: Prisma.ActivityGetPayload<{
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: activity.capacity,
+    coverImageUrl: activity.coverImageUrl,
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
@@ -127,7 +142,11 @@ export async function getAdminState() {
   };
 }
 
-async function resolveDatabaseRange(mode: ScraperPreviewRequest["mode"], from?: string | null, to?: string | null) {
+async function resolveDatabaseRange(
+  mode: ScraperPreviewRequest["mode"],
+  from?: string | null,
+  to?: string | null,
+) {
   if (mode !== "database") {
     return {
       from: from ? new Date(from) : null,
@@ -145,8 +164,14 @@ async function resolveDatabaseRange(mode: ScraperPreviewRequest["mode"], from?: 
   };
 }
 
-export async function previewScraperActivities(request: ScraperPreviewRequest): Promise<ScraperPreviewItem[]> {
-  const { from, to } = await resolveDatabaseRange(request.mode, request.from, request.to);
+export async function previewScraperActivities(
+  request: ScraperPreviewRequest,
+): Promise<ScraperPreviewItem[]> {
+  const { from, to } = await resolveDatabaseRange(
+    request.mode,
+    request.from,
+    request.to,
+  );
   const scraped = await scrapeActivities({
     sources: request.sources,
     limit: request.limit,
@@ -156,12 +181,25 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
   });
 
   const existing = await prisma.activity.findMany({
-    select: { id: true, title: true, startAt: true, address: true, sourceUrl: true },
+    select: {
+      id: true,
+      title: true,
+      startAt: true,
+      address: true,
+      sourceUrl: true,
+    },
   });
   const byId = new Map(existing.map((item) => [item.id, item]));
-  const byFingerprint = new Map(existing.map((item) => [hashFingerprint(item.title, item.startAt.toISOString(), item.address), item]));
+  const byFingerprint = new Map(
+    existing.map((item) => [
+      hashFingerprint(item.title, item.startAt.toISOString(), item.address),
+      item,
+    ]),
+  );
   const bySourceUrl = new Map(
-    existing.filter((item) => item.sourceUrl).map((item) => [item.sourceUrl as string, item]),
+    existing
+      .filter((item) => item.sourceUrl)
+      .map((item) => [item.sourceUrl as string, item]),
   );
 
   return scraped.map((activity) => {
@@ -171,10 +209,15 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
       startAt: activity.startAt,
       address: activity.address,
     });
-    const lookupFingerprint = hashFingerprint(activity.title, activity.startAt, activity.address);
+    const lookupFingerprint = hashFingerprint(
+      activity.title,
+      activity.startAt,
+      activity.address,
+    );
     const sameId = byId.get(activity.id);
     const sameSourceUrl = bySourceUrl.get(activity.sourceUrl);
-    const duplicate = sameId ?? sameSourceUrl ?? byFingerprint.get(lookupFingerprint) ?? null;
+    const duplicate =
+      sameId ?? sameSourceUrl ?? byFingerprint.get(lookupFingerprint) ?? null;
 
     return {
       ...activity,
@@ -186,7 +229,10 @@ export async function previewScraperActivities(request: ScraperPreviewRequest): 
   });
 }
 
-function scraperActivityFields(activity: ScraperPreviewItem, organizerId: string) {
+function scraperActivityFields(
+  activity: ScraperPreviewItem,
+  organizerId: string,
+) {
   return {
     title: activity.title,
     description: activity.description,
@@ -212,7 +258,11 @@ function scraperActivityFields(activity: ScraperPreviewItem, organizerId: string
   };
 }
 
-async function upsertActivitySourceLink(activityId: string, source: string, sourceUrl: string) {
+async function upsertActivitySourceLink(
+  activityId: string,
+  source: string,
+  sourceUrl: string,
+) {
   await prisma.activitySourceLink.upsert({
     where: { sourceUrl },
     update: { activityId, source },
@@ -220,8 +270,15 @@ async function upsertActivitySourceLink(activityId: string, source: string, sour
   });
 }
 
-function resolveImportTarget(activity: ScraperPreviewItem, mergeDuplicates: boolean) {
-  if (mergeDuplicates && activity.duplicateStatus === "duplicate" && activity.duplicateOfId) {
+function resolveImportTarget(
+  activity: ScraperPreviewItem,
+  mergeDuplicates: boolean,
+) {
+  if (
+    mergeDuplicates &&
+    activity.duplicateStatus === "duplicate" &&
+    activity.duplicateOfId
+  ) {
     return activity.duplicateOfId;
   }
 
@@ -232,7 +289,10 @@ function resolveImportTarget(activity: ScraperPreviewItem, mergeDuplicates: bool
   return activity.id;
 }
 
-function shouldImportItem(activity: ScraperPreviewItem, options: ScraperImportOptions) {
+function shouldImportItem(
+  activity: ScraperPreviewItem,
+  options: ScraperImportOptions,
+) {
   const { mode, mergeDuplicates } = options;
 
   if (activity.duplicateStatus === "existing") {
@@ -253,11 +313,18 @@ function shouldImportItem(activity: ScraperPreviewItem, options: ScraperImportOp
 
 export async function importScraperActivities(
   items: ScraperPreviewItem[],
-  options: ScraperImportOptions = { mode: "create_only", mergeDuplicates: false },
+  options: ScraperImportOptions = {
+    mode: "create_only",
+    mergeDuplicates: false,
+  },
 ): Promise<ScraperImportResult> {
   const importer = await prisma.userProfile.upsert({
     where: { clerkUserId: "scraper-import-bot" },
-    update: { nickname: "Imported Paris Events", status: "ACTIVE", syncedAt: new Date() },
+    update: {
+      nickname: "Imported Paris Events",
+      status: "ACTIVE",
+      syncedAt: new Date(),
+    },
     create: {
       clerkUserId: "scraper-import-bot",
       nickname: "Imported Paris Events",
@@ -281,7 +348,9 @@ export async function importScraperActivities(
     const targetId = resolveImportTarget(activity, options.mergeDuplicates);
     const fields = scraperActivityFields(activity, importer.id);
     const isMerge =
-      options.mergeDuplicates && activity.duplicateStatus === "duplicate" && activity.duplicateOfId === targetId;
+      options.mergeDuplicates &&
+      activity.duplicateStatus === "duplicate" &&
+      activity.duplicateOfId === targetId;
 
     if (activity.duplicateStatus === "new" || options.mode === "upsert") {
       await prisma.activity.upsert({
@@ -297,7 +366,11 @@ export async function importScraperActivities(
     }
 
     if (isMerge) {
-      await upsertActivitySourceLink(targetId, activity.source, activity.sourceUrl);
+      await upsertActivitySourceLink(
+        targetId,
+        activity.source,
+        activity.sourceUrl,
+      );
       merged += 1;
     }
 
@@ -312,18 +385,34 @@ export async function createAdminActivity(data: {
   description: string;
   itinerary?: string | null;
   type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
-  category: "BOARD_GAME" | "MOVIE" | "MUSIC" | "SPORTS" | "TRAVEL" | "FOOD" | "EXHIBITION" | "OTHER";
+  category:
+    | "BOARD_GAME"
+    | "MOVIE"
+    | "MUSIC"
+    | "SPORTS"
+    | "TRAVEL"
+    | "FOOD"
+    | "EXHIBITION"
+    | "OTHER";
   city: string;
   destination?: string | null;
   address: string;
   startAt: string;
   endAt?: string | null;
   capacity: number;
+  coverImageUrl?: string | null;
   minParticipants?: number | null;
   requiresApproval: boolean;
   priceType: "FREE" | "AA" | "FIXED" | "RANGE";
   priceText: string;
-  status: "OPEN" | "FULL" | "DRAFT" | "RECRUITING" | "CONFIRMED" | "ENDED" | "CANCELLED";
+  status:
+    | "OPEN"
+    | "FULL"
+    | "DRAFT"
+    | "RECRUITING"
+    | "CONFIRMED"
+    | "ENDED"
+    | "CANCELLED";
   visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
   organizerId: string;
 }) {
@@ -341,13 +430,18 @@ export async function createAdminActivity(data: {
   return serializeAdminActivity(activity);
 }
 
-export async function updateAdminActivity(id: string, data: Partial<Parameters<typeof createAdminActivity>[0]>) {
+export async function updateAdminActivity(
+  id: string,
+  data: Partial<Parameters<typeof createAdminActivity>[0]>,
+) {
   const activity = await prisma.activity.update({
     where: { id },
     data: {
       ...data,
       ...(data.startAt ? { startAt: new Date(data.startAt) } : {}),
-      ...(data.endAt !== undefined ? { endAt: data.endAt ? new Date(data.endAt) : null } : {}),
+      ...(data.endAt !== undefined
+        ? { endAt: data.endAt ? new Date(data.endAt) : null }
+        : {}),
     },
     include: {
       organizer: { select: { id: true, nickname: true } },

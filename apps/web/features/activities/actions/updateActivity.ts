@@ -164,6 +164,7 @@ export async function updateActivityAction(
         title: result.data.title,
         description: formatStoredDescription(result.data),
         itinerary: result.data.itinerary,
+        coverImageUrl: result.data.coverImageUrl,
         type: result.data.type,
         category: result.data.category,
         city: result.data.city,
