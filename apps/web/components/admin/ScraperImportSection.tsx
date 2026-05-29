@@ -1,9 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Textarea } from "@chill-club/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Textarea,
+} from "@chill-club/ui";
 import type { ScraperImportMode, ScraperPreviewItem } from "@/lib/admin-scraper";
 import { FormField, selectClassName } from "@/components/admin/FormField";
 
@@ -60,6 +68,8 @@ const importModeLabels: Record<ScraperImportMode, string> = {
   skip_existing: "忽略已有",
 };
 
+const compactSelectClassName = `${selectClassName} h-9`;
+
 function LoadingLabel({ loading, loadingText, children }: { loading: boolean; loadingText: string; children: string }) {
   if (!loading) return children;
   return (
@@ -103,6 +113,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
   const previewCount = resolvedPreviewItems.length;
   const newCount = resolvedPreviewItems.filter((item) => item.duplicateStatus === "new").length;
   const duplicateCount = resolvedPreviewItems.filter((item) => item.duplicateStatus !== "new").length;
+  const isDatabaseMode = scraperForm.mode === "database";
 
   function applySelection(ids: string[]) {
     setSelectedPreviewIds(ids);
@@ -155,7 +166,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
 
       const json = await response.json();
       if (!response.ok) {
-        toast.error(json.error ?? "抓取失败，请稍后重试");
+        toast.error(json.error ?? "预览失败，请稍后重试");
         return;
       }
 
@@ -163,9 +174,9 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
       setPreviewItems(items);
       setItemOverrides({});
       applySelection(items.filter((item) => item.duplicateStatus === "new").map((item) => item.id));
-      toast.success(`抓取完成：共 ${items.length} 条（新增 ${items.filter((i) => i.duplicateStatus === "new").length} 条）`);
+      toast.success(`预览完成：共 ${items.length} 条（新增 ${items.filter((i) => i.duplicateStatus === "new").length} 条）`);
     } catch {
-      toast.error("抓取失败，请检查网络或稍后重试");
+      toast.error("预览失败，请检查网络或稍后重试");
     } finally {
       onBusyChange(null);
     }
@@ -209,11 +220,21 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>爬虫导入</CardTitle>
+      <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
+        <CardTitle>公共活动导入</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
+      <CardContent className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
+        <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50/70 px-3 py-3 text-sm text-amber-900">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <div className="space-y-1">
+            <p className="font-medium">先预览，再导入</p>
+            <p className="leading-6">
+              公共活动通过服务端读取外部 API。请先预览并选择要导入的活动，避免频繁请求公共数据源。
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
           <FormField label="抓取来源">
             <div className="flex flex-wrap gap-4 pt-1">
               <label className="flex items-center gap-2 text-sm text-zinc-700">
@@ -234,9 +255,9 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
               </label>
             </div>
           </FormField>
-          <FormField label="时间策略" hint="决定从什么时间范围开始抓取">
+          <FormField label="时间策略" hint="决定从什么时间范围开始预览">
             <select
-              className={selectClassName}
+              className={compactSelectClassName}
               value={scraperForm.mode}
               onChange={(e) => setScraperForm({ ...scraperForm, mode: e.target.value as ScraperFormState["mode"] })}
             >
@@ -247,36 +268,44 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
           </FormField>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <FormField label="最多抓取条数" hint="合并各来源后的总上限">
-            <Input type="number" min={1} max={100} value={scraperForm.limit} onChange={(e) => setScraperForm({ ...scraperForm, limit: Number(e.target.value) })} />
+            <Input className="h-9" type="number" min={1} max={100} value={scraperForm.limit} onChange={(e) => setScraperForm({ ...scraperForm, limit: Number(e.target.value) })} />
           </FormField>
-          <FormField label="开始时间">
-            <Input type="datetime-local" value={scraperForm.from} onChange={(e) => setScraperForm({ ...scraperForm, from: e.target.value })} />
+          <FormField
+            label="开始时间"
+            hint={isDatabaseMode ? "数据库模式会自动从最新活动后开始。" : undefined}
+          >
+            <Input
+              className="h-9 disabled:bg-zinc-100 disabled:text-zinc-400"
+              type="datetime-local"
+              value={scraperForm.from}
+              disabled={isDatabaseMode}
+              onChange={(e) => setScraperForm({ ...scraperForm, from: e.target.value })}
+            />
           </FormField>
-          <FormField label="结束时间">
-            <Input type="datetime-local" value={scraperForm.to} onChange={(e) => setScraperForm({ ...scraperForm, to: e.target.value })} />
+          <FormField label="结束时间" hint="作为本次预览的上限，避免一次拉取过多。">
+            <Input className="h-9" type="datetime-local" value={scraperForm.to} onChange={(e) => setScraperForm({ ...scraperForm, to: e.target.value })} />
           </FormField>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <FormField label="每个来源最大列表页数" hint="防止翻页过多，例如 3 表示最多抓 3 页列表">
-            <Input type="number" min={1} max={20} value={scraperForm.maxPages} onChange={(e) => setScraperForm({ ...scraperForm, maxPages: Number(e.target.value) })} />
+        <div className="grid gap-3 md:grid-cols-3">
+          <FormField label="每个来源最大列表页数" hint="控制外部 API 请求量，例如 3 表示最多读 3 页。">
+            <Input className="h-9" type="number" min={1} max={20} value={scraperForm.maxPages} onChange={(e) => setScraperForm({ ...scraperForm, maxPages: Number(e.target.value) })} />
           </FormField>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={previewScraper} disabled={isBusy} className="min-w-[8.5rem]">
-            <LoadingLabel loading={isPreviewing} loadingText="抓取中…">
-              开始抓取
+            <LoadingLabel loading={isPreviewing} loadingText="预览中…">
+              预览活动
             </LoadingLabel>
           </Button>
           <Button type="button" variant="secondary" disabled={isBusy} onClick={() => { setPreviewItems([]); setItemOverrides({}); selectNone(); }}>
-            清空结果
+            清空预览
           </Button>
           <Button
             type="button"
-            variant="success"
             onClick={importSelected}
             disabled={isBusy || selectedPreviewItems.length === 0}
             className="min-w-[9.5rem]"
@@ -289,7 +318,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
 
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-black/10 bg-zinc-50 px-3 py-3 text-sm">
           <FormField label="导入模式" className="min-w-[10rem]">
-            <select className={selectClassName} value={importMode} onChange={(e) => setImportMode(e.target.value as ScraperImportMode)}>
+            <select className={compactSelectClassName} value={importMode} onChange={(e) => setImportMode(e.target.value as ScraperImportMode)}>
               {(Object.keys(importModeLabels) as ScraperImportMode[]).map((mode) => (
                 <option key={mode} value={mode}>
                   {importModeLabels[mode]}
@@ -318,18 +347,26 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
           </Button>
         </div>
 
-        <div className="text-sm text-zinc-600">
-          结果：{previewCount} 条，新增 {newCount} 条，重复/相似 {duplicateCount} 条。
+        <div className="flex flex-wrap gap-2 text-sm text-zinc-600">
+          <span className="inline-flex rounded-full bg-zinc-100 px-3 py-1">
+            预览 {previewCount} 条
+          </span>
+          <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+            新增 {newCount} 条
+          </span>
+          <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-amber-700">
+            重复/相似 {duplicateCount} 条
+          </span>
         </div>
 
         <div className="relative overflow-auto rounded-md border border-black/10">
           {isBusy ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-white/80 text-sm text-zinc-700">
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-              {isPreviewing ? "正在抓取，请稍候…" : "正在导入，请稍候…"}
+              {isPreviewing ? "正在读取公共活动，请稍候…" : "正在导入，请稍候…"}
             </div>
           ) : null}
-          <table className="min-w-full text-left text-sm">
+          <table className="min-w-[980px] text-left text-sm">
             <thead className="bg-zinc-50 text-zinc-500">
               <tr>
                 <th className="px-3 py-2">选择</th>
@@ -343,6 +380,16 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
               </tr>
             </thead>
             <tbody>
+              {resolvedPreviewItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-3 py-12 text-center">
+                    <p className="font-medium text-zinc-800">还没有预览结果</p>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      点击“预览活动”后，系统会先展示新增和相似活动，再由你选择是否导入。
+                    </p>
+                  </td>
+                </tr>
+              ) : null}
               {resolvedPreviewItems.map((item) => (
                 <tr
                   key={item.id}
@@ -396,7 +443,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
 
         {editingItem ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-6">
               <h3 className="text-lg font-semibold text-zinc-950">导入前编辑</h3>
               <p className="mt-1 text-sm text-zinc-500">修改仅影响本次导入，不会写回爬虫源站。</p>
               <div className="mt-4 grid gap-3">
@@ -404,10 +451,10 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
                   <Input value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} />
                 </FormField>
                 <FormField label="描述">
-                  <Textarea value={editingItem.description} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} />
+                  <Textarea className="min-h-20" value={editingItem.description} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} />
                 </FormField>
                 <FormField label="行程（可选）">
-                  <Textarea value={editingItem.itinerary ?? ""} onChange={(e) => setEditingItem({ ...editingItem, itinerary: e.target.value || null })} />
+                  <Textarea className="min-h-20" value={editingItem.itinerary ?? ""} onChange={(e) => setEditingItem({ ...editingItem, itinerary: e.target.value || null })} />
                 </FormField>
                 <FormField label="地址">
                   <Input value={editingItem.address} onChange={(e) => setEditingItem({ ...editingItem, address: e.target.value })} />

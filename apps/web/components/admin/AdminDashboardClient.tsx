@@ -14,6 +14,7 @@ import {
 } from "@chill-club/ui";
 import type {
   AdminActivityListItem,
+  AdminMerchantOption,
   AdminOrganizerOption,
 } from "@/lib/admin-scraper";
 import { ScraperImportSection } from "@/components/admin/ScraperImportSection";
@@ -23,6 +24,7 @@ import { ActivityCoverUpload } from "@/features/activities/components/ActivityCo
 type AdminDashboardClientProps = {
   initialActivities: AdminActivityListItem[];
   initialOrganizers: AdminOrganizerOption[];
+  initialMerchants: AdminMerchantOption[];
   locale: string;
 };
 
@@ -62,11 +64,15 @@ type ActivityFormState = {
     | "CANCELLED";
   visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
   organizerId: string;
+  merchantId: string;
 };
 
 type DashboardTab = "activities" | "scraper";
 
-const emptyActivityForm = (organizerId = ""): ActivityFormState => ({
+const emptyActivityForm = (
+  organizerId = "",
+  merchantId = "",
+): ActivityFormState => ({
   title: "",
   description: "",
   itinerary: "",
@@ -86,6 +92,7 @@ const emptyActivityForm = (organizerId = ""): ActivityFormState => ({
   status: "RECRUITING",
   visibility: "PUBLIC",
   organizerId,
+  merchantId,
 });
 
 function toDatetimeLocal(value?: string | null) {
@@ -124,14 +131,54 @@ function LoadingLabel({
   );
 }
 
+const compactSelectClassName = `${selectClassName} h-9`;
+
+const statusLabels: Record<ActivityFormState["status"], string> = {
+  OPEN: "招募中",
+  FULL: "已满",
+  DRAFT: "草稿",
+  RECRUITING: "招募中",
+  CONFIRMED: "已成团",
+  ENDED: "已结束",
+  CANCELLED: "已取消",
+};
+
+function getAdminStatusLabel(status: string) {
+  return statusLabels[status as ActivityFormState["status"]] ?? status;
+}
+
+function getSourceLabel(source: string | null, sourceUrl: string | null) {
+  const normalizedSource = source?.toLowerCase() ?? "";
+
+  if (normalizedSource.includes("sortiraparis")) {
+    return "Sortir à Paris";
+  }
+
+  if (normalizedSource.includes("playinparis")) {
+    return "Play in Paris";
+  }
+
+  if (normalizedSource.includes("paris-opendata")) {
+    return "Paris OpenData";
+  }
+
+  if (source || sourceUrl) {
+    return "外部导入";
+  }
+
+  return "手动";
+}
+
 export function AdminDashboardClient({
   initialActivities,
   initialOrganizers,
+  initialMerchants,
   locale,
 }: AdminDashboardClientProps) {
   const defaultOrganizerId = initialOrganizers[0]?.id ?? "";
   const [activities, setActivities] = useState(initialActivities);
   const [organizers] = useState(initialOrganizers);
+  const [merchants] = useState(initialMerchants);
   const [activityForm, setActivityForm] = useState<ActivityFormState>(
     emptyActivityForm(defaultOrganizerId),
   );
@@ -167,6 +214,7 @@ export function AdminDashboardClient({
         capacity: Number(activityForm.capacity),
         requiresApproval: activityForm.requiresApproval,
         organizerId: activityForm.organizerId || defaultOrganizerId,
+        merchantId: activityForm.merchantId || null,
       };
 
       const isEdit = Boolean(activityForm.id);
@@ -217,7 +265,7 @@ export function AdminDashboardClient({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 md:space-y-6">
       <Toaster position="top-center" richColors closeButton />
 
       <div className="flex flex-wrap gap-2">
@@ -226,28 +274,32 @@ export function AdminDashboardClient({
           variant={activeTab === "activities" ? "primary" : "secondary"}
           onClick={() => setActiveTab("activities")}
         >
-          活动数据库
+          活动库
         </Button>
         <Button
           type="button"
           variant={activeTab === "scraper" ? "primary" : "secondary"}
           onClick={() => setActiveTab("scraper")}
         >
-          爬虫导入
+          公共活动导入
         </Button>
       </div>
 
       {activeTab === "activities" ? (
-        <section className="space-y-6">
+        <section className="space-y-5">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
               <CardTitle>活动管理</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <form className="grid gap-4" onSubmit={submitActivityForm}>
-                <div className="grid gap-4 md:grid-cols-2">
+            <CardContent className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
+              <form
+                className="grid gap-3 sm:gap-4"
+                onSubmit={submitActivityForm}
+              >
+                <div className="grid gap-3 md:grid-cols-2">
                   <FormField label="标题">
                     <Input
+                      className="h-9"
                       value={activityForm.title}
                       onChange={(e) =>
                         setActivityForm({
@@ -259,6 +311,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="城市">
                     <Input
+                      className="h-9"
                       value={activityForm.city}
                       onChange={(e) =>
                         setActivityForm({
@@ -271,6 +324,7 @@ export function AdminDashboardClient({
                 </div>
                 <FormField label="活动描述">
                   <Textarea
+                    className="min-h-20"
                     value={activityForm.description}
                     onChange={(e) =>
                       setActivityForm({
@@ -292,6 +346,7 @@ export function AdminDashboardClient({
                 </FormField>
                 <FormField label="行程安排（可选）">
                   <Textarea
+                    className="min-h-20"
                     value={activityForm.itinerary}
                     onChange={(e) =>
                       setActivityForm({
@@ -301,9 +356,10 @@ export function AdminDashboardClient({
                     }
                   />
                 </FormField>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <FormField label="地点地址">
                     <Input
+                      className="h-9"
                       value={activityForm.address}
                       onChange={(e) =>
                         setActivityForm({
@@ -315,6 +371,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="目的地（Trip 可选）">
                     <Input
+                      className="h-9"
                       value={activityForm.destination}
                       onChange={(e) =>
                         setActivityForm({
@@ -325,9 +382,10 @@ export function AdminDashboardClient({
                     />
                   </FormField>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <FormField label="开始时间">
                     <Input
+                      className="h-9"
                       type="datetime-local"
                       value={activityForm.startAt}
                       onChange={(e) =>
@@ -340,6 +398,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="结束时间（可选）">
                     <Input
+                      className="h-9"
                       type="datetime-local"
                       value={activityForm.endAt}
                       onChange={(e) =>
@@ -351,12 +410,13 @@ export function AdminDashboardClient({
                     />
                   </FormField>
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-3">
                   <FormField
                     label="人数上限"
                     hint="例如 100 表示最多 100 人参加"
                   >
                     <Input
+                      className="h-9"
                       type="number"
                       min={1}
                       value={activityForm.capacity}
@@ -370,6 +430,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="最少成团人数（可选）">
                     <Input
+                      className="h-9"
                       type="number"
                       min={1}
                       value={activityForm.minParticipants}
@@ -386,6 +447,7 @@ export function AdminDashboardClient({
                     hint="展示给用户的文字，如「免费」「AA 制」"
                   >
                     <Input
+                      className="h-9"
                       value={activityForm.priceText}
                       onChange={(e) =>
                         setActivityForm({
@@ -396,10 +458,10 @@ export function AdminDashboardClient({
                     />
                   </FormField>
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-3">
                   <FormField label="活动类型">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.type}
                       onChange={(e) =>
                         setActivityForm({
@@ -420,7 +482,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="分类">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.category}
                       onChange={(e) =>
                         setActivityForm({
@@ -442,7 +504,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="计费方式">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.priceType}
                       onChange={(e) =>
                         setActivityForm({
@@ -459,10 +521,10 @@ export function AdminDashboardClient({
                     </select>
                   </FormField>
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-4">
                   <FormField label="活动状态">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.status}
                       onChange={(e) =>
                         setActivityForm({
@@ -482,7 +544,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="可见范围">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.visibility}
                       onChange={(e) =>
                         setActivityForm({
@@ -499,7 +561,7 @@ export function AdminDashboardClient({
                   </FormField>
                   <FormField label="组织者">
                     <select
-                      className={selectClassName}
+                      className={compactSelectClassName}
                       value={activityForm.organizerId}
                       onChange={(e) =>
                         setActivityForm({
@@ -511,6 +573,28 @@ export function AdminDashboardClient({
                       {organizers.map((organizer) => (
                         <option key={organizer.id} value={organizer.id}>
                           {organizer.nickname}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField
+                    label="关联商家（可选）"
+                    hint="新增或维护商家请从头像菜单进入「商家管理」。"
+                  >
+                    <select
+                      className={compactSelectClassName}
+                      value={activityForm.merchantId}
+                      onChange={(e) =>
+                        setActivityForm({
+                          ...activityForm,
+                          merchantId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">不关联商家</option>
+                      {merchants.map((merchant) => (
+                        <option key={merchant.id} value={merchant.id}>
+                          {merchant.name} · {merchant.city}
                         </option>
                       ))}
                     </select>
@@ -558,17 +642,18 @@ export function AdminDashboardClient({
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
               <CardTitle>数据库活动列表</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
               <div className="max-h-[70vh] overflow-auto rounded-md border border-black/10">
-                <table className="min-w-full text-left text-sm">
+                <table className="min-w-[980px] text-left text-sm">
                   <thead className="bg-zinc-50 text-zinc-500">
                     <tr>
                       <th className="px-3 py-2">标题</th>
                       <th className="px-3 py-2">开始时间</th>
                       <th className="px-3 py-2">状态</th>
+                      <th className="px-3 py-2">商家</th>
                       <th className="px-3 py-2">来源</th>
                       <th className="px-3 py-2">操作</th>
                     </tr>
@@ -588,24 +673,32 @@ export function AdminDashboardClient({
                           {dateOnly(activity.startAt)}
                         </td>
                         <td className="px-3 py-2 text-zinc-600">
-                          {activity.status}
+                          <span className="inline-flex whitespace-nowrap rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700">
+                            {getAdminStatusLabel(activity.status)}
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-zinc-600">
-                          {activity.source ? (
-                            <span>{activity.source} </span>
-                          ) : null}
+                          <span className="whitespace-nowrap">
+                            {activity.merchantName ?? "-"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-zinc-600">
+                          <span className="whitespace-nowrap">
+                            {getSourceLabel(
+                              activity.source,
+                              activity.sourceUrl,
+                            )}
+                          </span>
                           {activity.sourceUrl ? (
                             <a
-                              className="text-sky-700 underline"
+                              className="ml-2 whitespace-nowrap text-sky-700 underline"
                               href={activity.sourceUrl}
                               target="_blank"
                               rel="noreferrer"
                             >
                               原文
                             </a>
-                          ) : (
-                            "-"
-                          )}
+                          ) : null}
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex gap-2">
@@ -640,6 +733,7 @@ export function AdminDashboardClient({
                                     activity.visibility as ActivityFormState["visibility"],
                                   organizerId:
                                     activity.organizerId || defaultOrganizerId,
+                                  merchantId: activity.merchantId ?? "",
                                 })
                               }
                             >

@@ -123,6 +123,8 @@ model Activity {
   visibility       ActivityVisibility    @default(PUBLIC)
   organizerId      String
   organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  merchantId       String?
+  merchant         Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   participants     ActivityParticipant[]
   comments         Comment[]
   sourceLinks      ActivitySourceLink[]
@@ -131,7 +133,36 @@ model Activity {
 
   @@index([city, startAt])
   @@index([organizerId])
+  @@index([merchantId])
   @@index([source])
+  @@index([externalSource, externalId])
+  @@index([externalUrl])
+  @@index([importedAt])
+}
+
+model Merchant {
+  id             String     @id @default(cuid())
+  slug           String     @unique
+  name           String
+  description    String
+  logoUrl        String?
+  city           String     @default("Paris")
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  websiteUrl     String?
+  contactEmail   String?
+  externalSource String?
+  externalId     String?
+  externalUrl    String?
+  sourcePayload  Json?
+  importedAt     DateTime?
+  isActive       Boolean    @default(true)
+  activities     Activity[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([isActive, city])
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])

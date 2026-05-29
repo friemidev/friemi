@@ -1,11 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  CalendarPlus,
-  CircleUserRound,
-  Compass,
-  LayoutDashboard,
-} from "lucide-react";
+import { CalendarPlus, CircleUserRound, Compass } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -49,15 +44,6 @@ export function AppHeader({ locale, showAdminNav = false }: AppHeaderProps) {
             <Compass className="h-4 w-4" />
             {t.nav.activities}
           </Link>
-          {showAdminNav ? (
-            <Link
-              className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
-              href={withLocale(locale, "/admin/data-scraper")}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              后台
-            </Link>
-          ) : null}
           <Link
             className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70 lg:hidden"
             href={withLocale(locale, "/activities/new")}
@@ -85,7 +71,7 @@ export function AppHeader({ locale, showAdminNav = false }: AppHeaderProps) {
               {t.nav.newActivity}
             </Button>
           </Link>
-          <UserMenu locale={locale} />
+          <UserMenu locale={locale} showAdminLink={showAdminNav} />
         </div>
       </div>
     </header>

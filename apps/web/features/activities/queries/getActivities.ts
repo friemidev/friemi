@@ -33,6 +33,16 @@ export const activityCardSelect = {
   coverImageUrl: true,
   priceText: true,
   status: true,
+  merchant: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      logoUrl: true,
+      city: true,
+      isActive: true,
+    },
+  },
   _count: {
     select: {
       participants: {
@@ -129,6 +139,15 @@ export function getActivityCardViewModel(
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
+    merchant: activity.merchant?.isActive
+      ? {
+          id: activity.merchant.id,
+          slug: activity.merchant.slug,
+          name: activity.merchant.name,
+          logoUrl: activity.merchant.logoUrl,
+          city: activity.merchant.city,
+        }
+      : null,
   };
 }
 
