@@ -12,6 +12,8 @@ export type ActivityFormValues = {
   city: string;
   destination: string;
   address: string;
+  latitude: string;
+  longitude: string;
   startAt: string;
   endAt: string;
   capacity: string;
@@ -125,6 +127,8 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     city: getString(formData, "city"),
     destination: getString(formData, "destination"),
     address: getString(formData, "address"),
+    latitude: getString(formData, "latitude"),
+    longitude: getString(formData, "longitude"),
     startAt: getString(formData, "startAt"),
     endAt: getString(formData, "endAt"),
     capacity: getString(formData, "capacity"),

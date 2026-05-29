@@ -56,6 +56,8 @@ function getActivityDetailViewModel(
     city: activity.city,
     destination: activity.destination,
     address: activity.address,
+    latitude: activity.latitude,
+    longitude: activity.longitude,
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: activity.capacity,

@@ -170,6 +170,8 @@ export async function updateActivityAction(
         city: result.data.city,
         destination: result.data.destination,
         address: result.data.address,
+        latitude: result.data.latitude ?? null,
+        longitude: result.data.longitude ?? null,
         startAt,
         endAt,
         capacity: result.data.capacity,

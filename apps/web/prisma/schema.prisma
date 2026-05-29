@@ -104,6 +104,8 @@ model Activity {
   city             String                @default("Paris")
   destination      String?
   address          String
+  latitude         Float?
+  longitude        Float?
   startAt          DateTime
   endAt            DateTime?
   capacity         Int
@@ -132,6 +134,7 @@ model Activity {
   updatedAt        DateTime              @updatedAt
 
   @@index([city, startAt])
+  @@index([city, latitude, longitude])
   @@index([organizerId])
   @@index([merchantId])
   @@index([source])

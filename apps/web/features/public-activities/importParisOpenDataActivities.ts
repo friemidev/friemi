@@ -26,6 +26,15 @@ type ParisOpenDataRecord = {
   address_name?: string | null;
   address_street?: string | null;
   address_city?: string | null;
+  lat_lon?:
+    | {
+        lat?: string | number | null;
+        lon?: string | number | null;
+        lng?: string | number | null;
+      }
+    | [string | number, string | number]
+    | string
+    | null;
   tags?: string[] | string | null;
   price_type?: string | null;
   price_detail?: string | null;
@@ -170,6 +179,62 @@ function getAddress(record: ParisOpenDataRecord) {
   return addressParts.length > 0 ? addressParts.join(" · ") : "Paris";
 }
 
+function parseCoordinate(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numberValue =
+    typeof value === "number" ? value : Number.parseFloat(value);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function isValidCoordinate(latitude: number | null, longitude: number | null) {
+  return (
+    latitude !== null &&
+    longitude !== null &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
+function getCoordinates(record: ParisOpenDataRecord) {
+  const rawCoordinates = record.lat_lon;
+
+  if (Array.isArray(rawCoordinates)) {
+    const latitude = parseCoordinate(rawCoordinates[0]);
+    const longitude = parseCoordinate(rawCoordinates[1]);
+
+    return isValidCoordinate(latitude, longitude)
+      ? { latitude, longitude }
+      : { latitude: null, longitude: null };
+  }
+
+  if (typeof rawCoordinates === "string") {
+    const [latPart, lonPart] = rawCoordinates.split(",");
+    const latitude = parseCoordinate(latPart);
+    const longitude = parseCoordinate(lonPart);
+
+    return isValidCoordinate(latitude, longitude)
+      ? { latitude, longitude }
+      : { latitude: null, longitude: null };
+  }
+
+  if (rawCoordinates && typeof rawCoordinates === "object") {
+    const latitude = parseCoordinate(rawCoordinates.lat);
+    const longitude = parseCoordinate(rawCoordinates.lon ?? rawCoordinates.lng);
+
+    return isValidCoordinate(latitude, longitude)
+      ? { latitude, longitude }
+      : { latitude: null, longitude: null };
+  }
+
+  return { latitude: null, longitude: null };
+}
+
 function getDescription(record: ParisOpenDataRecord) {
   const leadText = stripHtml(record.lead_text);
   const description = stripHtml(record.description);
@@ -221,6 +286,7 @@ function toActivityData(
   }
 
   const price = mapPrice(record);
+  const coordinates = getCoordinates(record);
 
   return {
     title,
@@ -230,6 +296,8 @@ function toActivityData(
     category: mapCategory(record),
     city: normalizeText(record.address_city) || "Paris",
     address: getAddress(record),
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
     startAt,
     endAt:
       endAt && !Number.isNaN(endAt.getTime()) && endAt > startAt ? endAt : null,
@@ -363,6 +431,8 @@ export async function importParisOpenDataActivities(
           category: activityData.category,
           city: activityData.city,
           address: activityData.address,
+          latitude: activityData.latitude,
+          longitude: activityData.longitude,
           startAt: activityData.startAt,
           endAt: activityData.endAt,
           priceType: activityData.priceType,

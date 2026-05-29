@@ -19,6 +19,7 @@ import { ActivityStatusBadge } from "@/features/activities/components/ActivitySt
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
@@ -140,6 +141,16 @@ export default async function ActivityDetailPage({
               </p>
             )}
           </div>
+
+          {activity.latitude !== null && activity.longitude !== null ? (
+            <ActivityMapPreview
+              address={getActivityLocationLabel(activity)}
+              latitude={activity.latitude}
+              longitude={activity.longitude}
+              openLabel={t.activityDetail.openMap}
+              title={t.activityDetail.locationMapTitle}
+            />
+          ) : null}
 
           {activity.merchant ? (
             <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">

@@ -104,6 +104,8 @@ const copy = {
       approvalRequired: "报名后需发起人确认",
       approvalAuto: "报名后自动确认",
       editActivity: "编辑活动",
+      locationMapTitle: "活动地点",
+      openMap: "打开地图",
     },
     merchant: {
       cardLabel: (name: string) => `商家：${name}`,
@@ -288,6 +290,20 @@ const copy = {
       destinationPlaceholder: "例如：Nice / Amsterdam / London",
       destinationHint: "旅行搭子需要填写目的地，方便用户判断是否感兴趣。",
       address: "地址",
+      placePickerTitle: "地图定位",
+      placePickerHint:
+        "根据城市和地址匹配坐标；保存后活动详情页会显示地图位置。",
+      placeSearch: "匹配地点",
+      placeSearching: "匹配中...",
+      placeSearchNeedAddress: "请先填写地址，再匹配地图位置。",
+      placeSearchEmpty: "没有找到匹配地点，可以补充更完整地址后重试。",
+      placeSearchFailed: "地点匹配失败，请稍后重试。",
+      placeSearchResults: "选择一个匹配结果",
+      placeSelected: "已选择坐标",
+      placeChangedClear: "地址已变更，请重新匹配地图位置。",
+      placeClear: "清除",
+      mapPreviewTitle: "地图预览",
+      openMap: "打开地图",
       startAt: "开始时间",
       startAtHint: "按巴黎时间保存，需晚于当前时间。",
       endAt: "结束时间",
@@ -438,6 +454,8 @@ const copy = {
       approvalRequired: "Organizer approval required",
       approvalAuto: "Auto-confirmed after joining",
       editActivity: "Edit activity",
+      locationMapTitle: "Activity location",
+      openMap: "Open map",
     },
     merchant: {
       cardLabel: (name: string) => `Merchant: ${name}`,
@@ -644,6 +662,21 @@ const copy = {
       destinationHint:
         "Trips need a destination so users can quickly judge fit.",
       address: "Address",
+      placePickerTitle: "Map location",
+      placePickerHint:
+        "Match coordinates from the city and address. The detail page will show a map after saving.",
+      placeSearch: "Match place",
+      placeSearching: "Matching...",
+      placeSearchNeedAddress: "Add an address before matching the map point.",
+      placeSearchEmpty:
+        "No matching place found. Try again with a more complete address.",
+      placeSearchFailed: "Place matching failed. Try again later.",
+      placeSearchResults: "Choose a matching result",
+      placeSelected: "Selected coordinates",
+      placeChangedClear: "The address changed. Match the map point again.",
+      placeClear: "Clear",
+      mapPreviewTitle: "Map preview",
+      openMap: "Open map",
       startAt: "Start time",
       startAtHint: "Saved in Paris time. Must be later than now.",
       endAt: "End time",
@@ -795,6 +828,8 @@ const copy = {
       approvalRequired: "Validation par l'organisateur requise",
       approvalAuto: "Confirmation automatique après inscription",
       editActivity: "Modifier",
+      locationMapTitle: "Lieu de l'activité",
+      openMap: "Ouvrir la carte",
     },
     merchant: {
       cardLabel: (name: string) => `Commerçant : ${name}`,
@@ -1016,6 +1051,23 @@ const copy = {
       destinationHint:
         "Les voyages nécessitent une destination pour juger rapidement l'intérêt.",
       address: "Adresse",
+      placePickerTitle: "Position sur la carte",
+      placePickerHint:
+        "Associe des coordonnées à partir de la ville et de l'adresse. La page détail affichera une carte après l'enregistrement.",
+      placeSearch: "Associer le lieu",
+      placeSearching: "Recherche...",
+      placeSearchNeedAddress:
+        "Renseignez d'abord une adresse avant de placer le point.",
+      placeSearchEmpty:
+        "Aucun lieu correspondant. Essayez avec une adresse plus complète.",
+      placeSearchFailed: "Échec de recherche du lieu. Réessayez plus tard.",
+      placeSearchResults: "Choisissez un résultat",
+      placeSelected: "Coordonnées sélectionnées",
+      placeChangedClear:
+        "L'adresse a changé. Associez à nouveau la position sur la carte.",
+      placeClear: "Effacer",
+      mapPreviewTitle: "Aperçu carte",
+      openMap: "Ouvrir la carte",
       startAt: "Début",
       startAtHint: "Enregistré à l'heure de Paris. Doit être dans le futur.",
       endAt: "Fin",

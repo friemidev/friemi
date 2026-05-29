@@ -40,6 +40,12 @@ const optionalNumber = z.preprocess(
     .max(100, "最少成团人数最多为 100 人")
     .optional(),
 );
+const optionalCoordinate = (min: number, max: number, message: string) =>
+  z.preprocess(
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
+    z.coerce.number().min(min, message).max(max, message).optional(),
+  );
 
 export const createActivitySchema = z
   .object({
@@ -53,6 +59,8 @@ export const createActivitySchema = z
     city: nonEmptyString.default("Paris"),
     destination: optionalText,
     address: nonEmptyString,
+    latitude: optionalCoordinate(-90, 90, "纬度必须在 -90 到 90 之间"),
+    longitude: optionalCoordinate(-180, 180, "经度必须在 -180 到 180 之间"),
     startAt: nonEmptyString,
     endAt: optionalText,
     capacity: z.coerce
@@ -87,6 +95,19 @@ export const createActivitySchema = z
         code: z.ZodIssueCode.custom,
         message: "最少成团人数不能大于人数上限",
         path: ["minParticipants"],
+      });
+    }
+
+    if ((value.latitude === undefined) !== (value.longitude === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "请选择完整地点坐标",
+        path: ["latitude"],
+      });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "请选择完整地点坐标",
+        path: ["longitude"],
       });
     }
   });

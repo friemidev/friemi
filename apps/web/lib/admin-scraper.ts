@@ -18,6 +18,8 @@ export type AdminActivityListItem = {
   city: string;
   destination: string | null;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   startAt: string;
   endAt: string | null;
   capacity: number;
@@ -78,6 +80,46 @@ export type AdminMerchantCreateInput = {
   longitude?: number | string | null;
   websiteUrl?: string | null;
   contactEmail?: string | null;
+};
+
+type AdminActivityInput = {
+  title: string;
+  description: string;
+  itinerary?: string | null;
+  type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
+  category:
+    | "BOARD_GAME"
+    | "MOVIE"
+    | "MUSIC"
+    | "SPORTS"
+    | "TRAVEL"
+    | "FOOD"
+    | "EXHIBITION"
+    | "OTHER";
+  city: string;
+  destination?: string | null;
+  address: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  startAt: string;
+  endAt?: string | null;
+  capacity: number;
+  coverImageUrl?: string | null;
+  minParticipants?: number | null;
+  requiresApproval: boolean;
+  priceType: "FREE" | "AA" | "FIXED" | "RANGE";
+  priceText: string;
+  status:
+    | "OPEN"
+    | "FULL"
+    | "DRAFT"
+    | "RECRUITING"
+    | "CONFIRMED"
+    | "ENDED"
+    | "CANCELLED";
+  visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
+  organizerId: string;
+  merchantId?: string | null;
 };
 
 export type ScraperPreviewRequest = {
@@ -152,6 +194,8 @@ function normalizeOptionalEmail(value: string | null | undefined) {
 
 function normalizeOptionalCoordinate(
   value: number | string | null | undefined,
+  min = Number.NEGATIVE_INFINITY,
+  max = Number.POSITIVE_INFINITY,
 ) {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -160,7 +204,19 @@ function normalizeOptionalCoordinate(
   const numberValue =
     typeof value === "number" ? value : Number.parseFloat(value);
 
-  return Number.isFinite(numberValue) ? numberValue : null;
+  return Number.isFinite(numberValue) &&
+    numberValue >= min &&
+    numberValue <= max
+    ? numberValue
+    : null;
+}
+
+function normalizeOptionalLatitude(value: number | string | null | undefined) {
+  return normalizeOptionalCoordinate(value, -90, 90);
+}
+
+function normalizeOptionalLongitude(value: number | string | null | undefined) {
+  return normalizeOptionalCoordinate(value, -180, 180);
 }
 
 function serializeAdminMerchant(merchant: AdminMerchantOption) {
@@ -217,6 +273,8 @@ export function serializeAdminActivity(
     city: activity.city,
     destination: activity.destination,
     address: activity.address,
+    latitude: activity.latitude,
+    longitude: activity.longitude,
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: activity.capacity,
@@ -535,48 +593,75 @@ export async function importScraperActivities(
   return { imported, skipped, merged };
 }
 
-export async function createAdminActivity(data: {
-  title: string;
-  description: string;
-  itinerary?: string | null;
-  type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
-  category:
-    | "BOARD_GAME"
-    | "MOVIE"
-    | "MUSIC"
-    | "SPORTS"
-    | "TRAVEL"
-    | "FOOD"
-    | "EXHIBITION"
-    | "OTHER";
-  city: string;
-  destination?: string | null;
-  address: string;
-  startAt: string;
-  endAt?: string | null;
-  capacity: number;
-  coverImageUrl?: string | null;
-  minParticipants?: number | null;
-  requiresApproval: boolean;
-  priceType: "FREE" | "AA" | "FIXED" | "RANGE";
-  priceText: string;
-  status:
-    | "OPEN"
-    | "FULL"
-    | "DRAFT"
-    | "RECRUITING"
-    | "CONFIRMED"
-    | "ENDED"
-    | "CANCELLED";
-  visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
-  organizerId: string;
-  merchantId?: string | null;
-}) {
+function buildAdminActivityUpdateData(
+  data: Partial<AdminActivityInput>,
+): Prisma.ActivityUncheckedUpdateInput {
+  const updateData: Prisma.ActivityUncheckedUpdateInput = {};
+
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.itinerary !== undefined) updateData.itinerary = data.itinerary;
+  if (data.type !== undefined) updateData.type = data.type;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.city !== undefined) updateData.city = data.city;
+  if (data.destination !== undefined) updateData.destination = data.destination;
+  if (data.address !== undefined) updateData.address = data.address;
+  if (data.latitude !== undefined) {
+    updateData.latitude = normalizeOptionalLatitude(data.latitude);
+  }
+  if (data.longitude !== undefined) {
+    updateData.longitude = normalizeOptionalLongitude(data.longitude);
+  }
+  if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt);
+  if (data.endAt !== undefined) {
+    updateData.endAt = data.endAt ? new Date(data.endAt) : null;
+  }
+  if (data.capacity !== undefined) updateData.capacity = data.capacity;
+  if (data.coverImageUrl !== undefined) {
+    updateData.coverImageUrl = data.coverImageUrl;
+  }
+  if (data.minParticipants !== undefined) {
+    updateData.minParticipants = data.minParticipants;
+  }
+  if (data.requiresApproval !== undefined) {
+    updateData.requiresApproval = data.requiresApproval;
+  }
+  if (data.priceType !== undefined) updateData.priceType = data.priceType;
+  if (data.priceText !== undefined) updateData.priceText = data.priceText;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.visibility !== undefined) updateData.visibility = data.visibility;
+  if (data.organizerId !== undefined) updateData.organizerId = data.organizerId;
+  if (data.merchantId !== undefined) {
+    updateData.merchantId = data.merchantId || null;
+  }
+
+  return updateData;
+}
+
+export async function createAdminActivity(data: AdminActivityInput) {
   const activity = await prisma.activity.create({
     data: {
-      ...data,
+      title: data.title,
+      description: data.description,
+      itinerary: data.itinerary ?? null,
+      type: data.type,
+      category: data.category,
+      city: data.city,
+      destination: data.destination ?? null,
+      address: data.address,
+      latitude: normalizeOptionalLatitude(data.latitude),
+      longitude: normalizeOptionalLongitude(data.longitude),
       startAt: new Date(data.startAt),
       endAt: data.endAt ? new Date(data.endAt) : null,
+      capacity: data.capacity,
+      coverImageUrl: data.coverImageUrl ?? null,
+      minParticipants: data.minParticipants ?? null,
+      requiresApproval: data.requiresApproval,
+      priceType: data.priceType,
+      priceText: data.priceText,
+      status: data.status,
+      visibility: data.visibility,
+      organizerId: data.organizerId,
       merchantId: data.merchantId || null,
     },
     include: {
@@ -590,20 +675,11 @@ export async function createAdminActivity(data: {
 
 export async function updateAdminActivity(
   id: string,
-  data: Partial<Parameters<typeof createAdminActivity>[0]>,
+  data: Partial<AdminActivityInput>,
 ) {
   const activity = await prisma.activity.update({
     where: { id },
-    data: {
-      ...data,
-      ...(data.startAt ? { startAt: new Date(data.startAt) } : {}),
-      ...(data.endAt !== undefined
-        ? { endAt: data.endAt ? new Date(data.endAt) : null }
-        : {}),
-      ...(data.merchantId !== undefined
-        ? { merchantId: data.merchantId || null }
-        : {}),
-    },
+    data: buildAdminActivityUpdateData(data),
     include: {
       organizer: { select: { id: true, nickname: true } },
       merchant: { select: { id: true, name: true, slug: true } },
@@ -636,8 +712,8 @@ export async function createAdminMerchant(data: AdminMerchantCreateInput) {
       description,
       city,
       address: data.address?.trim() || null,
-      latitude: normalizeOptionalCoordinate(data.latitude),
-      longitude: normalizeOptionalCoordinate(data.longitude),
+      latitude: normalizeOptionalLatitude(data.latitude),
+      longitude: normalizeOptionalLongitude(data.longitude),
       websiteUrl: normalizeOptionalUrl(data.websiteUrl),
       contactEmail: normalizeOptionalEmail(data.contactEmail),
     },
