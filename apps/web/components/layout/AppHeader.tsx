@@ -1,6 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, CalendarPlus, CircleUserRound, Compass } from "lucide-react";
+import {
+  Bell,
+  CalendarPlus,
+  CircleUserRound,
+  Compass,
+  MessageCircle,
+} from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -61,6 +67,13 @@ export function AppHeader({
           >
             <CalendarPlus className="h-4 w-4" />
             {t.nav.newActivityShort}
+          </Link>
+          <Link
+            className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
+            href={withLocale(locale, "/messages")}
+          >
+            <MessageCircle className="h-4 w-4" />
+            {t.nav.messages}
           </Link>
           <Link
             className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"

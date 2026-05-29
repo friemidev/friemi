@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { locales } from "@chill-club/shared";
-import { CalendarPlus, CircleUserRound, Compass } from "lucide-react";
+import {
+  CalendarPlus,
+  CircleUserRound,
+  Compass,
+  MessageCircle,
+} from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -26,6 +31,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       icon: CalendarPlus,
       className: "lg:hidden",
     },
+    { href: "/messages", label: t.nav.messages, icon: MessageCircle },
     { href: "/profile", label: t.nav.profile, icon: CircleUserRound },
   ];
 

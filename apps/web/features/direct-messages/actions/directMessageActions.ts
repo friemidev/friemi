@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -103,6 +104,38 @@ export async function createDirectConversationAction(
       formError: getActionErrorMessage(result.data.locale, error),
     };
   }
+}
+
+export async function openDirectConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    friendProfileId: getString(formData, "friendProfileId"),
+  };
+  const result = createDirectConversationSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    redirect(withLocale(rawInput.locale, "/friends"));
+  }
+
+  let conversationId: string;
+
+  try {
+    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const conversation = await getOrCreateDirectConversation({
+      currentUserProfileId: profile.id,
+      friendProfileId: result.data.friendProfileId,
+    });
+
+    conversationId = conversation.id;
+    refreshConversation(result.data.locale, conversation.id);
+  } catch (error) {
+    console.error("Failed to open direct conversation", error);
+    redirect(withLocale(result.data.locale, "/messages"));
+  }
+
+  redirect(withLocale(result.data.locale, `/messages/${conversationId}`));
 }
 
 export async function sendDirectMessageAction(

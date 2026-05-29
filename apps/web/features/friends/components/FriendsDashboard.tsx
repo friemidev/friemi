@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Inbox,
+  MessageCircle,
   Send,
   Trash2,
   type LucideIcon,
@@ -19,6 +20,7 @@ import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import {
   acceptFriendRequestAction,
   cancelFriendRequestAction,
@@ -296,6 +298,17 @@ function FriendCard({
       {activities.length > 0 ? (
         <FriendActivitySummary activities={activities} locale={locale} />
       ) : null}
+      <form action={openDirectConversationAction} className="mt-3 grid">
+        <input name="locale" type="hidden" value={locale} />
+        <input name="friendProfileId" type="hidden" value={user.id} />
+        <SubmitButton
+          icon={MessageCircle}
+          pendingLabel={t.acting}
+          variant="secondary"
+        >
+          {t.message}
+        </SubmitButton>
+      </form>
       <form
         action={formAction}
         className="mt-3 grid gap-2"

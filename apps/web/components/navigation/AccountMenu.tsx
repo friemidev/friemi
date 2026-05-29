@@ -9,6 +9,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Settings,
   type LucideIcon,
   UserRound,
@@ -46,6 +47,7 @@ export function AccountMenu({
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
   const friendsHref = withLocale(locale, "/friends");
+  const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
@@ -136,6 +138,17 @@ export function AccountMenu({
               label={t.friends}
               description={t.friendsDescription}
               active={pathname === friendsHref}
+              onClick={closeMenu}
+            />
+            <MenuLink
+              href={messagesHref}
+              icon={MessageCircle}
+              label={t.messages}
+              description={t.messagesDescription}
+              active={
+                pathname === messagesHref ||
+                pathname.startsWith(`${messagesHref}/`)
+              }
               onClick={closeMenu}
             />
             <MenuLink

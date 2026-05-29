@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { locales } from "@chill-club/shared";
-import { CalendarPlus, CircleUserRound, Compass, Home } from "lucide-react";
+import {
+  CalendarPlus,
+  CircleUserRound,
+  Compass,
+  Home,
+  MessageCircle,
+} from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -26,6 +32,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       label: t.nav.newActivityShort,
       icon: CalendarPlus,
     },
+    { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
     { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
   ];
 
@@ -53,7 +60,7 @@ export function MobileNav({ locale }: MobileNavProps) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-paper/95 shadow-[0_-8px_24px_rgba(21,21,21,0.08)] backdrop-blur md:hidden">
-      <div className="mx-auto grid h-[4.25rem] max-w-md grid-cols-4 px-4">
+      <div className="mx-auto grid h-[4.25rem] max-w-md grid-cols-5 px-4">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
