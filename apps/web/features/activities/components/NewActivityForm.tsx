@@ -26,6 +26,7 @@ import {
 } from "../actions/createActivity";
 import type { ActivityFormValues } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
+import { ActivityLinkImportPanel } from "@/features/activity-link-import/components/ActivityLinkImportPanel";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
 import { ActivityPlacePicker } from "./ActivityPlacePicker";
 
@@ -164,11 +165,32 @@ export function NewActivityForm({
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
-  const values = state.values ?? initialValues;
+  const [importedValues, setImportedValues] = useState<
+    Partial<ActivityFormValues> | undefined
+  >();
+  const [prefillVersion, setPrefillVersion] = useState(0);
+  const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
+
+  function applyImportedValues(nextValues: Partial<ActivityFormValues>) {
+    setImportedValues((currentValues) => ({
+      ...currentValues,
+      ...nextValues,
+    }));
+
+    if (nextValues.type) {
+      setActivityType(nextValues.type);
+    }
+
+    if (nextValues.category) {
+      setCategory(nextValues.category);
+    }
+
+    setPrefillVersion((currentVersion) => currentVersion + 1);
+  }
 
   return (
     <Card>
@@ -177,7 +199,7 @@ export function NewActivityForm({
       </CardHeader>
       <CardContent>
         <form
-          key={state.version ?? 0}
+          key={`${state.version ?? 0}-${prefillVersion}`}
           action={formAction}
           className="grid gap-6"
           noValidate
@@ -194,6 +216,13 @@ export function NewActivityForm({
             >
               {state.formError}
             </div>
+          ) : null}
+
+          {mode === "create" ? (
+            <ActivityLinkImportPanel
+              locale={locale}
+              onApply={applyImportedValues}
+            />
           ) : null}
 
           <FormSection title={t.form.activityContent}>
