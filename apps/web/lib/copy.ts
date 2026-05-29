@@ -313,6 +313,26 @@ const copy = {
       coverSizeError: "图片不能超过 4MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
       coverStorageConfigError: "图片上传尚未配置，请联系管理员。",
+      linkImportTitle: "从链接导入",
+      linkImportDescription:
+        "粘贴支持的网站链接，先预览可识别信息，再套用到创建表单。",
+      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPreview: "解析链接",
+      linkImportParsing: "解析中...",
+      linkImportApply: "套用到表单",
+      linkImportApplied: "已套用到表单，请继续检查必填信息后再发布。",
+      linkImportUntitled: "未识别标题",
+      linkImportMissingAddress: "未识别地点",
+      linkImportMissingFields: (count: number) =>
+        `还有 ${count} 项需要手动补充。`,
+      linkImportErrors: {
+        INVALID_URL: "请输入有效的 https 链接。",
+        UNSUPPORTED_HOST:
+          "暂不支持这个网站。请先使用 Paris.fr、Que Faire à Paris、Sortir à Paris、Eventbrite、Billetweb 或 Meetup 链接。",
+        UNSUPPORTED_CONTENT: "这个链接不是可解析的活动页面。",
+        FETCH_FAILED: "链接解析失败，请稍后重试或手动填写。",
+        UNAUTHORIZED: "请登录后再解析链接。",
+      },
       title: "标题",
       titlePlaceholder: "例如：周五下班后桌游局",
       description: "描述",
@@ -726,6 +746,28 @@ const copy = {
         "The image content is invalid. Please choose the original image file.",
       coverStorageConfigError:
         "Image upload is not configured. Please contact an admin.",
+      linkImportTitle: "Import from link",
+      linkImportDescription:
+        "Paste a supported activity page, preview detected details, then apply them to the form.",
+      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPreview: "Preview link",
+      linkImportParsing: "Parsing...",
+      linkImportApply: "Apply to form",
+      linkImportApplied:
+        "Applied to the form. Review required fields before publishing.",
+      linkImportUntitled: "Title not found",
+      linkImportMissingAddress: "Place not found",
+      linkImportMissingFields: (count: number) =>
+        `${count} item(s) still need manual input.`,
+      linkImportErrors: {
+        INVALID_URL: "Enter a valid https link.",
+        UNSUPPORTED_HOST:
+          "This website is not supported yet. Use Paris.fr, Que Faire a Paris, Sortir a Paris, Eventbrite, Billetweb, or Meetup.",
+        UNSUPPORTED_CONTENT: "This link is not a parsable activity page.",
+        FETCH_FAILED:
+          "Failed to parse the link. Try again later or fill the form manually.",
+        UNAUTHORIZED: "Sign in before parsing a link.",
+      },
       title: "Title",
       titlePlaceholder: "Example: Friday board game night",
       description: "Description",
@@ -1158,6 +1200,29 @@ const copy = {
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:
         "L'import d'images n'est pas configuré. Contactez un administrateur.",
+      linkImportTitle: "Importer depuis un lien",
+      linkImportDescription:
+        "Collez une page prise en charge, vérifiez les infos détectées, puis appliquez-les au formulaire.",
+      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPreview: "Analyser le lien",
+      linkImportParsing: "Analyse...",
+      linkImportApply: "Appliquer au formulaire",
+      linkImportApplied:
+        "Appliqué au formulaire. Vérifiez les champs requis avant publication.",
+      linkImportUntitled: "Titre non détecté",
+      linkImportMissingAddress: "Lieu non détecté",
+      linkImportMissingFields: (count: number) =>
+        `${count} champ(s) restent à compléter.`,
+      linkImportErrors: {
+        INVALID_URL: "Saisissez un lien https valide.",
+        UNSUPPORTED_HOST:
+          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire a Paris, Sortir a Paris, Eventbrite, Billetweb ou Meetup.",
+        UNSUPPORTED_CONTENT:
+          "Ce lien n'est pas une page d'activité analysable.",
+        FETCH_FAILED:
+          "Échec de l'analyse du lien. Réessayez plus tard ou remplissez le formulaire manuellement.",
+        UNAUTHORIZED: "Connectez-vous avant d'analyser un lien.",
+      },
       title: "Titre",
       titlePlaceholder: "Exemple : soirée jeux de société vendredi",
       description: "Description",
