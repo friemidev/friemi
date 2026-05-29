@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import type {
   ActivityStatus,
   ActivityVisibility,
   ParticipantStatus,
-  Prisma,
 } from "@prisma/client";
 import type { ActivityCardViewModel } from "../types";
 import type {
@@ -27,6 +27,13 @@ const coverTones: ActivityCardViewModel["coverTone"][] = [
   "sky",
 ];
 const defaultActivityPageSize = 12;
+const dailyRankingTimeZone = "Europe/Paris";
+const dayInMs = 24 * 60 * 60 * 1000;
+const freshOngoingWindowDays = 2;
+const endingSoonWindowDays = 1;
+const upcomingSoonWindowDays = 1;
+const upcomingWeekWindowDays = 7;
+const upcomingMonthWindowDays = 30;
 
 export const activityCardSelect = {
   id: true,
@@ -343,11 +350,31 @@ function getActivityListOrderBy(
 function hasExplicitActivityListFilters(filters: ActivityFilters) {
   return Boolean(
     filters.keyword ||
-      filters.category ||
-      filters.city ||
-      filters.type ||
-      filters.timeState,
+    filters.category ||
+    filters.city ||
+    filters.type ||
+    filters.timeState,
   );
+}
+
+function addDays(value: Date, days: number) {
+  return new Date(value.getTime() + days * dayInMs);
+}
+
+function getDailyRankingSeed(now: Date) {
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: dailyRankingTimeZone,
+    year: "numeric",
+  }).formatToParts(now);
+  const partMap = new Map(dateParts.map((part) => [part.type, part.value]));
+
+  return [
+    partMap.get("year") ?? "0000",
+    partMap.get("month") ?? "00",
+    partMap.get("day") ?? "00",
+  ].join("-");
 }
 
 function getActivityListWhere(
@@ -400,77 +427,136 @@ async function getRecommendedActivityList(
   pageSize: number,
   now: Date,
 ): Promise<ActivityListResult> {
-  const baseWhere: Prisma.ActivityWhereInput = {
-    AND: [
-      getVisibleActivityWhere({
-        includeEnded: true,
-        includePast: true,
-        now,
-      }),
-      getActivityFilterWhere(filters),
-    ],
-  };
-  const bucketDefinitions: Array<{
-    orderBy: Prisma.ActivityOrderByWithRelationInput[];
-    timeState: ActivityTimeState;
-  }> = [
-    {
-      timeState: "ONGOING",
-      orderBy: [{ endAt: "asc" }, { startAt: "asc" }, { id: "asc" }],
-    },
-    {
-      timeState: "UPCOMING",
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-    },
-    {
-      timeState: "ENDED",
-      orderBy: [{ startAt: "desc" }, { id: "asc" }],
-    },
-  ];
-  const bucketWheres = bucketDefinitions.map(({ timeState }) => ({
-    AND: [baseWhere, getActivityTimeStateWhere(timeState, now)],
-  }));
-  const bucketCounts = await Promise.all(
-    bucketWheres.map((where) => prisma.activity.count({ where })),
-  );
-  const totalCount = bucketCounts.reduce((total, count) => total + count, 0);
+  const where = getActivityListWhere(filters, now);
+  const totalCount = await prisma.activity.count({ where });
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
-  let skipRemaining = (page - 1) * pageSize;
-  let takeRemaining = pageSize;
-  const activityChunks: ActivityQueryResult[][] = [];
+  const activityIds = await getRecommendedActivityIds({
+    now,
+    page,
+    pageSize,
+  });
 
-  for (const [index, count] of bucketCounts.entries()) {
-    if (takeRemaining <= 0) {
-      break;
-    }
-
-    if (skipRemaining >= count) {
-      skipRemaining -= count;
-      continue;
-    }
-
-    const take = Math.min(takeRemaining, count - skipRemaining);
-    const activities = await prisma.activity.findMany({
-      where: bucketWheres[index],
-      orderBy: bucketDefinitions[index].orderBy,
-      skip: skipRemaining,
-      take,
-      select: activityCardSelect,
-    });
-
-    activityChunks.push(activities);
-    takeRemaining -= take;
-    skipRemaining = 0;
+  if (activityIds.length === 0) {
+    return {
+      activities: [],
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+    };
   }
 
+  const activities = await prisma.activity.findMany({
+    where: {
+      id: {
+        in: activityIds,
+      },
+    },
+    select: activityCardSelect,
+  });
+  const activityById = new Map(
+    activities.map((activity) => [activity.id, activity]),
+  );
+
   return {
-    activities: activityChunks.flat().map(getActivityCardViewModel),
+    activities: activityIds
+      .map((activityId) => activityById.get(activityId))
+      .filter((activity): activity is ActivityQueryResult => Boolean(activity))
+      .map(getActivityCardViewModel),
     page,
     pageSize,
     totalCount,
     totalPages,
   };
+}
+
+type RecommendedActivityIdRow = {
+  id: string;
+};
+
+async function getRecommendedActivityIds({
+  now,
+  page,
+  pageSize,
+}: {
+  now: Date;
+  page: number;
+  pageSize: number;
+}) {
+  const activeStatuses = Prisma.join(visibleActivityStatuses);
+  const archivedStatuses = Prisma.join(visibleArchivedActivityStatuses);
+  const publicVisibility = Prisma.join(publicActivityVisibility);
+  const dailySeed = getDailyRankingSeed(now);
+  const freshOngoingBoundary = addDays(now, -freshOngoingWindowDays);
+  const endingSoonBoundary = addDays(now, endingSoonWindowDays);
+  const upcomingSoonBoundary = addDays(now, upcomingSoonWindowDays);
+  const upcomingWeekBoundary = addDays(now, upcomingWeekWindowDays);
+  const upcomingMonthBoundary = addDays(now, upcomingMonthWindowDays);
+  const offset = (page - 1) * pageSize;
+
+  // Recommendation groups are intentionally coarse: proximity decides the
+  // useful buckets, then the daily seed only shuffles activities with the same
+  // user-facing priority so pagination stays stable for the whole day.
+  const rows = await prisma.$queryRaw<RecommendedActivityIdRow[]>(Prisma.sql`
+    WITH ranked_activities AS (
+      SELECT
+        activity.id,
+        activity."startAt",
+        CASE
+          WHEN activity.status::text IN (${activeStatuses})
+            AND activity."startAt" <= ${now}
+            AND activity."endAt" IS NOT NULL
+            AND activity."endAt" > ${now}
+            AND activity."startAt" >= ${freshOngoingBoundary}
+            THEN 0
+          WHEN activity.status::text IN (${activeStatuses})
+            AND activity."startAt" > ${now}
+            THEN 1
+          WHEN activity.status::text IN (${activeStatuses})
+            AND activity."startAt" <= ${now}
+            AND activity."endAt" IS NOT NULL
+            AND activity."endAt" > ${now}
+            THEN 2
+          ELSE 3
+        END AS recommendation_group,
+        CASE
+          WHEN activity.status::text IN (${activeStatuses})
+            AND activity."startAt" <= ${now}
+            AND activity."endAt" IS NOT NULL
+            AND activity."endAt" > ${now}
+            AND activity."startAt" >= ${freshOngoingBoundary}
+            THEN CASE WHEN activity."endAt" <= ${endingSoonBoundary} THEN 0 ELSE 1 END
+          WHEN activity.status::text IN (${activeStatuses})
+            AND activity."startAt" > ${now}
+            THEN CASE
+              WHEN activity."startAt" <= ${upcomingSoonBoundary} THEN 0
+              WHEN activity."startAt" <= ${upcomingWeekBoundary} THEN 1
+              WHEN activity."startAt" <= ${upcomingMonthBoundary} THEN 2
+              ELSE 3
+            END
+          ELSE 0
+        END AS proximity_group
+      FROM "Activity" AS activity
+      INNER JOIN "UserProfile" AS organizer
+        ON organizer.id = activity."organizerId"
+      WHERE activity.status::text IN (${archivedStatuses})
+        AND activity.visibility::text IN (${publicVisibility})
+        AND organizer.status::text = 'ACTIVE'
+    )
+    SELECT id
+    FROM ranked_activities
+    ORDER BY
+      recommendation_group ASC,
+      proximity_group ASC,
+      md5(${dailySeed} || id) ASC,
+      "startAt" ASC,
+      id ASC
+    OFFSET ${offset}
+    LIMIT ${pageSize}
+  `);
+
+  return rows.map((row) => row.id);
 }
 
 export async function getActivityList(
@@ -480,7 +566,10 @@ export async function getActivityList(
   const now = new Date();
   const pageSize = normalizeLimit(options.pageSize) ?? defaultActivityPageSize;
 
-  if (filters.sort === "recommended" && !hasExplicitActivityListFilters(filters)) {
+  if (
+    filters.sort === "recommended" &&
+    !hasExplicitActivityListFilters(filters)
+  ) {
     return getRecommendedActivityList(filters, pageSize, now);
   }
 
