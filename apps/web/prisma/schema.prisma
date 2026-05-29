@@ -111,6 +111,9 @@ model UserProfile {
   receivedFriendRequests FriendRequest[]       @relation("FriendRequestReceiver")
   friendshipsAsUserA     Friendship[]          @relation("FriendshipUserA")
   friendshipsAsUserB     Friendship[]          @relation("FriendshipUserB")
+  conversationsAsUserA   Conversation[]        @relation("ConversationUserA")
+  conversationsAsUserB   Conversation[]        @relation("ConversationUserB")
+  sentDirectMessages     DirectMessage[]       @relation("DirectMessageSender")
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 }
@@ -295,4 +298,36 @@ model Friendship {
 
   @@unique([userAId, userBId])
   @@index([userBId])
+}
+
+model Conversation {
+  id            String          @id @default(cuid())
+  userAId       String
+  userBId       String
+  userA         UserProfile     @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB         UserProfile     @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages      DirectMessage[]
+  lastMessageAt DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt])
+  @@index([userBId, lastMessageAt])
+  @@index([lastMessageAt])
+}
+
+model DirectMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  readAt         DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
 }
