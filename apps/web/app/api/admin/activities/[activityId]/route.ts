@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireAdminApiAccess } from "@/lib/admin-auth";
 import { deleteAdminActivity, updateAdminActivity } from "@/lib/admin-scraper";
 
 export const dynamic = "force-dynamic";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ activityId: string }> }) {
+  const authError = await requireAdminApiAccess();
+  if (authError) return authError;
+
   const { activityId } = await params;
   const body = await request.json();
   const updated = await updateAdminActivity(activityId, body);
@@ -11,10 +15,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ac
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ activityId: string }> }) {
+  const authError = await requireAdminApiAccess();
+  if (authError) return authError;
+
   const { activityId } = await params;
   await deleteAdminActivity(activityId);
   return NextResponse.json({ ok: true });
 }
-
 
 

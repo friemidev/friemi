@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { hasClerkKeys } from "@/lib/clerk";
 import { withLocale } from "@/lib/routes";
 import { hasAdminConfig, isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
@@ -47,4 +48,21 @@ export async function requireAdminPageAccess(locale: string) {
   }
 }
 
+export async function requireAdminApiAccess() {
+  if (!hasClerkKeys()) {
+    return null;
+  }
+
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await currentUser();
+  if (!user || !isAdminUser(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return null;
+}
 
