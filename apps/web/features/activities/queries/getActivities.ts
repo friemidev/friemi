@@ -6,6 +6,7 @@ import type {
   Prisma,
 } from "@prisma/client";
 import type { ActivityCardViewModel } from "../types";
+import type { ActivityFilters } from "../utils/activityFilters";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "RECRUITING",
@@ -59,6 +60,7 @@ export const activityCardSelect = {
 } satisfies Prisma.ActivitySelect;
 
 type GetActivitiesOptions = {
+  filters?: ActivityFilters;
   includePast?: boolean;
   limit?: number;
 };
@@ -74,6 +76,72 @@ function normalizeLimit(limit: number | undefined) {
   }
 
   return Math.min(Math.max(Math.floor(limit), 1), 50);
+}
+
+function getKeywordTerms(keyword: string | undefined) {
+  if (!keyword) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      keyword
+        .split(/\s+/)
+        .map((term) => term.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 5);
+}
+
+function getActivityFilterWhere(
+  filters: ActivityFilters | undefined,
+): Prisma.ActivityWhereInput {
+  if (!filters) {
+    return {};
+  }
+
+  const keywordTerms = getKeywordTerms(filters.keyword);
+
+  return {
+    ...(keywordTerms.length > 0
+      ? {
+          AND: keywordTerms.map((term) => ({
+            OR: [
+              {
+                title: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+              {
+                description: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          })),
+        }
+      : {}),
+    ...(filters.category
+      ? {
+          category: filters.category,
+        }
+      : {}),
+    ...(filters.city
+      ? {
+          city: {
+            equals: filters.city,
+            mode: "insensitive",
+          },
+        }
+      : {}),
+    ...(filters.type
+      ? {
+          type: filters.type,
+        }
+      : {}),
+  };
 }
 
 export function getActivityCoverTone(activityId: string) {
@@ -159,12 +227,45 @@ export async function getActivities(
   options: GetActivitiesOptions = {},
 ): Promise<ActivityCardViewModel[]> {
   const now = new Date();
+  const baseWhere = getVisibleActivityWhere({
+    includePast: options.includePast,
+    now,
+  });
+  const filterWhere = getActivityFilterWhere(options.filters);
   const activities = await prisma.activity.findMany({
-    where: getVisibleActivityWhere({ includePast: options.includePast, now }),
-    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    where: {
+      AND: [baseWhere, filterWhere],
+    },
+    orderBy: [
+      { startAt: options.filters?.sort === "latest" ? "desc" : "asc" },
+      { id: "asc" },
+    ],
     take: normalizeLimit(options.limit),
     select: activityCardSelect,
   });
 
   return activities.map(getActivityCardViewModel);
+}
+
+export async function getActivityFilterOptions() {
+  const now = new Date();
+  const cities = await prisma.activity.findMany({
+    where: getVisibleActivityWhere({ now }),
+    select: {
+      city: true,
+    },
+    distinct: ["city"],
+    orderBy: {
+      city: "asc",
+    },
+    take: 50,
+  });
+
+  return {
+    cities: cities
+      .map((activity) => activity.city.trim())
+      .filter(
+        (city, index, cityList) => city && cityList.indexOf(city) === index,
+      ),
+  };
 }

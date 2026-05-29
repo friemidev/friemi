@@ -1,27 +1,58 @@
+import { redirect } from "next/navigation";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { getActivities } from "@/features/activities/queries/getActivities";
+import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
+import {
+  getActivities,
+  getActivityFilterOptions,
+} from "@/features/activities/queries/getActivities";
+import {
+  getActivityFilterHref,
+  hasActiveActivityFilters,
+  isCanonicalActivityFilterSearchParams,
+  normalizeActivityFilters,
+  type ActivityFilterSearchParams,
+} from "@/features/activities/utils/activityFilters";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 type ActivitiesPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<ActivityFilterSearchParams>;
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function ActivitiesPage({ params }: ActivitiesPageProps) {
+export default async function ActivitiesPage({
+  params,
+  searchParams,
+}: ActivitiesPageProps) {
   const { locale } = await params;
+  const rawSearchParams = (await searchParams) ?? {};
+  const filters = normalizeActivityFilters(rawSearchParams);
+
+  if (!isCanonicalActivityFilterSearchParams(rawSearchParams)) {
+    redirect(getActivityFilterHref(withLocale(locale, "/activities"), filters));
+  }
+
   const t = getCopy(locale);
-  const activitiesResult = await getActivities()
-    .then((activities) => ({ activities, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load activities", error);
-      return { activities: [], error };
-    });
+  const hasFilters = hasActiveActivityFilters(filters);
+  const [activitiesResult, filterOptions] = await Promise.all([
+    getActivities({ filters })
+      .then((activities) => ({ activities, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load activities", error);
+        return { activities: [], error };
+      }),
+    getActivityFilterOptions().catch((error: unknown) => {
+      console.error("Failed to load activity filter options", error);
+      return { cities: [] };
+    }),
+  ]);
 
   return (
     <PageContainer className="space-y-7">
@@ -49,6 +80,13 @@ export default async function ActivitiesPage({ params }: ActivitiesPageProps) {
         </div>
       </section>
 
+      <ActivityFilters
+        cities={filterOptions.cities}
+        filters={filters}
+        locale={locale}
+        resultCount={activitiesResult.activities.length}
+      />
+
       {activitiesResult.error ? (
         <EmptyState
           title={t.common.loadFailed}
@@ -56,8 +94,16 @@ export default async function ActivitiesPage({ params }: ActivitiesPageProps) {
         />
       ) : activitiesResult.activities.length === 0 ? (
         <EmptyState
-          title={t.activities.emptyTitle}
-          description={t.activities.emptyDescription}
+          title={
+            hasFilters
+              ? t.activities.emptyFilteredTitle
+              : t.activities.emptyTitle
+          }
+          description={
+            hasFilters
+              ? t.activities.emptyFilteredDescription
+              : t.activities.emptyDescription
+          }
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
