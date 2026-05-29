@@ -1,9 +1,12 @@
 "use client";
 
-import { Children, useActionState, type ReactNode } from "react";
+import Link from "next/link";
+import { Children, useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  CalendarDays,
   Check,
+  ChevronDown,
   Inbox,
   Send,
   Trash2,
@@ -12,8 +15,10 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
+import { withLocale } from "@/lib/routes";
 import {
   acceptFriendRequestAction,
   cancelFriendRequestAction,
@@ -24,6 +29,7 @@ import {
 } from "../actions/friendActions";
 import { getFriendsCopy } from "../copy";
 import type {
+  FriendActivitySummaryViewModel,
   FriendRequestViewModel,
   FriendsDashboardViewModel,
   FriendUserViewModel,
@@ -118,6 +124,7 @@ export function FriendsDashboard({ dashboard, locale }: FriendsDashboardProps) {
               {dashboard.friends.map((friend) => (
                 <FriendCard
                   key={friend.id}
+                  activities={friend.recentActivities}
                   friendshipId={friend.id}
                   locale={locale}
                   user={friend.user}
@@ -263,10 +270,12 @@ function RequestPanel({
 }
 
 function FriendCard({
+  activities,
   friendshipId,
   locale,
   user,
 }: {
+  activities: FriendActivitySummaryViewModel[];
   friendshipId: string;
   locale: string;
   user: FriendUserViewModel;
@@ -279,7 +288,14 @@ function FriendCard({
 
   return (
     <article className="min-w-0 rounded-lg border border-zinc-200 bg-white p-3">
-      <UserSummary locale={locale} user={user} />
+      <UserSummary
+        compactBio={activities.length > 0}
+        locale={locale}
+        user={user}
+      />
+      {activities.length > 0 ? (
+        <FriendActivitySummary activities={activities} locale={locale} />
+      ) : null}
       <form
         action={formAction}
         className="mt-3 grid gap-2"
@@ -297,6 +313,85 @@ function FriendCard({
         </SubmitButton>
       </form>
     </article>
+  );
+}
+
+function FriendActivitySummary({
+  activities,
+  locale,
+}: {
+  activities: FriendActivitySummaryViewModel[];
+  locale: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const t = getFriendsCopy(locale);
+  const [firstActivity, ...remainingActivities] = activities;
+
+  if (!firstActivity) {
+    return null;
+  }
+
+  const hasMore = remainingActivities.length > 0;
+
+  return (
+    <div className="mt-3 rounded-md bg-moss/5 p-2.5 ring-1 ring-moss/10">
+      <div className="flex min-w-0 items-start gap-2">
+        <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-moss" />
+        <Link
+          className="min-w-0 flex-1 text-xs font-medium leading-5 text-ink transition hover:text-moss"
+          href={withLocale(locale, `/activities/${firstActivity.id}`)}
+          title={firstActivity.title}
+        >
+          <span className="line-clamp-2">
+            {t.friendActivitySummary(
+              formatActivityDateOnly(firstActivity.startAt, locale),
+              firstActivity.title,
+            )}
+          </span>
+        </Link>
+        {hasMore ? (
+          <button
+            type="button"
+            className="inline-flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-white px-2 text-xs font-semibold text-moss ring-1 ring-moss/15 transition hover:bg-moss/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss"
+            aria-expanded={isExpanded}
+            aria-label={
+              isExpanded
+                ? t.collapseActivities
+                : t.showMoreActivitiesLabel(remainingActivities.length)
+            }
+            onClick={() => setIsExpanded((current) => !current)}
+          >
+            {isExpanded
+              ? t.collapseActivities
+              : t.moreActivities(remainingActivities.length)}
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 transition",
+                isExpanded && "rotate-180",
+              )}
+            />
+          </button>
+        ) : null}
+      </div>
+
+      {isExpanded ? (
+        <div className="mt-2 grid max-h-32 gap-1 overflow-y-auto pr-1">
+          {remainingActivities.map((activity) => (
+            <Link
+              key={activity.id}
+              className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs leading-5 text-zinc-600 ring-1 ring-black/5 transition hover:bg-white hover:text-ink"
+              href={withLocale(locale, `/activities/${activity.id}`)}
+              title={activity.title}
+            >
+              <span className="shrink-0 whitespace-nowrap text-zinc-500">
+                {formatActivityDateOnly(activity.startAt, locale)}
+              </span>
+              <span className="truncate font-medium">{activity.title}</span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -424,9 +519,11 @@ function SubmitButton({
 }
 
 function UserSummary({
+  compactBio = false,
   locale,
   user,
 }: {
+  compactBio?: boolean;
   locale: string;
   user: FriendUserViewModel;
 }) {
@@ -442,7 +539,12 @@ function UserSummary({
         {user.email ? (
           <p className="mt-0.5 truncate text-xs text-zinc-500">{user.email}</p>
         ) : null}
-        <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-zinc-500">
+        <p
+          className={cn(
+            "mt-1 break-words text-xs leading-5 text-zinc-500",
+            compactBio ? "line-clamp-1" : "line-clamp-2",
+          )}
+        >
           {user.bio || t.noBio}
         </p>
       </div>
