@@ -2,19 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { ActivityStatus } from "@prisma/client";
+import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 
 const cancellableActivityStatuses: ActivityStatus[] = [
   "OPEN",
   "FULL",
   "RECRUITING",
   "CONFIRMED",
+];
+const notifiableParticipantStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "PENDING",
+  "APPROVED",
 ];
 
 const cancelActivitySchema = z.object({
@@ -49,6 +55,8 @@ function refreshActivityViews(locale: string, activityId: string) {
   revalidatePath(withLocale(locale, "/activities"));
   revalidatePath(withLocale(locale, "/"));
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   return activityPath;
 }
@@ -94,6 +102,16 @@ export async function cancelActivityAction(
             endAt: true,
             startAt: true,
             status: true,
+            participants: {
+              where: {
+                status: {
+                  in: notifiableParticipantStatuses,
+                },
+              },
+              select: {
+                userProfileId: true,
+              },
+            },
           },
         });
 
@@ -133,6 +151,16 @@ export async function cancelActivityAction(
             status: "CANCELLED",
           },
         });
+
+        await createNotifications(
+          tx,
+          activity.participants.map((participant) => ({
+            actorId: profile.id,
+            activityId: activity.id,
+            recipientId: participant.userProfileId,
+            type: "ACTIVITY_CANCELLED",
+          })),
+        );
 
         return {
           ok: true,

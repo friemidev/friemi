@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarPlus, CircleUserRound, Compass } from "lucide-react";
+import { Bell, CalendarPlus, CircleUserRound, Compass } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -9,10 +9,17 @@ import { getCopy } from "@/lib/copy";
 
 type AppHeaderProps = {
   locale: string;
+  showNotificationNav?: boolean;
   showAdminNav?: boolean;
+  unreadNotificationCount?: number;
 };
 
-export function AppHeader({ locale, showAdminNav = false }: AppHeaderProps) {
+export function AppHeader({
+  locale,
+  showNotificationNav = false,
+  showAdminNav = false,
+  unreadNotificationCount = 0,
+}: AppHeaderProps) {
   const t = getCopy(locale);
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-paper/85 backdrop-blur">
@@ -71,9 +78,54 @@ export function AppHeader({ locale, showAdminNav = false }: AppHeaderProps) {
               {t.nav.newActivity}
             </Button>
           </Link>
-          <UserMenu locale={locale} showAdminLink={showAdminNav} />
+          {showNotificationNav ? (
+            <NotificationHeaderLink
+              locale={locale}
+              unreadNotificationCount={unreadNotificationCount}
+            />
+          ) : null}
+          <UserMenu
+            locale={locale}
+            showAdminLink={showAdminNav}
+            unreadNotificationCount={unreadNotificationCount}
+          />
         </div>
       </div>
     </header>
+  );
+}
+
+function NotificationHeaderLink({
+  locale,
+  unreadNotificationCount,
+}: {
+  locale: string;
+  unreadNotificationCount: number;
+}) {
+  const t = getCopy(locale).notifications;
+  const hasUnreadNotifications = unreadNotificationCount > 0;
+  const unreadBadgeText =
+    unreadNotificationCount > 99 ? "99+" : String(unreadNotificationCount);
+  const label = hasUnreadNotifications
+    ? `${t.title} (${t.unreadCount(unreadNotificationCount)})`
+    : t.title;
+
+  return (
+    <Link
+      aria-label={label}
+      className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/75 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+      href={withLocale(locale, "/notifications")}
+      title={label}
+    >
+      <Bell className="h-5 w-5" aria-hidden="true" />
+      {hasUnreadNotifications ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-paper"
+        >
+          {unreadBadgeText}
+        </span>
+      ) : null}
+    </Link>
   );
 }

@@ -13,6 +13,7 @@ import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 const existingParticipantStatuses: ParticipantStatus[] = [
@@ -209,6 +210,15 @@ export async function joinActivityAction(
           });
         }
 
+        await createNotification(tx, {
+          activityId: activity.id,
+          recipientId: profile.id,
+          type:
+            nextStatus === "PENDING"
+              ? "PARTICIPATION_PENDING"
+              : "PARTICIPATION_CONFIRMED",
+        });
+
         return { ok: true };
       },
       {
@@ -258,5 +268,7 @@ export async function joinActivityAction(
     `/activities/${result.data.activityId}`,
   );
   revalidatePath(activityPath);
+  revalidatePath(withLocale(result.data.locale, "/notifications"));
+  revalidatePath(withLocale(result.data.locale, "/"), "layout");
   redirect(activityPath);
 }

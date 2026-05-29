@@ -43,6 +43,8 @@ const copy = {
       fallbackName: "Next Fun Club 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
+      notifications: "通知中心",
+      notificationsDescription: "查看报名、审核和活动变更",
       activityOps: "活动运营",
       activityOpsDescription: "维护活动库与公共活动导入",
       merchantOps: "商家管理",
@@ -148,6 +150,46 @@ const copy = {
         QUESTION: "提问",
         SUGGESTION: "建议",
         REVIEW: "评价",
+      },
+    },
+    notifications: {
+      title: "通知中心",
+      description: "查看报名提交、审核结果和活动取消提醒。",
+      unreadCount: (count: number) => `${count} 条未读`,
+      allRead: "全部已读",
+      markAllRead: "全部标为已读",
+      markOneRead: "标为已读",
+      emptyTitle: "暂无通知",
+      emptyDescription: "报名、审核和活动变更提醒会显示在这里。",
+      openActivity: "查看活动",
+      fallbackActivity: "相关活动",
+      read: "已读",
+      unread: "未读",
+      types: {
+        PARTICIPATION_PENDING: {
+          title: "报名已提交",
+          body: (activityTitle: string) =>
+            `你已提交「${activityTitle}」的报名申请，等待发起人审核。`,
+        },
+        PARTICIPATION_CONFIRMED: {
+          title: "报名成功",
+          body: (activityTitle: string) => `你已成功报名「${activityTitle}」。`,
+        },
+        PARTICIPATION_APPROVED: {
+          title: "报名已通过",
+          body: (activityTitle: string, actorName = "发起人") =>
+            `${actorName}已通过你对「${activityTitle}」的报名申请。`,
+        },
+        PARTICIPATION_REJECTED: {
+          title: "报名未通过",
+          body: (activityTitle: string, actorName = "发起人") =>
+            `${actorName}未通过你对「${activityTitle}」的报名申请。`,
+        },
+        ACTIVITY_CANCELLED: {
+          title: "活动已取消",
+          body: (activityTitle: string, actorName = "发起人") =>
+            `${actorName}已取消「${activityTitle}」。`,
+        },
       },
     },
     activityOwner: {
@@ -387,6 +429,8 @@ const copy = {
       fallbackName: "Next Fun Club user",
       openMenu: "Open account menu",
       profile: "Profile",
+      notifications: "Notifications",
+      notificationsDescription: "Review joins, approvals, and activity changes",
       activityOps: "Activity operations",
       activityOpsDescription: "Maintain activities and public imports",
       merchantOps: "Merchant management",
@@ -500,6 +544,49 @@ const copy = {
         QUESTION: "Question",
         SUGGESTION: "Suggestion",
         REVIEW: "Review",
+      },
+    },
+    notifications: {
+      title: "Notifications",
+      description:
+        "Review join submissions, review results, and cancellations.",
+      unreadCount: (count: number) => `${count} unread`,
+      allRead: "All read",
+      markAllRead: "Mark all as read",
+      markOneRead: "Mark read",
+      emptyTitle: "No notifications",
+      emptyDescription:
+        "Join, review, and activity change alerts will appear here.",
+      openActivity: "Open activity",
+      fallbackActivity: "Related activity",
+      read: "Read",
+      unread: "Unread",
+      types: {
+        PARTICIPATION_PENDING: {
+          title: "Request submitted",
+          body: (activityTitle: string) =>
+            `Your request for "${activityTitle}" was submitted and is waiting for organizer review.`,
+        },
+        PARTICIPATION_CONFIRMED: {
+          title: "Join confirmed",
+          body: (activityTitle: string) =>
+            `You have joined "${activityTitle}".`,
+        },
+        PARTICIPATION_APPROVED: {
+          title: "Join request approved",
+          body: (activityTitle: string, actorName = "The organizer") =>
+            `${actorName} approved your request for "${activityTitle}".`,
+        },
+        PARTICIPATION_REJECTED: {
+          title: "Join request declined",
+          body: (activityTitle: string, actorName = "The organizer") =>
+            `${actorName} declined your request for "${activityTitle}".`,
+        },
+        ACTIVITY_CANCELLED: {
+          title: "Activity cancelled",
+          body: (activityTitle: string, actorName = "The organizer") =>
+            `${actorName} cancelled "${activityTitle}".`,
+        },
       },
     },
     activityOwner: {
@@ -761,6 +848,9 @@ const copy = {
       fallbackName: "Utilisateur Next Fun Club",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
+      notifications: "Notifications",
+      notificationsDescription:
+        "Suivre inscriptions, validations et changements d'activité",
       activityOps: "Opérations activités",
       activityOpsDescription: "Gérer les activités et les imports publics",
       merchantOps: "Gestion partenaires",
@@ -877,6 +967,49 @@ const copy = {
         QUESTION: "Question",
         SUGGESTION: "Suggestion",
         REVIEW: "Avis",
+      },
+    },
+    notifications: {
+      title: "Notifications",
+      description:
+        "Suivez les demandes d'inscription, validations et annulations.",
+      unreadCount: (count: number) => `${count} non lues`,
+      allRead: "Tout est lu",
+      markAllRead: "Tout marquer comme lu",
+      markOneRead: "Marquer lu",
+      emptyTitle: "Aucune notification",
+      emptyDescription:
+        "Les alertes d'inscription, validation et changement d'activité apparaîtront ici.",
+      openActivity: "Voir l'activité",
+      fallbackActivity: "Activité liée",
+      read: "Lu",
+      unread: "Non lu",
+      types: {
+        PARTICIPATION_PENDING: {
+          title: "Demande envoyée",
+          body: (activityTitle: string) =>
+            `Votre demande pour « ${activityTitle} » a été envoyée et attend la validation de l'organisateur.`,
+        },
+        PARTICIPATION_CONFIRMED: {
+          title: "Inscription confirmée",
+          body: (activityTitle: string) =>
+            `Vous êtes inscrit à « ${activityTitle} ».`,
+        },
+        PARTICIPATION_APPROVED: {
+          title: "Demande acceptée",
+          body: (activityTitle: string, actorName = "L'organisateur") =>
+            `${actorName} a accepté votre demande pour « ${activityTitle} ».`,
+        },
+        PARTICIPATION_REJECTED: {
+          title: "Demande refusée",
+          body: (activityTitle: string, actorName = "L'organisateur") =>
+            `${actorName} a refusé votre demande pour « ${activityTitle} ».`,
+        },
+        ACTIVITY_CANCELLED: {
+          title: "Activité annulée",
+          body: (activityTitle: string, actorName = "L'organisateur") =>
+            `${actorName} a annulé « ${activityTitle} ».`,
+        },
       },
     },
     activityOwner: {

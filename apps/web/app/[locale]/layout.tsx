@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
+import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 
 type LocaleLayoutProps = {
@@ -26,11 +28,22 @@ export default async function LocaleLayout({
   }
 
   const messages = await getMessages();
-  const showAdminNav = await isCurrentUserAdmin();
+  const [showAdminNav, viewerProfile] = await Promise.all([
+    isCurrentUserAdmin(),
+    getOptionalCurrentUserProfile(),
+  ]);
+  const unreadNotificationCount = viewerProfile
+    ? await getUnreadNotificationCount(viewerProfile.id)
+    : 0;
   const content = (
     <NextIntlClientProvider messages={messages}>
       <div className="min-h-screen pb-24 md:pb-0">
-        <AppHeader locale={locale} showAdminNav={showAdminNav} />
+        <AppHeader
+          locale={locale}
+          showNotificationNav={Boolean(viewerProfile)}
+          showAdminNav={showAdminNav}
+          unreadNotificationCount={unreadNotificationCount}
+        />
         {children}
         <MobileNav locale={locale} />
       </div>

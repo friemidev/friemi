@@ -68,30 +68,40 @@ enum CommentType {
   REVIEW
 }
 
+enum NotificationType {
+  PARTICIPATION_PENDING
+  PARTICIPATION_CONFIRMED
+  PARTICIPATION_APPROVED
+  PARTICIPATION_REJECTED
+  ACTIVITY_CANCELLED
+}
+
 model UserProfile {
-  id             String                @id @default(cuid())
-  clerkUserId    String                @unique
-  email          String?
-  nickname       String
-  firstName      String?
-  lastName       String?
-  username       String?
-  avatarUrl      String?
-  bio            String?
-  interests      String[]              @default([])
-  status         UserProfileStatus     @default(ACTIVE)
-  lastSignInAt   DateTime?
-  clerkCreatedAt DateTime?
-  clerkUpdatedAt DateTime?
-  clerkDeletedAt DateTime?
-  syncedAt       DateTime?
-  activities     Activity[]            @relation("ActivityOrganizer")
-  participations ActivityParticipant[]
-  comments       Comment[]
-  following      UserFollow[]          @relation("UserFollowing")
-  followers      UserFollow[]          @relation("UserFollowers")
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  id                String                @id @default(cuid())
+  clerkUserId       String                @unique
+  email             String?
+  nickname          String
+  firstName         String?
+  lastName          String?
+  username          String?
+  avatarUrl         String?
+  bio               String?
+  interests         String[]              @default([])
+  status            UserProfileStatus     @default(ACTIVE)
+  lastSignInAt      DateTime?
+  clerkCreatedAt    DateTime?
+  clerkUpdatedAt    DateTime?
+  clerkDeletedAt    DateTime?
+  syncedAt          DateTime?
+  activities        Activity[]            @relation("ActivityOrganizer")
+  participations    ActivityParticipant[]
+  comments          Comment[]
+  notifications     Notification[]        @relation("NotificationRecipient")
+  sentNotifications Notification[]        @relation("NotificationActor")
+  following         UserFollow[]          @relation("UserFollowing")
+  followers         UserFollow[]          @relation("UserFollowers")
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 }
 
 model Activity {
@@ -129,6 +139,7 @@ model Activity {
   merchant         Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   participants     ActivityParticipant[]
   comments         Comment[]
+  notifications    Notification[]
   sourceLinks      ActivitySourceLink[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
@@ -213,6 +224,23 @@ model Comment {
 
   @@index([activityId, pinnedByOrganizer, createdAt])
   @@index([authorId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  type        NotificationType
+  recipientId String
+  recipient   UserProfile      @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       UserProfile?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  activityId  String?
+  activity    Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([recipientId, readAt, createdAt])
+  @@index([activityId])
 }
 
 model UserFollow {

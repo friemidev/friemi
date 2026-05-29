@@ -8,6 +8,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 
 const reviewParticipationSchema = z.object({
   activityId: z.string().min(1),
@@ -56,6 +57,8 @@ function refreshActivityViews(locale: string, activityId: string) {
   revalidatePath(withLocale(locale, "/activities"));
   revalidatePath(withLocale(locale, "/"));
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   return activityPath;
 }
@@ -92,6 +95,7 @@ export async function reviewParticipationAction(
             id: true,
             status: true,
             activityId: true,
+            userProfileId: true,
             activity: {
               select: {
                 id: true,
@@ -168,6 +172,16 @@ export async function reviewParticipationAction(
             status:
               result.data.decision === "approve" ? "APPROVED" : "REJECTED",
           },
+        });
+
+        await createNotification(tx, {
+          actorId: profile.id,
+          activityId: participation.activityId,
+          recipientId: participation.userProfileId,
+          type:
+            result.data.decision === "approve"
+              ? "PARTICIPATION_APPROVED"
+              : "PARTICIPATION_REJECTED",
         });
 
         return {

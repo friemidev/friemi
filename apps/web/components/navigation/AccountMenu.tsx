@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
+  Bell,
   Building2,
   LayoutDashboard,
   LogOut,
@@ -19,11 +20,13 @@ import { cn } from "@/lib/utils";
 type AccountMenuProps = {
   locale: string;
   showAdminLink?: boolean;
+  unreadNotificationCount?: number;
 };
 
 export function AccountMenu({
   locale,
   showAdminLink = false,
+  unreadNotificationCount = 0,
 }: AccountMenuProps) {
   const { signOut, openUserProfile } = useClerk();
   const { user } = useUser();
@@ -41,6 +44,7 @@ export function AccountMenu({
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
+  const notificationsHref = withLocale(locale, "/notifications");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
 
@@ -122,6 +126,15 @@ export function AccountMenu({
               icon={UserRound}
               label={t.profile}
               active={pathname === profileHref}
+              onClick={closeMenu}
+            />
+            <MenuLink
+              href={notificationsHref}
+              icon={Bell}
+              label={t.notifications}
+              description={t.notificationsDescription}
+              badgeCount={unreadNotificationCount}
+              active={pathname === notificationsHref}
               onClick={closeMenu}
             />
             {showAdminLink ? (
@@ -206,6 +219,7 @@ function MenuLink({
   label,
   description,
   active = false,
+  badgeCount = 0,
   onClick,
 }: {
   href: string;
@@ -213,6 +227,7 @@ function MenuLink({
   label: string;
   description?: string;
   active?: boolean;
+  badgeCount?: number;
   onClick: () => void;
 }) {
   return (
@@ -229,7 +244,14 @@ function MenuLink({
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
       <span className="min-w-0">
-        <span className="block font-medium">{label}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">{label}</span>
+          {badgeCount > 0 ? (
+            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-moss px-1.5 text-[11px] font-semibold text-white">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          ) : null}
+        </span>
         {description ? (
           <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
             {description}

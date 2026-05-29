@@ -9,9 +9,14 @@ import { AccountMenu } from "@/components/navigation/AccountMenu";
 type UserMenuProps = {
   locale: string;
   showAdminLink?: boolean;
+  unreadNotificationCount?: number;
 };
 
-export function UserMenu({ locale, showAdminLink = false }: UserMenuProps) {
+export function UserMenu({
+  locale,
+  showAdminLink = false,
+  unreadNotificationCount = 0,
+}: UserMenuProps) {
   const t = getCopy(locale);
 
   if (!hasClerkKeys()) {
@@ -25,7 +30,11 @@ export function UserMenu({ locale, showAdminLink = false }: UserMenuProps) {
   return (
     <>
       <SignedIn>
-        <AccountMenu locale={locale} showAdminLink={showAdminLink} />
+        <AccountMenu
+          locale={locale}
+          showAdminLink={showAdminLink}
+          unreadNotificationCount={unreadNotificationCount}
+        />
       </SignedIn>
       <SignedOut>
         <Link href={withLocale(locale, "/sign-in")}>
