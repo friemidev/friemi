@@ -27,6 +27,7 @@ import {
 import type { ActivityFormValues } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
+import { ActivityPlacePicker } from "./ActivityPlacePicker";
 
 type NewActivityFormProps = {
   activityId?: string;
@@ -341,6 +342,15 @@ export function NewActivityForm({
               />
               <FieldError errors={state.fieldErrors?.address} />
             </label>
+
+            <ActivityPlacePicker
+              initialAddress={values?.address}
+              initialLatitude={values?.latitude}
+              initialLongitude={values?.longitude}
+              latitudeErrors={state.fieldErrors?.latitude}
+              locale={locale}
+              longitudeErrors={state.fieldErrors?.longitude}
+            />
 
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">

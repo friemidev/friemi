@@ -46,6 +46,8 @@ type ActivityFormState = {
   city: string;
   destination: string;
   address: string;
+  latitude: string;
+  longitude: string;
   startAt: string;
   endAt: string;
   capacity: string;
@@ -81,6 +83,8 @@ const emptyActivityForm = (
   city: "Paris",
   destination: "",
   address: "",
+  latitude: "",
+  longitude: "",
   startAt: "",
   endAt: "",
   capacity: "100",
@@ -206,6 +210,12 @@ export function AdminDashboardClient({
         ...activityForm,
         itinerary: activityForm.itinerary.trim() || null,
         destination: activityForm.destination.trim() || null,
+        latitude: activityForm.latitude.trim()
+          ? Number(activityForm.latitude)
+          : null,
+        longitude: activityForm.longitude.trim()
+          ? Number(activityForm.longitude)
+          : null,
         endAt: activityForm.endAt.trim() || null,
         coverImageUrl: activityForm.coverImageUrl.trim() || null,
         minParticipants: activityForm.minParticipants.trim()
@@ -377,6 +387,46 @@ export function AdminDashboardClient({
                         setActivityForm({
                           ...activityForm,
                           destination: e.target.value,
+                        })
+                      }
+                    />
+                  </FormField>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormField
+                    label="纬度（可选）"
+                    hint="用于活动详情页地图；可从 OpenStreetMap 复制。"
+                  >
+                    <Input
+                      className="h-9"
+                      type="number"
+                      step="any"
+                      min={-90}
+                      max={90}
+                      value={activityForm.latitude}
+                      onChange={(e) =>
+                        setActivityForm({
+                          ...activityForm,
+                          latitude: e.target.value,
+                        })
+                      }
+                    />
+                  </FormField>
+                  <FormField
+                    label="经度（可选）"
+                    hint="填写时建议和纬度同时填写。"
+                  >
+                    <Input
+                      className="h-9"
+                      type="number"
+                      step="any"
+                      min={-180}
+                      max={180}
+                      value={activityForm.longitude}
+                      onChange={(e) =>
+                        setActivityForm({
+                          ...activityForm,
+                          longitude: e.target.value,
                         })
                       }
                     />
@@ -717,6 +767,14 @@ export function AdminDashboardClient({
                                   city: activity.city,
                                   destination: activity.destination ?? "",
                                   address: activity.address,
+                                  latitude:
+                                    activity.latitude === null
+                                      ? ""
+                                      : String(activity.latitude),
+                                  longitude:
+                                    activity.longitude === null
+                                      ? ""
+                                      : String(activity.longitude),
                                   startAt: toDatetimeLocal(activity.startAt),
                                   endAt: toDatetimeLocal(activity.endAt),
                                   capacity: String(activity.capacity),
