@@ -98,6 +98,16 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
             </span>
           </div>
           <div className="mt-auto space-y-2 pt-1">
+            {activity.friendSignal && activity.friendSignal.count > 0 ? (
+              <div className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-semibold text-moss">
+                <UsersRound className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate whitespace-nowrap">
+                  {t.activityFriendSignal.cardSummary(
+                    activity.friendSignal.count,
+                  )}
+                </span>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between gap-3 text-sm text-zinc-600">
               <span className="flex items-center gap-2">
                 <UsersRound className="h-4 w-4 shrink-0" />

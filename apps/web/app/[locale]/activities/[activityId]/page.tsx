@@ -39,6 +39,8 @@ import {
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { getFollowCopy } from "@/features/follow/copy";
 import { getViewerFollowState } from "@/features/follow/queries/getViewerFollowState";
+import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
+import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -67,11 +69,12 @@ export default async function ActivityDetailPage({
     notFound();
   }
 
-  const [viewerParticipation, isFollowingOrganizer, comments] =
+  const [viewerParticipation, isFollowingOrganizer, comments, friendSignal] =
     await Promise.all([
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
       getViewerFollowState(viewerProfile?.id, activity.organizer.id),
       getActivityComments(activity.id),
+      getActivityFriendSignal(activity.id, viewerProfile?.id),
     ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
@@ -318,6 +321,7 @@ export default async function ActivityDetailPage({
                 />
               </div>
             </div>
+            <ActivityFriendSignalPanel locale={locale} signal={friendSignal} />
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <WalletCards className="h-4 w-4 shrink-0" />

@@ -5,12 +5,26 @@ import type {
 } from "@chill-club/shared";
 import type { CommentType } from "@prisma/client";
 
+export type ActivityFriendSignalUserViewModel = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+};
+
+export type ActivityFriendSignalViewModel = {
+  count: number;
+  previewFriends: ActivityFriendSignalUserViewModel[];
+  allFriends: ActivityFriendSignalUserViewModel[];
+  extraCount: number;
+};
+
 export type ActivityCardViewModel = ActivitySummary & {
   coverImageUrl: string | null;
   coverTone: "moss" | "clay" | "sky";
   latitude: number | null;
   longitude: number | null;
   merchant: ActivityMerchantViewModel | null;
+  friendSignal?: ActivityFriendSignalViewModel | null;
 };
 
 export type ActivityMerchantViewModel = {

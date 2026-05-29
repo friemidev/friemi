@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
 import { Prisma } from "@prisma/client";
 import type {
   ActivityStatus,
@@ -78,6 +79,7 @@ type GetActivitiesOptions = {
   filters?: ActivityFilters;
   includePast?: boolean;
   limit?: number;
+  viewerProfileId?: string | null;
 };
 
 export type ActivityListResult = {
@@ -325,7 +327,10 @@ export async function getActivities(
     select: activityCardSelect,
   });
 
-  return activities.map(getActivityCardViewModel);
+  return attachActivityFriendSignals(
+    activities.map(getActivityCardViewModel),
+    options.viewerProfileId,
+  );
 }
 
 function getActivityTotalPages(totalCount: number, pageSize: number) {
@@ -400,6 +405,7 @@ async function getOrderedActivityList(
   filters: ActivityFilters,
   pageSize: number,
   now: Date,
+  viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
   const where = getActivityListWhere(filters, now);
   const totalCount = await prisma.activity.count({ where });
@@ -414,7 +420,10 @@ async function getOrderedActivityList(
   });
 
   return {
-    activities: activities.map(getActivityCardViewModel),
+    activities: await attachActivityFriendSignals(
+      activities.map(getActivityCardViewModel),
+      viewerProfileId,
+    ),
     page,
     pageSize,
     totalCount,
@@ -426,6 +435,7 @@ async function getRecommendedActivityList(
   filters: ActivityFilters,
   pageSize: number,
   now: Date,
+  viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
   const where = getActivityListWhere(filters, now);
   const totalCount = await prisma.activity.count({ where });
@@ -460,10 +470,15 @@ async function getRecommendedActivityList(
   );
 
   return {
-    activities: activityIds
-      .map((activityId) => activityById.get(activityId))
-      .filter((activity): activity is ActivityQueryResult => Boolean(activity))
-      .map(getActivityCardViewModel),
+    activities: await attachActivityFriendSignals(
+      activityIds
+        .map((activityId) => activityById.get(activityId))
+        .filter((activity): activity is ActivityQueryResult =>
+          Boolean(activity),
+        )
+        .map(getActivityCardViewModel),
+      viewerProfileId,
+    ),
     page,
     pageSize,
     totalCount,
@@ -561,7 +576,7 @@ async function getRecommendedActivityIds({
 
 export async function getActivityList(
   filters: ActivityFilters,
-  options: { pageSize?: number } = {},
+  options: { pageSize?: number; viewerProfileId?: string | null } = {},
 ): Promise<ActivityListResult> {
   const now = new Date();
   const pageSize = normalizeLimit(options.pageSize) ?? defaultActivityPageSize;
@@ -570,10 +585,20 @@ export async function getActivityList(
     filters.sort === "recommended" &&
     !hasExplicitActivityListFilters(filters)
   ) {
-    return getRecommendedActivityList(filters, pageSize, now);
+    return getRecommendedActivityList(
+      filters,
+      pageSize,
+      now,
+      options.viewerProfileId,
+    );
   }
 
-  return getOrderedActivityList(filters, pageSize, now);
+  return getOrderedActivityList(
+    filters,
+    pageSize,
+    now,
+    options.viewerProfileId,
+  );
 }
 
 export async function getActivityFilterOptions() {

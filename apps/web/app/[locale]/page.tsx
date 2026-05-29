@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getActivities } from "@/features/activities/queries/getActivities";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 
@@ -19,7 +20,11 @@ export const dynamic = "force-dynamic";
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
   const t = getCopy(locale);
-  const activitiesResult = await getActivities({ limit: 3 })
+  const viewerProfile = await getOptionalCurrentUserProfile();
+  const activitiesResult = await getActivities({
+    limit: 3,
+    viewerProfileId: viewerProfile?.id,
+  })
     .then((activities) => ({ activities, error: null }))
     .catch((error: unknown) => {
       console.error("Failed to load home activities", error);
@@ -75,7 +80,10 @@ export default async function HomePage({ params }: HomePageProps) {
               </div>
             ) : (
               activitiesResult.activities.slice(0, 2).map((activity) => (
-                <div key={activity.id} className="rounded-md bg-paper px-3 py-3 sm:px-4">
+                <div
+                  key={activity.id}
+                  className="rounded-md bg-paper px-3 py-3 sm:px-4"
+                >
                   <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
                     {activity.title}
                   </p>

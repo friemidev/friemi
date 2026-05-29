@@ -169,6 +169,24 @@ const copy = {
       locationMapTitle: "活动地点",
       openMap: "打开地图",
     },
+    activityFriendSignal: {
+      title: "好友也在",
+      cardSummary: (count: number) => `${count} 位好友已报名`,
+      detailSummary: (names: string[], count: number) => {
+        if (names.length === 0) {
+          return `${count} 位好友已报名`;
+        }
+
+        if (count > names.length) {
+          return `${names.join("、")} 等 ${count} 位好友已报名`;
+        }
+
+        return `${names.join("、")} 已报名`;
+      },
+      showMore: "查看更多",
+      showAllLabel: (count: number) => `查看全部 ${count} 位好友`,
+      showLess: "收起",
+    },
     activityShare: {
       title: "分享活动",
       description: "复制关键信息，或下载带二维码的宣传图。",
@@ -672,6 +690,25 @@ const copy = {
       editActivity: "Edit activity",
       locationMapTitle: "Activity location",
       openMap: "Open map",
+    },
+    activityFriendSignal: {
+      title: "Friends joining",
+      cardSummary: (count: number) =>
+        `${count} friend${count === 1 ? "" : "s"} joined`,
+      detailSummary: (names: string[], count: number) => {
+        if (names.length === 0) {
+          return `${count} friend${count === 1 ? "" : "s"} joined`;
+        }
+
+        if (count > names.length) {
+          return `${names.join(", ")} and others joined (${count} friends)`;
+        }
+
+        return `${names.join(", ")} joined`;
+      },
+      showMore: "More",
+      showAllLabel: (count: number) => `Show all ${count} friends`,
+      showLess: "Collapse",
     },
     activityShare: {
       title: "Share activity",
@@ -1207,6 +1244,25 @@ const copy = {
       editActivity: "Modifier",
       locationMapTitle: "Lieu de l'activité",
       openMap: "Ouvrir la carte",
+    },
+    activityFriendSignal: {
+      title: "Amis inscrits",
+      cardSummary: (count: number) =>
+        `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`,
+      detailSummary: (names: string[], count: number) => {
+        if (names.length === 0) {
+          return `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`;
+        }
+
+        if (count > names.length) {
+          return `${names.join(", ")} et d'autres amis sont inscrits (${count})`;
+        }
+
+        return `${names.join(", ")} ${names.length > 1 ? "sont inscrits" : "est inscrit"}`;
+      },
+      showMore: "Plus",
+      showAllLabel: (count: number) => `Voir les ${count} amis`,
+      showLess: "Réduire",
     },
     activityShare: {
       title: "Partager l'activité",

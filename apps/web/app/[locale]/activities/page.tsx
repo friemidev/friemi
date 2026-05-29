@@ -18,6 +18,7 @@ import {
   normalizeActivityFilters,
   type ActivityFilterSearchParams,
 } from "@/features/activities/utils/activityFilters";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -119,8 +120,9 @@ export default async function ActivitiesPage({
 
   const t = getCopy(locale);
   const hasFilters = hasActiveActivityFilters(filters);
+  const viewerProfile = await getOptionalCurrentUserProfile();
   const [activitiesResult, filterOptions] = await Promise.all([
-    getActivityList(filters)
+    getActivityList(filters, { viewerProfileId: viewerProfile?.id })
       .then((list) => ({ list, error: null }))
       .catch((error: unknown) => {
         console.error("Failed to load activities", error);
@@ -132,10 +134,7 @@ export default async function ActivitiesPage({
     }),
   ]);
 
-  if (
-    activitiesResult.list &&
-    activitiesResult.list.page !== filters.page
-  ) {
+  if (activitiesResult.list && activitiesResult.list.page !== filters.page) {
     redirect(
       getActivityFilterHref(withLocale(locale, "/activities"), {
         ...filters,
@@ -176,7 +175,8 @@ export default async function ActivitiesPage({
           title={t.common.loadFailed}
           description={t.common.retryDatabase}
         />
-      ) : !activitiesResult.list || activitiesResult.list.activities.length === 0 ? (
+      ) : !activitiesResult.list ||
+        activitiesResult.list.activities.length === 0 ? (
         <EmptyState
           title={
             hasFilters
