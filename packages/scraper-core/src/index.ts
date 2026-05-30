@@ -5,6 +5,10 @@ import type { ScrapedActivity, ScraperSource } from "./types";
 export type { ScrapedActivity, ScraperSource } from "./types";
 export {
   activityLinkImportUserAgent,
+  enrichSortirActivityAddress,
+  extractSortirFrenchStreetAddress,
+  extractSortirLocationHint,
+  findSortirFrenchArticleUrl,
   parseChineseDate,
   parseEventbriteEventHtml,
   parseMeetupEventHtml,

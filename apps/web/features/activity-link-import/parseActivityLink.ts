@@ -1,6 +1,8 @@
 import type { ActivityCategory, PriceType } from "@chill-club/shared";
 import {
   activityLinkImportUserAgent,
+  enrichSortirActivityAddress,
+  findSortirFrenchArticleUrl,
   parseEventbriteEventHtml,
   parseMeetupEventHtml,
   parsePlayInParisEventHtml,
@@ -8,6 +10,7 @@ import {
   type ScrapedActivity,
 } from "@chill-club/scraper-core";
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
+import { formatImportedAddressForForm } from "@/lib/place-search";
 import { formatParisDateTimeInput } from "@/features/activities/actions/activityActionUtils";
 
 const requestTimeoutMs = 12_000;
@@ -684,7 +687,7 @@ function buildPreviewFromScrapedActivity(
     resolvePreviewImageUrl(meta.get("og:image") || meta.get("twitter:image"), sourceUrl);
   const values: ActivityLinkPreviewValues = {
     address: activity.address
-      ? truncateText(activity.address, 120)
+      ? truncateText(formatImportedAddressForForm(activity.address), 120)
       : undefined,
     category: activity.category,
     city: activity.city,
@@ -1022,16 +1025,91 @@ export async function parseActivityLink(
   }
 
   const html = (await response.text()).slice(0, maxHtmlLength);
-  const siteSpecificPreview = buildSiteSpecificPreview(
+  let siteSpecificPreview = buildSiteSpecificPreview(
     sourceUrl,
     siteName,
     html,
     copy,
   );
 
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "sortiraparis.com") {
+    siteSpecificPreview = await enrichSortirLinkPreview(
+      siteSpecificPreview,
+      html,
+      sourceUrl,
+    );
+  }
+
   if (siteSpecificPreview) {
     return siteSpecificPreview;
   }
 
   return buildPreview(sourceUrl, siteName, html, copy);
+}
+
+async function enrichSortirLinkPreview(
+  preview: ActivityLinkPreview,
+  html: string,
+  sourceUrl: URL,
+): Promise<ActivityLinkPreview> {
+  const frenchUrl = findSortirFrenchArticleUrl(html, sourceUrl.toString());
+  let frenchHtml: string | undefined;
+
+  if (frenchUrl && /\/zh\//i.test(sourceUrl.pathname)) {
+    try {
+      const response = await fetch(frenchUrl, {
+        headers: {
+          Accept:
+            "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+          "User-Agent": activityLinkImportUserAgent,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      });
+
+      if (response.ok) {
+        frenchHtml = (await response.text()).slice(0, maxHtmlLength);
+      }
+    } catch {
+      frenchHtml = undefined;
+    }
+  }
+
+  const activity = enrichSortirActivityAddress(
+    {
+      id: "sortiraparis_preview",
+      source: "sortiraparis",
+      sourceUrl: preview.sourceUrl,
+      title: preview.values.title ?? "",
+      description: preview.values.description ?? "",
+      itinerary: preview.values.itinerary ?? null,
+      type: "PUBLIC_EVENT",
+      category: preview.values.category ?? "OTHER",
+      city: preview.values.city ?? "Paris",
+      destination: null,
+      address: preview.values.address ?? "Paris, France",
+      startAt: preview.values.startAt ?? new Date().toISOString(),
+      endAt: preview.values.endAt ?? null,
+      capacity: 100,
+      minParticipants: null,
+      requiresApproval: false,
+      priceType: preview.values.priceType ?? "RANGE",
+      priceText: preview.values.priceText ?? "",
+      coverImageUrl: preview.values.coverImageUrl ?? null,
+      status: "RECRUITING",
+      visibility: "PUBLIC",
+    },
+    html,
+    sourceUrl.toString(),
+    frenchHtml,
+  );
+
+  return {
+    ...preview,
+    values: {
+      ...preview.values,
+      address: truncateText(formatImportedAddressForForm(activity.address), 120),
+      city: activity.city,
+    },
+  };
 }

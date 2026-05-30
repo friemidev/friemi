@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
+  extractSortirFrenchStreetAddress,
   parseChineseDate,
   parseEventbriteEventHtml,
   parseMeetupEventHtml,
@@ -44,6 +45,17 @@ test("parseSortirAParisArticleHtml reads microdata dates and address", () => {
   );
   assert.match(activity.description, /约十五位知名作家/);
   assert.doesNotMatch(activity.description, /^2026年6月6日与7日/);
+});
+
+test("extractSortirFrenchStreetAddress maps arrondissement to postal code", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "sortir-french-street-snippet.html"),
+    "utf8",
+  );
+  const address = extractSortirFrenchStreetAddress(html);
+
+  assert.equal(address, "Rue Albert, 75013 Paris");
 });
 
 test("parseSortirAParisArticleHtml prefers article body over short NewsArticle summary", () => {
