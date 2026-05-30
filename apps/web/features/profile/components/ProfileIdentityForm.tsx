@@ -46,7 +46,7 @@ export function ProfileIdentityForm({
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border border-black/10 bg-white/80 p-3 shadow-sm">
+    <div className="grid gap-3 rounded-lg border border-black/10 bg-white/70 p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-zinc-500">

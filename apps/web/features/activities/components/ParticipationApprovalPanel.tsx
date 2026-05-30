@@ -97,7 +97,10 @@ export function ParticipationApprovalPanel({
   const t = getCopy(locale).approval;
 
   return (
-    <section className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+    <section
+      id="participation-approval"
+      className="scroll-mt-24 rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5"
+    >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-ink">{t.title}</h2>
@@ -132,9 +135,9 @@ export function ParticipationApprovalPanel({
                       {formatActivityDate(participant.joinedAt, locale)}
                     </p>
                   </div>
-                  {participant.user.email ? (
-                    <p className="mt-1 truncate text-xs text-zinc-500">
-                      {participant.user.email}
+                  {participant.user.friendCode ? (
+                    <p className="mt-1 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+                      {participant.user.friendCode}
                     </p>
                   ) : null}
                   <p className="mt-2 text-sm leading-6 text-zinc-600">

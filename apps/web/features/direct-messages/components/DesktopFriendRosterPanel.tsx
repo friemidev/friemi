@@ -12,7 +12,10 @@ import {
   formatActivityDate,
   formatActivityDateOnly,
 } from "@chill-club/shared";
-import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
+import {
+  AddFriendDialog,
+  RequestCountBadge,
+} from "@/features/friends/components/FriendsDashboard";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -21,12 +24,15 @@ import type {
   DirectConversationActivitySignalViewModel,
   DirectMessageFriendRosterItemViewModel,
 } from "../queries/getDirectMessages";
+import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { MessageAvatar } from "./MessageAvatar";
 
 type DesktopFriendRosterPanelProps = {
   currentUserProfileId: string;
   currentUserFriendCode?: string | null;
   friends: DirectMessageFriendRosterItemViewModel[];
+  initialAddFriendOpen?: boolean;
+  incomingRequests?: FriendRequestViewModel[];
   locale: string;
   selectedConversationId?: string;
 };
@@ -35,14 +41,18 @@ export function DesktopFriendRosterPanel({
   currentUserProfileId,
   currentUserFriendCode = null,
   friends,
+  initialAddFriendOpen = false,
+  incomingRequests = [],
   locale,
   selectedConversationId,
 }: DesktopFriendRosterPanelProps) {
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(
+    initialAddFriendOpen && incomingRequests.length > 0,
+  );
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <aside className="overflow-hidden rounded-lg border border-black/10 bg-white/82 shadow-sm">
+    <aside className="overflow-hidden rounded-lg border border-black/10 bg-white/82 shadow-sm lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
       <div className="flex items-start gap-3 border-b border-black/10 p-4">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-white">
           <MessageCircle className="h-5 w-5" />
@@ -57,12 +67,13 @@ export function DesktopFriendRosterPanel({
         </div>
         <button
           type="button"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
           aria-label={t.addFriend}
           title={t.addFriend}
           onClick={() => setAddFriendOpen(true)}
         >
           <UserPlus className="h-4 w-4" />
+          <RequestCountBadge count={incomingRequests.length} />
         </button>
       </div>
 
@@ -76,7 +87,7 @@ export function DesktopFriendRosterPanel({
           </p>
         </div>
       ) : (
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {friends.map((friend) => (
             <DesktopFriendRosterRow
               key={friend.friendshipId}
@@ -92,6 +103,7 @@ export function DesktopFriendRosterPanel({
       {addFriendOpen ? (
         <AddFriendDialog
           currentUserFriendCode={currentUserFriendCode}
+          incomingRequests={incomingRequests}
           locale={locale}
           onClose={() => setAddFriendOpen(false)}
           returnTo="messages"

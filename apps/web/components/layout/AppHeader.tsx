@@ -23,6 +23,7 @@ type AppHeaderProps = {
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
+  viewerNickname?: string | null;
 };
 
 export function AppHeader({
@@ -31,6 +32,7 @@ export function AppHeader({
   showAdminNav = false,
   unreadNotificationCount = 0,
   viewerFriendCode = null,
+  viewerNickname = null,
 }: AppHeaderProps) {
   const t = getCopy(locale);
   return (
@@ -113,6 +115,7 @@ export function AppHeader({
             locale={locale}
             showAdminLink={showAdminNav}
             viewerFriendCode={viewerFriendCode}
+            viewerNickname={viewerNickname}
             unreadNotificationCount={unreadNotificationCount}
           />
         </div>

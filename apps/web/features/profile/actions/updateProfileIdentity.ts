@@ -15,6 +15,7 @@ export type UpdateProfileIdentityState = {
 const updateProfileIdentitySchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
+  returnTo: z.string().optional(),
 });
 
 function getString(formData: FormData, key: string) {
@@ -32,6 +33,7 @@ export async function updateProfileIdentityAction(
   const result = updateProfileIdentitySchema.safeParse({
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
+    returnTo: getString(formData, "returnTo"),
   });
 
   if (!result.success) {
@@ -40,7 +42,7 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { locale, nickname } = result.data;
+  const { locale, nickname, returnTo } = result.data;
   const profile = await ensureCurrentUserProfile(locale);
 
   await prisma.userProfile.update({
@@ -56,6 +58,12 @@ export async function updateProfileIdentityAction(
   revalidatePath(withLocale(locale, "/friends"));
   revalidatePath(withLocale(locale, "/messages"));
   revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
-  redirect(withLocale(locale, "/profile"));
+  const safeReturnTo =
+    returnTo?.startsWith(`/${locale}`) && !returnTo.startsWith(`//`)
+      ? returnTo
+      : withLocale(locale, "/profile");
+
+  redirect(safeReturnTo);
 }

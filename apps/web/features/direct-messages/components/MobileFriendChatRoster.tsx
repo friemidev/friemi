@@ -13,7 +13,11 @@ import {
 } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
-import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
+import {
+  AddFriendDialog,
+  RequestCountBadge,
+} from "@/features/friends/components/FriendsDashboard";
+import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
@@ -26,6 +30,8 @@ type MobileFriendChatRosterProps = {
   currentUserProfileId: string;
   currentUserFriendCode?: string | null;
   friends: DirectMessageFriendRosterItemViewModel[];
+  initialAddFriendOpen?: boolean;
+  incomingRequests?: FriendRequestViewModel[];
   locale: string;
 };
 
@@ -33,9 +39,13 @@ export function MobileFriendChatRoster({
   currentUserProfileId,
   currentUserFriendCode = null,
   friends,
+  initialAddFriendOpen = false,
+  incomingRequests = [],
   locale,
 }: MobileFriendChatRosterProps) {
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(
+    initialAddFriendOpen && incomingRequests.length > 0,
+  );
   const t = getDirectMessagesCopy(locale);
 
   return (
@@ -52,12 +62,13 @@ export function MobileFriendChatRoster({
         </div>
         <button
           type="button"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white shadow-sm transition hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white shadow-sm transition hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
           aria-label={t.addFriend}
           title={t.addFriend}
           onClick={() => setAddFriendOpen(true)}
         >
           <UserPlus className="h-5 w-5" />
+          <RequestCountBadge count={incomingRequests.length} />
         </button>
       </div>
 
@@ -72,11 +83,12 @@ export function MobileFriendChatRoster({
           <Button
             type="button"
             variant="secondary"
-            className="mt-5 h-11 gap-2 bg-white px-5"
+            className="relative mt-5 h-11 gap-2 bg-white px-5"
             onClick={() => setAddFriendOpen(true)}
           >
             <UserPlus className="h-4 w-4" />
             {t.addFriend}
+            <RequestCountBadge count={incomingRequests.length} />
           </Button>
         </div>
       ) : (
@@ -95,6 +107,7 @@ export function MobileFriendChatRoster({
       {addFriendOpen ? (
         <AddFriendDialog
           currentUserFriendCode={currentUserFriendCode}
+          incomingRequests={incomingRequests}
           locale={locale}
           onClose={() => setAddFriendOpen(false)}
           returnTo="messages"

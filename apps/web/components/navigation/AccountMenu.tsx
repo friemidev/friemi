@@ -25,6 +25,7 @@ type AccountMenuProps = {
   showAdminLink?: boolean;
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
+  viewerNickname?: string | null;
 };
 
 export function AccountMenu({
@@ -32,6 +33,7 @@ export function AccountMenu({
   showAdminLink = false,
   unreadNotificationCount = 0,
   viewerFriendCode = null,
+  viewerNickname = null,
 }: AccountMenuProps) {
   const { signOut, openUserProfile } = useClerk();
   const { user } = useUser();
@@ -42,12 +44,7 @@ export function AccountMenu({
   const t = getCopy(locale).accountMenu;
   const profileCopy = getCopy(locale).profile;
 
-  const displayName =
-    user?.fullName ||
-    user?.username ||
-    user?.primaryEmailAddress?.emailAddress ||
-    t.fallbackName;
-  const email = user?.primaryEmailAddress?.emailAddress;
+  const displayName = viewerNickname?.trim() || user?.username || t.fallbackName;
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
@@ -134,11 +131,8 @@ export function AccountMenu({
               <p className="truncate text-sm font-semibold text-ink">
                 {displayName}
               </p>
-              {email ? (
-                <p className="truncate text-xs text-zinc-500">{email}</p>
-              ) : null}
               {viewerFriendCode ? (
-                <div className="mt-2 flex min-w-0 items-center gap-2">
+                <div className="mt-1.5 flex min-w-0 items-center gap-2">
                   <span className="shrink-0 text-xs text-zinc-500">
                     {profileCopy.friendCodeLabel}
                   </span>

@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -18,6 +20,19 @@ import {
 export type UpdateActivityState = ActivityFormState;
 
 const countedParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
+const notifiableParticipantStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "PENDING",
+  "APPROVED",
+];
+
+function hasDateChanged(before: Date | null, after: Date | null) {
+  return (before?.getTime() ?? null) !== (after?.getTime() ?? null);
+}
+
+function normalizeText(value: string | null | undefined) {
+  return (value ?? "").trim();
+}
 
 export async function updateActivityAction(
   previousState: UpdateActivityState,
@@ -42,10 +57,22 @@ export async function updateActivityAction(
       organizerId: profile.id,
     },
     select: {
+      address: true,
+      city: true,
       id: true,
       endAt: true,
       startAt: true,
       status: true,
+      participants: {
+        where: {
+          status: {
+            in: notifiableParticipantStatuses,
+          },
+        },
+        select: {
+          userProfileId: true,
+        },
+      },
       _count: {
         select: {
           participants: {
@@ -155,31 +182,60 @@ export async function updateActivityAction(
     );
   }
 
+  const keyFieldsChanged =
+    hasDateChanged(editableActivity.startAt, startAt) ||
+    hasDateChanged(editableActivity.endAt, endAt) ||
+    normalizeText(editableActivity.city) !== normalizeText(result.data.city) ||
+    normalizeText(editableActivity.address) !==
+      normalizeText(result.data.address);
+
   try {
-    await prisma.activity.update({
-      where: {
-        id: activityId,
-      },
-      data: {
-        title: result.data.title,
-        description: formatStoredDescription(result.data),
-        itinerary: result.data.itinerary,
-        coverImageUrl: result.data.coverImageUrl,
-        type: result.data.type,
-        category: result.data.category,
-        city: result.data.city,
-        destination: result.data.destination,
-        address: result.data.address,
-        latitude: result.data.latitude ?? null,
-        longitude: result.data.longitude ?? null,
-        startAt,
-        endAt,
-        capacity: result.data.capacity,
-        minParticipants: result.data.minParticipants ?? null,
-        requiresApproval: result.data.requiresApproval,
-        priceType: result.data.priceType,
-        priceText: result.data.priceText,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.activity.update({
+        where: {
+          id: activityId,
+        },
+        data: {
+          title: result.data.title,
+          description: formatStoredDescription(result.data),
+          itinerary: result.data.itinerary,
+          coverImageUrl: result.data.coverImageUrl,
+          type: result.data.type,
+          category: result.data.category,
+          city: result.data.city,
+          destination: result.data.destination,
+          address: result.data.address,
+          latitude: result.data.latitude ?? null,
+          longitude: result.data.longitude ?? null,
+          startAt,
+          endAt,
+          capacity: result.data.capacity,
+          minParticipants: result.data.minParticipants ?? null,
+          requiresApproval: result.data.requiresApproval,
+          priceType: result.data.priceType,
+          priceText: result.data.priceText,
+        },
+      });
+
+      if (keyFieldsChanged) {
+        const recipientIds = Array.from(
+          new Set(
+            editableActivity.participants
+              .map((participant) => participant.userProfileId)
+              .filter((userProfileId) => userProfileId !== profile.id),
+          ),
+        );
+
+        await createNotifications(
+          tx,
+          recipientIds.map((recipientId) => ({
+            actorId: profile.id,
+            activityId,
+            recipientId,
+            type: "ACTIVITY_UPDATED",
+          })),
+        );
+      }
     });
   } catch (error) {
     console.error("Failed to update activity", error);
@@ -190,6 +246,11 @@ export async function updateActivityAction(
       "保存活动失败，请稍后重试。",
     );
   }
+
+  revalidatePath(withLocale(locale, `/activities/${activityId}`));
+  revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   redirect(withLocale(locale, `/activities/${activityId}`));
 }

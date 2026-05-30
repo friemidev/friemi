@@ -22,6 +22,7 @@ type ProfileOverviewPanelProps = {
   locale: string;
   createdLabel: string;
   joinedLabel: string;
+  showJoinedCount?: boolean;
 };
 
 type SocialPanelKey = "followers" | "following" | null;
@@ -119,9 +120,13 @@ export function ProfileOverviewPanel({
   locale,
   createdLabel,
   joinedLabel,
+  showJoinedCount = true,
 }: ProfileOverviewPanelProps) {
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
   const t = getProfileFollowCopy(locale);
+  const statsGridClass = showJoinedCount
+    ? "grid grid-cols-2 gap-3 sm:min-w-80 lg:grid-cols-4"
+    : "grid grid-cols-2 gap-3 sm:min-w-80 sm:grid-cols-3";
 
   const activeList = activePanel === "followers" ? followers : following;
   const activeTitle =
@@ -143,9 +148,11 @@ export function ProfileOverviewPanel({
 
   return (
     <div className="relative">
-      <div className="grid grid-cols-2 gap-3 sm:min-w-80 lg:grid-cols-4">
+      <div className={statsGridClass}>
         <StatCard label={createdLabel} value={createdCount} />
-        <StatCard label={joinedLabel} value={joinedCount} />
+        {showJoinedCount ? (
+          <StatCard label={joinedLabel} value={joinedCount} />
+        ) : null}
         <button
           className="rounded-lg bg-zinc-50 p-3 text-left transition hover:bg-zinc-100"
           onClick={() =>
@@ -206,7 +213,7 @@ export function ProfileOverviewPanel({
                 ))}
                 {hiddenCount > 0 ? (
                   <p className="pt-1 text-xs text-zinc-500">
-                    + {hiddenCount} more
+                    {t.showMoreUsers(hiddenCount)}
                   </p>
                 ) : null}
               </div>

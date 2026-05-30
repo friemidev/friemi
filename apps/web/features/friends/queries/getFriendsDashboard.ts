@@ -19,7 +19,7 @@ const visibleFriendActivityStatuses: ActivityStatus[] = [
 export type FriendUserViewModel = {
   id: string;
   nickname: string;
-  email: string | null;
+  friendCode: string | null;
   bio: string | null;
   avatarUrl: string | null;
 };
@@ -51,12 +51,18 @@ export type FriendsDashboardViewModel = {
 };
 
 function mapUser(user: FriendUserViewModel): FriendUserViewModel {
+  const hasPublicNickname = user.nickname.trim().length > 0;
+
   return {
     id: user.id,
-    nickname: user.nickname,
-    email: user.email,
+    nickname: hasPublicNickname
+      ? user.nickname
+      : user.friendCode
+        ? `NF ${user.friendCode}`
+        : "NF",
+    friendCode: user.friendCode,
     bio: user.bio,
-    avatarUrl: user.avatarUrl,
+    avatarUrl: hasPublicNickname ? user.avatarUrl : null,
   };
 }
 
@@ -152,6 +158,40 @@ async function getFriendActivitySummaries(friendIds: string[]) {
   return activitiesByFriendId;
 }
 
+export async function getPendingIncomingFriendRequests(
+  viewerProfileId: string,
+) {
+  const incomingRequests = await prisma.friendRequest.findMany({
+    where: {
+      receiverId: viewerProfileId,
+      status: "PENDING",
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    take: friendRequestListLimit,
+    select: {
+      id: true,
+      message: true,
+      createdAt: true,
+      requester: {
+        select: {
+          id: true,
+          nickname: true,
+          friendCode: true,
+          bio: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  return incomingRequests.map((request) => ({
+    id: request.id,
+    message: request.message,
+    createdAt: request.createdAt.toISOString(),
+    user: mapUser(request.requester),
+  }));
+}
+
 export async function getFriendsDashboard(
   viewerProfileId: string,
 ): Promise<FriendsDashboardViewModel> {
@@ -170,7 +210,7 @@ export async function getFriendsDashboard(
           select: {
             id: true,
             nickname: true,
-            email: true,
+            friendCode: true,
             bio: true,
             avatarUrl: true,
           },
@@ -179,35 +219,14 @@ export async function getFriendsDashboard(
           select: {
             id: true,
             nickname: true,
-            email: true,
+            friendCode: true,
             bio: true,
             avatarUrl: true,
           },
         },
       },
     }),
-    prisma.friendRequest.findMany({
-      where: {
-        receiverId: viewerProfileId,
-        status: "PENDING",
-      },
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      take: friendRequestListLimit,
-      select: {
-        id: true,
-        message: true,
-        createdAt: true,
-        requester: {
-          select: {
-            id: true,
-            nickname: true,
-            email: true,
-            bio: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    }),
+    getPendingIncomingFriendRequests(viewerProfileId),
     prisma.friendRequest.findMany({
       where: {
         requesterId: viewerProfileId,
@@ -223,7 +242,7 @@ export async function getFriendsDashboard(
           select: {
             id: true,
             nickname: true,
-            email: true,
+            friendCode: true,
             bio: true,
             avatarUrl: true,
           },
@@ -255,12 +274,7 @@ export async function getFriendsDashboard(
 
   return {
     friends: sortFriendsForDashboard(friends),
-    incomingRequests: incomingRequests.map((request) => ({
-      id: request.id,
-      message: request.message,
-      createdAt: request.createdAt.toISOString(),
-      user: mapUser(request.requester),
-    })),
+    incomingRequests,
     outgoingRequests: outgoingRequests.map((request) => ({
       id: request.id,
       message: request.message,

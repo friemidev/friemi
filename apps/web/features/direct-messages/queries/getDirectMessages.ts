@@ -26,6 +26,7 @@ const visibleFriendActivityStatuses: ActivityStatus[] = [
 const userSummarySelect = {
   id: true,
   nickname: true,
+  friendCode: true,
   avatarUrl: true,
   bio: true,
 } satisfies Prisma.UserProfileSelect;
@@ -99,6 +100,7 @@ type FriendshipRosterResult = Prisma.FriendshipGetPayload<{
 export type DirectMessageUserViewModel = {
   id: string;
   nickname: string;
+  friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
 };
@@ -147,8 +149,31 @@ export type DirectMessageThreadItemViewModel = {
 export type DirectConversationThreadViewModel =
   DirectConversationListItemViewModel & {
     canSend: boolean;
+    currentUser: DirectMessageUserViewModel;
     messages: DirectMessageThreadItemViewModel[];
   };
+
+function mapUserProfile(user: {
+  id: string;
+  nickname: string;
+  friendCode: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+}): DirectMessageUserViewModel {
+  const hasPublicNickname = user.nickname.trim().length > 0;
+
+  return {
+    id: user.id,
+    nickname: hasPublicNickname
+      ? user.nickname
+      : user.friendCode
+        ? `NF ${user.friendCode}`
+        : "NF",
+    friendCode: user.friendCode,
+    avatarUrl: hasPublicNickname ? user.avatarUrl : null,
+    bio: user.bio,
+  };
+}
 
 function mapPeer(
   conversation: Pick<
@@ -161,12 +186,7 @@ function mapPeer(
   const peer =
     peerId === conversation.userAId ? conversation.userA : conversation.userB;
 
-  return {
-    id: peer.id,
-    nickname: peer.nickname,
-    avatarUrl: peer.avatarUrl,
-    bio: peer.bio,
-  };
+  return mapUserProfile(peer);
 }
 
 function mapFriendshipPeer(
@@ -178,12 +198,7 @@ function mapFriendshipPeer(
       ? friendship.userB
       : friendship.userA;
 
-  return {
-    id: peer.id,
-    nickname: peer.nickname,
-    avatarUrl: peer.avatarUrl,
-    bio: peer.bio,
-  };
+  return mapUserProfile(peer);
 }
 
 function mapLastMessage(
@@ -223,9 +238,15 @@ function mapConversationThread(
   currentUserProfileId: string,
   canSend: boolean,
 ): DirectConversationThreadViewModel {
+  const currentUser =
+    currentUserProfileId === conversation.userAId
+      ? conversation.userA
+      : conversation.userB;
+
   return {
     ...mapConversationListItem(conversation, currentUserProfileId),
     canSend,
+    currentUser: mapUserProfile(currentUser),
     messages: [...conversation.messages].reverse().map((message) => ({
       id: message.id,
       senderId: message.senderId,

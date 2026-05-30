@@ -18,12 +18,13 @@ type DirectMessagesCopy = {
   noSelectedDescription: string;
   lastMessageEmpty: string;
   messagePlaceholder: string;
-  messageHint: string;
   readOnlyTitle: string;
   readOnlyDescription: string;
   send: string;
   sending: string;
+  addEmoji: string;
   backToMessages: string;
+  viewProfile: string;
   openFriends: string;
   openConversation: (name: string) => string;
   startConversation: string;
@@ -49,13 +50,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       listTitle: "Discussions",
       listDescription: "Vos conversations récentes.",
       friendListTitle: "Amis",
-      friendListDescription: "Touchez un ami pour discuter.",
+      friendListDescription: "Touchez un ami pour discuter",
       threadTitle: (name: string) => `Discussion avec ${name}`,
       emptyListTitle: "Aucune discussion",
       emptyListDescription: "Ajoutez un ami pour commencer à discuter.",
       emptyFriendListTitle: "Aucun ami pour le moment",
       emptyFriendListDescription:
-        "Ajoutez un ami pour commencer à discuter ici.",
+        "Ajoutez un ami pour commencer.",
       emptyThreadTitle: "Aucun message",
       emptyThreadDescription:
         "Envoyez un premier message court pour préparer la prochaine sortie.",
@@ -64,13 +65,14 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "Sélectionnez un ami pour lire ou envoyer un message.",
       lastMessageEmpty: "Aucun message pour le moment",
       messagePlaceholder: "Écrire un message...",
-      messageHint: "Texte uniquement, 1000 caractères maximum.",
       readOnlyTitle: "Conversation en lecture seule",
       readOnlyDescription:
         "L'historique reste visible, mais vous devez redevenir amis pour envoyer un nouveau message.",
       send: "Envoyer",
       sending: "Envoi...",
+      addEmoji: "Ajouter emoji",
       backToMessages: "Messages",
+      viewProfile: "Voir le profil",
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
       startConversation: "Message",
@@ -104,12 +106,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       listTitle: "Chats",
       listDescription: "Your recent conversations.",
       friendListTitle: "Friends",
-      friendListDescription: "Tap a friend to chat.",
+      friendListDescription: "Tap a friend to chat",
       threadTitle: (name: string) => `Chat with ${name}`,
       emptyListTitle: "No chats yet",
       emptyListDescription: "Add a friend to start chatting.",
       emptyFriendListTitle: "No friends yet",
-      emptyFriendListDescription: "Add a friend to start chatting here.",
+      emptyFriendListDescription: "Add a friend to start chatting.",
       emptyThreadTitle: "No messages yet",
       emptyThreadDescription:
         "Send a short first message to plan the next activity.",
@@ -117,13 +119,14 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       noSelectedDescription: "Select a friend to read or send messages.",
       lastMessageEmpty: "No messages yet",
       messagePlaceholder: "Write a message...",
-      messageHint: "Text only, up to 1000 characters.",
       readOnlyTitle: "Read-only chat",
       readOnlyDescription:
         "The history stays visible, but you need to be friends again before sending a new message.",
       send: "Send",
       sending: "Sending...",
+      addEmoji: "Add emoji",
       backToMessages: "Messages",
+      viewProfile: "View profile",
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
       startConversation: "Message",
@@ -155,24 +158,25 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     listTitle: "聊天列表",
     listDescription: "最近联系的好友。",
     friendListTitle: "好友列表",
-    friendListDescription: "点一位好友，开始聊天。",
+    friendListDescription: "点一位好友，开始聊天",
     threadTitle: (name: string) => `和 ${name} 的聊天`,
     emptyListTitle: "还没有聊天",
     emptyListDescription: "添加好友后，就可以在这里聊天。",
     emptyFriendListTitle: "暂无好友",
-    emptyFriendListDescription: "添加好友后，就可以直接聊天。",
+    emptyFriendListDescription: "添加好友后即可开始聊天。",
     emptyThreadTitle: "还没有消息",
     emptyThreadDescription: "发送第一条简短消息，约定活动前的信息。",
     noSelectedTitle: "选择一个聊天",
     noSelectedDescription: "选择一位好友，查看或发送消息。",
     lastMessageEmpty: "还没有消息",
     messagePlaceholder: "输入消息...",
-    messageHint: "仅支持纯文本，最多 1000 字。",
     readOnlyTitle: "当前聊天只读",
     readOnlyDescription: "历史消息仍可查看，但需要重新成为好友后才能继续发送。",
     send: "发送",
     sending: "发送中...",
+    addEmoji: "添加表情",
     backToMessages: "消息",
+    viewProfile: "查看主页",
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
     startConversation: "发消息",

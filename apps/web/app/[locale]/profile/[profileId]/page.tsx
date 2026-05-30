@@ -1,14 +1,18 @@
+import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
+  getPublicProfileDashboard,
+  getPublicProfileById,
   type ProfileDashboardViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
 
-type ProfilePageProps = {
+type PublicProfilePageProps = {
   params: Promise<{
     locale: string;
+    profileId: string;
   }>;
 };
 
@@ -27,13 +31,25 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   };
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale);
-  const dashboardResult = await getProfileDashboard(profile.id)
+export default async function PublicProfilePage({
+  params,
+}: PublicProfilePageProps) {
+  const { locale, profileId } = await params;
+  const [profile, viewerProfile] = await Promise.all([
+    getPublicProfileById(profileId),
+    getOptionalCurrentUserProfile(),
+  ]);
+
+  if (!profile) {
+    notFound();
+  }
+
+  const isSelf = viewerProfile?.id === profile.id;
+  const loadDashboard = isSelf ? getProfileDashboard : getPublicProfileDashboard;
+  const dashboardResult = await loadDashboard(profile.id)
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {
-      console.error("Failed to load profile dashboard", error);
+      console.error("Failed to load public profile dashboard", error);
 
       return {
         dashboard: getEmptyProfileDashboard(),
@@ -46,15 +62,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}
-        isSelf
+        isSelf={isSelf}
         locale={locale}
-        profile={{
-          id: profile.id,
-          nickname: profile.nickname,
-          friendCode: profile.friendCode,
-          avatarUrl: profile.avatarUrl,
-          bio: profile.bio,
-        }}
+        profile={profile}
       />
     </PageContainer>
   );

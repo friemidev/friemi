@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Children,
   useActionState,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -57,6 +59,18 @@ type FriendAction = (
 
 const initialState: FriendActionState = {};
 
+type FriendPreviewStatus = "AVAILABLE" | "SELF" | "FRIENDS" | "PENDING";
+type FriendPreviewUser = {
+  id: string;
+  nickname: string;
+  friendCode: string | null;
+  avatarUrl: string | null;
+};
+type FriendPreview = {
+  user: FriendPreviewUser | null;
+  status: FriendPreviewStatus | null;
+};
+
 export function FriendsDashboard({
   dashboard,
   currentUserFriendCode = null,
@@ -64,27 +78,11 @@ export function FriendsDashboard({
 }: FriendsDashboardProps) {
   const t = getFriendsCopy(locale);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
-  const hasIncomingRequests = dashboard.incomingRequests.length > 0;
   const hasOutgoingRequests = dashboard.outgoingRequests.length > 0;
+  const incomingRequestCount = dashboard.incomingRequests.length;
 
   return (
     <div className="space-y-5">
-      {hasIncomingRequests ? (
-        <RequestPanel
-          count={dashboard.incomingRequests.length}
-          title={t.incomingTitle}
-          icon="inbox"
-        >
-          {dashboard.incomingRequests.map((request) => (
-            <IncomingRequestCard
-              key={request.id}
-              locale={locale}
-              request={request}
-            />
-          ))}
-        </RequestPanel>
-      ) : null}
-
       <div
         className={cn(
           "grid gap-4",
@@ -109,12 +107,13 @@ export function FriendsDashboard({
                 </p>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/85 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                  className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/85 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                   aria-label={t.addTitle}
                   title={t.addTitle}
                   onClick={() => setAddFriendOpen(true)}
                 >
                   <UserPlus className="h-4 w-4" />
+                  <RequestCountBadge count={incomingRequestCount} />
                 </button>
               </div>
             </div>
@@ -160,6 +159,7 @@ export function FriendsDashboard({
       {addFriendOpen ? (
         <AddFriendDialog
           currentUserFriendCode={currentUserFriendCode}
+          incomingRequests={dashboard.incomingRequests}
           locale={locale}
           onClose={() => setAddFriendOpen(false)}
         />
@@ -183,11 +183,81 @@ function AddFriendForm({
   returnTo?: "friends" | "messages";
   showHeader?: boolean;
 }) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useActionState(
     sendFriendRequestAction,
     initialState,
   );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [preview, setPreview] = useState<FriendPreview>({
+    user: null,
+    status: null,
+  });
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [showSentSuccess, setShowSentSuccess] = useState(false);
   const t = getFriendsCopy(locale);
+  const isFriendCodeSearch = /^\d{6}$/.test(searchTerm.trim());
+  const submitDisabled =
+    isFriendCodeSearch &&
+    (previewLoading || !preview.user || preview.status !== "AVAILABLE");
+
+  useEffect(() => {
+    if (state.ok) {
+      formRef.current?.reset();
+      setSearchTerm("");
+      setPreview({ user: null, status: null });
+      setShowSentSuccess(true);
+      router.refresh();
+    }
+  }, [router, state.ok]);
+
+  useEffect(() => {
+    const query = searchTerm.trim();
+
+    if (!/^\d{6}$/.test(query)) {
+      setPreview({ user: null, status: null });
+      setPreviewLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setPreviewLoading(true);
+      fetch(
+        `/api/friends/preview?${new URLSearchParams({
+          q: query,
+          locale,
+        }).toString()}`,
+        {
+          signal: controller.signal,
+        },
+      )
+        .then((response) => response.json())
+        .then((data: FriendPreview) => {
+          setPreview({
+            user: data.user,
+            status: data.status,
+          });
+        })
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            console.error("Failed to preview friend", error);
+            setPreview({ user: null, status: null });
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setPreviewLoading(false);
+          }
+        });
+    }, 220);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [locale, searchTerm]);
 
   return (
     <section
@@ -196,6 +266,10 @@ function AddFriendForm({
         className,
       )}
     >
+      {currentUserFriendCode && !showHeader ? (
+        <OwnFriendCodeBlock friendCode={currentUserFriendCode} locale={locale} />
+      ) : null}
+
       {showHeader ? (
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay/10 text-clay">
@@ -210,11 +284,12 @@ function AddFriendForm({
         <p className="text-sm leading-6 text-zinc-600">{t.addDescription}</p>
       )}
 
-      {currentUserFriendCode ? (
+      {currentUserFriendCode && showHeader ? (
         <OwnFriendCodeBlock friendCode={currentUserFriendCode} locale={locale} />
       ) : null}
 
       <form
+        ref={formRef}
         action={formAction}
         className="mt-4 grid gap-4"
         noValidate
@@ -231,11 +306,22 @@ function AddFriendForm({
             autoComplete="off"
             autoFocus={autoFocusSearch}
             className="bg-white"
+            value={searchTerm}
+            onChange={(event) => {
+              setSearchTerm(event.currentTarget.value);
+              setShowSentSuccess(false);
+            }}
           />
           <span className="text-xs leading-5 text-zinc-500">
             {t.searchHint}
           </span>
         </label>
+        <FriendPreviewCard
+          isSearchingFriendCode={isFriendCodeSearch}
+          loading={previewLoading}
+          preview={preview}
+          locale={locale}
+        />
         <label className="grid gap-2">
           <span className="text-sm font-medium text-zinc-700">
             {t.messageLabel}
@@ -248,10 +334,19 @@ function AddFriendForm({
           />
         </label>
 
+        {showSentSuccess ? (
+          <p
+            className="rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+            aria-live="polite"
+          >
+            {t.sentSuccess}
+          </p>
+        ) : null}
         {state.formError ? <FormError message={state.formError} /> : null}
 
         <SubmitButton
           className="w-full"
+          disabled={submitDisabled}
           icon={Send}
           pendingLabel={t.sending}
         >
@@ -262,13 +357,99 @@ function AddFriendForm({
   );
 }
 
+function FriendPreviewCard({
+  isSearchingFriendCode,
+  loading,
+  locale,
+  preview,
+}: {
+  isSearchingFriendCode: boolean;
+  loading: boolean;
+  locale: string;
+  preview: FriendPreview;
+}) {
+  const t = getFriendsCopy(locale);
+
+  if (!isSearchingFriendCode) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <p className="rounded-lg border border-black/10 bg-white/70 px-3 py-2 text-sm text-zinc-500">
+        {t.previewLoading}
+      </p>
+    );
+  }
+
+  if (!preview.user) {
+    return (
+      <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm text-zinc-500">
+        {t.previewNotFound}
+      </p>
+    );
+  }
+
+  const descriptionByStatus: Record<FriendPreviewStatus, string> = {
+    AVAILABLE: t.previewAvailable,
+    SELF: t.previewSelf,
+    FRIENDS: t.previewFriends,
+    PENDING: t.previewPending,
+  };
+
+  return (
+    <div className="rounded-lg border border-black/10 bg-white/75 p-3">
+      <p className="text-xs font-medium text-zinc-500">{t.previewTitle}</p>
+      <div className="mt-3 flex min-w-0 items-center gap-3">
+        <PreviewAvatar user={preview.user} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">
+            {preview.user.nickname}
+          </p>
+          {preview.user.friendCode ? (
+            <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+              {preview.user.friendCode}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {preview.status ? (
+        <p className="mt-2 text-xs leading-5 text-zinc-500">
+          {descriptionByStatus[preview.status]}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function PreviewAvatar({ user }: { user: FriendPreviewUser }) {
+  const initial = user.nickname.trim().slice(0, 1).toUpperCase() || "N";
+
+  return (
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-moss text-sm font-semibold text-white">
+      {user.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user.avatarUrl}
+          alt={user.nickname}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        initial
+      )}
+    </span>
+  );
+}
+
 export function AddFriendDialog({
   currentUserFriendCode = null,
+  incomingRequests = [],
   locale,
   onClose,
   returnTo = "friends",
 }: {
   currentUserFriendCode?: string | null;
+  incomingRequests?: FriendRequestViewModel[];
   locale: string;
   onClose: () => void;
   returnTo?: "friends" | "messages";
@@ -323,16 +504,51 @@ export function AddFriendDialog({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:max-h-[calc(100dvh-9rem)] sm:p-5">
           <AddFriendForm
-            autoFocusSearch
+            autoFocusSearch={incomingRequests.length === 0}
             className="border-0 bg-transparent p-0 shadow-none"
             currentUserFriendCode={currentUserFriendCode}
             locale={locale}
             returnTo={returnTo}
             showHeader={false}
           />
+          {incomingRequests.length > 0 ? (
+            <section className="mt-6 grid gap-3 border-t border-black/10 pt-5">
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <h3 className="truncate text-base font-semibold text-ink">
+                  {t.incomingTitle}
+                </h3>
+                <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-clay px-2 text-xs font-semibold text-white">
+                  {incomingRequests.length}
+                </span>
+              </div>
+              {incomingRequests.map((request) => (
+                <IncomingRequestCard
+                  key={request.id}
+                  locale={locale}
+                  request={request}
+                  returnTo={returnTo}
+                />
+              ))}
+            </section>
+          ) : null}
         </div>
       </div>
     </div>
+  );
+}
+
+export function RequestCountBadge({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }
 
@@ -564,9 +780,11 @@ function FriendActivitySummary({
 function IncomingRequestCard({
   locale,
   request,
+  returnTo = "friends",
 }: {
   locale: string;
   request: FriendRequestViewModel;
+  returnTo?: "friends" | "messages";
 }) {
   const t = getFriendsCopy(locale);
 
@@ -580,6 +798,7 @@ function IncomingRequestCard({
           icon={Check}
           locale={locale}
           requestId={request.id}
+          returnTo={returnTo}
           variant="success"
         >
           {t.accept}
@@ -589,6 +808,7 @@ function IncomingRequestCard({
           icon={X}
           locale={locale}
           requestId={request.id}
+          returnTo={returnTo}
           variant="secondary"
         >
           {t.reject}
@@ -632,6 +852,7 @@ function SmallActionForm({
   icon,
   locale,
   requestId,
+  returnTo = "friends",
   variant = "primary",
 }: {
   action: FriendAction;
@@ -639,6 +860,7 @@ function SmallActionForm({
   icon: LucideIcon;
   locale: string;
   requestId: string;
+  returnTo?: "friends" | "messages";
   variant?: "primary" | "secondary" | "success";
 }) {
   const [state, formAction] = useActionState(action, initialState);
@@ -648,6 +870,7 @@ function SmallActionForm({
     <form action={formAction} className="grid gap-2">
       <input name="locale" type="hidden" value={locale} />
       <input name="requestId" type="hidden" value={requestId} />
+      <input name="returnTo" type="hidden" value={returnTo} />
       {state.formError ? <FormError message={state.formError} /> : null}
       <SubmitButton icon={icon} pendingLabel={t.acting} variant={variant}>
         {children}
@@ -659,12 +882,14 @@ function SmallActionForm({
 function SubmitButton({
   children,
   className,
+  disabled = false,
   icon: Icon,
   pendingLabel,
   variant = "primary",
 }: {
   children: ReactNode;
   className?: string;
+  disabled?: boolean;
   icon: LucideIcon;
   pendingLabel: string;
   variant?: "primary" | "secondary" | "success";
@@ -675,7 +900,7 @@ function SubmitButton({
     <Button
       type="submit"
       variant={variant}
-      disabled={pending}
+      disabled={pending || disabled}
       className={cn("gap-2 whitespace-nowrap", className)}
     >
       <Icon className="h-4 w-4" />
@@ -702,8 +927,10 @@ function UserSummary({
         <h3 className="truncate text-sm font-semibold text-ink">
           {user.nickname}
         </h3>
-        {user.email ? (
-          <p className="mt-0.5 truncate text-xs text-zinc-500">{user.email}</p>
+        {user.friendCode ? (
+          <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+            {t.friendCodeLabel} {user.friendCode}
+          </p>
         ) : null}
         <p
           className={cn(

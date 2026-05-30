@@ -7,9 +7,22 @@ export type PendingParticipantViewModel = {
   user: {
     id: string;
     nickname: string;
-    email: string | null;
+    friendCode: string | null;
   };
 };
+
+function getPublicParticipantName(user: {
+  friendCode: string | null;
+  nickname: string;
+}) {
+  const nickname = user.nickname.trim();
+
+  if (nickname) {
+    return nickname;
+  }
+
+  return user.friendCode ? `NF ${user.friendCode}` : "NF";
+}
 
 export async function getPendingParticipants(
   activityId: string,
@@ -43,7 +56,7 @@ export async function getPendingParticipants(
         select: {
           id: true,
           nickname: true,
-          email: true,
+          friendCode: true,
         },
       },
     },
@@ -53,6 +66,10 @@ export async function getPendingParticipants(
     id: participant.id,
     message: participant.message,
     joinedAt: participant.joinedAt.toISOString(),
-    user: participant.userProfile,
+    user: {
+      id: participant.userProfile.id,
+      nickname: getPublicParticipantName(participant.userProfile),
+      friendCode: participant.userProfile.friendCode,
+    },
   }));
 }

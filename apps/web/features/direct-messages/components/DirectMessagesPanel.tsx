@@ -4,6 +4,8 @@ import {
   CalendarDays,
   ChevronDown,
   MessageCircle,
+  MoreVertical,
+  UserRound,
   UsersRound,
 } from "lucide-react";
 import {
@@ -23,6 +25,7 @@ import type {
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
 import { MessageComposer } from "./MessageComposer";
+import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
 
 type ConversationListPanelProps = {
@@ -62,7 +65,7 @@ export function ConversationListPanel({
 
       {conversations.length === 0 ? (
         <div className="grid gap-4 p-4">
-          <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4">
+          <div className="py-3">
             <h3 className="text-sm font-semibold text-ink">
               {t.emptyListTitle}
             </h3>
@@ -265,7 +268,7 @@ export function NoConversationSelected({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <section className="hidden min-h-[28rem] items-center justify-center rounded-lg border border-dashed border-black/10 bg-white/45 p-8 lg:flex">
+    <section className="hidden h-[calc(100dvh-6.5rem)] items-center justify-center p-8 lg:flex">
       <div className="max-w-md text-center">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10">
           <MessageCircle className="h-6 w-6" />
@@ -294,33 +297,43 @@ export function MessageThread({
     conversation.messages[conversation.messages.length - 1]?.id;
 
   return (
-    <section className="overflow-hidden rounded-lg border border-black/10 bg-white/82 shadow-sm">
-      <div className="flex min-w-0 items-center gap-3 border-b border-black/10 bg-white/80 p-4">
-        <Link
-          href={withLocale(locale, "/messages")}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 lg:hidden"
-          aria-label={t.backToMessages}
-          title={t.backToMessages}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <MessageAvatar
-          avatarUrl={conversation.peer.avatarUrl}
-          name={conversation.peer.nickname}
-        />
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold text-ink">
-            {t.threadTitle(conversation.peer.nickname)}
-          </h1>
-          {conversation.peer.bio ? (
-            <p className="mt-1 truncate text-xs text-zinc-500">
-              {conversation.peer.bio}
-            </p>
-          ) : null}
+    <section className="-mx-4 flex min-h-[calc(100dvh-8.25rem)] flex-col overflow-hidden bg-white/82 sm:mx-0 sm:rounded-lg sm:border sm:border-black/10 sm:shadow-sm lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+      <MessageThreadAutoRefresh conversationId={conversation.id} />
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-black/10 bg-white/80 p-4">
+        <div className="flex h-9 w-9 items-center justify-start">
+          <Link
+            href={withLocale(locale, "/messages")}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 lg:hidden"
+            aria-label={t.backToMessages}
+            title={t.backToMessages}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
         </div>
+        <h1 className="min-w-0 truncate text-center text-lg font-semibold text-ink">
+          {conversation.peer.nickname}
+        </h1>
+        <details className="group relative justify-self-end">
+          <summary
+            aria-label={t.viewProfile}
+            title={t.viewProfile}
+            className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden"
+          >
+            <MoreVertical className="h-5 w-5" />
+          </summary>
+          <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl">
+            <Link
+              className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:bg-zinc-50"
+              href={withLocale(locale, `/profile/${conversation.peer.id}`)}
+            >
+              <UserRound className="h-4 w-4 shrink-0" />
+              <span className="truncate">{t.viewProfile}</span>
+            </Link>
+          </div>
+        </details>
       </div>
 
-      <div className="max-h-[calc(100vh-17rem)] min-h-[22rem] overflow-y-auto bg-zinc-50/60 px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-50/60 px-3 py-4 sm:px-5">
         {hasMessages ? (
           <div className="grid gap-3">
             {conversation.messages.map((message) => (
@@ -330,14 +343,16 @@ export function MessageThread({
                 createdAt={message.createdAt}
                 isMine={message.isMine}
                 locale={locale}
-                peer={conversation.peer}
+                sender={
+                  message.isMine ? conversation.currentUser : conversation.peer
+                }
               />
             ))}
             <MessageThreadScrollAnchor lastMessageId={lastMessageId} />
           </div>
         ) : (
           <div className="flex min-h-[18rem] items-center justify-center">
-            <div className="max-w-sm rounded-lg border border-dashed border-zinc-300 bg-white p-5 text-center">
+            <div className="max-w-sm p-5 text-center">
               <h2 className="text-base font-semibold text-ink">
                 {t.emptyThreadTitle}
               </h2>
@@ -364,7 +379,7 @@ function ReadOnlyMessageComposer({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <div className="sticky bottom-[4.75rem] z-20 border-t border-black/10 bg-white/95 p-3 backdrop-blur md:bottom-0 md:rounded-b-lg">
+    <div className="shrink-0 border-t border-black/10 bg-white/95 p-3 backdrop-blur md:rounded-b-lg">
       <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
         <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -380,42 +395,61 @@ function MessageBubble({
   createdAt,
   isMine,
   locale,
-  peer,
+  sender,
 }: {
   body: string;
   createdAt: string;
   isMine: boolean;
   locale: string;
-  peer: DirectMessageUserViewModel;
+  sender: DirectMessageUserViewModel;
 }) {
   return (
-    <div className={cn("flex gap-2", isMine ? "justify-end" : "justify-start")}>
-      {!isMine ? (
-        <MessageAvatar
-          avatarUrl={peer.avatarUrl}
-          name={peer.nickname}
-          size="sm"
-        />
-      ) : null}
+    <div
+      className={cn(
+        "flex items-start gap-2",
+        isMine ? "justify-end" : "justify-start",
+      )}
+    >
+      {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
       <div
         className={cn(
-          "max-w-[82%] rounded-lg px-3 py-2 text-sm leading-6 shadow-sm sm:max-w-[68%]",
+          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm sm:max-w-[64%]",
           isMine
-            ? "bg-ink text-white"
-            : "bg-white text-ink ring-1 ring-black/10",
+            ? "rounded-tr-md bg-moss/12 text-ink ring-1 ring-moss/20"
+            : "rounded-tl-md bg-white text-ink ring-1 ring-black/10",
         )}
       >
         <p className="whitespace-pre-wrap break-words">{body}</p>
         <p
           className={cn(
             "mt-1 text-[11px]",
-            isMine ? "text-white/60" : "text-zinc-400",
+            isMine ? "text-moss/75" : "text-zinc-400",
           )}
         >
           {formatActivityDate(createdAt, locale)}
         </p>
       </div>
+      {isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
     </div>
+  );
+}
+
+function MessageBubbleAvatar({
+  locale,
+  user,
+}: {
+  locale: string;
+  user: DirectMessageUserViewModel;
+}) {
+  return (
+    <Link
+      aria-label={user.nickname}
+      className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+      href={withLocale(locale, `/profile/${user.id}`)}
+      title={user.nickname}
+    >
+      <MessageAvatar avatarUrl={user.avatarUrl} name={user.nickname} size="sm" />
+    </Link>
   );
 }
 

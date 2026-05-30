@@ -261,14 +261,18 @@ const copy = {
       emptyTitle: "暂无通知",
       emptyDescription: "报名、审核和活动变更提醒会显示在这里。",
       openActivity: "查看活动",
+      openMessages: "去处理",
+      openReview: "去审核",
       fallbackActivity: "相关活动",
       read: "已读",
       unread: "未读",
       types: {
         PARTICIPATION_PENDING: {
           title: "报名已提交",
-          body: (activityTitle: string) =>
-            `你已提交「${activityTitle}」的报名申请，等待发起人审核。`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName}申请参加「${activityTitle}」，等待你审核。`
+              : `你已提交「${activityTitle}」的报名申请，等待发起人审核。`,
         },
         PARTICIPATION_CONFIRMED: {
           title: "报名成功",
@@ -288,6 +292,16 @@ const copy = {
           title: "活动已取消",
           body: (activityTitle: string, actorName = "发起人") =>
             `${actorName}已取消「${activityTitle}」。`,
+        },
+        ACTIVITY_UPDATED: {
+          title: "活动信息已更新",
+          body: (activityTitle: string, actorName = "发起人") =>
+            `${actorName}更新了「${activityTitle}」的时间或地点。`,
+        },
+        FRIEND_REQUEST: {
+          title: "新的好友申请",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}想添加你为好友。`,
         },
       },
     },
@@ -344,23 +358,24 @@ const copy = {
       friendCodeCopied: "已复制",
       nicknameLabel: "昵称",
       nicknamePlaceholder: "输入你的昵称",
+      nicknameSetupTitle: "先设置昵称",
+      nicknameSetupDescription:
+        "别人只会看到这个昵称和好友号，不会显示你的 Google 姓名或邮箱。",
       saveNickname: "保存昵称",
       savingNickname: "保存中...",
       nicknameError: "昵称不能为空，最多 24 个字。",
-      createdCount: "我发起的活动",
-      participationCount: "我参与的活动",
+      createdCount: "发起活动",
+      participationCount: "参加活动",
       errorTitle: "个人空间加载失败",
       errorDescription: "部分内容暂时无法加载，请稍后再试。",
-      createdTitle: "我发起的活动",
-      createdDescription: "你发起的活动都会显示在这里。",
-      createdEmptyTitle: "还没有发起活动",
-      createdEmptyDescription:
-        "发起第一场活动后，它会显示在这里。",
-      participationTitle: "我参与的活动",
-      participationDescription: "你报名过的活动都会显示在这里。",
-      participationEmptyTitle: "还没有报名记录",
-      participationEmptyDescription:
-        "报名参加活动后，你可以在这里查看报名状态和活动详情。",
+      createdTitle: "发起的活动",
+      createdDescription: "",
+      createdEmptyTitle: "暂无发起活动",
+      createdEmptyDescription: "有活动后会显示在这里。",
+      participationTitle: "参加的活动",
+      participationDescription: "",
+      participationEmptyTitle: "暂无参加记录",
+      participationEmptyDescription: "参加活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
         `当前显示最近 ${limit} 个发起活动，另有 ${count} 个更早的活动暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -793,14 +808,18 @@ const copy = {
       emptyDescription:
         "Join, review, and activity change alerts will appear here.",
       openActivity: "Open activity",
+      openMessages: "Review",
+      openReview: "Review",
       fallbackActivity: "Related activity",
       read: "Read",
       unread: "Unread",
       types: {
         PARTICIPATION_PENDING: {
           title: "Request submitted",
-          body: (activityTitle: string) =>
-            `Your request for "${activityTitle}" was submitted and is waiting for organizer review.`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} asked to join "${activityTitle}".`
+              : `Your request for "${activityTitle}" was submitted and is waiting for organizer review.`,
         },
         PARTICIPATION_CONFIRMED: {
           title: "Join confirmed",
@@ -821,6 +840,16 @@ const copy = {
           title: "Activity cancelled",
           body: (activityTitle: string, actorName = "The organizer") =>
             `${actorName} cancelled "${activityTitle}".`,
+        },
+        ACTIVITY_UPDATED: {
+          title: "Activity updated",
+          body: (activityTitle: string, actorName = "The organizer") =>
+            `${actorName} updated the time or location for "${activityTitle}".`,
+        },
+        FRIEND_REQUEST: {
+          title: "New friend request",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} wants to add you as a friend.`,
         },
       },
     },
@@ -884,6 +913,9 @@ const copy = {
       friendCodeCopied: "Copied",
       nicknameLabel: "Nickname",
       nicknamePlaceholder: "Enter your nickname",
+      nicknameSetupTitle: "Set your nickname",
+      nicknameSetupDescription:
+        "Others will see this nickname and your friend code, not your Google name or email.",
       saveNickname: "Save nickname",
       savingNickname: "Saving...",
       nicknameError: "Nickname is required, up to 24 characters.",
@@ -891,16 +923,14 @@ const copy = {
       participationCount: "Joined",
       errorTitle: "Profile failed to load",
       errorDescription: "Some profile content is unavailable. Try again later.",
-      createdTitle: "Created by me",
-      createdDescription: "Activities you create will appear here.",
+      createdTitle: "Created activities",
+      createdDescription: "",
       createdEmptyTitle: "No created activities",
-      createdEmptyDescription: "Your first created activity will appear here.",
-      participationTitle: "Activities I joined",
-      participationDescription:
-        "Track pending, confirmed, and cancelled participation records.",
+      createdEmptyDescription: "Activities will appear here.",
+      participationTitle: "Joined activities",
+      participationDescription: "",
       participationEmptyTitle: "No participation records",
-      participationEmptyDescription:
-        "Activities you join will appear here with their status.",
+      participationEmptyDescription: "Joined activities will appear here.",
       hiddenCreated: (limit: number, count: number) =>
         `Showing the latest ${limit} created activities. ${count} earlier activities are not shown yet.`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -1358,14 +1388,18 @@ const copy = {
       emptyDescription:
         "Les alertes d'inscription, validation et changement d'activité apparaîtront ici.",
       openActivity: "Voir l'activité",
+      openMessages: "Traiter",
+      openReview: "Valider",
       fallbackActivity: "Activité liée",
       read: "Lu",
       unread: "Non lu",
       types: {
         PARTICIPATION_PENDING: {
           title: "Demande envoyée",
-          body: (activityTitle: string) =>
-            `Votre demande pour « ${activityTitle} » a été envoyée et attend la validation de l'organisateur.`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} souhaite rejoindre « ${activityTitle} ».`
+              : `Votre demande pour « ${activityTitle} » a été envoyée et attend la validation de l'organisateur.`,
         },
         PARTICIPATION_CONFIRMED: {
           title: "Inscription confirmée",
@@ -1386,6 +1420,16 @@ const copy = {
           title: "Activité annulée",
           body: (activityTitle: string, actorName = "L'organisateur") =>
             `${actorName} a annulé « ${activityTitle} ».`,
+        },
+        ACTIVITY_UPDATED: {
+          title: "Activité mise à jour",
+          body: (activityTitle: string, actorName = "L'organisateur") =>
+            `${actorName} a modifié l'heure ou le lieu de « ${activityTitle} ».`,
+        },
+        FRIEND_REQUEST: {
+          title: "Nouvelle demande d'ami",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} souhaite vous ajouter en ami.`,
         },
       },
     },
@@ -1454,6 +1498,9 @@ const copy = {
       friendCodeCopied: "Copié",
       nicknameLabel: "Pseudo",
       nicknamePlaceholder: "Saisissez votre pseudo",
+      nicknameSetupTitle: "Choisissez un pseudo",
+      nicknameSetupDescription:
+        "Les autres verront ce pseudo et votre code ami, pas votre nom Google ni votre e-mail.",
       saveNickname: "Enregistrer",
       savingNickname: "Enregistrement...",
       nicknameError: "Le pseudo est requis, 24 caractères maximum.",
@@ -1463,15 +1510,13 @@ const copy = {
       errorDescription:
         "Certaines informations sont indisponibles. Réessayez plus tard.",
       createdTitle: "Activités créées",
-      createdDescription: "Les activités que vous créez apparaissent ici.",
+      createdDescription: "",
       createdEmptyTitle: "Aucune activité créée",
-      createdEmptyDescription: "Votre première activité créée apparaîtra ici.",
+      createdEmptyDescription: "Les activités apparaîtront ici.",
       participationTitle: "Activités rejointes",
-      participationDescription:
-        "Les activités que vous rejoignez apparaissent ici.",
+      participationDescription: "",
       participationEmptyTitle: "Aucune participation",
-      participationEmptyDescription:
-        "Les activités rejointes apparaîtront ici avec leur statut.",
+      participationEmptyDescription: "Les activités rejointes apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>

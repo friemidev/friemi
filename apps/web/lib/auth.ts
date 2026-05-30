@@ -44,7 +44,7 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress ??
     null;
-  const nickname = user.fullName || user.username || email || "未命名用户";
+  const nickname = user.username?.trim() ?? "";
 
   return {
     email,
@@ -57,6 +57,49 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
     clerkDeletedAt: null,
     syncedAt: new Date(),
   };
+}
+
+function getClerkPrivateNames(user: ClerkCurrentUser) {
+  const email =
+    user.primaryEmailAddress?.emailAddress ??
+    user.emailAddresses[0]?.emailAddress ??
+    null;
+  const fullName = user.fullName;
+  const firstLastName = [user.firstName, user.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  return [email, fullName, firstLastName]
+    .map((value) => value?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value));
+}
+
+async function clearPrivateNicknameIfNeeded<
+  TProfile extends { id: string; nickname: string },
+>(profile: TProfile, user: ClerkCurrentUser) {
+  const nickname = profile.nickname.trim();
+
+  if (
+    nickname &&
+    !user.username &&
+    getClerkPrivateNames(user).includes(nickname.toLowerCase())
+  ) {
+    await prisma.userProfile.update({
+      where: {
+        id: profile.id,
+      },
+      data: {
+        nickname: "",
+      },
+    });
+
+    return {
+      ...profile,
+      nickname: "",
+    };
+  }
+
+  return profile;
 }
 
 function upsertLocalUserProfile(clerkUserId: string) {
@@ -99,7 +142,9 @@ function upsertClerkUserProfile(user: ClerkCurrentUser) {
       clerkDeletedAt: profileFields.clerkDeletedAt,
       syncedAt: profileFields.syncedAt,
     },
-  }).then(ensureUserProfileFriendCode);
+  })
+    .then((profile) => clearPrivateNicknameIfNeeded(profile, user))
+    .then(ensureUserProfileFriendCode);
 }
 
 export async function ensureCurrentUserProfile(locale = "zh-CN") {

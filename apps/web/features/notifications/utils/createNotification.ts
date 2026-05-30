@@ -7,34 +7,56 @@ type CreateNotificationInput = {
   type: NotificationType;
 };
 
-export function createNotification(
+function getNotificationIdentity(input: CreateNotificationInput) {
+  return {
+    actorId: input.actorId ?? null,
+    activityId: input.activityId ?? null,
+    recipientId: input.recipientId,
+    type: input.type,
+  };
+}
+
+export async function createNotification(
   tx: Prisma.TransactionClient,
   input: CreateNotificationInput,
 ) {
-  return tx.notification.create({
-    data: {
-      actorId: input.actorId ?? null,
-      activityId: input.activityId ?? null,
-      recipientId: input.recipientId,
-      type: input.type,
+  const identity = getNotificationIdentity(input);
+  const existingUnread = await tx.notification.findFirst({
+    where: {
+      ...identity,
+      readAt: null,
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingUnread) {
+    return null;
+  }
+
+  return tx.notification.create({
+    data: identity,
   });
 }
 
-export function createNotifications(
+export async function createNotifications(
   tx: Prisma.TransactionClient,
   inputs: CreateNotificationInput[],
 ) {
   if (inputs.length === 0) {
-    return Promise.resolve({ count: 0 });
+    return { count: 0 };
   }
 
-  return tx.notification.createMany({
-    data: inputs.map((input) => ({
-      actorId: input.actorId ?? null,
-      activityId: input.activityId ?? null,
-      recipientId: input.recipientId,
-      type: input.type,
-    })),
-  });
+  let count = 0;
+
+  for (const input of inputs) {
+    const notification = await createNotification(tx, input);
+
+    if (notification) {
+      count += 1;
+    }
+  }
+
+  return { count };
 }

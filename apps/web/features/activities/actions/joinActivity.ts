@@ -219,6 +219,15 @@ export async function joinActivityAction(
               : "PARTICIPATION_CONFIRMED",
         });
 
+        if (nextStatus === "PENDING") {
+          await createNotification(tx, {
+            actorId: profile.id,
+            activityId: activity.id,
+            recipientId: activity.organizerId,
+            type: "PARTICIPATION_PENDING",
+          });
+        }
+
         return { ok: true };
       },
       {

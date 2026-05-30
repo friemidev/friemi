@@ -5,12 +5,14 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getFriendsCopy } from "../copy";
 import { getFriendshipPair, getFriendshipPairKey } from "../utils/friendship";
 
 export type FriendActionState = {
+  ok?: boolean;
   formError?: string;
 };
 
@@ -24,6 +26,7 @@ const sendFriendRequestSchema = z.object({
 const requestActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   requestId: z.string().min(1),
+  returnTo: z.enum(["friends", "messages"]).default("friends"),
 });
 
 const friendshipActionSchema = z.object({
@@ -132,12 +135,6 @@ export async function sendFriendRequestAction(
         status: "ACTIVE",
         OR: [
           {
-            email: {
-              equals: searchTerm,
-              mode: "insensitive",
-            },
-          },
-          {
             nickname: {
               equals: searchTerm,
               mode: "insensitive",
@@ -188,13 +185,21 @@ export async function sendFriendRequestAction(
       };
     }
 
-    await prisma.friendRequest.create({
-      data: {
-        requesterId: viewerProfile.id,
-        receiverId: targetUser.id,
-        pendingPairKey: getFriendshipPairKey(viewerProfile.id, targetUser.id),
-        message: message || null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.friendRequest.create({
+        data: {
+          requesterId: viewerProfile.id,
+          receiverId: targetUser.id,
+          pendingPairKey: getFriendshipPairKey(viewerProfile.id, targetUser.id),
+          message: message || null,
+        },
+      });
+
+      await createNotification(tx, {
+        actorId: viewerProfile.id,
+        recipientId: targetUser.id,
+        type: "FRIEND_REQUEST",
+      });
     });
   } catch (error) {
     console.error("Failed to send friend request", error);
@@ -208,7 +213,12 @@ export async function sendFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectAfterFriendAction(locale, returnTo);
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+
+  return {
+    ok: true,
+  };
 }
 
 export async function acceptFriendRequestAction(
@@ -220,6 +230,7 @@ export async function acceptFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    returnTo: getString(formData, "returnTo") || "friends",
   });
 
   if (!result.success) {
@@ -228,7 +239,7 @@ export async function acceptFriendRequestAction(
     };
   }
 
-  const { locale, requestId } = result.data;
+  const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
 
@@ -275,6 +286,17 @@ export async function acceptFriendRequestAction(
         create: pair,
         update: {},
       }),
+      prisma.notification.updateMany({
+        where: {
+          recipientId: viewerProfile.id,
+          actorId: request.requesterId,
+          type: "FRIEND_REQUEST",
+          readAt: null,
+        },
+        data: {
+          readAt: new Date(),
+        },
+      }),
     ]);
   } catch (error) {
     console.error("Failed to accept friend request", error);
@@ -284,7 +306,9 @@ export async function acceptFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectAfterFriendAction(locale);
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+  redirectAfterFriendAction(locale, returnTo);
 }
 
 export async function rejectFriendRequestAction(
@@ -296,6 +320,7 @@ export async function rejectFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    returnTo: getString(formData, "returnTo") || "friends",
   });
 
   if (!result.success) {
@@ -304,11 +329,28 @@ export async function rejectFriendRequestAction(
     };
   }
 
-  const { locale, requestId } = result.data;
+  const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
 
   try {
+    const request = await prisma.friendRequest.findFirst({
+      where: {
+        id: requestId,
+        receiverId: viewerProfile.id,
+        status: "PENDING",
+      },
+      select: {
+        requesterId: true,
+      },
+    });
+
+    if (!request) {
+      return {
+        formError: t.requestUnavailable,
+      };
+    }
+
     const updatedRequest = await prisma.friendRequest.updateMany({
       where: {
         id: requestId,
@@ -327,6 +369,18 @@ export async function rejectFriendRequestAction(
         formError: t.requestUnavailable,
       };
     }
+
+    await prisma.notification.updateMany({
+      where: {
+        recipientId: viewerProfile.id,
+        type: "FRIEND_REQUEST",
+        readAt: null,
+        actorId: request.requesterId,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
   } catch (error) {
     console.error("Failed to reject friend request", error);
     return {
@@ -335,7 +389,9 @@ export async function rejectFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectAfterFriendAction(locale);
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+  redirectAfterFriendAction(locale, returnTo);
 }
 
 export async function cancelFriendRequestAction(
@@ -347,6 +403,7 @@ export async function cancelFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    returnTo: getString(formData, "returnTo") || "friends",
   });
 
   if (!result.success) {
@@ -355,7 +412,7 @@ export async function cancelFriendRequestAction(
     };
   }
 
-  const { locale, requestId } = result.data;
+  const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
 
@@ -386,7 +443,7 @@ export async function cancelFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectAfterFriendAction(locale);
+  redirectAfterFriendAction(locale, returnTo);
 }
 
 export async function removeFriendshipAction(

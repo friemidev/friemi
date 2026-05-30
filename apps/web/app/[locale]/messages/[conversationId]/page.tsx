@@ -7,6 +7,7 @@ import {
   getDirectConversationThread,
   getDirectMessageFriendRoster,
 } from "@/features/direct-messages/queries/getDirectMessages";
+import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 
@@ -25,20 +26,26 @@ export default async function MessageThreadPage({
   const { locale, conversationId } = await params;
   const profile = await ensureCurrentUserProfile(locale);
   const commonCopy = getCopy(locale).common;
-  const [conversationResult, friendRosterResult] = await Promise.all([
-    getDirectConversationThread(profile.id, conversationId)
-      .then((conversation) => ({ conversation, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load direct conversation thread", error);
-        return { conversation: null, error };
+  const [conversationResult, friendRosterResult, incomingRequests] =
+    await Promise.all([
+      getDirectConversationThread(profile.id, conversationId)
+        .then((conversation) => ({ conversation, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load direct conversation thread", error);
+          return { conversation: null, error };
+        }),
+      getDirectMessageFriendRoster(profile.id)
+        .then((friends) => ({ friends, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load direct message friend roster", error);
+          return { friends: [], error };
+        }),
+      getPendingIncomingFriendRequests(profile.id).catch((error: unknown) => {
+        console.error("Failed to load incoming friend requests", error);
+
+        return [];
       }),
-    getDirectMessageFriendRoster(profile.id)
-      .then((friends) => ({ friends, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load direct message friend roster", error);
-        return { friends: [], error };
-      }),
-  ]);
+    ]);
 
   if (conversationResult.error) {
     return (
@@ -56,7 +63,7 @@ export default async function MessageThreadPage({
   }
 
   return (
-    <PageContainer className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0">
+    <PageContainer className="py-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
       <MessageThread
         conversation={conversationResult.conversation}
         locale={locale}
@@ -72,6 +79,7 @@ export default async function MessageThreadPage({
             currentUserProfileId={profile.id}
             currentUserFriendCode={profile.friendCode}
             friends={friendRosterResult.friends}
+            incomingRequests={incomingRequests}
             locale={locale}
             selectedConversationId={conversationResult.conversation.id}
           />

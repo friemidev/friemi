@@ -23,9 +23,11 @@ import { ActivityCoverImage } from "@/features/activities/components/ActivityCov
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
+import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
 import { getActivityById } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
+import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
@@ -92,6 +94,10 @@ export default async function ActivityDetailPage({
   const activityLocationLabel = getActivityLocationLabel(activity);
   const activityParticipantLabel = `${activity.participantCount}/${activity.capacity} ${t.common.people}`;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
+  const pendingParticipants =
+    isOrganizer && activity.requiresApproval && viewerProfile
+      ? await getPendingParticipants(activity.id, viewerProfile.id)
+      : [];
 
   return (
     <PageContainer className="space-y-6">
@@ -159,6 +165,14 @@ export default async function ActivityDetailPage({
               longitude={activity.longitude}
               openLabel={t.activityDetail.openMap}
               title={t.activityDetail.locationMapTitle}
+            />
+          ) : null}
+
+          {isOrganizer && activity.requiresApproval ? (
+            <ParticipationApprovalPanel
+              activityId={activity.id}
+              locale={locale}
+              pendingParticipants={pendingParticipants}
             />
           ) : null}
 

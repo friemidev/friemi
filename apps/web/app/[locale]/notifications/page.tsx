@@ -4,6 +4,7 @@ import {
   CheckCheck,
   Clock3,
   ExternalLink,
+  UserPlus,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -41,8 +42,20 @@ function getNotificationText(
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
   const actorName = notification.actor?.nickname;
 
-  if (notification.type === "PARTICIPATION_APPROVED") {
-    const copy = t.types.PARTICIPATION_APPROVED;
+  if (notification.type === "FRIEND_REQUEST") {
+    const copy = t.types.FRIEND_REQUEST;
+
+    return {
+      title: copy.title,
+      body: copy.body(activityTitle, actorName),
+    };
+  }
+
+  if (
+    notification.type === "PARTICIPATION_PENDING" ||
+    notification.type === "PARTICIPATION_APPROVED"
+  ) {
+    const copy = t.types[notification.type];
 
     return {
       title: copy.title,
@@ -68,12 +81,38 @@ function getNotificationText(
     };
   }
 
+  if (notification.type === "ACTIVITY_UPDATED") {
+    const copy = t.types.ACTIVITY_UPDATED;
+
+    return {
+      title: copy.title,
+      body: copy.body(activityTitle, actorName),
+    };
+  }
+
   const copy = t.types[notification.type];
 
   return {
     title: copy.title,
     body: copy.body(activityTitle),
   };
+}
+
+function getNotificationActionLabel(
+  notification: NotificationViewModel,
+  locale: string,
+) {
+  const t = getCopy(locale).notifications;
+
+  if (notification.type === "FRIEND_REQUEST") {
+    return t.openMessages;
+  }
+
+  if (notification.type === "PARTICIPATION_PENDING" && notification.actor) {
+    return t.openReview;
+  }
+
+  return t.openActivity;
 }
 
 function getNotificationVisual(
@@ -88,6 +127,34 @@ function getNotificationVisual(
   if (type === "PARTICIPATION_PENDING") {
     return {
       icon: Clock3,
+      iconClassName: isUnread ? "bg-sky text-ink" : "bg-sky/40 text-zinc-600",
+      cardClassName: isUnread
+        ? "border-sky/80 bg-white"
+        : "border-black/10 bg-white/65",
+      statusClassName: isUnread
+        ? "bg-sky/60 text-ink"
+        : "bg-zinc-100 text-zinc-500",
+    };
+  }
+
+  if (type === "FRIEND_REQUEST") {
+    return {
+      icon: UserPlus,
+      iconClassName: isUnread
+        ? "bg-ink text-white"
+        : "bg-zinc-100 text-zinc-600",
+      cardClassName: isUnread
+        ? "border-black/15 bg-white"
+        : "border-black/10 bg-white/65",
+      statusClassName: isUnread
+        ? "bg-ink text-white"
+        : "bg-zinc-100 text-zinc-500",
+    };
+  }
+
+  if (type === "ACTIVITY_UPDATED") {
+    return {
+      icon: Bell,
       iconClassName: isUnread ? "bg-sky text-ink" : "bg-sky/40 text-zinc-600",
       cardClassName: isUnread
         ? "border-sky/80 bg-white"
@@ -206,7 +273,7 @@ export default async function NotificationsPage({
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
-                          "rounded-full px-2.5 py-1 text-xs font-medium",
+                          "inline-flex min-h-9 items-center rounded-full px-2.5 py-1 text-xs font-medium sm:min-h-0",
                           visual.statusClassName,
                         )}
                       >
@@ -221,7 +288,7 @@ export default async function NotificationsPage({
                             value={notification.id}
                           />
                           <button
-                            className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                            className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-8"
                             type="submit"
                           >
                             <CheckCheck className="h-3.5 w-3.5" />
@@ -229,7 +296,8 @@ export default async function NotificationsPage({
                           </button>
                         </form>
                       ) : null}
-                      {notification.activity ? (
+                      {notification.activity ||
+                      notification.type === "FRIEND_REQUEST" ? (
                         <form action={openNotificationActivityAction}>
                           <input name="locale" type="hidden" value={locale} />
                           <input
@@ -238,10 +306,13 @@ export default async function NotificationsPage({
                             value={notification.id}
                           />
                           <button
-                            className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                            className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-8"
                             type="submit"
                           >
-                            {t.openActivity}
+                            {getNotificationActionLabel(
+                              notification,
+                              locale,
+                            )}
                             <ExternalLink className="h-3.5 w-3.5" />
                           </button>
                         </form>

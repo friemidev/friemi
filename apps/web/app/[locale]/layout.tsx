@@ -6,6 +6,7 @@ import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
+import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRequiredDialog";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -43,8 +44,12 @@ export default async function LocaleLayout({
           showNotificationNav={Boolean(viewerProfile)}
           showAdminNav={showAdminNav}
           viewerFriendCode={viewerProfile?.friendCode ?? null}
+          viewerNickname={viewerProfile?.nickname ?? null}
           unreadNotificationCount={unreadNotificationCount}
         />
+        {viewerProfile && viewerProfile.nickname.trim().length === 0 ? (
+          <NicknameRequiredDialog locale={locale} />
+        ) : null}
         {children}
         <MobileNav locale={locale} />
       </div>
