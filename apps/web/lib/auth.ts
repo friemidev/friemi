@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
+import { ensureUserProfileFriendCode } from "./user-profile-identity";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
@@ -74,7 +75,7 @@ function upsertLocalUserProfile(clerkUserId: string) {
       status: "ACTIVE",
       syncedAt: new Date(),
     },
-  });
+  }).then(ensureUserProfileFriendCode);
 }
 
 function upsertClerkUserProfile(user: ClerkCurrentUser) {
@@ -88,8 +89,17 @@ function upsertClerkUserProfile(user: ClerkCurrentUser) {
       clerkUserId: user.id,
       ...profileFields,
     },
-    update: profileFields,
-  });
+    update: {
+      email: profileFields.email,
+      firstName: profileFields.firstName,
+      lastName: profileFields.lastName,
+      username: profileFields.username,
+      avatarUrl: profileFields.avatarUrl,
+      status: profileFields.status,
+      clerkDeletedAt: profileFields.clerkDeletedAt,
+      syncedAt: profileFields.syncedAt,
+    },
+  }).then(ensureUserProfileFriendCode);
 }
 
 export async function ensureCurrentUserProfile(locale = "zh-CN") {

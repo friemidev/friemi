@@ -18,6 +18,7 @@ const sendFriendRequestSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   searchTerm: z.string().trim().min(1).max(120),
   message: z.string().trim().max(240).optional(),
+  returnTo: z.enum(["friends", "messages"]).default("friends"),
 });
 
 const requestActionSchema = z.object({
@@ -38,11 +39,17 @@ function getString(formData: FormData, key: string) {
 
 function refreshFriends(locale: string) {
   revalidatePath(withLocale(locale, "/friends"));
+  revalidatePath(withLocale(locale, "/messages"));
   revalidatePath(withLocale(locale, "/profile"));
 }
 
-function redirectToFriends(locale: string): never {
-  redirect(withLocale(locale, "/friends"));
+function redirectAfterFriendAction(
+  locale: string,
+  returnTo: "friends" | "messages" = "friends",
+): never {
+  redirect(
+    withLocale(locale, returnTo === "messages" ? "/messages" : "/friends"),
+  );
 }
 
 async function getExistingFriendship(userId: string, otherUserId: string) {
@@ -99,6 +106,7 @@ export async function sendFriendRequestAction(
     locale: fallbackLocale,
     searchTerm: getString(formData, "searchTerm"),
     message: getString(formData, "message") || undefined,
+    returnTo: getString(formData, "returnTo") || "friends",
   });
 
   if (!result.success) {
@@ -107,9 +115,16 @@ export async function sendFriendRequestAction(
     };
   }
 
-  const { locale, searchTerm, message } = result.data;
+  const { locale, searchTerm, message, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
+  const friendCodeQuery = /^\d{6}$/.test(searchTerm)
+    ? [
+        {
+          friendCode: searchTerm,
+        },
+      ]
+    : [];
 
   try {
     const targetUsers = await prisma.userProfile.findMany({
@@ -128,6 +143,7 @@ export async function sendFriendRequestAction(
               mode: "insensitive",
             },
           },
+          ...friendCodeQuery,
         ],
       },
       select: {
@@ -192,7 +208,7 @@ export async function sendFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectToFriends(locale);
+  redirectAfterFriendAction(locale, returnTo);
 }
 
 export async function acceptFriendRequestAction(
@@ -268,7 +284,7 @@ export async function acceptFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectToFriends(locale);
+  redirectAfterFriendAction(locale);
 }
 
 export async function rejectFriendRequestAction(
@@ -319,7 +335,7 @@ export async function rejectFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectToFriends(locale);
+  redirectAfterFriendAction(locale);
 }
 
 export async function cancelFriendRequestAction(
@@ -370,7 +386,7 @@ export async function cancelFriendRequestAction(
   }
 
   refreshFriends(locale);
-  redirectToFriends(locale);
+  redirectAfterFriendAction(locale);
 }
 
 export async function removeFriendshipAction(
@@ -415,5 +431,5 @@ export async function removeFriendshipAction(
   }
 
   refreshFriends(locale);
-  redirectToFriends(locale);
+  redirectAfterFriendAction(locale);
 }

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { ensureUserProfileFriendCode } from "./user-profile-identity";
 
 type ClerkEmailAddressLike = {
   id: string;
@@ -38,6 +39,7 @@ function getDisplayName(user: ClerkUserLike) {
 
 export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
   const email = getPrimaryEmail(user);
+  const nickname = getDisplayName(user);
 
   return prisma.userProfile.upsert({
     where: {
@@ -46,7 +48,7 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
     create: {
       clerkUserId: user.id,
       email,
-      nickname: getDisplayName(user),
+      nickname,
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
@@ -60,7 +62,6 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
     },
     update: {
       email,
-      nickname: getDisplayName(user),
       firstName: user.first_name,
       lastName: user.last_name,
       username: user.username,
@@ -71,7 +72,7 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
       clerkDeletedAt: null,
       syncedAt: new Date()
     }
-  });
+  }).then(ensureUserProfileFriendCode);
 }
 
 export async function markUserProfileDeletedFromClerk(user: ClerkDeletedUserLike) {

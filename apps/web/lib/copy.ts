@@ -61,25 +61,25 @@ const copy = {
     common: {
       viewAll: "查看全部",
       loadFailed: "加载失败",
-      retryDatabase: "请稍后刷新重试，或检查数据库连接是否可用。",
+      retryDatabase: "暂时无法加载，请稍后再试。",
       people: "人",
       switchLanguage: (nextLanguage: string) => `切换到 ${nextLanguage}`,
     },
     globalSearch: {
       eyebrow: "全站搜索",
       title: "搜索 Next Fun Club",
-      description: "从一个入口查找活动和商家，适合快速定位站内内容。",
+      description: "快速查找活动、地点和商家。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、地点或商家",
       mobileOpen: "打开全站搜索",
       submit: "搜索",
       emptyTitle: "输入关键词开始搜索",
-      emptyDescription: "可以搜索活动标题、描述、城市、地址和商家信息。",
+      emptyDescription: "试试活动名称、地点、城市或商家名。",
       noResultsTitle: "没有找到结果",
       noResultsDescription: (query: string) =>
         `没有找到与「${query}」匹配的活动或商家。`,
       loadFailedTitle: "搜索加载失败",
-      loadFailedDescription: "请稍后刷新重试，或检查数据库连接是否可用。",
+      loadFailedDescription: "暂时无法搜索，请稍后再试。",
       resultSummary: (count: number, query: string) =>
         `找到 ${count} 个与「${query}」相关的结果。`,
       viewMoreActivities: (_shown: number, total: number) =>
@@ -92,11 +92,9 @@ const copy = {
       openMerchant: (name: string) => `查看商家：${name}`,
     },
     auth: {
-      clerkMissingTitle: "Clerk 尚未配置",
-      signInMissingDescription:
-        "填写 `.env.local` 中的 Clerk key 后，这里会显示真实登录组件。",
-      signUpMissingDescription:
-        "填写 `.env.local` 中的 Clerk key 后，这里会显示真实注册组件。",
+      clerkMissingTitle: "登录暂不可用",
+      signInMissingDescription: "登录服务正在准备中，请稍后再试。",
+      signUpMissingDescription: "注册服务正在准备中，请稍后再试。",
     },
     home: {
       eyebrow: "Paris first · 中文活动搭子",
@@ -105,13 +103,12 @@ const copy = {
       description: "发现巴黎附近活动，约上朋友或认识新搭子一起出发。",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
-      homeActivityFailedDescription: "请检查数据库连接后刷新页面。",
+      homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",
       emptyPreviewTitle: "暂无活动",
-      emptyPreviewDescription: "数据库新增可参与活动后会显示在这里。",
+      emptyPreviewDescription: "有新活动后会显示在这里。",
       recentTitle: "最近活动",
       recentDescription: "按开始时间展示最近可参加的公开活动。",
-      emptyRecentDescription:
-        "数据库新增公开的可参与活动后，刷新页面即可看到。",
+      emptyRecentDescription: "有新的公开活动后会显示在这里。",
     },
     activities: {
       title: "活动发现",
@@ -302,11 +299,11 @@ const copy = {
       cancelConfirm: "确定要取消这个活动吗？取消后用户将不能继续报名。",
       cancelledHint: "活动已取消，用户无法继续报名。",
       endedHint: "活动已结束，不能再取消。",
-      refreshError: "请刷新页面后重试。",
+      refreshError: "请稍后再试。",
       permissionError: "只有活动发起人可以取消这个活动。",
       statusError: "当前活动状态不能取消。",
       endedError: "活动已结束，不能再取消。",
-      conflictError: "活动状态刚刚发生变化，请刷新后重试。",
+      conflictError: "活动状态已更新，请稍后再试。",
       failedError: "取消活动失败，请稍后重试。",
     },
     approval: {
@@ -318,22 +315,22 @@ const copy = {
       approve: "通过",
       reject: "拒绝",
       reviewing: "处理中...",
-      refreshError: "请刷新页面后重试。",
+      refreshError: "请稍后再试。",
       missingError: "报名记录不存在或已更新。",
       permissionError: "只有活动发起人可以审核报名。",
       statusError: "当前报名状态不能审核。",
       closedError: "活动已结束或已取消，不能继续审核。",
       fullError: "活动名额已满，不能继续通过报名。",
-      conflictError: "报名人数刚刚发生变化，请刷新后重试。",
+      conflictError: "报名人数已更新，请稍后再试。",
       failedError: "审核报名失败，请稍后重试。",
     },
     newActivity: {
       title: "发起活动",
-      description: "填写活动信息后会写入数据库，并跳转到新活动详情页。",
+      description: "填写信息后发布活动，发布后会进入详情页。",
     },
     editActivity: {
       title: "编辑活动",
-      description: "只允许发起人修改活动信息，保存后会回到活动详情页。",
+      description: "修改活动信息，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人可以编辑这个活动。",
       lockedTitle: "活动不可编辑",
@@ -342,19 +339,25 @@ const copy = {
     profile: {
       title: "个人空间",
       emailFallback: "未绑定邮箱",
+      friendCodeLabel: "好友号",
+      copyFriendCode: "复制好友号",
+      friendCodeCopied: "已复制",
+      nicknameLabel: "昵称",
+      nicknamePlaceholder: "输入你的昵称",
+      saveNickname: "保存昵称",
+      savingNickname: "保存中...",
+      nicknameError: "昵称不能为空，最多 24 个字。",
       createdCount: "我发起的活动",
       participationCount: "我参与的活动",
       errorTitle: "个人空间加载失败",
-      errorDescription:
-        "用户资料已读取，但活动数据暂时加载失败，请稍后刷新重试。",
+      errorDescription: "部分内容暂时无法加载，请稍后再试。",
       createdTitle: "我发起的活动",
-      createdDescription: "展示你创建的活动，点击卡片可以进入活动详情页。",
+      createdDescription: "你发起的活动都会显示在这里。",
       createdEmptyTitle: "还没有发起活动",
       createdEmptyDescription:
-        "创建第一场活动后，它会显示在这里，方便你从个人空间回到详情页。",
+        "发起第一场活动后，它会显示在这里。",
       participationTitle: "我参与的活动",
-      participationDescription:
-        "报名状态会区分待审核、已确认和已取消，点击卡片可以查看活动详情。",
+      participationDescription: "你报名过的活动都会显示在这里。",
       participationEmptyTitle: "还没有报名记录",
       participationEmptyDescription:
         "报名参加活动后，你可以在这里查看报名状态和活动详情。",
@@ -414,7 +417,7 @@ const copy = {
       coverTypeError: "只支持 JPG、PNG 或 WebP 图片。",
       coverSizeError: "图片不能超过 4MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
-      coverStorageConfigError: "图片上传尚未配置，请联系管理员。",
+      coverStorageConfigError: "图片上传暂不可用，请稍后再试。",
       linkImportTitle: "从链接导入",
       linkImportDescription:
         "粘贴支持的网站链接，先预览可识别信息，再套用到创建表单。",
@@ -559,7 +562,7 @@ const copy = {
       openMenu: "Open account menu",
       profile: "Profile",
       friends: "Friends",
-      friendsDescription: "Manage requests and accepted friends",
+      friendsDescription: "Requests and friend list",
       messages: "Messages",
       messagesDescription: "Open friend chats and activity planning",
       notifications: "Notifications",
@@ -574,29 +577,26 @@ const copy = {
     common: {
       viewAll: "View all",
       loadFailed: "Load failed",
-      retryDatabase:
-        "Refresh later, or check whether the database connection is available.",
+      retryDatabase: "Unable to load right now. Try again later.",
       people: "people",
       switchLanguage: (nextLanguage: string) => `Switch to ${nextLanguage}`,
     },
     globalSearch: {
       eyebrow: "Site search",
       title: "Search Next Fun Club",
-      description:
-        "Find activities and merchants from one entry point when you need to jump directly to content.",
+      description: "Find activities, places, and merchants quickly.",
       inputLabel: "Search keyword",
       placeholder: "Search activities, places, or merchants",
       mobileOpen: "Open site search",
       submit: "Search",
       emptyTitle: "Enter a keyword to search",
       emptyDescription:
-        "Search activity titles, descriptions, cities, addresses, and merchant information.",
+        "Try an activity name, place, city, or merchant name.",
       noResultsTitle: "No results found",
       noResultsDescription: (query: string) =>
         `No activities or merchants matched "${query}".`,
       loadFailedTitle: "Search failed to load",
-      loadFailedDescription:
-        "Refresh later, or check whether the database connection is available.",
+      loadFailedDescription: "Search is unavailable right now. Try again later.",
       resultSummary: (count: number, query: string) =>
         `${count} result${count === 1 ? "" : "s"} found for "${query}".`,
       viewMoreActivities: (_shown: number, total: number) =>
@@ -610,11 +610,9 @@ const copy = {
       openMerchant: (name: string) => `Open merchant: ${name}`,
     },
     auth: {
-      clerkMissingTitle: "Clerk is not configured",
-      signInMissingDescription:
-        "Add the Clerk keys in `.env.local` to show the real sign-in component here.",
-      signUpMissingDescription:
-        "Add the Clerk keys in `.env.local` to show the real sign-up component here.",
+      clerkMissingTitle: "Sign-in is unavailable",
+      signInMissingDescription: "Sign-in is being prepared. Try again later.",
+      signUpMissingDescription: "Sign-up is being prepared. Try again later.",
     },
     home: {
       eyebrow: "Paris first · Chinese-speaking activity crews",
@@ -625,15 +623,14 @@ const copy = {
       browseActivities: "Browse activities",
       homeActivityFailedTitle: "Activities failed to load",
       homeActivityFailedDescription:
-        "Check the database connection and refresh the page.",
+        "Activities are unavailable right now. Try again later.",
       emptyPreviewTitle: "No activities yet",
       emptyPreviewDescription:
         "Joinable activities will appear here once they are added.",
       recentTitle: "Recent activities",
       recentDescription:
         "Upcoming public activities sorted by the nearest start time.",
-      emptyRecentDescription:
-        "Add a public recruiting activity, then refresh to see it here.",
+      emptyRecentDescription: "New public activities will appear here.",
     },
     activities: {
       title: "Activity discovery",
@@ -837,11 +834,11 @@ const copy = {
         "Cancel this activity? Users will no longer be able to join.",
       cancelledHint: "This activity is cancelled. Users can no longer join.",
       endedHint: "This activity has ended and can no longer be cancelled.",
-      refreshError: "Refresh the page and try again.",
+      refreshError: "Try again later.",
       permissionError: "Only the organizer can cancel this activity.",
       statusError: "This activity status cannot be cancelled.",
       endedError: "This activity has ended and can no longer be cancelled.",
-      conflictError: "The activity status just changed. Refresh and try again.",
+      conflictError: "The activity status changed. Try again later.",
       failedError: "Failed to cancel the activity. Try again later.",
     },
     approval: {
@@ -854,20 +851,20 @@ const copy = {
       approve: "Approve",
       reject: "Reject",
       reviewing: "Reviewing...",
-      refreshError: "Refresh the page and try again.",
+      refreshError: "Try again later.",
       missingError: "This request no longer exists or was updated.",
       permissionError: "Only the organizer can review participation requests.",
       statusError: "This request status cannot be reviewed.",
       closedError:
         "This activity has ended or been cancelled, so requests cannot be reviewed.",
       fullError: "This activity is full. No more requests can be approved.",
-      conflictError: "Seat availability just changed. Refresh and try again.",
+      conflictError: "Seat availability changed. Try again later.",
       failedError: "Failed to review this request. Try again later.",
     },
     newActivity: {
       title: "Create activity",
       description:
-        "Fill in the activity details, save them to the database, then go to the new detail page.",
+        "Add the details, publish the activity, then review the detail page.",
     },
     editActivity: {
       title: "Edit activity",
@@ -882,14 +879,20 @@ const copy = {
     profile: {
       title: "Profile",
       emailFallback: "No email connected",
+      friendCodeLabel: "Friend code",
+      copyFriendCode: "Copy friend code",
+      friendCodeCopied: "Copied",
+      nicknameLabel: "Nickname",
+      nicknamePlaceholder: "Enter your nickname",
+      saveNickname: "Save nickname",
+      savingNickname: "Saving...",
+      nicknameError: "Nickname is required, up to 24 characters.",
       createdCount: "Created",
       participationCount: "Joined",
       errorTitle: "Profile failed to load",
-      errorDescription:
-        "Your profile loaded, but activity data failed to load. Refresh later.",
+      errorDescription: "Some profile content is unavailable. Try again later.",
       createdTitle: "Created by me",
-      createdDescription:
-        "Activities you created. Open a card to review the detail page.",
+      createdDescription: "Activities you create will appear here.",
       createdEmptyTitle: "No created activities",
       createdEmptyDescription: "Your first created activity will appear here.",
       participationTitle: "Activities I joined",
@@ -963,7 +966,7 @@ const copy = {
       coverInvalidContentError:
         "The image content is invalid. Please choose the original image file.",
       coverStorageConfigError:
-        "Image upload is not configured. Please contact an admin.",
+        "Image upload is unavailable right now. Try again later.",
       linkImportTitle: "Import from link",
       linkImportDescription:
         "Paste a supported activity page, preview detected details, then apply them to the form.",
@@ -1132,29 +1135,27 @@ const copy = {
     common: {
       viewAll: "Tout voir",
       loadFailed: "Échec du chargement",
-      retryDatabase:
-        "Réessayez plus tard ou vérifiez la connexion à la base de données.",
+      retryDatabase: "Chargement impossible pour le moment. Réessayez plus tard.",
       people: "pers.",
       switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
     },
     globalSearch: {
       eyebrow: "Recherche globale",
       title: "Rechercher dans Next Fun Club",
-      description:
-        "Trouvez activités et partenaires depuis une seule entrée pour accéder vite au bon contenu.",
+      description: "Trouvez vite une activité, un lieu ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
       placeholder: "Activités, lieux ou partenaires",
       mobileOpen: "Ouvrir la recherche globale",
       submit: "Rechercher",
       emptyTitle: "Saisissez un mot-clé",
       emptyDescription:
-        "Recherchez dans les titres, descriptions, villes, adresses et informations partenaires.",
+        "Essayez un nom d'activité, un lieu, une ville ou un partenaire.",
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
         `Aucune activité ni partenaire ne correspond à « ${query} ».`,
       loadFailedTitle: "Échec de la recherche",
       loadFailedDescription:
-        "Réessayez plus tard ou vérifiez la connexion à la base de données.",
+        "La recherche est indisponible pour le moment. Réessayez plus tard.",
       resultSummary: (count: number, query: string) =>
         `${count} résultat${count > 1 ? "s" : ""} pour « ${query} ».`,
       viewMoreActivities: (_shown: number, total: number) =>
@@ -1168,11 +1169,11 @@ const copy = {
       openMerchant: (name: string) => `Voir le partenaire : ${name}`,
     },
     auth: {
-      clerkMissingTitle: "Clerk n'est pas configuré",
+      clerkMissingTitle: "Connexion indisponible",
       signInMissingDescription:
-        "Ajoutez les clés Clerk dans `.env.local` pour afficher le vrai composant de connexion.",
+        "La connexion est en préparation. Réessayez plus tard.",
       signUpMissingDescription:
-        "Ajoutez les clés Clerk dans `.env.local` pour afficher le vrai composant d'inscription.",
+        "L'inscription est en préparation. Réessayez plus tard.",
     },
     home: {
       eyebrow: "Paris d'abord · activités sinophones",
@@ -1183,14 +1184,13 @@ const copy = {
       browseActivities: "Voir les activités",
       homeActivityFailedTitle: "Échec du chargement",
       homeActivityFailedDescription:
-        "Vérifiez la connexion à la base de données puis actualisez la page.",
+        "Les activités sont indisponibles pour le moment. Réessayez plus tard.",
       emptyPreviewTitle: "Aucune activité",
       emptyPreviewDescription: "Les activités en recrutement apparaîtront ici.",
       recentTitle: "Activités récentes",
       recentDescription:
         "Activités publiques à venir, triées par date de début proche.",
-      emptyRecentDescription:
-        "Ajoutez une activité publique en recrutement puis actualisez la page.",
+      emptyRecentDescription: "Les nouvelles activités publiques apparaîtront ici.",
     },
     activities: {
       title: "Découvrir des activités",
@@ -1400,12 +1400,12 @@ const copy = {
       cancelledHint:
         "Cette activité est annulée. Les utilisateurs ne peuvent plus la rejoindre.",
       endedHint: "Cette activité est terminée et ne peut plus être annulée.",
-      refreshError: "Actualisez la page puis réessayez.",
+      refreshError: "Réessayez plus tard.",
       permissionError: "Seul l'organisateur peut annuler cette activité.",
       statusError: "Ce statut d'activité ne peut pas être annulé.",
       endedError: "Cette activité est terminée et ne peut plus être annulée.",
       conflictError:
-        "Le statut de l'activité vient de changer. Actualisez puis réessayez.",
+        "Le statut de l'activité a changé. Réessayez plus tard.",
       failedError: "Échec de l'annulation. Réessayez plus tard.",
     },
     approval: {
@@ -1418,7 +1418,7 @@ const copy = {
       approve: "Valider",
       reject: "Refuser",
       reviewing: "Traitement...",
-      refreshError: "Actualisez la page puis réessayez.",
+      refreshError: "Réessayez plus tard.",
       missingError: "Cette demande n'existe plus ou a été modifiée.",
       permissionError:
         "Seul l'organisateur peut valider les demandes d'inscription.",
@@ -1428,13 +1428,13 @@ const copy = {
       fullError:
         "Cette activité est complète. Aucune demande supplémentaire ne peut être validée.",
       conflictError:
-        "Le nombre de places vient de changer. Actualisez puis réessayez.",
+        "Le nombre de places a changé. Réessayez plus tard.",
       failedError: "Échec de la validation. Réessayez plus tard.",
     },
     newActivity: {
       title: "Créer une activité",
       description:
-        "Renseignez les informations, enregistrez l'activité en base, puis ouvrez sa page détail.",
+        "Ajoutez les informations, publiez l'activité, puis vérifiez sa page.",
     },
     editActivity: {
       title: "Modifier l'activité",
@@ -1449,19 +1449,26 @@ const copy = {
     profile: {
       title: "Profil",
       emailFallback: "Aucun e-mail connecté",
+      friendCodeLabel: "Code ami",
+      copyFriendCode: "Copier le code ami",
+      friendCodeCopied: "Copié",
+      nicknameLabel: "Pseudo",
+      nicknamePlaceholder: "Saisissez votre pseudo",
+      saveNickname: "Enregistrer",
+      savingNickname: "Enregistrement...",
+      nicknameError: "Le pseudo est requis, 24 caractères maximum.",
       createdCount: "Créées",
       participationCount: "Participations",
       errorTitle: "Échec du chargement du profil",
       errorDescription:
-        "Le profil est chargé, mais les activités n'ont pas pu être récupérées. Réessayez plus tard.",
+        "Certaines informations sont indisponibles. Réessayez plus tard.",
       createdTitle: "Activités créées",
-      createdDescription:
-        "Activités que vous avez créées. Ouvrez une carte pour revoir le détail.",
+      createdDescription: "Les activités que vous créez apparaissent ici.",
       createdEmptyTitle: "Aucune activité créée",
       createdEmptyDescription: "Votre première activité créée apparaîtra ici.",
       participationTitle: "Activités rejointes",
       participationDescription:
-        "Suivez les inscriptions en attente, confirmées et annulées.",
+        "Les activités que vous rejoignez apparaissent ici.",
       participationEmptyTitle: "Aucune participation",
       participationEmptyDescription:
         "Les activités rejointes apparaîtront ici avec leur statut.",
@@ -1534,7 +1541,7 @@ const copy = {
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:
-        "L'import d'images n'est pas configuré. Contactez un administrateur.",
+        "L'import d'images est indisponible pour le moment. Réessayez plus tard.",
       linkImportTitle: "Importer depuis un lien",
       linkImportDescription:
         "Collez une page prise en charge, vérifiez les infos détectées, puis appliquez-les au formulaire.",

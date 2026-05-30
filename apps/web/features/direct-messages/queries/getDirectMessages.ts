@@ -71,12 +71,29 @@ const conversationThreadSelect = {
   },
 } satisfies Prisma.ConversationSelect;
 
+const friendshipRosterSelect = {
+  id: true,
+  createdAt: true,
+  userAId: true,
+  userBId: true,
+  userA: {
+    select: userSummarySelect,
+  },
+  userB: {
+    select: userSummarySelect,
+  },
+} satisfies Prisma.FriendshipSelect;
+
 type ConversationListResult = Prisma.ConversationGetPayload<{
   select: typeof conversationListSelect;
 }>;
 
 type ConversationThreadResult = Prisma.ConversationGetPayload<{
   select: typeof conversationThreadSelect;
+}>;
+
+type FriendshipRosterResult = Prisma.FriendshipGetPayload<{
+  select: typeof friendshipRosterSelect;
 }>;
 
 export type DirectMessageUserViewModel = {
@@ -108,6 +125,16 @@ export type DirectConversationListItemViewModel = {
   recentActivities: DirectConversationActivitySignalViewModel[];
 };
 
+export type DirectMessageFriendRosterItemViewModel = {
+  friendshipId: string;
+  friend: DirectMessageUserViewModel;
+  conversationId: string | null;
+  lastMessage: DirectMessagePreviewViewModel | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  recentActivities: DirectConversationActivitySignalViewModel[];
+};
+
 export type DirectMessageThreadItemViewModel = {
   id: string;
   senderId: string;
@@ -133,6 +160,23 @@ function mapPeer(
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
   const peer =
     peerId === conversation.userAId ? conversation.userA : conversation.userB;
+
+  return {
+    id: peer.id,
+    nickname: peer.nickname,
+    avatarUrl: peer.avatarUrl,
+    bio: peer.bio,
+  };
+}
+
+function mapFriendshipPeer(
+  friendship: FriendshipRosterResult,
+  currentUserProfileId: string,
+): DirectMessageUserViewModel {
+  const peer =
+    friendship.userAId === currentUserProfileId
+      ? friendship.userB
+      : friendship.userA;
 
   return {
     id: peer.id,
@@ -292,6 +336,52 @@ async function getFriendActivitySignals(friendIds: string[]) {
   return activitiesByFriendId;
 }
 
+function sortFriendRosterItems(
+  items: DirectMessageFriendRosterItemViewModel[],
+) {
+  return [...items].sort((itemA, itemB) => {
+    if (itemA.lastMessageAt && itemB.lastMessageAt) {
+      return (
+        new Date(itemB.lastMessageAt).getTime() -
+          new Date(itemA.lastMessageAt).getTime() ||
+        itemA.friendshipId.localeCompare(itemB.friendshipId)
+      );
+    }
+
+    if (itemA.lastMessageAt) {
+      return -1;
+    }
+
+    if (itemB.lastMessageAt) {
+      return 1;
+    }
+
+    const firstActivityA = itemA.recentActivities[0]?.startAt;
+    const firstActivityB = itemB.recentActivities[0]?.startAt;
+
+    if (firstActivityA && firstActivityB) {
+      return (
+        new Date(firstActivityA).getTime() -
+          new Date(firstActivityB).getTime() ||
+        itemA.friendshipId.localeCompare(itemB.friendshipId)
+      );
+    }
+
+    if (firstActivityA) {
+      return -1;
+    }
+
+    if (firstActivityB) {
+      return 1;
+    }
+
+    return (
+      new Date(itemB.createdAt).getTime() - new Date(itemA.createdAt).getTime() ||
+      itemA.friendshipId.localeCompare(itemB.friendshipId)
+    );
+  });
+}
+
 export async function getDirectConversations(currentUserProfileId: string) {
   const conversations = await prisma.conversation.findMany({
     where: {
@@ -341,6 +431,71 @@ export async function getDirectConversations(currentUserProfileId: string) {
         getConversationPeerId(conversation, currentUserProfileId),
       ) ?? [],
     ),
+  );
+}
+
+export async function getDirectMessageFriendRoster(
+  currentUserProfileId: string,
+) {
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      OR: [
+        {
+          userAId: currentUserProfileId,
+        },
+        {
+          userBId: currentUserProfileId,
+        },
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    take: 80,
+    select: friendshipRosterSelect,
+  });
+  const friendIds = friendships.map(
+    (friendship) => mapFriendshipPeer(friendship, currentUserProfileId).id,
+  );
+  const [conversations, activitiesByFriendId] = await Promise.all([
+    friendIds.length === 0
+      ? Promise.resolve([])
+      : prisma.conversation.findMany({
+          where: {
+            OR: friendIds.map((friendId) =>
+              getConversationPair(currentUserProfileId, friendId),
+            ),
+          },
+          select: conversationListSelect,
+        }),
+    getFriendActivitySignals(friendIds).catch((error: unknown) => {
+      console.error("Failed to load mobile friend activity signals", error);
+
+      return new Map<string, DirectConversationActivitySignalViewModel[]>();
+    }),
+  ]);
+  const conversationsByFriendId = new Map<string, ConversationListResult>();
+
+  for (const conversation of conversations) {
+    conversationsByFriendId.set(
+      getConversationPeerId(conversation, currentUserProfileId),
+      conversation,
+    );
+  }
+
+  return sortFriendRosterItems(
+    friendships.map((friendship) => {
+      const friend = mapFriendshipPeer(friendship, currentUserProfileId);
+      const conversation = conversationsByFriendId.get(friend.id);
+
+      return {
+        friendshipId: friendship.id,
+        friend,
+        conversationId: conversation?.id ?? null,
+        lastMessage: conversation ? mapLastMessage(conversation) : null,
+        lastMessageAt: conversation?.lastMessageAt?.toISOString() ?? null,
+        createdAt: friendship.createdAt.toISOString(),
+        recentActivities: activitiesByFriendId.get(friend.id) ?? [],
+      };
+    }),
   );
 }
 

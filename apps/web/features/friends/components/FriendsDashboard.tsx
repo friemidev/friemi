@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Children, useActionState, useState, type ReactNode } from "react";
+import {
+  Children,
+  useActionState,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 import {
   CalendarDays,
@@ -51,41 +57,27 @@ const initialState: FriendActionState = {};
 
 export function FriendsDashboard({ dashboard, locale }: FriendsDashboardProps) {
   const t = getFriendsCopy(locale);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
   const hasIncomingRequests = dashboard.incomingRequests.length > 0;
   const hasOutgoingRequests = dashboard.outgoingRequests.length > 0;
 
   return (
     <div className="space-y-5">
-      <div
-        className={cn(
-          "grid gap-4",
-          hasIncomingRequests &&
-            "lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)]",
-        )}
-      >
-        <AddFriendForm
-          className={cn(
-            hasIncomingRequests ? "order-2 lg:order-1" : "lg:max-w-3xl",
-          )}
-          locale={locale}
-        />
-        {hasIncomingRequests ? (
-          <RequestPanel
-            className="order-1 lg:order-2"
-            count={dashboard.incomingRequests.length}
-            title={t.incomingTitle}
-            icon="inbox"
-          >
-            {dashboard.incomingRequests.map((request) => (
-              <IncomingRequestCard
-                key={request.id}
-                locale={locale}
-                request={request}
-              />
-            ))}
-          </RequestPanel>
-        ) : null}
-      </div>
+      {hasIncomingRequests ? (
+        <RequestPanel
+          count={dashboard.incomingRequests.length}
+          title={t.incomingTitle}
+          icon="inbox"
+        >
+          {dashboard.incomingRequests.map((request) => (
+            <IncomingRequestCard
+              key={request.id}
+              locale={locale}
+              request={request}
+            />
+          ))}
+        </RequestPanel>
+      ) : null}
 
       <div
         className={cn(
@@ -94,35 +86,41 @@ export function FriendsDashboard({ dashboard, locale }: FriendsDashboardProps) {
             "lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)]",
         )}
       >
-        <section className="rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:p-5">
-          <div className="flex items-center gap-3">
+        <section className="space-y-4">
+          <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss/10 text-moss">
               <UsersRound className="h-5 w-5" />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-ink">
                 {t.friendsTitle}
               </h2>
-              {dashboard.friends.length > 0 ? (
-                <span className="mt-2 inline-flex h-6 items-center rounded-full bg-moss/10 px-2.5 text-xs font-semibold text-moss">
-                  {dashboard.friends.length}
-                </span>
-              ) : null}
-              <p className="mt-1 text-sm text-zinc-500">
-                {dashboard.friends.length > 0
-                  ? t.friendsDescription(dashboard.friends.length)
-                  : t.friendsEmptyDescription}
-              </p>
+              <div className="mt-1 flex min-w-0 items-center gap-2">
+                <p className="min-w-0 flex-1 truncate text-sm text-zinc-500">
+                  {dashboard.friends.length > 0
+                    ? t.friendsDescription(dashboard.friends.length)
+                    : t.friendsListDescription}
+                </p>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/85 text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                  aria-label={t.addTitle}
+                  title={t.addTitle}
+                  onClick={() => setAddFriendOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
           {dashboard.friends.length === 0 ? (
-            <CompactEmptyState
+            <PlainEmptyState
               title={t.friendsEmptyTitle}
               description={t.friendsEmptyDescription}
             />
           ) : (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {dashboard.friends.map((friend) => (
                 <FriendCard
                   key={friend.id}
@@ -152,16 +150,29 @@ export function FriendsDashboard({ dashboard, locale }: FriendsDashboardProps) {
           </RequestPanel>
         ) : null}
       </div>
+
+      {addFriendOpen ? (
+        <AddFriendDialog
+          locale={locale}
+          onClose={() => setAddFriendOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
 
 function AddFriendForm({
   className,
+  autoFocusSearch = false,
   locale,
+  returnTo = "friends",
+  showHeader = true,
 }: {
+  autoFocusSearch?: boolean;
   className?: string;
   locale: string;
+  returnTo?: "friends" | "messages";
+  showHeader?: boolean;
 }) {
   const [state, formAction] = useActionState(
     sendFriendRequestAction,
@@ -176,18 +187,27 @@ function AddFriendForm({
         className,
       )}
     >
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay/10 text-clay">
-          <UserPlus className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-ink">{t.addTitle}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t.addDescription}</p>
+      {showHeader ? (
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-clay/10 text-clay">
+            <UserPlus className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-ink">{t.addTitle}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t.addDescription}</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="text-sm leading-6 text-zinc-600">{t.addDescription}</p>
+      )}
 
-      <form action={formAction} className="mt-4 grid gap-4" noValidate>
+      <form
+        action={formAction}
+        className={cn("grid gap-4", showHeader && "mt-4")}
+        noValidate
+      >
         <input name="locale" type="hidden" value={locale} />
+        <input name="returnTo" type="hidden" value={returnTo} />
         <label className="grid gap-2">
           <span className="text-sm font-medium text-zinc-700">
             {t.searchLabel}
@@ -196,6 +216,7 @@ function AddFriendForm({
             name="searchTerm"
             placeholder={t.searchPlaceholder}
             autoComplete="off"
+            autoFocus={autoFocusSearch}
             className="bg-white"
           />
           <span className="text-xs leading-5 text-zinc-500">
@@ -217,7 +238,7 @@ function AddFriendForm({
         {state.formError ? <FormError message={state.formError} /> : null}
 
         <SubmitButton
-          className="w-full sm:w-fit"
+          className="w-full"
           icon={Send}
           pendingLabel={t.sending}
         >
@@ -225,6 +246,77 @@ function AddFriendForm({
         </SubmitButton>
       </form>
     </section>
+  );
+}
+
+export function AddFriendDialog({
+  locale,
+  onClose,
+  returnTo = "friends",
+}: {
+  locale: string;
+  onClose: () => void;
+  returnTo?: "friends" | "messages";
+}) {
+  const t = getFriendsCopy(locale);
+  const titleId = "add-friend-dialog-title";
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-hidden rounded-2xl bg-paper shadow-2xl ring-1 ring-black/10 sm:max-h-[calc(100dvh-3rem)] sm:rounded-xl">
+        <div className="flex items-center justify-between border-b border-black/10 px-4 py-4 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-moss">{t.entryTitle}</p>
+            <h2
+              id={titleId}
+              className="mt-1 text-2xl font-semibold tracking-normal text-ink"
+            >
+              {t.addTitle}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            aria-label={t.close}
+            title={t.close}
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto p-4 sm:max-h-[calc(100dvh-9rem)] sm:p-5">
+          <AddFriendForm
+            autoFocusSearch
+            className="border-0 bg-transparent p-0 shadow-none"
+            locale={locale}
+            returnTo={returnTo}
+            showHeader={false}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -609,7 +701,7 @@ function RequestMeta({
   );
 }
 
-function CompactEmptyState({
+function PlainEmptyState({
   title,
   description,
 }: {
@@ -617,10 +709,11 @@ function CompactEmptyState({
   description: string;
 }) {
   return (
-    <div className="mt-4 rounded-lg border border-dashed border-zinc-200 bg-white/60 p-5 text-center">
-      <UsersRound className="mx-auto h-6 w-6 text-zinc-400" />
-      <h3 className="mt-3 text-sm font-semibold text-ink">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-zinc-500">{description}</p>
+    <div className="py-8">
+      <h3 className="text-base font-semibold text-ink">{title}</h3>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
+        {description}
+      </p>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getFriendsCopy } from "@/features/friends/copy";
+import { ProfileIdentityForm } from "@/features/profile/components/ProfileIdentityForm";
 import { ProfileOverviewPanel } from "@/features/profile/components/ProfileOverviewPanel";
 import { ProfileParticipationCard } from "@/features/profile/components/ProfileParticipationCard";
 import {
@@ -62,29 +63,36 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     <PageContainer className="space-y-8">
       <section className="rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            {profile.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={`${profile.nickname} 的头像`}
-                className="h-16 w-16 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-moss text-xl font-semibold text-white">
-                {profileInitial}
+          <div className="grid min-w-0 gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={`${profile.nickname} 的头像`}
+                  className="h-16 w-16 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-moss text-xl font-semibold text-white">
+                  {profileInitial}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className="truncate text-3xl font-semibold tracking-normal text-ink">
+                  {t.profile.title}
+                </h1>
+                <p className="mt-2 truncate text-sm text-zinc-600">
+                  {profile.nickname}
+                </p>
+                <p className="mt-1 truncate text-sm text-zinc-500">
+                  {profile.email ?? t.profile.emailFallback}
+                </p>
               </div>
-            )}
-            <div className="min-w-0">
-              <h1 className="truncate text-3xl font-semibold tracking-normal text-ink">
-                {t.profile.title}
-              </h1>
-              <p className="mt-2 truncate text-sm text-zinc-600">
-                {profile.nickname}
-              </p>
-              <p className="mt-1 truncate text-sm text-zinc-500">
-                {profile.email ?? t.profile.emailFallback}
-              </p>
             </div>
+            <ProfileIdentityForm
+              friendCode={profile.friendCode}
+              locale={locale}
+              nickname={profile.nickname}
+            />
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
@@ -100,7 +108,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               joinedLabel={t.profile.participationCount}
             />
             <Link
-              href={withLocale(locale, "/friends")}
+              href={withLocale(locale, "/messages")}
               className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-fit"
             >
               <UsersRound className="h-4 w-4" />

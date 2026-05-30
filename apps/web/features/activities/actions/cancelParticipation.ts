@@ -51,7 +51,7 @@ export async function cancelParticipationAction(
 
   if (!result.success) {
     return {
-      formError: "请刷新页面后重试。",
+      formError: "请稍后再试。",
     };
   }
 

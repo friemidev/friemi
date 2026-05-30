@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
+import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
 import {
-  ConversationListPanel,
-  MessageThread,
-} from "@/features/direct-messages/components/DirectMessagesPanel";
-import {
-  getDirectConversations,
   getDirectConversationThread,
+  getDirectMessageFriendRoster,
 } from "@/features/direct-messages/queries/getDirectMessages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
@@ -27,18 +25,18 @@ export default async function MessageThreadPage({
   const { locale, conversationId } = await params;
   const profile = await ensureCurrentUserProfile(locale);
   const commonCopy = getCopy(locale).common;
-  const [conversationResult, conversationsResult] = await Promise.all([
+  const [conversationResult, friendRosterResult] = await Promise.all([
     getDirectConversationThread(profile.id, conversationId)
       .then((conversation) => ({ conversation, error: null }))
       .catch((error: unknown) => {
         console.error("Failed to load direct conversation thread", error);
         return { conversation: null, error };
       }),
-    getDirectConversations(profile.id)
-      .then((conversations) => ({ conversations, error: null }))
+    getDirectMessageFriendRoster(profile.id)
+      .then((friends) => ({ friends, error: null }))
       .catch((error: unknown) => {
-        console.error("Failed to load direct conversations", error);
-        return { conversations: [], error };
+        console.error("Failed to load direct message friend roster", error);
+        return { friends: [], error };
       }),
   ]);
 
@@ -64,15 +62,15 @@ export default async function MessageThreadPage({
         locale={locale}
       />
       <div className="hidden lg:block">
-        {conversationsResult.error ? (
+        {friendRosterResult.error ? (
           <EmptyState
             title={commonCopy.loadFailed}
             description={commonCopy.retryDatabase}
           />
         ) : (
-          <ConversationListPanel
-            conversations={conversationsResult.conversations}
+          <DesktopFriendRosterPanel
             currentUserProfileId={profile.id}
+            friends={friendRosterResult.friends}
             locale={locale}
             selectedConversationId={conversationResult.conversation.id}
           />

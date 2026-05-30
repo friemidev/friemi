@@ -87,6 +87,7 @@ model UserProfile {
   id                     String                @id @default(cuid())
   clerkUserId            String                @unique
   email                  String?
+  friendCode             String?               @unique @db.Char(6)
   nickname               String
   firstName              String?
   lastName               String?
@@ -116,6 +117,8 @@ model UserProfile {
   sentDirectMessages     DirectMessage[]       @relation("DirectMessageSender")
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
+
+  @@index([nickname])
 }
 
 model Activity {

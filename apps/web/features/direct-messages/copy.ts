@@ -5,9 +5,13 @@ type DirectMessagesCopy = {
   description: string;
   listTitle: string;
   listDescription: string;
+  friendListTitle: string;
+  friendListDescription: string;
   threadTitle: (name: string) => string;
   emptyListTitle: string;
   emptyListDescription: string;
+  emptyFriendListTitle: string;
+  emptyFriendListDescription: string;
   emptyThreadTitle: string;
   emptyThreadDescription: string;
   noSelectedTitle: string;
@@ -23,6 +27,8 @@ type DirectMessagesCopy = {
   openFriends: string;
   openConversation: (name: string) => string;
   startConversation: string;
+  addFriend: string;
+  startChat: string;
   activitySignal: (date: string, title: string) => string;
   openActivity: (title: string) => string;
   moreActivities: (count: number) => string;
@@ -41,17 +47,21 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       description:
         "Échangez simplement avec vos amis autour des sorties à venir.",
       listTitle: "Discussions",
-      listDescription: "Amis avec lesquels vous avez déjà démarré un échange.",
+      listDescription: "Vos conversations récentes.",
+      friendListTitle: "Amis",
+      friendListDescription: "Touchez un ami pour discuter.",
       threadTitle: (name: string) => `Discussion avec ${name}`,
       emptyListTitle: "Aucune discussion",
-      emptyListDescription:
-        "Démarrez une conversation depuis la page amis. Seuls les amis acceptés peuvent échanger.",
+      emptyListDescription: "Ajoutez un ami pour commencer à discuter.",
+      emptyFriendListTitle: "Aucun ami pour le moment",
+      emptyFriendListDescription:
+        "Ajoutez un ami pour commencer à discuter ici.",
       emptyThreadTitle: "Aucun message",
       emptyThreadDescription:
         "Envoyez un premier message court pour préparer la prochaine sortie.",
       noSelectedTitle: "Choisissez une discussion",
       noSelectedDescription:
-        "La liste reste compacte, façon panneau de contacts. Sélectionnez un ami pour lire ou envoyer un message.",
+        "Sélectionnez un ami pour lire ou envoyer un message.",
       lastMessageEmpty: "Aucun message pour le moment",
       messagePlaceholder: "Écrire un message...",
       messageHint: "Texte uniquement, 1000 caractères maximum.",
@@ -64,6 +74,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
       startConversation: "Message",
+      addFriend: "Ajouter",
+      startChat: "Démarrer la discussion",
       activitySignal: (date: string, title: string) =>
         `Participe à « ${title} » le ${date}`,
       openActivity: (title: string) => `Voir l'activité : ${title}`,
@@ -72,7 +84,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         `Afficher ${count} activité(s) récente(s) de plus`,
       collapseActivities: "Réduire",
       youPrefix: "Vous :",
-      invalidRequest: "Requête invalide. Actualisez puis réessayez.",
+      invalidRequest: "Requête invalide. Réessayez plus tard.",
       failed: "Message impossible à envoyer pour le moment.",
       errors: {
         SELF_CONVERSATION:
@@ -88,20 +100,21 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
   if (locale === "en") {
     return {
       title: "Messages",
-      description:
-        "Keep lightweight one-to-one conversations with friends before an activity.",
+      description: "Chat with friends before an activity.",
       listTitle: "Chats",
-      listDescription: "Friends you have started a conversation with.",
+      listDescription: "Your recent conversations.",
+      friendListTitle: "Friends",
+      friendListDescription: "Tap a friend to chat.",
       threadTitle: (name: string) => `Chat with ${name}`,
       emptyListTitle: "No chats yet",
-      emptyListDescription:
-        "Start one from the friends page. Only accepted friends can message each other.",
+      emptyListDescription: "Add a friend to start chatting.",
+      emptyFriendListTitle: "No friends yet",
+      emptyFriendListDescription: "Add a friend to start chatting here.",
       emptyThreadTitle: "No messages yet",
       emptyThreadDescription:
         "Send a short first message to plan the next activity.",
       noSelectedTitle: "Pick a chat",
-      noSelectedDescription:
-        "The list stays compact like a contacts panel. Select a friend to read or send messages.",
+      noSelectedDescription: "Select a friend to read or send messages.",
       lastMessageEmpty: "No messages yet",
       messagePlaceholder: "Write a message...",
       messageHint: "Text only, up to 1000 characters.",
@@ -114,6 +127,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
       startConversation: "Message",
+      addFriend: "Add",
+      startChat: "Start chat",
       activitySignal: (date: string, title: string) =>
         `Joined "${title}" on ${date}`,
       openActivity: (title: string) => `Open activity: ${title}`,
@@ -122,7 +137,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         `Show ${count} more recent activities`,
       collapseActivities: "Collapse",
       youPrefix: "You:",
-      invalidRequest: "Invalid request. Refresh and try again.",
+      invalidRequest: "Invalid request. Try again later.",
       failed: "Message could not be sent right now.",
       errors: {
         SELF_CONVERSATION: "You cannot start a conversation with yourself.",
@@ -136,18 +151,20 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
 
   return {
     title: "消息",
-    description: "和好友进行轻量点对点沟通，适合活动前简单确认。",
+    description: "和好友聊聊，活动前快速确认。",
     listTitle: "聊天列表",
-    listDescription: "已和你建立会话的好友。",
+    listDescription: "最近联系的好友。",
+    friendListTitle: "好友列表",
+    friendListDescription: "点一位好友，开始聊天。",
     threadTitle: (name: string) => `和 ${name} 的聊天`,
     emptyListTitle: "还没有聊天",
-    emptyListDescription:
-      "可以从好友页发起会话。第一版只允许已接受好友互相发送消息。",
+    emptyListDescription: "添加好友后，就可以在这里聊天。",
+    emptyFriendListTitle: "暂无好友",
+    emptyFriendListDescription: "添加好友后，就可以直接聊天。",
     emptyThreadTitle: "还没有消息",
     emptyThreadDescription: "发送第一条简短消息，约定活动前的信息。",
     noSelectedTitle: "选择一个聊天",
-    noSelectedDescription:
-      "聊天列表保持联系人面板式的紧凑布局，选择好友后即可查看或发送消息。",
+    noSelectedDescription: "选择一位好友，查看或发送消息。",
     lastMessageEmpty: "还没有消息",
     messagePlaceholder: "输入消息...",
     messageHint: "仅支持纯文本，最多 1000 字。",
@@ -159,6 +176,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
     startConversation: "发消息",
+    addFriend: "添加",
+    startChat: "开始聊天",
     activitySignal: (date: string, title: string) =>
       `${date} 参加了「${title}」`,
     openActivity: (title: string) => `查看活动：${title}`,
@@ -166,7 +185,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     showMoreActivitiesLabel: (count: number) => `展开 ${count} 个近期活动`,
     collapseActivities: "收起",
     youPrefix: "你：",
-    invalidRequest: "请求无效，请刷新后重试。",
+    invalidRequest: "请求无效，请稍后再试。",
     failed: "消息暂时无法发送，请稍后重试。",
     errors: {
       SELF_CONVERSATION: "不能和自己创建会话。",

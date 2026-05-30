@@ -246,7 +246,7 @@ export async function joinActivityAction(
 
     if (isPrismaTransactionConflictError(error)) {
       return {
-        formError: "报名人数刚刚发生变化，请刷新后重试。",
+        formError: "报名人数已更新，请稍后再试。",
         values: {
           message: rawInput.message,
         },

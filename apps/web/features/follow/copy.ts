@@ -8,7 +8,7 @@ export function getFollowCopy(locale: string) {
       signInToFollow: "Se connecter pour suivre",
       followers: "Abonnes",
       followingCount: "Abonnements",
-      invalidRequest: "Requete invalide. Actualisez la page puis reessayez.",
+      invalidRequest: "Requete invalide. Reessayez plus tard.",
       cannotFollowSelf: "Vous ne pouvez pas vous suivre vous-meme.",
       targetUnavailable:
         "Cet utilisateur est introuvable ou temporairement indisponible.",
@@ -24,7 +24,7 @@ export function getFollowCopy(locale: string) {
       signInToFollow: "Sign in to follow",
       followers: "Followers",
       followingCount: "Following",
-      invalidRequest: "Invalid request. Refresh the page and try again.",
+      invalidRequest: "Invalid request. Try again later.",
       cannotFollowSelf: "You cannot follow yourself.",
       targetUnavailable:
         "This user does not exist or cannot be followed right now.",
@@ -39,7 +39,7 @@ export function getFollowCopy(locale: string) {
     signInToFollow: "登录后关注",
     followers: "粉丝",
     followingCount: "关注",
-    invalidRequest: "请求参数无效，请刷新页面后重试。",
+    invalidRequest: "请求无效，请稍后再试。",
     cannotFollowSelf: "不能关注自己。",
     targetUnavailable: "目标用户不存在或暂不可关注。",
   };
