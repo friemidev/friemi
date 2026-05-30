@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   parseChineseDate,
   parseEventbriteEventHtml,
+  parseMeetupEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
 } from "./link-import";
@@ -41,6 +42,23 @@ test("parseSortirAParisArticleHtml reads microdata dates and address", () => {
     activity.coverImageUrl ?? "",
     /cdn\.sortiraparis\.com\/images\/1001\//,
   );
+  assert.match(activity.description, /约十五位知名作家/);
+  assert.doesNotMatch(activity.description, /^2026年6月6日与7日/);
+});
+
+test("parseSortirAParisArticleHtml prefers article body over short NewsArticle summary", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "sortiraparis-article-snippet.html"),
+    "utf8",
+  );
+  const activity = parseSortirAParisArticleHtml(
+    html,
+    "https://www.sortiraparis.com/zh/articles/346020-sample",
+  );
+
+  assert.ok(activity);
+  assert.ok(activity.description.length > 80);
 });
 
 test("parsePlayInParisEventHtml reads Event JSON-LD from event page", () => {
@@ -57,6 +75,43 @@ test("parsePlayInParisEventHtml reads Event JSON-LD from event page", () => {
   assert.equal(activity.priceType, "FREE");
   assert.match(activity.address, /Vincennes/i);
   assert.ok(activity.coverImageUrl?.includes("vincennes-en-anciennes"));
+});
+
+test("parseMeetupEventHtml reads full description from __NEXT_DATA__", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "meetup-nextdata-snippet.html"),
+    "utf8",
+  );
+  const sourceUrl =
+    "https://www.meetup.com/fr-fr/speakenglishtoulouse/events/314770849/";
+  const activity = parseMeetupEventHtml(html, sourceUrl);
+
+  assert.ok(activity);
+  assert.match(activity.description, /Please note:/);
+  assert.match(activity.description, /This event is free/);
+  assert.doesNotMatch(activity.description, /practice your E$/);
+  assert.equal(activity.city, "Toulouse");
+  assert.match(activity.address, /Baraka Jeux/);
+});
+
+test("parseEventbriteEventHtml merges structuredContent modules into description", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "eventbrite-nextdata-snippet.html"),
+    "utf8",
+  );
+  const sourceUrl =
+    "https://www.eventbrite.fr/e/nuit-blanche-des-etoiles-tickets-1983356647122";
+  const activity = parseEventbriteEventHtml(html, sourceUrl);
+
+  assert.ok(activity);
+  assert.match(activity.description, /Le programme/);
+  assert.match(activity.description, /Dominique Leglu/);
+  assert.doesNotMatch(
+    activity.description,
+    /^Les étoiles, témoins silencieux/,
+  );
 });
 
 test("parseEventbriteEventHtml reads Festival JSON-LD and decodes Next image URLs", () => {

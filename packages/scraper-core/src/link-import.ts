@@ -296,18 +296,184 @@ export function parseStructuredEventHtml(
   );
 }
 
+type MeetupNextVenue = {
+  address?: string;
+  city?: string;
+  country?: string;
+  name?: string;
+  state?: string;
+};
+
+type MeetupNextPhoto = {
+  source?: string;
+};
+
+type MeetupNextEvent = {
+  dateTime?: string;
+  description?: string;
+  displayPhoto?: MeetupNextPhoto;
+  endTime?: string;
+  featuredEventPhoto?: MeetupNextPhoto;
+  title?: string;
+  venue?: MeetupNextVenue;
+};
+
+function normalizePlainTextDescription(input: string) {
+  return decodeHtmlEntities(input)
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractMeetupNextDataEvent(html: string): MeetupNextEvent | null {
+  const match = html.match(
+    /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  try {
+    const data = JSON.parse(match[1]) as {
+      props?: { pageProps?: { event?: MeetupNextEvent } };
+    };
+    const event = data.props?.pageProps?.event;
+
+    return event && typeof event === "object" ? event : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatMeetupVenueAddress(venue: MeetupNextVenue | undefined) {
+  if (!venue) {
+    return "Paris";
+  }
+
+  return [venue.name, venue.address, venue.city, venue.state, venue.country]
+    .filter((part) => typeof part === "string" && part.trim())
+    .map((part) => stripHtml(String(part)))
+    .join(" · ");
+}
+
+function parseMeetupEventFromNextData(
+  event: MeetupNextEvent,
+  html: string,
+  sourceUrl: string,
+): ScrapedActivity | null {
+  const startAt = event.dateTime
+    ? parseDateTimeString(event.dateTime)
+    : null;
+
+  if (!startAt) {
+    return null;
+  }
+
+  const endAt = event.endTime ? parseDateTimeString(event.endTime) : null;
+  const title =
+    typeof event.title === "string"
+      ? stripHtml(event.title)
+      : "未命名活动";
+  const description =
+    typeof event.description === "string"
+      ? cleanPromoTextMultiline(normalizePlainTextDescription(event.description))
+      : "";
+  const venue = event.venue;
+  const city =
+    venue && typeof venue.city === "string" && venue.city.trim()
+      ? stripHtml(venue.city)
+      : "Paris";
+  const coverImageUrl =
+    (typeof event.featuredEventPhoto?.source === "string"
+      ? event.featuredEventPhoto.source
+      : null) ||
+    (typeof event.displayPhoto?.source === "string"
+      ? event.displayPhoto.source
+      : null) ||
+    extractPageImageUrl(html, sourceUrl);
+  const priceText = "查看原文";
+
+  return {
+    id: makeStableId("meetup", sourceUrl),
+    source: "meetup",
+    sourceUrl,
+    title,
+    description: description || title,
+    itinerary: null,
+    type: "PUBLIC_EVENT",
+    category: guessCategory(`${title} ${description}`),
+    city,
+    destination: null,
+    address: formatMeetupVenueAddress(venue),
+    startAt: startAt.toISOString(),
+    endAt: endAt?.toISOString() ?? null,
+    capacity: 100,
+    minParticipants: null,
+    requiresApproval: false,
+    priceType: guessPriceType(priceText),
+    priceText,
+    coverImageUrl,
+    status: "RECRUITING",
+    visibility: "PUBLIC",
+  };
+}
+
 export function parseMeetupEventHtml(
   html: string,
   sourceUrl: string,
 ): ScrapedActivity | null {
-  return parseStructuredEventHtml(html, sourceUrl, "meetup");
+  const nextEvent = extractMeetupNextDataEvent(html);
+
+  if (nextEvent) {
+    const activity = parseMeetupEventFromNextData(nextEvent, html, sourceUrl);
+
+    if (activity) {
+      return activity;
+    }
+  }
+
+  const structured = parseStructuredEventHtml(html, sourceUrl, "meetup");
+
+  if (!structured) {
+    return null;
+  }
+
+  if (typeof nextEvent?.description === "string" && nextEvent.description.trim()) {
+    const description = cleanPromoTextMultiline(
+      normalizePlainTextDescription(nextEvent.description),
+    );
+
+    return {
+      ...structured,
+      description: description || structured.description,
+      category: guessCategory(`${structured.title} ${description}`),
+    };
+  }
+
+  return structured;
 }
 
 export function parseEventbriteEventHtml(
   html: string,
   sourceUrl: string,
 ): ScrapedActivity | null {
-  return parseStructuredEventHtml(html, sourceUrl, "eventbrite");
+  const activity = parseStructuredEventHtml(html, sourceUrl, "eventbrite");
+  const fullDescription = extractEventbriteStructuredDescription(html);
+
+  if (activity && fullDescription) {
+    return {
+      ...activity,
+      description: fullDescription,
+      category: guessCategory(`${activity.title} ${fullDescription}`),
+    };
+  }
+
+  return activity;
 }
 
 function parseDateTimeString(value: string) {
@@ -494,6 +660,158 @@ function cleanPromoText(value: string) {
     .trim();
 }
 
+function cleanPromoTextMultiline(value: string) {
+  return value
+    .replace(/微信|wechat|playinparis1|交流群/gi, " ")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]{2,}/g, " ").trim())
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+}
+
+function htmlFragmentToPlainText(htmlFragment: string) {
+  return decodeHtmlEntities(htmlFragment)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|tr|blockquote)>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractParagraphTextsFromHtml(
+  htmlFragment: string,
+  minLength = 40,
+) {
+  const paragraphs: string[] = [];
+
+  for (const match of htmlFragment.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)) {
+    const text = htmlFragmentToPlainText(match[1]);
+
+    if (text.length >= minLength) {
+      paragraphs.push(text);
+    }
+  }
+
+  return paragraphs;
+}
+
+function parseNextDataPayload(html: string) {
+  const match = html.match(
+    /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(match[1]) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function extractEventbriteStructuredDescription(html: string) {
+  const data = parseNextDataPayload(html);
+
+  if (!data) {
+    return null;
+  }
+
+  const pageProps = (data.props as Record<string, unknown> | undefined)
+    ?.pageProps as Record<string, unknown> | undefined;
+  const context = pageProps?.context as Record<string, unknown> | undefined;
+  const structuredContent = context?.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  const modules = structuredContent?.modules;
+
+  if (!Array.isArray(modules)) {
+    return null;
+  }
+
+  const parts = modules
+    .map((module) => {
+      if (!module || typeof module !== "object") {
+        return "";
+      }
+
+      const text = (module as Record<string, unknown>).text;
+
+      return typeof text === "string" ? htmlFragmentToPlainText(text) : "";
+    })
+    .filter((part) => part.length > 0);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return cleanPromoTextMultiline(parts.join("\n\n"));
+}
+
+function extractSortirArticleBody(html: string) {
+  const articleBodyMatch = html.match(
+    /<[^>]+itemprop=["']articleBody["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i,
+  );
+
+  if (articleBodyMatch?.[1]) {
+    const paragraphs = extractParagraphTextsFromHtml(articleBodyMatch[1], 30);
+
+    if (paragraphs.length > 0) {
+      return cleanPromoTextMultiline(paragraphs.join("\n\n"));
+    }
+
+    const text = htmlFragmentToPlainText(articleBodyMatch[1]);
+
+    if (text.length > 120) {
+      return cleanPromoTextMultiline(text);
+    }
+  }
+
+  const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+
+  if (articleMatch?.[1]) {
+    const paragraphs = extractParagraphTextsFromHtml(articleMatch[1]);
+
+    if (paragraphs.length >= 2) {
+      return cleanPromoTextMultiline(paragraphs.join("\n\n"));
+    }
+  }
+
+  const contentMatchers = [
+    /class="[^"]*\barticle[_-]?content\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /class="[^"]*\beditorial\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /class="[^"]*\bcontent-body\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+  ];
+
+  for (const pattern of contentMatchers) {
+    const match = html.match(pattern);
+
+    if (match?.[1]) {
+      const paragraphs = extractParagraphTextsFromHtml(match[1]);
+
+      if (paragraphs.length >= 2) {
+        return cleanPromoTextMultiline(paragraphs.join("\n\n"));
+      }
+    }
+  }
+
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const paragraphs = extractParagraphTextsFromHtml(bodyMatch?.[1] ?? html);
+
+  if (paragraphs.length >= 3) {
+    return cleanPromoTextMultiline(paragraphs.join("\n\n"));
+  }
+
+  return null;
+}
+
 export function parseSortirAParisArticleHtml(
   html: string,
   sourceUrl: string,
@@ -525,7 +843,9 @@ export function parseSortirAParisArticleHtml(
     articleData && typeof articleData.description === "string"
       ? articleData.description
       : (extractMetaContent(html, ["description", "og:description"]) ?? "");
-  const description = stripHtml(descriptionRaw) || title;
+  const summary = stripHtml(descriptionRaw) || title;
+  const articleBody = extractSortirArticleBody(html);
+  const description = articleBody || summary;
   const microdata = extractSortirMicrodata(html);
   const explicitDateHint = parseChineseDate(
     `${title} ${description}`,
