@@ -24,6 +24,10 @@ export type ActivityCoverStorageErrorCode =
   | "UPLOAD_FAILED"
   | "FETCH_FAILED";
 
+export type ActivityCoverUploadResult =
+  | { error: ActivityCoverStorageErrorCode }
+  | { path: string; url: string };
+
 export function getActivityCoverStorageConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -142,7 +146,7 @@ export async function uploadActivityCoverBuffer(
   userId: string,
   fileBuffer: Buffer,
   detectedMimeType: AllowedCoverMimeType,
-) {
+): Promise<ActivityCoverUploadResult> {
   const config = getActivityCoverStorageConfig();
 
   if (!config) {
