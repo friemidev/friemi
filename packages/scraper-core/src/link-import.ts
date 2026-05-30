@@ -585,10 +585,41 @@ function capitalizeFrenchStreetPhrase(value: string) {
   );
 }
 
-export function findSortirFrenchArticleUrl(
+function normalizeSortirArticleUrl(href: string, sourceUrl: string) {
+  try {
+    return new URL(href, sourceUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+export function findSortirFrenchArticleUrls(
   html: string,
   sourceUrl: string,
-): string | null {
+): string[] {
+  const articleId = sourceUrl.match(/\/articles\/(\d+)-/)?.[1];
+
+  if (!articleId) {
+    return [];
+  }
+
+  const found = new Set<string>();
+  const addCandidate = (href: string | undefined) => {
+    if (!href) {
+      return;
+    }
+
+    const normalized = normalizeSortirArticleUrl(href, sourceUrl);
+
+    if (
+      normalized &&
+      normalized.includes(`/articles/${articleId}-`) &&
+      !/\/zh\//i.test(normalized)
+    ) {
+      found.add(normalized);
+    }
+  };
+
   const hreflang =
     html.match(
       /<link[^>]+hreflang=["']fr(?:-FR)?["'][^>]+href=["']([^"']+)"/i,
@@ -596,32 +627,115 @@ export function findSortirFrenchArticleUrl(
     html.match(
       /<link[^>]+href=["']([^"']+)["'][^>]+hreflang=["']fr(?:-FR)?["']/i,
     );
+  addCandidate(hreflang?.[1]);
 
-  if (hreflang?.[1]) {
-    try {
-      return new URL(hreflang[1], sourceUrl).toString();
-    } catch {
-      /* ignore invalid url */
-    }
-  }
-
-  const articleId = sourceUrl.match(/\/articles\/(\d+)-/)?.[1];
-
-  if (!articleId) {
-    return null;
-  }
+  const canonical = html.match(
+    /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)"/i,
+  );
+  addCandidate(canonical?.[1]);
 
   for (const match of html.matchAll(
     new RegExp(
-      `href=["'](https://www\\.sortiraparis\\.com/[^"']*/articles/${articleId}-[^"']+)["']`,
+      `href=["']([^"']*/articles/${articleId}-[^"'#]+)["']`,
       "gi",
     ),
   )) {
-    const candidate = match[1];
+    addCandidate(match[1]);
+  }
 
-    if (!/\/zh\//i.test(candidate)) {
-      return candidate;
-    }
+  return [...found].sort((left, right) => {
+    const score = (value: string) => {
+      if (/\/scenes\/|\/spectacle\//i.test(value)) {
+        return 0;
+      }
+
+      if (/\/loisirs\/|\/culture\//i.test(value)) {
+        return 1;
+      }
+
+      return 2;
+    };
+
+    return score(left) - score(right);
+  });
+}
+
+export function findSortirFrenchArticleUrl(
+  html: string,
+  sourceUrl: string,
+): string | null {
+  return findSortirFrenchArticleUrls(html, sourceUrl)[0] ?? null;
+}
+
+function formatParisStreetAddress({
+  streetName,
+  streetNumber,
+  arrondissement,
+}: {
+  streetName: string;
+  streetNumber?: string | null;
+  arrondissement: number;
+}) {
+  const postal = PARIS_ARRONDISSEMENT_POSTAL[arrondissement];
+  const street = capitalizeFrenchStreetPhrase(
+    streetNumber ? `${streetNumber} rue ${streetName}` : `rue ${streetName}`,
+  );
+
+  if (postal) {
+    return `${street}, ${postal} Paris`;
+  }
+
+  return `${street}, ${arrondissement}e arrondissement, Paris`;
+}
+
+export function extractSortirChineseStreetAddress(html: string): string | null {
+  const body = extractSortirArticleBody(html) ?? stripHtml(html);
+  const labeledAddress = body.match(
+    /地址[：:]\s*巴黎\s*(\d{1,2})\s*区\s*(?:Albert|阿尔贝尔)\s*街\s*(\d+)?/i,
+  );
+
+  if (labeledAddress) {
+    return formatParisStreetAddress({
+      streetName: "Albert",
+      streetNumber: labeledAddress[2],
+      arrondissement: Number(labeledAddress[1]),
+    });
+  }
+
+  const districtFirst = body.match(
+    /巴黎\s*(\d{1,2})\s*区\s*(?:Albert|阿尔贝尔)\s*街\s*(\d+)?/i,
+  );
+
+  if (districtFirst) {
+    return formatParisStreetAddress({
+      streetName: "Albert",
+      streetNumber: districtFirst[2],
+      arrondissement: Number(districtFirst[1]),
+    });
+  }
+
+  const streetWithNumber = body.match(
+    /(?:Albert|阿尔贝尔)\s*街\s*(\d+)?[^。\n]{0,40}?巴黎\s*(\d{1,2})\s*区/i,
+  );
+
+  if (streetWithNumber) {
+    return formatParisStreetAddress({
+      streetName: "Albert",
+      streetNumber: streetWithNumber[1],
+      arrondissement: Number(streetWithNumber[2]),
+    });
+  }
+
+  const reverseDistrict = body.match(
+    /(?:Albert|阿尔贝尔)\s*街[的]?\s*(?:巴黎)?\s*(\d{1,2})\s*区/i,
+  );
+
+  if (reverseDistrict) {
+    return formatParisStreetAddress({
+      streetName: "Albert",
+      streetNumber: null,
+      arrondissement: Number(reverseDistrict[1]),
+    });
   }
 
   return null;
@@ -669,35 +783,35 @@ export function extractSortirFrenchStreetAddress(html: string): string | null {
 }
 
 export function extractSortirLocationHint(html: string): string | null {
-  const frenchStreet = extractSortirFrenchStreetAddress(html);
-
-  if (frenchStreet) {
-    return frenchStreet;
-  }
-
-  const body = extractSortirArticleBody(html) ?? stripHtml(html);
-  const chineseDistrictMatch = body.match(
-    /([\u4e00-\u9fffA-Za-z0-9·-]{2,30}街)[的]?(?:巴黎)?(\d{1,2})区/,
+  return (
+    extractSortirFrenchStreetAddress(html) ??
+    extractSortirChineseStreetAddress(html)
   );
-
-  if (chineseDistrictMatch) {
-    return `巴黎${chineseDistrictMatch[2]}区 ${chineseDistrictMatch[1]}`;
-  }
-
-  return null;
 }
 
-function resolveSortirAddress(html: string, microdataAddress: string | null) {
+function resolveSortirAddress(
+  html: string,
+  microdataAddress: string | null,
+  frenchHtml?: string,
+) {
+  if (frenchHtml) {
+    const frenchStreet = extractSortirFrenchStreetAddress(frenchHtml);
+
+    if (frenchStreet) {
+      return frenchStreet;
+    }
+  }
+
   const frenchStreet = extractSortirFrenchStreetAddress(html);
 
   if (frenchStreet) {
     return frenchStreet;
   }
 
-  const hint = extractSortirLocationHint(html);
+  const chineseStreet = extractSortirChineseStreetAddress(html);
 
-  if (hint) {
-    return hint;
+  if (chineseStreet) {
+    return chineseStreet;
   }
 
   if (microdataAddress && microdataAddress !== "Paris, France") {
@@ -1025,7 +1139,7 @@ export function parseSortirAParisArticleHtml(
   )
     ? "免费"
     : "查看原文";
-  const address = resolveSortirAddress(html, microdata.address);
+  const address = resolveSortirAddress(html, microdata.address, undefined);
   const city =
     /\bToulouse\b/i.test(address) || /\bToulouse\b/i.test(bodyText)
       ? "Toulouse"
@@ -1062,13 +1176,20 @@ export function enrichSortirActivityAddress(
   sourceUrl: string,
   frenchHtml?: string,
 ): ScrapedActivity {
-  const mergedHtml = frenchHtml ? `${html}\n${frenchHtml}` : html;
-  const resolvedAddress = resolveSortirAddress(mergedHtml, activity.address);
+  const resolvedAddress = resolveSortirAddress(
+    html,
+    activity.address,
+    frenchHtml,
+  );
 
   return {
     ...activity,
     address: resolvedAddress,
-    city: /\bToulouse\b/i.test(resolvedAddress) ? "Toulouse" : activity.city,
+    city: /\bToulouse\b/i.test(resolvedAddress)
+      ? "Toulouse"
+      : /Paris|750\d{2}/i.test(resolvedAddress)
+        ? "Paris"
+        : activity.city,
   };
 }
 

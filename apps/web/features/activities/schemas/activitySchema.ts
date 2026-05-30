@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { activityCategories, priceTypes } from "@chill-club/shared";
+import { clampActivityDescription } from "@/lib/activity-description";
 import { nonEmptyString } from "@/lib/validations";
+
+export const MAX_ACTIVITY_DESCRIPTION_LENGTH = 3000;
 
 const createActivityTypes = ["LOCAL", "TRIP"] as const;
 const activityCategoryValues = Object.keys(activityCategories) as [
@@ -50,7 +53,16 @@ const optionalCoordinate = (min: number, max: number, message: string) =>
 export const createActivitySchema = z
   .object({
     title: nonEmptyString.max(80, "标题最多 80 个字"),
-    description: nonEmptyString.max(2000, "描述最多 2000 个字"),
+    description: z.preprocess(
+      (value) =>
+        typeof value === "string"
+          ? clampActivityDescription(value, MAX_ACTIVITY_DESCRIPTION_LENGTH)
+          : value,
+      nonEmptyString.max(
+        MAX_ACTIVITY_DESCRIPTION_LENGTH,
+        `描述最多 ${MAX_ACTIVITY_DESCRIPTION_LENGTH} 个字`,
+      ),
+    ),
     itinerary: optionalText,
     coverImageUrl: optionalImageUrl,
     type: z.enum(createActivityTypes),

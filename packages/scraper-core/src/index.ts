@@ -6,9 +6,11 @@ export type { ScrapedActivity, ScraperSource } from "./types";
 export {
   activityLinkImportUserAgent,
   enrichSortirActivityAddress,
+  extractSortirChineseStreetAddress,
   extractSortirFrenchStreetAddress,
   extractSortirLocationHint,
   findSortirFrenchArticleUrl,
+  findSortirFrenchArticleUrls,
   parseChineseDate,
   parseEventbriteEventHtml,
   parseMeetupEventHtml,

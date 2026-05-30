@@ -2,7 +2,9 @@ import type { ActivityCategory, PriceType } from "@chill-club/shared";
 import {
   activityLinkImportUserAgent,
   enrichSortirActivityAddress,
+  extractSortirFrenchStreetAddress,
   findSortirFrenchArticleUrl,
+  findSortirFrenchArticleUrls,
   parseEventbriteEventHtml,
   parseMeetupEventHtml,
   parsePlayInParisEventHtml,
@@ -12,6 +14,7 @@ import {
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
 import { formatImportedAddressForForm } from "@/lib/place-search";
 import { formatParisDateTimeInput } from "@/features/activities/actions/activityActionUtils";
+import { buildActivityDescriptionWithSource } from "@/lib/activity-description";
 
 const requestTimeoutMs = 12_000;
 const maxHtmlLength = 600_000;
@@ -844,9 +847,12 @@ function buildDescription(
   sourceUrl: string,
   copy: ActivityLinkImportLocaleCopy,
 ) {
-  const body = description || copy.fallbackDescription;
-
-  return truncateText(`${body}\n\n${copy.sourceLabel}: ${sourceUrl}`, 2000);
+  return buildActivityDescriptionWithSource({
+    body: description,
+    fallbackDescription: copy.fallbackDescription,
+    sourceLabel: copy.sourceLabel,
+    sourceUrl,
+  });
 }
 
 function buildPreview(
@@ -1052,26 +1058,38 @@ async function enrichSortirLinkPreview(
   html: string,
   sourceUrl: URL,
 ): Promise<ActivityLinkPreview> {
-  const frenchUrl = findSortirFrenchArticleUrl(html, sourceUrl.toString());
   let frenchHtml: string | undefined;
 
-  if (frenchUrl && /\/zh\//i.test(sourceUrl.pathname)) {
-    try {
-      const response = await fetch(frenchUrl, {
-        headers: {
-          Accept:
-            "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-          "User-Agent": activityLinkImportUserAgent,
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(requestTimeoutMs),
-      });
+  if (/\/zh\//i.test(sourceUrl.pathname)) {
+    const frenchUrls = findSortirFrenchArticleUrls(html, sourceUrl.toString());
 
-      if (response.ok) {
-        frenchHtml = (await response.text()).slice(0, maxHtmlLength);
+    for (const frenchUrl of frenchUrls) {
+      try {
+        const response = await fetch(frenchUrl, {
+          headers: {
+            Accept:
+              "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+            "User-Agent": activityLinkImportUserAgent,
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const candidateHtml = (await response.text()).slice(0, maxHtmlLength);
+
+        if (extractSortirFrenchStreetAddress(candidateHtml)) {
+          frenchHtml = candidateHtml;
+          break;
+        }
+
+        frenchHtml ??= candidateHtml;
+      } catch {
+        /* try next candidate */
       }
-    } catch {
-      frenchHtml = undefined;
     }
   }
 

@@ -8,6 +8,29 @@ export type ImportedAddressParts = {
 
 const COUNTRY_TOKENS = /^(fr|france|frança|french)$/i;
 
+const PARIS_ARRONDISSEMENT_POSTAL: Record<number, string> = {
+  1: "75001",
+  2: "75002",
+  3: "75003",
+  4: "75004",
+  5: "75005",
+  6: "75006",
+  7: "75007",
+  8: "75008",
+  9: "75009",
+  10: "75010",
+  11: "75011",
+  12: "75012",
+  13: "75013",
+  14: "75014",
+  15: "75015",
+  16: "75016",
+  17: "75017",
+  18: "75018",
+  19: "75019",
+  20: "75020",
+};
+
 const STREET_HINT =
   /\b(rue|avenue|boulevard|bd\.?|place|quai|route|allée|allee|impasse|passage|square|cours|street|str\.|boulevard)\b/i;
 
@@ -82,7 +105,43 @@ export function parseImportedAddressParts(raw: string): ImportedAddressParts {
   };
 }
 
+function expandChineseParisAddressQueries(address: string) {
+  const queries: string[] = [];
+  const labeledAddress = address.match(
+    /巴黎\s*(\d{1,2})\s*区\s*(?:阿尔贝尔|Albert)\s*街\s*(\d+)?/i,
+  );
+  const reverseDistrict = address.match(
+    /(?:阿尔贝尔|Albert)\s*街.*巴黎\s*(\d{1,2})\s*区/i,
+  );
+  const arrondissement = Number(
+    labeledAddress?.[1] ?? reverseDistrict?.[1] ?? "",
+  );
+  const streetNumber = labeledAddress?.[2] ?? null;
+  const postal = PARIS_ARRONDISSEMENT_POSTAL[arrondissement];
+
+  if (!postal) {
+    return queries;
+  }
+
+  const streetLine = streetNumber
+    ? `${streetNumber} Rue Albert`
+    : "Rue Albert";
+
+  queries.push(`${streetLine}, ${postal} Paris, France`);
+  queries.push(`Rue Albert, ${postal} Paris, France`);
+  queries.push(`${postal} Paris, France`);
+
+  return queries;
+}
+
 export function formatImportedAddressForForm(raw: string) {
+  const chineseFormatted = expandChineseParisAddressQueries(raw)[0]
+    ?.replace(/, France$/, "");
+
+  if (chineseFormatted) {
+    return chineseFormatted;
+  }
+
   const parts = parseImportedAddressParts(raw);
 
   if (parts.streetLine && parts.postalCode && parts.city) {
@@ -110,7 +169,7 @@ export function formatImportedAddressForForm(raw: string) {
 export function buildGeocodingQueries(address: string, city: string) {
   const parts = parseImportedAddressParts(address);
   const effectiveCity = parts.city || city.trim();
-  const queries: string[] = [];
+  const queries: string[] = [...expandChineseParisAddressQueries(address)];
 
   if (parts.streetLine && parts.postalCode && effectiveCity) {
     queries.push(

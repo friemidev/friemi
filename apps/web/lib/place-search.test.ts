@@ -35,6 +35,20 @@ test("buildGeocodingQueries prioritizes street and postal code", () => {
   );
 });
 
+test("formatImportedAddressForForm converts Chinese Paris district streets", () => {
+  const formatted = formatImportedAddressForForm("巴黎13区 阿尔贝尔街");
+
+  assert.equal(formatted, "Rue Albert, 75013 Paris");
+});
+
+test("buildGeocodingQueries expands Chinese Paris district addresses", () => {
+  const queries = buildGeocodingQueries("巴黎13区 阿尔贝尔街", "Paris");
+
+  assert.ok(
+    queries.some((query) => /rue Albert,\s*75013 Paris,\s*France/i.test(query)),
+  );
+});
+
 test("parseImportedAddressParts extracts postal code from street segment", () => {
   const parts = parseImportedAddressParts(
     "Fondation Maison des sciences de l'homme (FMSH) · 54 Boulevard Raspail, 75006 Paris · Paris · FR",
