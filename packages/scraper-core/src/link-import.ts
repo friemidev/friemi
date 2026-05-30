@@ -74,16 +74,20 @@ function extractMetaContent(html: string, keys: string[]) {
   return null;
 }
 
-function extractSortirArticleImage(html: string, articleImage: unknown) {
+function extractSortirArticleImage(
+  html: string,
+  articleImage: unknown,
+  baseUrl: string,
+) {
   const carouselMatch = html.match(
     /data-src="(https:\/\/cdn\.sortiraparis\.com\/images\/\d+\/[^"]+)"/i,
   );
 
   return (
     normalizeExternalImageUrl(carouselMatch?.[1]) ??
-    normalizeExternalImageUrl(extractItempropMetaContent(html, "image")) ??
+    resolvePageImageUrl(extractItempropMetaContent(html, "image"), baseUrl) ??
     normalizeExternalImageUrl(articleImage) ??
-    extractPageImageUrl(html)
+    extractPageImageUrl(html, baseUrl)
   );
 }
 
@@ -134,6 +138,176 @@ function hasJsonLdType(value: Record<string, unknown>, typeName: string) {
   return values.some(
     (item) => String(item).toLowerCase() === typeName.toLowerCase(),
   );
+}
+
+function hasImportableEventJsonLdType(value: Record<string, unknown>) {
+  const type = value["@type"];
+  const values = Array.isArray(type) ? type : [type];
+
+  return values.some((item) => {
+    const normalized = String(item).toLowerCase();
+
+    return (
+      normalized === "event" ||
+      normalized.endsWith("event") ||
+      normalized === "festival" ||
+      normalized.endsWith("festival")
+    );
+  });
+}
+
+function resolvePageImageUrl(rawUrl: string | null | undefined, baseUrl: string) {
+  if (!rawUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawUrl, baseUrl);
+
+    if (url.pathname.includes("/_next/image")) {
+      const embedded = url.searchParams.get("url");
+
+      if (embedded) {
+        return normalizeExternalImageUrl(decodeURIComponent(embedded));
+      }
+    }
+
+    return normalizeExternalImageUrl(url.toString());
+  } catch {
+    return normalizeExternalImageUrl(rawUrl);
+  }
+}
+
+function extractPageImageUrl(html: string, baseUrl: string) {
+  const metaImage =
+    extractMetaContent(html, ["og:image", "twitter:image"]) ??
+    extractItempropMetaContent(html, "image");
+
+  return resolvePageImageUrl(metaImage, baseUrl);
+}
+
+function buildScrapedActivityFromJsonLdEvent(
+  event: Record<string, unknown>,
+  nodes: Record<string, unknown>[],
+  html: string,
+  sourceUrl: string,
+  source: ScrapedActivity["source"],
+): ScrapedActivity | null {
+  const title =
+    typeof event.name === "string" ? stripHtml(event.name) : "未命名活动";
+  const description = cleanPromoText(
+    typeof event.description === "string" ? stripHtml(event.description) : "",
+  );
+  const startAt =
+    typeof event.startDate === "string"
+      ? parseDateTimeString(event.startDate)
+      : null;
+  const endAt =
+    typeof event.endDate === "string"
+      ? parseDateTimeString(event.endDate)
+      : null;
+
+  if (!startAt) {
+    return null;
+  }
+
+  const location = event.location as Record<string, unknown> | undefined;
+  const locationName =
+    location && typeof location.name === "string"
+      ? stripHtml(location.name)
+      : typeof location === "string"
+        ? stripHtml(location)
+        : "";
+  const address =
+    location?.address && typeof location.address === "object"
+      ? [
+          locationName,
+          (location.address as Record<string, unknown>).streetAddress,
+          (location.address as Record<string, unknown>).postalCode,
+          (location.address as Record<string, unknown>).addressLocality,
+          (location.address as Record<string, unknown>).addressCountry,
+        ]
+          .filter(Boolean)
+          .map((part) => stripHtml(String(part)))
+          .join(" · ")
+      : locationName || "Paris";
+  const offer = Array.isArray(event.offers) ? event.offers[0] : event.offers;
+  const price =
+    offer && typeof offer === "object"
+      ? (offer as Record<string, unknown>).price
+      : undefined;
+  const currency =
+    offer && typeof offer === "object"
+      ? (offer as Record<string, unknown>).priceCurrency
+      : undefined;
+  const priceText =
+    price === undefined || price === null || price === ""
+      ? "查看原文"
+      : String(price) === "0"
+        ? "免费"
+        : currency
+          ? `${price} ${currency}`
+          : String(price);
+
+  return {
+    id: makeStableId(source, sourceUrl),
+    source,
+    sourceUrl,
+    title,
+    description: description || title,
+    itinerary: null,
+    type: "PUBLIC_EVENT",
+    category: guessCategory(`${title} ${description}`),
+    city: "Paris",
+    destination: null,
+    address,
+    startAt: startAt.toISOString(),
+    endAt: endAt?.toISOString() ?? null,
+    capacity: 100,
+    minParticipants: null,
+    requiresApproval: false,
+    priceType: guessPriceType(priceText),
+    priceText,
+    coverImageUrl:
+      resolveJsonLdImage(nodes, event.image) ?? extractPageImageUrl(html, sourceUrl),
+    status: "RECRUITING",
+    visibility: "PUBLIC",
+  };
+}
+
+export function parseStructuredEventHtml(
+  html: string,
+  sourceUrl: string,
+  source: ScrapedActivity["source"],
+): ScrapedActivity | null {
+  const nodes = flattenJsonLd(html);
+  const event = nodes.find((node) => hasImportableEventJsonLdType(node));
+
+  if (!event) {
+    return null;
+  }
+
+  return buildScrapedActivityFromJsonLdEvent(
+    event,
+    nodes,
+    html,
+    sourceUrl,
+    source,
+  );
+}
+
+export function parseMeetupEventHtml(
+  html: string,
+  sourceUrl: string,
+): ScrapedActivity | null {
+  return parseStructuredEventHtml(html, sourceUrl, "meetup");
+}
+
+export function parseEventbriteEventHtml(
+  html: string,
+  sourceUrl: string,
+): ScrapedActivity | null {
+  return parseStructuredEventHtml(html, sourceUrl, "eventbrite");
 }
 
 function parseDateTimeString(value: string) {
@@ -203,14 +377,6 @@ function extractItempropMetaContent(html: string, prop: string) {
   }
 
   return null;
-}
-
-function extractPageImageUrl(html: string) {
-  return (
-    extractMetaContent(html, ["og:image", "twitter:image"]) ??
-    extractItempropMetaContent(html, "image") ??
-    null
-  );
 }
 
 function extractItempropText(html: string, prop: string) {
@@ -377,7 +543,11 @@ export function parseSortirAParisArticleHtml(
   const startAt =
     microdata.startAt ?? dateHint?.start ?? datePublished ?? new Date();
   const endAt = microdata.endAt ?? dateHint?.end ?? null;
-  const coverImageUrl = extractSortirArticleImage(html, articleData?.image);
+  const coverImageUrl = extractSortirArticleImage(
+    html,
+    articleData?.image,
+    sourceUrl,
+  );
   const priceText = /免费|gratuit|free/i.test(
     `${title} ${description} ${bodyText}`,
   )
@@ -414,85 +584,7 @@ export function parsePlayInParisEventHtml(
   html: string,
   sourceUrl: string,
 ): ScrapedActivity | null {
-  const nodes = flattenJsonLd(html);
-  const event = nodes.find((node) => hasJsonLdType(node, "event"));
-  if (!event) return null;
-
-  const title =
-    typeof event.name === "string" ? stripHtml(event.name) : "未命名活动";
-  const description = cleanPromoText(
-    typeof event.description === "string" ? stripHtml(event.description) : "",
-  );
-  const startAt =
-    typeof event.startDate === "string"
-      ? parseDateTimeString(event.startDate)
-      : null;
-  const endAt =
-    typeof event.endDate === "string"
-      ? parseDateTimeString(event.endDate)
-      : null;
-  if (!startAt) return null;
-
-  const location = event.location as Record<string, unknown> | undefined;
-  const locationName =
-    location && typeof location.name === "string"
-      ? stripHtml(location.name)
-      : "";
-  const address =
-    location?.address && typeof location.address === "object"
-      ? [
-          locationName,
-          (location.address as Record<string, unknown>).streetAddress,
-          (location.address as Record<string, unknown>).postalCode,
-          (location.address as Record<string, unknown>).addressLocality,
-          (location.address as Record<string, unknown>).addressCountry,
-        ]
-          .filter(Boolean)
-          .map((part) => stripHtml(String(part)))
-          .join(" · ")
-      : locationName || "Paris";
-  const offer = Array.isArray(event.offers) ? event.offers[0] : event.offers;
-  const price =
-    offer && typeof offer === "object"
-      ? (offer as Record<string, unknown>).price
-      : undefined;
-  const currency =
-    offer && typeof offer === "object"
-      ? (offer as Record<string, unknown>).priceCurrency
-      : undefined;
-  const priceText =
-    price === undefined || price === null || price === ""
-      ? "查看原文"
-      : String(price) === "0"
-        ? "免费"
-        : currency
-          ? `${price} ${currency}`
-          : String(price);
-
-  return {
-    id: makeStableId("playinparis", sourceUrl),
-    source: "playinparis",
-    sourceUrl,
-    title,
-    description: description || title,
-    itinerary: null,
-    type: "PUBLIC_EVENT",
-    category: guessCategory(`${title} ${description}`),
-    city: "Paris",
-    destination: null,
-    address,
-    startAt: startAt.toISOString(),
-    endAt: endAt?.toISOString() ?? null,
-    capacity: 100,
-    minParticipants: null,
-    requiresApproval: false,
-    priceType: guessPriceType(priceText),
-    priceText,
-    coverImageUrl:
-      resolveJsonLdImage(nodes, event.image) ?? extractPageImageUrl(html),
-    status: "RECRUITING",
-    visibility: "PUBLIC",
-  };
+  return parseStructuredEventHtml(html, sourceUrl, "playinparis");
 }
 
 export const activityLinkImportUserAgent =

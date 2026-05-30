@@ -13,6 +13,7 @@ import {
   parseParisDateTime,
   type ActivityFormState,
 } from "./activityActionUtils";
+import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -63,24 +64,18 @@ export async function createActivityAction(
     );
   }
 
-  if (startAt < new Date()) {
-    return buildActivityErrorState(
-      previousState,
-      rawInput,
-      "开始时间不能早于当前时间。",
-      {
-        startAt: ["请选择未来的开始时间"],
-      },
-    );
-  }
+  const scheduleValidation = validateActivitySchedule({
+    startAt,
+    endAt: endAt ?? null,
+  });
 
-  if (endAt && endAt <= startAt) {
+  if (!scheduleValidation.ok) {
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "结束时间必须晚于开始时间。",
+      scheduleValidation.message,
       {
-        endAt: ["结束时间必须晚于开始时间"],
+        [scheduleValidation.field]: [scheduleValidation.fieldMessage],
       },
     );
   }

@@ -1,4 +1,8 @@
-export type ScraperSource = "sortiraparis" | "playinparis";
+export type ScraperSource =
+  | "sortiraparis"
+  | "playinparis"
+  | "meetup"
+  | "eventbrite";
 
 export type ScrapedActivity = {
   id: string;

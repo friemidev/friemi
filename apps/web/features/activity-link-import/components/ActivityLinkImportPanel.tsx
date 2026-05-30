@@ -6,14 +6,17 @@ import {
   AlertCircle,
   CalendarClock,
   CheckCircle2,
+  CircleHelp,
   ImageIcon,
   LinkIcon,
   Loader2,
   MapPin,
   WandSparkles,
+  X,
 } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
+import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
 import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
 
 type ActivityLinkPreview = {
@@ -45,9 +48,11 @@ export function ActivityLinkImportPanel({
   onApply,
 }: ActivityLinkImportPanelProps) {
   const t = getCopy(locale).form;
+  const supportedSites = activityLinkImportSites;
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [isApplied, setIsApplied] = useState(false);
+  const [isSitesDialogOpen, setIsSitesDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ActivityLinkPreview | null>(null);
   const canSubmit = url.trim().length > 0 && !isLoading;
@@ -151,12 +156,72 @@ export function ActivityLinkImportPanel({
           <LinkIcon className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">{t.linkImportTitle}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-semibold text-ink">{t.linkImportTitle}</p>
+            <button
+              aria-label={t.linkImportSupportedSitesAriaLabel}
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white hover:text-moss"
+              onClick={() => setIsSitesDialogOpen(true)}
+              type="button"
+            >
+              <CircleHelp className="h-4 w-4" />
+            </button>
+          </div>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
             {t.linkImportDescription}
           </p>
         </div>
       </div>
+
+      {isSitesDialogOpen ? (
+        <div
+          aria-labelledby="link-import-sites-title"
+          aria-modal="true"
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-6"
+          role="dialog"
+        >
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl border border-black/10 bg-paper p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <h2
+                className="text-lg font-semibold text-ink"
+                id="link-import-sites-title"
+              >
+                {t.linkImportSupportedSitesTitle}
+              </h2>
+              <button
+                aria-label={t.linkImportSupportedSitesClose}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white hover:text-ink"
+                onClick={() => setIsSitesDialogOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ul className="mt-4 grid gap-3">
+              {supportedSites.map((site) => (
+                <li
+                  className="rounded-md border border-zinc-200 bg-white px-3 py-2.5"
+                  key={site.host}
+                >
+                  <p className="text-sm font-semibold text-ink">{site.name}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">{site.host}</p>
+                  <p className="mt-1 break-all font-mono text-[11px] leading-5 text-moss">
+                    {site.exampleUrl}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <Button
+              className="mt-4 w-full"
+              onClick={() => setIsSitesDialogOpen(false)}
+              type="button"
+              variant="secondary"
+            >
+              {t.linkImportSupportedSitesClose}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <Input
@@ -182,6 +247,9 @@ export function ActivityLinkImportPanel({
           {isLoading ? t.linkImportParsing : t.linkImportPreview}
         </Button>
       </div>
+      <p className="text-[11px] leading-5 text-zinc-500">
+        {t.linkImportSupportedSiteExamples}
+      </p>
 
       {error ? (
         <p

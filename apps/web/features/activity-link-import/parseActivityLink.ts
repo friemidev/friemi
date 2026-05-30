@@ -1,10 +1,13 @@
 import type { ActivityCategory, PriceType } from "@chill-club/shared";
 import {
   activityLinkImportUserAgent,
+  parseEventbriteEventHtml,
+  parseMeetupEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
   type ScrapedActivity,
 } from "@chill-club/scraper-core";
+import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
 import { formatParisDateTimeInput } from "@/features/activities/actions/activityActionUtils";
 
 const requestTimeoutMs = 12_000;
@@ -150,6 +153,10 @@ function getLinkImportHostKey(url: URL) {
 
 export function getSupportedActivityLinkHosts() {
   return supportedHosts.map(([host]) => host);
+}
+
+export function getSupportedActivityLinkSites() {
+  return activityLinkImportSites;
 }
 
 function getLocaleCopy(
@@ -336,7 +343,40 @@ function isEventJsonLd(value: JsonLdObject) {
   const type = value["@type"];
   const typeValues = Array.isArray(type) ? type : [type];
 
-  return typeValues.some((item) => String(item).toLowerCase() === "event");
+  return typeValues.some((item) => {
+    const normalized = String(item).toLowerCase();
+
+    return (
+      normalized === "event" ||
+      normalized.endsWith("event") ||
+      normalized === "festival" ||
+      normalized.endsWith("festival")
+    );
+  });
+}
+
+function resolvePreviewImageUrl(value: unknown, baseUrl: URL) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value.trim(), baseUrl);
+
+    if (url.pathname.includes("/_next/image")) {
+      const embedded = url.searchParams.get("url");
+
+      if (embedded) {
+        const decoded = decodeURIComponent(embedded);
+
+        return getAbsoluteUrl(decoded, baseUrl);
+      }
+    }
+  } catch {
+    return getAbsoluteUrl(value, baseUrl);
+  }
+
+  return getAbsoluteUrl(value, baseUrl);
 }
 
 function resolveJsonLdNodeImage(
@@ -641,10 +681,7 @@ function buildPreviewFromScrapedActivity(
   const meta = extractMeta(html);
   const coverImageUrl =
     activity.coverImageUrl ??
-    getAbsoluteUrl(
-      meta.get("og:image") || meta.get("twitter:image"),
-      sourceUrl,
-    );
+    resolvePreviewImageUrl(meta.get("og:image") || meta.get("twitter:image"), sourceUrl);
   const values: ActivityLinkPreviewValues = {
     address: activity.address
       ? truncateText(activity.address, 120)
@@ -703,6 +740,34 @@ function buildSiteSpecificPreview(
     /\/event\//i.test(sourceUrl.pathname)
   ) {
     const activity = parsePlayInParisEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "meetup.com") {
+    const activity = parseMeetupEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "eventbrite.fr") {
+    const activity = parseEventbriteEventHtml(html, sourceUrl.toString());
 
     return activity
       ? buildPreviewFromScrapedActivity(
@@ -802,10 +867,7 @@ function buildPreview(
     "";
   const image =
     jsonLdEvent.image ||
-    getAbsoluteUrl(
-      meta.get("og:image") || meta.get("twitter:image"),
-      sourceUrl,
-    );
+    resolvePreviewImageUrl(meta.get("og:image") || meta.get("twitter:image"), sourceUrl);
   const address = jsonLdEvent.address || jsonLdEvent.locationName || "";
   const city = jsonLdEvent.city || "Paris";
   const startAt =

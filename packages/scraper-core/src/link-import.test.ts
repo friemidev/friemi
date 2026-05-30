@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
   parseChineseDate,
+  parseEventbriteEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
 } from "./link-import";
@@ -56,6 +57,25 @@ test("parsePlayInParisEventHtml reads Event JSON-LD from event page", () => {
   assert.equal(activity.priceType, "FREE");
   assert.match(activity.address, /Vincennes/i);
   assert.ok(activity.coverImageUrl?.includes("vincennes-en-anciennes"));
+});
+
+test("parseEventbriteEventHtml reads Festival JSON-LD and decodes Next image URLs", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "eventbrite-festival-snippet.html"),
+    "utf8",
+  );
+  const sourceUrl =
+    "https://www.eventbrite.fr/e/nuit-blanche-des-etoiles-tickets-1983356647122";
+  const activity = parseEventbriteEventHtml(html, sourceUrl);
+
+  assert.ok(activity);
+  assert.match(activity.title, /Nuit blanche/i);
+  assert.equal(activity.source, "eventbrite");
+  assert.equal(
+    activity.coverImageUrl,
+    "https://img.evbuc.com/images/123456789/123456789/1/original.jpg",
+  );
 });
 
 test("parsePlayInParisEventHtml falls back to og:image when JSON-LD image is unresolved", () => {

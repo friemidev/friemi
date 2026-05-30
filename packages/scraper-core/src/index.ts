@@ -6,8 +6,11 @@ export type { ScrapedActivity, ScraperSource } from "./types";
 export {
   activityLinkImportUserAgent,
   parseChineseDate,
+  parseEventbriteEventHtml,
+  parseMeetupEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
+  parseStructuredEventHtml,
 } from "./link-import";
 
 export type ScraperMode = "recent" | "range" | "database";
