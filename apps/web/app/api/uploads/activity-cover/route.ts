@@ -72,14 +72,7 @@ export async function POST(request: Request) {
   );
 
   if ("error" in uploaded) {
-    const status =
-      uploaded.error === "STORAGE_NOT_CONFIGURED"
-        ? 500
-        : uploaded.error === "BUCKET_NOT_AVAILABLE"
-          ? 500
-          : 500;
-
-    return uploadError(uploaded.error, status);
+    return uploadError(uploaded.error, 500);
   }
 
   return NextResponse.json({
