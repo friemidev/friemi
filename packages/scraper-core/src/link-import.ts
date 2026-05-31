@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto";
+import {
+  extractCoordinatesFromRecord,
+  extractGeoCoordinatesFromJsonLdLocation,
+} from "./geo";
 import type { ScrapedActivity } from "./types";
 
 function sha1(input: string) {
@@ -239,6 +243,8 @@ function buildScrapedActivityFromJsonLdEvent(
     });
   const priceText = offerPrice.priceText;
   const priceType = offerPrice.priceType;
+  const coordinates =
+    extractGeoCoordinatesFromJsonLdLocation(location) ?? null;
 
   return {
     id: makeStableId(source, sourceUrl),
@@ -252,6 +258,8 @@ function buildScrapedActivityFromJsonLdEvent(
     city: "Paris",
     destination: null,
     address,
+    latitude: coordinates?.latitude ?? null,
+    longitude: coordinates?.longitude ?? null,
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
     capacity: linkImportDefaultCapacity,
@@ -581,6 +589,11 @@ type MeetupNextVenue = {
   address?: string;
   city?: string;
   country?: string;
+  lat?: number | string;
+  latitude?: number | string;
+  lng?: number | string;
+  lon?: number | string;
+  longitude?: number | string;
   name?: string;
   state?: string;
 };
@@ -678,6 +691,7 @@ function parseMeetupEventFromNextData(
       : null) ||
     extractPageImageUrl(html, sourceUrl);
   const priceText = "查看原文";
+  const coordinates = extractCoordinatesFromRecord(venue);
 
   return {
     id: makeStableId("meetup", sourceUrl),
@@ -691,6 +705,8 @@ function parseMeetupEventFromNextData(
     city,
     destination: null,
     address: formatMeetupVenueAddress(venue),
+    latitude: coordinates?.latitude ?? null,
+    longitude: coordinates?.longitude ?? null,
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
     capacity: linkImportDefaultCapacity,
@@ -1039,10 +1055,13 @@ export function parseFeverupEventHtml(
   );
   const coverImageUrl =
     normalizeExternalImageUrl(planDetail?.coverImage) ?? activity.coverImageUrl;
+  const feverCoordinates = extractCoordinatesFromRecord(planDetail?.defaultPlace);
 
   return {
     ...activity,
     address: placeAddress || activity.address,
+    latitude: feverCoordinates?.latitude ?? activity.latitude ?? null,
+    longitude: feverCoordinates?.longitude ?? activity.longitude ?? null,
     category: mapFeverPlanCategory(
       planDetail,
       activity.title,
@@ -1939,6 +1958,11 @@ export function parseSortirAParisArticleHtml(
     /\bToulouse\b/i.test(address) || /\bToulouse\b/i.test(bodyText)
       ? "Toulouse"
       : "Paris";
+  const jsonLdNodes = flattenJsonLd(html);
+  const jsonLdEvent = jsonLdNodes.find((node) => hasImportableEventJsonLdType(node));
+  const coordinates = jsonLdEvent
+    ? extractGeoCoordinatesFromJsonLdLocation(jsonLdEvent.location)
+    : null;
 
   return {
     id: makeStableId("sortiraparis", sourceUrl),
@@ -1952,6 +1976,8 @@ export function parseSortirAParisArticleHtml(
     city,
     destination: null,
     address,
+    latitude: coordinates?.latitude ?? null,
+    longitude: coordinates?.longitude ?? null,
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
     capacity: linkImportDefaultCapacity,

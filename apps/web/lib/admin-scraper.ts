@@ -7,6 +7,7 @@ import {
   type ScraperSource,
   type ScrapedActivity,
 } from "@chill-club/scraper-core";
+import { geocodeActivitiesMissingCoordinates } from "@/lib/nominatim-geocode";
 
 export type AdminActivityListItem = {
   id: string;
@@ -130,6 +131,8 @@ export type ScraperPreviewRequest = {
   from?: string | null;
   to?: string | null;
   maxPages?: number;
+  /** When true (default), geocode items that lack coordinates via Nominatim. */
+  geocodeMissing?: boolean;
 };
 
 export type ScraperImportMode =
@@ -393,6 +396,10 @@ export async function previewScraperActivities(
     from,
     to,
   });
+  const geocodeMissing = request.geocodeMissing ?? true;
+  const resolvedScraped = geocodeMissing
+    ? await geocodeActivitiesMissingCoordinates(scraped)
+    : scraped;
 
   const existing = await prisma.activity.findMany({
     select: {
@@ -416,7 +423,7 @@ export async function previewScraperActivities(
       .map((item) => [item.sourceUrl as string, item]),
   );
 
-  return scraped.map((activity) => {
+  return resolvedScraped.map((activity) => {
     const fingerprint = buildFingerprint({
       source: activity.source,
       title: activity.title,
@@ -456,6 +463,8 @@ function scraperActivityFields(
     city: activity.city,
     destination: activity.destination,
     address: activity.address,
+    latitude: normalizeOptionalLatitude(activity.latitude),
+    longitude: normalizeOptionalLongitude(activity.longitude),
     startAt: new Date(activity.startAt),
     endAt: activity.endAt ? new Date(activity.endAt) : null,
     capacity: activity.capacity,

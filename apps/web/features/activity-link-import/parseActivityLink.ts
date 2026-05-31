@@ -19,6 +19,7 @@ import {
   extractBilletreducPriceRange,
   extractParisFrTicketUrl,
   extractBilletreducEventId,
+  extractGeoCoordinatesFromJsonLdLocation,
   type ScrapedActivity,
 } from "@chill-club/scraper-core";
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
@@ -104,7 +105,9 @@ type ParsedEvent = {
   description?: string;
   endAt?: string;
   image?: string;
+  latitude?: string;
   locationName?: string;
+  longitude?: string;
   priceText?: string;
   priceType?: PriceType;
   startAt?: string;
@@ -671,6 +674,7 @@ function parseJsonLdEvent(
 
   const location = getJsonLdAddress(event.location);
   const offer = getJsonLdOffer(event.offers, copy);
+  const coordinates = extractGeoCoordinatesFromJsonLdLocation(event.location);
 
   return {
     address: location.address,
@@ -678,7 +682,13 @@ function parseJsonLdEvent(
     description: stripHtml(getText(event.description)),
     endAt: normalizeDateInput(event.endDate),
     image: resolveJsonLdNodeImage(objects, event.image, baseUrl),
+    latitude: coordinates
+      ? String(coordinates.latitude)
+      : undefined,
     locationName: location.locationName,
+    longitude: coordinates
+      ? String(coordinates.longitude)
+      : undefined,
     priceText: offer.priceText,
     priceType: offer.priceType,
     startAt: normalizeDateInput(event.startDate),
@@ -750,6 +760,10 @@ function buildPreviewFromScrapedActivity(
       ? formatParisDateTimeInput(activity.endAt)
       : undefined,
     itinerary: activity.itinerary ?? "",
+    latitude:
+      activity.latitude != null ? String(activity.latitude) : undefined,
+    longitude:
+      activity.longitude != null ? String(activity.longitude) : undefined,
     priceText: price.priceText,
     priceType: price.priceType,
     startAt: formatParisDateTimeInput(activity.startAt),
@@ -987,6 +1001,8 @@ function buildPreview(
     ),
     endAt,
     itinerary: "",
+    latitude: jsonLdEvent.latitude,
+    longitude: jsonLdEvent.longitude,
     priceText,
     priceType,
     startAt,

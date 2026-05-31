@@ -205,7 +205,20 @@ cd apps/web && npm run db:push
 
 若 `npx prisma generate` 因 dev 进程占用报 `EPERM`，请先停止 `npm run dev` 再重新 generate。
 
+## 经纬度（地图）
+
+| 场景 | 行为 |
+|------|------|
+| **链接导入** | 优先从 JSON-LD `Event.location` / Paris OpenData `lat_lon` 解析；站点专用 `ScrapedActivity` 预览会带出坐标；无坐标时用户可在 `ActivityPlacePicker` 用 Nominatim 选点 |
+| **管理端抓取** | 同上解析 + 预览可选 Nominatim 补全；导入模式须用 **「只更新」/「新增或更新」** 才能给 **「已有」** 活动写入坐标（默认「只新增」会跳过已有记录） |
+| **入库** | `Activity.latitude` / `Activity.longitude`（Prisma `Float?`） |
+
+共享实现：`packages/scraper-core/src/geo.ts`；地理编码：`apps/web/lib/nominatim-geocode.ts`（与 `/api/places/search` 共用 `buildGeocodingQueries`）。
+
+管理端抓取、导入模式与补坐标步骤见 **[admin-data-scraper.md](./admin-data-scraper.md)**。
+
 ## 相关文档
 
+- [Admin data scraper](./admin-data-scraper.md) — 批量抓取、坐标、导入模式
 - [Development](./development.md) — 环境、分支、PR
 - [Architecture](./architecture.md) — monorepo 结构

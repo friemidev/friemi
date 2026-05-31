@@ -71,6 +71,10 @@ npm run db:migrate
 
 功能说明、支持站点、fixture 贡献方式与测试命令见 [activity-link-import.md](./activity-link-import.md)。
 
+## 管理端活动抓取
+
+批量抓取、经纬度补全、导入模式（含给「已有」活动更新坐标）见 [admin-data-scraper.md](./admin-data-scraper.md)。环境变量 `ADMIN_EMAILS` / `ADMIN_CLERK_USER_IDS` 须写在 **`apps/web/.env.local`**。
+
 ## 代码风格
 
 - TypeScript strict mode

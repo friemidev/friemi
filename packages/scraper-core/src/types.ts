@@ -27,6 +27,8 @@ export type ScrapedActivity = {
   city: string;
   destination: string | null;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   startAt: string;
   endAt: string | null;
   capacity: number;

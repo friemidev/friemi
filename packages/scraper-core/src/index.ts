@@ -4,6 +4,13 @@ import type { ScrapedActivity, ScraperSource } from "./types";
 
 export type { ScrapedActivity, ScraperSource } from "./types";
 export {
+  extractCoordinatesFromRecord,
+  extractGeoCoordinatesFromJsonLdLocation,
+  isValidGeoCoordinates,
+  parseCoordinate,
+  type GeoCoordinates,
+} from "./geo";
+export {
   activityLinkImportUserAgent,
   enrichSortirActivityAddress,
   extractSortirChineseStreetAddress,
