@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findFriendRequestTargets } from "@/features/friends/queries/findFriendRequestTarget";
 import { getFriendshipPair, getFriendshipPairKey } from "@/features/friends/utils/friendship";
 
-type FriendPreviewStatus = "AVAILABLE" | "SELF" | "FRIENDS" | "PENDING";
+type FriendPreviewStatus =
+  | "AVAILABLE"
+  | "SELF"
+  | "FRIENDS"
+  | "PENDING"
+  | "AMBIGUOUS"
+  | "NOT_FOUND";
 
 function mapPreviewUser(user: {
   id: string;
@@ -28,9 +35,8 @@ function mapPreviewUser(user: {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = url.searchParams.get("q")?.trim() ?? "";
-  const locale = url.searchParams.get("locale") ?? "zh-CN";
 
-  if (!/^\d{6}$/.test(query)) {
+  if (!query) {
     return NextResponse.json({
       ok: true,
       user: null,
@@ -38,25 +44,35 @@ export async function GET(request: Request) {
     });
   }
 
-  const viewerProfile = await ensureCurrentUserProfile(locale);
-  const targetUser = await prisma.userProfile.findFirst({
-    where: {
-      friendCode: query,
-      status: "ACTIVE",
-    },
-    select: {
-      id: true,
-      nickname: true,
-      friendCode: true,
-      avatarUrl: true,
-    },
-  });
+  const viewerProfile = await getOptionalCurrentUserProfile();
+
+  if (!viewerProfile) {
+    return NextResponse.json(
+      {
+        ok: false,
+        user: null,
+        status: null,
+      },
+      { status: 401 },
+    );
+  }
+
+  const targetUsers = await findFriendRequestTargets(query);
+  const targetUser = targetUsers[0];
 
   if (!targetUser) {
     return NextResponse.json({
       ok: true,
       user: null,
-      status: null,
+      status: "NOT_FOUND" satisfies FriendPreviewStatus,
+    });
+  }
+
+  if (targetUsers.length > 1) {
+    return NextResponse.json({
+      ok: true,
+      user: null,
+      status: "AMBIGUOUS" satisfies FriendPreviewStatus,
     });
   }
 

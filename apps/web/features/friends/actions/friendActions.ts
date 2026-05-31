@@ -9,6 +9,10 @@ import { createNotification } from "@/features/notifications/utils/createNotific
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getFriendsCopy } from "../copy";
+import {
+  findFriendRequestTargets,
+  normalizeFriendRequestSearchTerm,
+} from "../queries/findFriendRequestTarget";
 import { getFriendshipPair, getFriendshipPairKey } from "../utils/friendship";
 
 export type FriendActionState = {
@@ -118,36 +122,15 @@ export async function sendFriendRequestAction(
     };
   }
 
-  const { locale, searchTerm, message, returnTo } = result.data;
+  const { locale, message, returnTo } = result.data;
+  const { searchTerm } = normalizeFriendRequestSearchTerm(
+    result.data.searchTerm,
+  );
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
-  const friendCodeQuery = /^\d{6}$/.test(searchTerm)
-    ? [
-        {
-          friendCode: searchTerm,
-        },
-      ]
-    : [];
 
   try {
-    const targetUsers = await prisma.userProfile.findMany({
-      where: {
-        status: "ACTIVE",
-        OR: [
-          {
-            nickname: {
-              equals: searchTerm,
-              mode: "insensitive",
-            },
-          },
-          ...friendCodeQuery,
-        ],
-      },
-      select: {
-        id: true,
-      },
-      take: 2,
-    });
+    const targetUsers = await findFriendRequestTargets(searchTerm);
     const targetUser = targetUsers[0];
 
     if (!targetUser) {
