@@ -1,3 +1,4 @@
+import type { ActivityDuplicateHint } from "@/lib/activity-dedupe";
 import type { ActivityCategory, PriceType } from "@chill-club/shared";
 import {
   activityLinkImportUserAgent,
@@ -90,6 +91,7 @@ export type ActivityLinkPreviewValues = {
 };
 
 export type ActivityLinkPreview = {
+  duplicateHint?: ActivityDuplicateHint | null;
   missingFields: string[];
   siteName: string;
   sourceUrl: string;

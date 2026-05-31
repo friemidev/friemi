@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { findActivityDuplicateHint } from "@/features/activity-link-import/findActivityDuplicateHint";
 import {
   getSupportedActivityLinkHosts,
   parseActivityLink,
@@ -93,6 +94,8 @@ export async function POST(request: Request) {
         (field) => field !== "coverImageUrl",
       );
     }
+
+    preview.duplicateHint = await findActivityDuplicateHint(preview);
 
     return NextResponse.json({ preview });
   } catch (error) {

@@ -41,6 +41,19 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 
 预览 UI（`ActivityLinkImportPanel`）：字段纵向排列，**所有字段可选**勾选后再应用。
 
+### 重复活动检测（轻量）
+
+解析预览时会查库（不阻止发布）：
+
+| 优先级 | 规则 | 提示 |
+|--------|------|------|
+| 1 | `Activity.sourceUrl` 或 `ActivitySourceLink.sourceUrl` 与当前链接一致（忽略 `aff` 等追踪参数） | 相同来源链接 |
+| 2 | `sha1(title + startAt + address)` 与已有活动一致 | 可能重复 |
+
+套用导入并创建活动时，会将规范化后的来源 URL 写入 `Activity.sourceUrl`，便于下次识别。
+
+实现：`findActivityDuplicateHint()`、`lib/activity-dedupe.ts`。
+
 抓取限制：
 
 - 仅 `https:` URL

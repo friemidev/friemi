@@ -21,6 +21,7 @@ export type ActivityFormValues = {
   requiresApproval: boolean;
   priceType: string;
   priceText: string;
+  importSourceUrl?: string;
 };
 
 export type ActivityFormState = {
@@ -136,6 +137,7 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     requiresApproval: formData.get("requiresApproval") === "on",
     priceType: getString(formData, "priceType"),
     priceText: getString(formData, "priceText"),
+    importSourceUrl: getString(formData, "importSourceUrl"),
   };
 }
 

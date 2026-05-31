@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import {
@@ -20,6 +21,7 @@ import {
   getPriceTypeLabel,
 } from "@/lib/copy";
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
+import { withLocale } from "@/lib/routes";
 import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
 import type {
   ActivityLinkPreview,
@@ -309,6 +311,8 @@ export function ActivityLinkImportPanel({
       }
     }
 
+    payload.importSourceUrl = preview.sourceUrl;
+
     onApply(payload);
     setIsApplied(true);
   }
@@ -467,6 +471,30 @@ export function ActivityLinkImportPanel({
             <p className="mt-2 text-xs leading-5 text-zinc-500">
               {t.linkImportMissingFields(preview.missingFields.length)}
             </p>
+          ) : null}
+
+          {preview.duplicateHint ? (
+            <div
+              className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900"
+              role="status"
+            >
+              <p>
+                {preview.duplicateHint.status === "same_url"
+                  ? t.linkImportDuplicateSameUrl(preview.duplicateHint.title)
+                  : t.linkImportDuplicateSimilar(preview.duplicateHint.title)}
+              </p>
+              <Link
+                className="mt-1 inline-block font-medium underline"
+                href={withLocale(
+                  locale,
+                  `/activities/${preview.duplicateHint.activityId}`,
+                )}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t.linkImportViewExisting}
+              </Link>
+            </div>
           ) : null}
 
           <p className="mt-3 text-xs font-semibold text-zinc-700">
