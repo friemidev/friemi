@@ -376,10 +376,15 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "暂无参加记录",
       participationEmptyDescription: "参加活动后会显示在这里。",
+      favoriteTitle: "收藏的活动",
+      favoriteEmptyTitle: "暂无收藏活动",
+      favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
         `当前显示最近 ${limit} 个发起活动，另有 ${count} 个更早的活动暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `当前显示最近 ${limit} 个收藏活动，另有 ${count} 个更早的收藏暂未展示。`,
       signedUpAt: (date: string) => `报名于 ${date}`,
       cancelledAt: (date: string) => `取消于 ${date}`,
       participationAria: (
@@ -931,10 +936,15 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "No participation records",
       participationEmptyDescription: "Joined activities will appear here.",
+      favoriteTitle: "Saved activities",
+      favoriteEmptyTitle: "No saved activities",
+      favoriteEmptyDescription: "Saved activities will appear here.",
       hiddenCreated: (limit: number, count: number) =>
         `Showing the latest ${limit} created activities. ${count} earlier activities are not shown yet.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Showing the latest ${limit} participation records. ${count} earlier records are not shown yet.`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `Showing the latest ${limit} saved activities. ${count} earlier saved activities are not shown yet.`,
       signedUpAt: (date: string) => `Joined on ${date}`,
       cancelledAt: (date: string) => `Cancelled on ${date}`,
       participationAria: (
@@ -1517,10 +1527,16 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "Aucune participation",
       participationEmptyDescription: "Les activités rejointes apparaîtront ici.",
+      favoriteTitle: "Activités enregistrées",
+      favoriteEmptyTitle: "Aucune activité enregistrée",
+      favoriteEmptyDescription:
+        "Les activités enregistrées apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Affichage des ${limit} dernières participations. ${count} plus anciennes ne sont pas encore affichées.`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `Affichage des ${limit} dernieres activites enregistrees. ${count} plus anciennes ne sont pas encore affichees.`,
       signedUpAt: (date: string) => `Inscrit le ${date}`,
       cancelledAt: (date: string) => `Annulé le ${date}`,
       participationAria: (

@@ -41,6 +41,8 @@ import {
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { getFollowCopy } from "@/features/follow/copy";
 import { getViewerFollowState } from "@/features/follow/queries/getViewerFollowState";
+import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
+import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
@@ -71,13 +73,19 @@ export default async function ActivityDetailPage({
     notFound();
   }
 
-  const [viewerParticipation, isFollowingOrganizer, comments, friendSignal] =
-    await Promise.all([
-      getActivityViewerParticipation(activity.id, viewerProfile?.id),
-      getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-      getActivityComments(activity.id),
-      getActivityFriendSignal(activity.id, viewerProfile?.id),
-    ]);
+  const [
+    viewerParticipation,
+    isFollowingOrganizer,
+    isFavorited,
+    comments,
+    friendSignal,
+  ] = await Promise.all([
+    getActivityViewerParticipation(activity.id, viewerProfile?.id),
+    getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+    getViewerActivityFavorite(activity.id, viewerProfile?.id),
+    getActivityComments(activity.id),
+    getActivityFriendSignal(activity.id, viewerProfile?.id),
+  ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -106,6 +114,15 @@ export default async function ActivityDetailPage({
           src={activity.coverImageUrl}
           overlayClassName="bg-black/35"
         />
+        <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+          <ActivityFavoriteButton
+            activityId={activity.id}
+            isAuthenticated={Boolean(viewerProfile)}
+            isFavorited={isFavorited}
+            locale={locale}
+            redirectPath={`/activities/${activity.id}`}
+          />
+        </div>
         <div className="relative max-w-3xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
