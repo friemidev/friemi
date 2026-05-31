@@ -12,13 +12,16 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  AlertCircle,
   CalendarDays,
   Check,
+  CheckCircle2,
   ChevronDown,
   Copy,
   Inbox,
   MessageCircle,
   Send,
+  ShieldCheck,
   Trash2,
   type LucideIcon,
   UserPlus,
@@ -59,7 +62,14 @@ type FriendAction = (
 
 const initialState: FriendActionState = {};
 
-type FriendPreviewStatus = "AVAILABLE" | "SELF" | "FRIENDS" | "PENDING";
+type FriendPreviewStatus =
+  | "AVAILABLE"
+  | "SELF"
+  | "FRIENDS"
+  | "PENDING"
+  | "AMBIGUOUS"
+  | "NOT_FOUND"
+  | "ERROR";
 type FriendPreviewUser = {
   id: string;
   nickname: string;
@@ -197,10 +207,12 @@ function AddFriendForm({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showSentSuccess, setShowSentSuccess] = useState(false);
   const t = getFriendsCopy(locale);
-  const isFriendCodeSearch = /^\d{6}$/.test(searchTerm.trim());
+  const hasSearchTerm = searchTerm.trim().length > 0;
   const submitDisabled =
-    isFriendCodeSearch &&
-    (previewLoading || !preview.user || preview.status !== "AVAILABLE");
+    !hasSearchTerm ||
+    previewLoading ||
+    !preview.user ||
+    preview.status !== "AVAILABLE";
 
   useEffect(() => {
     if (state.ok) {
@@ -215,25 +227,37 @@ function AddFriendForm({
   useEffect(() => {
     const query = searchTerm.trim();
 
-    if (!/^\d{6}$/.test(query)) {
+    if (!query) {
       setPreview({ user: null, status: null });
       setPreviewLoading(false);
       return;
     }
 
     const controller = new AbortController();
+    setPreview({ user: null, status: null });
+    setPreviewLoading(true);
     const timer = window.setTimeout(() => {
-      setPreviewLoading(true);
       fetch(
         `/api/friends/preview?${new URLSearchParams({
           q: query,
           locale,
         }).toString()}`,
         {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
           signal: controller.signal,
         },
       )
-        .then((response) => response.json())
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Friend preview failed: ${response.status}`);
+          }
+
+          return response.json();
+        })
         .then((data: FriendPreview) => {
           setPreview({
             user: data.user,
@@ -243,7 +267,7 @@ function AddFriendForm({
         .catch((error: unknown) => {
           if (!controller.signal.aborted) {
             console.error("Failed to preview friend", error);
-            setPreview({ user: null, status: null });
+            setPreview({ user: null, status: "ERROR" });
           }
         })
         .finally(() => {
@@ -317,7 +341,7 @@ function AddFriendForm({
           </span>
         </label>
         <FriendPreviewCard
-          isSearchingFriendCode={isFriendCodeSearch}
+          hasSearchTerm={hasSearchTerm}
           loading={previewLoading}
           preview={preview}
           locale={locale}
@@ -358,35 +382,59 @@ function AddFriendForm({
 }
 
 function FriendPreviewCard({
-  isSearchingFriendCode,
+  hasSearchTerm,
   loading,
   locale,
   preview,
 }: {
-  isSearchingFriendCode: boolean;
+  hasSearchTerm: boolean;
   loading: boolean;
   locale: string;
   preview: FriendPreview;
 }) {
   const t = getFriendsCopy(locale);
 
-  if (!isSearchingFriendCode) {
+  if (!hasSearchTerm) {
     return null;
   }
 
   if (loading) {
     return (
-      <p className="rounded-lg border border-black/10 bg-white/70 px-3 py-2 text-sm text-zinc-500">
-        {t.previewLoading}
-      </p>
+      <div className="rounded-xl border border-black/10 bg-white/80 p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-zinc-100" />
+          <div className="min-w-0 flex-1">
+            <p className="h-3 w-24 animate-pulse rounded bg-zinc-100" />
+            <p className="mt-2 h-3 w-36 animate-pulse rounded bg-zinc-100" />
+          </div>
+        </div>
+        <p className="mt-3 text-xs font-medium text-zinc-500">
+          {t.previewLoading}
+        </p>
+      </div>
     );
   }
 
   if (!preview.user) {
+    const messageByStatus: Partial<Record<FriendPreviewStatus, string>> = {
+      AMBIGUOUS: t.previewAmbiguous,
+      ERROR: t.previewError,
+      NOT_FOUND: t.previewNotFound,
+    };
+    const message = messageByStatus[preview.status ?? "NOT_FOUND"];
+
+    if (!message) {
+      return null;
+    }
+
     return (
-      <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 px-3 py-2 text-sm text-zinc-500">
-        {t.previewNotFound}
-      </p>
+      <div
+        className="flex items-start gap-2 rounded-xl border border-clay/20 bg-clay/5 px-3 py-3 text-sm text-clay"
+        aria-live="polite"
+      >
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <p className="min-w-0 leading-5">{message}</p>
+      </div>
     );
   }
 
@@ -395,11 +443,36 @@ function FriendPreviewCard({
     SELF: t.previewSelf,
     FRIENDS: t.previewFriends,
     PENDING: t.previewPending,
+    AMBIGUOUS: t.previewAmbiguous,
+    NOT_FOUND: t.previewNotFound,
+    ERROR: t.previewError,
   };
+  const canSend = preview.status === "AVAILABLE";
 
   return (
-    <div className="rounded-lg border border-black/10 bg-white/75 p-3">
-      <p className="text-xs font-medium text-zinc-500">{t.previewTitle}</p>
+    <div
+      className={cn(
+        "rounded-xl border bg-white p-3 shadow-sm",
+        canSend ? "border-moss/25 ring-1 ring-moss/10" : "border-black/10",
+      )}
+      aria-live="polite"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-zinc-500">{t.previewTitle}</p>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold",
+            canSend ? "bg-moss/10 text-moss" : "bg-zinc-100 text-zinc-500",
+          )}
+        >
+          {canSend ? (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
+          {canSend ? t.previewReady : t.previewBlocked}
+        </span>
+      </div>
       <div className="mt-3 flex min-w-0 items-center gap-3">
         <PreviewAvatar user={preview.user} />
         <div className="min-w-0 flex-1">
@@ -414,7 +487,12 @@ function FriendPreviewCard({
         </div>
       </div>
       {preview.status ? (
-        <p className="mt-2 text-xs leading-5 text-zinc-500">
+        <p
+          className={cn(
+            "mt-3 rounded-lg px-3 py-2 text-xs leading-5",
+            canSend ? "bg-moss/5 text-moss" : "bg-zinc-50 text-zinc-500",
+          )}
+        >
           {descriptionByStatus[preview.status]}
         </p>
       ) : null}
@@ -514,9 +592,14 @@ export function AddFriendDialog({
           {incomingRequests.length > 0 ? (
             <section className="mt-6 grid gap-3 border-t border-black/10 pt-5">
               <div className="flex min-w-0 items-center justify-between gap-3">
-                <h3 className="truncate text-base font-semibold text-ink">
-                  {t.incomingTitle}
-                </h3>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-semibold text-ink">
+                    {t.incomingTitle}
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    {t.incomingDescription}
+                  </p>
+                </div>
                 <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-clay px-2 text-xs font-semibold text-white">
                   {incomingRequests.length}
                 </span>
@@ -789,9 +872,15 @@ function IncomingRequestCard({
   const t = getFriendsCopy(locale);
 
   return (
-    <article className="min-w-0 rounded-lg border border-zinc-200 bg-white p-3">
-      <UserSummary locale={locale} user={request.user} />
-      <RequestMeta locale={locale} request={request} />
+    <article className="min-w-0 rounded-xl border border-black/10 bg-white/95 p-3 shadow-sm shadow-black/5">
+      <div className="rounded-lg border border-black/10 bg-paper/45 p-3">
+        <UserSummary locale={locale} showBio={false} user={request.user} />
+        <RequestMeta
+          label={t.messageLabel}
+          locale={locale}
+          request={request}
+        />
+      </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <SmallActionForm
           action={acceptFriendRequestAction}
@@ -799,7 +888,7 @@ function IncomingRequestCard({
           locale={locale}
           requestId={request.id}
           returnTo={returnTo}
-          variant="success"
+          variant="primary"
         >
           {t.accept}
         </SmallActionForm>
@@ -829,8 +918,8 @@ function OutgoingRequestCard({
 
   return (
     <article className="min-w-0 rounded-lg border border-zinc-200 bg-white p-3">
-      <UserSummary locale={locale} user={request.user} />
-      <RequestMeta locale={locale} request={request} />
+      <UserSummary locale={locale} showBio={false} user={request.user} />
+      <RequestMeta label={t.messageLabel} locale={locale} request={request} />
       <div className="mt-3">
         <SmallActionForm
           action={cancelFriendRequestAction}
@@ -912,10 +1001,12 @@ function SubmitButton({
 function UserSummary({
   compactBio = false,
   locale,
+  showBio = true,
   user,
 }: {
   compactBio?: boolean;
   locale: string;
+  showBio?: boolean;
   user: FriendUserViewModel;
 }) {
   const t = getFriendsCopy(locale);
@@ -932,14 +1023,16 @@ function UserSummary({
             {t.friendCodeLabel} {user.friendCode}
           </p>
         ) : null}
-        <p
-          className={cn(
-            "mt-1 break-words text-xs leading-5 text-zinc-500",
-            compactBio ? "line-clamp-1" : "line-clamp-2",
-          )}
-        >
-          {user.bio || t.noBio}
-        </p>
+        {showBio ? (
+          <p
+            className={cn(
+              "mt-1 break-words text-xs leading-5 text-zinc-500",
+              compactBio ? "line-clamp-1" : "line-clamp-2",
+            )}
+          >
+            {user.bio || t.noBio}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -967,9 +1060,11 @@ function UserAvatar({ user }: { user: FriendUserViewModel }) {
 }
 
 function RequestMeta({
+  label,
   locale,
   request,
 }: {
+  label: string;
   locale: string;
   request: FriendRequestViewModel;
 }) {
@@ -978,9 +1073,12 @@ function RequestMeta({
   return (
     <div className="mt-3 space-y-2">
       {request.message ? (
-        <p className="break-words rounded-md bg-zinc-50 px-3 py-2 text-sm leading-6 text-zinc-700">
-          {request.message}
-        </p>
+        <div className="rounded-md bg-white/80 px-3 py-2 ring-1 ring-black/5">
+          <p className="text-[11px] font-semibold text-zinc-400">{label}</p>
+          <p className="mt-1 break-words text-sm leading-6 text-zinc-700">
+            {request.message}
+          </p>
+        </div>
       ) : null}
       <p className="text-xs text-zinc-400">
         {t.requestedAt(request.createdAt.slice(0, 10))}

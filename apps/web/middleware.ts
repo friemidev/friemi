@@ -18,6 +18,7 @@ const isProtectedRoute = createRouteMatcher([
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
 const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
+const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   if (hasClerkKeys() && isProtectedRoute(request)) {
@@ -62,6 +63,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isFriendsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   return intlMiddleware(request);
 });
 
@@ -70,5 +75,6 @@ export const config = {
     "/((?!api|_next|_vercel|.*\\..*).*)",
     "/api/admin/:path*",
     "/api/uploads/:path*",
+    "/api/friends/:path*",
   ],
 };
