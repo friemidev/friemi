@@ -20,7 +20,7 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 | `playinparis.com` | Play in Paris | 专用 `parsePlayInParisEventHtml`（路径需含 `/event/`） | ✅ |
 | `sortiraparis.com` | Sortir à Paris | 专用 `parseSortirAParisArticleHtml`；中文文章会尝试抓取法语版补地址 | ✅ |
 | `quefaire.paris.fr` | Que Faire à Paris | 通用 `buildPreview`（meta + JSON-LD） | ❌ |
-| `paris.fr` | Paris.fr | 通用 | ❌ |
+| `paris.fr` | Paris.fr | 专用 `parseParisFrEventHtml`（JSON-LD + 页面标签；Billetreduc 票价尽力抓取） | ✅ |
 | `billetweb.fr` | Billetweb | 通用 | ❌ |
 | `opendata.paris.fr` | Paris OpenData | JSON API → `buildParisOpenDataPreview` | ❌ |
 
@@ -33,7 +33,7 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 | 字段 | 说明 |
 |------|------|
 | 标题、时间、地址、封面 | 尽量从结构化数据提取；缺失会列入 `missingFields` |
-| 分类 | 关键词启发式（`mapCategory`）；Fever 等站点有额外规则 |
+| 分类 | 关键词启发式（`mapCategory`）；Fever / Paris.fr 等有额外规则；含 **THEATER（戏剧）** |
 | 价格 | `FREE` / `FIXED` / `RANGE`；多档票合并为区间（如 `12,50 € – 19,50 €`） |
 | 人数 | 链接导入默认 **99**（`linkImportDefaultCapacity`） |
 | 描述 | 附带来源链接后缀；Sortir / Meetup / Eventbrite 等尽量拉取长文 |
@@ -51,10 +51,18 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 | 来源 | 逻辑 |
 |------|------|
 | Fever | `ticket-selector-config.transferState` 各 zone 的 `ticketTypes` 最低价–最高价；无配置时回退 JSON-LD 单价 |
-| Eventbrite | `extractJsonLdOfferPrice()`：`Offer.price` 或 `AggregateOffer.lowPrice` / `highPrice` |
+| Eventbrite | `extractJsonLdOfferPrice()`：`Offer.price` 或 `AggregateOffer.lowPrice` / `highPrice`；`low === high` 时为 **FIXED** |
+| Paris.fr | JSON-LD `price: 0` 或页面 **Gratuit** → FREE；票价链接指向 Billetreduc 时会尝试搜索页解析区间，失败则「以外部页面为准」 |
 | 通用 / 无数据 | `priceType: RANGE`，`priceText` 为「以外部页面为准」类文案 |
 
-示例（Eventbrite UK，JSON-LD）：`58.86 – 116.52 EUR`（Hololive 巴黎场）。
+示例：
+
+| 链接 | 期望价格 | 期望分类 |
+|------|----------|----------|
+| [Eventbrite Yoga](https://www.eventbrite.com/e/paris-yoga-club-may-31-with-lucy-tickets-1990485031311) | FIXED `7.58 EUR` | SPORTS |
+| [Eventbrite Hololive UK](https://www.eventbrite.co.uk/e/paris-hololive-english-3rd-concert-all-for-one-screening-tickets-1988723487486) | RANGE `58.86 – 116.52 EUR` | MUSIC |
+| [Paris.fr L'Ogrelet](https://www.paris.fr/evenements/l-ogrelet-110475) | RANGE `12.95 – 16.5 EUR`（经 Billetreduc，或外部页） | THEATER |
+| [Paris.fr PASSIONS](https://www.paris.fr/evenements/passions-l-expo-poetico-drole-de-guillaume-blot-108919) | FREE | EXHIBITION |
 
 ## 测试
 
@@ -153,6 +161,9 @@ capacity: 99                         # 可选，链接导入一般为 99
 | `feverup-candlelight-snippet.html` | 音乐会 + 多档价 |
 | `eventbrite-festival-snippet.html` | 免费活动 |
 | `eventbrite-hololive-aggregate-offer-snippet.html` | UK + AggregateOffer 区间 |
+| `eventbrite-yoga-fixed-snippet.html` | US + 固定价 AggregateOffer |
+| `paris-fr-ogrelet-snippet.html` | 戏剧 + Billetreduc 票价注释块 |
+| `paris-fr-passions-expo-snippet.html` | 免费展览 |
 | `meetup-nextdata-snippet.html` | 描述 + 地址 |
 | `playinparis-event-snippet.html` | 免费活动 |
 | `sortiraparis-article-snippet.html` | 中文文章 |
@@ -169,6 +180,16 @@ capacity: 99                         # 可选，链接导入一般为 99
 | `eventbrite.co.uk` 不支持 | `isEventbriteHost()` |
 | Hololive 价格显示「以外部页面为准」 | `AggregateOffer` → `extractJsonLdOfferPrice` |
 | 表单 `priceType` 不更新 | 新建活动表单改为受控 `priceType` |
+
+## 数据库（THEATER 分类）
+
+新增 `ActivityCategory.THEATER` 后，在本地/部署环境执行一次：
+
+```bash
+cd apps/web && npm run db:push
+```
+
+若 `npx prisma generate` 因 dev 进程占用报 `EPERM`，请先停止 `npm run dev` 再重新 generate。
 
 ## 相关文档
 

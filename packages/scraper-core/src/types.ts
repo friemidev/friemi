@@ -3,7 +3,8 @@ export type ScraperSource =
   | "playinparis"
   | "meetup"
   | "eventbrite"
-  | "feverup";
+  | "feverup"
+  | "parisfr";
 
 export type ScrapedActivity = {
   id: string;
@@ -21,6 +22,7 @@ export type ScrapedActivity = {
     | "TRAVEL"
     | "FOOD"
     | "EXHIBITION"
+    | "THEATER"
     | "OTHER";
   city: string;
   destination: string | null;
