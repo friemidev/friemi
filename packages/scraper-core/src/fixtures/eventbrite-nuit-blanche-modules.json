@@ -1,0 +1,26 @@
+[
+  {
+    "type": "text",
+    "data": {
+      "body": {
+        "text": "<p>Comment les étoiles ont-elles participé à l'avancement de nos sociétés ?</p>"
+      }
+    }
+  },
+  {
+    "type": "text",
+    "data": {
+      "body": {
+        "text": "<h4>Le programme</h4><p>Soirée modérée par <strong>Dominique Leglu</strong>.</p><h4>19h – « La marche à l'étoile », discussion</h4><p>Projection d'extraits.</p><h4>20h – À l'école du ciel</h4><p>Victor Gysembergh et Sylvie Nony.</p><h4>21h30-21h45 – Entracte</h4><h4>21h45 – Quand les astres outillent le monde</h4><p>François Bellec.</p>"
+      }
+    }
+  },
+  {
+    "type": "text",
+    "data": {
+      "body": {
+        "text": "<h4>À propos des intervenant.e.s</h4><p>Biographies des intervenants.</p>"
+      }
+    }
+  }
+]

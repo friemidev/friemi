@@ -1,11 +1,37 @@
+import type { ActivityDuplicateHint } from "@/lib/activity-dedupe";
 import type { ActivityCategory, PriceType } from "@chill-club/shared";
+import {
+  activityLinkImportUserAgent,
+  enrichSortirActivityAddress,
+  extractSortirFrenchStreetAddress,
+  findSortirFrenchArticleUrl,
+  findSortirFrenchArticleUrls,
+  parseEventbriteEventHtml,
+  fetchEventbriteStructuredContent,
+  extractEventbriteEventId,
+  extractJsonLdOfferPrice,
+  parseFeverupEventHtml,
+  linkImportDefaultCapacity,
+  parseMeetupEventHtml,
+  parseParisFrEventHtml,
+  parsePlayInParisEventHtml,
+  parseSortirAParisArticleHtml,
+  extractBilletreducPriceRange,
+  extractParisFrTicketUrl,
+  extractBilletreducEventId,
+  extractGeoCoordinatesFromJsonLdLocation,
+  type ScrapedActivity,
+} from "@chill-club/scraper-core";
+import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
+import { formatImportedAddressForForm } from "@/lib/place-search";
 import { formatParisDateTimeInput } from "@/features/activities/actions/activityActionUtils";
+import { buildActivityDescriptionWithSource } from "@/lib/activity-description";
 
-const requestTimeoutMs = 8_000;
-const maxHtmlLength = 600_000;
+const requestTimeoutMs = 12_000;
+/** Fever pages embed ~160KB JSON after ~440KB; keep headroom above ~1.4MB pages. */
+const maxHtmlLength = 2_000_000;
 
-const supportedHosts = new Map<string, string>([
-  ["paris.fr", "Paris.fr"],
+const supportedHosts: [string, string][] = [
   ["quefaire.paris.fr", "Que Faire a Paris"],
   ["opendata.paris.fr", "Paris OpenData"],
   ["sortiraparis.com", "Sortir a Paris"],
@@ -13,7 +39,9 @@ const supportedHosts = new Map<string, string>([
   ["eventbrite.fr", "Eventbrite"],
   ["billetweb.fr", "Billetweb"],
   ["meetup.com", "Meetup"],
-]);
+  ["feverup.com", "Fever"],
+  ["paris.fr", "Paris.fr"],
+];
 
 type ActivityLinkImportLocaleCopy = {
   externalPriceText: string;
@@ -47,6 +75,7 @@ const localeCopy = {
 
 export type ActivityLinkPreviewValues = {
   address?: string;
+  capacity?: string;
   category?: ActivityCategory;
   city?: string;
   coverImageUrl?: string;
@@ -63,6 +92,7 @@ export type ActivityLinkPreviewValues = {
 };
 
 export type ActivityLinkPreview = {
+  duplicateHint?: ActivityDuplicateHint | null;
   missingFields: string[];
   siteName: string;
   sourceUrl: string;
@@ -75,7 +105,9 @@ type ParsedEvent = {
   description?: string;
   endAt?: string;
   image?: string;
+  latitude?: string;
   locationName?: string;
+  longitude?: string;
   priceText?: string;
   priceType?: PriceType;
   startAt?: string;
@@ -118,8 +150,18 @@ function normalizeHost(hostname: string) {
   return hostname.toLowerCase().replace(/^www\./, "");
 }
 
+const eventbriteHostKey = "eventbrite.fr";
+
+export function isEventbriteHost(hostname: string) {
+  return /^eventbrite\.[a-z.]+$/i.test(normalizeHost(hostname));
+}
+
 function getSupportedSiteName(url: URL) {
   const normalizedHost = normalizeHost(url.hostname);
+
+  if (isEventbriteHost(normalizedHost)) {
+    return "Eventbrite";
+  }
 
   for (const [host, siteName] of supportedHosts) {
     if (normalizedHost === host || normalizedHost.endsWith(`.${host}`)) {
@@ -130,8 +172,28 @@ function getSupportedSiteName(url: URL) {
   return null;
 }
 
+function getLinkImportHostKey(url: URL) {
+  const normalizedHost = normalizeHost(url.hostname);
+
+  if (isEventbriteHost(normalizedHost)) {
+    return eventbriteHostKey;
+  }
+
+  for (const [host] of supportedHosts) {
+    if (normalizedHost === host || normalizedHost.endsWith(`.${host}`)) {
+      return host;
+    }
+  }
+
+  return null;
+}
+
 export function getSupportedActivityLinkHosts() {
-  return Array.from(supportedHosts.keys());
+  return supportedHosts.map(([host]) => host);
+}
+
+export function getSupportedActivityLinkSites() {
+  return activityLinkImportSites;
 }
 
 function getLocaleCopy(
@@ -171,6 +233,16 @@ function stripHtml(value: string | undefined) {
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]{2,}/g, " "),
   ).trim();
+}
+
+function preserveImportedMultilineText(value: string | undefined) {
+  const trimmed = (value ?? "").trim();
+
+  if (!trimmed || !/<[a-z][^>]*>/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return stripHtml(trimmed);
 }
 
 function truncateText(value: string, maxLength: number) {
@@ -318,18 +390,84 @@ function isEventJsonLd(value: JsonLdObject) {
   const type = value["@type"];
   const typeValues = Array.isArray(type) ? type : [type];
 
-  return typeValues.some((item) => String(item).toLowerCase() === "event");
+  return typeValues.some((item) => {
+    const normalized = String(item).toLowerCase();
+
+    return (
+      normalized === "event" ||
+      normalized.endsWith("event") ||
+      normalized === "festival" ||
+      normalized.endsWith("festival")
+    );
+  });
 }
 
-function getJsonLdImage(value: unknown, baseUrl: URL): string | undefined {
+function resolvePreviewImageUrl(value: unknown, baseUrl: URL) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value.trim(), baseUrl);
+
+    if (url.pathname.includes("/_next/image")) {
+      const embedded = url.searchParams.get("url");
+
+      if (embedded) {
+        const decoded = decodeURIComponent(embedded);
+
+        return getAbsoluteUrl(decoded, baseUrl);
+      }
+    }
+  } catch {
+    return getAbsoluteUrl(value, baseUrl);
+  }
+
+  return getAbsoluteUrl(value, baseUrl);
+}
+
+function resolveJsonLdNodeImage(
+  objects: JsonLdObject[],
+  value: unknown,
+  baseUrl: URL,
+): string | undefined {
+  if (typeof value === "object" && value !== null && "@id" in value) {
+    const id = getText((value as JsonLdObject)["@id"]);
+
+    if (id) {
+      for (const node of objects.filter((item) => item["@id"] === id)) {
+        const resolved = getJsonLdImage(node, baseUrl, objects);
+
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+  }
+
+  return getJsonLdImage(value, baseUrl, objects);
+}
+
+function getJsonLdImage(
+  value: unknown,
+  baseUrl: URL,
+  objects: JsonLdObject[] = [],
+): string | undefined {
   if (Array.isArray(value)) {
-    return value.map((item) => getJsonLdImage(item, baseUrl)).find(Boolean);
+    return value
+      .map((item) => getJsonLdImage(item, baseUrl, objects))
+      .find(Boolean);
   }
 
   if (typeof value === "object" && value !== null) {
     const imageObject = value as JsonLdObject;
 
-    return getAbsoluteUrl(imageObject.url ?? imageObject.contentUrl, baseUrl);
+    return (
+      getAbsoluteUrl(
+        imageObject.url ?? imageObject.contentUrl ?? imageObject.thumbnailUrl,
+        baseUrl,
+      ) ?? resolveJsonLdNodeImage(objects, imageObject, baseUrl)
+    );
   }
 
   return getAbsoluteUrl(value, baseUrl);
@@ -373,32 +511,19 @@ function getJsonLdOffer(
   priceText?: string;
   priceType?: PriceType;
 } {
-  const offer = Array.isArray(offers) ? offers[0] : offers;
+  const offerPrice = extractJsonLdOfferPrice(offers, {
+    freeText: copy.freePriceText,
+    externalText: copy.externalPriceText,
+  });
 
-  if (!offer || typeof offer !== "object") {
-    return {};
-  }
-
-  const offerObject = offer as JsonLdObject;
-  const price = getText(offerObject.price);
-  const currency = getText(offerObject.priceCurrency);
-  const availability = getText(offerObject.availability).toLowerCase();
-
-  if (price === "0" || availability.includes("free")) {
+  if (!offerPrice) {
     return {
-      priceText: copy.freePriceText,
-      priceType: "FREE",
+      priceText: copy.externalPriceText,
+      priceType: "RANGE",
     };
   }
 
-  if (price) {
-    return {
-      priceText: currency ? `${price} ${currency}` : price,
-      priceType: "FIXED",
-    };
-  }
-
-  return {};
+  return offerPrice;
 }
 
 function getParisOpenDataRecord(payload: unknown): ParisOpenDataRecord | null {
@@ -540,7 +665,8 @@ function parseJsonLdEvent(
   baseUrl: URL,
   copy: ActivityLinkImportLocaleCopy,
 ): ParsedEvent {
-  const event = extractJsonLdObjects(html).find(isEventJsonLd);
+  const objects = extractJsonLdObjects(html);
+  const event = objects.find(isEventJsonLd);
 
   if (!event) {
     return {};
@@ -548,19 +674,207 @@ function parseJsonLdEvent(
 
   const location = getJsonLdAddress(event.location);
   const offer = getJsonLdOffer(event.offers, copy);
+  const coordinates = extractGeoCoordinatesFromJsonLdLocation(event.location);
 
   return {
     address: location.address,
     city: location.city,
     description: stripHtml(getText(event.description)),
     endAt: normalizeDateInput(event.endDate),
-    image: getJsonLdImage(event.image, baseUrl),
+    image: resolveJsonLdNodeImage(objects, event.image, baseUrl),
+    latitude: coordinates
+      ? String(coordinates.latitude)
+      : undefined,
     locationName: location.locationName,
+    longitude: coordinates
+      ? String(coordinates.longitude)
+      : undefined,
     priceText: offer.priceText,
     priceType: offer.priceType,
     startAt: normalizeDateInput(event.startDate),
     title: getText(event.name),
   };
+}
+
+function isImportedPriceRangeText(priceText: string) {
+  return /[\d.,]+(?:\s*€)?\s*[-–~至到]\s*[\d.,]+(?:\s*€)?/.test(priceText);
+}
+
+function mapScrapedPriceText(
+  priceText: string,
+  copy: ActivityLinkImportLocaleCopy,
+  scrapedPriceType?: PriceType,
+): { priceText: string; priceType: PriceType } {
+  if (/免费|gratuit|free/i.test(priceText)) {
+    return { priceText: copy.freePriceText, priceType: "FREE" };
+  }
+
+  if (/查看原文|check the external/i.test(priceText)) {
+    return { priceText: copy.externalPriceText, priceType: "RANGE" };
+  }
+
+  if (
+    scrapedPriceType === "RANGE" ||
+    isImportedPriceRangeText(priceText)
+  ) {
+    return { priceText, priceType: "RANGE" };
+  }
+
+  if (scrapedPriceType && scrapedPriceType !== "FIXED") {
+    return { priceText, priceType: scrapedPriceType };
+  }
+
+  return { priceText, priceType: "FIXED" };
+}
+
+function buildPreviewFromScrapedActivity(
+  activity: ScrapedActivity,
+  siteName: string,
+  html: string,
+  sourceUrl: URL,
+  copy: ActivityLinkImportLocaleCopy,
+): ActivityLinkPreview {
+  const price = mapScrapedPriceText(
+    activity.priceText,
+    copy,
+    activity.priceType,
+  );
+  const meta = extractMeta(html);
+  const coverImageUrl =
+    activity.coverImageUrl ??
+    resolvePreviewImageUrl(meta.get("og:image") || meta.get("twitter:image"), sourceUrl);
+  const values: ActivityLinkPreviewValues = {
+    address: activity.address
+      ? truncateText(formatImportedAddressForForm(activity.address), 120)
+      : undefined,
+    capacity: String(activity.capacity || linkImportDefaultCapacity),
+    category: activity.category,
+    city: activity.city,
+    coverImageUrl,
+    description: buildDescription(
+      preserveImportedMultilineText(activity.description),
+      activity.sourceUrl,
+      copy,
+    ),
+    endAt: activity.endAt
+      ? formatParisDateTimeInput(activity.endAt)
+      : undefined,
+    itinerary: activity.itinerary ?? "",
+    latitude:
+      activity.latitude != null ? String(activity.latitude) : undefined,
+    longitude:
+      activity.longitude != null ? String(activity.longitude) : undefined,
+    priceText: price.priceText,
+    priceType: price.priceType,
+    startAt: formatParisDateTimeInput(activity.startAt),
+    title: truncateText(stripHtml(activity.title), 80),
+    type: "LOCAL",
+  };
+
+  return {
+    missingFields: getMissingFields(values),
+    siteName,
+    sourceUrl: activity.sourceUrl,
+    values,
+  };
+}
+
+function buildSiteSpecificPreview(
+  sourceUrl: URL,
+  siteName: string,
+  html: string,
+  copy: ActivityLinkImportLocaleCopy,
+): ActivityLinkPreview | null {
+  const hostKey = getLinkImportHostKey(sourceUrl);
+
+  if (hostKey === "sortiraparis.com") {
+    const activity = parseSortirAParisArticleHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (
+    hostKey === "playinparis.com" &&
+    /\/event\//i.test(sourceUrl.pathname)
+  ) {
+    const activity = parsePlayInParisEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "meetup.com") {
+    const activity = parseMeetupEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "eventbrite.fr") {
+    const activity = parseEventbriteEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "feverup.com" && /^\/m\/\d+/i.test(sourceUrl.pathname)) {
+    const activity = parseFeverupEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  if (hostKey === "paris.fr" && /\/evenements\//i.test(sourceUrl.pathname)) {
+    const activity = parseParisFrEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
+  return null;
 }
 
 function mapCategory(input: string): ActivityCategory {
@@ -572,15 +886,26 @@ function mapCategory(input: string): ActivityCategory {
     return "BOARD_GAME";
   }
 
-  if (/expo|exposition|mus[eé]e|museum|art|visite/.test(searchable)) {
-    return "EXHIBITION";
+  if (
+    /théâtre|theatre|theater|pièce|comédie|舞台剧|戏剧/.test(searchable) &&
+    !/\bexpos\b|exposition/.test(searchable)
+  ) {
+    return "THEATER";
   }
 
-  if (/concert|musique|music|festival|danse|spectacle/.test(searchable)) {
+  if (/candlelight|concert|musique|music|festival|danse|quatuor/.test(searchable)) {
     return "MUSIC";
   }
 
-  if (/cin[eé]ma|film|movie|projection/.test(searchable)) {
+  if (
+    /expo|exposition|mus[eé]e|museum|immersive|lumières|lumieres|atelier des|灯光|展览|\bexpos\b/.test(
+      searchable,
+    )
+  ) {
+    return "EXHIBITION";
+  }
+
+  if (/cin[eé]ma|\bfilm\b|movie|projection/.test(searchable) && !/candlelight/.test(searchable)) {
     return "MOVIE";
   }
 
@@ -589,7 +914,7 @@ function mapCategory(input: string): ActivityCategory {
   }
 
   if (
-    /voyage|travel|trip|randonn[eé]e|balade|city walk|excursion/.test(
+    /travel|trip|randonn[eé]e|balade|city walk|excursion|\bvoyage\b|旅行/.test(
       searchable,
     )
   ) {
@@ -621,9 +946,12 @@ function buildDescription(
   sourceUrl: string,
   copy: ActivityLinkImportLocaleCopy,
 ) {
-  const body = description || copy.fallbackDescription;
-
-  return truncateText(`${body}\n\n${copy.sourceLabel}: ${sourceUrl}`, 2000);
+  return buildActivityDescriptionWithSource({
+    body: description,
+    fallbackDescription: copy.fallbackDescription,
+    sourceLabel: copy.sourceLabel,
+    sourceUrl,
+  });
 }
 
 function buildPreview(
@@ -647,10 +975,7 @@ function buildPreview(
     "";
   const image =
     jsonLdEvent.image ||
-    getAbsoluteUrl(
-      meta.get("og:image") || meta.get("twitter:image"),
-      sourceUrl,
-    );
+    resolvePreviewImageUrl(meta.get("og:image") || meta.get("twitter:image"), sourceUrl);
   const address = jsonLdEvent.address || jsonLdEvent.locationName || "";
   const city = jsonLdEvent.city || "Paris";
   const startAt =
@@ -676,6 +1001,8 @@ function buildPreview(
     ),
     endAt,
     itinerary: "",
+    latitude: jsonLdEvent.latitude,
+    longitude: jsonLdEvent.longitude,
     priceText,
     priceType,
     startAt,
@@ -773,8 +1100,9 @@ export async function parseActivityLink(
 
   const response = await fetch(sourceUrl, {
     headers: {
-      Accept: "text/html,application/xhtml+xml,application/json",
-      "User-Agent": "NextFunClub/1.0 activity-link-import",
+      Accept:
+        "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+      "User-Agent": activityLinkImportUserAgent,
     },
     cache: "no-store",
     signal: AbortSignal.timeout(requestTimeoutMs),
@@ -804,6 +1132,228 @@ export async function parseActivityLink(
   }
 
   const html = (await response.text()).slice(0, maxHtmlLength);
+  let siteSpecificPreview = buildSiteSpecificPreview(
+    sourceUrl,
+    siteName,
+    html,
+    copy,
+  );
+
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "sortiraparis.com") {
+    siteSpecificPreview = await enrichSortirLinkPreview(
+      siteSpecificPreview,
+      html,
+      sourceUrl,
+    );
+  }
+
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "paris.fr") {
+    siteSpecificPreview = await enrichParisFrLinkPreview(
+      siteSpecificPreview,
+      html,
+      copy,
+    );
+  }
+
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "eventbrite.fr") {
+    siteSpecificPreview = await enrichEventbriteLinkPreview(
+      siteSpecificPreview,
+      sourceUrl,
+      copy,
+    );
+  }
+
+  if (siteSpecificPreview) {
+    return siteSpecificPreview;
+  }
 
   return buildPreview(sourceUrl, siteName, html, copy);
+}
+
+async function enrichEventbriteLinkPreview(
+  preview: ActivityLinkPreview,
+  sourceUrl: URL,
+  copy: ActivityLinkImportLocaleCopy,
+): Promise<ActivityLinkPreview> {
+  const eventId = extractEventbriteEventId(sourceUrl.toString());
+
+  if (!eventId) {
+    return preview;
+  }
+
+  try {
+    const structured = await fetchEventbriteStructuredContent(eventId, {
+      userAgent: activityLinkImportUserAgent,
+      timeoutMs: requestTimeoutMs,
+    });
+
+    if (!structured) {
+      return preview;
+    }
+
+    const description = buildDescription(
+      preserveImportedMultilineText(structured.description),
+      preview.sourceUrl,
+      copy,
+    );
+
+    return {
+      ...preview,
+      values: {
+        ...preview.values,
+        description: description || preview.values.description,
+        itinerary: structured.itinerary ?? preview.values.itinerary,
+      },
+    };
+  } catch {
+    return preview;
+  }
+}
+
+async function enrichParisFrLinkPreview(
+  preview: ActivityLinkPreview,
+  html: string,
+  copy: ActivityLinkImportLocaleCopy,
+): Promise<ActivityLinkPreview> {
+  const currentPriceText = preview.values.priceText ?? "";
+
+  if (
+    preview.values.priceType !== "RANGE" ||
+    currentPriceText !== copy.externalPriceText
+  ) {
+    return preview;
+  }
+
+  const event = extractJsonLdObjects(html).find(isEventJsonLd);
+  const ticketUrl = extractParisFrTicketUrl(event?.offers);
+
+  if (!ticketUrl || !/billetreduc\.com/i.test(ticketUrl)) {
+    return preview;
+  }
+
+  const eventId = extractBilletreducEventId(ticketUrl);
+  const searchQuery = encodeURIComponent(
+    (preview.values.title ?? "Paris")
+      .replace(/[«»"']/g, "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join(" "),
+  );
+
+  try {
+    const response = await fetch(
+      `https://www.billetreduc.com/search?q=${searchQuery}`,
+      {
+        headers: {
+          Accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+          "User-Agent": activityLinkImportUserAgent,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      },
+    );
+
+    if (response.ok) {
+      const searchHtml = (await response.text()).slice(0, maxHtmlLength);
+      const ticketPrices = extractBilletreducPriceRange(searchHtml, {
+        eventId,
+        eventName: preview.values.title,
+      });
+
+      if (ticketPrices) {
+        return {
+          ...preview,
+          values: {
+            ...preview.values,
+            priceText: ticketPrices.priceText,
+            priceType: ticketPrices.priceType,
+          },
+        };
+      }
+    }
+  } catch {
+    return preview;
+  }
+
+  return preview;
+}
+
+async function enrichSortirLinkPreview(
+  preview: ActivityLinkPreview,
+  html: string,
+  sourceUrl: URL,
+): Promise<ActivityLinkPreview> {
+  let frenchHtml: string | undefined;
+
+  if (/\/zh\//i.test(sourceUrl.pathname)) {
+    const frenchUrls = findSortirFrenchArticleUrls(html, sourceUrl.toString());
+
+    for (const frenchUrl of frenchUrls) {
+      try {
+        const response = await fetch(frenchUrl, {
+          headers: {
+            Accept:
+              "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+            "User-Agent": activityLinkImportUserAgent,
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const candidateHtml = (await response.text()).slice(0, maxHtmlLength);
+
+        if (extractSortirFrenchStreetAddress(candidateHtml)) {
+          frenchHtml = candidateHtml;
+          break;
+        }
+
+        frenchHtml ??= candidateHtml;
+      } catch {
+        /* try next candidate */
+      }
+    }
+  }
+
+  const activity = enrichSortirActivityAddress(
+    {
+      id: "sortiraparis_preview",
+      source: "sortiraparis",
+      sourceUrl: preview.sourceUrl,
+      title: preview.values.title ?? "",
+      description: preview.values.description ?? "",
+      itinerary: preview.values.itinerary ?? null,
+      type: "PUBLIC_EVENT",
+      category: preview.values.category ?? "OTHER",
+      city: preview.values.city ?? "Paris",
+      destination: null,
+      address: preview.values.address ?? "Paris, France",
+      startAt: preview.values.startAt ?? new Date().toISOString(),
+      endAt: preview.values.endAt ?? null,
+      capacity: linkImportDefaultCapacity,
+      minParticipants: null,
+      requiresApproval: false,
+      priceType: preview.values.priceType ?? "RANGE",
+      priceText: preview.values.priceText ?? "",
+      coverImageUrl: preview.values.coverImageUrl ?? null,
+      status: "RECRUITING",
+      visibility: "PUBLIC",
+    },
+    html,
+    sourceUrl.toString(),
+    frenchHtml,
+  );
+
+  return {
+    ...preview,
+    values: {
+      ...preview.values,
+      address: truncateText(formatImportedAddressForForm(activity.address), 120),
+      city: activity.city,
+    },
+  };
 }

@@ -1,4 +1,5 @@
 import type { ActivityCategory, PriceType, Prisma } from "@prisma/client";
+import { MAX_ACTIVITY_DESCRIPTION_LENGTH } from "@/features/activities/schemas/activitySchema";
 import { prisma } from "@/lib/prisma";
 
 const parisOpenDataDataset = "que-faire-a-paris-";
@@ -242,7 +243,7 @@ function getDescription(record: ParisOpenDataRecord) {
   const body = leadText || description || "公共活动信息来自 Paris OpenData。";
   const text = officialUrl ? `${body}\n\n官方链接：${officialUrl}` : body;
 
-  return truncateText(text, 2000);
+  return truncateText(text, MAX_ACTIVITY_DESCRIPTION_LENGTH);
 }
 
 function getItinerary(record: ParisOpenDataRecord) {

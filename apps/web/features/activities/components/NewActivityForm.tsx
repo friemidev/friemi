@@ -172,6 +172,7 @@ export function NewActivityForm({
   const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
 
@@ -187,6 +188,10 @@ export function NewActivityForm({
 
     if (nextValues.category) {
       setCategory(nextValues.category);
+    }
+
+    if (nextValues.priceType) {
+      setPriceType(nextValues.priceType);
     }
 
     setPrefillVersion((currentVersion) => currentVersion + 1);
@@ -222,6 +227,14 @@ export function NewActivityForm({
             <ActivityLinkImportPanel
               locale={locale}
               onApply={applyImportedValues}
+            />
+          ) : null}
+
+          {values?.importSourceUrl ? (
+            <input
+              name="importSourceUrl"
+              type="hidden"
+              value={values.importSourceUrl}
             />
           ) : null}
 
@@ -423,7 +436,7 @@ export function NewActivityForm({
                   type="number"
                   min={2}
                   max={100}
-                  defaultValue={values?.capacity ?? 6}
+                  defaultValue={values?.capacity ?? "99"}
                   required
                 />
                 <FieldError errors={state.fieldErrors?.capacity} />

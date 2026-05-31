@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildGeocodingQueries } from "@/lib/place-search";
 
 export const revalidate = 86_400;
 
@@ -34,14 +35,60 @@ function normalizeAcceptLanguage(value: string | null) {
   return acceptLanguages[value ?? ""] ?? acceptLanguages["zh-CN"];
 }
 
-function buildSearchQuery(query: string, city: string | undefined) {
-  if (!city) {
-    return query;
+function buildSearchQueries(query: string, city: string | undefined) {
+  const normalizedCity = city?.trim() ?? "";
+
+  return buildGeocodingQueries(query, normalizedCity);
+}
+
+async function searchNominatim(query: string, acceptLanguage: string, limit: number) {
+  const nominatimUrl = new URL("https://nominatim.openstreetmap.org/search");
+  nominatimUrl.searchParams.set("format", "jsonv2");
+  nominatimUrl.searchParams.set("addressdetails", "1");
+  nominatimUrl.searchParams.set("dedupe", "1");
+  nominatimUrl.searchParams.set("accept-language", acceptLanguage);
+  nominatimUrl.searchParams.set("limit", String(limit));
+  nominatimUrl.searchParams.set("countrycodes", "fr");
+  nominatimUrl.searchParams.set("q", query);
+
+  const response = await fetch(nominatimUrl, {
+    headers: {
+      Accept: "application/json",
+      "Accept-Language": acceptLanguage,
+      "User-Agent": "NextFunClub/1.0 location-search",
+    },
+    next: {
+      revalidate: 86_400,
+    },
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    return [];
   }
 
-  return query.toLowerCase().includes(city.toLowerCase())
-    ? query
-    : `${query}, ${city}`;
+  const payload = (await response.json()) as NominatimPlace[];
+
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .map((place) => {
+      const latitude = Number.parseFloat(place.lat ?? "");
+      const longitude = Number.parseFloat(place.lon ?? "");
+
+      if (!place.display_name || !isValidCoordinate(latitude, longitude)) {
+        return null;
+      }
+
+      return {
+        label: place.display_name,
+        latitude,
+        longitude,
+      };
+    })
+    .filter((place): place is PlaceSearchResult => place !== null);
 }
 
 function isValidCoordinate(latitude: number, longitude: number) {
@@ -65,60 +112,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ places: [] });
   }
 
-  const nominatimUrl = new URL("https://nominatim.openstreetmap.org/search");
-  nominatimUrl.searchParams.set("format", "jsonv2");
-  nominatimUrl.searchParams.set("addressdetails", "1");
-  nominatimUrl.searchParams.set("dedupe", "1");
-  nominatimUrl.searchParams.set("accept-language", acceptLanguage);
-  nominatimUrl.searchParams.set(
-    "limit",
-    String(normalizeLimit(searchParams.get("limit"))),
-  );
-  nominatimUrl.searchParams.set("countrycodes", "fr");
-  nominatimUrl.searchParams.set("q", buildSearchQuery(query, city));
+  const limit = normalizeLimit(searchParams.get("limit"));
+  const queries = buildSearchQueries(query, city);
 
   try {
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        Accept: "application/json",
-        "Accept-Language": acceptLanguage,
-        "User-Agent": "NextFunClub/1.0 location-search",
-      },
-      next: {
-        revalidate: 86_400,
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
+    const places: PlaceSearchResult[] = [];
+    const seen = new Set<string>();
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { places: [], error: "PLACE_SEARCH_FAILED" },
-        { status: 502 },
+    for (const searchQuery of queries) {
+      if (places.length >= limit) {
+        break;
+      }
+
+      const batch = await searchNominatim(
+        searchQuery,
+        acceptLanguage,
+        limit - places.length,
       );
+
+      for (const place of batch) {
+        const key = `${place.latitude.toFixed(5)}:${place.longitude.toFixed(5)}`;
+
+        if (seen.has(key)) {
+          continue;
+        }
+
+        seen.add(key);
+        places.push(place);
+      }
     }
-
-    const payload = (await response.json()) as NominatimPlace[];
-    const places = Array.isArray(payload)
-      ? payload
-          .map((place) => {
-            const latitude = Number.parseFloat(place.lat ?? "");
-            const longitude = Number.parseFloat(place.lon ?? "");
-
-            if (
-              !place.display_name ||
-              !isValidCoordinate(latitude, longitude)
-            ) {
-              return null;
-            }
-
-            return {
-              label: place.display_name,
-              latitude,
-              longitude,
-            };
-          })
-          .filter((place): place is PlaceSearchResult => place !== null)
-      : [];
 
     return NextResponse.json({ places });
   } catch (error) {

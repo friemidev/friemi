@@ -9,7 +9,11 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
-  transpilePackages: ["@chill-club/shared", "@chill-club/ui"]
+  transpilePackages: [
+    "@chill-club/shared",
+    "@chill-club/ui",
+    "@chill-club/scraper-core",
+  ],
 };
 
 export default withNextIntl(nextConfig);

@@ -42,6 +42,7 @@ type ActivityFormState = {
     | "TRAVEL"
     | "FOOD"
     | "EXHIBITION"
+    | "THEATER"
     | "OTHER";
   city: string;
   destination: string;
@@ -549,6 +550,7 @@ export function AdminDashboardClient({
                       <option value="TRAVEL">TRAVEL</option>
                       <option value="FOOD">FOOD</option>
                       <option value="EXHIBITION">EXHIBITION</option>
+                      <option value="THEATER">THEATER</option>
                       <option value="OTHER">OTHER</option>
                     </select>
                   </FormField>

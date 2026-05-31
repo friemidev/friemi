@@ -22,6 +22,7 @@ type ScraperFormState = {
   to: string;
   limit: number;
   maxPages: number;
+  geocodeMissing: boolean;
 };
 
 type ScraperImportSectionProps = {
@@ -47,6 +48,17 @@ function todayPlusDays(days: number) {
 function dateOnly(value?: string | null) {
   if (!value) return "";
   return value.slice(0, 10);
+}
+
+function formatCoordinates(
+  latitude?: number | null,
+  longitude?: number | null,
+) {
+  if (latitude == null || longitude == null) {
+    return "无坐标";
+  }
+
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
 }
 
 function statusColor(status: ScraperPreviewItem["duplicateStatus"]) {
@@ -88,6 +100,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
     to: todayPlusDays(30),
     limit: 20,
     maxPages: 3,
+    geocodeMissing: true,
   });
   const [previewItems, setPreviewItems] = useState<ScraperPreviewItem[]>([]);
   const [itemOverrides, setItemOverrides] = useState<Record<string, ScraperPreviewItem>>({});
@@ -330,6 +343,19 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
             <input type="checkbox" checked={mergeDuplicates} onChange={(e) => setMergeDuplicates(e.target.checked)} />
             相似内容合并到已有活动
           </label>
+          <label className="flex items-center gap-2 pt-6 text-zinc-700">
+            <input
+              type="checkbox"
+              checked={scraperForm.geocodeMissing}
+              onChange={(e) =>
+                setScraperForm((current) => ({
+                  ...current,
+                  geocodeMissing: e.target.checked,
+                }))
+              }
+            />
+            缺失坐标时用 Nominatim 自动补全（约 1 条/秒）
+          </label>
         </div>
 
         <div className="flex flex-wrap gap-2 text-sm">
@@ -373,6 +399,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
                 <th className="px-3 py-2">状态</th>
                 <th className="px-3 py-2">标题</th>
                 <th className="px-3 py-2">日期</th>
+                <th className="px-3 py-2">坐标</th>
                 <th className="px-3 py-2">来源</th>
                 <th className="px-3 py-2">原文</th>
                 <th className="px-3 py-2">重复命中</th>
@@ -382,7 +409,7 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
             <tbody>
               {resolvedPreviewItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-12 text-center">
+                  <td colSpan={9} className="px-3 py-12 text-center">
                     <p className="font-medium text-zinc-800">还没有预览结果</p>
                     <p className="mt-2 text-sm text-zinc-500">
                       点击“预览活动”后，系统会先展示新增和相似活动，再由你选择是否导入。
@@ -423,6 +450,9 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
                   <td className="px-3 py-2 text-zinc-600">
                     {dateOnly(item.startAt)} {item.endAt ? `~ ${dateOnly(item.endAt)}` : ""}
                   </td>
+                  <td className="px-3 py-2 text-xs text-zinc-600">
+                    {formatCoordinates(item.latitude, item.longitude)}
+                  </td>
                   <td className="px-3 py-2 text-zinc-600">{item.source}</td>
                   <td className="px-3 py-2">
                     <a className="text-sky-700 underline" href={item.sourceUrl} target="_blank" rel="noreferrer">
@@ -459,6 +489,36 @@ export function ScraperImportSection({ busy, onBusyChange, onImported }: Scraper
                 <FormField label="地址">
                   <Input value={editingItem.address} onChange={(e) => setEditingItem({ ...editingItem, address: e.target.value })} />
                 </FormField>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormField label="纬度">
+                    <Input
+                      inputMode="decimal"
+                      value={editingItem.latitude ?? ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          latitude: e.target.value.trim()
+                            ? Number(e.target.value)
+                            : null,
+                        })
+                      }
+                    />
+                  </FormField>
+                  <FormField label="经度">
+                    <Input
+                      inputMode="decimal"
+                      value={editingItem.longitude ?? ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          longitude: e.target.value.trim()
+                            ? Number(e.target.value)
+                            : null,
+                        })
+                      }
+                    />
+                  </FormField>
+                </div>
                 <FormField label="原文链接">
                   <Input value={editingItem.sourceUrl} onChange={(e) => setEditingItem({ ...editingItem, sourceUrl: e.target.value })} />
                 </FormField>

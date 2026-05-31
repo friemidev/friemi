@@ -8,6 +8,7 @@
     "build": "prisma generate && next build",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test features/activity-link-import/parseActivityLink.test.ts features/activities/utils/validateActivitySchedule.test.ts lib/place-search.test.ts lib/activity-description.test.ts lib/activity-dedupe.test.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

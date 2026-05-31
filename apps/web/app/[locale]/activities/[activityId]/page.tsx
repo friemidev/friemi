@@ -125,7 +125,7 @@ export default async function ActivityDetailPage({
             <h2 className="text-lg font-semibold text-ink">
               {t.activityDetail.descriptionTitle}
             </h2>
-            <p className="mt-3 text-sm leading-7 text-zinc-600">
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
               {activity.description}
             </p>
           </div>
