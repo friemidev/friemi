@@ -17,8 +17,13 @@ export {
   parseEventbriteEventHtml,
   parseFeverupEventHtml,
   parseMeetupEventHtml,
+  parseParisFrEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
+  extractBilletreducPriceRange,
+  extractParisFrTicketUrl,
+  extractBilletreducEventId,
+  mapParisFrCategory,
   parseStructuredEventHtml,
 } from "./link-import";
 
@@ -137,8 +142,10 @@ function guessCategory(text: string): ScrapedActivity["category"] {
     )
   )
     return "FOOD";
-  if (/(展|exhibition|museum|gallery|art|博物馆|艺术)/i.test(value))
+  if (/(展|exhibition|museum|gallery|art|博物馆|艺术|\bexpos\b)/i.test(value))
     return "EXHIBITION";
+  if (/(théâtre|theatre|theater|pièce|舞台剧|戏剧)/i.test(value))
+    return "THEATER";
   return "OTHER";
 }
 

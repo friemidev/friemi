@@ -9,6 +9,7 @@ import {
   parseEventbriteEventHtml,
   parseFeverupEventHtml,
   parseMeetupEventHtml,
+  parseParisFrEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
 } from "./link-import";
@@ -74,6 +75,20 @@ const siteParserCases: SiteParserCase[] = [
     },
   },
   {
+    id: "eventbrite-yoga-fixed",
+    fixture: "eventbrite-yoga-fixed-snippet.html",
+    sourceUrl:
+      "https://www.eventbrite.com/e/paris-yoga-club-may-31-with-lucy-tickets-1990485031311",
+    parse: parseEventbriteEventHtml,
+    expect: {
+      title: /Paris Yoga Club/i,
+      category: "SPORTS",
+      priceType: "FIXED",
+      priceText: /7\.58.*EUR/i,
+      address: /Jivamukti/i,
+    },
+  },
+  {
     id: "eventbrite-uk-hololive",
     fixture: "eventbrite-hololive-aggregate-offer-snippet.html",
     sourceUrl:
@@ -85,6 +100,31 @@ const siteParserCases: SiteParserCase[] = [
       priceType: "RANGE",
       priceText: /58\.86.*116\.52.*EUR/i,
       address: /UGC Ciné Cité Bercy/,
+    },
+  },
+  {
+    id: "paris-fr-ogrelet",
+    fixture: "paris-fr-ogrelet-snippet.html",
+    sourceUrl: "https://www.paris.fr/evenements/l-ogrelet-110475",
+    parse: parseParisFrEventHtml,
+    expect: {
+      title: /Ogrelet/i,
+      category: "THEATER",
+      priceType: "RANGE",
+      priceText: /12\.95.*16\.5/i,
+      address: /Théâtre Essaïon/i,
+    },
+  },
+  {
+    id: "paris-fr-passions-expo",
+    fixture: "paris-fr-passions-expo-snippet.html",
+    sourceUrl:
+      "https://www.paris.fr/evenements/passions-l-expo-poetico-drole-de-guillaume-blot-108919",
+    parse: parseParisFrEventHtml,
+    expect: {
+      title: /PASSIONS/i,
+      category: "EXHIBITION",
+      priceType: "FREE",
     },
   },
   {

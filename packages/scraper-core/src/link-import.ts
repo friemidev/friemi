@@ -384,6 +384,178 @@ export function extractJsonLdOfferPrice(
   return null;
 }
 
+export function extractParisFrTicketUrl(offers: unknown): string | null {
+  if (!offers || typeof offers !== "object") {
+    return null;
+  }
+
+  const record = offers as Record<string, unknown>;
+  const url = typeof record.url === "string" ? record.url.trim() : "";
+
+  return url || null;
+}
+
+export function extractBilletreducEventId(ticketUrl: string) {
+  return ticketUrl.match(/eventId=(\d+)/i)?.[1] ?? null;
+}
+
+/** Best-effort ticket price range from Billetreduc HTML (search or event page). */
+export function extractBilletreducPriceRange(
+  html: string,
+  options?: { eventId?: string | null; eventName?: string },
+): Pick<ScrapedActivity, "priceText" | "priceType"> | null {
+  let scope = html;
+
+  if (options?.eventId && html.includes(options.eventId)) {
+    const index = html.indexOf(options.eventId);
+    scope = html.slice(Math.max(0, index - 2500), index + 6000);
+  } else if (options?.eventName) {
+    const token = options.eventName
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .split(/[^\p{L}\d']+/u)
+      .filter((part) => part.length >= 4)[0];
+
+    if (token) {
+      const match = html.match(
+        new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+      );
+
+      if (match?.index !== undefined) {
+        scope = html.slice(
+          Math.max(0, match.index - 500),
+          match.index + 4000,
+        );
+      }
+    }
+  }
+
+  const prices = [
+    ...scope.matchAll(/(\d{1,3}[,.]\d{2})\s*€/g),
+    ...scope.matchAll(/d[eè]s\s*(\d{1,3}[,.]\d{2})\s*€/gi),
+  ]
+    .map((match) =>
+      Number.parseFloat((match[1] ?? match[0]).replace(",", ".")),
+    )
+    .filter((price) => Number.isFinite(price) && price >= 5 && price <= 200);
+
+  if (prices.length === 0) {
+    return null;
+  }
+
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const currency = "EUR";
+
+  if (min === max) {
+    return {
+      priceText: `${min} ${currency}`,
+      priceType: "FIXED",
+    };
+  }
+
+  return {
+    priceText: `${min} – ${max} ${currency}`,
+    priceType: "RANGE",
+  };
+}
+
+export function mapParisFrCategory(
+  html: string,
+  title: string,
+  description: string,
+): ScrapedActivity["category"] {
+  const tagLine =
+    html.match(
+      /<p>\s*((?:Enfants|Théâtre|Expos|Photos|Musique)(?:\s+(?:Enfants|Théâtre|Expos|Photos|Musique))*)\s*<\/p>/i,
+    )?.[1] ?? "";
+  const text = `${tagLine} ${title} ${description}`.toLowerCase();
+
+  if (/\bexpos\b|\bexposition\b|expo poético|poético-drôle/i.test(text)) {
+    return "EXHIBITION";
+  }
+
+  if (
+    /théâtre|theatre|theater|pièce\b|comédie|舞台剧|戏剧/.test(text) &&
+    !/\bexpos\b/.test(text)
+  ) {
+    return "THEATER";
+  }
+
+  if (/\bgratuit\b/i.test(html) && /\bexpos\b/i.test(text)) {
+    return "EXHIBITION";
+  }
+
+  return guessCategory(`${title} ${description}`);
+}
+
+export function parseParisFrEventHtml(
+  html: string,
+  sourceUrl: string,
+): ScrapedActivity | null {
+  const nodes = flattenJsonLd(html);
+  const event = nodes.find((node) => hasImportableEventJsonLdType(node));
+
+  if (!event) {
+    return null;
+  }
+
+  const activity = buildScrapedActivityFromJsonLdEvent(
+    event,
+    nodes,
+    html,
+    sourceUrl,
+    "parisfr",
+  );
+
+  if (!activity) {
+    return null;
+  }
+
+  const category = mapParisFrCategory(
+    html,
+    activity.title,
+    activity.description,
+  );
+  let { priceText, priceType } = activity;
+
+  if (/\bGratuit\b/i.test(html)) {
+    const offerPrice = extractJsonLdOfferPrice(event.offers, {
+      freeText: "免费",
+    });
+
+    if (offerPrice?.priceType === "FREE") {
+      priceText = offerPrice.priceText;
+      priceType = offerPrice.priceType;
+    }
+  }
+
+  const embeddedTicketHtml = html.match(
+    /<!--\s*billetreduc-ticket-html\s*([\s\S]*?)\s*-->/i,
+  )?.[1];
+
+  if (embeddedTicketHtml) {
+    const ticketPrices = extractBilletreducPriceRange(embeddedTicketHtml, {
+      eventId: extractBilletreducEventId(
+        extractParisFrTicketUrl(event.offers) ?? "",
+      ),
+      eventName: activity.title,
+    });
+
+    if (ticketPrices) {
+      priceText = ticketPrices.priceText;
+      priceType = ticketPrices.priceType;
+    }
+  }
+
+  return {
+    ...activity,
+    category,
+    priceText,
+    priceType,
+  };
+}
+
 export function parseStructuredEventHtml(
   html: string,
   sourceUrl: string,
@@ -1075,6 +1247,13 @@ function guessCategory(text: string): ScrapedActivity["category"] {
   }
 
   if (
+    /(théâtre|theatre|theater|pièce\b|comédie|舞台剧|戏剧)/i.test(value) &&
+    !/\bexpos\b|exposition/i.test(value)
+  ) {
+    return "THEATER";
+  }
+
+  if (
     /(candlelight|音乐|concert|live\s*music|quatuor|orchestre|symphon|dj\b|k-pop|kpop|festival|opera)/i.test(
       value,
     )
@@ -1083,7 +1262,7 @@ function guessCategory(text: string): ScrapedActivity["category"] {
   }
 
   if (
-    /(展|exposition|exhibition|museum|gallery|musée|immersive|lumières|lumieres|atelier des|灯光秀)/i.test(
+    /(展|exposition|exhibition|museum|gallery|musée|immersive|lumières|lumieres|atelier des|灯光秀|\bexpos\b)/i.test(
       value,
     )
   ) {

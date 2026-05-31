@@ -10,8 +10,12 @@ import {
   parseFeverupEventHtml,
   linkImportDefaultCapacity,
   parseMeetupEventHtml,
+  parseParisFrEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
+  extractBilletreducPriceRange,
+  extractParisFrTicketUrl,
+  extractBilletreducEventId,
   type ScrapedActivity,
 } from "@chill-club/scraper-core";
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
@@ -828,6 +832,20 @@ function buildSiteSpecificPreview(
       : null;
   }
 
+  if (hostKey === "paris.fr" && /\/evenements\//i.test(sourceUrl.pathname)) {
+    const activity = parseParisFrEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
   return null;
 }
 
@@ -840,12 +858,19 @@ function mapCategory(input: string): ActivityCategory {
     return "BOARD_GAME";
   }
 
-  if (/candlelight|concert|musique|music|festival|danse|quatuor|spectacle/.test(searchable)) {
+  if (
+    /théâtre|theatre|theater|pièce|comédie|舞台剧|戏剧/.test(searchable) &&
+    !/\bexpos\b|exposition/.test(searchable)
+  ) {
+    return "THEATER";
+  }
+
+  if (/candlelight|concert|musique|music|festival|danse|quatuor/.test(searchable)) {
     return "MUSIC";
   }
 
   if (
-    /expo|exposition|mus[eé]e|museum|immersive|lumières|lumieres|atelier des|灯光|展览/.test(
+    /expo|exposition|mus[eé]e|museum|immersive|lumières|lumieres|atelier des|灯光|展览|\bexpos\b/.test(
       searchable,
     )
   ) {
@@ -1092,11 +1117,88 @@ export async function parseActivityLink(
     );
   }
 
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "paris.fr") {
+    siteSpecificPreview = await enrichParisFrLinkPreview(
+      siteSpecificPreview,
+      html,
+      copy,
+    );
+  }
+
   if (siteSpecificPreview) {
     return siteSpecificPreview;
   }
 
   return buildPreview(sourceUrl, siteName, html, copy);
+}
+
+async function enrichParisFrLinkPreview(
+  preview: ActivityLinkPreview,
+  html: string,
+  copy: ActivityLinkImportLocaleCopy,
+): Promise<ActivityLinkPreview> {
+  const currentPriceText = preview.values.priceText ?? "";
+
+  if (
+    preview.values.priceType !== "RANGE" ||
+    currentPriceText !== copy.externalPriceText
+  ) {
+    return preview;
+  }
+
+  const event = extractJsonLdObjects(html).find(isEventJsonLd);
+  const ticketUrl = extractParisFrTicketUrl(event?.offers);
+
+  if (!ticketUrl || !/billetreduc\.com/i.test(ticketUrl)) {
+    return preview;
+  }
+
+  const eventId = extractBilletreducEventId(ticketUrl);
+  const searchQuery = encodeURIComponent(
+    (preview.values.title ?? "Paris")
+      .replace(/[«»"']/g, "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join(" "),
+  );
+
+  try {
+    const response = await fetch(
+      `https://www.billetreduc.com/search?q=${searchQuery}`,
+      {
+        headers: {
+          Accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+          "User-Agent": activityLinkImportUserAgent,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      },
+    );
+
+    if (response.ok) {
+      const searchHtml = (await response.text()).slice(0, maxHtmlLength);
+      const ticketPrices = extractBilletreducPriceRange(searchHtml, {
+        eventId,
+        eventName: preview.values.title,
+      });
+
+      if (ticketPrices) {
+        return {
+          ...preview,
+          values: {
+            ...preview.values,
+            priceText: ticketPrices.priceText,
+            priceType: ticketPrices.priceType,
+          },
+        };
+      }
+    }
+  } catch {
+    return preview;
+  }
+
+  return preview;
 }
 
 async function enrichSortirLinkPreview(

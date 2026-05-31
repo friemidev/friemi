@@ -526,6 +526,7 @@ const copy = {
         TRAVEL: "旅行",
         FOOD: "饭局",
         EXHIBITION: "展览",
+        THEATER: "戏剧",
         OTHER: "其他",
       },
       statuses: {
@@ -1108,6 +1109,7 @@ const copy = {
         TRAVEL: "Travel",
         FOOD: "Food",
         EXHIBITION: "Exhibition",
+        THEATER: "Theater",
         OTHER: "Other",
       },
       statuses: {
@@ -1715,6 +1717,7 @@ const copy = {
         TRAVEL: "Voyage",
         FOOD: "Repas",
         EXHIBITION: "Expo",
+        THEATER: "Théâtre",
         OTHER: "Autre",
       },
       statuses: {

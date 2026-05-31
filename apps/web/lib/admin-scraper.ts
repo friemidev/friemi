@@ -95,6 +95,7 @@ type AdminActivityInput = {
     | "TRAVEL"
     | "FOOD"
     | "EXHIBITION"
+    | "THEATER"
     | "OTHER";
   city: string;
   destination?: string | null;

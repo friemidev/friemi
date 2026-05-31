@@ -23,6 +23,7 @@ enum ActivityCategory {
   TRAVEL
   FOOD
   EXHIBITION
+  THEATER
   OTHER
 }
 
