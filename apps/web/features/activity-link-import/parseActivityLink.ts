@@ -6,6 +6,8 @@ import {
   findSortirFrenchArticleUrl,
   findSortirFrenchArticleUrls,
   parseEventbriteEventHtml,
+  fetchEventbriteStructuredContent,
+  extractEventbriteEventId,
   extractJsonLdOfferPrice,
   parseFeverupEventHtml,
   linkImportDefaultCapacity,
@@ -226,6 +228,16 @@ function stripHtml(value: string | undefined) {
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]{2,}/g, " "),
   ).trim();
+}
+
+function preserveImportedMultilineText(value: string | undefined) {
+  const trimmed = (value ?? "").trim();
+
+  if (!trimmed || !/<[a-z][^>]*>/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return stripHtml(trimmed);
 }
 
 function truncateText(value: string, maxLength: number) {
@@ -728,7 +740,7 @@ function buildPreviewFromScrapedActivity(
     city: activity.city,
     coverImageUrl,
     description: buildDescription(
-      stripHtml(activity.description),
+      preserveImportedMultilineText(activity.description),
       activity.sourceUrl,
       copy,
     ),
@@ -1125,11 +1137,59 @@ export async function parseActivityLink(
     );
   }
 
+  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "eventbrite.fr") {
+    siteSpecificPreview = await enrichEventbriteLinkPreview(
+      siteSpecificPreview,
+      sourceUrl,
+      copy,
+    );
+  }
+
   if (siteSpecificPreview) {
     return siteSpecificPreview;
   }
 
   return buildPreview(sourceUrl, siteName, html, copy);
+}
+
+async function enrichEventbriteLinkPreview(
+  preview: ActivityLinkPreview,
+  sourceUrl: URL,
+  copy: ActivityLinkImportLocaleCopy,
+): Promise<ActivityLinkPreview> {
+  const eventId = extractEventbriteEventId(sourceUrl.toString());
+
+  if (!eventId) {
+    return preview;
+  }
+
+  try {
+    const structured = await fetchEventbriteStructuredContent(eventId, {
+      userAgent: activityLinkImportUserAgent,
+      timeoutMs: requestTimeoutMs,
+    });
+
+    if (!structured) {
+      return preview;
+    }
+
+    const description = buildDescription(
+      preserveImportedMultilineText(structured.description),
+      preview.sourceUrl,
+      copy,
+    );
+
+    return {
+      ...preview,
+      values: {
+        ...preview.values,
+        description: description || preview.values.description,
+        itinerary: structured.itinerary ?? preview.values.itinerary,
+      },
+    };
+  } catch {
+    return preview;
+  }
 }
 
 async function enrichParisFrLinkPreview(

@@ -8,6 +8,7 @@ import {
   extractSortirFrenchStreetAddress,
   parseChineseDate,
   parseEventbriteEventHtml,
+  parseEventbriteStructuredModules,
   parseFeverupEventHtml,
   parseMeetupEventHtml,
   parsePlayInParisEventHtml,
@@ -118,6 +119,21 @@ test("parseMeetupEventHtml reads full description from __NEXT_DATA__", () => {
   assert.doesNotMatch(activity.description, /practice your E$/);
   assert.equal(activity.city, "Toulouse");
   assert.match(activity.address, /Baraka Jeux/);
+});
+
+test("parseEventbriteStructuredModules splits programme into itinerary lines", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const modules = JSON.parse(
+    readFileSync(join(fixtureDir, "eventbrite-nuit-blanche-modules.json"), "utf8"),
+  );
+  const parsed = parseEventbriteStructuredModules(modules);
+
+  assert.ok(parsed);
+  assert.match(parsed?.description ?? "", /étoiles/i);
+  assert.match(parsed?.itinerary ?? "", /19h.*marche/i);
+  assert.match(parsed?.itinerary ?? "", /20h/i);
+  assert.match(parsed?.itinerary ?? "", /Entracte/i);
+  assert.equal((parsed?.itinerary?.split("\n") ?? []).length, 4);
 });
 
 test("parseEventbriteEventHtml merges structuredContent modules into description", () => {
