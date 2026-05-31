@@ -263,7 +263,7 @@ function buildScrapedActivityFromJsonLdEvent(
     address,
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
-    capacity: 100,
+    capacity: linkImportDefaultCapacity,
     minParticipants: null,
     requiresApproval: false,
     priceType: guessPriceType(priceText),
@@ -412,7 +412,7 @@ function parseMeetupEventFromNextData(
     address: formatMeetupVenueAddress(venue),
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
-    capacity: 100,
+    capacity: linkImportDefaultCapacity,
     minParticipants: null,
     requiresApproval: false,
     priceType: guessPriceType(priceText),
@@ -474,6 +474,40 @@ export function parseEventbriteEventHtml(
   }
 
   return activity;
+}
+
+export function parseFeverupEventHtml(
+  html: string,
+  sourceUrl: string,
+): ScrapedActivity | null {
+  const activity = parseStructuredEventHtml(html, sourceUrl, "feverup");
+
+  if (!activity) {
+    return null;
+  }
+
+  const feverPayload = extractFeverAppPayload(html);
+  const planDetail = feverPayload?.["page-config"]?.planDetail;
+  const placeAddress = formatFeverDefaultPlaceAddress(planDetail?.defaultPlace);
+  const feverPrice = buildFeverPriceFromTransferState(
+    feverPayload?.["ticket-selector-config"]?.transferState,
+  );
+  const coverImageUrl =
+    normalizeExternalImageUrl(planDetail?.coverImage) ?? activity.coverImageUrl;
+
+  return {
+    ...activity,
+    address: placeAddress || activity.address,
+    category: mapFeverPlanCategory(
+      planDetail,
+      activity.title,
+      planDetail?.description ?? activity.description,
+    ),
+    capacity: linkImportDefaultCapacity,
+    coverImageUrl,
+    priceText: feverPrice?.priceText ?? activity.priceText,
+    priceType: feverPrice?.priceType ?? activity.priceType,
+  };
 }
 
 function parseDateTimeString(value: string) {
@@ -890,24 +924,94 @@ function resolveJsonLdImage(
   return normalizeExternalImageUrl(image);
 }
 
+function mapFeverPlanCategory(
+  planDetail: FeverPlanDetail | undefined,
+  title: string,
+  description: string,
+): ScrapedActivity["category"] {
+  const slug = String(planDetail?.category ?? "").toLowerCase();
+  const tags = Array.isArray(planDetail?.categories)
+    ? planDetail.categories.map((entry) => String(entry).toLowerCase()).join(" ")
+    : "";
+  const tagAndTitle = `${tags} ${title}`.toLowerCase();
+
+  if (slug === "art") {
+    return "EXHIBITION";
+  }
+
+  if (slug === "concert") {
+    return "MUSIC";
+  }
+
+  if (/candlelight|\bconcert\b|nightlife/.test(tagAndTitle)) {
+    return "MUSIC";
+  }
+
+  if (
+    /art gallery|exposition|exhibition|museum|musée|immersive|lumières|lumieres|atelier des/.test(
+      `${slug} ${tagAndTitle}`,
+    )
+  ) {
+    return "EXHIBITION";
+  }
+
+  return guessCategory(`${title} ${description}`);
+}
+
 function guessCategory(text: string): ScrapedActivity["category"] {
   const value = text.toLowerCase();
-  if (/(桌游|board\s*game|jenga|狼人杀|卡牌)/i.test(value)) return "BOARD_GAME";
-  if (/(电影|cinema|movie|film)/i.test(value)) return "MOVIE";
-  if (/(音乐|concert|live|dj|k-pop|kpop|festival|show|opera)/i.test(value))
+
+  if (/(桌游|board\s*game|jenga|狼人杀|卡牌)/i.test(value)) {
+    return "BOARD_GAME";
+  }
+
+  if (
+    /(candlelight|音乐|concert|live\s*music|quatuor|orchestre|symphon|dj\b|k-pop|kpop|festival|opera)/i.test(
+      value,
+    )
+  ) {
     return "MUSIC";
-  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value))
+  }
+
+  if (
+    /(展|exposition|exhibition|museum|gallery|musée|immersive|lumières|lumieres|atelier des|灯光秀)/i.test(
+      value,
+    )
+  ) {
+    return "EXHIBITION";
+  }
+
+  if (
+    /(电影|cinema|movie|\bfilm\b|projection)/i.test(value) &&
+    !/candlelight/i.test(value)
+  ) {
+    return "MOVIE";
+  }
+
+  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value)) {
     return "SPORTS";
-  if (/(旅行|walk|city\s*walk|tour|travel|hike|voyage|漫步|散步)/i.test(value))
+  }
+
+  if (
+    /(旅行|city\s*walk|\btour\b|travel|hike|\bvoyage\b|漫步|散步|excursion|randonnée)/i.test(
+      value,
+    )
+  ) {
     return "TRAVEL";
+  }
+
   if (
     /(美食|food|wine|drink|restaurant|café|cafe|brunch|dinner|cooking|餐|吃)/i.test(
       value,
     )
-  )
+  ) {
     return "FOOD";
-  if (/(展|exhibition|museum|gallery|art|博物馆|艺术)/i.test(value))
+  }
+
+  if (/(博物馆|艺术|\bart\b)/i.test(value)) {
     return "EXHIBITION";
+  }
+
   return "OTHER";
 }
 
@@ -915,8 +1019,180 @@ function guessPriceType(priceText: string): ScrapedActivity["priceType"] {
   const value = priceText.toLowerCase();
   if (!value || /free|免费|0\s*€|0\s*eur|gratuit/.test(value)) return "FREE";
   if (/aa|split|各自|均摊/.test(value)) return "AA";
-  if (/\d+\s*[-~至到]\s*\d+/.test(value)) return "RANGE";
+  if (/[\d.,]+(?:\s*€)?\s*[-–~至到]\s*[\d.,]+(?:\s*€)?/.test(value)) {
+    return "RANGE";
+  }
   return "FIXED";
+}
+
+type FeverDefaultPlace = {
+  address?: string;
+  name?: string;
+};
+
+type FeverPlanDetail = {
+  categories?: string[];
+  category?: string;
+  coverImage?: string;
+  defaultPlace?: FeverDefaultPlace;
+  description?: string;
+};
+
+/** Public ticketed events rarely have a fixed headcount on the source page. */
+export const linkImportDefaultCapacity = 99;
+
+type FeverAppPayload = {
+  "page-config"?: {
+    planDetail?: FeverPlanDetail;
+  };
+  "ticket-selector-config"?: {
+    transferState?: Record<string, unknown>;
+  };
+};
+
+function extractFeverAppPayload(html: string): FeverAppPayload | null {
+  const pattern =
+    /<script[^>]*>\s*(\{\s*"appConfig"[\s\S]*?)\s*<\/script>/gi;
+  let fallback: FeverAppPayload | null = null;
+
+  for (const match of html.matchAll(pattern)) {
+    try {
+      const payload = JSON.parse(match[1]) as FeverAppPayload;
+
+      if (payload["ticket-selector-config"]?.transferState) {
+        return payload;
+      }
+
+      fallback ??= payload;
+    } catch {
+      // try next script block
+    }
+  }
+
+  return fallback;
+}
+
+function formatFeverEuroAmount(amount: number) {
+  const hasFraction = Math.abs(amount % 1) > 0.001;
+  return (
+    amount.toLocaleString("fr-FR", {
+      minimumFractionDigits: hasFraction ? 2 : 0,
+      maximumFractionDigits: 2,
+    }) + " €"
+  );
+}
+
+function isFeverTicketLabel(label: string) {
+  const value = stripHtml(label);
+
+  if (!value) {
+    return false;
+  }
+
+  if (/recommandé|lot de|bougie|flexible|annulation/i.test(value)) {
+    return false;
+  }
+
+  return (
+    /^billet\b/i.test(value) ||
+    /^zone\s+[a-d]$/i.test(value) ||
+    /^premium$/i.test(value)
+  );
+}
+
+function collectFeverTicketPrices(
+  value: unknown,
+  priceByLabel: Map<string, number>,
+) {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectFeverTicketPrices(item, priceByLabel);
+    }
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  const label = [
+    record.label,
+    record.label_without_format,
+    record.default_label,
+  ].find((part) => typeof part === "string" && part.trim());
+
+  if (typeof record.price === "number" && typeof label === "string") {
+    const normalizedLabel = stripHtml(label);
+
+    if (isFeverTicketLabel(normalizedLabel)) {
+      const previous = priceByLabel.get(normalizedLabel);
+
+      if (previous === undefined || record.price < previous) {
+        priceByLabel.set(normalizedLabel, record.price);
+      }
+    }
+  }
+
+  for (const child of Object.values(record)) {
+    if (child && typeof child === "object") {
+      collectFeverTicketPrices(child, priceByLabel);
+    }
+  }
+}
+
+function buildFeverPriceFromTransferState(
+  transferState: Record<string, unknown> | undefined,
+): Pick<ScrapedActivity, "priceText" | "priceType"> | null {
+  if (!transferState) {
+    return null;
+  }
+
+  const priceByLabel = new Map<string, number>();
+
+  for (const value of Object.values(transferState)) {
+    collectFeverTicketPrices(value, priceByLabel);
+  }
+
+  const ticketPrices = [...priceByLabel.values()].filter(
+    (price) => Number.isFinite(price) && price > 0,
+  );
+
+  if (!ticketPrices.length) {
+    return null;
+  }
+
+  const min = Math.min(...ticketPrices);
+  const max = Math.max(...ticketPrices);
+
+  if (min === max) {
+    return {
+      priceText: formatFeverEuroAmount(min),
+      priceType: "FIXED",
+    };
+  }
+
+  return {
+    priceText: `${formatFeverEuroAmount(min)} – ${formatFeverEuroAmount(max)}`,
+    priceType: "RANGE",
+  };
+}
+
+function formatFeverDefaultPlaceAddress(place: FeverDefaultPlace | undefined) {
+  if (!place) {
+    return null;
+  }
+
+  const name = typeof place.name === "string" ? stripHtml(place.name) : "";
+  const street = typeof place.address === "string" ? stripHtml(place.address) : "";
+
+  if (name && street) {
+    return street.includes("Paris")
+      ? `${name} · ${street}`
+      : `${name} · ${street}, Paris`;
+  }
+
+  return name || street || null;
 }
 
 function cleanPromoText(value: string) {
@@ -1159,7 +1435,7 @@ export function parseSortirAParisArticleHtml(
     address,
     startAt: startAt.toISOString(),
     endAt: endAt?.toISOString() ?? null,
-    capacity: 100,
+    capacity: linkImportDefaultCapacity,
     minParticipants: null,
     requiresApproval: false,
     priceType: guessPriceType(priceText),

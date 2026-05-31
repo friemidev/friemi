@@ -8,6 +8,7 @@ import {
   extractSortirFrenchStreetAddress,
   parseChineseDate,
   parseEventbriteEventHtml,
+  parseFeverupEventHtml,
   parseMeetupEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
@@ -155,6 +156,53 @@ test("parseEventbriteEventHtml reads Festival JSON-LD and decodes Next image URL
     activity.coverImageUrl,
     "https://img.evbuc.com/images/123456789/123456789/1/original.jpg",
   );
+});
+
+test("parseFeverupEventHtml builds ticket price range and venue address", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "feverup-renaissance-snippet.html"),
+    "utf8",
+  );
+  const activity = parseFeverupEventHtml(
+    html,
+    "https://feverup.com/m/569949",
+  );
+
+  assert.ok(activity);
+  assert.equal(activity.source, "feverup");
+  assert.equal(activity.category, "EXHIBITION");
+  assert.equal(activity.capacity, 99);
+  assert.match(activity.title, /Renaissance/i);
+  assert.match(activity.address, /Atelier des Lumières/);
+  assert.match(activity.address, /38 Rue Saint-Maur/);
+  assert.equal(activity.priceType, "RANGE");
+  assert.match(activity.priceText, /12,50\s*€/);
+  assert.match(activity.priceText, /19,50\s*€/);
+  assert.match(activity.description, /Renaissance italienne/);
+});
+
+test("parseFeverupEventHtml ignores add-ons when computing zone price range", () => {
+  const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+  const html = readFileSync(
+    join(fixtureDir, "feverup-candlelight-snippet.html"),
+    "utf8",
+  );
+  const activity = parseFeverupEventHtml(
+    html,
+    "https://feverup.com/m/619306",
+  );
+
+  assert.ok(activity);
+  assert.equal(activity.category, "MUSIC");
+  assert.equal(activity.capacity, 99);
+  assert.match(activity.title, /Seigneur des Anneaux/i);
+  assert.match(activity.address, /Maison de l'Océan/);
+  assert.match(activity.address, /195 Rue Saint-Jacques/);
+  assert.equal(activity.priceType, "RANGE");
+  assert.match(activity.priceText, /25\s*€/);
+  assert.match(activity.priceText, /58,50\s*€/);
+  assert.doesNotMatch(activity.priceText, /10\s*€/);
 });
 
 test("parsePlayInParisEventHtml falls back to og:image when JSON-LD image is unresolved", () => {

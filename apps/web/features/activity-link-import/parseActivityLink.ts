@@ -6,6 +6,8 @@ import {
   findSortirFrenchArticleUrl,
   findSortirFrenchArticleUrls,
   parseEventbriteEventHtml,
+  parseFeverupEventHtml,
+  linkImportDefaultCapacity,
   parseMeetupEventHtml,
   parsePlayInParisEventHtml,
   parseSortirAParisArticleHtml,
@@ -17,7 +19,8 @@ import { formatParisDateTimeInput } from "@/features/activities/actions/activity
 import { buildActivityDescriptionWithSource } from "@/lib/activity-description";
 
 const requestTimeoutMs = 12_000;
-const maxHtmlLength = 600_000;
+/** Fever pages embed ~160KB JSON after ~440KB; keep headroom above ~1.4MB pages. */
+const maxHtmlLength = 2_000_000;
 
 const supportedHosts: [string, string][] = [
   ["quefaire.paris.fr", "Que Faire a Paris"],
@@ -27,6 +30,7 @@ const supportedHosts: [string, string][] = [
   ["eventbrite.fr", "Eventbrite"],
   ["billetweb.fr", "Billetweb"],
   ["meetup.com", "Meetup"],
+  ["feverup.com", "Fever"],
   ["paris.fr", "Paris.fr"],
 ];
 
@@ -62,6 +66,7 @@ const localeCopy = {
 
 export type ActivityLinkPreviewValues = {
   address?: string;
+  capacity?: string;
   category?: ActivityCategory;
   city?: string;
   coverImageUrl?: string;
@@ -133,8 +138,18 @@ function normalizeHost(hostname: string) {
   return hostname.toLowerCase().replace(/^www\./, "");
 }
 
+const eventbriteHostKey = "eventbrite.fr";
+
+function isEventbriteHost(hostname: string) {
+  return /^eventbrite\.[a-z.]+$/i.test(normalizeHost(hostname));
+}
+
 function getSupportedSiteName(url: URL) {
   const normalizedHost = normalizeHost(url.hostname);
+
+  if (isEventbriteHost(normalizedHost)) {
+    return "Eventbrite";
+  }
 
   for (const [host, siteName] of supportedHosts) {
     if (normalizedHost === host || normalizedHost.endsWith(`.${host}`)) {
@@ -147,6 +162,10 @@ function getSupportedSiteName(url: URL) {
 
 function getLinkImportHostKey(url: URL) {
   const normalizedHost = normalizeHost(url.hostname);
+
+  if (isEventbriteHost(normalizedHost)) {
+    return eventbriteHostKey;
+  }
 
   for (const [host] of supportedHosts) {
     if (normalizedHost === host || normalizedHost.endsWith(`.${host}`)) {
@@ -661,9 +680,14 @@ function parseJsonLdEvent(
   };
 }
 
+function isImportedPriceRangeText(priceText: string) {
+  return /[\d.,]+(?:\s*€)?\s*[-–~至到]\s*[\d.,]+(?:\s*€)?/.test(priceText);
+}
+
 function mapScrapedPriceText(
   priceText: string,
   copy: ActivityLinkImportLocaleCopy,
+  scrapedPriceType?: PriceType,
 ): { priceText: string; priceType: PriceType } {
   if (/免费|gratuit|free/i.test(priceText)) {
     return { priceText: copy.freePriceText, priceType: "FREE" };
@@ -671,6 +695,17 @@ function mapScrapedPriceText(
 
   if (/查看原文|check the external/i.test(priceText)) {
     return { priceText: copy.externalPriceText, priceType: "RANGE" };
+  }
+
+  if (
+    scrapedPriceType === "RANGE" ||
+    isImportedPriceRangeText(priceText)
+  ) {
+    return { priceText, priceType: "RANGE" };
+  }
+
+  if (scrapedPriceType && scrapedPriceType !== "FIXED") {
+    return { priceText, priceType: scrapedPriceType };
   }
 
   return { priceText, priceType: "FIXED" };
@@ -683,7 +718,11 @@ function buildPreviewFromScrapedActivity(
   sourceUrl: URL,
   copy: ActivityLinkImportLocaleCopy,
 ): ActivityLinkPreview {
-  const price = mapScrapedPriceText(activity.priceText, copy);
+  const price = mapScrapedPriceText(
+    activity.priceText,
+    copy,
+    activity.priceType,
+  );
   const meta = extractMeta(html);
   const coverImageUrl =
     activity.coverImageUrl ??
@@ -692,6 +731,7 @@ function buildPreviewFromScrapedActivity(
     address: activity.address
       ? truncateText(formatImportedAddressForForm(activity.address), 120)
       : undefined,
+    capacity: String(activity.capacity || linkImportDefaultCapacity),
     category: activity.category,
     city: activity.city,
     coverImageUrl,
@@ -786,6 +826,20 @@ function buildSiteSpecificPreview(
       : null;
   }
 
+  if (hostKey === "feverup.com" && /^\/m\/\d+/i.test(sourceUrl.pathname)) {
+    const activity = parseFeverupEventHtml(html, sourceUrl.toString());
+
+    return activity
+      ? buildPreviewFromScrapedActivity(
+          activity,
+          siteName,
+          html,
+          sourceUrl,
+          copy,
+        )
+      : null;
+  }
+
   return null;
 }
 
@@ -798,15 +852,19 @@ function mapCategory(input: string): ActivityCategory {
     return "BOARD_GAME";
   }
 
-  if (/expo|exposition|mus[eé]e|museum|art|visite/.test(searchable)) {
-    return "EXHIBITION";
-  }
-
-  if (/concert|musique|music|festival|danse|spectacle/.test(searchable)) {
+  if (/candlelight|concert|musique|music|festival|danse|quatuor|spectacle/.test(searchable)) {
     return "MUSIC";
   }
 
-  if (/cin[eé]ma|film|movie|projection/.test(searchable)) {
+  if (
+    /expo|exposition|mus[eé]e|museum|immersive|lumières|lumieres|atelier des|灯光|展览/.test(
+      searchable,
+    )
+  ) {
+    return "EXHIBITION";
+  }
+
+  if (/cin[eé]ma|\bfilm\b|movie|projection/.test(searchable) && !/candlelight/.test(searchable)) {
     return "MOVIE";
   }
 
@@ -815,7 +873,7 @@ function mapCategory(input: string): ActivityCategory {
   }
 
   if (
-    /voyage|travel|trip|randonn[eé]e|balade|city walk|excursion/.test(
+    /travel|trip|randonn[eé]e|balade|city walk|excursion|\bvoyage\b|旅行/.test(
       searchable,
     )
   ) {
@@ -1108,7 +1166,7 @@ async function enrichSortirLinkPreview(
       address: preview.values.address ?? "Paris, France",
       startAt: preview.values.startAt ?? new Date().toISOString(),
       endAt: preview.values.endAt ?? null,
-      capacity: 100,
+      capacity: linkImportDefaultCapacity,
       minParticipants: null,
       requiresApproval: false,
       priceType: preview.values.priceType ?? "RANGE",
