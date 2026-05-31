@@ -230,6 +230,14 @@ export function NewActivityForm({
             />
           ) : null}
 
+          {values?.importSourceUrl ? (
+            <input
+              name="importSourceUrl"
+              type="hidden"
+              value={values.importSourceUrl}
+            />
+          ) : null}
+
           <FormSection title={t.form.activityContent}>
             <div className="grid gap-2 text-sm font-medium text-zinc-700">
               <span>{t.form.coverImage}</span>

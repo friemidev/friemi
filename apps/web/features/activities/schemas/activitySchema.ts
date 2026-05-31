@@ -84,6 +84,15 @@ export const createActivitySchema = z
     requiresApproval: z.coerce.boolean().default(false),
     priceType: z.enum(priceTypeValues),
     priceText: nonEmptyString.max(120, "费用说明最多 120 个字"),
+    importSourceUrl: z
+      .string()
+      .trim()
+      .transform((value) => (value.length > 0 ? value : null))
+      .refine(
+        (value) => value === null || /^https?:\/\/.+/i.test(value),
+        "来源链接无效",
+      )
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (value.category === "OTHER" && !value.otherCategoryText) {

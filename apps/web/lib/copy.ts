@@ -454,6 +454,11 @@ const copy = {
       linkImportMissingAddress: "未识别地点",
       linkImportMissingFields: (count: number) =>
         `还有 ${count} 项需要手动补充。`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `库里已有相同来源链接的活动「${title}」。`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `可能与已有活动「${title}」重复（标题、时间与地址相近）。`,
+      linkImportViewExisting: "查看已有活动",
       linkImportErrors: {
         INVALID_URL: "请输入有效的 https 链接。",
         UNSUPPORTED_HOST:
@@ -1030,6 +1035,11 @@ const copy = {
       linkImportMissingAddress: "Place not found",
       linkImportMissingFields: (count: number) =>
         `${count} item(s) still need manual input.`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `An activity with the same source link already exists: “${title}”.`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `This may duplicate an existing activity: “${title}” (similar title, time, and place).`,
+      linkImportViewExisting: "View existing activity",
       linkImportErrors: {
         INVALID_URL: "Enter a valid https link.",
         UNSUPPORTED_HOST:
@@ -1631,6 +1641,11 @@ const copy = {
       linkImportMissingAddress: "Lieu non détecté",
       linkImportMissingFields: (count: number) =>
         `${count} champ(s) restent à compléter.`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `Une activité avec le même lien source existe déjà : « ${title} ».`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `Risque de doublon avec « ${title} » (titre, horaire et lieu proches).`,
+      linkImportViewExisting: "Voir l'activité existante",
       linkImportErrors: {
         INVALID_URL: "Saisissez un lien https valide.",
         UNSUPPORTED_HOST:
