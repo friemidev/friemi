@@ -8,6 +8,7 @@ export {
   enrichSortirActivityAddress,
   extractSortirChineseStreetAddress,
   extractSortirFrenchStreetAddress,
+  extractJsonLdOfferPrice,
   extractSortirLocationHint,
   findSortirFrenchArticleUrl,
   findSortirFrenchArticleUrls,

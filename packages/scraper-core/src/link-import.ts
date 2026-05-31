@@ -231,23 +231,14 @@ function buildScrapedActivityFromJsonLdEvent(
           .map((part) => stripHtml(String(part)))
           .join(" · ")
       : locationName || "Paris";
-  const offer = Array.isArray(event.offers) ? event.offers[0] : event.offers;
-  const price =
-    offer && typeof offer === "object"
-      ? (offer as Record<string, unknown>).price
-      : undefined;
-  const currency =
-    offer && typeof offer === "object"
-      ? (offer as Record<string, unknown>).priceCurrency
-      : undefined;
-  const priceText =
-    price === undefined || price === null || price === ""
-      ? "查看原文"
-      : String(price) === "0"
-        ? "免费"
-        : currency
-          ? `${price} ${currency}`
-          : String(price);
+  const offerPrice =
+    extractJsonLdOfferPrice(event.offers) ??
+    ({
+      priceText: "查看原文",
+      priceType: "RANGE" as const,
+    });
+  const priceText = offerPrice.priceText;
+  const priceType = offerPrice.priceType;
 
   return {
     id: makeStableId(source, sourceUrl),
@@ -266,13 +257,131 @@ function buildScrapedActivityFromJsonLdEvent(
     capacity: linkImportDefaultCapacity,
     minParticipants: null,
     requiresApproval: false,
-    priceType: guessPriceType(priceText),
+    priceType,
     priceText,
     coverImageUrl:
       resolveJsonLdImage(nodes, event.image) ?? extractPageImageUrl(html, sourceUrl),
     status: "RECRUITING",
     visibility: "PUBLIC",
   };
+}
+
+function parseJsonLdOfferNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number.parseFloat(value.replace(",", "."));
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+export function extractJsonLdOfferPrice(
+  offers: unknown,
+  options?: {
+    externalText?: string;
+    freeText?: string;
+  },
+): Pick<ScrapedActivity, "priceText" | "priceType"> | null {
+  const freeText = options?.freeText ?? "免费";
+  const externalText = options?.externalText ?? "查看原文";
+
+  if (!offers) {
+    return null;
+  }
+
+  if (Array.isArray(offers)) {
+    const objectOffers = offers.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === "object",
+    );
+    const prices = objectOffers
+      .map((entry) => parseJsonLdOfferNumber(entry.price))
+      .filter((price): price is number => price !== null && price > 0);
+
+    if (prices.length > 0) {
+      const currency =
+        String(objectOffers[0]?.priceCurrency || "EUR").trim() || "EUR";
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+
+      if (min === max) {
+        return {
+          priceText: `${min} ${currency}`,
+          priceType: "FIXED",
+        };
+      }
+
+      return {
+        priceText: `${min} – ${max} ${currency}`,
+        priceType: "RANGE",
+      };
+    }
+
+    if (objectOffers.length > 0) {
+      return extractJsonLdOfferPrice(objectOffers[0], options);
+    }
+
+    return null;
+  }
+
+  if (typeof offers !== "object") {
+    return null;
+  }
+
+  const record = offers as Record<string, unknown>;
+  const currency = String(record.priceCurrency || "EUR").trim() || "EUR";
+  const availability = String(record.availability || "").toLowerCase();
+  const types = Array.isArray(record["@type"])
+    ? record["@type"]
+    : [record["@type"]];
+  const isAggregate = types.some((type) =>
+    String(type).toLowerCase().includes("aggregateoffer"),
+  );
+
+  if (availability.includes("free")) {
+    return { priceText: freeText, priceType: "FREE" };
+  }
+
+  const low = parseJsonLdOfferNumber(record.lowPrice);
+  const high = parseJsonLdOfferNumber(record.highPrice);
+
+  if (low !== null && high !== null && (isAggregate || low !== high || low === high)) {
+    if (low === 0 && high === 0) {
+      return { priceText: freeText, priceType: "FREE" };
+    }
+
+    if (low === high) {
+      return {
+        priceText: `${low} ${currency}`,
+        priceType: "FIXED",
+      };
+    }
+
+    return {
+      priceText: `${low} – ${high} ${currency}`,
+      priceType: "RANGE",
+    };
+  }
+
+  const price = parseJsonLdOfferNumber(record.price);
+
+  if (price === 0) {
+    return { priceText: freeText, priceType: "FREE" };
+  }
+
+  if (price !== null) {
+    return {
+      priceText: `${price} ${currency}`,
+      priceType: "FIXED",
+    };
+  }
+
+  return null;
 }
 
 export function parseStructuredEventHtml(

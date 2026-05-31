@@ -6,6 +6,7 @@ import {
   findSortirFrenchArticleUrl,
   findSortirFrenchArticleUrls,
   parseEventbriteEventHtml,
+  extractJsonLdOfferPrice,
   parseFeverupEventHtml,
   linkImportDefaultCapacity,
   parseMeetupEventHtml,
@@ -140,7 +141,7 @@ function normalizeHost(hostname: string) {
 
 const eventbriteHostKey = "eventbrite.fr";
 
-function isEventbriteHost(hostname: string) {
+export function isEventbriteHost(hostname: string) {
   return /^eventbrite\.[a-z.]+$/i.test(normalizeHost(hostname));
 }
 
@@ -489,32 +490,19 @@ function getJsonLdOffer(
   priceText?: string;
   priceType?: PriceType;
 } {
-  const offer = Array.isArray(offers) ? offers[0] : offers;
+  const offerPrice = extractJsonLdOfferPrice(offers, {
+    freeText: copy.freePriceText,
+    externalText: copy.externalPriceText,
+  });
 
-  if (!offer || typeof offer !== "object") {
-    return {};
-  }
-
-  const offerObject = offer as JsonLdObject;
-  const price = getText(offerObject.price);
-  const currency = getText(offerObject.priceCurrency);
-  const availability = getText(offerObject.availability).toLowerCase();
-
-  if (price === "0" || availability.includes("free")) {
+  if (!offerPrice) {
     return {
-      priceText: copy.freePriceText,
-      priceType: "FREE",
+      priceText: copy.externalPriceText,
+      priceType: "RANGE",
     };
   }
 
-  if (price) {
-    return {
-      priceText: currency ? `${price} ${currency}` : price,
-      priceType: "FIXED",
-    };
-  }
-
-  return {};
+  return offerPrice;
 }
 
 function getParisOpenDataRecord(payload: unknown): ParisOpenDataRecord | null {

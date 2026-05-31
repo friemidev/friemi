@@ -67,6 +67,10 @@ npm run db:seed
 npm run db:migrate
 ```
 
+## 活动链接导入
+
+功能说明、支持站点、fixture 贡献方式与测试命令见 [activity-link-import.md](./activity-link-import.md)。
+
 ## 代码风格
 
 - TypeScript strict mode
