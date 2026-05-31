@@ -39,7 +39,13 @@ export const activityLinkImportSites: ActivityLinkImportSite[] = [
   {
     host: "eventbrite.fr",
     name: "Eventbrite",
-    exampleUrl: "https://www.eventbrite.fr/e/...",
+    exampleUrl:
+      "https://www.eventbrite.fr/e/... or eventbrite.co.uk/e/...",
+  },
+  {
+    host: "feverup.com",
+    name: "Fever",
+    exampleUrl: "https://feverup.com/m/569949",
   },
   {
     host: "billetweb.fr",

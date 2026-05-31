@@ -1,46 +1,159 @@
 "use client";
 
-import { useState } from "react";
-import type { ComponentType, KeyboardEvent } from "react";
+import { useMemo, useState } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import {
   AlertCircle,
-  CalendarClock,
   CheckCircle2,
   CircleHelp,
-  ImageIcon,
   LinkIcon,
   Loader2,
-  MapPin,
   WandSparkles,
   X,
 } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
-import { getCopy } from "@/lib/copy";
+import type { ActivityCategory, PriceType } from "@chill-club/shared";
+import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
+import {
+  getCategoryLabel,
+  getCopy,
+  getPriceTypeLabel,
+} from "@/lib/copy";
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
 import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
-
-type ActivityLinkPreview = {
-  missingFields: string[];
-  siteName: string;
-  sourceUrl: string;
-  values: Partial<ActivityFormValues>;
-};
+import type {
+  ActivityLinkPreview,
+  ActivityLinkPreviewValues,
+} from "@/features/activity-link-import/parseActivityLink";
 
 type ActivityLinkImportPanelProps = {
   locale: string;
   onApply: (values: Partial<ActivityFormValues>) => void;
 };
 
-type DetectedField = {
-  isDetected: boolean;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-};
+const importFieldKeys = [
+  "title",
+  "startAt",
+  "endAt",
+  "address",
+  "category",
+  "capacity",
+  "coverImageUrl",
+  "description",
+  "price",
+] as const;
+
+type ImportFieldKey = (typeof importFieldKeys)[number];
+
+type FieldSelection = Record<ImportFieldKey, boolean>;
 
 function getErrorMessage(locale: string, errorCode: string) {
   const t = getCopy(locale).form.linkImportErrors;
 
   return t[errorCode as keyof typeof t] ?? t.FETCH_FAILED;
+}
+
+function hasImportFieldValue(
+  field: ImportFieldKey,
+  values: ActivityLinkPreviewValues,
+) {
+  if (field === "description") {
+    return Boolean(values.description);
+  }
+
+  if (field === "price") {
+    return Boolean(values.priceText);
+  }
+
+  return Boolean(values[field]);
+}
+
+function buildDefaultFieldSelection(
+  values: ActivityLinkPreviewValues,
+): FieldSelection {
+  return {
+    title: Boolean(values.title),
+    startAt: Boolean(values.startAt),
+    endAt: Boolean(values.endAt),
+    address: Boolean(values.address),
+    category: Boolean(values.category),
+    capacity: Boolean(values.capacity),
+    coverImageUrl: Boolean(values.coverImageUrl),
+    description: Boolean(values.description),
+    price: Boolean(values.priceText),
+  };
+}
+
+function formatPreviewValue(
+  field: ImportFieldKey,
+  values: ActivityLinkPreviewValues,
+  locale: string,
+  missingLabel: string,
+) {
+  if (field === "description") {
+    return values.description
+      ? values.description.slice(0, 220) +
+          (values.description.length > 220 ? "…" : "")
+      : missingLabel;
+  }
+
+  if (field === "price") {
+    if (!values.priceText) {
+      return missingLabel;
+    }
+
+    const priceTypeLabel = values.priceType
+      ? getPriceTypeLabel(values.priceType as PriceType, locale)
+      : "";
+
+    return priceTypeLabel
+      ? `${priceTypeLabel} · ${values.priceText}`
+      : values.priceText;
+  }
+
+  if (field === "category" && values.category) {
+    return getCategoryLabel(values.category as ActivityCategory, locale);
+  }
+
+  const value = values[field];
+
+  if (!value) {
+    return missingLabel;
+  }
+
+  if (field === "coverImageUrl") {
+    return value;
+  }
+
+  return String(value);
+}
+
+function PreviewFieldRow({
+  checked,
+  disabled = false,
+  label,
+  onCheckedChange,
+  value,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onCheckedChange?: (checked: boolean) => void;
+  value: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[auto_5.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 border-b border-zinc-100 py-2.5 last:border-b-0 sm:grid-cols-[auto_6.5rem_minmax(0,1fr)]">
+      <input
+        checked={checked}
+        className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-moss focus:ring-moss/30 disabled:opacity-60"
+        disabled={disabled}
+        onChange={(event) => onCheckedChange?.(event.target.checked)}
+        type="checkbox"
+      />
+      <span className="text-xs font-medium leading-5 text-zinc-600">{label}</span>
+      <div className="min-w-0 text-sm leading-5 text-ink">{value}</div>
+    </div>
+  );
 }
 
 export function ActivityLinkImportPanel({
@@ -55,31 +168,25 @@ export function ActivityLinkImportPanel({
   const [isSitesDialogOpen, setIsSitesDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ActivityLinkPreview | null>(null);
+  const [selectedFields, setSelectedFields] = useState<FieldSelection>(() =>
+    buildDefaultFieldSelection({}),
+  );
   const canSubmit = url.trim().length > 0 && !isLoading;
-  const detectedFields: DetectedField[] = preview
-    ? [
-        {
-          icon: CheckCircle2,
-          isDetected: Boolean(preview.values.title),
-          label: t.title,
-        },
-        {
-          icon: CalendarClock,
-          isDetected: Boolean(preview.values.startAt),
-          label: t.startAt,
-        },
-        {
-          icon: MapPin,
-          isDetected: Boolean(preview.values.address),
-          label: t.address,
-        },
-        {
-          icon: ImageIcon,
-          isDetected: Boolean(preview.values.coverImageUrl),
-          label: t.coverImage,
-        },
-      ]
-    : [];
+
+  const fieldLabels = useMemo(
+    () => ({
+      title: t.title,
+      startAt: t.startAt,
+      endAt: t.endAt,
+      address: t.address,
+      category: t.category,
+      capacity: t.capacity,
+      coverImageUrl: t.coverImage,
+      description: t.description,
+      price: t.priceText,
+    }),
+    [t],
+  );
 
   function handleUrlChange(nextUrl: string) {
     setUrl(nextUrl);
@@ -121,6 +228,7 @@ export function ActivityLinkImportPanel({
       }
 
       setPreview(payload.preview);
+      setSelectedFields(buildDefaultFieldSelection(payload.preview.values));
     } catch (caughtError) {
       const errorCode =
         caughtError instanceof Error ? caughtError.message : "FETCH_FAILED";
@@ -136,7 +244,57 @@ export function ActivityLinkImportPanel({
       return;
     }
 
-    onApply(preview.values);
+    const payload: Partial<ActivityFormValues> = {};
+
+    for (const field of importFieldKeys) {
+      if (!selectedFields[field] || !hasImportFieldValue(field, preview.values)) {
+        continue;
+      }
+
+      if (field === "description" && preview.values.description) {
+        payload.description = preview.values.description;
+        continue;
+      }
+
+      if (field === "price") {
+        if (preview.values.priceText) {
+          payload.priceText = preview.values.priceText;
+        }
+
+        if (preview.values.priceType) {
+          payload.priceType = preview.values.priceType;
+        }
+
+        continue;
+      }
+
+      if (field === "category" && preview.values.category) {
+        payload.category = preview.values.category;
+        continue;
+      }
+
+      const value = preview.values[field];
+
+      if (value !== undefined && value !== "") {
+        payload[field] = String(value);
+      }
+    }
+
+    if (selectedFields.address) {
+      if (preview.values.city) {
+        payload.city = preview.values.city;
+      }
+
+      if (preview.values.latitude) {
+        payload.latitude = preview.values.latitude;
+      }
+
+      if (preview.values.longitude) {
+        payload.longitude = preview.values.longitude;
+      }
+    }
+
+    onApply(payload);
     setIsApplied(true);
   }
 
@@ -147,6 +305,14 @@ export function ActivityLinkImportPanel({
 
     event.preventDefault();
     void previewLink();
+  }
+
+  function toggleField(field: ImportFieldKey, checked: boolean) {
+    setSelectedFields((current) => ({
+      ...current,
+      [field]: checked,
+    }));
+    setIsApplied(false);
   }
 
   return (
@@ -272,9 +438,6 @@ export function ActivityLinkImportPanel({
               <p className="mt-1 line-clamp-2 text-sm font-semibold text-ink">
                 {preview.values.title || t.linkImportUntitled}
               </p>
-              <p className="mt-1 truncate text-xs text-zinc-500">
-                {preview.values.address || t.linkImportMissingAddress}
-              </p>
             </div>
             <Button
               className="w-full whitespace-nowrap sm:w-auto"
@@ -284,30 +447,60 @@ export function ActivityLinkImportPanel({
               {t.linkImportApply}
             </Button>
           </div>
+
           {preview.missingFields.length > 0 ? (
             <p className="mt-2 text-xs leading-5 text-zinc-500">
               {t.linkImportMissingFields(preview.missingFields.length)}
             </p>
           ) : null}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {detectedFields.map((field) => {
-              const Icon = field.icon;
+
+          <p className="mt-3 text-xs font-semibold text-zinc-700">
+            {t.linkImportSelectFields}
+          </p>
+
+          <div className="mt-1 rounded-md border border-zinc-100 bg-zinc-50/60 px-2">
+            {importFieldKeys.map((field) => {
+              const hasValue = hasImportFieldValue(field, preview.values);
+              const displayValue = formatPreviewValue(
+                field,
+                preview.values,
+                locale,
+                t.linkImportFieldNotDetected,
+              );
 
               return (
-                <span
-                  className={
-                    field.isDetected
-                      ? "inline-flex min-h-8 items-center gap-1.5 rounded-md bg-moss/10 px-2 text-xs font-medium text-moss"
-                      : "inline-flex min-h-8 items-center gap-1.5 rounded-md bg-zinc-100 px-2 text-xs font-medium text-zinc-500"
+                <PreviewFieldRow
+                  checked={selectedFields[field] && hasValue}
+                  disabled={!hasValue}
+                  key={field}
+                  label={fieldLabels[field]}
+                  onCheckedChange={(checked) => toggleField(field, checked)}
+                  value={
+                    field === "coverImageUrl" && hasValue ? (
+                      <img
+                        alt=""
+                        className="h-16 w-16 rounded-md border border-zinc-200 object-cover"
+                        src={getActivityCoverDisplayUrl(displayValue)}
+                      />
+                    ) : field === "description" && hasValue ? (
+                      <span className="whitespace-pre-wrap text-xs leading-5 text-zinc-700">
+                        {displayValue}
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          hasValue ? "text-ink" : "text-zinc-400 italic"
+                        }
+                      >
+                        {displayValue}
+                      </span>
+                    )
                   }
-                  key={field.label}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{field.label}</span>
-                </span>
+                />
               );
             })}
           </div>
+
           {isApplied ? (
             <p
               className="mt-3 flex items-start gap-2 rounded-md bg-moss/10 px-3 py-2 text-xs leading-5 text-moss"

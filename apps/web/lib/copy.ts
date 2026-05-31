@@ -442,11 +442,14 @@ const copy = {
       linkImportSupportedSitesClose: "关闭",
       linkImportSupportedSitesAriaLabel: "查看支持的网站列表",
       linkImportSupportedSiteExamples:
-        "例如：meetup.com、eventbrite.fr、sortiraparis.com、playinparis.com、quefaire.paris.fr",
+        "例如：feverup.com、meetup.com、eventbrite.fr、sortiraparis.com、playinparis.com",
       linkImportPreview: "解析链接",
       linkImportParsing: "解析中...",
       linkImportApply: "套用到表单",
       linkImportApplied: "已套用到表单，请继续检查必填信息后再发布。",
+      linkImportAlwaysApply: "始终套用",
+      linkImportFieldNotDetected: "未识别",
+      linkImportSelectFields: "选择要套用的字段",
       linkImportUntitled: "未识别标题",
       linkImportMissingAddress: "未识别地点",
       linkImportMissingFields: (count: number) =>
@@ -1013,12 +1016,15 @@ const copy = {
       linkImportSupportedSitesClose: "Close",
       linkImportSupportedSitesAriaLabel: "View supported websites",
       linkImportSupportedSiteExamples:
-        "Examples: meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com, quefaire.paris.fr",
+        "Examples: feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
       linkImportPreview: "Preview link",
       linkImportParsing: "Parsing...",
       linkImportApply: "Apply to form",
       linkImportApplied:
         "Applied to the form. Review required fields before publishing.",
+      linkImportAlwaysApply: "Always applied",
+      linkImportFieldNotDetected: "Not detected",
+      linkImportSelectFields: "Fields to apply",
       linkImportUntitled: "Title not found",
       linkImportMissingAddress: "Place not found",
       linkImportMissingFields: (count: number) =>
@@ -1610,12 +1616,15 @@ const copy = {
       linkImportSupportedSitesClose: "Fermer",
       linkImportSupportedSitesAriaLabel: "Voir les sites pris en charge",
       linkImportSupportedSiteExamples:
-        "Ex. : meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com, quefaire.paris.fr",
+        "Ex. : feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
       linkImportPreview: "Analyser le lien",
       linkImportParsing: "Analyse...",
       linkImportApply: "Appliquer au formulaire",
       linkImportApplied:
         "Appliqué au formulaire. Vérifiez les champs requis avant publication.",
+      linkImportAlwaysApply: "Toujours appliqué",
+      linkImportFieldNotDetected: "Non détecté",
+      linkImportSelectFields: "Champs à appliquer",
       linkImportUntitled: "Titre non détecté",
       linkImportMissingAddress: "Lieu non détecté",
       linkImportMissingFields: (count: number) =>

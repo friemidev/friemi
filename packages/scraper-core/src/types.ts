@@ -2,7 +2,8 @@ export type ScraperSource =
   | "sortiraparis"
   | "playinparis"
   | "meetup"
-  | "eventbrite";
+  | "eventbrite"
+  | "feverup";
 
 export type ScrapedActivity = {
   id: string;
