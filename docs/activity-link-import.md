@@ -36,7 +36,8 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 | 分类 | 关键词启发式（`mapCategory`）；Fever / Paris.fr 等有额外规则；含 **THEATER（戏剧）** |
 | 价格 | `FREE` / `FIXED` / `RANGE`；多档票合并为区间（如 `12,50 € – 19,50 €`） |
 | 人数 | 链接导入默认 **99**（`linkImportDefaultCapacity`） |
-| 描述 | 附带来源链接后缀；Sortir / Meetup / Eventbrite 等尽量拉取长文 |
+| 描述 | 附带来源链接后缀；Sortir / Meetup / Eventbrite 等尽量拉取长文；详情页以 `whitespace-pre-line` 保留换行 |
+| 行程 | `itinerary` 字段，按行展示为编号列表；Eventbrite 从 `structured_content` API 解析 programme（`19h – …` 等） |
 
 预览 UI（`ActivityLinkImportPanel`）：字段纵向排列，**所有字段可选**勾选后再应用。
 
@@ -51,7 +52,7 @@ API：`POST /api/activity-link-preview`（见 `apps/web/app/api/activity-link-pr
 | 来源 | 逻辑 |
 |------|------|
 | Fever | `ticket-selector-config.transferState` 各 zone 的 `ticketTypes` 最低价–最高价；无配置时回退 JSON-LD 单价 |
-| Eventbrite | `extractJsonLdOfferPrice()`：`Offer.price` 或 `AggregateOffer.lowPrice` / `highPrice`；`low === high` 时为 **FIXED** |
+| Eventbrite | 描述/行程：`/api/v3/events/{id}/structured_content/`（页面 HTML 中 modules 常为空）；价格见 `extractJsonLdOfferPrice()` |
 | Paris.fr | JSON-LD `price: 0` 或页面 **Gratuit** → FREE；票价链接指向 Billetreduc 时会尝试搜索页解析区间，失败则「以外部页面为准」 |
 | 通用 / 无数据 | `priceType: RANGE`，`priceText` 为「以外部页面为准」类文案 |
 

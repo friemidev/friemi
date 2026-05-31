@@ -739,18 +739,282 @@ export function parseMeetupEventHtml(
   return structured;
 }
 
+export type EventbriteStructuredParse = {
+  description: string;
+  itinerary: string | null;
+};
+
+export function extractEventbriteEventId(sourceUrl: string) {
+  return sourceUrl.match(/(\d{10,})(?:\?|#|$)/)?.[1] ?? null;
+}
+
+function getEventbriteModuleHtml(module: unknown) {
+  if (!module || typeof module !== "object") {
+    return "";
+  }
+
+  const record = module as Record<string, unknown>;
+
+  if (typeof record.text === "string") {
+    return record.text;
+  }
+
+  const data = record.data as Record<string, unknown> | undefined;
+  const body = data?.body as Record<string, unknown> | undefined;
+
+  return typeof body?.text === "string" ? body.text : "";
+}
+
+function isEventbriteScheduleHeading(text: string) {
+  const normalized = text.trim();
+
+  if (!normalized || /^le programme$/i.test(normalized)) {
+    return false;
+  }
+
+  return (
+    /\d{1,2}h(?:\d{2})?\b/i.test(normalized) ||
+    /\d{1,2}:\d{2}/.test(normalized) ||
+    /entracte|doors?\s*open|ouverture\s*des\s*portes/i.test(normalized)
+  );
+}
+
+export function extractInlineScheduleItems(text: string) {
+  const markers = [
+    ...text.matchAll(
+      /\d{1,2}h(?:\d{2})?(?:\s*-\s*\d{1,2}h(?:\d{2})?)?\s*[–—-]\s*/gi,
+    ),
+  ];
+
+  if (markers.length < 2) {
+    return [];
+  }
+
+  const items: string[] = [];
+
+  for (let index = 0; index < markers.length; index += 1) {
+    const start = markers[index].index ?? 0;
+    const end =
+      index + 1 < markers.length
+        ? (markers[index + 1].index ?? text.length)
+        : text.length;
+    const item = text.slice(start, end).replace(/\s+/g, " ").trim();
+
+    if (item) {
+      items.push(item);
+    }
+  }
+
+  return items;
+}
+
+function extractScheduleItemsFromHtmlFragment(htmlFragment: string) {
+  const headingItems: string[] = [];
+
+  for (const match of htmlFragment.matchAll(
+    /<h[234][^>]*>([\s\S]*?)<\/h[234]>/gi,
+  )) {
+    const heading = htmlFragmentToPlainText(match[1]).trim();
+
+    if (isEventbriteScheduleHeading(heading)) {
+      headingItems.push(heading.replace(/\s+/g, " "));
+    }
+  }
+
+  if (headingItems.length >= 2) {
+    return headingItems;
+  }
+
+  return extractInlineScheduleItems(htmlFragmentToPlainText(htmlFragment));
+}
+
+function extractIntroBeforeSchedule(htmlFragment: string) {
+  const firstSchedule = htmlFragment.search(
+    /<h[234][^>]*>[^<]*\d{1,2}h/i,
+  );
+
+  if (firstSchedule < 0) {
+    return htmlFragmentToPlainText(htmlFragment);
+  }
+
+  return htmlFragmentToPlainText(htmlFragment.slice(0, firstSchedule));
+}
+
+export function parseEventbriteStructuredModules(
+  modules: unknown[],
+): EventbriteStructuredParse | null {
+  const descriptionParts: string[] = [];
+  const itineraryItems: string[] = [];
+
+  for (const module of modules) {
+    const html = getEventbriteModuleHtml(module);
+
+    if (!html) {
+      continue;
+    }
+
+    const scheduleItems = extractScheduleItemsFromHtmlFragment(html);
+
+    if (scheduleItems.length >= 2) {
+      itineraryItems.push(...scheduleItems);
+
+      const intro = extractIntroBeforeSchedule(html).trim();
+
+      if (intro && !/^le programme$/i.test(intro)) {
+        descriptionParts.push(intro);
+      }
+
+      continue;
+    }
+
+    const plain = htmlFragmentToPlainText(html);
+
+    if (plain) {
+      descriptionParts.push(plain);
+    }
+  }
+
+  const description = cleanPromoTextMultiline(descriptionParts.join("\n\n"));
+  const itinerary =
+    itineraryItems.length > 0 ? itineraryItems.join("\n") : null;
+
+  if (!description && !itinerary) {
+    return null;
+  }
+
+  return {
+    description,
+    itinerary,
+  };
+}
+
+function extractEventbriteStructuredContentFromHtml(
+  html: string,
+): EventbriteStructuredParse | null {
+  const data = parseNextDataPayload(html);
+
+  if (!data) {
+    return null;
+  }
+
+  const pageProps = (data.props as Record<string, unknown> | undefined)
+    ?.pageProps as Record<string, unknown> | undefined;
+  const context = pageProps?.context as Record<string, unknown> | undefined;
+  const structuredContent = context?.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  const modules = structuredContent?.modules;
+
+  if (!Array.isArray(modules) || modules.length === 0) {
+    return null;
+  }
+
+  return parseEventbriteStructuredModules(modules);
+}
+
+const eventbriteStructuredContentHosts = [
+  "www.eventbrite.fr",
+  "www.eventbrite.com",
+  "www.eventbrite.co.uk",
+] as const;
+
+export async function fetchEventbriteStructuredModules(
+  eventId: string,
+  options?: { userAgent?: string; timeoutMs?: number },
+): Promise<unknown[] | null> {
+  const userAgent =
+    options?.userAgent ??
+    "Mozilla/5.0 (compatible; ChillClubLinkImport/1.0)";
+  const timeoutMs = options?.timeoutMs ?? 12_000;
+
+  for (const host of eventbriteStructuredContentHosts) {
+    try {
+      const response = await fetch(
+        `https://${host}/api/v3/events/${eventId}/structured_content/`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": userAgent,
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(timeoutMs),
+        },
+      );
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = (await response.json()) as { modules?: unknown[] };
+      const modules = payload.modules;
+
+      if (Array.isArray(modules) && modules.length > 0) {
+        return modules;
+      }
+    } catch {
+      /* try next host */
+    }
+  }
+
+  return null;
+}
+
+export async function fetchEventbriteStructuredContent(
+  eventId: string,
+  options?: { userAgent?: string; timeoutMs?: number },
+): Promise<EventbriteStructuredParse | null> {
+  const modules = await fetchEventbriteStructuredModules(eventId, options);
+
+  if (!modules) {
+    return null;
+  }
+
+  return parseEventbriteStructuredModules(modules);
+}
+
+function applyEventbriteStructuredParse(
+  activity: ScrapedActivity,
+  structured: EventbriteStructuredParse,
+): ScrapedActivity {
+  const description = structured.description || activity.description;
+
+  return {
+    ...activity,
+    description,
+    itinerary: structured.itinerary,
+    category: guessCategory(`${activity.title} ${description}`),
+  };
+}
+
 export function parseEventbriteEventHtml(
   html: string,
   sourceUrl: string,
 ): ScrapedActivity | null {
   const activity = parseStructuredEventHtml(html, sourceUrl, "eventbrite");
-  const fullDescription = extractEventbriteStructuredDescription(html);
 
-  if (activity && fullDescription) {
+  if (!activity) {
+    return null;
+  }
+
+  const structured = extractEventbriteStructuredContentFromHtml(html);
+
+  if (structured) {
+    return applyEventbriteStructuredParse(activity, structured);
+  }
+
+  const inlineItems = extractInlineScheduleItems(activity.description);
+
+  if (inlineItems.length >= 2) {
+    const firstMarker = activity.description.search(/\d{1,2}h(?:\d{2})?\s*[–—-]/i);
+    const intro =
+      firstMarker > 0
+        ? activity.description.slice(0, firstMarker).trim()
+        : activity.description;
+
     return {
       ...activity,
-      description: fullDescription,
-      category: guessCategory(`${activity.title} ${fullDescription}`),
+      description: intro,
+      itinerary: inlineItems.join("\n"),
     };
   }
 
@@ -1547,42 +1811,9 @@ function parseNextDataPayload(html: string) {
   }
 }
 
+/** @deprecated Use extractEventbriteStructuredContentFromHtml or fetchEventbriteStructuredContent */
 function extractEventbriteStructuredDescription(html: string) {
-  const data = parseNextDataPayload(html);
-
-  if (!data) {
-    return null;
-  }
-
-  const pageProps = (data.props as Record<string, unknown> | undefined)
-    ?.pageProps as Record<string, unknown> | undefined;
-  const context = pageProps?.context as Record<string, unknown> | undefined;
-  const structuredContent = context?.structuredContent as
-    | Record<string, unknown>
-    | undefined;
-  const modules = structuredContent?.modules;
-
-  if (!Array.isArray(modules)) {
-    return null;
-  }
-
-  const parts = modules
-    .map((module) => {
-      if (!module || typeof module !== "object") {
-        return "";
-      }
-
-      const text = (module as Record<string, unknown>).text;
-
-      return typeof text === "string" ? htmlFragmentToPlainText(text) : "";
-    })
-    .filter((part) => part.length > 0);
-
-  if (parts.length === 0) {
-    return null;
-  }
-
-  return cleanPromoTextMultiline(parts.join("\n\n"));
+  return extractEventbriteStructuredContentFromHtml(html)?.description ?? null;
 }
 
 function extractSortirArticleBody(html: string) {

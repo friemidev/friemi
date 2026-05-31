@@ -72,7 +72,7 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-          <p className="line-clamp-2 text-sm leading-5 text-zinc-600">
+          <p className="line-clamp-2 whitespace-pre-line text-sm leading-5 text-zinc-600">
             {activity.description}
           </p>
           <div className="grid gap-1.5 text-sm text-zinc-600">
