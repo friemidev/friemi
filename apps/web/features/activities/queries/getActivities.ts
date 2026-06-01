@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { Prisma } from "@prisma/client";
 import type {
@@ -172,28 +173,6 @@ function getActivityFilterWhere(
         }
       : {}),
   };
-}
-
-async function getViewerFriendIds(viewerProfileId: string) {
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
-    },
-    select: {
-      userAId: true,
-      userBId: true,
-    },
-  });
-
-  return Array.from(
-    new Set(
-      friendships.map((friendship) =>
-        friendship.userAId === viewerProfileId
-          ? friendship.userBId
-          : friendship.userAId,
-      ),
-    ),
-  );
 }
 
 async function getActivityRelationWhere(

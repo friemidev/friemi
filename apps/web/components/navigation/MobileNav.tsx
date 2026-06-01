@@ -6,7 +6,6 @@ import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   CircleUserRound,
-  Compass,
   Home,
   MessageCircle,
 } from "lucide-react";
@@ -26,7 +25,6 @@ export function MobileNav({ locale }: MobileNavProps) {
     : "zh-CN";
   const items = [
     { href: "/", label: t.nav.home, icon: Home },
-    { href: "/activities", label: t.nav.activities, icon: Compass },
     {
       href: "/activities/new",
       label: t.nav.newActivityShort,
@@ -43,16 +41,6 @@ export function MobileNav({ locale }: MobileNavProps) {
       return pathname === localizedHref;
     }
 
-    if (href === "/activities") {
-      const newActivityHref = withLocale(currentLocale, "/activities/new");
-
-      return (
-        pathname === localizedHref ||
-        (pathname.startsWith(`${localizedHref}/`) &&
-          pathname !== newActivityHref)
-      );
-    }
-
     return (
       pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
     );
@@ -60,7 +48,7 @@ export function MobileNav({ locale }: MobileNavProps) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-paper/95 shadow-[0_-8px_24px_rgba(21,21,21,0.08)] backdrop-blur md:hidden">
-      <div className="mx-auto grid h-[4.25rem] max-w-md grid-cols-5 px-4">
+      <div className="mx-auto grid h-[4.25rem] max-w-md grid-cols-4 px-4">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);

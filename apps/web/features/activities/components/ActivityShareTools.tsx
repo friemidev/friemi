@@ -46,7 +46,7 @@ function getUrlHost(value: string) {
   try {
     return new URL(value).host.replace(/^www\./, "");
   } catch {
-    return "Next Fun Club";
+    return "Next Fun";
   }
 }
 
@@ -295,7 +295,7 @@ export function ActivityShareTools({
       context.fillText("NF", 90, 121);
       context.font = "700 28px sans-serif";
       context.fillStyle = hasCoverBackground ? "#ffffff" : "#3f5f46";
-      context.fillText("Next Fun Club", 176, 120);
+      context.fillText("Next Fun", 176, 120);
 
       drawPill(context, categoryLabel, 72, 286);
 
