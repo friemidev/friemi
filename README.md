@@ -73,10 +73,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 管理员后台访问控制支持三种方式（任意命中即可）：
 
 - `ADMIN_CLERK_USER_IDS`：Clerk `user.id` 列表（逗号分隔）
-- `ADMIN_EMAILS`：管理员邮箱列表（逗号分隔）
+- `ADMIN_EMAILS`：管理员邮箱列表（逗号分隔，须与 Clerk **Primary email** 一致）
 - Clerk metadata 中设置 `role=admin`（`publicMetadata` 或 `privateMetadata`）
 
-管理员页面入口：`/{locale}/admin/data-scraper`（例如 `/zh-CN/admin/data-scraper`）。
+以上变量与 `DATABASE_URL` 一样，应配置在 **`apps/web/.env.local`**（Next.js 从 `apps/web` 读取）。修改后需重启 `npm run dev`。
+
+管理员页面入口：`/{locale}/admin/data-scraper`（例如 `/zh-CN/admin/data-scraper`）。抓取预览、经纬度与导入模式说明见 [docs/admin-data-scraper.md](./docs/admin-data-scraper.md)。
 
 ## 数据库与 Prisma 操作
 

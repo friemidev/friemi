@@ -13,7 +13,7 @@ export function parseChineseDate(text: string, referenceYear = new Date().getFul
     .replace(/\uFF0F/g, "/")
     .replace(/\u2013|\u2014|\u2212/g, "-");
 
-  const rangeMatch = normalized.match(/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/);
+  const rangeMatch = normalized.match(/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-|与)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/);
   if (rangeMatch) {
     const [, yearA, monthA, dayA, yearB, monthB, dayB] = rangeMatch;
     const startYear = Number(yearA ?? yearB ?? referenceYear);

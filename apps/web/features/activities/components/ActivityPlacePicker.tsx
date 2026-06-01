@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Search, X } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
+import { formatImportedAddressForForm } from "@/lib/place-search";
 import { ActivityMapPreview } from "./ActivityMapPreview";
 
 type PlaceSearchResult = {
@@ -91,7 +92,7 @@ export function ActivityPlacePicker({
     const form = containerRef.current?.closest("form") ?? null;
     const address = getFormValue(form, "address");
     const city = getFormValue(form, "city");
-    const query = address || selectedLabel;
+    const query = formatImportedAddressForForm(address || selectedLabel);
 
     if (query.length < 3) {
       setResults([]);

@@ -1,39 +1,46 @@
 import { createHash } from "node:crypto";
+import { parseSortirAParisArticleHtml } from "./link-import";
+import type { ScrapedActivity, ScraperSource } from "./types";
 
-export type ScraperSource = "sortiraparis" | "playinparis";
+export type { ScrapedActivity, ScraperSource } from "./types";
+export {
+  extractCoordinatesFromRecord,
+  extractGeoCoordinatesFromJsonLdLocation,
+  isValidGeoCoordinates,
+  parseCoordinate,
+  type GeoCoordinates,
+} from "./geo";
+export {
+  activityLinkImportUserAgent,
+  enrichSortirActivityAddress,
+  extractSortirChineseStreetAddress,
+  extractSortirFrenchStreetAddress,
+  extractJsonLdOfferPrice,
+  extractSortirLocationHint,
+  findSortirFrenchArticleUrl,
+  findSortirFrenchArticleUrls,
+  linkImportDefaultCapacity,
+  parseChineseDate,
+  parseEventbriteEventHtml,
+  parseEventbriteStructuredModules,
+  fetchEventbriteStructuredModules,
+  fetchEventbriteStructuredContent,
+  extractEventbriteEventId,
+  extractInlineScheduleItems,
+  type EventbriteStructuredParse,
+  parseFeverupEventHtml,
+  parseMeetupEventHtml,
+  parseParisFrEventHtml,
+  parsePlayInParisEventHtml,
+  parseSortirAParisArticleHtml,
+  extractBilletreducPriceRange,
+  extractParisFrTicketUrl,
+  extractBilletreducEventId,
+  mapParisFrCategory,
+  parseStructuredEventHtml,
+} from "./link-import";
+
 export type ScraperMode = "recent" | "range" | "database";
-
-export type ScrapedActivity = {
-  id: string;
-  source: ScraperSource;
-  sourceUrl: string;
-  title: string;
-  description: string;
-  itinerary: string | null;
-  type: "PUBLIC_EVENT";
-  category:
-    | "BOARD_GAME"
-    | "MOVIE"
-    | "MUSIC"
-    | "SPORTS"
-    | "TRAVEL"
-    | "FOOD"
-    | "EXHIBITION"
-    | "OTHER";
-  city: string;
-  destination: string | null;
-  address: string;
-  startAt: string;
-  endAt: string | null;
-  capacity: number;
-  minParticipants: number | null;
-  requiresApproval: boolean;
-  priceType: "FREE" | "AA" | "FIXED" | "RANGE";
-  priceText: string;
-  coverImageUrl: string | null;
-  status: "RECRUITING";
-  visibility: "PUBLIC";
-};
 
 export type ScrapePreviewItem = ScrapedActivity & {
   fingerprint: string;
@@ -148,8 +155,10 @@ function guessCategory(text: string): ScrapedActivity["category"] {
     )
   )
     return "FOOD";
-  if (/(展|exhibition|museum|gallery|art|博物馆|艺术)/i.test(value))
+  if (/(展|exhibition|museum|gallery|art|博物馆|艺术|\bexpos\b)/i.test(value))
     return "EXHIBITION";
+  if (/(théâtre|theatre|theater|pièce|舞台剧|戏剧)/i.test(value))
+    return "THEATER";
   return "OTHER";
 }
 
@@ -243,7 +252,7 @@ function parseChineseDate(
     .replace(/\uFF0F/g, "/")
     .replace(/\u2013|\u2014|\u2212/g, "-");
   const rangeMatch = normalized.match(
-    /(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/,
+    /(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日(?:至|到|-|与)(?:(\d{4})年)?(?:(\d{1,2})月)?(\d{1,2})日/,
   );
   if (rangeMatch) {
     const [, yearA, monthA, dayA, yearB, monthB, dayB] = rangeMatch;
@@ -405,91 +414,16 @@ async function scrapeSortirAParis(
     return [...links];
   };
 
-  const parseArticlePage = (
-    html: string,
-    sourceUrl: string,
-  ): ScrapedActivity | null => {
-    const jsonLdBlocks = parseJsonLdBlocks(html);
-    let articleData: Record<string, unknown> | null = null;
-    for (const block of jsonLdBlocks) {
-      if (block && typeof block === "object" && !Array.isArray(block)) {
-        const value = block as Record<string, unknown>;
-        if (value["@type"] === "NewsArticle") {
-          articleData = value;
-          break;
-        }
-      }
-    }
-
-    const bodyText = stripHtml(html);
-    const pageTitle = (() => {
-      const match = html.match(/<title>([\s\S]*?)<\/title>/i)?.[1];
-      if (!match) return "未命名活动";
-      return stripHtml(match.replace(/\s*-\s*Sortiraparis\.com.*/i, ""));
-    })();
-    const title =
-      articleData && typeof articleData.headline === "string"
-        ? stripHtml(articleData.headline)
-        : pageTitle;
-    const descriptionRaw =
-      articleData && typeof articleData.description === "string"
-        ? articleData.description
-        : (extractMetaContent(html, ["description", "og:description"]) ?? "");
-    const description = stripHtml(descriptionRaw) || title;
-    const explicitDateHint = parseChineseDate(
-      `${title} ${description}`,
-      new Date().getUTCFullYear(),
-    );
-    const fallbackDateHint = parseChineseDate(
-      `${title} ${description} ${bodyText}`,
-      new Date().getUTCFullYear(),
-    );
-    const datePublished =
-      articleData && typeof articleData.datePublished === "string"
-        ? parseDateTimeString(articleData.datePublished)
-        : null;
-    const dateHint = explicitDateHint ?? fallbackDateHint;
-    const startAt = dateHint?.start ?? datePublished ?? new Date();
-    const endAt = dateHint?.end ?? null;
-    const coverImageUrl = normalizeExternalImageUrl(articleData?.image);
-    const priceText = /免费|gratuit|free/i.test(
-      `${title} ${description} ${bodyText}`,
-    )
-      ? "免费"
-      : "查看原文";
-
-    return {
-      id: makeStableId("sortiraparis", sourceUrl),
-      source: "sortiraparis",
-      sourceUrl,
-      title,
-      description,
-      itinerary: null,
-      type: "PUBLIC_EVENT",
-      category: "EXHIBITION",
-      city: "Paris",
-      destination: null,
-      address: "Paris, France",
-      startAt: startAt.toISOString(),
-      endAt: endAt?.toISOString() ?? null,
-      capacity: 100,
-      minParticipants: null,
-      requiresApproval: false,
-      priceType: guessPriceType(priceText),
-      priceText,
-      coverImageUrl,
-      status: "RECRUITING",
-      visibility: "PUBLIC",
-    };
-  };
-
   for (let page = 1; page <= maxPages && found.size < limit; page += 1) {
     const pageUrl = page === 1 ? listUrl : `${listUrl}/page/${page}`;
     const html = await fetchText(pageUrl, timeoutMs);
     for (const link of extractArticleLinks(html, pageUrl)) {
       if (found.size >= limit) break;
       if (found.has(link)) continue;
-      const article = parseArticlePage(await fetchText(link, timeoutMs), link);
+      const article = parseSortirAParisArticleHtml(
+        await fetchText(link, timeoutMs),
+        link,
+      );
       if (article) found.set(link, article);
     }
   }

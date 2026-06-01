@@ -109,6 +109,7 @@ model UserProfile {
   comments               Comment[]
   notifications          Notification[]        @relation("NotificationRecipient")
   sentNotifications      Notification[]        @relation("NotificationActor")
+  favoriteActivities     ActivityFavorite[]
   following              UserFollow[]          @relation("UserFollowing")
   followers              UserFollow[]          @relation("UserFollowers")
   sentFriendRequests     FriendRequest[]       @relation("FriendRequestRequester")
@@ -161,6 +162,7 @@ model Activity {
   comments         Comment[]
   notifications    Notification[]
   sourceLinks      ActivitySourceLink[]
+  favorites        ActivityFavorite[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
@@ -228,6 +230,18 @@ model ActivityParticipant {
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+}
+
+model ActivityFavorite {
+  id            String      @id @default(cuid())
+  activityId    String
+  userProfileId String
+  activity      Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([activityId, userProfileId])
+  @@index([userProfileId, createdAt])
 }
 
 model Comment {

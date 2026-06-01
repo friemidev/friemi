@@ -4,6 +4,7 @@ import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function ActivityCoverUpload({
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const displayImageUrl = getActivityCoverDisplayUrl(imageUrl);
 
   useEffect(() => {
     setImageUrl(initialUrl ?? "");
@@ -179,7 +181,7 @@ export function ActivityCoverUpload({
             // uploader independent from Next remote image domain config.
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={imageUrl}
+              src={displayImageUrl}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
             />

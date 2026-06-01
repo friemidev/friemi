@@ -376,10 +376,15 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "暂无参加记录",
       participationEmptyDescription: "参加活动后会显示在这里。",
+      favoriteTitle: "收藏的活动",
+      favoriteEmptyTitle: "暂无收藏活动",
+      favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
         `当前显示最近 ${limit} 个发起活动，另有 ${count} 个更早的活动暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `当前显示最近 ${limit} 个收藏活动，另有 ${count} 个更早的收藏暂未展示。`,
       signedUpAt: (date: string) => `报名于 ${date}`,
       cancelledAt: (date: string) => `取消于 ${date}`,
       participationAria: (
@@ -436,19 +441,33 @@ const copy = {
       linkImportTitle: "从链接导入",
       linkImportDescription:
         "粘贴支持的网站链接，先预览可识别信息，再套用到创建表单。",
-      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPlaceholder:
+        "https://meetup.com/.../events/... 或 https://www.eventbrite.fr/e/...",
+      linkImportSupportedSitesTitle: "支持的网站",
+      linkImportSupportedSitesClose: "关闭",
+      linkImportSupportedSitesAriaLabel: "查看支持的网站列表",
+      linkImportSupportedSiteExamples:
+        "例如：feverup.com、meetup.com、eventbrite.fr、sortiraparis.com、playinparis.com",
       linkImportPreview: "解析链接",
       linkImportParsing: "解析中...",
       linkImportApply: "套用到表单",
       linkImportApplied: "已套用到表单，请继续检查必填信息后再发布。",
+      linkImportAlwaysApply: "始终套用",
+      linkImportFieldNotDetected: "未识别",
+      linkImportSelectFields: "选择要套用的字段",
       linkImportUntitled: "未识别标题",
       linkImportMissingAddress: "未识别地点",
       linkImportMissingFields: (count: number) =>
         `还有 ${count} 项需要手动补充。`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `库里已有相同来源链接的活动「${title}」。`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `可能与已有活动「${title}」重复（标题、时间与地址相近）。`,
+      linkImportViewExisting: "查看已有活动",
       linkImportErrors: {
         INVALID_URL: "请输入有效的 https 链接。",
         UNSUPPORTED_HOST:
-          "暂不支持这个网站。请先使用 Paris.fr、Que Faire à Paris、Sortir à Paris、Eventbrite、Billetweb 或 Meetup 链接。",
+          "暂不支持这个网站。请先使用 Paris.fr、Que Faire à Paris、Sortir à Paris、Play in Paris、Eventbrite、Billetweb 或 Meetup 链接。",
         UNSUPPORTED_CONTENT: "这个链接不是可解析的活动页面。",
         FETCH_FAILED: "链接解析失败，请稍后重试或手动填写。",
         UNAUTHORIZED: "请登录后再解析链接。",
@@ -487,7 +506,8 @@ const copy = {
       mapPreviewTitle: "地图预览",
       openMap: "打开地图",
       startAt: "开始时间",
-      startAtHint: "按巴黎时间保存，需晚于当前时间。",
+      startAtHint:
+        "按巴黎时间保存。若填写结束时间且晚于现在，开始时间可早于当前时间。",
       endAt: "结束时间",
       endAtHint: "可选；填写时必须晚于开始时间。",
       peoplePrice: "人数和费用",
@@ -932,10 +952,15 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "No participation records",
       participationEmptyDescription: "Joined activities will appear here.",
+      favoriteTitle: "Saved activities",
+      favoriteEmptyTitle: "No saved activities",
+      favoriteEmptyDescription: "Saved activities will appear here.",
       hiddenCreated: (limit: number, count: number) =>
         `Showing the latest ${limit} created activities. ${count} earlier activities are not shown yet.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Showing the latest ${limit} participation records. ${count} earlier records are not shown yet.`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `Showing the latest ${limit} saved activities. ${count} earlier saved activities are not shown yet.`,
       signedUpAt: (date: string) => `Joined on ${date}`,
       cancelledAt: (date: string) => `Cancelled on ${date}`,
       participationAria: (
@@ -1001,20 +1026,34 @@ const copy = {
       linkImportTitle: "Import from link",
       linkImportDescription:
         "Paste a supported activity page, preview detected details, then apply them to the form.",
-      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPlaceholder:
+        "https://meetup.com/.../events/... or https://www.eventbrite.fr/e/...",
+      linkImportSupportedSitesTitle: "Supported websites",
+      linkImportSupportedSitesClose: "Close",
+      linkImportSupportedSitesAriaLabel: "View supported websites",
+      linkImportSupportedSiteExamples:
+        "Examples: feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
       linkImportPreview: "Preview link",
       linkImportParsing: "Parsing...",
       linkImportApply: "Apply to form",
       linkImportApplied:
         "Applied to the form. Review required fields before publishing.",
+      linkImportAlwaysApply: "Always applied",
+      linkImportFieldNotDetected: "Not detected",
+      linkImportSelectFields: "Fields to apply",
       linkImportUntitled: "Title not found",
       linkImportMissingAddress: "Place not found",
       linkImportMissingFields: (count: number) =>
         `${count} item(s) still need manual input.`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `An activity with the same source link already exists: “${title}”.`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `This may duplicate an existing activity: “${title}” (similar title, time, and place).`,
+      linkImportViewExisting: "View existing activity",
       linkImportErrors: {
         INVALID_URL: "Enter a valid https link.",
         UNSUPPORTED_HOST:
-          "This website is not supported yet. Use Paris.fr, Que Faire a Paris, Sortir a Paris, Eventbrite, Billetweb, or Meetup.",
+          "This website is not supported yet. Use Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
         UNSUPPORTED_CONTENT: "This link is not a parsable activity page.",
         FETCH_FAILED:
           "Failed to parse the link. Try again later or fill the form manually.",
@@ -1059,7 +1098,8 @@ const copy = {
       mapPreviewTitle: "Map preview",
       openMap: "Open map",
       startAt: "Start time",
-      startAtHint: "Saved in Paris time. Must be later than now.",
+      startAtHint:
+        "Saved in Paris time. If the end time is in the future, the start time may be in the past.",
       endAt: "End time",
       endAtHint: "Optional. Must be after the start time when filled.",
       peoplePrice: "People and cost",
@@ -1519,10 +1559,16 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "Aucune participation",
       participationEmptyDescription: "Les activités rejointes apparaîtront ici.",
+      favoriteTitle: "Activités enregistrées",
+      favoriteEmptyTitle: "Aucune activité enregistrée",
+      favoriteEmptyDescription:
+        "Les activités enregistrées apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Affichage des ${limit} dernières participations. ${count} plus anciennes ne sont pas encore affichées.`,
+      hiddenFavorite: (limit: number, count: number) =>
+        `Affichage des ${limit} dernieres activites enregistrees. ${count} plus anciennes ne sont pas encore affichees.`,
       signedUpAt: (date: string) => `Inscrit le ${date}`,
       cancelledAt: (date: string) => `Annulé le ${date}`,
       participationAria: (
@@ -1592,20 +1638,34 @@ const copy = {
       linkImportTitle: "Importer depuis un lien",
       linkImportDescription:
         "Collez une page prise en charge, vérifiez les infos détectées, puis appliquez-les au formulaire.",
-      linkImportPlaceholder: "https://quefaire.paris.fr/...",
+      linkImportPlaceholder:
+        "https://meetup.com/.../events/... ou https://www.eventbrite.fr/e/...",
+      linkImportSupportedSitesTitle: "Sites pris en charge",
+      linkImportSupportedSitesClose: "Fermer",
+      linkImportSupportedSitesAriaLabel: "Voir les sites pris en charge",
+      linkImportSupportedSiteExamples:
+        "Ex. : feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
       linkImportPreview: "Analyser le lien",
       linkImportParsing: "Analyse...",
       linkImportApply: "Appliquer au formulaire",
       linkImportApplied:
         "Appliqué au formulaire. Vérifiez les champs requis avant publication.",
+      linkImportAlwaysApply: "Toujours appliqué",
+      linkImportFieldNotDetected: "Non détecté",
+      linkImportSelectFields: "Champs à appliquer",
       linkImportUntitled: "Titre non détecté",
       linkImportMissingAddress: "Lieu non détecté",
       linkImportMissingFields: (count: number) =>
         `${count} champ(s) restent à compléter.`,
+      linkImportDuplicateSameUrl: (title: string) =>
+        `Une activité avec le même lien source existe déjà : « ${title} ».`,
+      linkImportDuplicateSimilar: (title: string) =>
+        `Risque de doublon avec « ${title} » (titre, horaire et lieu proches).`,
+      linkImportViewExisting: "Voir l'activité existante",
       linkImportErrors: {
         INVALID_URL: "Saisissez un lien https valide.",
         UNSUPPORTED_HOST:
-          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire a Paris, Sortir a Paris, Eventbrite, Billetweb ou Meetup.",
+          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
         UNSUPPORTED_CONTENT:
           "Ce lien n'est pas une page d'activité analysable.",
         FETCH_FAILED:
@@ -1656,7 +1716,8 @@ const copy = {
       mapPreviewTitle: "Aperçu carte",
       openMap: "Ouvrir la carte",
       startAt: "Début",
-      startAtHint: "Enregistré à l'heure de Paris. Doit être dans le futur.",
+      startAtHint:
+        "Heure de Paris. Si la fin est dans le futur, le début peut être dans le passé.",
       endAt: "Fin",
       endAtHint: "Facultatif. Si renseignée, doit être après le début.",
       peoplePrice: "Participants et coût",
