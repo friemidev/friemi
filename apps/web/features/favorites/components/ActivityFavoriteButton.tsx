@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Heart } from "lucide-react";
 import { Button } from "@chill-club/ui";
@@ -34,17 +35,19 @@ function FavoriteTooltip({ label }: { label: string }) {
 
 function FavoriteSubmitButton({
   isFavorited,
+  pendingAction,
   locale,
   className,
 }: {
   isFavorited: boolean;
+  pendingAction: "favorite" | "unfavorite" | null;
   locale: string;
   className?: string;
 }) {
   const { pending } = useFormStatus();
   const t = getActivityFavoriteCopy(locale);
   const label = pending
-    ? isFavorited
+    ? pendingAction === "unfavorite"
       ? t.unfavoriting
       : t.favoriting
     : isFavorited
@@ -82,11 +85,45 @@ export function ActivityFavoriteButton({
   redirectPath,
   className,
 }: ActivityFavoriteButtonProps) {
+  const router = useRouter();
   const [state, formAction] = useActionState(
     toggleActivityFavoriteAction,
     initialState,
   );
+  const [, startRefreshTransition] = useTransition();
+  const [displayIsFavorited, setDisplayIsFavorited] = useState(isFavorited);
+  const [hasOptimisticUpdate, setHasOptimisticUpdate] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "favorite" | "unfavorite" | null
+  >(null);
   const t = getActivityFavoriteCopy(locale);
+
+  useEffect(() => {
+    setDisplayIsFavorited(isFavorited);
+    setHasOptimisticUpdate(false);
+    setPendingAction(null);
+  }, [isFavorited]);
+
+  useEffect(() => {
+    if (state.formError && hasOptimisticUpdate) {
+      setDisplayIsFavorited(isFavorited);
+      setHasOptimisticUpdate(false);
+      setPendingAction(null);
+    }
+  }, [hasOptimisticUpdate, isFavorited, state.formError]);
+
+  useEffect(() => {
+    if (!state.ok || !state.updatedAt) {
+      return;
+    }
+
+    setDisplayIsFavorited(Boolean(state.isFavorited));
+    setHasOptimisticUpdate(false);
+    setPendingAction(null);
+    startRefreshTransition(() => {
+      router.refresh();
+    });
+  }, [router, startRefreshTransition, state.isFavorited, state.ok, state.updatedAt]);
 
   if (!isAuthenticated) {
     return (
@@ -110,7 +147,15 @@ export function ActivityFavoriteButton({
   }
 
   return (
-    <form action={formAction} className="grid justify-start gap-2">
+    <form
+      action={formAction}
+      className="grid justify-start gap-2"
+      onSubmit={() => {
+        setPendingAction(displayIsFavorited ? "unfavorite" : "favorite");
+        setDisplayIsFavorited((current) => !current);
+        setHasOptimisticUpdate(true);
+      }}
+    >
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
       <input name="redirectPath" type="hidden" value={redirectPath} />
@@ -121,7 +166,8 @@ export function ActivityFavoriteButton({
       ) : null}
       <FavoriteSubmitButton
         className={className}
-        isFavorited={isFavorited}
+        isFavorited={displayIsFavorited}
+        pendingAction={pendingAction}
         locale={locale}
       />
     </form>
