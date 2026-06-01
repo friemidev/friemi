@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
+import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getActivityFavoriteCopy } from "../copy";
@@ -17,6 +17,9 @@ const toggleActivityFavoriteSchema = z.object({
 
 export type ToggleActivityFavoriteState = {
   formError?: string;
+  isFavorited?: boolean;
+  ok?: boolean;
+  updatedAt?: number;
 };
 
 function getString(formData: FormData, key: string) {
@@ -29,6 +32,29 @@ function isPrismaUniqueError(error: unknown) {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   );
+}
+
+async function getViewerProfileId(locale: string) {
+  const clerkUserId = await requireUser(locale);
+
+  if (!hasClerkKeys()) {
+    return ensureCurrentUserProfile(locale).then((profile) => profile.id);
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingProfile) {
+    return existingProfile.id;
+  }
+
+  return ensureCurrentUserProfile(locale).then((profile) => profile.id);
 }
 
 export async function toggleActivityFavoriteAction(
@@ -51,7 +77,7 @@ export async function toggleActivityFavoriteAction(
 
   const { activityId, locale, redirectPath } = result.data;
   const t = getActivityFavoriteCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfileId = await getViewerProfileId(locale);
   const activity = await prisma.activity.findFirst({
     where: {
       id: activityId,
@@ -75,7 +101,7 @@ export async function toggleActivityFavoriteAction(
     where: {
       activityId_userProfileId: {
         activityId,
-        userProfileId: viewerProfile.id,
+        userProfileId: viewerProfileId,
       },
     },
     select: {
@@ -94,7 +120,7 @@ export async function toggleActivityFavoriteAction(
       await prisma.activityFavorite.create({
         data: {
           activityId,
-          userProfileId: viewerProfile.id,
+          userProfileId: viewerProfileId,
         },
       });
     }
@@ -107,5 +133,11 @@ export async function toggleActivityFavoriteAction(
   const localizedPath = withLocale(locale, redirectPath);
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
-  redirect(localizedPath);
+
+  return {
+    formError: undefined,
+    isFavorited: !existingFavorite,
+    ok: true,
+    updatedAt: Date.now(),
+  };
 }
