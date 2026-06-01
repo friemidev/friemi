@@ -76,6 +76,8 @@ export default clerkMiddleware(async (auth, request) => {
 export const config = {
   matcher: [
     "/((?!api|_next|_vercel|.*\\..*).*)",
+    "/:locale/updates",
+    "/:locale/updates/:path*",
     "/api/admin/:path*",
     "/api/uploads/:path*",
     "/api/activity-link-preview",
