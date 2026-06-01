@@ -33,6 +33,8 @@ const copy = {
     nav: {
       home: "首页",
       activities: "活动",
+      lobby: "组队大厅",
+      lobbyShort: "大厅",
       newActivity: "发起活动",
       newActivityShort: "发起",
       messages: "消息",
@@ -42,7 +44,7 @@ const copy = {
       signIn: "登录",
     },
     accountMenu: {
-      fallbackName: "Next Fun Club 用户",
+      fallbackName: "Next Fun 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
       friends: "好友",
@@ -67,7 +69,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "全站搜索",
-      title: "搜索 Next Fun Club",
+      title: "搜索 Next Fun",
       description: "快速查找活动、地点和商家。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、地点或商家",
@@ -98,9 +100,9 @@ const copy = {
     },
     home: {
       eyebrow: "Paris first · 中文活动搭子",
-      title: "Next Fun Club",
+      title: "Next Fun",
       tagline: "下一场，Fun 开场",
-      description: "发现巴黎附近活动，约上朋友或认识新搭子一起出发。",
+      description: "在这里发现活动，和朋友、新搭子一起组队出发!",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",
@@ -121,6 +123,24 @@ const copy = {
       emptyDescription: "当前没有可展示的公开活动，创建新活动后会显示在这里。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
+    },
+    activityLobby: {
+      title: "组队大厅",
+      description:
+        "集中查看我发起、我参加、我收藏，以及好友相关的活动，不再被公告类活动淹没。",
+      emptyTitle: "大厅暂时还没有活动",
+      emptyDescription: "先去活动发现里逛逛，感兴趣的活动会慢慢聚到这里。",
+      emptySectionTitle: "这里还没有活动",
+      createdTitle: "我发起的",
+      createdDescription: "我正在组织或已经发起的活动。",
+      joinedTitle: "我参加的",
+      joinedDescription: "我已经报名或加入的活动。",
+      favoriteTitle: "我的收藏",
+      favoriteDescription: "我感兴趣、想去或想稍后再决定的活动。",
+      friendHostedTitle: "好友发起的",
+      friendHostedDescription: "朋友正在组织或发起中的活动。",
+      friendJoinedTitle: "好友参加的",
+      friendJoinedDescription: "朋友已经加入的活动，方便一起同行。",
     },
     activityFilters: {
       title: "搜索和筛选",
@@ -591,6 +611,8 @@ const copy = {
     nav: {
       home: "Home",
       activities: "Activities",
+      lobby: "Lobby",
+      lobbyShort: "Lobby",
       newActivity: "Create activity",
       newActivityShort: "Create",
       messages: "Messages",
@@ -600,7 +622,7 @@ const copy = {
       signIn: "Sign in",
     },
     accountMenu: {
-      fallbackName: "Next Fun Club user",
+      fallbackName: "Next Fun user",
       openMenu: "Open account menu",
       profile: "Profile",
       friends: "Friends",
@@ -625,7 +647,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Site search",
-      title: "Search Next Fun Club",
+      title: "Search Next Fun",
       description: "Find activities, places, and merchants quickly.",
       inputLabel: "Search keyword",
       placeholder: "Search activities, places, or merchants",
@@ -658,10 +680,10 @@ const copy = {
     },
     home: {
       eyebrow: "Paris first · Chinese-speaking activity crews",
-      title: "Next Fun Club",
+      title: "Next Fun",
       tagline: "What's next? Fun begins.",
       description:
-        "Discover nearby Paris activities, bring friends, or meet new activity buddies.",
+        "Discover activities here and head out with your friends and new buddies as a team!",
       browseActivities: "Browse activities",
       homeActivityFailedTitle: "Activities failed to load",
       homeActivityFailedDescription:
@@ -687,6 +709,25 @@ const copy = {
       emptyFilteredTitle: "No matching activities",
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
+    },
+    activityLobby: {
+      title: "Lobby",
+      description:
+        "Keep your own, saved, and friend-related activities in one place so they do not get buried under public announcements.",
+      emptyTitle: "No lobby activities yet",
+      emptyDescription:
+        "Browse the discovery page first. The activities you care about will start to gather here.",
+      emptySectionTitle: "Nothing here yet",
+      createdTitle: "Created by me",
+      createdDescription: "Activities I am organizing or have created.",
+      joinedTitle: "Joined by me",
+      joinedDescription: "Activities I have already joined or signed up for.",
+      favoriteTitle: "Saved by me",
+      favoriteDescription: "Activities I am interested in or want to revisit later.",
+      friendHostedTitle: "Hosted by friends",
+      friendHostedDescription: "Activities friends are organizing right now.",
+      friendJoinedTitle: "Joined by friends",
+      friendJoinedDescription: "Activities friends have already joined.",
     },
     activityFilters: {
       title: "Search and filters",
@@ -1190,6 +1231,8 @@ const copy = {
     nav: {
       home: "Accueil",
       activities: "Activités",
+      lobby: "Hall d'équipe",
+      lobbyShort: "Hall",
       newActivity: "Créer une activité",
       newActivityShort: "Créer",
       messages: "Messages",
@@ -1199,7 +1242,7 @@ const copy = {
       signIn: "Connexion",
     },
     accountMenu: {
-      fallbackName: "Utilisateur Next Fun Club",
+      fallbackName: "Utilisateur Next Fun",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
       friends: "Amis",
@@ -1225,7 +1268,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Recherche globale",
-      title: "Rechercher dans Next Fun Club",
+      title: "Rechercher dans Next Fun",
       description: "Trouvez vite une activité, un lieu ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
       placeholder: "Activités, lieux ou partenaires",
@@ -1261,10 +1304,10 @@ const copy = {
     },
     home: {
       eyebrow: "Paris d'abord · activités sinophones",
-      title: "Next Fun Club",
+      title: "Next Fun",
       tagline: "La prochaine sortie commence ici.",
       description:
-        "Découvrez des activités à Paris, venez avec vos amis ou rencontrez de nouveaux compagnons de sortie.",
+        "Découvrez des activités ici et partez en équipe avec vos amis et de nouveaux compagnons.",
       browseActivities: "Voir les activités",
       homeActivityFailedTitle: "Échec du chargement",
       homeActivityFailedDescription:
@@ -1289,6 +1332,25 @@ const copy = {
       emptyFilteredTitle: "Aucune activité trouvée",
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
+    },
+    activityLobby: {
+      title: "Hall d'équipe",
+      description:
+        "Retrouvez au même endroit mes activités, mes favoris et les activités liées à mes amis, sans qu'elles soient noyées parmi les annonces publiques.",
+      emptyTitle: "Le hall est encore vide",
+      emptyDescription:
+        "Parcourez d'abord la page découverte. Les activités qui vous concernent viendront ici.",
+      emptySectionTitle: "Aucune activité pour le moment",
+      createdTitle: "Créées par moi",
+      createdDescription: "Les activités que j'organise ou que j'ai lancées.",
+      joinedTitle: "Rejointes par moi",
+      joinedDescription: "Les activités que j'ai déjà rejointes ou demandées.",
+      favoriteTitle: "Mes favoris",
+      favoriteDescription: "Les activités qui m'intéressent ou que je veux garder de côté.",
+      friendHostedTitle: "Organisées par des amis",
+      friendHostedDescription: "Les activités actuellement lancées par mes amis.",
+      friendJoinedTitle: "Rejointes par des amis",
+      friendJoinedDescription: "Les activités auxquelles mes amis participent déjà.",
     },
     activityFilters: {
       title: "Recherche et filtres",

@@ -12,16 +12,17 @@
 
 html {
   min-height: 100%;
-  background: #f7f3ea;
+  background: #f5efe2;
 }
 
 body {
   min-height: 100%;
   margin: 0;
   background:
-    linear-gradient(135deg, rgba(220, 235, 240, 0.8), transparent 34rem),
-    linear-gradient(315deg, rgba(184, 95, 63, 0.12), transparent 28rem),
-    #f7f3ea;
+    radial-gradient(circle at top left, rgba(220, 198, 147, 0.2), transparent 24rem),
+    radial-gradient(circle at top right, rgba(178, 201, 177, 0.14), transparent 22rem),
+    linear-gradient(180deg, rgba(255, 251, 244, 0.92), rgba(244, 236, 221, 0.96)),
+    #f5efe2;
   color: #151515;
 }
 

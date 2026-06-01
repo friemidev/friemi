@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Store, UsersRound } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
+import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -8,9 +8,6 @@ import type { ActivityCardViewModel } from "../types";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
-  getActivityLocationLabel,
-  getActivityParticipantPercent,
-  getActivitySeatLabel,
   getActivityTimeState,
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
@@ -37,13 +34,25 @@ export function ActivityCard({
   showFavoriteButton = false,
 }: ActivityCardProps) {
   const t = getCopy(locale);
-  const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const timeState = getActivityTimeState(activity);
+  const shouldShowCapacity = activity.type !== "PUBLIC_EVENT";
+  const primaryActionLabel =
+    activity.type === "PUBLIC_EVENT"
+      ? locale === "fr"
+        ? "Former une équipe"
+        : locale === "en"
+          ? "Team up now"
+          : "立刻组队"
+      : locale === "fr"
+        ? "Rejoindre maintenant"
+        : locale === "en"
+          ? "Join now"
+          : "立刻报名";
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
-    getActivityLocationLabel(activity),
+    activity.city,
   );
 
   return (
@@ -61,7 +70,7 @@ export function ActivityCard({
         </div>
       ) : null}
       <Link
-        className="flex h-full flex-col"
+        className="flex flex-1 flex-col"
         href={withLocale(locale, `/activities/${activity.id}`)}
         aria-label={activityLabel}
       >
@@ -93,18 +102,7 @@ export function ActivityCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-          <p className="line-clamp-2 whitespace-pre-line text-sm leading-5 text-zinc-600">
-            {activity.description}
-          </p>
-          <div className="grid gap-1.5 text-sm text-zinc-600">
-            {activity.merchant ? (
-              <span className="flex items-start gap-2 text-zinc-700">
-                <Store className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="min-w-0 line-clamp-1">
-                  {t.merchant.cardLabel(activity.merchant.name)}
-                </span>
-              </span>
-            ) : null}
+          <div className="grid gap-2 text-sm text-zinc-600">
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0">
@@ -113,42 +111,40 @@ export function ActivityCard({
             </span>
             <span className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
-                {getActivityLocationLabel(activity)}
-              </span>
+              <span className="min-w-0 line-clamp-1">{activity.city}</span>
             </span>
           </div>
-          <div className="mt-auto space-y-2 pt-1">
-            {activity.friendSignal && activity.friendSignal.count > 0 ? (
-              <div className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-semibold text-moss">
-                <UsersRound className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate whitespace-nowrap">
-                  {t.activityFriendSignal.cardSummary(
-                    activity.friendSignal.count,
-                  )}
-                </span>
-              </div>
-            ) : null}
+          <div className="mt-auto border-t border-black/5 pt-3">
             <div className="flex items-center justify-between gap-3 text-sm text-zinc-600">
-              <span className="flex items-center gap-2">
-                <UsersRound className="h-4 w-4 shrink-0" />
-                {activity.participantCount}/{activity.capacity}{" "}
-                {t.common.people}
-              </span>
-              <span className="shrink-0 font-medium text-ink">
-                {getActivitySeatLabel(activity, locale)}
-              </span>
+              {activity.friendSignal && activity.friendSignal.count > 0 ? (
+                <div className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-semibold text-moss">
+                  <UsersRound className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate whitespace-nowrap">
+                    {t.activityFriendSignal.cardSummary(
+                      activity.friendSignal.count,
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <span />
+              )}
+              {shouldShowCapacity ? (
+                <span className="flex shrink-0 items-center gap-2 font-medium text-ink">
+                  <UsersRound className="h-4 w-4 shrink-0 text-zinc-500" />
+                  {activity.participantCount}/{activity.capacity} {t.common.people}
+                </span>
+              ) : null}
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-              <div
-                className="h-full rounded-full bg-moss"
-                style={{ width: `${participantPercent}%` }}
-              />
-            </div>
-            <p className="text-sm font-medium text-ink">{activity.priceText}</p>
           </div>
         </CardContent>
       </Link>
+      <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+        <Link href={withLocale(locale, `/activities/${activity.id}`)}>
+          <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
+            {primaryActionLabel}
+          </Button>
+        </Link>
+      </div>
     </Card>
   );
 }
