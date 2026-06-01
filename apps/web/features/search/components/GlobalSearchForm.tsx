@@ -60,7 +60,7 @@ export function GlobalSearchForm({
         type="submit"
         aria-label={t.submit}
         className={cn(
-          "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-ink font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+          "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] font-medium text-white transition hover:bg-[#c87b61] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e6b3a1]",
           isPage ? "h-10 w-10 px-0 text-sm sm:w-auto sm:px-4" : "h-8 w-8",
         )}
       >
