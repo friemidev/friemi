@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -10,6 +11,7 @@ import type {
 import type { ActivityCardViewModel } from "../types";
 import type {
   ActivityFilters,
+  ActivityRelationFilter,
   ActivityTimeState,
 } from "../utils/activityFilters";
 
@@ -53,6 +55,7 @@ export const activityCardSelect = {
   coverImageUrl: true,
   priceText: true,
   status: true,
+  createdAt: true,
   merchant: {
     select: {
       id: true,
@@ -168,6 +171,78 @@ function getActivityFilterWhere(
           type: filters.type,
         }
       : {}),
+  };
+}
+
+async function getViewerFriendIds(viewerProfileId: string) {
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
+    },
+    select: {
+      userAId: true,
+      userBId: true,
+    },
+  });
+
+  return Array.from(
+    new Set(
+      friendships.map((friendship) =>
+        friendship.userAId === viewerProfileId
+          ? friendship.userBId
+          : friendship.userAId,
+      ),
+    ),
+  );
+}
+
+async function getActivityRelationWhere(
+  relation: ActivityRelationFilter,
+  viewerProfileId: string | null | undefined,
+): Promise<Prisma.ActivityWhereInput> {
+  if (relation === "ALL") {
+    return {};
+  }
+
+  if (!viewerProfileId) {
+    return {
+      organizerId: "__no_matching_profile__",
+    };
+  }
+
+  if (relation === "MINE") {
+    return {
+      organizerId: viewerProfileId,
+    };
+  }
+
+  const friendIds = await getViewerFriendIds(viewerProfileId);
+
+  if (friendIds.length === 0) {
+    return {
+      organizerId: "__no_matching_profile__",
+    };
+  }
+
+  if (relation === "FRIEND_HOSTED") {
+    return {
+      organizerId: {
+        in: friendIds,
+      },
+    };
+  }
+
+  return {
+    participants: {
+      some: {
+        userProfileId: {
+          in: friendIds,
+        },
+        status: {
+          in: participantStatuses,
+        },
+      },
+    },
   };
 }
 
@@ -316,14 +391,24 @@ export async function getActivities(
     now,
   });
   const filterWhere = getActivityFilterWhere(options.filters);
+  const relationWhere = await getActivityRelationWhere(
+    options.filters?.relation ?? "ALL",
+    options.viewerProfileId,
+  );
+  const orderBy: Prisma.ActivityOrderByWithRelationInput[] =
+    options.filters?.sort === "recentlyAdded"
+      ? [{ createdAt: "desc" }, { id: "asc" }]
+      : [
+          {
+            startAt: options.filters?.sort === "latest" ? "desc" : "asc",
+          },
+          { id: "asc" },
+        ];
   const activities = await prisma.activity.findMany({
     where: {
-      AND: [baseWhere, filterWhere],
+      AND: [baseWhere, filterWhere, relationWhere],
     },
-    orderBy: [
-      { startAt: options.filters?.sort === "latest" ? "desc" : "asc" },
-      { id: "asc" },
-    ],
+    orderBy,
     take: normalizeLimit(options.limit),
     select: activityCardSelect,
   });
@@ -351,6 +436,10 @@ function getActivityListOrderBy(
   filters: ActivityFilters,
   timeState?: ActivityTimeState,
 ): Prisma.ActivityOrderByWithRelationInput[] {
+  if (filters.sort === "recentlyAdded") {
+    return [{ createdAt: "desc" }, { id: "asc" }];
+  }
+
   if (filters.sort === "latest" || timeState === "ENDED") {
     return [{ startAt: "desc" }, { id: "asc" }];
   }
@@ -363,6 +452,7 @@ function hasExplicitActivityListFilters(filters: ActivityFilters) {
     filters.keyword ||
     filters.category ||
     filters.city ||
+    filters.relation !== "ALL" ||
     filters.type ||
     filters.timeState,
   );
@@ -388,10 +478,16 @@ function getDailyRankingSeed(now: Date) {
   ].join("-");
 }
 
-function getActivityListWhere(
+async function getActivityListWhere(
   filters: ActivityFilters,
   now: Date,
-): Prisma.ActivityWhereInput {
+  viewerProfileId: string | null | undefined,
+): Promise<Prisma.ActivityWhereInput> {
+  const relationWhere = await getActivityRelationWhere(
+    filters.relation,
+    viewerProfileId,
+  );
+
   return {
     AND: [
       getVisibleActivityWhere({
@@ -400,6 +496,7 @@ function getActivityListWhere(
         now,
       }),
       getActivityFilterWhere(filters),
+      relationWhere,
       ...(filters.timeState
         ? [getActivityTimeStateWhere(filters.timeState, now)]
         : []),
@@ -413,7 +510,7 @@ async function getOrderedActivityList(
   now: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
-  const where = getActivityListWhere(filters, now);
+  const where = await getActivityListWhere(filters, now, viewerProfileId);
   const totalCount = await prisma.activity.count({ where });
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
@@ -446,14 +543,16 @@ async function getRecommendedActivityList(
   now: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
-  const where = getActivityListWhere(filters, now);
+  const where = await getActivityListWhere(filters, now, viewerProfileId);
   const totalCount = await prisma.activity.count({ where });
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
   const activityIds = await getRecommendedActivityIds({
+    filters,
     now,
     page,
     pageSize,
+    viewerProfileId,
   });
 
   if (activityIds.length === 0) {
@@ -503,87 +602,114 @@ type RecommendedActivityIdRow = {
 };
 
 async function getRecommendedActivityIds({
+  filters,
   now,
   page,
   pageSize,
+  viewerProfileId,
 }: {
+  filters: ActivityFilters;
   now: Date;
   page: number;
   pageSize: number;
+  viewerProfileId: string | null | undefined;
 }) {
-  const activeStatuses = Prisma.join(visibleActivityStatuses);
-  const archivedStatuses = Prisma.join(visibleArchivedActivityStatuses);
-  const publicVisibility = Prisma.join(publicActivityVisibility);
+  const where = await getActivityListWhere(filters, now, viewerProfileId);
+  const totalCount = await prisma.activity.count({ where });
+  const totalPages = getActivityTotalPages(totalCount, pageSize);
+  const currentPage = getActivityPage(page, totalPages);
+  const offset = (currentPage - 1) * pageSize;
+  const activities = await prisma.activity.findMany({
+    where,
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      status: true,
+    },
+  });
   const dailySeed = getDailyRankingSeed(now);
   const freshOngoingBoundary = addDays(now, -freshOngoingWindowDays);
   const endingSoonBoundary = addDays(now, endingSoonWindowDays);
   const upcomingSoonBoundary = addDays(now, upcomingSoonWindowDays);
   const upcomingWeekBoundary = addDays(now, upcomingWeekWindowDays);
   const upcomingMonthBoundary = addDays(now, upcomingMonthWindowDays);
-  const offset = (page - 1) * pageSize;
 
-  // Recommendation groups are intentionally coarse: proximity decides the
-  // useful buckets, then the daily seed only shuffles activities with the same
-  // user-facing priority so pagination stays stable for the whole day.
-  const rows = await prisma.$queryRaw<RecommendedActivityIdRow[]>(Prisma.sql`
-    WITH ranked_activities AS (
-      SELECT
-        activity.id,
-        activity."startAt",
-        CASE
-          WHEN activity.status::text IN (${activeStatuses})
-            AND activity."startAt" <= ${now}
-            AND activity."endAt" IS NOT NULL
-            AND activity."endAt" > ${now}
-            AND activity."startAt" >= ${freshOngoingBoundary}
-            THEN 0
-          WHEN activity.status::text IN (${activeStatuses})
-            AND activity."startAt" > ${now}
-            THEN 1
-          WHEN activity.status::text IN (${activeStatuses})
-            AND activity."startAt" <= ${now}
-            AND activity."endAt" IS NOT NULL
-            AND activity."endAt" > ${now}
-            THEN 2
-          ELSE 3
-        END AS recommendation_group,
-        CASE
-          WHEN activity.status::text IN (${activeStatuses})
-            AND activity."startAt" <= ${now}
-            AND activity."endAt" IS NOT NULL
-            AND activity."endAt" > ${now}
-            AND activity."startAt" >= ${freshOngoingBoundary}
-            THEN CASE WHEN activity."endAt" <= ${endingSoonBoundary} THEN 0 ELSE 1 END
-          WHEN activity.status::text IN (${activeStatuses})
-            AND activity."startAt" > ${now}
-            THEN CASE
-              WHEN activity."startAt" <= ${upcomingSoonBoundary} THEN 0
-              WHEN activity."startAt" <= ${upcomingWeekBoundary} THEN 1
-              WHEN activity."startAt" <= ${upcomingMonthBoundary} THEN 2
-              ELSE 3
-            END
-          ELSE 0
-        END AS proximity_group
-      FROM "Activity" AS activity
-      INNER JOIN "UserProfile" AS organizer
-        ON organizer.id = activity."organizerId"
-      WHERE activity.status::text IN (${archivedStatuses})
-        AND activity.visibility::text IN (${publicVisibility})
-        AND organizer.status::text = 'ACTIVE'
-    )
-    SELECT id
-    FROM ranked_activities
-    ORDER BY
-      recommendation_group ASC,
-      proximity_group ASC,
-      md5(${dailySeed} || id) ASC,
-      "startAt" ASC,
-      id ASC
-    OFFSET ${offset}
-    LIMIT ${pageSize}
-  `);
+  const rankedActivityIds = activities
+    .map((activity) => {
+      const isActive = visibleActivityStatuses.includes(activity.status);
+      const isFreshOngoing =
+        isActive &&
+        activity.startAt <= now &&
+        activity.endAt !== null &&
+        activity.endAt > now &&
+        activity.startAt >= freshOngoingBoundary;
+      const isUpcoming = isActive && activity.startAt > now;
+      const isOngoing =
+        isActive &&
+        activity.startAt <= now &&
+        activity.endAt !== null &&
+        activity.endAt > now;
+      const recommendationGroup = isFreshOngoing
+        ? 0
+        : isUpcoming
+          ? 1
+          : isOngoing
+            ? 2
+            : 3;
+      let proximityGroup = 0;
 
-  return rows.map((row) => row.id);
+      if (isFreshOngoing) {
+        proximityGroup =
+          activity.endAt !== null && activity.endAt <= endingSoonBoundary ? 0 : 1;
+      } else if (isUpcoming) {
+        proximityGroup =
+          activity.startAt <= upcomingSoonBoundary
+            ? 0
+            : activity.startAt <= upcomingWeekBoundary
+              ? 1
+              : activity.startAt <= upcomingMonthBoundary
+                ? 2
+                : 3;
+      }
+
+      return {
+        id: activity.id,
+        startAt: activity.startAt,
+        recommendationGroup,
+        proximityGroup,
+        seed: createHash("md5")
+          .update(`${dailySeed}:${activity.id}`)
+          .digest("hex"),
+      };
+    })
+    .sort((left, right) => {
+      if (left.recommendationGroup !== right.recommendationGroup) {
+        return left.recommendationGroup - right.recommendationGroup;
+      }
+
+      if (left.proximityGroup !== right.proximityGroup) {
+        return left.proximityGroup - right.proximityGroup;
+      }
+
+      if (left.seed < right.seed) {
+        return -1;
+      }
+
+      if (left.seed > right.seed) {
+        return 1;
+      }
+
+      if (left.startAt.getTime() !== right.startAt.getTime()) {
+        return left.startAt.getTime() - right.startAt.getTime();
+      }
+
+      return left.id.localeCompare(right.id);
+    })
+    .slice(offset, offset + pageSize)
+    .map((activity) => activity.id);
+
+  return rankedActivityIds;
 }
 
 export async function getActivityList(
