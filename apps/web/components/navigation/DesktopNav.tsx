@@ -6,7 +6,7 @@ import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   CircleUserRound,
-  Compass,
+  Home,
   MessageCircle,
 } from "lucide-react";
 import { withLocale } from "@/lib/routes";
@@ -24,7 +24,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
     ? locale
     : "zh-CN";
   const items = [
-    { href: "/activities", label: t.nav.activities, icon: Compass },
+    { href: "/", label: t.nav.home, icon: Home },
     {
       href: "/activities/new",
       label: t.nav.newActivityShort,
@@ -38,14 +38,8 @@ export function DesktopNav({ locale }: DesktopNavProps) {
   function isItemActive(href: string) {
     const localizedHref = withLocale(currentLocale, href);
 
-    if (href === "/activities") {
-      const newActivityHref = withLocale(currentLocale, "/activities/new");
-
-      return (
-        pathname === localizedHref ||
-        (pathname.startsWith(`${localizedHref}/`) &&
-          pathname !== newActivityHref)
-      );
+    if (href === "/") {
+      return pathname === localizedHref;
     }
 
     return (

@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
+import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
 import {
   getActivityList,
   getActivityFilterOptions,
@@ -145,21 +146,24 @@ export default async function ActivitiesPage({
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
-            {t.activities.title}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 sm:mt-2">
-            {t.activities.description}
-          </p>
-        </div>
-        <div className="hidden max-w-md flex-wrap justify-end gap-2 sm:flex">
-          <Badge>{t.activityLabels.statuses.OPEN}</Badge>
-          <Badge>{t.activityLabels.statuses.FULL}</Badge>
-          <Badge>{t.activityLabels.timeStates.ONGOING}</Badge>
-          <Badge>{t.activityLabels.timeStates.UPCOMING}</Badge>
-          <Badge>{t.activityLabels.timeStates.ENDED}</Badge>
+      <div className="space-y-4">
+        <ActivityModeTabs current="activities" locale={locale} />
+        <div className="overflow-hidden rounded-[2rem] border border-[#ded2bc] bg-[radial-gradient(circle_at_top_right,_rgba(130,152,173,0.12),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(212,183,126,0.18),_transparent_32%),linear-gradient(135deg,rgba(255,250,244,0.98),rgba(244,236,221,0.95))] px-5 py-7 text-center shadow-[0_12px_28px_rgba(99,78,48,0.06)] sm:px-8 sm:py-9">
+          <div className="mx-auto max-w-3xl">
+            <h1 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
+              {t.activities.title}
+            </h1>
+            <p className="mt-3 text-base leading-7 text-zinc-600 sm:text-lg">
+              {t.activities.description}
+            </p>
+          </div>
+          <div className="mt-5 hidden flex-wrap justify-center gap-2 sm:flex">
+            <Badge>{t.activityLabels.statuses.OPEN}</Badge>
+            <Badge>{t.activityLabels.statuses.FULL}</Badge>
+            <Badge>{t.activityLabels.timeStates.ONGOING}</Badge>
+            <Badge>{t.activityLabels.timeStates.UPCOMING}</Badge>
+            <Badge>{t.activityLabels.timeStates.ENDED}</Badge>
+          </div>
         </div>
       </div>
 
@@ -191,7 +195,7 @@ export default async function ActivitiesPage({
         />
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {activitiesResult.list.activities.map((activity) => (
               <ActivityCard
                 key={activity.id}

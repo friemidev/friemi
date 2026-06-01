@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Next Fun Club",
+  title: "Next Fun",
   description:
-    "Next Fun Club helps overseas Chinese-speaking users discover, create, and join local activities.",
+    "Next Fun helps overseas Chinese-speaking users discover, create, and join local activities.",
   icons: {
     icon: "/logo-icon.png",
     apple: "/logo-icon.png",

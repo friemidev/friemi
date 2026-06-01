@@ -4,7 +4,7 @@ import {
   Bell,
   CalendarPlus,
   CircleUserRound,
-  Compass,
+  Home,
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
@@ -45,7 +45,7 @@ export function AppHeader({
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
             <Image
               src="/logo-icon.png"
-              alt="Next Fun Club"
+              alt="Next Fun"
               width={40}
               height={40}
               className="h-full w-full object-cover"
@@ -53,17 +53,17 @@ export function AppHeader({
             />
           </span>
           <span className="hidden whitespace-nowrap text-sm font-semibold tracking-normal sm:inline">
-            Next Fun Club
+            Next Fun
           </span>
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
           <Link
             className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
-            href={withLocale(locale, "/activities")}
+            href={withLocale(locale, "/")}
           >
-            <Compass className="h-4 w-4" />
-            {t.nav.activities}
+            <Home className="h-4 w-4" />
+            {t.nav.home}
           </Link>
           <Link
             className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70 lg:hidden"
@@ -100,7 +100,7 @@ export function AppHeader({
             href={withLocale(locale, "/activities/new")}
             className="hidden lg:block"
           >
-            <Button className="gap-2">
+            <Button className="gap-2 border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
               <CalendarPlus className="h-4 w-4" />
               {t.nav.newActivity}
             </Button>

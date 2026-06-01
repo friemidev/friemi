@@ -133,7 +133,7 @@ export function ProfileDashboardView({
               />
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {dashboard.createdActivities.map((activity) => (
                     <ActivityCard
                       key={activity.id}
@@ -201,7 +201,7 @@ export function ProfileDashboardView({
                   />
                 ) : (
                   <>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                       {dashboard.favoriteActivities.map((favorite) => (
                         <ActivityCard
                           key={favorite.id}
