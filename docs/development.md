@@ -67,6 +67,12 @@ npm run db:seed
 npm run db:migrate
 ```
 
+Preview / Production 环境隔离、baseline migration 和生产库同步流程见：
+
+```text
+docs/database-environment-workflow.md
+```
+
 ## 活动链接导入
 
 功能说明、支持站点、fixture 贡献方式与测试命令见 [activity-link-import.md](./activity-link-import.md)。
