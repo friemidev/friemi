@@ -1,18 +1,32 @@
 import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 
 export const activityFilterTypes = ["LOCAL", "TRIP"] as const;
-export const activitySortOptions = ["recommended", "soonest", "latest"] as const;
+export const activitySortOptions = [
+  "recommended",
+  "soonest",
+  "latest",
+  "recentlyAdded",
+] as const;
 export const activityTimeStates = ["ONGOING", "UPCOMING", "ENDED"] as const;
+export const activityRelationFilters = [
+  "ALL",
+  "FRIEND_HOSTED",
+  "FRIEND_JOINED",
+  "MINE",
+] as const;
 
 export type ActivityFilterType = (typeof activityFilterTypes)[number];
 export type ActivitySortOption = (typeof activitySortOptions)[number];
 export type ActivityTimeState = (typeof activityTimeStates)[number];
+export type ActivityRelationFilter =
+  (typeof activityRelationFilters)[number];
 
 export type ActivityFilters = {
   category?: ActivityCategory;
   city?: string;
   keyword?: string;
   page: number;
+  relation: ActivityRelationFilter;
   sort: ActivitySortOption;
   timeState?: ActivityTimeState;
   type?: ActivityFilterType;
@@ -29,6 +43,7 @@ const activityFilterQueryKeys = [
   "city",
   "type",
   "time",
+  "relation",
   "sort",
   "page",
 ];
@@ -38,6 +53,7 @@ type ActivityFilterRawValues = {
   city?: unknown;
   keyword?: unknown;
   page?: unknown;
+  relation?: unknown;
   sort?: unknown;
   timeState?: unknown;
   type?: unknown;
@@ -105,6 +121,12 @@ function isActivityTimeState(value: string): value is ActivityTimeState {
   return activityTimeStates.some((timeState) => timeState === value);
 }
 
+function isActivityRelationFilter(
+  value: string,
+): value is ActivityRelationFilter {
+  return activityRelationFilters.some((relation) => relation === value);
+}
+
 function normalizePageParam(value: string | undefined) {
   const page = Number(value);
 
@@ -119,6 +141,7 @@ export function hasActiveActivityFilters(filters: {
   category?: unknown;
   city?: unknown;
   keyword?: unknown;
+  relation?: unknown;
   timeState?: unknown;
   type?: unknown;
 }) {
@@ -126,6 +149,7 @@ export function hasActiveActivityFilters(filters: {
     filters.keyword ||
       filters.category ||
       filters.city ||
+      (filters.relation && filters.relation !== "ALL") ||
       filters.type ||
       filters.timeState,
   );
@@ -149,6 +173,7 @@ export function normalizeActivityFilters(
     city: getSingleParam(searchParams, "city"),
     keyword: getSingleParam(searchParams, "q"),
     page: getSingleParam(searchParams, "page"),
+    relation: getSingleParam(searchParams, "relation"),
     sort: getSingleParam(searchParams, "sort"),
     timeState: getSingleParam(searchParams, "time"),
     type: getSingleParam(searchParams, "type"),
@@ -162,6 +187,7 @@ export function normalizeActivityFilterValues(
   const city = normalizeTextParam(getStringValue(values.city), 60);
   const keyword = normalizeTextParam(getStringValue(values.keyword), 80);
   const page = getStringValue(values.page);
+  const relation = getStringValue(values.relation);
   const type = getStringValue(values.type);
   const timeState = getStringValue(values.timeState);
   const sort = getStringValue(values.sort);
@@ -169,6 +195,8 @@ export function normalizeActivityFilterValues(
     category: category && isActivityCategory(category) ? category : undefined,
     city,
     keyword,
+    relation:
+      relation && isActivityRelationFilter(relation) ? relation : "ALL",
     timeState:
       timeState && isActivityTimeState(timeState) ? timeState : undefined,
     type: type && isActivityFilterType(type) ? type : undefined,
@@ -192,6 +220,7 @@ export function normalizeActivityFilterFormData(
     city: formData.get("city"),
     keyword: formData.get("q"),
     page: formData.get("page"),
+    relation: formData.get("relation"),
     sort: formData.get("sort"),
     timeState: formData.get("time"),
     type: formData.get("type"),
@@ -206,6 +235,7 @@ export function getActivityFilterQueryString(filters: ActivityFilters) {
   if (filters.city) query.set("city", filters.city);
   if (filters.type) query.set("type", filters.type);
   if (filters.timeState) query.set("time", filters.timeState);
+  if (filters.relation !== "ALL") query.set("relation", filters.relation);
   if (filters.sort !== getDefaultActivitySort(filters)) {
     query.set("sort", filters.sort);
   }
