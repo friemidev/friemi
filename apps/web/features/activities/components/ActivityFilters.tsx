@@ -16,6 +16,7 @@ import { withLocale } from "@/lib/routes";
 import {
   activityCategoryOptions,
   activityFilterTypes,
+  activityRelationFilters,
   activityTimeStates,
   getActivityFilterHref,
   getDefaultActivitySort,
@@ -96,6 +97,19 @@ export function ActivityFilters({
           },
         ]
       : []),
+    ...(filters.relation !== "ALL"
+      ? [
+          {
+            href: buildFilterHref({ relation: "ALL" }),
+            label:
+              filters.relation === "FRIEND_HOSTED"
+                ? t.activityFilters.relationFriendHosted
+                : filters.relation === "FRIEND_JOINED"
+                  ? t.activityFilters.relationFriendJoined
+                  : t.activityFilters.relationMine,
+          },
+        ]
+      : []),
     ...(filters.type
       ? [
           {
@@ -119,9 +133,11 @@ export function ActivityFilters({
             label:
               filters.sort === "latest"
                 ? t.activityFilters.sortLatest
+                : filters.sort === "recentlyAdded"
+                  ? t.activityFilters.sortRecentlyAdded
                 : filters.sort === "recommended"
                   ? t.activityFilters.sortRecommended
-                : t.activityFilters.sortSoonest,
+                  : t.activityFilters.sortSoonest,
           },
         ]
       : []),
@@ -191,6 +207,27 @@ export function ActivityFilters({
         </label>
 
         <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
+          {t.activityFilters.relationLabel}
+          <select
+            className={selectClassName}
+            defaultValue={filters.relation}
+            name="relation"
+          >
+            {activityRelationFilters.map((relation) => (
+              <option key={relation} value={relation}>
+                {relation === "ALL"
+                  ? t.activityFilters.allRelations
+                  : relation === "FRIEND_HOSTED"
+                    ? t.activityFilters.relationFriendHosted
+                    : relation === "FRIEND_JOINED"
+                      ? t.activityFilters.relationFriendJoined
+                      : t.activityFilters.relationMine}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
           {t.activityFilters.typeLabel}
           <select
             className={selectClassName}
@@ -234,6 +271,9 @@ export function ActivityFilters({
             </option>
             <option value="soonest">{t.activityFilters.sortSoonest}</option>
             <option value="latest">{t.activityFilters.sortLatest}</option>
+            <option value="recentlyAdded">
+              {t.activityFilters.sortRecentlyAdded}
+            </option>
           </select>
         </label>
 
@@ -289,7 +329,7 @@ export function ActivityFilters({
       </details>
 
       <div className="hidden md:block">
-        <FilterForm className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(180px,1.35fr)_repeat(5,minmax(116px,1fr))_auto_auto]" />
+        <FilterForm className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(180px,1.35fr)_repeat(6,minmax(116px,1fr))_auto_auto]" />
       </div>
 
       {activeFilterChips.length > 0 ? (
