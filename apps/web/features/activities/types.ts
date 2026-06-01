@@ -25,6 +25,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   longitude: number | null;
   merchant: ActivityMerchantViewModel | null;
   friendSignal?: ActivityFriendSignalViewModel | null;
+  isFavorited?: boolean;
 };
 
 export type ActivityMerchantViewModel = {

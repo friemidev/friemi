@@ -196,7 +196,9 @@ export default async function ActivitiesPage({
               <ActivityCard
                 key={activity.id}
                 activity={activity}
+                isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
+                showFavoriteButton
               />
             ))}
           </div>

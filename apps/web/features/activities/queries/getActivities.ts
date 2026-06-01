@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
+import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { Prisma } from "@prisma/client";
 import type {
   ActivityStatus,
@@ -327,8 +328,13 @@ export async function getActivities(
     select: activityCardSelect,
   });
 
-  return attachActivityFriendSignals(
+  const activityViewModels = await attachActivityFriendSignals(
     activities.map(getActivityCardViewModel),
+    options.viewerProfileId,
+  );
+
+  return attachActivityFavoriteStates(
+    activityViewModels,
     options.viewerProfileId,
   );
 }
@@ -420,8 +426,11 @@ async function getOrderedActivityList(
   });
 
   return {
-    activities: await attachActivityFriendSignals(
-      activities.map(getActivityCardViewModel),
+    activities: await attachActivityFavoriteStates(
+      await attachActivityFriendSignals(
+        activities.map(getActivityCardViewModel),
+        viewerProfileId,
+      ),
       viewerProfileId,
     ),
     page,
@@ -470,13 +479,16 @@ async function getRecommendedActivityList(
   );
 
   return {
-    activities: await attachActivityFriendSignals(
-      activityIds
-        .map((activityId) => activityById.get(activityId))
-        .filter((activity): activity is ActivityQueryResult =>
-          Boolean(activity),
-        )
-        .map(getActivityCardViewModel),
+    activities: await attachActivityFavoriteStates(
+      await attachActivityFriendSignals(
+        activityIds
+          .map((activityId) => activityById.get(activityId))
+          .filter((activity): activity is ActivityQueryResult =>
+            Boolean(activity),
+          )
+          .map(getActivityCardViewModel),
+        viewerProfileId,
+      ),
       viewerProfileId,
     ),
     page,
