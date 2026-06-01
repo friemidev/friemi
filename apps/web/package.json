@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:copy-public-content": "tsx prisma/copy-public-content.ts"
   },
   "dependencies": {
     "@chill-club/scraper-core": "file:../../packages/scraper-core",

@@ -67,6 +67,12 @@ npm run db:seed
 npm run db:migrate
 ```
 
+Preview / Production 环境隔离、baseline migration 和生产库同步流程见：
+
+```text
+docs/database-environment-workflow.md
+```
+
 ## 代码风格
 
 - TypeScript strict mode
