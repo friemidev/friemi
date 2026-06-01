@@ -13,6 +13,7 @@ export const activityCategories = {
   TRAVEL: "旅行",
   FOOD: "饭局",
   EXHIBITION: "展览",
+  THEATER: "戏剧",
   OTHER: "其他"
 } as const;
 

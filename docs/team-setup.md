@@ -152,6 +152,12 @@ https://your-project.vercel.app/zh-CN
 
 项目使用 PostgreSQL + Prisma。
 
+Preview / Production 数据库环境隔离和迁移流程请先阅读：
+
+```text
+docs/database-environment-workflow.md
+```
+
 ### 方案 A：使用团队共享远程数据库
 
 负责人提供一个开发数据库连接，例如 Neon 或 Supabase：
