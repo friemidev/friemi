@@ -18,10 +18,12 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
     createdActivityCount: 0,
     participationCount: 0,
+    favoriteActivityCount: 0,
     followersCount: 0,
     followingCount: 0,
     createdActivities: [],
     participations: [],
+    favoriteActivities: [],
     followers: [],
     following: [],
   };

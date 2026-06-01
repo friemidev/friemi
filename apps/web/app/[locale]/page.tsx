@@ -130,7 +130,9 @@ export default async function HomePage({ params }: HomePageProps) {
               <ActivityCard
                 key={activity.id}
                 activity={activity}
+                isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
+                showFavoriteButton
               />
             ))}
           </div>

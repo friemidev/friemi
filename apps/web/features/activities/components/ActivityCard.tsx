@@ -15,10 +15,13 @@ import {
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ActivityStatusBadge } from "./ActivityStatusBadge";
+import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
 
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
+  isAuthenticated?: boolean;
   locale: string;
+  showFavoriteButton?: boolean;
 };
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
@@ -27,7 +30,12 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   sky: "bg-sky",
 };
 
-export function ActivityCard({ activity, locale }: ActivityCardProps) {
+export function ActivityCard({
+  activity,
+  isAuthenticated = false,
+  locale,
+  showFavoriteButton = false,
+}: ActivityCardProps) {
   const t = getCopy(locale);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
@@ -39,11 +47,24 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
   );
 
   return (
-    <Link
-      href={withLocale(locale, `/activities/${activity.id}`)}
-      aria-label={activityLabel}
-    >
-      <Card className="flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+    <Card className="relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+      {showFavoriteButton ? (
+        <div className="absolute right-3 top-3 z-20">
+          <ActivityFavoriteButton
+            activityId={activity.id}
+            className="h-9 w-9"
+            isAuthenticated={isAuthenticated}
+            isFavorited={Boolean(activity.isFavorited)}
+            locale={locale}
+            redirectPath="/activities"
+          />
+        </div>
+      ) : null}
+      <Link
+        className="flex h-full flex-col"
+        href={withLocale(locale, `/activities/${activity.id}`)}
+        aria-label={activityLabel}
+      >
         <div
           className={cn(
             "relative flex h-28 items-end justify-between gap-2 overflow-hidden p-3 sm:h-36 sm:p-4",
@@ -127,7 +148,7 @@ export function ActivityCard({ activity, locale }: ActivityCardProps) {
             <p className="text-sm font-medium text-ink">{activity.priceText}</p>
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

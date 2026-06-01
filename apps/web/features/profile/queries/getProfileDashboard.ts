@@ -32,6 +32,18 @@ type ProfileParticipationQueryResult = Prisma.ActivityParticipantGetPayload<{
   select: typeof profileParticipationSelect;
 }>;
 
+const profileFavoriteSelect = {
+  id: true,
+  createdAt: true,
+  activity: {
+    select: activityCardSelect,
+  },
+} satisfies Prisma.ActivityFavoriteSelect;
+
+type ProfileFavoriteQueryResult = Prisma.ActivityFavoriteGetPayload<{
+  select: typeof profileFavoriteSelect;
+}>;
+
 export type ProfileParticipationViewModel = {
   id: string;
   status: ParticipantStatus;
@@ -43,12 +55,20 @@ export type ProfileParticipationViewModel = {
 export type ProfileDashboardViewModel = {
   createdActivityCount: number;
   participationCount: number;
+  favoriteActivityCount: number;
   followersCount: number;
   followingCount: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
+  favoriteActivities: ProfileFavoriteActivityViewModel[];
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
+};
+
+export type ProfileFavoriteActivityViewModel = {
+  id: string;
+  createdAt: string;
+  activity: ActivityCardViewModel;
 };
 
 export type PublicProfileViewModel = {
@@ -100,6 +120,16 @@ function mapParticipation(
   };
 }
 
+function mapFavorite(
+  favorite: ProfileFavoriteQueryResult,
+): ProfileFavoriteActivityViewModel {
+  return {
+    id: favorite.id,
+    createdAt: favorite.createdAt.toISOString(),
+    activity: getActivityCardViewModel(favorite.activity),
+  };
+}
+
 function mapFollowUser(user: {
   id: string;
   nickname: string;
@@ -120,10 +150,12 @@ export async function getProfileDashboard(
   const [
     createdActivityCount,
     participationCount,
+    favoriteActivityCount,
     followersCount,
     followingCount,
     createdActivities,
     participations,
+    favoriteActivities,
     followers,
     following,
   ] = await Promise.all([
@@ -133,6 +165,11 @@ export async function getProfileDashboard(
       },
     }),
     prisma.activityParticipant.count({
+      where: {
+        userProfileId: profileId,
+      },
+    }),
+    prisma.activityFavorite.count({
       where: {
         userProfileId: profileId,
       },
@@ -162,6 +199,14 @@ export async function getProfileDashboard(
       orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
       take: profileActivityListLimit,
       select: profileParticipationSelect,
+    }),
+    prisma.activityFavorite.findMany({
+      where: {
+        userProfileId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileFavoriteSelect,
     }),
     prisma.userFollow.findMany({
       where: {
@@ -202,10 +247,12 @@ export async function getProfileDashboard(
   return {
     createdActivityCount,
     participationCount,
+    favoriteActivityCount,
     followersCount,
     followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: participations.map(mapParticipation),
+    favoriteActivities: favoriteActivities.map(mapFavorite),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
   };
@@ -284,10 +331,12 @@ export async function getPublicProfileDashboard(
   return {
     createdActivityCount,
     participationCount: 0,
+    favoriteActivityCount: 0,
     followersCount,
     followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: [],
+    favoriteActivities: [],
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
   };

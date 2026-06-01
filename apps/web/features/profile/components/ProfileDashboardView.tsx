@@ -40,6 +40,10 @@ export function ProfileDashboardView({
     dashboard.participationCount - dashboard.participations.length,
     0,
   );
+  const hiddenFavoriteActivityCount = Math.max(
+    dashboard.favoriteActivityCount - dashboard.favoriteActivities.length,
+    0,
+  );
   const showPrivateParticipation = isSelf;
 
   return (
@@ -151,38 +155,73 @@ export function ProfileDashboardView({
           </section>
 
           {showPrivateParticipation ? (
-            <section className="space-y-4">
-              <h2 className="text-xl font-semibold text-ink">
-                {t.profile.participationTitle}
-              </h2>
+            <>
+              <section className="space-y-4">
+                <h2 className="text-xl font-semibold text-ink">
+                  {t.profile.participationTitle}
+                </h2>
 
-              {dashboard.participations.length === 0 ? (
-                <EmptyState
-                  title={t.profile.participationEmptyTitle}
-                  description={t.profile.participationEmptyDescription}
-                />
-              ) : (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {dashboard.participations.map((participation) => (
-                      <ProfileParticipationCard
-                        key={participation.id}
-                        participation={participation}
-                        locale={locale}
-                      />
-                    ))}
-                  </div>
-                  {hiddenParticipationCount > 0 ? (
-                    <p className="text-sm text-zinc-500">
-                      {t.profile.hiddenParticipation(
-                        profileActivityListLimit,
-                        hiddenParticipationCount,
-                      )}
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </section>
+                {dashboard.participations.length === 0 ? (
+                  <EmptyState
+                    title={t.profile.participationEmptyTitle}
+                    description={t.profile.participationEmptyDescription}
+                  />
+                ) : (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {dashboard.participations.map((participation) => (
+                        <ProfileParticipationCard
+                          key={participation.id}
+                          participation={participation}
+                          locale={locale}
+                        />
+                      ))}
+                    </div>
+                    {hiddenParticipationCount > 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        {t.profile.hiddenParticipation(
+                          profileActivityListLimit,
+                          hiddenParticipationCount,
+                        )}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </section>
+
+              <section className="space-y-4">
+                <h2 className="text-xl font-semibold text-ink">
+                  {t.profile.favoriteTitle}
+                </h2>
+
+                {dashboard.favoriteActivities.length === 0 ? (
+                  <EmptyState
+                    title={t.profile.favoriteEmptyTitle}
+                    description={t.profile.favoriteEmptyDescription}
+                  />
+                ) : (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {dashboard.favoriteActivities.map((favorite) => (
+                        <ActivityCard
+                          key={favorite.id}
+                          activity={favorite.activity}
+                          locale={locale}
+                        />
+                      ))}
+                    </div>
+                    {hiddenFavoriteActivityCount > 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        {t.profile.hiddenFavorite(
+                          profileActivityListLimit,
+                          hiddenFavoriteActivityCount,
+                        )}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </section>
+            </>
           ) : null}
         </>
       )}
