@@ -10,6 +10,6 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test src/geo.test.ts src/link-import.test.ts src/link-import-supported-sites.test.ts"
   }
 }
