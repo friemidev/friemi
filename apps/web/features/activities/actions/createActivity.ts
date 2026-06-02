@@ -14,15 +14,20 @@ import {
   type ActivityFormState,
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
+import { getPublicEventCopy } from "@/features/public-events/copy";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
+import type { ActivityStatus } from "@prisma/client";
 
 export type CreateActivityState = ActivityFormState;
+
+const activeTeamStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
 
 export async function createActivityAction(
   previousState: CreateActivityState,
   formData: FormData,
 ): Promise<CreateActivityState> {
   const locale = getString(formData, "locale") || "zh-CN";
+  const publicEventCopy = getPublicEventCopy(locale);
   const rawInput = getActivityFormValues(formData);
 
   const result = createActivitySchema.safeParse(rawInput);
@@ -84,6 +89,71 @@ export async function createActivityAction(
   let activityId: string;
   const profile = await ensureCurrentUserProfile(locale);
   const description = formatStoredDescription(result.data);
+  const publicEventId = result.data.publicEventId ?? null;
+  const publicEvent = publicEventId
+    ? await prisma.publicEvent.findFirst({
+        where: {
+          id: publicEventId,
+          visibility: "PUBLIC",
+        },
+        select: {
+          id: true,
+          status: true,
+          startAt: true,
+          endAt: true,
+        },
+      })
+    : null;
+
+  if (publicEventId && !publicEvent) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      publicEventCopy.eventUnavailableError,
+    );
+  }
+
+  if (publicEvent) {
+    if (publicEvent.status === "CANCELLED") {
+      return buildActivityErrorState(
+        previousState,
+        rawInput,
+        publicEventCopy.eventCancelledError,
+      );
+    }
+
+    const publicEventEndBoundary = publicEvent.endAt ?? publicEvent.startAt;
+
+    if (publicEventEndBoundary <= new Date()) {
+      return buildActivityErrorState(
+        previousState,
+        rawInput,
+        publicEventCopy.eventEndedError,
+      );
+    }
+
+    const existingTeam = await prisma.activity.findFirst({
+      where: {
+        organizerId: profile.id,
+        publicEventId: publicEvent.id,
+        status: {
+          in: activeTeamStatuses,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingTeam) {
+      return buildActivityErrorState(
+        previousState,
+        rawInput,
+        publicEventCopy.duplicateTeamError,
+      );
+    }
+  }
+
   const importSourceUrl = result.data.importSourceUrl
     ? normalizeActivitySourceUrl(result.data.importSourceUrl)
     : null;
@@ -114,6 +184,7 @@ export async function createActivityAction(
         priceText: result.data.priceText,
         source: importSourceHost,
         sourceUrl: importSourceUrl,
+        publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
         visibility: "PUBLIC",
         organizerId: profile.id,

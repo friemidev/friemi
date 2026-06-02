@@ -84,6 +84,12 @@ export const createActivitySchema = z
     requiresApproval: z.coerce.boolean().default(false),
     priceType: z.enum(priceTypeValues),
     priceText: nonEmptyString.max(120, "费用说明最多 120 个字"),
+    publicEventId: z
+      .string()
+      .trim()
+      .max(80, "活动来源无效")
+      .transform((value) => (value.length > 0 ? value : null))
+      .optional(),
     importSourceUrl: z
       .string()
       .trim()

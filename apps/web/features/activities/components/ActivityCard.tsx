@@ -1,7 +1,13 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
-import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { CalendarDays, MapPin } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@chill-club/ui";
+import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
@@ -27,6 +33,48 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   sky: "bg-sky",
 };
 
+function getCardKindLabel(isActivityInfo: boolean, locale: string) {
+  if (locale === "fr") {
+    return isActivityInfo ? "Événement" : "Équipe";
+  }
+
+  if (locale === "en") {
+    return isActivityInfo ? "Event" : "Team";
+  }
+
+  return isActivityInfo ? "活动" : "车队";
+}
+
+function getInterestedFavoriteLabels(locale: string) {
+  if (locale === "fr") {
+    return {
+      favorite: "Intéressé",
+      unfavorite: "Intéressé",
+      favoriting: "Ajout...",
+      unfavoriting: "Retrait...",
+      signInToFavorite: "Se connecter pour marquer l’intérêt",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      favorite: "Interested",
+      unfavorite: "Interested",
+      favoriting: "Saving...",
+      unfavoriting: "Removing...",
+      signInToFavorite: "Sign in to mark interested",
+    };
+  }
+
+  return {
+    favorite: "感兴趣",
+    unfavorite: "已感兴趣",
+    favoriting: "标记中...",
+    unfavoriting: "取消中...",
+    signInToFavorite: "登录后标记感兴趣",
+  };
+}
+
 export function ActivityCard({
   activity,
   isAuthenticated = false,
@@ -34,21 +82,41 @@ export function ActivityCard({
   showFavoriteButton = false,
 }: ActivityCardProps) {
   const t = getCopy(locale);
+  const isActivityInfo = Boolean(
+    activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
+  );
   const displayStatus = getActivityDisplayStatus(activity);
   const timeState = getActivityTimeState(activity);
-  const shouldShowCapacity = activity.type !== "PUBLIC_EVENT";
-  const primaryActionLabel =
-    activity.type === "PUBLIC_EVENT"
-      ? locale === "fr"
-        ? "Former une équipe"
-        : locale === "en"
-          ? "Team up now"
+  const activityInfoHref = activity.publicEventId
+    ? `/public-events/${activity.publicEventId}`
+    : `/activities/${activity.id}`;
+  const activityInfoTeamHref = activity.publicEventId
+    ? `/public-events/${activity.publicEventId}/teams/new`
+    : `/activities/${activity.id}/teams/new`;
+  const cardHref = isActivityInfo
+    ? withLocale(locale, activityInfoHref)
+    : withLocale(locale, `/activities/${activity.id}`);
+  const actionHref =
+    isActivityInfo && displayStatus !== "ENDED" && displayStatus !== "CANCELLED"
+      ? withLocale(locale, activityInfoTeamHref)
+      : cardHref;
+  const primaryActionLabel = isActivityInfo
+    ? locale === "fr"
+      ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
+        ? "Voir l'événement"
+        : "Former une équipe"
+      : locale === "en"
+        ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
+          ? "View event"
+          : "Team up now"
+        : displayStatus === "ENDED" || displayStatus === "CANCELLED"
+          ? "查看活动"
           : "立刻组队"
-      : locale === "fr"
-        ? "Rejoindre maintenant"
-        : locale === "en"
-          ? "Join now"
-          : "立刻报名";
+    : locale === "fr"
+      ? "Rejoindre maintenant"
+      : locale === "en"
+        ? "Join now"
+        : "立刻报名";
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -57,7 +125,7 @@ export function ActivityCard({
 
   return (
     <Card className="relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
-      {showFavoriteButton ? (
+      {showFavoriteButton && !isActivityInfo ? (
         <div className="absolute right-3 top-3 z-20">
           <ActivityFavoriteButton
             activityId={activity.id}
@@ -66,12 +134,13 @@ export function ActivityCard({
             isFavorited={Boolean(activity.isFavorited)}
             locale={locale}
             redirectPath="/activities"
+            labelOverrides={getInterestedFavoriteLabels(locale)}
           />
         </div>
       ) : null}
       <Link
         className="flex flex-1 flex-col"
-        href={withLocale(locale, `/activities/${activity.id}`)}
+        href={cardHref}
         aria-label={activityLabel}
       >
         <div
@@ -86,11 +155,13 @@ export function ActivityCard({
               {getCategoryLabel(activity.category, locale)}
             </span>
             <span className="rounded-md bg-white/75 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700">
-              {getTypeLabel(activity.type, locale)}
+              {getCardKindLabel(isActivityInfo, locale)}
             </span>
           </div>
           <div className="relative flex shrink-0 flex-col items-end gap-2">
-            <ActivityStatusBadge status={displayStatus} locale={locale} />
+            {!isActivityInfo ? (
+              <ActivityStatusBadge status={displayStatus} locale={locale} />
+            ) : null}
             <span className="rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700">
               {t.activityLabels.timeStates[timeState]}
             </span>
@@ -114,32 +185,10 @@ export function ActivityCard({
               <span className="min-w-0 line-clamp-1">{activity.city}</span>
             </span>
           </div>
-          <div className="mt-auto border-t border-black/5 pt-3">
-            <div className="flex items-center justify-between gap-3 text-sm text-zinc-600">
-              {activity.friendSignal && activity.friendSignal.count > 0 ? (
-                <div className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-semibold text-moss">
-                  <UsersRound className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate whitespace-nowrap">
-                    {t.activityFriendSignal.cardSummary(
-                      activity.friendSignal.count,
-                    )}
-                  </span>
-                </div>
-              ) : (
-                <span />
-              )}
-              {shouldShowCapacity ? (
-                <span className="flex shrink-0 items-center gap-2 font-medium text-ink">
-                  <UsersRound className="h-4 w-4 shrink-0 text-zinc-500" />
-                  {activity.participantCount}/{activity.capacity} {t.common.people}
-                </span>
-              ) : null}
-            </div>
-          </div>
         </CardContent>
       </Link>
       <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
-        <Link href={withLocale(locale, `/activities/${activity.id}`)}>
+        <Link href={actionHref}>
           <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
             {primaryActionLabel}
           </Button>

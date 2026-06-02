@@ -50,6 +50,11 @@ enum ActivityVisibility {
   PRIVATE
 }
 
+enum PublicEventStatus {
+  SCHEDULED
+  CANCELLED
+}
+
 enum ParticipantStatus {
   JOINED
   PENDING
@@ -156,6 +161,8 @@ model Activity {
   visibility       ActivityVisibility    @default(PUBLIC)
   organizerId      String
   organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  publicEventId    String?
+  publicEvent      PublicEvent?          @relation(fields: [publicEventId], references: [id], onDelete: SetNull)
   merchantId       String?
   merchant         Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   participants     ActivityParticipant[]
@@ -169,8 +176,46 @@ model Activity {
   @@index([city, startAt])
   @@index([city, latitude, longitude])
   @@index([organizerId])
+  @@index([publicEventId, status, startAt])
   @@index([merchantId])
   @@index([source])
+  @@index([externalSource, externalId])
+  @@index([externalUrl])
+  @@index([importedAt])
+}
+
+model PublicEvent {
+  id             String             @id @default(cuid())
+  title          String
+  description    String
+  category       ActivityCategory   @default(OTHER)
+  city           String             @default("Paris")
+  address        String
+  latitude       Float?
+  longitude      Float?
+  startAt        DateTime
+  endAt          DateTime?
+  priceType      PriceType          @default(FREE)
+  priceText      String?
+  coverImageUrl  String?
+  officialUrl    String?
+  status         PublicEventStatus  @default(SCHEDULED)
+  visibility     ActivityVisibility @default(PUBLIC)
+  source         String?
+  sourceUrl      String?            @unique
+  externalSource String?
+  externalId     String?
+  externalUrl    String?
+  sourcePayload  Json?
+  importedAt     DateTime?
+  lastSyncedAt   DateTime?
+  teams          Activity[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([city, startAt])
+  @@index([status, startAt])
+  @@index([visibility, startAt])
   @@index([externalSource, externalId])
   @@index([externalUrl])
   @@index([importedAt])

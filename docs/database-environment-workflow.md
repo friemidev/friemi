@@ -12,11 +12,11 @@
 
 ## 1. 环境划分
 
-| 环境 | Vercel Environment | Supabase | Clerk | 用途 |
-| --- | --- | --- | --- | --- |
-| Local | 本地 `.env` / `.env.local` | Preview Supabase | Clerk test/dev keys | 本地开发 |
-| Preview | Vercel Preview | Preview Supabase | Clerk test/dev keys | PR、dev 分支测试 |
-| Production | Vercel Production | Production Supabase | Clerk production keys | 真实用户 |
+| 环境       | Vercel Environment         | Supabase            | Clerk                 | 用途             |
+| ---------- | -------------------------- | ------------------- | --------------------- | ---------------- |
+| Local      | 本地 `.env` / `.env.local` | Preview Supabase    | Clerk test/dev keys   | 本地开发         |
+| Preview    | Vercel Preview             | Preview Supabase    | Clerk test/dev keys   | PR、dev 分支测试 |
+| Production | Vercel Production          | Production Supabase | Clerk production keys | 真实用户         |
 
 ## 2. Vercel 环境变量
 
@@ -402,6 +402,78 @@ npm run db:copy-public-content -- --write --include-non-public
 ```
 
 默认不建议这样做。
+
+### 9.1 迁移旧导入活动到 `PublicEvent`
+
+早期导入脚本可能把 API / 爬虫活动直接写入了 `Activity` 表。它们不是用户组队，不应该显示报名人数、名额和报名按钮。
+
+项目提供一次性迁移脚本：
+
+```text
+apps/web/prisma/migrate-legacy-activity-info-to-public-events.ts
+```
+
+脚本规则：
+
+- 默认 dry-run，不写数据库。
+- `--write` 才会创建或更新 `PublicEvent`。
+- 正式写入时，默认只创建或更新 `PublicEvent`，不删除也不隐藏旧 `Activity`。
+- 前端会把已知 API/爬虫来源的旧 `Activity` 兼容渲染为活动信息位，不再按组队显示报名人数和报名按钮。
+- 已经有人报名或评论的旧 `Activity` 会跳过，避免把真实组队误迁移。
+- 只有 `source/sourceUrl`、没有强导入标记的记录默认跳过，需要确认后加 `--include-source-url-only`。
+
+Preview 先 dry-run：
+
+```bash
+cd ~/Bureau/nextfunclub
+
+npm run db:migrate-legacy-public-events
+```
+
+确认输出后，在 Preview 正式写入：
+
+```bash
+npm run db:migrate-legacy-public-events -- --write
+```
+
+如果迁移后确认需要隐藏旧 `Activity`，避免它们和 `PublicEvent` 重复展示，才显式追加：
+
+```bash
+npm run db:migrate-legacy-public-events -- --write --hide-legacy-activities
+```
+
+如果 dry-run 输出里 `sourceUrlOnlyRequiresFlag` 很多，且确认这些记录确实是旧导入活动信息，再执行：
+
+```bash
+npm run db:migrate-legacy-public-events -- --write --include-source-url-only
+```
+
+Production 执行前，必须临时切换到 Production 数据库连接：
+
+```bash
+cd ~/Bureau/nextfunclub/apps/web
+
+export DATABASE_URL="production-pooler-url"
+export DIRECT_URL="production-direct-url"
+
+npm run db:migrate-legacy-public-events
+npm run db:migrate-legacy-public-events -- --write
+
+unset DATABASE_URL
+unset DIRECT_URL
+```
+
+如果需要迁移 `source/sourceUrl` 旧数据：
+
+```bash
+export DATABASE_URL="production-pooler-url"
+export DIRECT_URL="production-direct-url"
+
+npm run db:migrate-legacy-public-events -- --write --include-source-url-only
+
+unset DATABASE_URL
+unset DIRECT_URL
+```
 
 ## 10. Vercel 和第三方链接放在哪里
 

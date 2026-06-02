@@ -20,7 +20,8 @@
     "db:generate": "npm run db:generate --workspace=apps/web",
     "db:push": "npm run db:push --workspace=apps/web",
     "db:migrate": "npm run db:migrate --workspace=apps/web",
-    "db:seed": "npm run db:seed --workspace=apps/web"
+    "db:seed": "npm run db:seed --workspace=apps/web",
+    "db:migrate-legacy-public-events": "npm run db:migrate-legacy-public-events --workspace=apps/web"
   },
   "devDependencies": {
     "prettier": "^3.3.3",

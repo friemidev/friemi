@@ -7,12 +7,19 @@ import {
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
+  getPublicEventCardViewModel,
+  getUpcomingPublicEventWhere,
+  publicEventSelect,
+} from "@/features/public-events/queries/getPublicEvents";
+import type { PublicEventCardViewModel } from "@/features/public-events/types";
+import {
   getGlobalSearchTerms,
   normalizeGlobalSearchQuery,
 } from "../utils/searchQuery";
 import type { Prisma } from "@prisma/client";
 
 const activityResultLimit = 6;
+const publicEventResultLimit = 6;
 const merchantResultLimit = 5;
 
 export type GlobalSearchMerchantViewModel = {
@@ -30,6 +37,8 @@ export type GlobalSearchResults = {
   query: string;
   activities: ActivityCardViewModel[];
   activityCount: number;
+  publicEvents: PublicEventCardViewModel[];
+  publicEventCount: number;
   merchants: GlobalSearchMerchantViewModel[];
   merchantCount: number;
 };
@@ -45,6 +54,8 @@ export async function getGlobalSearchResults(
       query,
       activities: [],
       activityCount: 0,
+      publicEvents: [],
+      publicEventCount: 0,
       merchants: [],
       merchantCount: 0,
     };
@@ -77,6 +88,21 @@ export async function getGlobalSearchResults(
   const endedActivityResultWhere = {
     AND: [searchableActivityWhere, activitySearchWhere, endedActivityWhere],
   };
+  const publicEventSearchWhere = {
+    AND: [
+      getUpcomingPublicEventWhere(now),
+      {
+        AND: terms.map((term) => ({
+          OR: [
+            { title: { contains: term, mode: "insensitive" as const } },
+            { description: { contains: term, mode: "insensitive" as const } },
+            { city: { contains: term, mode: "insensitive" as const } },
+            { address: { contains: term, mode: "insensitive" as const } },
+          ],
+        })),
+      },
+    ],
+  };
   const merchantSearchWhere = {
     isActive: true,
     AND: terms.map((term) => ({
@@ -88,45 +114,62 @@ export async function getGlobalSearchResults(
       ],
     })),
   };
-  const [activityCount, activities, merchantCount, merchants] =
-    await Promise.all([
-      prisma.activity.count({
-        where: activityWhere,
-      }),
-      getSearchActivityResults(
-        activeActivityResultWhere,
-        endedActivityResultWhere,
-      ),
-      prisma.merchant.count({
-        where: merchantSearchWhere,
-      }),
-      prisma.merchant.findMany({
-        where: merchantSearchWhere,
-        orderBy: [{ name: "asc" }, { id: "asc" }],
-        take: merchantResultLimit,
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          logoUrl: true,
-          city: true,
-          address: true,
-          _count: {
-            select: {
-              activities: {
-                where: activeActivityWhere,
-              },
+  const [
+    activityCount,
+    activities,
+    publicEventCount,
+    publicEvents,
+    merchantCount,
+    merchants,
+  ] = await Promise.all([
+    prisma.activity.count({
+      where: activityWhere,
+    }),
+    getSearchActivityResults(
+      activeActivityResultWhere,
+      endedActivityResultWhere,
+    ),
+    prisma.publicEvent.count({
+      where: publicEventSearchWhere,
+    }),
+    prisma.publicEvent.findMany({
+      where: publicEventSearchWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: publicEventResultLimit,
+      select: publicEventSelect,
+    }),
+    prisma.merchant.count({
+      where: merchantSearchWhere,
+    }),
+    prisma.merchant.findMany({
+      where: merchantSearchWhere,
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: merchantResultLimit,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        logoUrl: true,
+        city: true,
+        address: true,
+        _count: {
+          select: {
+            activities: {
+              where: activeActivityWhere,
             },
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return {
     query,
     activities: activities.map(getActivityCardViewModel),
     activityCount,
+    publicEvents: publicEvents.map(getPublicEventCardViewModel),
+    publicEventCount,
     merchants: merchants.map((merchant) => ({
       id: merchant.id,
       slug: merchant.slug,

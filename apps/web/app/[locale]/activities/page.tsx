@@ -158,8 +158,8 @@ export default async function ActivitiesPage({
             </p>
           </div>
           <div className="mt-5 hidden flex-wrap justify-center gap-2 sm:flex">
-            <Badge>{t.activityLabels.statuses.OPEN}</Badge>
-            <Badge>{t.activityLabels.statuses.FULL}</Badge>
+            <Badge>{t.globalSearch.publicEventsTitle}</Badge>
+            <Badge>{t.globalSearch.activitiesTitle}</Badge>
             <Badge>{t.activityLabels.timeStates.ONGOING}</Badge>
             <Badge>{t.activityLabels.timeStates.UPCOMING}</Badge>
             <Badge>{t.activityLabels.timeStates.ENDED}</Badge>

@@ -5,15 +5,19 @@ import {
   CheckCircle2,
   ClipboardList,
   ExternalLink,
+  Handshake,
+  Info,
   MapPin,
   Pencil,
   ShieldAlert,
   Route,
   Store,
+  Ticket,
   UserRound,
   UsersRound,
   WalletCards,
 } from "lucide-react";
+import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
@@ -45,6 +49,7 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
+import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -63,6 +68,7 @@ export default async function ActivityDetailPage({
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
   const t = getCopy(locale);
+  const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
   const [activity, viewerProfile] = await Promise.all([
     getActivityById(activityId),
@@ -71,6 +77,199 @@ export default async function ActivityDetailPage({
 
   if (!activity) {
     notFound();
+  }
+
+  if (activity.isActivityInfo) {
+    const activityCategoryLabel = getCategoryLabel(activity.category, locale);
+    const activityDateLabel = getActivityDateLabel(activity, locale);
+    const activityLocationLabel = getActivityLocationLabel(activity);
+    const activityPriceLabel = getActivityPriceLabel(activity, locale);
+    const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+    const isCancelled = activity.status === "CANCELLED";
+    const isEndedByTime = activityEndBoundary <= new Date();
+    const canCreateTeam = !isCancelled && !isEndedByTime;
+    const unavailableReason = isCancelled
+      ? publicEventCopy.eventCancelled
+      : publicEventCopy.eventEnded;
+    const unavailableDescription = isEndedByTime
+      ? publicEventCopy.teamSectionEndedDescription
+      : publicEventCopy.teamSectionUnavailableDescription;
+
+    return (
+      <PageContainer className="space-y-6">
+        <div className="relative flex min-h-52 items-end overflow-hidden rounded-lg bg-moss p-4 sm:p-5 md:min-h-72">
+          <ActivityCoverImage
+            src={activity.coverImageUrl}
+            overlayClassName="bg-black/35"
+          />
+          <div className="relative max-w-3xl space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
+                {activityCategoryLabel}
+              </span>
+              <span className="rounded-md bg-white/80 px-2.5 py-1 text-xs font-medium text-zinc-700">
+                {publicEventCopy.detailSource}
+              </span>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl md:text-5xl">
+              {activity.title}
+            </h1>
+          </div>
+        </div>
+
+        <section className="grid gap-4 rounded-[1.25rem] border border-[#d8ccb4] bg-white/85 p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#fff8ec] text-[#8a6a40] ring-1 ring-[#dccba8]">
+              {canCreateTeam ? (
+                <Handshake className="h-5 w-5" />
+              ) : (
+                <Info className="h-5 w-5" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-ink sm:text-lg">
+                {canCreateTeam
+                  ? publicEventCopy.actionTitle
+                  : unavailableReason}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-600">
+                {canCreateTeam
+                  ? publicEventCopy.actionDescription
+                  : unavailableDescription}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            {activity.officialUrl ? (
+              <a
+                className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                href={activity.officialUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {publicEventCopy.officialPage}
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : null}
+            {canCreateTeam ? (
+              <Link
+                href={withLocale(
+                  locale,
+                  `/activities/${activity.id}/teams/new`,
+                )}
+              >
+                <Button className="h-10 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
+                  {publicEventCopy.teamUp}
+                </Button>
+              </Link>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <article className="min-w-0 space-y-6 lg:order-1">
+            <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+              <h2 className="text-lg font-semibold text-ink">
+                {publicEventCopy.eventInfoTitle}
+              </h2>
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
+                {activity.description}
+              </p>
+            </div>
+
+            {activity.latitude !== null && activity.longitude !== null ? (
+              <ActivityMapPreview
+                address={activityLocationLabel}
+                latitude={activity.latitude}
+                longitude={activity.longitude}
+                openLabel={t.activityDetail.openMap}
+                title={t.activityDetail.locationMapTitle}
+              />
+            ) : null}
+          </article>
+
+          <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
+            <div className="mb-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+              <div className="flex items-center gap-2 font-semibold text-ink">
+                <Ticket className="h-4 w-4 text-[#8a6a40]" />
+                {publicEventCopy.publicEventRuleTitle}
+              </div>
+              <p className="mt-1 text-sm leading-6 text-zinc-600">
+                {publicEventCopy.publicEventRuleDescription}
+              </p>
+            </div>
+
+            <div className="space-y-4 text-sm text-zinc-700">
+              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">{activityDateLabel}</span>
+                <ActivityCopyButton
+                  failedLabel={t.activityShare.copyFailed}
+                  label={t.activityShare.copyTime}
+                  successLabel={t.activityShare.copied}
+                  value={activityDateLabel}
+                />
+              </p>
+              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">
+                  {activityLocationLabel}
+                </span>
+                <ActivityCopyButton
+                  failedLabel={t.activityShare.copyFailed}
+                  label={t.activityShare.copyLocation}
+                  successLabel={t.activityShare.copied}
+                  value={activityLocationLabel}
+                />
+              </p>
+              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                <WalletCards className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">
+                  {activityPriceLabel}
+                </span>
+                <ActivityCopyButton
+                  failedLabel={t.activityShare.copyFailed}
+                  label={t.activityShare.copyPrice}
+                  successLabel={t.activityShare.copied}
+                  value={activityPriceLabel}
+                />
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              {activity.officialUrl ? (
+                <a
+                  className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  href={activity.officialUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {publicEventCopy.officialPage}
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              ) : null}
+              {canCreateTeam ? (
+                <Link
+                  href={withLocale(
+                    locale,
+                    `/activities/${activity.id}/teams/new`,
+                  )}
+                >
+                  <Button className="h-11 w-full whitespace-nowrap rounded-full">
+                    {publicEventCopy.teamUp}
+                  </Button>
+                </Link>
+              ) : (
+                <p className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-600">
+                  {unavailableReason}
+                </p>
+              )}
+            </div>
+          </aside>
+        </section>
+      </PageContainer>
+    );
   }
 
   const [
@@ -183,6 +382,45 @@ export default async function ActivityDetailPage({
               openLabel={t.activityDetail.openMap}
               title={t.activityDetail.locationMapTitle}
             />
+          ) : null}
+
+          {activity.publicEvent ? (
+            <div className="rounded-[1.25rem] border border-[#d8ccb4] bg-[#fbf7ef] p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#b77955] ring-1 ring-[#d8ccb4]">
+                    <ExternalLink className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[#8a6a40]">
+                      {publicEventCopy.linkedEventTitle}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-base font-semibold text-ink">
+                      {activity.publicEvent.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-600">
+                      {publicEventCopy.linkedEventDescription}
+                    </p>
+                    {activity.publicEvent.status === "CANCELLED" ? (
+                      <p className="mt-3 inline-flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-700 ring-1 ring-red-200">
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{publicEventCopy.eventCancelled}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <Link
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  href={withLocale(
+                    locale,
+                    `/public-events/${activity.publicEvent.id}`,
+                  )}
+                >
+                  {publicEventCopy.linkedEventCta}
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
           ) : null}
 
           {isOrganizer && activity.requiresApproval ? (
