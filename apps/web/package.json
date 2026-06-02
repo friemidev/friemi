@@ -13,7 +13,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:copy-public-content": "tsx prisma/copy-public-content.ts"
+    "db:copy-public-content": "tsx prisma/copy-public-content.ts",
+    "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts"
   },
   "dependencies": {
     "@chill-club/scraper-core": "file:../../packages/scraper-core",

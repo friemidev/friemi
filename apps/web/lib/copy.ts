@@ -70,25 +70,27 @@ const copy = {
     globalSearch: {
       eyebrow: "全站搜索",
       title: "搜索 Next Fun",
-      description: "快速查找活动、地点和商家。",
+      description: "快速查找活动信息、车队、地点和商家。",
       inputLabel: "搜索关键词",
-      placeholder: "搜索活动、地点或商家",
+      placeholder: "搜索活动、车队、地点或商家",
       mobileOpen: "打开全站搜索",
       submit: "搜索",
       emptyTitle: "输入关键词开始搜索",
       emptyDescription: "试试活动名称、地点、城市或商家名。",
       noResultsTitle: "没有找到结果",
       noResultsDescription: (query: string) =>
-        `没有找到与「${query}」匹配的活动或商家。`,
+        `没有找到与「${query}」匹配的结果。`,
       loadFailedTitle: "搜索加载失败",
       loadFailedDescription: "暂时无法搜索，请稍后再试。",
       resultSummary: (count: number, query: string) =>
         `找到 ${count} 个与「${query}」相关的结果。`,
       viewMoreActivities: (_shown: number, total: number) =>
         `查看全部 ${total} 个活动`,
-      activitiesTitle: "活动",
+      activitiesTitle: "正在组局",
+      publicEventsTitle: "活动信息",
       merchantsTitle: "商家",
-      noActivityResults: "没有匹配的活动。",
+      noActivityResults: "没有匹配的车队。",
+      noPublicEventResults: "没有匹配的活动信息。",
       noMerchantResults: "没有匹配的商家。",
       merchantActivityCount: (count: number) => `${count} 个可展示活动`,
       openMerchant: (name: string) => `查看商家：${name}`,
@@ -109,8 +111,8 @@ const copy = {
       emptyPreviewTitle: "暂无活动",
       emptyPreviewDescription: "有新活动后会显示在这里。",
       recentTitle: "最近活动",
-      recentDescription: "按开始时间展示最近可参加的公开活动。",
-      emptyRecentDescription: "有新的公开活动后会显示在这里。",
+      recentDescription: "按开始时间展示最近的活动信息和正在组局的车队。",
+      emptyRecentDescription: "有新的活动后会显示在这里。",
     },
     activities: {
       title: "活动发现",
@@ -144,7 +146,8 @@ const copy = {
     },
     activityFilters: {
       title: "搜索和筛选",
-      description: "按关键词、主题、城市、关系、活动形式和进度快速缩小活动范围。",
+      description:
+        "按关键词、主题、城市、关系、活动形式和进度快速缩小活动范围。",
       mobileSummary: "搜索 / 筛选",
       keywordLabel: "关键词",
       keywordPlaceholder: "搜索标题或描述，例如：电影 Paris",
@@ -580,7 +583,7 @@ const copy = {
         ENDED: "已结束",
       },
       types: {
-        PUBLIC_EVENT: "公共活动",
+        PUBLIC_EVENT: "活动信息",
         USER_HOSTED: "用户发起",
         LOCAL: "本地局",
         TRIP: "旅游搭子",
@@ -648,26 +651,27 @@ const copy = {
     globalSearch: {
       eyebrow: "Site search",
       title: "Search Next Fun",
-      description: "Find activities, places, and merchants quickly.",
+      description: "Find activity info, crews, places, and merchants quickly.",
       inputLabel: "Search keyword",
-      placeholder: "Search activities, places, or merchants",
+      placeholder: "Search activities, crews, places, or merchants",
       mobileOpen: "Open site search",
       submit: "Search",
       emptyTitle: "Enter a keyword to search",
-      emptyDescription:
-        "Try an activity name, place, city, or merchant name.",
+      emptyDescription: "Try an activity name, place, city, or merchant name.",
       noResultsTitle: "No results found",
-      noResultsDescription: (query: string) =>
-        `No activities or merchants matched "${query}".`,
+      noResultsDescription: (query: string) => `No results matched "${query}".`,
       loadFailedTitle: "Search failed to load",
-      loadFailedDescription: "Search is unavailable right now. Try again later.",
+      loadFailedDescription:
+        "Search is unavailable right now. Try again later.",
       resultSummary: (count: number, query: string) =>
         `${count} result${count === 1 ? "" : "s"} found for "${query}".`,
       viewMoreActivities: (_shown: number, total: number) =>
         `View all ${total} activities`,
-      activitiesTitle: "Activities",
+      activitiesTitle: "Crews forming",
+      publicEventsTitle: "Activity info",
       merchantsTitle: "Merchants",
-      noActivityResults: "No matching activities.",
+      noActivityResults: "No matching crews.",
+      noPublicEventResults: "No matching activity info.",
       noMerchantResults: "No matching merchants.",
       merchantActivityCount: (count: number) =>
         `${count} visible activit${count === 1 ? "y" : "ies"}`,
@@ -693,8 +697,8 @@ const copy = {
         "Joinable activities will appear here once they are added.",
       recentTitle: "Recent activities",
       recentDescription:
-        "Upcoming public activities sorted by the nearest start time.",
-      emptyRecentDescription: "New public activities will appear here.",
+        "Recent activity info and crews sorted by nearest start time.",
+      emptyRecentDescription: "New activities will appear here.",
     },
     activities: {
       title: "Activity discovery",
@@ -723,7 +727,8 @@ const copy = {
       joinedTitle: "Joined by me",
       joinedDescription: "Activities I have already joined or signed up for.",
       favoriteTitle: "Saved by me",
-      favoriteDescription: "Activities I am interested in or want to revisit later.",
+      favoriteDescription:
+        "Activities I am interested in or want to revisit later.",
       friendHostedTitle: "Hosted by friends",
       friendHostedDescription: "Activities friends are organizing right now.",
       friendJoinedTitle: "Joined by friends",
@@ -1200,7 +1205,7 @@ const copy = {
         ENDED: "Ended",
       },
       types: {
-        PUBLIC_EVENT: "Public event",
+        PUBLIC_EVENT: "Activity info",
         USER_HOSTED: "User hosted",
         LOCAL: "Local",
         TRIP: "Trip buddy",
@@ -1262,16 +1267,18 @@ const copy = {
     common: {
       viewAll: "Tout voir",
       loadFailed: "Échec du chargement",
-      retryDatabase: "Chargement impossible pour le moment. Réessayez plus tard.",
+      retryDatabase:
+        "Chargement impossible pour le moment. Réessayez plus tard.",
       people: "pers.",
       switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
     },
     globalSearch: {
       eyebrow: "Recherche globale",
       title: "Rechercher dans Next Fun",
-      description: "Trouvez vite une activité, un lieu ou un partenaire.",
+      description:
+        "Trouvez vite une activité, un groupe, un lieu ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
-      placeholder: "Activités, lieux ou partenaires",
+      placeholder: "Activités, groupes, lieux ou partenaires",
       mobileOpen: "Ouvrir la recherche globale",
       submit: "Rechercher",
       emptyTitle: "Saisissez un mot-clé",
@@ -1279,7 +1286,7 @@ const copy = {
         "Essayez un nom d'activité, un lieu, une ville ou un partenaire.",
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
-        `Aucune activité ni partenaire ne correspond à « ${query} ».`,
+        `Aucun résultat ne correspond à « ${query} ».`,
       loadFailedTitle: "Échec de la recherche",
       loadFailedDescription:
         "La recherche est indisponible pour le moment. Réessayez plus tard.",
@@ -1287,9 +1294,11 @@ const copy = {
         `${count} résultat${count > 1 ? "s" : ""} pour « ${query} ».`,
       viewMoreActivities: (_shown: number, total: number) =>
         `Voir les ${total} activités`,
-      activitiesTitle: "Activités",
+      activitiesTitle: "Groupes en cours",
+      publicEventsTitle: "Activités",
       merchantsTitle: "Partenaires",
-      noActivityResults: "Aucune activité correspondante.",
+      noActivityResults: "Aucun groupe correspondant.",
+      noPublicEventResults: "Aucune activité correspondante.",
       noMerchantResults: "Aucun partenaire correspondant.",
       merchantActivityCount: (count: number) =>
         `${count} activité${count > 1 ? "s" : ""} visible${count > 1 ? "s" : ""}`,
@@ -1317,7 +1326,8 @@ const copy = {
       recentTitle: "Activités récentes",
       recentDescription:
         "Activités publiques à venir, triées par date de début proche.",
-      emptyRecentDescription: "Les nouvelles activités publiques apparaîtront ici.",
+      emptyRecentDescription:
+        "Les nouvelles activités publiques apparaîtront ici.",
     },
     activities: {
       title: "Découvrir des activités",
@@ -1346,11 +1356,14 @@ const copy = {
       joinedTitle: "Rejointes par moi",
       joinedDescription: "Les activités que j'ai déjà rejointes ou demandées.",
       favoriteTitle: "Mes favoris",
-      favoriteDescription: "Les activités qui m'intéressent ou que je veux garder de côté.",
+      favoriteDescription:
+        "Les activités qui m'intéressent ou que je veux garder de côté.",
       friendHostedTitle: "Organisées par des amis",
-      friendHostedDescription: "Les activités actuellement lancées par mes amis.",
+      friendHostedDescription:
+        "Les activités actuellement lancées par mes amis.",
       friendJoinedTitle: "Rejointes par des amis",
-      friendJoinedDescription: "Les activités auxquelles mes amis participent déjà.",
+      friendJoinedDescription:
+        "Les activités auxquelles mes amis participent déjà.",
     },
     activityFilters: {
       title: "Recherche et filtres",
@@ -1570,8 +1583,7 @@ const copy = {
       permissionError: "Seul l'organisateur peut annuler cette activité.",
       statusError: "Ce statut d'activité ne peut pas être annulé.",
       endedError: "Cette activité est terminée et ne peut plus être annulée.",
-      conflictError:
-        "Le statut de l'activité a changé. Réessayez plus tard.",
+      conflictError: "Le statut de l'activité a changé. Réessayez plus tard.",
       failedError: "Échec de l'annulation. Réessayez plus tard.",
     },
     approval: {
@@ -1593,8 +1605,7 @@ const copy = {
         "Cette activité est terminée ou annulée, les demandes ne peuvent plus être validées.",
       fullError:
         "Cette activité est complète. Aucune demande supplémentaire ne peut être validée.",
-      conflictError:
-        "Le nombre de places a changé. Réessayez plus tard.",
+      conflictError: "Le nombre de places a changé. Réessayez plus tard.",
       failedError: "Échec de la validation. Réessayez plus tard.",
     },
     newActivity: {
@@ -1638,11 +1649,11 @@ const copy = {
       participationTitle: "Activités rejointes",
       participationDescription: "",
       participationEmptyTitle: "Aucune participation",
-      participationEmptyDescription: "Les activités rejointes apparaîtront ici.",
+      participationEmptyDescription:
+        "Les activités rejointes apparaîtront ici.",
       favoriteTitle: "Activités enregistrées",
       favoriteEmptyTitle: "Aucune activité enregistrée",
-      favoriteEmptyDescription:
-        "Les activités enregistrées apparaîtront ici.",
+      favoriteEmptyDescription: "Les activités enregistrées apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -1846,7 +1857,7 @@ const copy = {
         ENDED: "Terminé",
       },
       types: {
-        PUBLIC_EVENT: "Événement public",
+        PUBLIC_EVENT: "Activité",
         USER_HOSTED: "Créé par utilisateur",
         LOCAL: "Local",
         TRIP: "Compagnon de voyage",

@@ -36,6 +36,7 @@ type NewActivityFormProps = {
   initialValues?: ActivityFormValues;
   locale: string;
   mode?: "create" | "edit";
+  showLinkImport?: boolean;
 };
 
 const initialState: CreateActivityState = {};
@@ -55,6 +56,64 @@ const categoryOptions = (
 });
 const selectClassName =
   "h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
+
+function getPublicEventTeamFormCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      cardTitle: "Détails du groupe",
+      activityContent: "Comment vous voulez y aller",
+      title: "Nom du groupe",
+      titlePlaceholder: "Ex. Sortie groupée après le travail",
+      description: "Message pour les personnes qui veulent venir",
+      descriptionPlaceholder:
+        "Expliquez le point de rendez-vous, l'ambiance et les détails utiles.",
+      itinerary: "Notes de rendez-vous",
+      itineraryPlaceholder:
+        "Ex. on se retrouve devant l'entrée, puis café après l'événement.",
+      timeLocation: "Rendez-vous",
+      peoplePrice: "Places et budget",
+      capacity: "Places dans le groupe",
+      minParticipants: "Minimum souhaité",
+      priceText: "Budget prévu",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      cardTitle: "Crew details",
+      activityContent: "How you want to go",
+      title: "Crew name",
+      titlePlaceholder: "Example: After-work group for this event",
+      description: "Message for people who want to join",
+      descriptionPlaceholder:
+        "Explain the meetup point, vibe, and useful details.",
+      itinerary: "Meetup notes",
+      itineraryPlaceholder:
+        "Example: meet at the entrance, then coffee after the event.",
+      timeLocation: "Meetup time and place",
+      peoplePrice: "Seats and budget",
+      capacity: "Crew size",
+      minParticipants: "Minimum group size",
+      priceText: "Budget note",
+    };
+  }
+
+  return {
+    cardTitle: "车队信息",
+    activityContent: "这次怎么约",
+    title: "车队标题",
+    titlePlaceholder: "例如：下班后一起去看展",
+    description: "给想加入的人看的说明",
+    descriptionPlaceholder: "说明集合方式、同行氛围和需要提前知道的信息。",
+    itinerary: "集合备注",
+    itineraryPlaceholder: "例如：入口处集合，结束后附近喝咖啡。",
+    timeLocation: "集合时间和地点",
+    peoplePrice: "车队人数和费用",
+    capacity: "车队人数上限",
+    minParticipants: "最少同行人数",
+    priceText: "费用说明",
+  };
+}
 
 function Select({
   className,
@@ -162,6 +221,7 @@ export function NewActivityForm({
   initialValues,
   locale,
   mode = "create",
+  showLinkImport = true,
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
@@ -175,6 +235,10 @@ export function NewActivityForm({
   const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
+  const publicEventTeamFormCopy = values?.publicEventId
+    ? getPublicEventTeamFormCopy(locale)
+    : null;
+  const isPublicEventTeam = Boolean(publicEventTeamFormCopy);
 
   function applyImportedValues(nextValues: Partial<ActivityFormValues>) {
     setImportedValues((currentValues) => ({
@@ -200,7 +264,9 @@ export function NewActivityForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t.form.basicInfo}</CardTitle>
+        <CardTitle>
+          {publicEventTeamFormCopy?.cardTitle ?? t.form.basicInfo}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -213,6 +279,13 @@ export function NewActivityForm({
           {activityId ? (
             <input name="activityId" type="hidden" value={activityId} />
           ) : null}
+          {values?.publicEventId ? (
+            <input
+              name="publicEventId"
+              type="hidden"
+              value={values.publicEventId}
+            />
+          ) : null}
 
           {state.formError ? (
             <div
@@ -223,7 +296,7 @@ export function NewActivityForm({
             </div>
           ) : null}
 
-          {mode === "create" ? (
+          {mode === "create" && showLinkImport ? (
             <ActivityLinkImportPanel
               locale={locale}
               onApply={applyImportedValues}
@@ -237,8 +310,23 @@ export function NewActivityForm({
               value={values.importSourceUrl}
             />
           ) : null}
+          {isPublicEventTeam ? (
+            <>
+              <input name="type" type="hidden" value={activityType} />
+              <input name="category" type="hidden" value={category} />
+              <input
+                name="otherCategoryText"
+                type="hidden"
+                value={values?.otherCategoryText ?? ""}
+              />
+            </>
+          ) : null}
 
-          <FormSection title={t.form.activityContent}>
+          <FormSection
+            title={
+              publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
+            }
+          >
             <div className="grid gap-2 text-sm font-medium text-zinc-700">
               <span>{t.form.coverImage}</span>
               <ActivityCoverUpload
@@ -250,82 +338,95 @@ export function NewActivityForm({
             </div>
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              {t.form.title}
+              {publicEventTeamFormCopy?.title ?? t.form.title}
               <Input
                 name="title"
                 aria-invalid={Boolean(state.fieldErrors?.title)}
                 defaultValue={values?.title}
-                placeholder={t.form.titlePlaceholder}
+                placeholder={
+                  publicEventTeamFormCopy?.titlePlaceholder ??
+                  t.form.titlePlaceholder
+                }
                 required
               />
               <FieldError errors={state.fieldErrors?.title} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              {t.form.description}
+              {publicEventTeamFormCopy?.description ?? t.form.description}
               <Textarea
                 name="description"
                 aria-invalid={Boolean(state.fieldErrors?.description)}
                 defaultValue={values?.description}
-                placeholder={t.form.descriptionPlaceholder}
+                placeholder={
+                  publicEventTeamFormCopy?.descriptionPlaceholder ??
+                  t.form.descriptionPlaceholder
+                }
                 required
               />
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
-              {t.form.itinerary}
+              {publicEventTeamFormCopy?.itinerary ?? t.form.itinerary}
               <Textarea
                 name="itinerary"
                 aria-invalid={Boolean(state.fieldErrors?.itinerary)}
                 defaultValue={values?.itinerary}
-                placeholder={t.form.itineraryPlaceholder}
+                placeholder={
+                  publicEventTeamFormCopy?.itineraryPlaceholder ??
+                  t.form.itineraryPlaceholder
+                }
               />
               <FieldError errors={state.fieldErrors?.itinerary} />
             </label>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                {t.form.type}
-                <Select
-                  name="type"
-                  aria-invalid={Boolean(state.fieldErrors?.type)}
-                  onChange={(event) => setActivityType(event.target.value)}
-                  required
-                  value={activityType}
-                >
-                  <option value="LOCAL">{getTypeLabel("LOCAL", locale)}</option>
-                  <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
-                </Select>
-                <span className="text-xs font-normal text-zinc-500">
-                  {t.form.typeHint}
-                </span>
-                <FieldError errors={state.fieldErrors?.type} />
-              </label>
-
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                {t.form.category}
-                <Select
-                  name="category"
-                  aria-invalid={Boolean(state.fieldErrors?.category)}
-                  onChange={(event) => setCategory(event.target.value)}
-                  required
-                  value={category}
-                >
-                  {categoryOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {getCategoryLabel(value, locale)}
+            {!isPublicEventTeam ? (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  {t.form.type}
+                  <Select
+                    name="type"
+                    aria-invalid={Boolean(state.fieldErrors?.type)}
+                    onChange={(event) => setActivityType(event.target.value)}
+                    required
+                    value={activityType}
+                  >
+                    <option value="LOCAL">
+                      {getTypeLabel("LOCAL", locale)}
                     </option>
-                  ))}
-                </Select>
-                <span className="text-xs font-normal text-zinc-500">
-                  {t.form.categoryHint}
-                </span>
-                <FieldError errors={state.fieldErrors?.category} />
-              </label>
-            </div>
+                    <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
+                  </Select>
+                  <span className="text-xs font-normal text-zinc-500">
+                    {t.form.typeHint}
+                  </span>
+                  <FieldError errors={state.fieldErrors?.type} />
+                </label>
 
-            {category === "OTHER" ? (
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  {t.form.category}
+                  <Select
+                    name="category"
+                    aria-invalid={Boolean(state.fieldErrors?.category)}
+                    onChange={(event) => setCategory(event.target.value)}
+                    required
+                    value={category}
+                  >
+                    {categoryOptions.map((value) => (
+                      <option key={value} value={value}>
+                        {getCategoryLabel(value, locale)}
+                      </option>
+                    ))}
+                  </Select>
+                  <span className="text-xs font-normal text-zinc-500">
+                    {t.form.categoryHint}
+                  </span>
+                  <FieldError errors={state.fieldErrors?.category} />
+                </label>
+              </div>
+            ) : null}
+
+            {!isPublicEventTeam && category === "OTHER" ? (
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
                 {t.form.otherCategory}
                 <Input
@@ -344,7 +445,9 @@ export function NewActivityForm({
             ) : null}
           </FormSection>
 
-          <FormSection title={t.form.timeLocation}>
+          <FormSection
+            title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
+          >
             <label className="grid gap-2 text-sm font-medium text-zinc-700">
               {t.form.city}
               <Input
@@ -426,10 +529,12 @@ export function NewActivityForm({
             </div>
           </FormSection>
 
-          <FormSection title={t.form.peoplePrice}>
+          <FormSection
+            title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
+          >
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                {t.form.capacity}
+                {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
                 <Input
                   name="capacity"
                   aria-invalid={Boolean(state.fieldErrors?.capacity)}
@@ -443,7 +548,8 @@ export function NewActivityForm({
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                {t.form.minParticipants}
+                {publicEventTeamFormCopy?.minParticipants ??
+                  t.form.minParticipants}
                 <Input
                   name="minParticipants"
                   aria-invalid={Boolean(state.fieldErrors?.minParticipants)}
@@ -476,7 +582,7 @@ export function NewActivityForm({
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-zinc-700">
-                {t.form.priceText}
+                {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
                 <Input
                   name="priceText"
                   aria-invalid={Boolean(state.fieldErrors?.priceText)}

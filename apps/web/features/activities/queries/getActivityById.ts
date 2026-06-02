@@ -4,6 +4,7 @@ import type { ActivityDetailViewModel } from "../types";
 import {
   activityCardSelect,
   getActivityCoverTone,
+  isLegacyActivityInfoSource,
   publicActivityVisibility,
 } from "./getActivities";
 
@@ -37,6 +38,14 @@ const activityDetailSelect = {
       },
     },
   },
+  publicEvent: {
+    select: {
+      id: true,
+      title: true,
+      officialUrl: true,
+      status: true,
+    },
+  },
 } satisfies Prisma.ActivitySelect;
 
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
@@ -46,12 +55,14 @@ type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
 function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
 ): ActivityDetailViewModel {
+  const isActivityInfo = isLegacyActivityInfoSource(activity);
+
   return {
     id: activity.id,
     title: activity.title,
     description: activity.description,
     itinerary: activity.itinerary,
-    type: activity.type,
+    type: isActivityInfo ? "PUBLIC_EVENT" : activity.type,
     category: activity.category,
     city: activity.city,
     destination: activity.destination,
@@ -60,15 +71,18 @@ function getActivityDetailViewModel(
     longitude: activity.longitude,
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
-    capacity: activity.capacity,
+    capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
-    participantCount: activity._count.participants,
+    participantCount: isActivityInfo ? 0 : activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
+    isActivityInfo,
+    officialUrl: activity.externalUrl ?? activity.sourceUrl,
+    publicEventId: activity.publicEventId,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,
@@ -85,6 +99,14 @@ function getActivityDetailViewModel(
       followerCount: activity.organizer._count.followers,
       followingCount: activity.organizer._count.following,
     },
+    publicEvent: activity.publicEvent
+      ? {
+          id: activity.publicEvent.id,
+          title: activity.publicEvent.title,
+          officialUrl: activity.publicEvent.officialUrl,
+          status: activity.publicEvent.status,
+        }
+      : null,
   };
 }
 

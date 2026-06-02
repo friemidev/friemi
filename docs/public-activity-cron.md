@@ -1,6 +1,6 @@
 # 公共活动定时同步
 
-本功能用于从 Paris OpenData `que-faire-a-paris-` 数据集定时拉取未来活动，并写入本项目活动库。
+本功能用于从 Paris OpenData `que-faire-a-paris-` 数据集定时拉取未来公共活动，并写入 `PublicEvent` 公共活动库。
 
 ## 数据来源
 
@@ -15,19 +15,21 @@
 - `externalSource + externalId`
 - `externalUrl`
 
-已存在的活动会更新标题、描述、时间、地点、费用、封面和原始 payload，不会重复创建。
+已存在的公共活动会更新标题、描述、时间、地点、费用、封面和原始 payload，不会重复创建。
 
 `externalId` 优先使用 Paris OpenData record `id`，其次使用 `event_id` 或 `url`。这样可以更好地区分同一公共活动的不同记录，同时保留 `externalUrl` 作为兜底查重。
 
 ## 数据库字段
 
-`Activity` 预留了外部活动字段：
+`PublicEvent` 保存外部公共活动字段：
 
 - `externalSource`
 - `externalId`
 - `externalUrl`
+- `officialUrl`
 - `sourcePayload`
 - `importedAt`
+- `lastSyncedAt`
 
 `sourcePayload` 保存原始 API payload，方便后续公共 API 字段增加时继续迭代。
 
@@ -37,7 +39,7 @@
 
 当前只接入 Paris OpenData Events API。`docs/paris_open_apis_summary.md` 中的 OSM、Nominatim、Overpass 暂不直接接入前端，后续如需扩展，也应继续走后端 API Route 并增加缓存或限流。
 
-导入的活动会使用 `Activity.type = PUBLIC_EVENT`，列表卡片会展示“公共活动”类型标签，用于和用户发起活动区分。
+导入结果不会直接创建可报名的 `Activity`。用户需要进入公共活动详情页，从公共活动发起自己的组队，组队才会成为可报名的 `Activity`。
 
 ## API Route
 
@@ -96,8 +98,8 @@ DATABASE_URL
 
 首次部署前，需要把 Prisma schema 同步到对应数据库。
 
-
 数据库调取
+
 ```
 curl -H "x-cron-secret: $CRON_SECRET" \
   "http://localhost:3000/api/cron/import-public-activities?limit=30"
