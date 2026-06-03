@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UsersRound } from "lucide-react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getFriendsCopy } from "@/features/friends/copy";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,6 +18,7 @@ import {
 type ProfileDashboardViewProps = {
   dashboard: ProfileDashboardViewModel;
   hasDashboardError?: boolean;
+  isAuthenticated?: boolean;
   isSelf?: boolean;
   locale: string;
   profile: PublicProfileViewModel;
@@ -25,6 +27,7 @@ type ProfileDashboardViewProps = {
 export function ProfileDashboardView({
   dashboard,
   hasDashboardError = false,
+  isAuthenticated = false,
   isSelf = false,
   locale,
   profile,
@@ -109,7 +112,15 @@ export function ProfileDashboardView({
                 <UsersRound className="h-4 w-4" />
                 {friendsCopy.openFriends}
               </Link>
-            ) : null}
+            ) : (
+              <ReportDialog
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                redirectPath={`/profile/${profile.id}`}
+                targetId={profile.id}
+                targetType="USER_PROFILE"
+              />
+            )}
           </div>
         </div>
       </section>

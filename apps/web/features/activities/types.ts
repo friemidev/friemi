@@ -68,8 +68,25 @@ export type ActivityCommentViewModel = {
   id: string;
   type: CommentType;
   content: string;
+  isDeleted: boolean;
   pinnedByOrganizer: boolean;
   createdAt: string;
+  editedAt: string | null;
+  author: {
+    id: string;
+    nickname: string;
+    avatarUrl: string | null;
+  };
+  replies: ActivityCommentReplyViewModel[];
+};
+
+export type ActivityCommentReplyViewModel = {
+  id: string;
+  type: CommentType;
+  content: string;
+  isDeleted: boolean;
+  createdAt: string;
+  editedAt: string | null;
   author: {
     id: string;
     nickname: string;

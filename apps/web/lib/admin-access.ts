@@ -27,33 +27,6 @@ export function readRoleFromMetadata(metadata: unknown) {
   return readStringProperty(metadata as Record<string, unknown>, "role");
 }
 
-export function extractAdminContextFromSessionClaims(sessionClaims: unknown) {
-  if (!sessionClaims || typeof sessionClaims !== "object") {
-    return { email: null, publicRole: null, privateRole: null };
-  }
-
-  const claims = sessionClaims as Record<string, unknown>;
-  const email =
-    readStringProperty(claims, "email") ??
-    readStringProperty(claims, "email_address") ??
-    readStringProperty(claims, "primary_email_address");
-
-  const publicMetadata = claims.public_metadata;
-  const privateMetadata = claims.private_metadata;
-
-  return {
-    email,
-    publicRole: readRoleFromMetadata(publicMetadata),
-    privateRole: readRoleFromMetadata(privateMetadata),
-  };
-}
-
-export function hasAdminConfig() {
-  const adminUserIds = splitToSet(process.env.ADMIN_CLERK_USER_IDS);
-  const adminEmails = splitToSet(process.env.ADMIN_EMAILS, true);
-  return adminUserIds.size > 0 || adminEmails.size > 0;
-}
-
 export function isAdminByFields(fields: AdminFields) {
   if (!fields.userId) {
     return false;
@@ -71,4 +44,3 @@ export function isAdminByFields(fields: AdminFields) {
 
   return fields.publicRole === "admin" || fields.privateRole === "admin";
 }
-

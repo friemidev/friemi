@@ -12,6 +12,11 @@ import {
   publicEventSelect,
 } from "@/features/public-events/queries/getPublicEvents";
 import type { PublicEventCardViewModel } from "@/features/public-events/types";
+import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/findFriendRequestTarget";
+import {
+  getFriendshipPair,
+  getFriendshipPairKey,
+} from "@/features/friends/utils/friendship";
 import {
   getGlobalSearchTerms,
   normalizeGlobalSearchQuery,
@@ -21,6 +26,13 @@ import type { Prisma } from "@prisma/client";
 const activityResultLimit = 6;
 const publicEventResultLimit = 6;
 const merchantResultLimit = 5;
+const userResultLimit = 6;
+
+export type GlobalSearchUserRelationshipStatus =
+  | "AVAILABLE"
+  | "SELF"
+  | "FRIENDS"
+  | "PENDING";
 
 export type GlobalSearchMerchantViewModel = {
   id: string;
@@ -33,8 +45,18 @@ export type GlobalSearchMerchantViewModel = {
   activityCount: number;
 };
 
+export type GlobalSearchUserViewModel = {
+  id: string;
+  nickname: string;
+  friendCode: string | null;
+  avatarUrl: string | null;
+  relationshipStatus: GlobalSearchUserRelationshipStatus;
+};
+
 export type GlobalSearchResults = {
   query: string;
+  users: GlobalSearchUserViewModel[];
+  userCount: number;
   activities: ActivityCardViewModel[];
   activityCount: number;
   publicEvents: PublicEventCardViewModel[];
@@ -45,6 +67,7 @@ export type GlobalSearchResults = {
 
 export async function getGlobalSearchResults(
   rawQuery: string,
+  currentUserProfileId?: string | null,
 ): Promise<GlobalSearchResults> {
   const query = normalizeGlobalSearchQuery(rawQuery);
   const terms = getGlobalSearchTerms(query);
@@ -52,6 +75,8 @@ export async function getGlobalSearchResults(
   if (terms.length === 0) {
     return {
       query,
+      users: [],
+      userCount: 0,
       activities: [],
       activityCount: 0,
       publicEvents: [],
@@ -114,7 +139,33 @@ export async function getGlobalSearchResults(
       ],
     })),
   };
+  const { friendCode } = normalizeFriendRequestSearchTerm(query);
+  const userSearchWhere: Prisma.UserProfileWhereInput = friendCode
+    ? {
+        status: "ACTIVE",
+        friendCode,
+      }
+    : {
+        status: "ACTIVE",
+        AND: terms.map((term) => ({
+          OR: [
+            {
+              nickname: {
+                contains: term,
+                mode: "insensitive",
+              },
+            },
+            {
+              friendCode: {
+                equals: term,
+              },
+            },
+          ],
+        })),
+      };
   const [
+    userCount,
+    users,
     activityCount,
     activities,
     publicEventCount,
@@ -122,6 +173,20 @@ export async function getGlobalSearchResults(
     merchantCount,
     merchants,
   ] = await Promise.all([
+    prisma.userProfile.count({
+      where: userSearchWhere,
+    }),
+    prisma.userProfile.findMany({
+      where: userSearchWhere,
+      orderBy: [{ nickname: "asc" }, { id: "asc" }],
+      take: userResultLimit,
+      select: {
+        id: true,
+        nickname: true,
+        friendCode: true,
+        avatarUrl: true,
+      },
+    }),
     prisma.activity.count({
       where: activityWhere,
     }),
@@ -163,9 +228,22 @@ export async function getGlobalSearchResults(
       },
     }),
   ]);
+  const userRelationshipStatuses = await getSearchUserRelationshipStatuses(
+    currentUserProfileId,
+    users.map((user) => user.id),
+  );
 
   return {
     query,
+    users: users.map((user) => ({
+      id: user.id,
+      nickname: getSearchUserDisplayName(user),
+      friendCode: user.friendCode,
+      avatarUrl: user.avatarUrl,
+      relationshipStatus:
+        userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+    })),
+    userCount,
     activities: activities.map(getActivityCardViewModel),
     activityCount,
     publicEvents: publicEvents.map(getPublicEventCardViewModel),
@@ -182,6 +260,113 @@ export async function getGlobalSearchResults(
     })),
     merchantCount,
   };
+}
+
+async function getSearchUserRelationshipStatuses(
+  currentUserProfileId: string | null | undefined,
+  userIds: string[],
+) {
+  const statuses = new Map<string, GlobalSearchUserRelationshipStatus>();
+
+  userIds.forEach((userId) => {
+    statuses.set(
+      userId,
+      currentUserProfileId && userId === currentUserProfileId
+        ? "SELF"
+        : "AVAILABLE",
+    );
+  });
+
+  if (!currentUserProfileId) {
+    return statuses;
+  }
+
+  const peerIds = userIds.filter((userId) => userId !== currentUserProfileId);
+
+  if (peerIds.length === 0) {
+    return statuses;
+  }
+
+  const friendshipPairs = peerIds.map((peerId) =>
+    getFriendshipPair(currentUserProfileId, peerId),
+  );
+  const pendingPairKeys = peerIds.map((peerId) =>
+    getFriendshipPairKey(currentUserProfileId, peerId),
+  );
+  const [friendships, pendingRequests] = await Promise.all([
+    prisma.friendship.findMany({
+      where: {
+        OR: friendshipPairs,
+      },
+      select: {
+        userAId: true,
+        userBId: true,
+      },
+    }),
+    prisma.friendRequest.findMany({
+      where: {
+        status: "PENDING",
+        OR: [
+          {
+            pendingPairKey: {
+              in: pendingPairKeys,
+            },
+          },
+          {
+            requesterId: currentUserProfileId,
+            receiverId: {
+              in: peerIds,
+            },
+          },
+          {
+            requesterId: {
+              in: peerIds,
+            },
+            receiverId: currentUserProfileId,
+          },
+        ],
+      },
+      select: {
+        requesterId: true,
+        receiverId: true,
+      },
+    }),
+  ]);
+
+  friendships.forEach((friendship) => {
+    const peerId =
+      friendship.userAId === currentUserProfileId
+        ? friendship.userBId
+        : friendship.userAId;
+
+    statuses.set(peerId, "FRIENDS");
+  });
+
+  pendingRequests.forEach((request) => {
+    const peerId =
+      request.requesterId === currentUserProfileId
+        ? request.receiverId
+        : request.requesterId;
+
+    if (statuses.get(peerId) !== "FRIENDS") {
+      statuses.set(peerId, "PENDING");
+    }
+  });
+
+  return statuses;
+}
+
+function getSearchUserDisplayName(user: {
+  nickname: string;
+  friendCode: string | null;
+}) {
+  const nickname = user.nickname.trim();
+
+  if (nickname) {
+    return nickname;
+  }
+
+  return user.friendCode ? `NF ${user.friendCode}` : "Next Fun";
 }
 
 async function getSearchActivityResults(
