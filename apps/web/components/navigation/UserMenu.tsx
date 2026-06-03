@@ -5,6 +5,7 @@ import { withLocale } from "@/lib/routes";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
 import { AccountMenu } from "@/components/navigation/AccountMenu";
+import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 
 type UserMenuProps = {
   locale: string;
@@ -12,6 +13,7 @@ type UserMenuProps = {
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
   viewerNickname?: string | null;
+  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 export function UserMenu({
@@ -20,6 +22,7 @@ export function UserMenu({
   unreadNotificationCount = 0,
   viewerFriendCode = null,
   viewerNickname = null,
+  incomingFriendRequests = [],
 }: UserMenuProps) {
   const t = getCopy(locale);
 
@@ -39,6 +42,7 @@ export function UserMenu({
           showAdminLink={showAdminLink}
           viewerFriendCode={viewerFriendCode}
           viewerNickname={viewerNickname}
+          incomingFriendRequests={incomingFriendRequests}
           unreadNotificationCount={unreadNotificationCount}
         />
       </SignedIn>

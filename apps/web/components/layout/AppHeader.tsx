@@ -11,6 +11,7 @@ import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { UserMenu } from "@/components/navigation/UserMenu";
+import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import {
   GlobalSearchForm,
   GlobalSearchIconLink,
@@ -24,6 +25,7 @@ type AppHeaderProps = {
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
   viewerNickname?: string | null;
+  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 export function AppHeader({
@@ -33,6 +35,7 @@ export function AppHeader({
   unreadNotificationCount = 0,
   viewerFriendCode = null,
   viewerNickname = null,
+  incomingFriendRequests = [],
 }: AppHeaderProps) {
   const t = getCopy(locale);
   const messagesLabel = (
@@ -98,10 +101,7 @@ export function AppHeader({
             <MessageCircle className="h-4 w-4" />
             {messagesLabel}
           </Link>
-          <Link
-            href={withLocale(locale, "/activities/new")}
-            className="ml-2"
-          >
+          <Link href={withLocale(locale, "/activities/new")} className="ml-2">
             <Button className="gap-1.5 rounded-full border-0 bg-[#d88d72] px-4 text-white shadow-[0_8px_20px_rgba(216,141,114,0.28)] hover:bg-[#c87b61] xl:gap-2 xl:px-5">
               <CalendarPlus className="h-4 w-4" />
               {newActivityLabel}
@@ -128,6 +128,7 @@ export function AppHeader({
             showAdminLink={showAdminNav}
             viewerFriendCode={viewerFriendCode}
             viewerNickname={viewerNickname}
+            incomingFriendRequests={incomingFriendRequests}
             unreadNotificationCount={unreadNotificationCount}
           />
         </div>
