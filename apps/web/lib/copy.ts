@@ -140,22 +140,28 @@ const copy = {
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
     },
     activityLobby: {
+      eyebrow: "你的局，你的搭子，你的下一场",
       title: "组队大厅",
-      description:
-        "集中查看我发起、我参加、我收藏，以及好友相关的活动，不再被公告类活动淹没。",
-      emptyTitle: "大厅暂时还没有活动",
-      emptyDescription: "先去活动发现里逛逛，感兴趣的活动会慢慢聚到这里。",
-      emptySectionTitle: "这里还没有活动",
+      description: "在这里发现活动，和朋友、新搭子一起组队出发",
+      emptyTitle: "你的组队大厅还空着",
+      emptyDescription:
+        "公园？逛展？还是看电影？先组个局，去逛逛活动，再加几个好友吧。",
+      emptySectionTitle: "从这里开始吧",
       createdTitle: "我发起的",
-      createdDescription: "我正在组织或已经发起的活动。",
+      createdDescription: "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
+      createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
       joinedTitle: "我参加的",
-      joinedDescription: "我已经报名或加入的活动。",
+      joinedDescription: "wow~ 这些都是你参加的活动",
+      joinedEmptyDescription: "还没加入任何活动？先去逛逛，看到心动的就报名吧。",
       favoriteTitle: "我的收藏",
-      favoriteDescription: "我感兴趣、想去或想稍后再决定的活动。",
+      favoriteDescription: "这些有趣的活动正等你参与呢",
+      favoriteEmptyDescription: "还没收藏任何活动？先把让你心动的那些留在这里。",
       friendHostedTitle: "好友发起的",
-      friendHostedDescription: "朋友正在组织或发起中的活动。",
+      friendHostedDescription: "朋友们在等你加入哦～",
+      friendHostedEmptyDescription: "先去加几个好友吧。等他们一组局，你就能第一时间看到。",
       friendJoinedTitle: "好友参加的",
-      friendJoinedDescription: "朋友已经加入的活动，方便一起同行。",
+      friendJoinedDescription: "朋友最近去哪儿玩了？说不定下一场就能一起出发。",
+      friendJoinedEmptyDescription: "朋友最近还没参加什么活动。先去发现页看看，有没有想一起去的。",
     },
     activityFilters: {
       title: "搜索和筛选",
@@ -776,23 +782,38 @@ const copy = {
         "Try a broader keyword, topic, city, or status filter.",
     },
     activityLobby: {
+      eyebrow: "Your plans, your people, your next outing",
       title: "Lobby",
-      description:
-        "Keep your own, favorites, and friend-related activities in one place so they do not get buried under public announcements.",
-      emptyTitle: "No lobby activities yet",
+      description: "Start with the activities that matter most to you.",
+      emptyTitle: "Your lobby is still empty",
       emptyDescription:
-        "Browse the discovery page first. The activities you care about will start to gather here.",
-      emptySectionTitle: "Nothing here yet",
+        "Start a plan, discover activities, or add a few friends.",
+      emptySectionTitle: "Begin here",
       createdTitle: "Created by me",
-      createdDescription: "Activities I am organizing or have created.",
+      createdDescription:
+        "When you want to start a plan, begin here. The activities you create will show up in this section.",
+      createdEmptyDescription:
+        "You have not started a plan yet. Create one and bring people along.",
       joinedTitle: "Joined by me",
-      joinedDescription: "Activities I have already joined or signed up for.",
+      joinedDescription:
+        "Once you join or sign up for something, you can keep track of it here.",
+      joinedEmptyDescription:
+        "Nothing joined yet. Explore activities and jump into one that feels right.",
       favoriteTitle: "My favorites",
-      favoriteDescription: "Activities I am interested in or want to revisit later.",
+      favoriteDescription:
+        "Save activities you are interested in so they are easy to come back to later.",
+      favoriteEmptyDescription:
+        "Save a few activities you like and they will be waiting for you here.",
       friendHostedTitle: "Hosted by friends",
-      friendHostedDescription: "Activities friends are organizing right now.",
+      friendHostedDescription:
+        "Add a few friends and the activities they host will start to appear here.",
+      friendHostedEmptyDescription:
+        "Add a few friends first, then you can quickly see the plans they start here.",
       friendJoinedTitle: "Joined by friends",
-      friendJoinedDescription: "Activities friends have already joined.",
+      friendJoinedDescription:
+        "Activities your friends have joined will appear here so it is easier to join them.",
+      friendJoinedEmptyDescription:
+        "Your friends have not joined anything yet. Discover something fun and invite them along.",
     },
     activityFilters: {
       title: "Search and filters",
@@ -1451,26 +1472,38 @@ const copy = {
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
     },
     activityLobby: {
+      eyebrow: "Vos plans, vos amis, votre prochaine sortie",
       title: "Hall d'équipe",
-      description:
-        "Retrouvez au même endroit mes activités, mes favoris et les activités liées à mes amis, sans qu'elles soient noyées parmi les annonces publiques.",
-      emptyTitle: "Le hall est encore vide",
+      description: "Commencez par les activités qui vous concernent le plus.",
+      emptyTitle: "Votre hall d'équipe est encore vide",
       emptyDescription:
-        "Parcourez d'abord la page découverte. Les activités qui vous concernent viendront ici.",
-      emptySectionTitle: "Aucune activité pour le moment",
+        "Lancez un plan, découvrez des activités ou ajoutez quelques amis.",
+      emptySectionTitle: "Commencez par ici",
       createdTitle: "Créées par moi",
-      createdDescription: "Les activités que j'organise ou que j'ai lancées.",
+      createdDescription:
+        "Quand vous voulez lancer un plan, commencez ici. Les activités que vous créez apparaîtront dans cette section.",
+      createdEmptyDescription:
+        "Vous n'avez encore rien lancé. Créez un plan et invitez du monde à vous rejoindre.",
       joinedTitle: "Rejointes par moi",
-      joinedDescription: "Les activités que j'ai déjà rejointes ou demandées.",
+      joinedDescription:
+        "Dès que vous rejoignez une activité ou envoyez une demande, vous pourrez la suivre ici.",
+      joinedEmptyDescription:
+        "Vous n'avez encore rejoint aucune activité. Allez en découvrir une qui vous tente.",
       favoriteTitle: "Mes favoris",
       favoriteDescription:
-        "Les activités qui m'intéressent ou que je veux garder de côté.",
+        "Enregistrez les activités qui vous intéressent pour les retrouver facilement plus tard.",
+      favoriteEmptyDescription:
+        "Mettez quelques activités en favoris et elles vous attendront ici.",
       friendHostedTitle: "Organisées par des amis",
       friendHostedDescription:
-        "Les activités actuellement lancées par mes amis.",
+        "Ajoutez quelques amis et les activités qu'ils lancent apparaîtront ici.",
+      friendHostedEmptyDescription:
+        "Ajoutez quelques amis et leurs plans apparaîtront ici dès qu'ils lancent quelque chose.",
       friendJoinedTitle: "Rejointes par des amis",
       friendJoinedDescription:
-        "Les activités auxquelles mes amis participent déjà.",
+        "Les activités que vos amis ont rejointes apparaîtront ici pour faciliter les sorties ensemble.",
+      friendJoinedEmptyDescription:
+        "Vos amis n'ont encore rien rejoint. Trouvez une activité sympa et proposez-leur d'y aller ensemble.",
     },
     activityFilters: {
       title: "Recherche et filtres",

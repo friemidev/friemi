@@ -61,7 +61,7 @@ export function AppHeader({
     <header className="sticky top-0 z-40 border-b border-black/10 bg-paper/85 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
-          href={withLocale(locale, "/")}
+          href={withLocale(locale, "/home")}
           className="flex shrink-0 items-center gap-2"
         >
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
