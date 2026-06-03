@@ -9,6 +9,7 @@ import { getDirectMessagesCopy } from "../copy";
 import {
   DirectMessageDomainError,
   directMessageBodyMaxLength,
+  getOrCreateActivityOrganizerConversation,
   getOrCreateDirectConversation,
   sendDirectMessage,
   sendDirectMessageToFriend,
@@ -28,6 +29,12 @@ export type DirectMessageActionState = {
 const createDirectConversationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   friendProfileId: z.string().min(1),
+});
+
+const createActivityOrganizerConversationSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  activityId: z.string().min(1),
+  organizerProfileId: z.string().min(1),
 });
 
 const sendDirectMessageSchema = z.object({
@@ -133,6 +140,42 @@ export async function openDirectConversationAction(
   } catch (error) {
     console.error("Failed to open direct conversation", error);
     redirect(withLocale(result.data.locale, "/messages"));
+  }
+
+  redirect(withLocale(result.data.locale, `/messages/${conversationId}`));
+}
+
+export async function openActivityOrganizerConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    activityId: getString(formData, "activityId"),
+    organizerProfileId: getString(formData, "organizerProfileId"),
+  };
+  const result = createActivityOrganizerConversationSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    redirect(withLocale(rawInput.locale, "/activities"));
+  }
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  let conversationId: string;
+
+  try {
+    const conversation = await getOrCreateActivityOrganizerConversation({
+      currentUserProfileId: profile.id,
+      organizerProfileId: result.data.organizerProfileId,
+      activityId: result.data.activityId,
+    });
+
+    conversationId = conversation.id;
+    refreshConversation(result.data.locale, conversation.id);
+  } catch (error) {
+    console.error("Failed to open activity organizer conversation", error);
+    redirect(
+      withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+    );
   }
 
   redirect(withLocale(result.data.locale, `/messages/${conversationId}`));

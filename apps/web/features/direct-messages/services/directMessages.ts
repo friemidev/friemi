@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { ActivityStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   getConversationPair,
@@ -15,6 +15,15 @@ export type DirectMessageErrorCode =
   | "BODY_TOO_LONG";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
+
+const organizerMessageActivityStatuses: ActivityStatus[] = [
+  "OPEN",
+  "FULL",
+  "RECRUITING",
+  "CONFIRMED",
+  "ENDED",
+  "CANCELLED",
+];
 
 const directConversationSelect = {
   id: true,
@@ -79,8 +88,17 @@ async function assertFriendshipExists(
 ) {
   assertDifferentUsers(userId, otherUserId);
 
+  const friendship = await findFriendship(db, userId, otherUserId);
+
+  if (!friendship) {
+    throw new DirectMessageDomainError("NOT_FRIENDS");
+  }
+}
+
+async function findFriendship(db: DbClient, userId: string, otherUserId: string) {
   const pair = getConversationPair(userId, otherUserId);
-  const friendship = await db.friendship.findUnique({
+
+  return db.friendship.findUnique({
     where: {
       userAId_userBId: pair,
     },
@@ -88,9 +106,72 @@ async function assertFriendshipExists(
       id: true,
     },
   });
+}
 
-  if (!friendship) {
+async function findOrganizerMessageActivity(
+  db: DbClient,
+  organizerProfileId: string,
+  activityId?: string,
+) {
+  return db.activity.findFirst({
+    where: {
+      id: activityId,
+      organizerId: organizerProfileId,
+      type: {
+        not: "PUBLIC_EVENT",
+      },
+      status: {
+        in: organizerMessageActivityStatuses,
+      },
+      visibility: "PUBLIC",
+      organizer: {
+        status: "ACTIVE",
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+async function assertDirectMessageSendAccess(
+  db: DbClient,
+  userId: string,
+  otherUserId: string,
+) {
+  assertDifferentUsers(userId, otherUserId);
+
+  const [friendship, organizerActivity] = await Promise.all([
+    findFriendship(db, userId, otherUserId),
+    findOrganizerMessageActivity(db, otherUserId),
+  ]);
+
+  if (!friendship && !organizerActivity) {
     throw new DirectMessageDomainError("NOT_FRIENDS");
+  }
+}
+
+export async function canSendDirectMessageToProfile({
+  currentUserProfileId,
+  peerProfileId,
+}: {
+  currentUserProfileId: string;
+  peerProfileId: string;
+}): Promise<boolean> {
+  try {
+    await assertDirectMessageSendAccess(
+      prisma,
+      currentUserProfileId,
+      peerProfileId,
+    );
+
+    return true;
+  } catch (error) {
+    if (error instanceof DirectMessageDomainError) {
+      return false;
+    }
+
+    throw error;
   }
 }
 
@@ -105,6 +186,41 @@ export async function getOrCreateDirectConversation({
     await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
 
     const pair = getConversationPair(currentUserProfileId, friendProfileId);
+
+    return tx.conversation.upsert({
+      where: {
+        userAId_userBId: pair,
+      },
+      create: pair,
+      update: {},
+      select: directConversationSelect,
+    });
+  });
+}
+
+export async function getOrCreateActivityOrganizerConversation({
+  currentUserProfileId,
+  organizerProfileId,
+  activityId,
+}: {
+  currentUserProfileId: string;
+  organizerProfileId: string;
+  activityId: string;
+}): Promise<DirectConversationViewModel> {
+  return prisma.$transaction(async (tx) => {
+    assertDifferentUsers(currentUserProfileId, organizerProfileId);
+
+    const activity = await findOrganizerMessageActivity(
+      tx,
+      organizerProfileId,
+      activityId,
+    );
+
+    if (!activity) {
+      throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
+    }
+
+    const pair = getConversationPair(currentUserProfileId, organizerProfileId);
 
     return tx.conversation.upsert({
       where: {
@@ -151,7 +267,7 @@ export async function sendDirectMessage({
       throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
     }
 
-    await assertFriendshipExists(
+    await assertDirectMessageSendAccess(
       tx,
       currentUserProfileId,
       getConversationPeerId(conversation, currentUserProfileId),

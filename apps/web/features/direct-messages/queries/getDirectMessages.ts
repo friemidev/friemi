@@ -4,6 +4,7 @@ import type {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { canSendDirectMessageToProfile } from "../services/directMessages";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -544,18 +545,14 @@ export async function getDirectConversationThread(
   }
 
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
-  const friendship = await prisma.friendship.findUnique({
-    where: {
-      userAId_userBId: getConversationPair(currentUserProfileId, peerId),
-    },
-    select: {
-      id: true,
-    },
+  const canSend = await canSendDirectMessageToProfile({
+    currentUserProfileId,
+    peerProfileId: peerId,
   });
 
   return mapConversationThread(
     conversation,
     currentUserProfileId,
-    Boolean(friendship),
+    canSend,
   );
 }
