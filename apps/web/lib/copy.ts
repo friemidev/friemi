@@ -35,8 +35,8 @@ const copy = {
       activities: "活动",
       lobby: "组队大厅",
       lobbyShort: "大厅",
-      newActivity: "发起活动",
-      newActivityShort: "发起",
+      newActivity: "我来组局",
+      newActivityShort: "组局",
       messages: "消息",
       messagesShort: "消息",
       profile: "个人空间",
@@ -616,8 +616,8 @@ const copy = {
       activities: "Activities",
       lobby: "Lobby",
       lobbyShort: "Lobby",
-      newActivity: "Create activity",
-      newActivityShort: "Create",
+      newActivity: "Start a plan",
+      newActivityShort: "Plan",
       messages: "Messages",
       messagesShort: "Chat",
       profile: "Profile",
@@ -717,7 +717,7 @@ const copy = {
     activityLobby: {
       title: "Lobby",
       description:
-        "Keep your own, saved, and friend-related activities in one place so they do not get buried under public announcements.",
+        "Keep your own, favorites, and friend-related activities in one place so they do not get buried under public announcements.",
       emptyTitle: "No lobby activities yet",
       emptyDescription:
         "Browse the discovery page first. The activities you care about will start to gather here.",
@@ -726,9 +726,8 @@ const copy = {
       createdDescription: "Activities I am organizing or have created.",
       joinedTitle: "Joined by me",
       joinedDescription: "Activities I have already joined or signed up for.",
-      favoriteTitle: "Saved by me",
-      favoriteDescription:
-        "Activities I am interested in or want to revisit later.",
+      favoriteTitle: "My favorites",
+      favoriteDescription: "Activities I am interested in or want to revisit later.",
       friendHostedTitle: "Hosted by friends",
       friendHostedDescription: "Activities friends are organizing right now.",
       friendJoinedTitle: "Joined by friends",
@@ -1010,15 +1009,15 @@ const copy = {
       participationDescription: "",
       participationEmptyTitle: "No participation records",
       participationEmptyDescription: "Joined activities will appear here.",
-      favoriteTitle: "Saved activities",
-      favoriteEmptyTitle: "No saved activities",
-      favoriteEmptyDescription: "Saved activities will appear here.",
+      favoriteTitle: "Favorite activities",
+      favoriteEmptyTitle: "No favorite activities",
+      favoriteEmptyDescription: "Favorite activities will appear here.",
       hiddenCreated: (limit: number, count: number) =>
         `Showing the latest ${limit} created activities. ${count} earlier activities are not shown yet.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Showing the latest ${limit} participation records. ${count} earlier records are not shown yet.`,
       hiddenFavorite: (limit: number, count: number) =>
-        `Showing the latest ${limit} saved activities. ${count} earlier saved activities are not shown yet.`,
+        `Showing the latest ${limit} favorite activities. ${count} earlier favorite activities are not shown yet.`,
       signedUpAt: (date: string) => `Joined on ${date}`,
       cancelledAt: (date: string) => `Cancelled on ${date}`,
       participationAria: (
@@ -1238,8 +1237,8 @@ const copy = {
       activities: "Activités",
       lobby: "Hall d'équipe",
       lobbyShort: "Hall",
-      newActivity: "Créer une activité",
-      newActivityShort: "Créer",
+      newActivity: "Je lance un plan",
+      newActivityShort: "Lancer",
       messages: "Messages",
       messagesShort: "Chat",
       profile: "Profil",
@@ -1651,15 +1650,16 @@ const copy = {
       participationEmptyTitle: "Aucune participation",
       participationEmptyDescription:
         "Les activités rejointes apparaîtront ici.",
-      favoriteTitle: "Activités enregistrées",
-      favoriteEmptyTitle: "Aucune activité enregistrée",
-      favoriteEmptyDescription: "Les activités enregistrées apparaîtront ici.",
+      favoriteTitle: "Activités favorites",
+      favoriteEmptyTitle: "Aucune activité favorite",
+      favoriteEmptyDescription:
+        "Les activités favorites apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
         `Affichage des ${limit} dernières participations. ${count} plus anciennes ne sont pas encore affichées.`,
       hiddenFavorite: (limit: number, count: number) =>
-        `Affichage des ${limit} dernieres activites enregistrees. ${count} plus anciennes ne sont pas encore affichees.`,
+        `Affichage des ${limit} dernieres activites favorites. ${count} plus anciennes ne sont pas encore affichees.`,
       signedUpAt: (date: string) => `Inscrit le ${date}`,
       cancelledAt: (date: string) => `Annulé le ${date}`,
       participationAria: (

@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { locales } from "@chill-club/shared";
-import {
-  CalendarPlus,
-  CircleUserRound,
-  Home,
-  MessageCircle,
-} from "lucide-react";
+import { Compass, MessageCircle, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -24,15 +19,9 @@ export function DesktopNav({ locale }: DesktopNavProps) {
     ? locale
     : "zh-CN";
   const items = [
-    { href: "/", label: t.nav.home, icon: Home },
-    {
-      href: "/activities/new",
-      label: t.nav.newActivityShort,
-      icon: CalendarPlus,
-      className: "lg:hidden",
-    },
+    { href: "/lobby", label: t.nav.lobby, icon: UsersRound },
+    { href: "/activities", label: t.nav.activities, icon: Compass },
     { href: "/messages", label: t.nav.messages, icon: MessageCircle },
-    { href: "/profile", label: t.nav.profile, icon: CircleUserRound },
   ];
 
   function isItemActive(href: string) {

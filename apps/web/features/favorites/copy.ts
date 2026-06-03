@@ -5,23 +5,23 @@ export function getActivityFavoriteCopy(locale: string) {
       unfavorite: "Retirer des favoris",
       favoriting: "Ajout...",
       unfavoriting: "Retrait...",
-      signInToFavorite: "Se connecter pour enregistrer",
+      signInToFavorite: "Se connecter pour ajouter aux favoris",
       invalidRequest: "Requete invalide. Reessayez plus tard.",
       activityUnavailable:
-        "Cette activite est introuvable ou ne peut pas etre enregistree.",
+        "Cette activite est introuvable ou ne peut pas etre ajoutee aux favoris.",
     };
   }
 
   if (locale === "en") {
     return {
-      favorite: "Save activity",
-      unfavorite: "Saved",
-      favoriting: "Saving...",
+      favorite: "Add to favorites",
+      unfavorite: "Favorited",
+      favoriting: "Adding...",
       unfavoriting: "Removing...",
-      signInToFavorite: "Sign in to save",
+      signInToFavorite: "Sign in to favorite",
       invalidRequest: "Invalid request. Try again later.",
       activityUnavailable:
-        "This activity does not exist or cannot be saved right now.",
+        "This activity does not exist or cannot be favorited right now.",
     };
   }
 

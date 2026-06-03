@@ -11,30 +11,26 @@ type ActivityModeTabsProps = {
 export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
   const tabs = [
     {
-      id: "activities" as const,
-      href: withLocale(locale, "/activities"),
-      icon: Compass,
-      shortLabel:
-        locale === "fr" ? "Sorties" : locale === "en" ? "Discover" : "发现",
-      label:
-        locale === "fr"
-          ? "Découverte"
-          : locale === "en"
-            ? "Activity Discovery"
-            : "活动发现",
-    },
-    {
       id: "lobby" as const,
       href: withLocale(locale, "/lobby"),
       icon: UsersRound,
-      shortLabel:
-        locale === "fr" ? "Équipes" : locale === "en" ? "Teams" : "组队",
       label:
         locale === "fr"
-          ? "Hall d'équipe"
+          ? "Hall d'equipe"
           : locale === "en"
             ? "Team Lobby"
             : "组队大厅",
+    },
+    {
+      id: "activities" as const,
+      href: withLocale(locale, "/activities"),
+      icon: Compass,
+      label:
+        locale === "fr"
+          ? "Decouverte"
+          : locale === "en"
+            ? "Activity Discovery"
+            : "活动发现",
     },
   ];
 
@@ -52,7 +48,7 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[1rem] px-2 py-2.5 transition sm:gap-2.5 sm:px-3",
+                "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[1rem] px-2.5 py-2.5 transition sm:gap-2.5 sm:px-3",
                 active
                   ? tab.id === "activities"
                     ? "border border-[#b9cbe0] bg-[linear-gradient(135deg,rgba(224,235,244,0.98),rgba(206,220,234,0.95))] text-[#496983] shadow-[inset_0_1px_0_rgba(249,253,255,0.82),0_3px_10px_rgba(98,123,150,0.1)]"
@@ -62,7 +58,7 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
             >
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8",
                   active
                     ? tab.id === "activities"
                       ? "bg-[rgba(235,244,250,0.86)] text-[#5a7890] ring-1 ring-[#c8d8e6]"
@@ -70,11 +66,10 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
                     : "bg-white/90 text-[#b08b58] ring-1 ring-[#ddd2bf]",
                 )}
               >
-                <Icon className="h-4 w-4" aria-hidden="true" />
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </span>
-              <span className="min-w-0 truncate text-sm font-semibold">
-                <span className="sm:hidden">{tab.shortLabel}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
+              <span className="min-w-0 truncate text-xs font-semibold sm:text-sm">
+                {tab.label}
               </span>
             </Link>
           );

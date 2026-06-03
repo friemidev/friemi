@@ -3,9 +3,9 @@ import Image from "next/image";
 import {
   Bell,
   CalendarPlus,
-  CircleUserRound,
-  Home,
+  Compass,
   MessageCircle,
+  UsersRound,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
@@ -35,9 +35,28 @@ export function AppHeader({
   viewerNickname = null,
 }: AppHeaderProps) {
   const t = getCopy(locale);
+  const messagesLabel = (
+    <>
+      <span className="2xl:hidden">{t.nav.messagesShort}</span>
+      <span className="hidden 2xl:inline">{t.nav.messages}</span>
+    </>
+  );
+  const lobbyLabel = (
+    <>
+      <span className="2xl:hidden">{t.nav.lobbyShort}</span>
+      <span className="hidden 2xl:inline">{t.nav.lobby}</span>
+    </>
+  );
+  const newActivityLabel = (
+    <>
+      <span className="2xl:hidden">{t.nav.newActivityShort}</span>
+      <span className="hidden 2xl:inline">{t.nav.newActivity}</span>
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-paper/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
           href={withLocale(locale, "/")}
           className="flex shrink-0 items-center gap-2"
@@ -52,59 +71,52 @@ export function AppHeader({
               priority
             />
           </span>
-          <span className="hidden whitespace-nowrap text-sm font-semibold tracking-normal sm:inline">
+          <span className="hidden whitespace-nowrap text-sm font-semibold tracking-normal xl:inline">
             Next Fun
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
+        <nav className="hidden min-w-0 items-center justify-center gap-1 lg:gap-1.5 md:flex">
           <Link
-            className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
-            href={withLocale(locale, "/")}
+            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
+            href={withLocale(locale, "/lobby")}
           >
-            <Home className="h-4 w-4" />
-            {t.nav.home}
+            <UsersRound className="h-4 w-4" />
+            {lobbyLabel}
           </Link>
           <Link
-            className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70 lg:hidden"
-            href={withLocale(locale, "/activities/new")}
+            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
+            href={withLocale(locale, "/activities")}
           >
-            <CalendarPlus className="h-4 w-4" />
-            {t.nav.newActivityShort}
+            <Compass className="h-4 w-4" />
+            {t.nav.activities}
           </Link>
           <Link
-            className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
+            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
             href={withLocale(locale, "/messages")}
           >
             <MessageCircle className="h-4 w-4" />
-            {t.nav.messages}
+            {messagesLabel}
           </Link>
           <Link
-            className="flex whitespace-nowrap items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 hover:bg-white/70"
-            href={withLocale(locale, "/profile")}
+            href={withLocale(locale, "/activities/new")}
+            className="ml-2"
           >
-            <CircleUserRound className="h-4 w-4" />
-            {t.nav.profile}
+            <Button className="gap-1.5 rounded-full border-0 bg-[#d88d72] px-4 text-white shadow-[0_8px_20px_rgba(216,141,114,0.28)] hover:bg-[#c87b61] xl:gap-2 xl:px-5">
+              <CalendarPlus className="h-4 w-4" />
+              {newActivityLabel}
+            </Button>
           </Link>
         </nav>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2">
           <GlobalSearchForm
             locale={locale}
-            className="hidden xl:flex"
+            className="hidden min-[1480px]:flex"
             variant="header"
           />
           <GlobalSearchIconLink locale={locale} />
           <LocaleSwitcher locale={locale} />
-          <Link
-            href={withLocale(locale, "/activities/new")}
-            className="hidden lg:block"
-          >
-            <Button className="gap-2 border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
-              <CalendarPlus className="h-4 w-4" />
-              {t.nav.newActivity}
-            </Button>
-          </Link>
           {showNotificationNav ? (
             <NotificationHeaderLink
               locale={locale}

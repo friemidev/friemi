@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getCopy } from "@/lib/copy";
-import { ActivityCard } from "./ActivityCard";
+import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
+import { ActivityCard } from "./ActivityCard";
 
 type ActivityLobbyViewProps = {
   createdActivities: ActivityCardViewModel[];
@@ -23,6 +23,12 @@ type LobbyFilterId =
   | "favorites"
   | "friendHosted"
   | "friendJoined";
+
+type FilterOption = {
+  id: LobbyFilterId;
+  count: number | null;
+  label: string;
+};
 
 const lobbyFilterStyles: Record<
   LobbyFilterId,
@@ -139,6 +145,92 @@ function ActivityLobbySection({
   );
 }
 
+function getAllLabel(locale: string) {
+  if (locale === "fr") {
+    return "Tout";
+  }
+
+  if (locale === "en") {
+    return "All";
+  }
+
+  return "全部";
+}
+
+function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
+  if (locale === "fr") {
+    switch (id) {
+      case "created":
+        return "Créées";
+      case "joined":
+        return "Rejointes";
+      case "favorites":
+        return "Favoris";
+      case "friendHosted":
+        return "Amis hôtes";
+      case "friendJoined":
+        return "Amis inscrits";
+      default:
+        return fallback;
+    }
+  }
+
+  if (locale === "en") {
+    switch (id) {
+      case "created":
+        return "Hosted by me";
+      case "joined":
+        return "Joined by me";
+      case "favorites":
+        return "Favorites";
+      case "friendHosted":
+        return "Hosted by friends";
+      case "friendJoined":
+        return "Joined by friends";
+      default:
+        return fallback;
+    }
+  }
+
+  switch (id) {
+    case "created":
+      return "我发起的";
+    case "joined":
+      return "我参加的";
+    case "favorites":
+      return "我收藏的";
+    case "friendHosted":
+      return "朋友发起";
+    case "friendJoined":
+      return "朋友参加";
+    default:
+      return fallback;
+  }
+}
+
+function getEmptyCategoryCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      title: "Aucune activite dans cette categorie pour le moment.",
+      description:
+        "Essayez une autre categorie pour retrouver vos activites et celles de vos amis.",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      title: "Nothing in this section yet.",
+      description:
+        "Try another section to see your activities, favorites, or friend-related plans.",
+    };
+  }
+
+  return {
+    title: "这个分类里暂时还没有活动。",
+    description: "可以切换其他分类，查看我发起、我参加、我收藏或和朋友相关的活动。",
+  };
+}
+
 export function ActivityLobbyView({
   createdActivities,
   joinedActivities,
@@ -181,12 +273,12 @@ export function ActivityLobbyView({
       title: t.friendJoinedTitle,
     },
   ];
-  const filterOptions = [
-    { id: "all" as const, count: sections.length, label: locale === "fr" ? "Tout" : locale === "en" ? "All" : "全部" },
+  const filterOptions: FilterOption[] = [
+    { id: "all", count: null, label: getAllLabel(locale) },
     ...sections.map((section) => ({
       id: section.id,
       count: section.activities.length,
-      label: section.title,
+      label: getFilterLabel(locale, section.id, section.title),
     })),
   ];
   const visibleSections = useMemo(
@@ -196,10 +288,13 @@ export function ActivityLobbyView({
         : sections.filter((section) => section.id === activeFilter),
     [activeFilter, sections],
   );
-  const hasActivities = sections.some((section) => section.activities.length > 0);
+  const hasActivities = sections.some(
+    (section) => section.activities.length > 0,
+  );
   const hasVisibleActivities = visibleSections.some(
     (section) => section.activities.length > 0,
   );
+  const emptyCategoryCopy = getEmptyCategoryCopy(locale);
 
   return (
     <div className="space-y-8">
@@ -214,57 +309,50 @@ export function ActivityLobbyView({
         </div>
 
         <div className="mx-auto mt-6 max-w-4xl">
-          <div className="flex flex-wrap justify-center gap-2 rounded-[1.5rem] border border-[#e3d9c7] bg-[rgba(255,251,245,0.78)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
-            {filterOptions.map((option) => {
-              const active = option.id === activeFilter;
-              const palette = lobbyFilterStyles[option.id];
+          <div className="rounded-[1.5rem] border border-[#e3d9c7] bg-[rgba(255,251,245,0.78)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
+              {filterOptions.map((option) => {
+                const active = option.id === activeFilter;
+                const palette = lobbyFilterStyles[option.id];
 
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setActiveFilter(option.id)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition",
-                    active ? palette.active : palette.idle,
-                  )}
-                >
-                  <span>{option.label}</span>
-                  <span
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setActiveFilter(option.id)}
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-semibold",
-                      active ? palette.badge : palette.idleBadge,
+                      "inline-flex min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-1.5 text-[11px] font-medium whitespace-nowrap transition sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm",
+                      active ? palette.active : palette.idle,
                     )}
                   >
-                    {option.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span className="truncate">{option.label}</span>
+                    {typeof option.count === "number" ? (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
+                          active ? palette.badge : palette.idleBadge,
+                        )}
+                      >
+                        {option.count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              </div>
+            </div>
         </div>
       </section>
 
       {!hasActivities ? (
-        <EmptyState
-          title={t.emptyTitle}
-          description={t.emptyDescription}
-        />
+        <EmptyState title={t.emptyTitle} description={t.emptyDescription} />
       ) : !hasVisibleActivities ? (
         <div className="rounded-[1.75rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-5 py-8 text-center">
           <p className="text-base font-semibold text-[#433a30]">
-            {locale === "fr"
-              ? "Aucune activite dans cette categorie pour le moment."
-              : locale === "en"
-                ? "Nothing in this section yet."
-                : "这个分类里暂时还没有活动。"}
+            {emptyCategoryCopy.title}
           </p>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            {locale === "fr"
-              ? "Essayez une autre categorie pour retrouver vos activites et celles de vos amis."
-              : locale === "en"
-                ? "Try another section to see your activities, favorites, or friend-related plans."
-                : "可以切换其他分类，查看我发起、我参加、我收藏或好友相关的活动。"}
+            {emptyCategoryCopy.description}
           </p>
         </div>
       ) : null}
