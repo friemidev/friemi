@@ -461,3 +461,29 @@ model DirectMessage {
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
 }
+
+model AnalyticsEvent {
+  id            String   @id @default(cuid())
+  name          String
+  environment   String
+  userProfileId String?
+  anonymousId   String?
+  sessionId     String?
+  locale        String
+  route         String
+  referrer      String?
+  userAgent     String?
+  deviceType    String?
+  sourceSurface String?
+  entityType    String?
+  entityId      String?
+  appVersion    String?
+  properties    Json?
+  createdAt     DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([userProfileId, createdAt])
+  @@index([sourceSurface, createdAt])
+  @@index([environment, createdAt])
+}

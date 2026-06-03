@@ -296,3 +296,29 @@ docs/v1_2/global-analytics-tracking-plan.md
 - 后续实现前已明确哪些数据不能采集
 - 后续实现前已明确客户端事件和服务端事件的边界
 - 后续实现前已明确 Preview / Production 数据隔离和看板过滤规则
+
+### 11. 埋点基础设施
+
+建议分支：
+
+```text
+feature/analytics-foundation
+```
+
+小功能：
+
+- [x] 新增 `AnalyticsEvent` 数据模型
+- [x] 新增事件白名单
+- [x] 新增事件字段校验和敏感字段清洗
+- [x] 新增服务端埋点 helper
+- [x] 新增客户端埋点 helper
+- [x] 新增 `/api/analytics/events` 上报接口
+- [x] 区分 `development` / `preview` / `production`
+- [x] 埋点失败不阻断用户主流程
+
+验收标准：
+
+- 合法事件可以写入数据库
+- 未知事件不能写入数据库
+- 聊天、评论、举报、报名留言正文不能进入埋点字段
+- Preview 和 Production 可以通过 `environment` 区分

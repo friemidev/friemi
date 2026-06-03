@@ -451,6 +451,17 @@ model AnalyticsEvent {
 - Google 用户信息
 - 完整自由文本地址
 
+同时，`route` 和 `referrer` 只保留路径，不保留查询参数。
+
+例如：
+
+```text
+/zh-CN/activities?q=xxx -> /zh-CN/activities
+https://example.com/zh-CN?q=xxx -> https://example.com/zh-CN
+```
+
+这样可以避免搜索词、外部分享参数或第三方追踪参数进入产品数据表。
+
 ### 2. 字段数量限制
 
 `properties` 建议限制：
@@ -479,6 +490,48 @@ has_friend_participants
 friend_participant_count
 participation_status
 ```
+
+第一版只接受 `snake_case` 属性名，跳过 `camelCase`、带连字符、带空格或不可比较的字段名。
+
+### 4. 标准化范围
+
+为了让后续看板可以直接聚合，第一版只允许有限的实体类型和入口来源。
+
+`entityType` 建议只使用：
+
+```text
+activity
+public_event
+team
+comment
+user
+merchant
+report
+notification
+conversation
+```
+
+`sourceSurface` 建议只使用：
+
+```text
+home_recent
+activity_list
+public_event_detail
+activity_detail
+global_search
+friend_activity
+notification
+share_link
+profile
+messages
+comments
+report_dialog
+admin_reports
+public_event_source
+wechat_webview
+```
+
+活动相关事件必须带 `entityType`、`entityId` 和 `sourceSurface`，否则数据无法归属到某个活动或某个入口，不进入第一版统计。
 
 ## 关键漏斗
 

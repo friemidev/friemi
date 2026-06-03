@@ -45,33 +45,33 @@ function getCardKindLabel(isActivityInfo: boolean, locale: string) {
   return isActivityInfo ? "活动" : "车队";
 }
 
-function getInterestedFavoriteLabels(locale: string) {
+function getCardFavoriteLabels(locale: string) {
   if (locale === "fr") {
     return {
-      favorite: "Intéressé",
-      unfavorite: "Intéressé",
+      favorite: "Ajouter aux favoris",
+      unfavorite: "Favori",
       favoriting: "Ajout...",
       unfavoriting: "Retrait...",
-      signInToFavorite: "Se connecter pour marquer l’intérêt",
+      signInToFavorite: "Se connecter pour ajouter aux favoris",
     };
   }
 
   if (locale === "en") {
     return {
-      favorite: "Interested",
-      unfavorite: "Interested",
+      favorite: "Save",
+      unfavorite: "Saved",
       favoriting: "Saving...",
       unfavoriting: "Removing...",
-      signInToFavorite: "Sign in to mark interested",
+      signInToFavorite: "Sign in to save",
     };
   }
 
   return {
-    favorite: "感兴趣",
-    unfavorite: "已感兴趣",
-    favoriting: "标记中...",
+    favorite: "收藏",
+    unfavorite: "已收藏",
+    favoriting: "收藏中...",
     unfavoriting: "取消中...",
-    signInToFavorite: "登录后标记感兴趣",
+    signInToFavorite: "登录后收藏",
   };
 }
 
@@ -134,7 +134,7 @@ export function ActivityCard({
             isFavorited={Boolean(activity.isFavorited)}
             locale={locale}
             redirectPath="/activities"
-            labelOverrides={getInterestedFavoriteLabels(locale)}
+            labelOverrides={getCardFavoriteLabels(locale)}
           />
         </div>
       ) : null}
