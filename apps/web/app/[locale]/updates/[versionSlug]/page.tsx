@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, CheckCircle2, ListChecks } from "lucide-react";
-import { PageContainer } from "@/components/layout/PageContainer";
 import {
-  getVersionUpdateBySlug,
-} from "@/features/updates/versionUpdates";
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  ListChecks,
+} from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { getVersionUpdateBySlug } from "@/features/updates/versionUpdates";
 import { withLocale } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
