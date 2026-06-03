@@ -40,6 +40,7 @@ MVP 基础阶段，重点完成：
 - 用户基于活动信息创建组队
 - 活动发现页和组队大厅的语义拆分
 - 评论、举报、好友搜索、私聊入口等社交能力规划
+- 全局埋点和数据系统方案规划
 
 v1.2 尚未作为正式版本发布，因此只保留草稿公告，不进入公开 `/updates` 版本列表。
 
@@ -47,6 +48,7 @@ v1.2 分支实现清单维护在：
 
 ```text
 docs/v1_2/implementation-checklist.md
+docs/v1_2/global-analytics-tracking-plan.md
 ```
 
 ## 更新公告
