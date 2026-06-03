@@ -1,7 +1,11 @@
 import { SignIn } from "@clerk/nextjs";
+import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
+
+export const dynamic = "force-dynamic";
 
 type SignInPageProps = {
   params: Promise<{
@@ -9,9 +13,22 @@ type SignInPageProps = {
   }>;
 };
 
+function isWechatWebView(userAgent: string | null) {
+  return /MicroMessenger/i.test(userAgent ?? "");
+}
+
 export default async function SignInPage({ params }: SignInPageProps) {
   const { locale } = await params;
   const t = getCopy(locale);
+  const requestHeaders = await headers();
+
+  if (isWechatWebView(requestHeaders.get("user-agent"))) {
+    return (
+      <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
+        <WechatWebViewGuide locale={locale} />
+      </PageContainer>
+    );
+  }
 
   if (!hasClerkKeys()) {
     return (
