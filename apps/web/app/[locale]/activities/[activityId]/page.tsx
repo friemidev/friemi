@@ -8,6 +8,7 @@ import {
   Handshake,
   Info,
   MapPin,
+  MessageCircle,
   Pencil,
   ShieldAlert,
   Route,
@@ -49,6 +50,7 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
+import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
@@ -295,6 +297,7 @@ export default async function ActivityDetailPage({
   const isCancelled = activity.status === "CANCELLED";
   const isFull = activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const canContactOrganizer = !isOrganizer;
   const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
@@ -662,6 +665,14 @@ export default async function ActivityDetailPage({
               isAuthenticated={Boolean(viewerProfile)}
               viewerParticipationStatus={viewerParticipation?.status ?? null}
             />
+            {canContactOrganizer ? (
+              <ContactOrganizerForm
+                activityId={activity.id}
+                locale={locale}
+                organizerNickname={activity.organizer.nickname}
+                organizerProfileId={activity.organizer.id}
+              />
+            ) : null}
           </div>
           <div className="mt-4">
             <ActivityShareTools
@@ -678,5 +689,46 @@ export default async function ActivityDetailPage({
         </aside>
       </section>
     </PageContainer>
+  );
+}
+
+function ContactOrganizerForm({
+  activityId,
+  locale,
+  organizerNickname,
+  organizerProfileId,
+}: {
+  activityId: string;
+  locale: string;
+  organizerNickname: string;
+  organizerProfileId: string;
+}) {
+  const t = getCopy(locale);
+
+  return (
+    <form
+      action={openActivityOrganizerConversationAction}
+      className="mt-3 grid gap-2"
+    >
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="activityId" value={activityId} />
+      <input
+        type="hidden"
+        name="organizerProfileId"
+        value={organizerProfileId}
+      />
+      <Button
+        type="submit"
+        variant="secondary"
+        className="h-11 w-full gap-2 rounded-full border border-[#d9c6ad] bg-[#fff8ed] text-[#6f5434] shadow-none hover:bg-white"
+        aria-label={`${t.activityDetail.contactOrganizer}: ${organizerNickname}`}
+      >
+        <MessageCircle className="h-4 w-4 shrink-0 text-[#9c6f4e]" />
+        {t.activityDetail.contactOrganizer}
+      </Button>
+      <p className="px-1 text-xs leading-5 text-zinc-500">
+        {t.activityDetail.contactOrganizerHint}
+      </p>
+    </form>
   );
 }
