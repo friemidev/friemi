@@ -16,6 +16,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
     "format": "prettier --write .",
     "db:generate": "npm run db:generate --workspace=apps/web",
     "db:push": "npm run db:push --workspace=apps/web",
