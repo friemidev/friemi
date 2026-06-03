@@ -19,6 +19,7 @@ import { getCategoryLabel } from "@/lib/copy";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import {
   getEventDateLabel,
   getEventPriceLabel,
@@ -78,6 +79,16 @@ export default async function PublicEventDetailPage({
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/64 via-black/22 to-black/8"
         />
+        <div className="absolute right-4 top-4 z-30 sm:right-6 sm:top-6">
+          <ReportDialog
+            isAuthenticated={Boolean(viewerProfile)}
+            locale={locale}
+            redirectPath={`/public-events/${publicEvent.id}`}
+            targetId={publicEvent.id}
+            targetType="PUBLIC_EVENT"
+            variant="icon"
+          />
+        </div>
         <div className="relative max-w-4xl space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">

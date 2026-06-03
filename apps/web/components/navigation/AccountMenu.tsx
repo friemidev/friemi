@@ -14,6 +14,7 @@ import {
   LogOut,
   MessageCircle,
   Settings,
+  ShieldAlert,
   UserPlus,
   type LucideIcon,
   UserRound,
@@ -69,6 +70,7 @@ export function AccountMenu({
   const notificationsHref = withLocale(locale, "/notifications");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
+  const reportOpsHref = withLocale(locale, "/admin/reports");
 
   useEffect(() => {
     if (!open) return;
@@ -235,6 +237,13 @@ export function AccountMenu({
                   icon={Building2}
                   label={t.merchantOps}
                   active={pathname.startsWith(merchantOpsHref)}
+                  onClick={closeMenu}
+                />
+                <MenuLink
+                  href={reportOpsHref}
+                  icon={ShieldAlert}
+                  label={t.reportOps}
+                  active={pathname.startsWith(reportOpsHref)}
                   onClick={closeMenu}
                 />
               </>

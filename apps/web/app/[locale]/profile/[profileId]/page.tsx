@@ -64,6 +64,7 @@ export default async function PublicProfilePage({
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}
+        isAuthenticated={Boolean(viewerProfile)}
         isSelf={isSelf}
         locale={locale}
         profile={profile}

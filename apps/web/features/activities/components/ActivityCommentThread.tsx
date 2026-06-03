@@ -15,6 +15,7 @@ import {
   type UpdateActivityCommentState,
   updateActivityCommentAction,
 } from "../actions/createActivityComment";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
@@ -332,22 +333,30 @@ function ReplyCommentForm({
 
 function CommentActions({
   canManage,
+  canReport,
   canReply,
+  isAuthenticated,
   locale,
   onDelete,
   onEdit,
   onReply,
+  redirectPath,
+  reportTargetId,
 }: {
   canManage: boolean;
+  canReport: boolean;
   canReply: boolean;
+  isAuthenticated: boolean;
   locale: string;
   onDelete: () => void;
   onEdit: () => void;
   onReply: () => void;
+  redirectPath: string;
+  reportTargetId: string;
 }) {
   const t = getCopy(locale).activityComments;
 
-  if (!canReply && !canManage) {
+  if (!canReply && !canManage && !canReport) {
     return null;
   }
 
@@ -382,6 +391,17 @@ function CommentActions({
           </button>
         </>
       ) : null}
+      {canReport ? (
+        <ReportDialog
+          className="text-zinc-500 hover:text-clay"
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          redirectPath={redirectPath}
+          targetId={reportTargetId}
+          targetType="COMMENT"
+          variant="link"
+        />
+      ) : null}
     </div>
   );
 }
@@ -404,6 +424,10 @@ function ReplyItem({
   const t = getCopy(locale).activityComments;
   const canManage =
     isAuthenticated && viewerProfileId === reply.author.id && !reply.isDeleted;
+  const canReport =
+    !reply.isDeleted &&
+    (!isAuthenticated || viewerProfileId !== reply.author.id);
+  const redirectPath = `/activities/${activityId}`;
 
   return (
     <div className="flex gap-2 py-3">
@@ -447,7 +471,9 @@ function ReplyItem({
         ) : !isEditing ? (
           <CommentActions
             canManage={canManage}
+            canReport={canReport}
             canReply={false}
+            isAuthenticated={isAuthenticated}
             locale={locale}
             onDelete={() => {
               setIsDeleting(true);
@@ -458,6 +484,8 @@ function ReplyItem({
               setIsDeleting(false);
             }}
             onReply={() => undefined}
+            redirectPath={redirectPath}
+            reportTargetId={reply.id}
           />
         ) : null}
       </div>
@@ -481,6 +509,10 @@ export function ActivityCommentThread({
     viewerProfileId === comment.author.id &&
     !comment.isDeleted;
   const canReply = isAuthenticated && !comment.isDeleted;
+  const canReport =
+    !comment.isDeleted &&
+    (!isAuthenticated || viewerProfileId !== comment.author.id);
+  const redirectPath = `/activities/${activityId}`;
 
   return (
     <article className="py-4 first:pt-0 last:pb-0">
@@ -539,7 +571,9 @@ export function ActivityCommentThread({
           ) : !isEditing ? (
             <CommentActions
               canManage={canManage}
+              canReport={canReport}
               canReply={canReply}
+              isAuthenticated={isAuthenticated}
               locale={locale}
               onDelete={() => {
                 setIsDeleting(true);
@@ -556,6 +590,8 @@ export function ActivityCommentThread({
                 setIsDeleting(false);
                 setIsEditing(false);
               }}
+              redirectPath={redirectPath}
+              reportTargetId={comment.id}
             />
           ) : null}
 

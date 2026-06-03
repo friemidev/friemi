@@ -52,6 +52,7 @@ import { ActivityFriendSignalPanel } from "@/features/friends/components/Activit
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
 import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -104,6 +105,16 @@ export default async function ActivityDetailPage({
             src={activity.coverImageUrl}
             overlayClassName="bg-black/35"
           />
+          <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+            <ReportDialog
+              isAuthenticated={Boolean(viewerProfile)}
+              locale={locale}
+              redirectPath={`/activities/${activity.id}`}
+              targetId={activity.id}
+              targetType="ACTIVITY"
+              variant="icon"
+            />
+          </div>
           <div className="relative max-w-3xl space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink">
@@ -316,13 +327,21 @@ export default async function ActivityDetailPage({
           src={activity.coverImageUrl}
           overlayClassName="bg-black/35"
         />
-        <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+        <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
           <ActivityFavoriteButton
             activityId={activity.id}
             isAuthenticated={Boolean(viewerProfile)}
             isFavorited={isFavorited}
             locale={locale}
             redirectPath={`/activities/${activity.id}`}
+          />
+          <ReportDialog
+            isAuthenticated={Boolean(viewerProfile)}
+            locale={locale}
+            redirectPath={`/activities/${activity.id}`}
+            targetId={activity.id}
+            targetType="ACTIVITY"
+            variant="icon"
           />
         </div>
         <div className="relative max-w-3xl space-y-3">
