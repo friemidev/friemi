@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { PublicEventCard } from "@/features/public-events/components/PublicEventCard";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
+import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
 import {
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
@@ -19,6 +20,7 @@ import {
   type GlobalSearchParams,
 } from "@/features/search/utils/searchQuery";
 import { getCopy } from "@/lib/copy";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
 type SearchPageProps = {
@@ -121,8 +123,14 @@ export default async function SearchPage({
   }
 
   const t = getCopy(locale).globalSearch;
+  const viewerProfile = query
+    ? await getOptionalCurrentUserProfile().catch((error: unknown) => {
+        console.error("Failed to load viewer profile for global search", error);
+        return null;
+      })
+    : null;
   const searchResult = query
-    ? await getGlobalSearchResults(query)
+    ? await getGlobalSearchResults(query, viewerProfile?.id)
         .then((result) => ({ result, error: null }))
         .catch((error: unknown) => {
           console.error("Failed to load global search results", error);
@@ -131,6 +139,7 @@ export default async function SearchPage({
     : { result: null, error: null };
   const totalCount = searchResult.result
     ? searchResult.result.activityCount +
+      searchResult.result.userCount +
       searchResult.result.merchantCount +
       searchResult.result.publicEventCount
     : 0;
@@ -172,6 +181,25 @@ export default async function SearchPage({
           <p className="rounded-lg border border-black/10 bg-white/70 px-4 py-3 text-sm text-zinc-600">
             {t.resultSummary(totalCount, query)}
           </p>
+
+          {searchResult.result.userCount > 0 ? (
+            <section className="space-y-3">
+              <SearchSectionHeader
+                title={t.usersTitle}
+                count={searchResult.result.userCount}
+              />
+              {searchResult.result.users.length > 0 ? (
+                <GlobalSearchUserResults
+                  users={searchResult.result.users}
+                  locale={locale}
+                />
+              ) : (
+                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                  {t.noUserResults}
+                </p>
+              )}
+            </section>
+          ) : null}
 
           {searchResult.result.activityCount > 0 ? (
             <section className="space-y-3">

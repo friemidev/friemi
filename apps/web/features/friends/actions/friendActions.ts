@@ -27,6 +27,13 @@ const sendFriendRequestSchema = z.object({
   returnTo: z.enum(["friends", "messages"]).default("friends"),
 });
 
+const sendFriendRequestToProfileSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  targetProfileId: z.string().trim().min(1),
+  message: z.string().trim().max(240).optional(),
+  returnTo: z.enum(["friends", "messages"]).default("friends"),
+});
+
 const requestActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   requestId: z.string().min(1),
@@ -103,6 +110,81 @@ async function hasPendingFriendRequest(userId: string, otherUserId: string) {
   return Boolean(pendingRequest);
 }
 
+async function createPendingFriendRequest({
+  locale,
+  logContext,
+  message,
+  targetProfileId,
+  t,
+  viewerProfileId,
+}: {
+  locale: string;
+  logContext: string;
+  message?: string;
+  targetProfileId: string;
+  t: ReturnType<typeof getFriendsCopy>;
+  viewerProfileId: string;
+}): Promise<FriendActionState> {
+  if (targetProfileId === viewerProfileId) {
+    return {
+      formError: t.cannotAddSelf,
+    };
+  }
+
+  try {
+    const [existingFriendship, pendingRequestExists] = await Promise.all([
+      getExistingFriendship(viewerProfileId, targetProfileId),
+      hasPendingFriendRequest(viewerProfileId, targetProfileId),
+    ]);
+
+    if (existingFriendship) {
+      return {
+        formError: t.alreadyFriends,
+      };
+    }
+
+    if (pendingRequestExists) {
+      return {
+        formError: t.pendingExists,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.friendRequest.create({
+        data: {
+          requesterId: viewerProfileId,
+          receiverId: targetProfileId,
+          pendingPairKey: getFriendshipPairKey(viewerProfileId, targetProfileId),
+          message: message || null,
+        },
+      });
+
+      await createNotification(tx, {
+        actorId: viewerProfileId,
+        recipientId: targetProfileId,
+        type: "FRIEND_REQUEST",
+      });
+    });
+  } catch (error) {
+    console.error(logContext, error);
+    return {
+      formError:
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+          ? t.pendingExists
+          : t.failed,
+    };
+  }
+
+  refreshFriends(locale);
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+
+  return {
+    ok: true,
+  };
+}
+
 export async function sendFriendRequestAction(
   _previousState: FriendActionState,
   formData: FormData,
@@ -129,79 +211,78 @@ export async function sendFriendRequestAction(
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
 
-  try {
-    const targetUsers = await findFriendRequestTargets(searchTerm);
-    const targetUser = targetUsers[0];
+  const targetUsers = await findFriendRequestTargets(searchTerm);
+  const targetUser = targetUsers[0];
 
-    if (!targetUser) {
-      return {
-        formError: t.targetNotFound,
-      };
-    }
-
-    if (targetUsers.length > 1) {
-      return {
-        formError: t.ambiguousTarget,
-      };
-    }
-
-    if (targetUser.id === viewerProfile.id) {
-      return {
-        formError: t.cannotAddSelf,
-      };
-    }
-
-    const [existingFriendship, pendingRequestExists] = await Promise.all([
-      getExistingFriendship(viewerProfile.id, targetUser.id),
-      hasPendingFriendRequest(viewerProfile.id, targetUser.id),
-    ]);
-
-    if (existingFriendship) {
-      return {
-        formError: t.alreadyFriends,
-      };
-    }
-
-    if (pendingRequestExists) {
-      return {
-        formError: t.pendingExists,
-      };
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.friendRequest.create({
-        data: {
-          requesterId: viewerProfile.id,
-          receiverId: targetUser.id,
-          pendingPairKey: getFriendshipPairKey(viewerProfile.id, targetUser.id),
-          message: message || null,
-        },
-      });
-
-      await createNotification(tx, {
-        actorId: viewerProfile.id,
-        recipientId: targetUser.id,
-        type: "FRIEND_REQUEST",
-      });
-    });
-  } catch (error) {
-    console.error("Failed to send friend request", error);
+  if (!targetUser) {
     return {
-      formError:
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-          ? t.pendingExists
-          : t.failed,
+      formError: t.targetNotFound,
     };
   }
 
-  refreshFriends(locale);
-  revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, "/"), "layout");
+  if (targetUsers.length > 1) {
+    return {
+      formError: t.ambiguousTarget,
+    };
+  }
 
-  return {
-    ok: true,
-  };
+  return createPendingFriendRequest({
+    locale,
+    logContext: "Failed to send friend request",
+    message,
+    targetProfileId: targetUser.id,
+    t,
+    viewerProfileId: viewerProfile.id,
+  });
+}
+
+export async function sendFriendRequestToProfileAction(
+  _previousState: FriendActionState,
+  formData: FormData,
+): Promise<FriendActionState> {
+  const fallbackLocale = getString(formData, "locale") || "zh-CN";
+  const fallbackCopy = getFriendsCopy(fallbackLocale);
+  const result = sendFriendRequestToProfileSchema.safeParse({
+    locale: fallbackLocale,
+    targetProfileId: getString(formData, "targetProfileId"),
+    message: getString(formData, "message") || undefined,
+    returnTo: getString(formData, "returnTo") || "friends",
+  });
+
+  if (!result.success) {
+    return {
+      formError: fallbackCopy.invalidRequest,
+    };
+  }
+
+  const { locale, message } = result.data;
+  const t = getFriendsCopy(locale);
+  const viewerProfile = await ensureCurrentUserProfile(locale);
+
+  const targetUser = await prisma.userProfile.findFirst({
+    where: {
+      id: result.data.targetProfileId,
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!targetUser) {
+    return {
+      formError: t.targetNotFound,
+    };
+  }
+
+  return createPendingFriendRequest({
+    locale,
+    logContext: "Failed to send friend request to profile",
+    message,
+    targetProfileId: targetUser.id,
+    t,
+    viewerProfileId: viewerProfile.id,
+  });
 }
 
 export async function acceptFriendRequestAction(
