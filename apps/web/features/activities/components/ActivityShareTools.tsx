@@ -4,12 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, FileText, Link as LinkIcon, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import { Button } from "@chill-club/ui";
+import type {
+  AnalyticsEntityType,
+  AnalyticsSourceSurface,
+} from "@/features/analytics/events";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ActivityCopyButton } from "./ActivityCopyButton";
 
 type ActivityShareToolsProps = {
   activityTitle: string;
+  analyticsEntityId: string;
+  analyticsEntityType: AnalyticsEntityType;
+  analyticsSourceSurface?: AnalyticsSourceSurface;
   categoryLabel: string;
   coverImageUrl?: string | null;
   dateLabel: string;
@@ -219,6 +227,9 @@ function drawImageCover(
 
 export function ActivityShareTools({
   activityTitle,
+  analyticsEntityId,
+  analyticsEntityType,
+  analyticsSourceSurface = "activity_detail",
   categoryLabel,
   coverImageUrl,
   dateLabel,
@@ -363,6 +374,16 @@ export function ActivityShareTools({
       link.download = posterFileName;
       link.href = posterDataUrl;
       link.click();
+      trackClientAnalyticsEvent({
+        name: "poster_downloaded",
+        entityId: analyticsEntityId,
+        entityType: analyticsEntityType,
+        sourceSurface: analyticsSourceSurface,
+        properties: {
+          has_cover_image: Boolean(coverImageUrl),
+          has_qr_code: true,
+        },
+      });
       setDownloadState("idle");
     } catch (error) {
       console.error("Failed to generate activity poster", error);
@@ -388,6 +409,15 @@ export function ActivityShareTools({
           <FileText className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{t.copyTitle}</span>
           <ActivityCopyButton
+            analyticsEvent={{
+              name: "field_copied",
+              entityId: analyticsEntityId,
+              entityType: analyticsEntityType,
+              sourceSurface: analyticsSourceSurface,
+              properties: {
+                field_name: "title",
+              },
+            }}
             className="-mr-1"
             failedLabel={t.copyFailed}
             label={t.copyTitle}
@@ -400,6 +430,12 @@ export function ActivityShareTools({
           <span className="min-w-0 flex-1 truncate">{t.copyLink}</span>
           {activityUrl ? (
             <ActivityCopyButton
+              analyticsEvent={{
+                name: "link_copied",
+                entityId: analyticsEntityId,
+                entityType: analyticsEntityType,
+                sourceSurface: analyticsSourceSurface,
+              }}
               className="-mr-1"
               failedLabel={t.copyFailed}
               label={t.copyLink}

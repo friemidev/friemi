@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button, Textarea } from "@chill-club/ui";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import {
@@ -178,7 +179,22 @@ export function JoinActivityForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <form
+      action={formAction}
+      className="grid gap-3"
+      noValidate
+      onSubmit={() => {
+        trackClientAnalyticsEvent({
+          name: "join_started",
+          entityId: activityId,
+          entityType: "team",
+          sourceSurface: "activity_detail",
+          properties: {
+            requires_approval: requiresApproval,
+          },
+        });
+      }}
+    >
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 

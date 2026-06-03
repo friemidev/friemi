@@ -150,6 +150,7 @@ export function ProfileDashboardView({
                       key={activity.id}
                       activity={activity}
                       locale={locale}
+                      sourceSurface="profile"
                     />
                   ))}
                 </div>
@@ -218,6 +219,7 @@ export function ProfileDashboardView({
                           key={favorite.id}
                           activity={favorite.activity}
                           locale={locale}
+                          sourceSurface="profile"
                         />
                       ))}
                     </div>

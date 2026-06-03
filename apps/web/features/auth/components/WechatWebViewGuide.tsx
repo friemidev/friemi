@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { cn } from "@/lib/utils";
 
 type WechatWebViewGuideProps = {
@@ -82,6 +83,16 @@ async function copyCurrentUrl() {
 export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
   const copy = getGuideCopy(locale);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    trackClientAnalyticsEvent({
+      name: "wechat_webview_login_guide_viewed",
+      sourceSurface: "wechat_webview",
+      properties: {
+        context: "sign_in",
+      },
+    });
+  }, []);
 
   async function handleCopy() {
     await copyCurrentUrl();

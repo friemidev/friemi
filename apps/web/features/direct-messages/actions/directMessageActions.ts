@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
@@ -73,6 +75,35 @@ function refreshConversation(locale: string, conversationId?: string) {
   }
 }
 
+function trackConversationOpened({
+  conversationId,
+  locale,
+  sourceSurface,
+  userProfileId,
+}: {
+  conversationId: string;
+  locale: string;
+  sourceSurface: "activity_detail" | "messages";
+  userProfileId: string;
+}) {
+  queueAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "conversation_opened",
+      route:
+        sourceSurface === "activity_detail"
+          ? `/${locale}/activities`
+          : `/${locale}/messages/${conversationId}`,
+      entityId: conversationId,
+      entityType: "conversation",
+      sourceSurface,
+    },
+    {
+      userProfileId,
+    },
+  );
+}
+
 export async function createDirectConversationAction(
   _previousState: DirectMessageActionState,
   formData: FormData,
@@ -98,6 +129,12 @@ export async function createDirectConversationAction(
       friendProfileId: result.data.friendProfileId,
     });
 
+    trackConversationOpened({
+      conversationId: conversation.id,
+      locale: result.data.locale,
+      sourceSurface: "messages",
+      userProfileId: profile.id,
+    });
     refreshConversation(result.data.locale, conversation.id);
 
     return {
@@ -136,6 +173,12 @@ export async function openDirectConversationAction(
     });
 
     conversationId = conversation.id;
+    trackConversationOpened({
+      conversationId,
+      locale: result.data.locale,
+      sourceSurface: "messages",
+      userProfileId: profile.id,
+    });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
     console.error("Failed to open direct conversation", error);
@@ -170,6 +213,25 @@ export async function openActivityOrganizerConversationAction(
     });
 
     conversationId = conversation.id;
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "organizer_contact_clicked",
+        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        entityId: result.data.activityId,
+        entityType: "team",
+        sourceSurface: "activity_detail",
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
+    trackConversationOpened({
+      conversationId,
+      locale: result.data.locale,
+      sourceSurface: "activity_detail",
+      userProfileId: profile.id,
+    });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
     console.error("Failed to open activity organizer conversation", error);
@@ -211,6 +273,22 @@ export async function sendDirectMessageAction(
       body: result.data.body,
     });
 
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "message_sent",
+        route: `/${result.data.locale}/messages/${conversation.id}`,
+        entityId: conversation.id,
+        entityType: "conversation",
+        sourceSurface: "messages",
+        properties: {
+          body_length: result.data.body.length,
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
     refreshConversation(result.data.locale, conversation.id);
 
     return {
@@ -263,6 +341,23 @@ export async function sendDirectMessageToFriendAction(
       body: result.data.body,
     });
 
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "message_sent",
+        route: `/${result.data.locale}/messages/${conversation.id}`,
+        entityId: conversation.id,
+        entityType: "conversation",
+        sourceSurface: "messages",
+        properties: {
+          body_length: result.data.body.length,
+          send_mode: "friend_shortcut",
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
     refreshConversation(result.data.locale, conversation.id);
 
     return {

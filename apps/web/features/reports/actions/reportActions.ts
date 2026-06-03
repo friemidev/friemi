@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, type ReportReason, type ReportStatus } from "@prisma/client";
 import { z } from "zod";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -236,14 +238,17 @@ export async function createReportAction(
       };
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.report.create({
+    const report = await prisma.$transaction(async (tx) => {
+      const createdReport = await tx.report.create({
         data: {
           reporterId: reporter.id,
           targetType: result.data.targetType,
           targetId: result.data.targetId,
           reason: result.data.reason,
           description: result.data.description || null,
+        },
+        select: {
+          id: true,
         },
       });
 
@@ -269,7 +274,27 @@ export async function createReportAction(
           type: "REPORT_CREATED",
         })),
       );
+
+      return createdReport;
     });
+
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(locale),
+        name: "report_submitted",
+        route: redirectPath?.startsWith("/") ? `/${locale}${redirectPath}` : `/${locale}`,
+        entityId: report.id,
+        entityType: "report",
+        sourceSurface: "report_dialog",
+        properties: {
+          reason: result.data.reason,
+          target_type: result.data.targetType,
+        },
+      },
+      {
+        userProfileId: reporter.id,
+      },
+    );
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -334,6 +359,21 @@ export async function reviewReportAction(
       };
     }
 
+    const existingReport = await prisma.report.findUnique({
+      where: {
+        id: result.data.reportId,
+      },
+      select: {
+        status: true,
+      },
+    });
+
+    if (!existingReport) {
+      return {
+        formError: t.reviewFailed,
+      };
+    }
+
     const isFinalStatus = ["RESOLVED", "DISMISSED"].includes(
       result.data.status,
     );
@@ -349,6 +389,25 @@ export async function reviewReportAction(
         reviewedAt: isFinalStatus ? new Date() : null,
       },
     });
+
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "admin_report_status_updated",
+        route: `/${result.data.locale}/admin/reports`,
+        entityId: result.data.reportId,
+        entityType: "report",
+        sourceSurface: "admin_reports",
+        properties: {
+          from_status: existingReport.status,
+          report_id: result.data.reportId,
+          to_status: result.data.status,
+        },
+      },
+      {
+        userProfileId: reviewer.id,
+      },
+    );
   } catch (error) {
     console.error("Failed to review report", error);
 

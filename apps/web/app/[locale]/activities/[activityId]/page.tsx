@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import {
   CalendarDays,
   CheckCircle2,
@@ -20,6 +21,16 @@ import {
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
+import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import { ActivityAnalyticsSummaryPanel } from "@/features/analytics/components/ActivityAnalyticsSummaryPanel";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { getActivityAnalyticsSummary } from "@/features/analytics/queries/getActivityAnalyticsSummary";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
+import {
+  getAnalyticsEntityForActivityDetail,
+  inferAnalyticsSourceSurfaceFromReferrer,
+} from "@/features/analytics/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
@@ -71,6 +82,7 @@ export default async function ActivityDetailPage({
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
   const t = getCopy(locale);
+  const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
   const [activity, viewerProfile] = await Promise.all([
@@ -81,6 +93,38 @@ export default async function ActivityDetailPage({
   if (!activity) {
     notFound();
   }
+
+  const requestHeaders = await headers();
+  const referrer = requestHeaders.get("referer");
+  const detailAnalyticsEntity = getAnalyticsEntityForActivityDetail(activity);
+  const detailSourceSurface = inferAnalyticsSourceSurfaceFromReferrer(
+    referrer,
+    "activity_list",
+  );
+
+  await trackAnalyticsEvent(
+    {
+      locale: analyticsLocale,
+      name: activity.isActivityInfo
+        ? "public_event_detail_viewed"
+        : "activity_detail_viewed",
+      route: `/${locale}/activities/${activity.id}`,
+      entityId: detailAnalyticsEntity.entityId,
+      entityType: detailAnalyticsEntity.entityType,
+      sourceSurface: detailSourceSurface,
+      properties: {
+        category: activity.category,
+        city: activity.city,
+        item_kind: detailAnalyticsEntity.itemKind,
+        status: activity.status,
+      },
+    },
+    {
+      referrer,
+      userAgent: requestHeaders.get("user-agent"),
+      userProfileId: viewerProfile?.id,
+    },
+  );
 
   if (activity.isActivityInfo) {
     const activityCategoryLabel = getCategoryLabel(activity.category, locale);
@@ -155,27 +199,45 @@ export default async function ActivityDetailPage({
 
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
             {activity.officialUrl ? (
-              <a
+              <AnalyticsExternalLink
                 className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                event={{
+                  name: "public_event_source_clicked",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    source_kind: "official_page",
+                  },
+                }}
                 href={activity.officialUrl}
-                rel="noreferrer"
-                target="_blank"
               >
                 {publicEventCopy.officialPage}
                 <ExternalLink className="h-4 w-4" />
-              </a>
+              </AnalyticsExternalLink>
             ) : null}
             {canCreateTeam ? (
-              <Link
+              <AnalyticsLink
                 href={withLocale(
                   locale,
                   `/activities/${activity.id}/teams/new`,
                 )}
+                event={{
+                  name: "team_create_started",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    category: activity.category,
+                    city: activity.city,
+                    item_kind: detailAnalyticsEntity.itemKind,
+                  },
+                }}
               >
                 <Button className="h-10 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
                   {publicEventCopy.teamUp}
                 </Button>
-              </Link>
+              </AnalyticsLink>
             ) : null}
           </div>
         </section>
@@ -218,6 +280,15 @@ export default async function ActivityDetailPage({
                 <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="min-w-0 break-words">{activityDateLabel}</span>
                 <ActivityCopyButton
+                  analyticsEvent={{
+                    name: "field_copied",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      field_name: "time",
+                    },
+                  }}
                   failedLabel={t.activityShare.copyFailed}
                   label={t.activityShare.copyTime}
                   successLabel={t.activityShare.copied}
@@ -230,6 +301,15 @@ export default async function ActivityDetailPage({
                   {activityLocationLabel}
                 </span>
                 <ActivityCopyButton
+                  analyticsEvent={{
+                    name: "field_copied",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      field_name: "location",
+                    },
+                  }}
                   failedLabel={t.activityShare.copyFailed}
                   label={t.activityShare.copyLocation}
                   successLabel={t.activityShare.copied}
@@ -242,6 +322,15 @@ export default async function ActivityDetailPage({
                   {activityPriceLabel}
                 </span>
                 <ActivityCopyButton
+                  analyticsEvent={{
+                    name: "field_copied",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      field_name: "price",
+                    },
+                  }}
                   failedLabel={t.activityShare.copyFailed}
                   label={t.activityShare.copyPrice}
                   successLabel={t.activityShare.copied}
@@ -252,27 +341,45 @@ export default async function ActivityDetailPage({
 
             <div className="mt-6 grid gap-3">
               {activity.officialUrl ? (
-                <a
+                <AnalyticsExternalLink
                   className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  event={{
+                    name: "public_event_source_clicked",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      source_kind: "official_page",
+                    },
+                  }}
                   href={activity.officialUrl}
-                  rel="noreferrer"
-                  target="_blank"
                 >
                   {publicEventCopy.officialPage}
                   <ExternalLink className="h-4 w-4" />
-                </a>
+                </AnalyticsExternalLink>
               ) : null}
               {canCreateTeam ? (
-                <Link
+                <AnalyticsLink
                   href={withLocale(
                     locale,
                     `/activities/${activity.id}/teams/new`,
                   )}
+                  event={{
+                    name: "team_create_started",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      category: activity.category,
+                      city: activity.city,
+                      item_kind: detailAnalyticsEntity.itemKind,
+                    },
+                  }}
                 >
                   <Button className="h-11 w-full whitespace-nowrap rounded-full">
                     {publicEventCopy.teamUp}
                   </Button>
-                </Link>
+                </AnalyticsLink>
               ) : (
                 <p className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-600">
                   {unavailableReason}
@@ -319,6 +426,9 @@ export default async function ActivityDetailPage({
     isOrganizer && activity.requiresApproval && viewerProfile
       ? await getPendingParticipants(activity.id, viewerProfile.id)
       : [];
+  const analyticsSummary = isOrganizer
+    ? await getActivityAnalyticsSummary(activity.id)
+    : null;
 
   return (
     <PageContainer className="space-y-6">
@@ -550,6 +660,15 @@ export default async function ActivityDetailPage({
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
               <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "activity_detail",
+                  properties: {
+                    field_name: "time",
+                  },
+                }}
                 failedLabel={t.activityShare.copyFailed}
                 label={t.activityShare.copyTime}
                 successLabel={t.activityShare.copied}
@@ -562,6 +681,15 @@ export default async function ActivityDetailPage({
                 {activityLocationLabel}
               </span>
               <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "activity_detail",
+                  properties: {
+                    field_name: "location",
+                  },
+                }}
                 failedLabel={t.activityShare.copyFailed}
                 label={t.activityShare.copyLocation}
                 successLabel={t.activityShare.copied}
@@ -623,6 +751,15 @@ export default async function ActivityDetailPage({
                 {activityPriceLabel}
               </span>
               <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "activity_detail",
+                  properties: {
+                    field_name: "price",
+                  },
+                }}
                 failedLabel={t.activityShare.copyFailed}
                 label={t.activityShare.copyPrice}
                 successLabel={t.activityShare.copied}
@@ -675,6 +812,10 @@ export default async function ActivityDetailPage({
                 ) : null}
               </div>
             ) : null}
+            <ActivityAnalyticsSummaryPanel
+              locale={locale}
+              summary={analyticsSummary}
+            />
             <JoinActivityForm
               activityId={activity.id}
               locale={locale}
@@ -697,6 +838,9 @@ export default async function ActivityDetailPage({
           <div className="mt-4">
             <ActivityShareTools
               activityTitle={activity.title}
+              analyticsEntityId={detailAnalyticsEntity.entityId}
+              analyticsEntityType={detailAnalyticsEntity.entityType}
+              analyticsSourceSurface="activity_detail"
               categoryLabel={activityCategoryLabel}
               coverImageUrl={activity.coverImageUrl}
               dateLabel={activityDateLabel}

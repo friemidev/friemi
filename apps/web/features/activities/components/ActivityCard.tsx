@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import {
   Button,
@@ -7,6 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@chill-club/ui";
+import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import type { AnalyticsEventName, AnalyticsSourceSurface } from "@/features/analytics/events";
+import { getAnalyticsEntityForActivity } from "@/features/analytics/utils";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ type ActivityCardProps = {
   isAuthenticated?: boolean;
   locale: string;
   showFavoriteButton?: boolean;
+  sourceSurface?: AnalyticsSourceSurface;
 };
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
@@ -80,6 +83,7 @@ export function ActivityCard({
   isAuthenticated = false,
   locale,
   showFavoriteButton = false,
+  sourceSurface = "activity_list",
 }: ActivityCardProps) {
   const t = getCopy(locale);
   const isActivityInfo = Boolean(
@@ -122,6 +126,21 @@ export function ActivityCard({
     getActivityDateLabel(activity, locale),
     activity.city,
   );
+  const analyticsEntity = getAnalyticsEntityForActivity(activity);
+  const canCreateTeam =
+    isActivityInfo &&
+    displayStatus !== "ENDED" &&
+    displayStatus !== "CANCELLED";
+  const actionEventName: AnalyticsEventName = canCreateTeam
+    ? "team_create_started"
+    : "activity_card_clicked";
+  const baseAnalyticsProperties = {
+    category: activity.category,
+    city: activity.city,
+    display_status: displayStatus,
+    item_kind: analyticsEntity.itemKind,
+    time_state: timeState,
+  };
 
   return (
     <Card className="relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -138,10 +157,17 @@ export function ActivityCard({
           />
         </div>
       ) : null}
-      <Link
+      <AnalyticsLink
         className="flex flex-1 flex-col"
         href={cardHref}
-        aria-label={activityLabel}
+        ariaLabel={activityLabel}
+        event={{
+          name: "activity_card_clicked",
+          entityId: analyticsEntity.entityId,
+          entityType: analyticsEntity.entityType,
+          sourceSurface,
+          properties: baseAnalyticsProperties,
+        }}
       >
         <div
           className={cn(
@@ -186,13 +212,22 @@ export function ActivityCard({
             </span>
           </div>
         </CardContent>
-      </Link>
+      </AnalyticsLink>
       <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
-        <Link href={actionHref}>
+        <AnalyticsLink
+          href={actionHref}
+          event={{
+            name: actionEventName,
+            entityId: analyticsEntity.entityId,
+            entityType: analyticsEntity.entityType,
+            sourceSurface,
+            properties: baseAnalyticsProperties,
+          }}
+        >
           <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
             {primaryActionLabel}
           </Button>
-        </Link>
+        </AnalyticsLink>
       </div>
     </Card>
   );

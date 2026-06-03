@@ -10,9 +10,11 @@ import type {
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
@@ -39,10 +41,61 @@ export type JoinActivityState = {
   };
 };
 
+type JoinFailureReasonCode =
+  | "activity_ended"
+  | "activity_full"
+  | "activity_unavailable"
+  | "already_joined"
+  | "concurrency_conflict"
+  | "organizer_self_join"
+  | "required_field_missing"
+  | "submit_failed";
+
+function getJoinFailure(
+  error: string,
+  reasonCode: JoinFailureReasonCode,
+) {
+  return {
+    ok: false as const,
+    error,
+    reasonCode,
+  };
+}
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+async function trackJoinFormFailure({
+  activityId,
+  locale,
+  profileId,
+  reasonCode,
+}: {
+  activityId: string;
+  locale: string;
+  profileId?: string | null;
+  reasonCode: JoinFailureReasonCode;
+}) {
+  await trackAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "form_submit_failed",
+      route: activityId ? `/${locale}/activities/${activityId}` : `/${locale}/activities`,
+      entityId: activityId || undefined,
+      entityType: activityId ? "team" : undefined,
+      sourceSurface: "activity_detail",
+      properties: {
+        form_name: "join_activity",
+        reason_code: reasonCode,
+      },
+    },
+    {
+      userProfileId: profileId,
+    },
+  );
 }
 
 function getActivityEndBoundary(activity: {
@@ -78,6 +131,12 @@ export async function joinActivityAction(
   const result = joinActivitySchema.safeParse(rawInput);
 
   if (!result.success) {
+    await trackJoinFormFailure({
+      activityId: rawInput.activityId,
+      locale: rawInput.locale,
+      reasonCode: "required_field_missing",
+    });
+
     return {
       formError: "请检查报名信息后再提交。",
       fieldErrors: result.error.flatten().fieldErrors,
@@ -126,37 +185,43 @@ export async function joinActivityAction(
         });
 
         if (!activity) {
-          return { ok: false, error: "活动不存在或已不可见。" };
+          return getJoinFailure(
+            "活动不存在或已不可见。",
+            "activity_unavailable",
+          );
         }
 
         if (
           !joinableActivityVisibility.includes(activity.visibility) ||
           !activeOrganizerStatuses.includes(activity.organizer.status)
         ) {
-          return { ok: false, error: "活动不存在或已不可见。" };
+          return getJoinFailure(
+            "活动不存在或已不可见。",
+            "activity_unavailable",
+          );
         }
 
         if (activity.organizerId === profile.id) {
-          return {
-            ok: false,
-            error: "你是活动发起人，不需要报名自己的活动。",
-          };
+          return getJoinFailure(
+            "你是活动发起人，不需要报名自己的活动。",
+            "organizer_self_join",
+          );
         }
 
         if (activity.status === "CANCELLED") {
-          return { ok: false, error: "活动已取消，不能继续报名。" };
+          return getJoinFailure("活动已取消，不能继续报名。", "activity_ended");
         }
 
         if (activity.status === "ENDED") {
-          return { ok: false, error: "活动已结束，不能继续报名。" };
+          return getJoinFailure("活动已结束，不能继续报名。", "activity_ended");
         }
 
         if (!joinableActivityStatuses.includes(activity.status)) {
-          return { ok: false, error: "当前活动暂不可报名。" };
+          return getJoinFailure("当前活动暂不可报名。", "activity_unavailable");
         }
 
         if (getActivityEndBoundary(activity) <= new Date()) {
-          return { ok: false, error: "活动已结束，不能继续报名。" };
+          return getJoinFailure("活动已结束，不能继续报名。", "activity_ended");
         }
 
         const existingParticipation = await tx.activityParticipant.findUnique({
@@ -176,11 +241,11 @@ export async function joinActivityAction(
           existingParticipation &&
           existingParticipantStatuses.includes(existingParticipation.status)
         ) {
-          return { ok: false, error: "你已经报名过这个活动。" };
+          return getJoinFailure("你已经报名过这个活动。", "already_joined");
         }
 
         if (activity._count.participants >= activity.capacity) {
-          return { ok: false, error: "活动名额已满，不能继续报名。" };
+          return getJoinFailure("活动名额已满，不能继续报名。", "activity_full");
         }
 
         const nextStatus: ParticipantStatus = activity.requiresApproval
@@ -228,7 +293,12 @@ export async function joinActivityAction(
           });
         }
 
-        return { ok: true };
+        return {
+          ok: true as const,
+          activityId: activity.id,
+          participantStatus: nextStatus,
+          requiresApproval: activity.requiresApproval,
+        };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -236,6 +306,13 @@ export async function joinActivityAction(
     );
 
     if (!joinResult.ok) {
+      await trackJoinFormFailure({
+        activityId: result.data.activityId,
+        locale: result.data.locale,
+        profileId: profile.id,
+        reasonCode: joinResult.reasonCode,
+      });
+
       return {
         formError: joinResult.error,
         values: {
@@ -243,8 +320,33 @@ export async function joinActivityAction(
         },
       };
     }
+
+    await trackAnalyticsEvent(
+    {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "join_submitted",
+        route: `/${result.data.locale}/activities/${joinResult.activityId}`,
+        entityId: joinResult.activityId,
+        entityType: "team",
+        sourceSurface: "activity_detail",
+        properties: {
+          participant_status: joinResult.participantStatus,
+          requires_approval: joinResult.requiresApproval,
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
   } catch (error) {
     if (isPrismaUniqueError(error)) {
+      await trackJoinFormFailure({
+        activityId: result.data.activityId,
+        locale: result.data.locale,
+        profileId: profile.id,
+        reasonCode: "already_joined",
+      });
+
       return {
         formError: "你已经报名过这个活动。",
         values: {
@@ -254,6 +356,13 @@ export async function joinActivityAction(
     }
 
     if (isPrismaTransactionConflictError(error)) {
+      await trackJoinFormFailure({
+        activityId: result.data.activityId,
+        locale: result.data.locale,
+        profileId: profile.id,
+        reasonCode: "concurrency_conflict",
+      });
+
       return {
         formError: "报名人数已更新，请稍后再试。",
         values: {
@@ -263,6 +372,12 @@ export async function joinActivityAction(
     }
 
     console.error("Failed to join activity", error);
+    await trackJoinFormFailure({
+      activityId: result.data.activityId,
+      locale: result.data.locale,
+      profileId: profile.id,
+      reasonCode: "submit_failed",
+    });
 
     return {
       formError: "报名失败，请稍后重试。",

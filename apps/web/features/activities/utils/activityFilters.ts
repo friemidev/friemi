@@ -155,6 +155,36 @@ export function hasActiveActivityFilters(filters: {
   );
 }
 
+export function getActiveActivityFilterNames(filters: {
+  category?: unknown;
+  city?: unknown;
+  relation?: ActivityRelationFilter;
+  timeState?: unknown;
+  type?: unknown;
+}) {
+  const filterNames: string[] = [];
+
+  if (filters.category) filterNames.push("category");
+  if (filters.city) filterNames.push("city");
+  if (filters.type) filterNames.push("type");
+  if (filters.timeState) filterNames.push("time_state");
+  if (filters.relation && filters.relation !== "ALL") {
+    filterNames.push("relation");
+  }
+
+  return filterNames;
+}
+
+export function getActiveActivityFilterCount(filters: {
+  category?: unknown;
+  city?: unknown;
+  relation?: ActivityRelationFilter;
+  timeState?: unknown;
+  type?: unknown;
+}) {
+  return getActiveActivityFilterNames(filters).length;
+}
+
 export function getDefaultActivitySort(filters: {
   category?: unknown;
   city?: unknown;

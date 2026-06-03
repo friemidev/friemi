@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -22,6 +24,46 @@ export type CreateActivityState = ActivityFormState;
 
 const activeTeamStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
 
+type CreateActivityFailureReasonCode =
+  | "duplicate_team"
+  | "event_ended"
+  | "event_unavailable"
+  | "required_field_missing"
+  | "schedule_invalid"
+  | "submit_failed";
+
+async function trackCreateActivityFailure({
+  locale,
+  publicEventId,
+  reasonCode,
+  userProfileId,
+}: {
+  locale: string;
+  publicEventId?: string | null;
+  reasonCode: CreateActivityFailureReasonCode;
+  userProfileId?: string | null;
+}) {
+  await trackAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "form_submit_failed",
+      route: publicEventId
+        ? `/${locale}/public-events/${publicEventId}/teams/new`
+        : `/${locale}/activities/new`,
+      entityId: publicEventId ?? undefined,
+      entityType: publicEventId ? "public_event" : undefined,
+      sourceSurface: publicEventId ? "public_event_detail" : "activity_detail",
+      properties: {
+        form_name: "create_team",
+        reason_code: reasonCode,
+      },
+    },
+    {
+      userProfileId,
+    },
+  );
+}
+
 export async function createActivityAction(
   previousState: CreateActivityState,
   formData: FormData,
@@ -34,6 +76,12 @@ export async function createActivityAction(
 
   if (!result.success) {
     const flattened = result.error.flatten();
+
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: rawInput.publicEventId,
+      reasonCode: "required_field_missing",
+    });
 
     return buildActivityErrorState(
       previousState,
@@ -49,6 +97,12 @@ export async function createActivityAction(
     : null;
 
   if (!startAt) {
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: result.data.publicEventId,
+      reasonCode: "schedule_invalid",
+    });
+
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -60,6 +114,12 @@ export async function createActivityAction(
   }
 
   if (result.data.endAt && !endAt) {
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: result.data.publicEventId,
+      reasonCode: "schedule_invalid",
+    });
+
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -76,6 +136,12 @@ export async function createActivityAction(
   });
 
   if (!scheduleValidation.ok) {
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: result.data.publicEventId,
+      reasonCode: "schedule_invalid",
+    });
+
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -106,6 +172,13 @@ export async function createActivityAction(
     : null;
 
   if (publicEventId && !publicEvent) {
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId,
+      reasonCode: "event_unavailable",
+      userProfileId: profile.id,
+    });
+
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -115,6 +188,13 @@ export async function createActivityAction(
 
   if (publicEvent) {
     if (publicEvent.status === "CANCELLED") {
+      await trackCreateActivityFailure({
+        locale,
+        publicEventId: publicEvent.id,
+        reasonCode: "event_ended",
+        userProfileId: profile.id,
+      });
+
       return buildActivityErrorState(
         previousState,
         rawInput,
@@ -125,6 +205,13 @@ export async function createActivityAction(
     const publicEventEndBoundary = publicEvent.endAt ?? publicEvent.startAt;
 
     if (publicEventEndBoundary <= new Date()) {
+      await trackCreateActivityFailure({
+        locale,
+        publicEventId: publicEvent.id,
+        reasonCode: "event_ended",
+        userProfileId: profile.id,
+      });
+
       return buildActivityErrorState(
         previousState,
         rawInput,
@@ -146,6 +233,13 @@ export async function createActivityAction(
     });
 
     if (existingTeam) {
+      await trackCreateActivityFailure({
+        locale,
+        publicEventId: publicEvent.id,
+        reasonCode: "duplicate_team",
+        userProfileId: profile.id,
+      });
+
       return buildActivityErrorState(
         previousState,
         rawInput,
@@ -197,11 +291,61 @@ export async function createActivityAction(
     activityId = activity.id;
   } catch (error) {
     console.error("Failed to create activity", error);
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: publicEvent?.id ?? result.data.publicEventId,
+      reasonCode: "submit_failed",
+      userProfileId: profile.id,
+    });
 
     return buildActivityErrorState(
       previousState,
       rawInput,
       "创建活动失败，请稍后重试。",
+    );
+  }
+
+  await trackAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "team_created",
+      route: publicEvent?.id
+        ? `/${locale}/public-events/${publicEvent.id}/teams/new`
+        : `/${locale}/activities/new`,
+      entityId: activityId,
+      entityType: "team",
+      sourceSurface: publicEvent?.id ? "public_event_detail" : "activity_detail",
+      properties: {
+        capacity: result.data.capacity,
+        category: result.data.category,
+        city: result.data.city,
+        has_public_event: Boolean(publicEvent?.id),
+        public_event_id: publicEvent?.id ?? null,
+        requires_approval: result.data.requiresApproval,
+      },
+    },
+    {
+      userProfileId: profile.id,
+    },
+  );
+
+  if (publicEvent?.id) {
+    await trackAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(locale),
+        name: "public_event_converted_to_team",
+        route: `/${locale}/public-events/${publicEvent.id}/teams/new`,
+        entityId: publicEvent.id,
+        entityType: "public_event",
+        sourceSurface: "public_event_detail",
+        properties: {
+          activity_id: activityId,
+          public_event_id: publicEvent.id,
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
     );
   }
 

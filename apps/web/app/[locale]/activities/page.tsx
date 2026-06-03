@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -13,12 +14,16 @@ import {
   type ActivityListResult,
 } from "@/features/activities/queries/getActivities";
 import {
+  getActiveActivityFilterCount,
+  getActiveActivityFilterNames,
   getActivityFilterHref,
   hasActiveActivityFilters,
   isCanonicalActivityFilterSearchParams,
   normalizeActivityFilters,
   type ActivityFilterSearchParams,
 } from "@/features/activities/utils/activityFilters";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -120,6 +125,7 @@ export default async function ActivitiesPage({
   }
 
   const t = getCopy(locale);
+  const analyticsLocale = normalizeAnalyticsLocale(locale);
   const hasFilters = hasActiveActivityFilters(filters);
   const viewerProfile = await getOptionalCurrentUserProfile();
   const [activitiesResult, filterOptions] = await Promise.all([
@@ -142,6 +148,80 @@ export default async function ActivitiesPage({
         page: activitiesResult.list.page,
       }),
     );
+  }
+
+  if (activitiesResult.list) {
+    const requestHeaders = await headers();
+    const referrer = requestHeaders.get("referer");
+    const userAgent = requestHeaders.get("user-agent");
+    const activeFilterNames = getActiveActivityFilterNames(filters);
+    const filterCount = getActiveActivityFilterCount(filters);
+    const publicEventCount = activitiesResult.list.activities.filter(
+      (activity) => activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
+    ).length;
+    const commonOptions = {
+      referrer,
+      userAgent,
+      userProfileId: viewerProfile?.id,
+    };
+
+    await Promise.all([
+      trackAnalyticsEvent(
+        {
+          locale: analyticsLocale,
+          name: "activity_list_viewed",
+          route: `/${locale}/activities`,
+          sourceSurface: "activity_list",
+          properties: {
+            filter_count: filterCount,
+            has_keyword: Boolean(filters.keyword),
+            page: activitiesResult.list.page,
+            page_size: activitiesResult.list.pageSize,
+            public_event_count: publicEventCount,
+            result_count: activitiesResult.list.activities.length,
+            sort: filters.sort,
+            team_count:
+              activitiesResult.list.activities.length - publicEventCount,
+            total_count: activitiesResult.list.totalCount,
+          },
+        },
+        commonOptions,
+      ),
+      filters.keyword
+        ? trackAnalyticsEvent(
+            {
+              locale: analyticsLocale,
+              name: "search_submitted",
+              route: `/${locale}/activities`,
+              sourceSurface: "activity_list",
+              properties: {
+                filter_count: filterCount,
+                keyword_length: filters.keyword.length,
+                result_count: activitiesResult.list.totalCount,
+                scope: "activities",
+              },
+            },
+            commonOptions,
+          )
+        : Promise.resolve({ ok: true as const }),
+      filterCount > 0
+        ? trackAnalyticsEvent(
+            {
+              locale: analyticsLocale,
+              name: "filter_applied",
+              route: `/${locale}/activities`,
+              sourceSurface: "activity_list",
+              properties: {
+                filter_count: filterCount,
+                filter_names: activeFilterNames,
+                result_count: activitiesResult.list.totalCount,
+                scope: "activities",
+              },
+            },
+            commonOptions,
+          )
+        : Promise.resolve({ ok: true as const }),
+    ]);
   }
 
   return (
@@ -203,6 +283,7 @@ export default async function ActivitiesPage({
                 isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
                 showFavoriteButton
+                sourceSurface="activity_list"
               />
             ))}
           </div>

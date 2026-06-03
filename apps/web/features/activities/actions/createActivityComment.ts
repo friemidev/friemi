@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { ActivityStatus, CommentType } from "@prisma/client";
 import { z } from "zod";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
@@ -156,8 +158,10 @@ export async function createActivityCommentAction(
       parentAuthorId = parentComment.authorId;
     }
 
+    let commentId: string | null = null;
+
     await prisma.$transaction(async (tx) => {
-      await tx.comment.create({
+      const comment = await tx.comment.create({
         data: {
           activityId: activity.id,
           authorId: profile.id,
@@ -165,8 +169,12 @@ export async function createActivityCommentAction(
           type: result.data.type,
           content: result.data.content,
         },
+        select: {
+          id: true,
+        },
       });
 
+      commentId = comment.id;
       const notificationInputs = [];
 
       if (parentAuthorId && parentAuthorId !== profile.id) {
@@ -192,6 +200,25 @@ export async function createActivityCommentAction(
 
       await createNotifications(tx, notificationInputs);
     });
+
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: result.data.parentId ? "comment_reply_created" : "comment_created",
+        route: `/${result.data.locale}/activities/${activity.id}`,
+        entityId: activity.id,
+        entityType: "team",
+        sourceSurface: "comments",
+        properties: {
+          comment_id: commentId,
+          comment_type: result.data.type,
+          is_reply: Boolean(result.data.parentId),
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
   } catch (error) {
     console.error("Failed to create activity comment", error);
 

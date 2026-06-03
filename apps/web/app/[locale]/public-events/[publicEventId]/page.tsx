@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import {
   ArrowLeft,
   CalendarDays,
@@ -13,6 +14,11 @@ import {
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
+import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/utils";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { getCategoryLabel } from "@/lib/copy";
@@ -41,6 +47,7 @@ export default async function PublicEventDetailPage({
 }: PublicEventDetailPageProps) {
   const { locale, publicEventId } = await params;
   const t = getPublicEventCopy(locale);
+  const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = await getOptionalCurrentUserProfile();
   const publicEvent = await getPublicEventById(
     publicEventId,
@@ -50,6 +57,34 @@ export default async function PublicEventDetailPage({
   if (!publicEvent) {
     notFound();
   }
+
+  const requestHeaders = await headers();
+  const referrer = requestHeaders.get("referer");
+  const sourceSurface = inferAnalyticsSourceSurfaceFromReferrer(
+    referrer,
+    "activity_list",
+  );
+
+  await trackAnalyticsEvent(
+    {
+      locale: analyticsLocale,
+      name: "public_event_detail_viewed",
+      route: `/${locale}/public-events/${publicEvent.id}`,
+      entityId: publicEvent.id,
+      entityType: "public_event",
+      sourceSurface,
+      properties: {
+        category: publicEvent.category,
+        city: publicEvent.city,
+        team_count: publicEvent.teamCount,
+      },
+    },
+    {
+      referrer,
+      userAgent: requestHeaders.get("user-agent"),
+      userProfileId: viewerProfile?.id,
+    },
+  );
 
   const eventDateLabel = getEventDateLabel(publicEvent, locale);
   const eventPriceLabel = getEventPriceLabel(publicEvent, locale);
@@ -155,27 +190,44 @@ export default async function PublicEventDetailPage({
             </a>
           ) : null}
           {publicEvent.officialUrl ? (
-            <a
+            <AnalyticsExternalLink
               className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+              event={{
+                name: "public_event_source_clicked",
+                entityId: publicEvent.id,
+                entityType: "public_event",
+                sourceSurface: "public_event_detail",
+                properties: {
+                  source_kind: "official_page",
+                },
+              }}
               href={publicEvent.officialUrl}
-              rel="noreferrer"
-              target="_blank"
             >
               {t.officialPage}
               <ExternalLink className="h-4 w-4" />
-            </a>
+            </AnalyticsExternalLink>
           ) : null}
           {canCreateTeam ? (
-            <Link
+            <AnalyticsLink
               href={withLocale(
                 locale,
                 `/public-events/${publicEvent.id}/teams/new`,
               )}
+              event={{
+                name: "team_create_started",
+                entityId: publicEvent.id,
+                entityType: "public_event",
+                sourceSurface: "public_event_detail",
+                properties: {
+                  category: publicEvent.category,
+                  city: publicEvent.city,
+                },
+              }}
             >
               <Button className="h-10 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
                 {t.teamUp}
               </Button>
-            </Link>
+            </AnalyticsLink>
           ) : null}
         </div>
       </section>
@@ -193,17 +245,27 @@ export default async function PublicEventDetailPage({
                 </p>
               </div>
               {canCreateTeam ? (
-                <Link
+                <AnalyticsLink
                   className="hidden sm:block"
                   href={withLocale(
                     locale,
                     `/public-events/${publicEvent.id}/teams/new`,
                   )}
+                  event={{
+                    name: "team_create_started",
+                    entityId: publicEvent.id,
+                    entityType: "public_event",
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      category: publicEvent.category,
+                      city: publicEvent.city,
+                    },
+                  }}
                 >
                   <Button className="w-full whitespace-nowrap sm:w-auto">
                     {t.teamUp}
                   </Button>
-                </Link>
+                </AnalyticsLink>
               ) : null}
             </div>
 
@@ -228,17 +290,27 @@ export default async function PublicEventDetailPage({
                     </div>
                   </div>
                   {canCreateTeam ? (
-                    <Link
+                    <AnalyticsLink
                       className="shrink-0"
                       href={withLocale(
                         locale,
                         `/public-events/${publicEvent.id}/teams/new`,
                       )}
+                      event={{
+                        name: "team_create_started",
+                        entityId: publicEvent.id,
+                        entityType: "public_event",
+                        sourceSurface: "public_event_detail",
+                        properties: {
+                          category: publicEvent.category,
+                          city: publicEvent.city,
+                        },
+                      }}
                     >
                       <Button className="w-full whitespace-nowrap rounded-full px-6 sm:w-auto">
                         {t.noTeamsCta}
                       </Button>
-                    </Link>
+                    </AnalyticsLink>
                   ) : null}
                 </div>
                 {canCreateTeam ? (
@@ -256,6 +328,7 @@ export default async function PublicEventDetailPage({
                     isAuthenticated={Boolean(viewerProfile)}
                     locale={locale}
                     showFavoriteButton
+                    sourceSurface="public_event_detail"
                   />
                 ))}
               </div>
@@ -337,31 +410,48 @@ export default async function PublicEventDetailPage({
 
           <div className="mt-6 grid gap-3">
             {publicEvent.officialUrl ? (
-              <a
+              <AnalyticsExternalLink
                 className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                event={{
+                  name: "public_event_source_clicked",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    source_kind: "official_page",
+                  },
+                }}
                 href={publicEvent.officialUrl}
-                rel="noreferrer"
-                target="_blank"
               >
                 {t.officialPage}
                 <ExternalLink className="h-4 w-4" />
-              </a>
+              </AnalyticsExternalLink>
             ) : null}
             {!canCreateTeam ? (
               <p className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-600">
                 {unavailableReason}
               </p>
             ) : (
-              <Link
+              <AnalyticsLink
                 href={withLocale(
                   locale,
                   `/public-events/${publicEvent.id}/teams/new`,
                 )}
+                event={{
+                  name: "team_create_started",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    category: publicEvent.category,
+                    city: publicEvent.city,
+                  },
+                }}
               >
                 <Button className="h-11 w-full whitespace-nowrap rounded-full">
                   {t.teamUp}
                 </Button>
-              </Link>
+              </AnalyticsLink>
             )}
           </div>
         </aside>

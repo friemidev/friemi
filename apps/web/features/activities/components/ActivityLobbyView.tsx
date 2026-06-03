@@ -149,6 +149,7 @@ function ActivityLobbySection({
               isAuthenticated
               locale={locale}
               showFavoriteButton
+              sourceSurface="profile"
             />
           ))}
         </div>

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import type { AnalyticsEventInput } from "@/features/analytics/events";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { cn } from "@/lib/utils";
 
 type ActivityCopyButtonProps = {
+  analyticsEvent?: Omit<AnalyticsEventInput, "locale" | "route">;
   className?: string;
   failedLabel: string;
   label: string;
@@ -35,6 +38,7 @@ async function copyText(value: string) {
 }
 
 export function ActivityCopyButton({
+  analyticsEvent,
   className,
   failedLabel,
   label,
@@ -56,6 +60,9 @@ export function ActivityCopyButton({
     try {
       await copyText(value);
       setState("copied");
+      if (analyticsEvent) {
+        trackClientAnalyticsEvent(analyticsEvent);
+      }
     } catch {
       setState("failed");
     }

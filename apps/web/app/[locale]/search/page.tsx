@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ArrowRight, MapPin, Search, Store } from "lucide-react";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { PublicEventCard } from "@/features/public-events/components/PublicEventCard";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
+import { trackAnalyticsEvent } from "@/features/analytics/server";
 import {
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
@@ -123,6 +126,7 @@ export default async function SearchPage({
   }
 
   const t = getCopy(locale).globalSearch;
+  const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = query
     ? await getOptionalCurrentUserProfile().catch((error: unknown) => {
         console.error("Failed to load viewer profile for global search", error);
@@ -144,6 +148,33 @@ export default async function SearchPage({
       searchResult.result.publicEventCount
     : 0;
   const hasResults = totalCount > 0;
+
+  if (query && searchResult.result) {
+    const requestHeaders = await headers();
+
+    await trackAnalyticsEvent(
+      {
+        locale: analyticsLocale,
+        name: "search_submitted",
+        route: `/${locale}/search`,
+        sourceSurface: "global_search",
+        properties: {
+          activity_count: searchResult.result.activityCount,
+          keyword_length: query.length,
+          merchant_count: searchResult.result.merchantCount,
+          public_event_count: searchResult.result.publicEventCount,
+          result_count: totalCount,
+          scope: "global",
+          user_count: searchResult.result.userCount,
+        },
+      },
+      {
+        referrer: requestHeaders.get("referer"),
+        userAgent: requestHeaders.get("user-agent"),
+        userProfileId: viewerProfile?.id,
+      },
+    );
+  }
 
   return (
     <PageContainer className="space-y-6 py-5 sm:py-8">
@@ -215,6 +246,7 @@ export default async function SearchPage({
                         key={activity.id}
                         activity={activity}
                         locale={locale}
+                        sourceSurface="global_search"
                       />
                     ))}
                   </div>

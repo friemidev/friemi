@@ -63,6 +63,9 @@ export const analyticsSourceSurfaces = [
   "wechat_webview",
 ] as const;
 
+export type AnalyticsEntityType = (typeof analyticsEntityTypes)[number];
+export type AnalyticsSourceSurface = (typeof analyticsSourceSurfaces)[number];
+export type AnalyticsLocale = "zh-CN" | "en" | "fr";
 export type AnalyticsEnvironment = "development" | "preview" | "production";
 export type AnalyticsDeviceType = "desktop" | "mobile" | "tablet" | "unknown";
 
@@ -370,6 +373,14 @@ export function inferAnalyticsDeviceType(
   }
 
   return "desktop";
+}
+
+export function normalizeAnalyticsLocale(locale: string): AnalyticsLocale {
+  if (locale === "en" || locale === "fr") {
+    return locale;
+  }
+
+  return "zh-CN";
 }
 
 export function assertAnalyticsEventRequirements(

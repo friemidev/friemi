@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -10,6 +12,38 @@ function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function trackNotificationOpened({
+  locale,
+  notificationId,
+  targetType,
+  type,
+  userProfileId,
+}: {
+  locale: string;
+  notificationId: string;
+  targetType: "activity" | "admin_reports" | "messages" | "notifications";
+  type: string;
+  userProfileId: string;
+}) {
+  queueAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "notification_opened",
+      route: `/${locale}/notifications`,
+      entityId: notificationId,
+      entityType: "notification",
+      sourceSurface: "notification",
+      properties: {
+        notification_type: type,
+        target_type: targetType,
+      },
+    },
+    {
+      userProfileId,
+    },
+  );
 }
 
 export async function markAllNotificationsReadAction(formData: FormData) {
@@ -85,6 +119,13 @@ export async function openNotificationActivityAction(formData: FormData) {
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, "/messages"));
     revalidatePath(withLocale(locale, "/"), "layout");
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "messages",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
     redirect(withLocale(locale, "/messages?friendRequests=1"));
   }
 
@@ -103,10 +144,26 @@ export async function openNotificationActivityAction(formData: FormData) {
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, "/admin/reports"));
     revalidatePath(withLocale(locale, "/"), "layout");
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "admin_reports",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
     redirect(withLocale(locale, "/admin/reports"));
   }
 
   if (!notification?.activityId) {
+    if (notification) {
+      trackNotificationOpened({
+        locale,
+        notificationId,
+        targetType: "notifications",
+        type: notification.type,
+        userProfileId: profile.id,
+      });
+    }
     redirect(withLocale(locale, "/notifications"));
   }
 
@@ -132,5 +189,12 @@ export async function openNotificationActivityAction(formData: FormData) {
         ? `/activities/${notification.activityId}#comments`
       : `/activities/${notification.activityId}`;
 
+  trackNotificationOpened({
+    locale,
+    notificationId,
+    targetType: "activity",
+    type: notification.type,
+    userProfileId: profile.id,
+  });
   redirect(withLocale(locale, target));
 }

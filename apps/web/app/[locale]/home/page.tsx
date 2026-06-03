@@ -132,6 +132,7 @@ export default async function HomePage({ params }: HomePageProps) {
                   isAuthenticated={Boolean(viewerProfile)}
                   locale={locale}
                   showFavoriteButton
+                  sourceSurface="home_recent"
                 />
               ))}
             </div>
