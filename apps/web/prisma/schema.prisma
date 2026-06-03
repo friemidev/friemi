@@ -68,6 +68,11 @@ enum UserProfileStatus {
   DELETED
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
@@ -91,6 +96,29 @@ enum NotificationType {
   FRIEND_REQUEST
 }
 
+enum ReportTargetType {
+  USER_PROFILE
+  PUBLIC_EVENT
+  ACTIVITY
+  COMMENT
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  MISLEADING_INFORMATION
+  SAFETY_CONCERN
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
 model UserProfile {
   id                     String                @id @default(cuid())
   clerkUserId            String                @unique
@@ -104,6 +132,7 @@ model UserProfile {
   bio                    String?
   interests              String[]              @default([])
   status                 UserProfileStatus     @default(ACTIVE)
+  role                   UserRole              @default(USER)
   lastSignInAt           DateTime?
   clerkCreatedAt         DateTime?
   clerkUpdatedAt         DateTime?
@@ -124,10 +153,13 @@ model UserProfile {
   conversationsAsUserA   Conversation[]        @relation("ConversationUserA")
   conversationsAsUserB   Conversation[]        @relation("ConversationUserB")
   sentDirectMessages     DirectMessage[]       @relation("DirectMessageSender")
+  submittedReports       Report[]              @relation("ReportReporter")
+  reviewedReports        Report[]              @relation("ReportReviewer")
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 
   @@index([nickname])
+  @@index([role, status])
 }
 
 model Activity {
@@ -327,6 +359,29 @@ model Notification {
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
+}
+
+model Report {
+  id          String           @id @default(cuid())
+  reporterId  String
+  reporter    UserProfile      @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType  ReportTargetType
+  targetId    String
+  reason      ReportReason
+  description String?
+  status      ReportStatus     @default(PENDING)
+  reviewerId  String?
+  reviewer    UserProfile?     @relation("ReportReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([reviewerId])
 }
 
 model UserFollow {
