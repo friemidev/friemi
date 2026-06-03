@@ -222,6 +222,37 @@ weekly_active_intent_users
 
 不单独记录好友搜索每一次提交。好友搜索更像入口功能，第一版只关心是否成功发起好友申请和是否被接受。
 
+### P1：搜索、筛选和关键阻碍
+
+这些事件不是开发排错，而是会直接影响用户能不能找到活动、能不能完成关键操作。
+
+| 事件名 | 触发时机 | 用途 |
+| --- | --- | --- |
+| `search_submitted` | 用户提交活动或全站搜索 | 判断搜索是否真的被使用、是否有结果 |
+| `filter_applied` | 用户使用筛选并刷新结果 | 判断用户最关心哪些筛选维度 |
+| `form_submit_failed` | 关键业务表单提交失败 | 判断用户在哪些业务规则上被挡住 |
+| `wechat_webview_login_guide_viewed` | 微信内置浏览器登录提示页打开 | 判断微信 WebView 是否影响登录和转化 |
+
+`search_submitted` 不存搜索原文，只记录：
+
+```text
+keyword_length
+scope
+result_count
+filter_count
+```
+
+`form_submit_failed` 不记录完整错误和用户输入，只记录可归类的业务原因，例如：
+
+```text
+not_signed_in
+already_joined
+activity_full
+activity_ended
+required_field_missing
+permission_denied
+```
+
 ### P1：分享和活动传播
 
 | 事件名 | 触发时机 | 用途 |
@@ -240,24 +271,39 @@ weekly_active_intent_users
 | `public_event_source_clicked` | 用户点击来源链接 | 判断公共活动来源价值 |
 | `public_event_converted_to_team` | 活动信息被转化为组队 | 判断公共活动来源是否促成组局 |
 
-### 暂不做的事件
+### 第二版候选事件
 
-| 事件名 | 暂不做原因 |
+这些事件有价值，但不是第一版必须先做。等基础看板跑起来后再补。
+
+| 事件名 | 暂缓原因 |
 | --- | --- |
 | `page_viewed` | 太泛，第一版用具体页面事件替代 |
-| `home_viewed` | 首页浏览本身价值有限，先看活动发现和详情转化 |
-| `search_submitted` | 搜索原文不能存，单独搜索价值不如最终点击和转化 |
-| `filter_applied` | 筛选使用可以后续补，第一版优先看点击和转化 |
-| `notification_marked_read` | 用户和管理员都不太关心 |
-| `report_dialog_opened` | 打开弹窗不代表真实举报 |
-| `report_duplicate_blocked` | 偏技术保护，不进产品数据 |
-| `public_event_import_started` | 管理员不需要看开始事件 |
-| `public_event_import_completed` | 可由导入后台或日志展示，不进产品行为埋点 |
-| `load_failed` | 开发监控处理，不进入产品埋点 |
-| `form_submit_failed` | 开发监控处理，不进入产品埋点 |
-| `not_found_viewed` | 开发监控处理，不进入产品埋点 |
-| `auth_required_redirected` | 可从登录行为推断，第一版不做 |
-| `wechat_webview_login_guide_viewed` | 可从页面日志看，第一版不进入核心埋点 |
+| `home_viewed` | 首页浏览有价值，但第一版先看活动发现和详情转化 |
+| `notification_marked_read` | 优先级低于 `notification_opened` |
+| `report_dialog_opened` | 可以判断举报入口意愿，但第一版先看真实举报提交 |
+| `report_duplicate_blocked` | 偏风控和防刷，后续再接 |
+| `auth_required_redirected` | 登录漏斗需要时再补 |
+| `not_found_viewed` | 分享链接失效问题明显时再补 |
+
+### 不进入产品埋点的开发监控
+
+这些问题有用，但应由开发监控处理，不进入产品行为埋点。
+
+| 事件名 | 处理方式 |
+| --- | --- |
+| `load_failed` | Vercel Logs / Sentry / 服务端日志 |
+| 接口异常 | Vercel Logs / Sentry / API 日志 |
+| 构建失败 | Vercel / GitHub checks |
+| 数据库连接错误 | Prisma logs / Vercel Logs |
+
+### 管理员导入日志
+
+公共活动导入开始和导入完成对管理员有用，但更适合放在导入后台或 cron 日志里，不和用户行为埋点混在一起。
+
+| 事件名 | 建议处理方式 |
+| --- | --- |
+| `public_event_import_started` | 管理员导入日志 |
+| `public_event_import_completed` | 管理员导入日志 |
 
 ## 活动级数据口径
 
@@ -603,11 +649,16 @@ feature/analytics-activity-insights
 - 活动详情浏览
 - 组队创建开始 / 成功
 - 报名开始 / 成功
+- 搜索提交
+- 筛选使用
+- 关键业务提交失败
+- 微信内置浏览器登录提示页打开
 - 活动发起人可见的活动级汇总数据
 
 验收标准：
 
 - 可以还原活动发现、组队和报名三条核心漏斗
+- 可以判断搜索、筛选和关键阻碍是否影响转化
 - 活动发起人可以看到自己活动的基础数据
 
 ### Phase C：沟通、好友和分享埋点
@@ -678,15 +729,22 @@ feature/admin-analytics-operations
 7. `team_created`
 8. `join_started`
 9. `join_submitted`
-10. `comment_created`
-11. `organizer_contact_clicked`
-12. `link_copied`
+10. `search_submitted`
+11. `filter_applied`
+12. `form_submit_failed`
+13. `wechat_webview_login_guide_viewed`
+14. `comment_created`
+15. `organizer_contact_clicked`
+16. `link_copied`
 
-这 12 个事件已经能回答第一批核心问题：
+这 16 个事件已经能回答第一批核心问题：
 
 - 用户是否真的看活动。
 - 用户点了哪些活动。
+- 用户是否通过搜索和筛选找到活动。
 - 用户是否基于活动发起组队。
 - 用户是否报名。
+- 用户在哪些业务规则上被挡住。
+- 微信内置浏览器是否影响登录。
 - 活动发起人能看到自己的活动表现。
 - 分享和沟通功能是否有实际价值。
