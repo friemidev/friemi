@@ -25,7 +25,8 @@ const footerCopy = {
     copyright: "© 2026 Next Fun Club",
   },
   fr: {
-    description: "Trouvez des sorties, invitez des amis et rencontrez du monde.",
+    description:
+      "Trouvez des sorties, invitez des amis et rencontrez du monde.",
     contactTitle: "Contact",
     contactEmail: "nextfunclub99@gmail.com",
     versionLabel: "Version",
@@ -85,7 +86,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             {t.versionLabel}{" "}
             <Link
               className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-              href={withLocale(locale, "/updates/nextfun_version1.0")}
+              href={withLocale(locale, "/updates/v1_0")}
             >
               v1.0
             </Link>
