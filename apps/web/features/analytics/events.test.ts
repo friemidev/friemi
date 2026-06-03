@@ -89,6 +89,33 @@ test("assertAnalyticsEventRequirements requires source surface for activity metr
   );
 });
 
+test("assertAnalyticsEventRequirements requires safe friend request context", () => {
+  assert.throws(() =>
+    assertAnalyticsEventRequirements({
+      name: "friend_request_sent",
+      entityType: "user",
+      entityId: "profile_1",
+      sourceSurface: "messages",
+      properties: {
+        lookup_type: "friend_code",
+      },
+    }),
+  );
+
+  assert.doesNotThrow(() =>
+    assertAnalyticsEventRequirements({
+      name: "friend_request_sent",
+      entityType: "user",
+      entityId: "profile_1",
+      sourceSurface: "messages",
+      properties: {
+        lookup_type: "friend_code",
+        request_origin: "lookup_form",
+      },
+    }),
+  );
+});
+
 test("inferAnalyticsDeviceType classifies common user agents", () => {
   assert.equal(
     inferAnalyticsDeviceType(

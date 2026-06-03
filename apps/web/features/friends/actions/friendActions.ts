@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import {
+  normalizeAnalyticsLocale,
+  type AnalyticsSourceSurface,
+} from "@/features/analytics/events";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +24,9 @@ export type FriendActionState = {
   ok?: boolean;
   formError?: string;
 };
+
+type FriendRequestLookupType = "friend_code" | "nickname" | "profile";
+type FriendActionReturnTo = "friends" | "messages";
 
 const sendFriendRequestSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
@@ -59,10 +67,88 @@ function refreshFriends(locale: string) {
 
 function redirectAfterFriendAction(
   locale: string,
-  returnTo: "friends" | "messages" = "friends",
+  returnTo: FriendActionReturnTo = "friends",
 ): never {
   redirect(
     withLocale(locale, returnTo === "messages" ? "/messages" : "/friends"),
+  );
+}
+
+function getFriendAnalyticsSourceSurface(
+  returnTo: FriendActionReturnTo,
+): AnalyticsSourceSurface {
+  return returnTo === "messages" ? "messages" : "profile";
+}
+
+function getFriendActionRoute(locale: string, returnTo: FriendActionReturnTo) {
+  return `/${locale}${returnTo === "messages" ? "/messages" : "/friends"}`;
+}
+
+function trackFriendRequestSent({
+  hasMessage,
+  locale,
+  lookupType,
+  requestOrigin,
+  route,
+  sourceSurface,
+  targetProfileId,
+  viewerProfileId,
+}: {
+  hasMessage: boolean;
+  locale: string;
+  lookupType: FriendRequestLookupType;
+  requestOrigin: "lookup_form" | "profile_action";
+  route: string;
+  sourceSurface: AnalyticsSourceSurface;
+  targetProfileId: string;
+  viewerProfileId: string;
+}) {
+  queueAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "friend_request_sent",
+      route,
+      entityId: targetProfileId,
+      entityType: "user",
+      sourceSurface,
+      properties: {
+        has_message: hasMessage,
+        lookup_type: lookupType,
+        request_origin: requestOrigin,
+      },
+    },
+    {
+      userProfileId: viewerProfileId,
+    },
+  );
+}
+
+function trackFriendRequestAccepted({
+  locale,
+  requesterId,
+  returnTo,
+  viewerProfileId,
+}: {
+  locale: string;
+  requesterId: string;
+  returnTo: FriendActionReturnTo;
+  viewerProfileId: string;
+}) {
+  queueAnalyticsEvent(
+    {
+      locale: normalizeAnalyticsLocale(locale),
+      name: "friend_request_accepted",
+      route: getFriendActionRoute(locale, returnTo),
+      entityId: requesterId,
+      entityType: "user",
+      sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
+      properties: {
+        accepted_from: returnTo,
+      },
+    },
+    {
+      userProfileId: viewerProfileId,
+    },
   );
 }
 
@@ -111,6 +197,7 @@ async function hasPendingFriendRequest(userId: string, otherUserId: string) {
 }
 
 async function createPendingFriendRequest({
+  analytics,
   locale,
   logContext,
   message,
@@ -118,6 +205,12 @@ async function createPendingFriendRequest({
   t,
   viewerProfileId,
 }: {
+  analytics: {
+    lookupType: FriendRequestLookupType;
+    requestOrigin: "lookup_form" | "profile_action";
+    route: string;
+    sourceSurface: AnalyticsSourceSurface;
+  };
   locale: string;
   logContext: string;
   message?: string;
@@ -179,6 +272,16 @@ async function createPendingFriendRequest({
   refreshFriends(locale);
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
+  trackFriendRequestSent({
+    hasMessage: Boolean(message?.trim()),
+    locale,
+    lookupType: analytics.lookupType,
+    requestOrigin: analytics.requestOrigin,
+    route: analytics.route,
+    sourceSurface: analytics.sourceSurface,
+    targetProfileId,
+    viewerProfileId,
+  });
 
   return {
     ok: true,
@@ -205,7 +308,7 @@ export async function sendFriendRequestAction(
   }
 
   const { locale, message, returnTo } = result.data;
-  const { searchTerm } = normalizeFriendRequestSearchTerm(
+  const { friendCode, searchTerm } = normalizeFriendRequestSearchTerm(
     result.data.searchTerm,
   );
   const t = getFriendsCopy(locale);
@@ -227,6 +330,12 @@ export async function sendFriendRequestAction(
   }
 
   return createPendingFriendRequest({
+    analytics: {
+      lookupType: friendCode ? "friend_code" : "nickname",
+      requestOrigin: "lookup_form",
+      route: getFriendActionRoute(locale, returnTo),
+      sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
+    },
     locale,
     logContext: "Failed to send friend request",
     message,
@@ -276,6 +385,12 @@ export async function sendFriendRequestToProfileAction(
   }
 
   return createPendingFriendRequest({
+    analytics: {
+      lookupType: "profile",
+      requestOrigin: "profile_action",
+      route: `/${locale}/profile/${targetUser.id}`,
+      sourceSurface: "profile",
+    },
     locale,
     logContext: "Failed to send friend request to profile",
     message,
@@ -362,6 +477,13 @@ export async function acceptFriendRequestAction(
         },
       }),
     ]);
+
+    trackFriendRequestAccepted({
+      locale,
+      requesterId: request.requesterId,
+      returnTo,
+      viewerProfileId: viewerProfile.id,
+    });
   } catch (error) {
     console.error("Failed to accept friend request", error);
     return {

@@ -164,6 +164,14 @@ const requiredByEvent: Partial<
   qr_code_shared: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
   },
+  friend_request_sent: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
+    properties: ["lookup_type", "request_origin"],
+  },
+  friend_request_accepted: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
+    properties: ["accepted_from"],
+  },
   report_submitted: {
     properties: ["target_type", "reason"],
   },

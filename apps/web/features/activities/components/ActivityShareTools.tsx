@@ -244,6 +244,9 @@ export function ActivityShareTools({
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "failed"
   >("idle");
+  const [qrDownloadState, setQrDownloadState] = useState<
+    "idle" | "downloading" | "failed"
+  >("idle");
   const posterFileName = useMemo(
     () =>
       `${sanitizeFileName(activityTitle)}-${sanitizeFileName(dateLabel).slice(
@@ -251,6 +254,10 @@ export function ActivityShareTools({
         36,
       )}-next-fun-club.png`,
     [activityTitle, dateLabel],
+  );
+  const qrFileName = useMemo(
+    () => `${sanitizeFileName(activityTitle)}-next-fun-club-qr.png`,
+    [activityTitle],
   );
 
   useEffect(() => {
@@ -391,7 +398,45 @@ export function ActivityShareTools({
     }
   }
 
+  async function handleDownloadQrCode() {
+    if (!activityUrl) {
+      return;
+    }
+
+    setQrDownloadState("downloading");
+
+    try {
+      const qrDataUrl = await QRCode.toDataURL(activityUrl, {
+        color: {
+          dark: "#18181b",
+          light: "#ffffff",
+        },
+        margin: 2,
+        width: 720,
+      });
+      const link = document.createElement("a");
+      link.download = qrFileName;
+      link.href = qrDataUrl;
+      link.click();
+      trackClientAnalyticsEvent({
+        name: "qr_code_shared",
+        entityId: analyticsEntityId,
+        entityType: analyticsEntityType,
+        sourceSurface: analyticsSourceSurface,
+        properties: {
+          share_mode: "qr_download",
+        },
+      });
+      setQrDownloadState("idle");
+    } catch (error) {
+      console.error("Failed to generate activity QR code", error);
+      setQrDownloadState("failed");
+    }
+  }
+
   const canDownload = Boolean(activityUrl) && downloadState !== "downloading";
+  const canDownloadQr =
+    Boolean(activityUrl) && qrDownloadState !== "downloading";
 
   return (
     <div className="rounded-md border border-zinc-200 bg-paper/80 p-3">
@@ -454,10 +499,25 @@ export function ActivityShareTools({
           <Download className="h-4 w-4 shrink-0" />
           {downloadState === "downloading" ? t.downloading : t.downloadPoster}
         </Button>
+        <Button
+          className={cn("gap-2 px-3", !canDownloadQr && "opacity-70")}
+          disabled={!canDownloadQr}
+          onClick={handleDownloadQrCode}
+          type="button"
+          variant="secondary"
+        >
+          <QrCode className="h-4 w-4 shrink-0" />
+          {qrDownloadState === "downloading" ? t.qrDownloading : t.downloadQr}
+        </Button>
       </div>
       {downloadState === "failed" ? (
         <p className="mt-2 text-xs leading-5 text-red-600">
           {t.downloadFailed}
+        </p>
+      ) : null}
+      {qrDownloadState === "failed" ? (
+        <p className="mt-2 text-xs leading-5 text-red-600">
+          {t.qrDownloadFailed}
         </p>
       ) : null}
       {posterPreviewUrl ? (
