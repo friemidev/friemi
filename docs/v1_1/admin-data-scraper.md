@@ -11,15 +11,32 @@
 
 ## 管理员权限
 
-须配置 Clerk，并在 **`apps/web/.env.local`**（不是仓库根目录）中设置至少一项：
+须配置 Clerk。当前管理员判断以数据库角色为主：
+
+| 来源 | 说明 |
+|------|------|
+| `UserProfile.role = ADMIN` | 推荐方式，权限持久化在数据库中 |
+| `ADMIN_CLERK_USER_IDS` | 兜底方式，逗号分隔 Clerk `user.id` |
+| `ADMIN_EMAILS` | 兜底方式，逗号分隔 Clerk Primary email（不区分大小写） |
+| Clerk metadata | 兜底方式，`publicMetadata` 或 `privateMetadata` 中 `"role": "admin"` |
+
+本地设置某个用户为管理员：
+
+```bash
+cd apps/web
+npx prisma studio
+```
+
+在 `UserProfile` 表中找到对应用户，把 `role` 从 `USER` 改为 `ADMIN`。
+
+也可以临时在 **`apps/web/.env.local`**（不是仓库根目录）中设置至少一项兜底变量：
 
 | 变量 | 说明 |
 |------|------|
 | `ADMIN_EMAILS` | 逗号分隔邮箱，与 Clerk **Primary email** 一致（不区分大小写） |
 | `ADMIN_CLERK_USER_IDS` | 逗号分隔 Clerk `user.id`，更稳定 |
-| Clerk metadata | `publicMetadata` 或 `privateMetadata` 中 `"role": "admin"` |
 
-未命中时：头像菜单无「活动运营」入口；访问 admin 路径会重定向到首页。修改 env 后需 **重启** `npm run dev`。
+未命中时：头像菜单无「活动运营」入口；访问 admin 路径会重定向到首页。修改 env 后需 **重启** `npm run dev`。修改数据库角色后刷新页面即可。
 
 详见 [README 环境变量](../README.md#环境变量)。
 

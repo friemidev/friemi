@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { hasClerkKeys } from "@/lib/clerk";
 import { withLocale } from "@/lib/routes";
-import { hasAdminConfig, isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
+import { isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
+import { prisma } from "@/lib/prisma";
 
 function isAdminUser(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
   return isAdminByFields({
@@ -14,14 +15,29 @@ function isAdminUser(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>)
   });
 }
 
-export async function isCurrentUserAdmin() {
-  if (!hasClerkKeys() || !hasAdminConfig()) {
+async function isAdminByDatabaseRole(clerkUserId: string) {
+  try {
+    const profile = await prisma.userProfile.findUnique({
+      where: {
+        clerkUserId,
+      },
+      select: {
+        role: true,
+        status: true,
+      },
+    });
+
+    return profile?.status === "ACTIVE" && profile.role === "ADMIN";
+  } catch {
+    // First deploys can briefly run before the role column is pushed.
+    // Keep env and Clerk metadata as the emergency fallback.
     return false;
   }
+}
 
-  const { userId } = await auth();
-  if (!userId) {
-    return false;
+async function isAdminWithFallback(userId: string) {
+  if (await isAdminByDatabaseRole(userId)) {
+    return true;
   }
 
   const user = await currentUser();
@@ -30,6 +46,19 @@ export async function isCurrentUserAdmin() {
   }
 
   return isAdminUser(user);
+}
+
+export async function isCurrentUserAdmin() {
+  if (!hasClerkKeys()) {
+    return false;
+  }
+
+  const { userId } = await auth();
+  if (!userId) {
+    return false;
+  }
+
+  return isAdminWithFallback(userId);
 }
 
 export async function requireAdminPageAccess(locale: string) {
@@ -42,8 +71,7 @@ export async function requireAdminPageAccess(locale: string) {
     redirect(withLocale(locale, "/sign-in"));
   }
 
-  const user = await currentUser();
-  if (!user || !isAdminUser(user)) {
+  if (!(await isAdminWithFallback(userId))) {
     redirect(withLocale(locale, "/"));
   }
 }
@@ -58,11 +86,9 @@ export async function requireAdminApiAccess() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await currentUser();
-  if (!user || !isAdminUser(user)) {
+  if (!(await isAdminWithFallback(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   return null;
 }
-
