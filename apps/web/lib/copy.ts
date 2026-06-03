@@ -312,16 +312,18 @@ const copy = {
     },
     notifications: {
       title: "通知中心",
-      description: "查看报名提交、审核结果和活动取消提醒。",
+      description: "活动、好友和评论的最新提醒都在这里。",
       unreadCount: (count: number) => `${count} 条未读`,
       allRead: "全部已读",
       markAllRead: "全部标为已读",
       markOneRead: "标为已读",
       emptyTitle: "暂无通知",
-      emptyDescription: "报名、审核和活动变更提醒会显示在这里。",
+      emptyDescription: "有新的报名、评论或好友消息时，会显示在这里。",
       openActivity: "查看活动",
+      openComments: "查看评论",
       openMessages: "去处理",
       openReview: "去审核",
+      openReports: "查看举报",
       fallbackActivity: "相关活动",
       read: "已读",
       unread: "未读",
@@ -361,6 +363,21 @@ const copy = {
           title: "新的好友申请",
           body: (_activityTitle: string, actorName = "有人") =>
             `${actorName}想添加你为好友。`,
+        },
+        ACTIVITY_COMMENTED: {
+          title: "活动有新评论",
+          body: (activityTitle: string, actorName = "有人") =>
+            `${actorName}在「${activityTitle}」下留言了。`,
+        },
+        COMMENT_REPLY: {
+          title: "有人回复了你",
+          body: (activityTitle: string, actorName = "有人") =>
+            `${actorName}回复了你在「${activityTitle}」下的评论。`,
+        },
+        REPORT_CREATED: {
+          title: "有新的举报",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}提交了一条举报，请尽快查看。`,
         },
       },
     },
@@ -938,18 +955,19 @@ const copy = {
     },
     notifications: {
       title: "Notifications",
-      description:
-        "Review join submissions, review results, and cancellations.",
+      description: "Activity, friend, and comment updates appear here.",
       unreadCount: (count: number) => `${count} unread`,
       allRead: "All read",
       markAllRead: "Mark all as read",
       markOneRead: "Mark read",
       emptyTitle: "No notifications",
       emptyDescription:
-        "Join, review, and activity change alerts will appear here.",
+        "New joins, comments, and friend updates will appear here.",
       openActivity: "Open activity",
+      openComments: "Open comments",
       openMessages: "Review",
       openReview: "Review",
+      openReports: "Open reports",
       fallbackActivity: "Related activity",
       read: "Read",
       unread: "Unread",
@@ -990,6 +1008,21 @@ const copy = {
           title: "New friend request",
           body: (_activityTitle: string, actorName = "Someone") =>
             `${actorName} wants to add you as a friend.`,
+        },
+        ACTIVITY_COMMENTED: {
+          title: "New activity comment",
+          body: (activityTitle: string, actorName = "Someone") =>
+            `${actorName} commented on "${activityTitle}".`,
+        },
+        COMMENT_REPLY: {
+          title: "New reply",
+          body: (activityTitle: string, actorName = "Someone") =>
+            `${actorName} replied to your comment on "${activityTitle}".`,
+        },
+        REPORT_CREATED: {
+          title: "New report",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} sent a report. Please review it soon.`,
         },
       },
     },
@@ -1606,17 +1639,19 @@ const copy = {
     notifications: {
       title: "Notifications",
       description:
-        "Suivez les demandes d'inscription, validations et annulations.",
+        "Les nouveautés d'activité, d'amis et de commentaires apparaissent ici.",
       unreadCount: (count: number) => `${count} non lues`,
       allRead: "Tout est lu",
       markAllRead: "Tout marquer comme lu",
       markOneRead: "Marquer lu",
       emptyTitle: "Aucune notification",
       emptyDescription:
-        "Les alertes d'inscription, validation et changement d'activité apparaîtront ici.",
+        "Les inscriptions, commentaires et demandes d'amis apparaîtront ici.",
       openActivity: "Voir l'activité",
+      openComments: "Voir les commentaires",
       openMessages: "Traiter",
       openReview: "Valider",
+      openReports: "Voir les signalements",
       fallbackActivity: "Activité liée",
       read: "Lu",
       unread: "Non lu",
@@ -1657,6 +1692,21 @@ const copy = {
           title: "Nouvelle demande d'ami",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} souhaite vous ajouter en ami.`,
+        },
+        ACTIVITY_COMMENTED: {
+          title: "Nouveau commentaire",
+          body: (activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a commenté « ${activityTitle} ».`,
+        },
+        COMMENT_REPLY: {
+          title: "Nouvelle réponse",
+          body: (activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a répondu à votre commentaire sur « ${activityTitle} ».`,
+        },
+        REPORT_CREATED: {
+          title: "Nouveau signalement",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a envoyé un signalement. À vérifier bientôt.`,
         },
       },
     },

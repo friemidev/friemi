@@ -24,7 +24,10 @@ export function ActivityCommentsSection({
   const t = getCopy(locale).activityComments;
 
   return (
-    <section className="rounded-lg border border-black/10 bg-white/75 p-4 sm:p-5">
+    <section
+      className="rounded-lg border border-black/10 bg-white/75 p-4 sm:p-5"
+      id="comments"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-moss/10 text-moss">
           <MessageCircleQuestion className="h-5 w-5" />

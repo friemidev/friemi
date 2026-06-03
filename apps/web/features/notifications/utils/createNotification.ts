@@ -3,6 +3,7 @@ import type { NotificationType, Prisma } from "@prisma/client";
 type CreateNotificationInput = {
   actorId?: string | null;
   activityId?: string | null;
+  dedupe?: boolean;
   recipientId: string;
   type: NotificationType;
 };
@@ -21,18 +22,22 @@ export async function createNotification(
   input: CreateNotificationInput,
 ) {
   const identity = getNotificationIdentity(input);
-  const existingUnread = await tx.notification.findFirst({
-    where: {
-      ...identity,
-      readAt: null,
-    },
-    select: {
-      id: true,
-    },
-  });
+  const shouldDedupe = input.dedupe ?? true;
 
-  if (existingUnread) {
-    return null;
+  if (shouldDedupe) {
+    const existingUnread = await tx.notification.findFirst({
+      where: {
+        ...identity,
+        readAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingUnread) {
+      return null;
+    }
   }
 
   return tx.notification.create({

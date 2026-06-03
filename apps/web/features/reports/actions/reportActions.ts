@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, type ReportReason, type ReportStatus } from "@prisma/client";
 import { z } from "zod";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -81,6 +82,8 @@ function revalidateReportTarget(
   }
 
   revalidatePath(withLocale(locale, "/admin/reports"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 }
 
 async function canReportTarget({
@@ -233,14 +236,39 @@ export async function createReportAction(
       };
     }
 
-    await prisma.report.create({
-      data: {
-        reporterId: reporter.id,
-        targetType: result.data.targetType,
-        targetId: result.data.targetId,
-        reason: result.data.reason,
-        description: result.data.description || null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.report.create({
+        data: {
+          reporterId: reporter.id,
+          targetType: result.data.targetType,
+          targetId: result.data.targetId,
+          reason: result.data.reason,
+          description: result.data.description || null,
+        },
+      });
+
+      const admins = await tx.userProfile.findMany({
+        where: {
+          id: {
+            not: reporter.id,
+          },
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await createNotifications(
+        tx,
+        admins.map((admin) => ({
+          actorId: reporter.id,
+          dedupe: false,
+          recipientId: admin.id,
+          type: "REPORT_CREATED",
+        })),
+      );
     });
   } catch (error) {
     if (

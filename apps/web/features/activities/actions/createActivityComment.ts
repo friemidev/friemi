@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActivityStatus, CommentType } from "@prisma/client";
 import { z } from "zod";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
@@ -112,6 +113,7 @@ export async function createActivityCommentAction(
       },
       select: {
         id: true,
+        organizerId: true,
       },
     });
 
@@ -125,6 +127,8 @@ export async function createActivityCommentAction(
       };
     }
 
+    let parentAuthorId: string | null = null;
+
     if (result.data.parentId) {
       const parentComment = await prisma.comment.findFirst({
         where: {
@@ -134,6 +138,7 @@ export async function createActivityCommentAction(
           deletedAt: null,
         },
         select: {
+          authorId: true,
           id: true,
         },
       });
@@ -147,16 +152,45 @@ export async function createActivityCommentAction(
           },
         };
       }
+
+      parentAuthorId = parentComment.authorId;
     }
 
-    await prisma.comment.create({
-      data: {
-        activityId: activity.id,
-        authorId: profile.id,
-        parentId: result.data.parentId ?? null,
-        type: result.data.type,
-        content: result.data.content,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.comment.create({
+        data: {
+          activityId: activity.id,
+          authorId: profile.id,
+          parentId: result.data.parentId ?? null,
+          type: result.data.type,
+          content: result.data.content,
+        },
+      });
+
+      const notificationInputs = [];
+
+      if (parentAuthorId && parentAuthorId !== profile.id) {
+        notificationInputs.push({
+          actorId: profile.id,
+          activityId: activity.id,
+          recipientId: parentAuthorId,
+          type: "COMMENT_REPLY" as const,
+        });
+      }
+
+      if (
+        activity.organizerId !== profile.id &&
+        activity.organizerId !== parentAuthorId
+      ) {
+        notificationInputs.push({
+          actorId: profile.id,
+          activityId: activity.id,
+          recipientId: activity.organizerId,
+          type: "ACTIVITY_COMMENTED" as const,
+        });
+      }
+
+      await createNotifications(tx, notificationInputs);
     });
   } catch (error) {
     console.error("Failed to create activity comment", error);
@@ -173,6 +207,8 @@ export async function createActivityCommentAction(
   revalidatePath(
     withLocale(result.data.locale, `/activities/${result.data.activityId}`),
   );
+  revalidatePath(withLocale(result.data.locale, "/notifications"));
+  revalidatePath(withLocale(result.data.locale, "/"), "layout");
 
   return {
     ok: true,

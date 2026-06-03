@@ -4,6 +4,8 @@ import {
   CheckCheck,
   Clock3,
   ExternalLink,
+  Flag,
+  MessageCircle,
   UserPlus,
   XCircle,
   type LucideIcon,
@@ -53,7 +55,9 @@ function getNotificationText(
 
   if (
     notification.type === "PARTICIPATION_PENDING" ||
-    notification.type === "PARTICIPATION_APPROVED"
+    notification.type === "PARTICIPATION_APPROVED" ||
+    notification.type === "ACTIVITY_COMMENTED" ||
+    notification.type === "COMMENT_REPLY"
   ) {
     const copy = t.types[notification.type];
 
@@ -90,6 +94,15 @@ function getNotificationText(
     };
   }
 
+  if (notification.type === "REPORT_CREATED") {
+    const copy = t.types.REPORT_CREATED;
+
+    return {
+      title: copy.title,
+      body: copy.body(activityTitle, actorName),
+    };
+  }
+
   const copy = t.types[notification.type];
 
   return {
@@ -108,6 +121,17 @@ function getNotificationActionLabel(
     return t.openMessages;
   }
 
+  if (notification.type === "REPORT_CREATED") {
+    return t.openReports;
+  }
+
+  if (
+    notification.type === "ACTIVITY_COMMENTED" ||
+    notification.type === "COMMENT_REPLY"
+  ) {
+    return t.openComments;
+  }
+
   if (notification.type === "PARTICIPATION_PENDING" && notification.actor) {
     return t.openReview;
   }
@@ -122,7 +146,6 @@ function getNotificationVisual(
   icon: LucideIcon;
   iconClassName: string;
   cardClassName: string;
-  statusClassName: string;
 } {
   if (type === "PARTICIPATION_PENDING") {
     return {
@@ -131,9 +154,6 @@ function getNotificationVisual(
       cardClassName: isUnread
         ? "border-sky/80 bg-white"
         : "border-black/10 bg-white/65",
-      statusClassName: isUnread
-        ? "bg-sky/60 text-ink"
-        : "bg-zinc-100 text-zinc-500",
     };
   }
 
@@ -146,9 +166,6 @@ function getNotificationVisual(
       cardClassName: isUnread
         ? "border-black/15 bg-white"
         : "border-black/10 bg-white/65",
-      statusClassName: isUnread
-        ? "bg-ink text-white"
-        : "bg-zinc-100 text-zinc-500",
     };
   }
 
@@ -159,9 +176,28 @@ function getNotificationVisual(
       cardClassName: isUnread
         ? "border-sky/80 bg-white"
         : "border-black/10 bg-white/65",
-      statusClassName: isUnread
-        ? "bg-sky/60 text-ink"
-        : "bg-zinc-100 text-zinc-500",
+    };
+  }
+
+  if (type === "ACTIVITY_COMMENTED" || type === "COMMENT_REPLY") {
+    return {
+      icon: MessageCircle,
+      iconClassName: isUnread
+        ? "bg-sky text-ink"
+        : "bg-sky/40 text-zinc-600",
+      cardClassName: isUnread
+        ? "border-sky/80 bg-white"
+        : "border-black/10 bg-white/65",
+    };
+  }
+
+  if (type === "REPORT_CREATED") {
+    return {
+      icon: Flag,
+      iconClassName: isUnread ? "bg-clay text-white" : "bg-clay/10 text-clay",
+      cardClassName: isUnread
+        ? "border-clay/25 bg-white"
+        : "border-black/10 bg-white/65",
     };
   }
 
@@ -172,9 +208,6 @@ function getNotificationVisual(
       cardClassName: isUnread
         ? "border-clay/25 bg-white"
         : "border-black/10 bg-white/65",
-      statusClassName: isUnread
-        ? "bg-clay/10 text-clay"
-        : "bg-zinc-100 text-zinc-500",
     };
   }
 
@@ -184,9 +217,6 @@ function getNotificationVisual(
     cardClassName: isUnread
       ? "border-moss/25 bg-white"
       : "border-black/10 bg-white/65",
-    statusClassName: isUnread
-      ? "bg-moss/10 text-moss"
-      : "bg-zinc-100 text-zinc-500",
   };
 }
 
@@ -238,15 +268,25 @@ export default async function NotificationsPage({
             const isUnread = notification.readAt === null;
             const visual = getNotificationVisual(notification.type, isUnread);
             const NotificationIcon = visual.icon;
+            const hasAction =
+              Boolean(notification.activity) ||
+              notification.type === "FRIEND_REQUEST" ||
+              notification.type === "REPORT_CREATED";
 
             return (
               <article
                 key={notification.id}
                 className={cn(
-                  "rounded-lg border p-4 shadow-sm transition sm:p-5",
+                  "relative overflow-hidden rounded-lg border p-4 shadow-sm transition sm:p-5",
                   visual.cardClassName,
                 )}
               >
+                {isUnread ? (
+                  <span
+                    aria-label={t.unread}
+                    className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-clay shadow-sm"
+                  />
+                ) : null}
                 <div className="flex gap-3">
                   <span
                     className={cn(
@@ -263,22 +303,39 @@ export default async function NotificationsPage({
                           {text.title}
                         </p>
                         <p className="mt-1 text-sm leading-6 text-zinc-600">
-                          {text.body}
+                        {text.body}
                         </p>
                       </div>
-                      <span className="shrink-0 whitespace-nowrap text-xs text-zinc-500">
+                      <span className="mr-5 shrink-0 whitespace-nowrap text-xs text-zinc-500 sm:mr-0">
                         {formatActivityDate(notification.createdAt, locale)}
                       </span>
                     </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex min-h-9 items-center rounded-full px-2.5 py-1 text-xs font-medium sm:min-h-0",
-                          visual.statusClassName,
-                        )}
-                      >
-                        {isUnread ? t.unread : t.read}
-                      </span>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      {hasAction ? (
+                        <form action={openNotificationActivityAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input
+                            name="notificationId"
+                            type="hidden"
+                            value={notification.id}
+                          />
+                          <button
+                            className={cn(
+                              "inline-flex min-h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-9 sm:w-auto sm:text-xs",
+                              isUnread
+                                ? "bg-ink text-white hover:bg-zinc-800"
+                                : "bg-white text-ink ring-1 ring-black/10 hover:bg-zinc-50",
+                            )}
+                            type="submit"
+                          >
+                            {getNotificationActionLabel(
+                              notification,
+                              locale,
+                            )}
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                      ) : null}
                       {isUnread ? (
                         <form action={markNotificationReadAction}>
                           <input name="locale" type="hidden" value={locale} />
@@ -288,32 +345,11 @@ export default async function NotificationsPage({
                             value={notification.id}
                           />
                           <button
-                            className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-8"
+                            className="inline-flex min-h-10 w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-white px-3 text-xs font-medium text-zinc-600 ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-8 sm:w-auto"
                             type="submit"
                           >
                             <CheckCheck className="h-3.5 w-3.5" />
                             {t.markOneRead}
-                          </button>
-                        </form>
-                      ) : null}
-                      {notification.activity ||
-                      notification.type === "FRIEND_REQUEST" ? (
-                        <form action={openNotificationActivityAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="notificationId"
-                            type="hidden"
-                            value={notification.id}
-                          />
-                          <button
-                            className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-md bg-white px-3 text-xs font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:min-h-8"
-                            type="submit"
-                          >
-                            {getNotificationActionLabel(
-                              notification,
-                              locale,
-                            )}
-                            <ExternalLink className="h-3.5 w-3.5" />
                           </button>
                         </form>
                       ) : null}

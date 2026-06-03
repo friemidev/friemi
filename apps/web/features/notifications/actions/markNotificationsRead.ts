@@ -88,6 +88,24 @@ export async function openNotificationActivityAction(formData: FormData) {
     redirect(withLocale(locale, "/messages?friendRequests=1"));
   }
 
+  if (notification?.type === "REPORT_CREATED") {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    revalidatePath(withLocale(locale, "/admin/reports"));
+    revalidatePath(withLocale(locale, "/"), "layout");
+    redirect(withLocale(locale, "/admin/reports"));
+  }
+
   if (!notification?.activityId) {
     redirect(withLocale(locale, "/notifications"));
   }
@@ -109,6 +127,9 @@ export async function openNotificationActivityAction(formData: FormData) {
   const target =
     notification.type === "PARTICIPATION_PENDING" && notification.actorId
       ? `/activities/${notification.activityId}#participation-approval`
+      : notification.type === "ACTIVITY_COMMENTED" ||
+          notification.type === "COMMENT_REPLY"
+        ? `/activities/${notification.activityId}#comments`
       : `/activities/${notification.activityId}`;
 
   redirect(withLocale(locale, target));
