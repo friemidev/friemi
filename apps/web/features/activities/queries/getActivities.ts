@@ -24,6 +24,7 @@ const visibleArchivedActivityStatuses: ActivityStatus[] = [
   ...visibleActivityStatuses,
   "ENDED",
 ];
+const visibleActivityStatusSet = new Set<string>(visibleActivityStatuses);
 const participantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 export const publicActivityVisibility: ActivityVisibility[] = ["PUBLIC"];
 const coverTones: ActivityCardViewModel["coverTone"][] = [
@@ -39,6 +40,31 @@ const endingSoonWindowDays = 1;
 const upcomingSoonWindowDays = 1;
 const upcomingWeekWindowDays = 7;
 const upcomingMonthWindowDays = 30;
+const legacyPublicActivityIdPattern =
+  /^(playinparis|sortiraparis|paris-opendata|paris_open_data|feverup)_/i;
+const legacyPublicActivitySources = [
+  "playinparis",
+  "playinparis.com",
+  "sortiraparis",
+  "sortiraparis.com",
+  "paris-opendata",
+  "paris-opendata:que-faire-a-paris",
+  "opendata.paris.fr",
+  "feverup",
+  "feverup.com",
+];
+
+function includesKnownPublicActivitySource(value: string | null | undefined) {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return legacyPublicActivitySources.some((knownSource) =>
+    normalizedValue.includes(knownSource),
+  );
+}
 
 export const activityCardSelect = {
   id: true,
@@ -56,6 +82,13 @@ export const activityCardSelect = {
   coverImageUrl: true,
   priceText: true,
   status: true,
+  publicEventId: true,
+  source: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+  importedAt: true,
   createdAt: true,
   merchant: {
     select: {
@@ -79,6 +112,44 @@ export const activityCardSelect = {
     },
   },
 } satisfies Prisma.ActivitySelect;
+
+const publicEventCardSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  coverImageUrl: true,
+  priceText: true,
+  status: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+  createdAt: true,
+  _count: {
+    select: {
+      teams: {
+        where: {
+          status: {
+            in: visibleArchivedActivityStatuses,
+          },
+          visibility: {
+            in: publicActivityVisibility,
+          },
+          organizer: {
+            status: "ACTIVE",
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.PublicEventSelect;
 
 type GetActivitiesOptions = {
   filters?: ActivityFilters;
@@ -237,6 +308,15 @@ type ActivityQueryResult = Prisma.ActivityGetPayload<{
   select: typeof activityCardSelect;
 }>;
 
+type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
+  select: typeof publicEventCardSelect;
+}>;
+
+type RankedActivityCard = {
+  card: ActivityCardViewModel;
+  createdAt: Date;
+};
+
 export function getVisibleActivityWhere(
   options: VisibleActivityWhereOptions = {},
 ): Prisma.ActivityWhereInput {
@@ -271,6 +351,225 @@ export function getVisibleActivityWhere(
       status: "ACTIVE",
     },
   };
+}
+
+function getVisiblePublicEventWhere(
+  options: VisibleActivityWhereOptions = {},
+): Prisma.PublicEventWhereInput {
+  const now = options.now ?? new Date();
+
+  return {
+    ...(options.includePast
+      ? {}
+      : {
+          OR: [
+            {
+              startAt: {
+                gte: now,
+              },
+            },
+            {
+              endAt: {
+                gte: now,
+              },
+            },
+          ],
+        }),
+    status: "SCHEDULED",
+    visibility: {
+      in: publicActivityVisibility,
+    },
+  };
+}
+
+function shouldIncludePublicEvents(filters: ActivityFilters | undefined) {
+  if (!filters) {
+    return true;
+  }
+
+  return !filters.type && filters.relation === "ALL";
+}
+
+function getPublicEventFilterWhere(
+  filters: ActivityFilters | undefined,
+): Prisma.PublicEventWhereInput {
+  if (!filters || !shouldIncludePublicEvents(filters)) {
+    return {};
+  }
+
+  const keywordTerms = getKeywordTerms(filters.keyword);
+
+  return {
+    ...(keywordTerms.length > 0
+      ? {
+          AND: keywordTerms.map((term) => ({
+            OR: [
+              {
+                title: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+              {
+                description: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+              {
+                address: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+            ],
+          })),
+        }
+      : {}),
+    ...(filters.category
+      ? {
+          category: filters.category,
+        }
+      : {}),
+    ...(filters.city
+      ? {
+          city: {
+            equals: filters.city,
+            mode: "insensitive",
+          },
+        }
+      : {}),
+  };
+}
+
+function getPublicEventTimeStateWhere(
+  timeState: ActivityTimeState,
+  now = new Date(),
+): Prisma.PublicEventWhereInput {
+  if (timeState === "UPCOMING") {
+    return {
+      startAt: {
+        gt: now,
+      },
+    };
+  }
+
+  if (timeState === "ONGOING") {
+    return {
+      startAt: {
+        lte: now,
+      },
+      endAt: {
+        gt: now,
+      },
+    };
+  }
+
+  return {
+    OR: [
+      {
+        endAt: {
+          lte: now,
+        },
+      },
+      {
+        AND: [
+          {
+            endAt: null,
+          },
+          {
+            startAt: {
+              lte: now,
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+export function isLegacyActivityInfoSource(activity: {
+  id?: string | null;
+  source?: string | null;
+  sourceUrl?: string | null;
+  externalSource?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+  importedAt?: Date | string | null;
+  sourcePayload?: unknown;
+}) {
+  const sourceLooksPublic =
+    Boolean(activity.id && legacyPublicActivityIdPattern.test(activity.id)) ||
+    includesKnownPublicActivitySource(activity.source) ||
+    includesKnownPublicActivitySource(activity.sourceUrl) ||
+    includesKnownPublicActivitySource(activity.externalUrl);
+
+  return Boolean(
+    sourceLooksPublic ||
+    activity.externalSource ||
+    activity.externalId ||
+    activity.externalUrl ||
+    activity.importedAt ||
+    activity.sourcePayload,
+  );
+}
+
+function getActivityInfoDedupeKeys(item: {
+  title: string;
+  city: string;
+  address: string;
+  startAt: Date;
+  sourceUrl?: string | null;
+  externalSource?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+}) {
+  const keys: string[] = [];
+
+  if (item.externalSource && item.externalId) {
+    keys.push(`external:${item.externalSource}:${item.externalId}`);
+  }
+
+  if (item.externalUrl) {
+    keys.push(`url:${item.externalUrl}`);
+  }
+
+  if (item.sourceUrl) {
+    keys.push(`url:${item.sourceUrl}`);
+  }
+
+  keys.push(
+    `semantic:${item.title.trim().toLowerCase()}:${item.city
+      .trim()
+      .toLowerCase()}:${item.address.trim().toLowerCase()}:${item.startAt.toISOString()}`,
+  );
+
+  return keys;
+}
+
+function filterDuplicateLegacyActivityInfoRows(
+  activities: ActivityQueryResult[],
+  publicEvents: PublicEventQueryResult[],
+) {
+  if (activities.length === 0 || publicEvents.length === 0) {
+    return activities;
+  }
+
+  const publicEventKeys = new Set(
+    publicEvents.flatMap((publicEvent) =>
+      getActivityInfoDedupeKeys(publicEvent),
+    ),
+  );
+
+  return activities.filter((activity) => {
+    if (!isLegacyActivityInfoSource(activity)) {
+      return true;
+    }
+
+    return !getActivityInfoDedupeKeys(activity).some((key) =>
+      publicEventKeys.has(key),
+    );
+  });
 }
 
 export function getActivityTimeStateWhere(
@@ -331,11 +630,13 @@ export function getActivityTimeStateWhere(
 export function getActivityCardViewModel(
   activity: ActivityQueryResult,
 ): ActivityCardViewModel {
+  const isActivityInfo = isLegacyActivityInfoSource(activity);
+
   return {
     id: activity.id,
     title: activity.title,
     description: activity.description,
-    type: activity.type,
+    type: isActivityInfo ? "PUBLIC_EVENT" : activity.type,
     category: activity.category,
     city: activity.city,
     address: activity.address,
@@ -343,12 +644,15 @@ export function getActivityCardViewModel(
     longitude: activity.longitude,
     startAt: activity.startAt.toISOString(),
     endAt: activity.endAt?.toISOString() ?? null,
-    capacity: activity.capacity,
+    capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
-    participantCount: activity._count.participants,
+    participantCount: isActivityInfo ? 0 : activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
     coverTone: getActivityCoverTone(activity.id),
+    isActivityInfo,
+    officialUrl: activity.externalUrl ?? activity.sourceUrl,
+    publicEventId: activity.publicEventId,
     merchant: activity.merchant?.isActive
       ? {
           id: activity.merchant.id,
@@ -361,10 +665,111 @@ export function getActivityCardViewModel(
   };
 }
 
+function getActivityRankedCardViewModel(
+  activity: ActivityQueryResult,
+): RankedActivityCard {
+  return {
+    card: getActivityCardViewModel(activity),
+    createdAt: activity.createdAt,
+  };
+}
+
+function getPublicEventActivityCardViewModel(
+  publicEvent: PublicEventQueryResult,
+): RankedActivityCard {
+  return {
+    card: {
+      id: publicEvent.id,
+      publicEventId: publicEvent.id,
+      title: publicEvent.title,
+      description: publicEvent.description,
+      type: "PUBLIC_EVENT",
+      category: publicEvent.category,
+      city: publicEvent.city,
+      address: publicEvent.address,
+      latitude: publicEvent.latitude,
+      longitude: publicEvent.longitude,
+      startAt: publicEvent.startAt.toISOString(),
+      endAt: publicEvent.endAt?.toISOString() ?? null,
+      capacity: 0,
+      coverImageUrl: publicEvent.coverImageUrl,
+      participantCount: publicEvent._count.teams,
+      priceText: publicEvent.priceText ?? "",
+      status: "RECRUITING",
+      coverTone: getActivityCoverTone(publicEvent.id),
+      merchant: null,
+      friendSignal: null,
+      isFavorited: false,
+    },
+    createdAt: publicEvent.createdAt,
+  };
+}
+
+async function attachJoinableActivityStates(
+  rankedActivities: RankedActivityCard[],
+  viewerProfileId: string | null | undefined,
+): Promise<ActivityCardViewModel[]> {
+  const joinableActivities = rankedActivities
+    .map((rankedActivity) => rankedActivity.card)
+    .filter((activity) => activity.type !== "PUBLIC_EVENT");
+  const joinableActivitiesWithState = await attachActivityFavoriteStates(
+    await attachActivityFriendSignals(joinableActivities, viewerProfileId),
+    viewerProfileId,
+  );
+  const joinableActivityById = new Map(
+    joinableActivitiesWithState.map((activity) => [activity.id, activity]),
+  );
+
+  return rankedActivities.map((rankedActivity) => {
+    if (rankedActivity.card.type === "PUBLIC_EVENT") {
+      return rankedActivity.card;
+    }
+
+    return (
+      joinableActivityById.get(rankedActivity.card.id) ?? rankedActivity.card
+    );
+  });
+}
+
+function compareRankedActivitiesByStartAt(
+  left: RankedActivityCard,
+  right: RankedActivityCard,
+  direction: "asc" | "desc",
+) {
+  const leftStartAt = new Date(left.card.startAt).getTime();
+  const rightStartAt = new Date(right.card.startAt).getTime();
+  const timeDiff =
+    direction === "asc"
+      ? leftStartAt - rightStartAt
+      : rightStartAt - leftStartAt;
+
+  return timeDiff || left.card.id.localeCompare(right.card.id);
+}
+
+function compareRankedActivities(
+  filters: Pick<ActivityFilters, "sort" | "timeState"> | undefined,
+  left: RankedActivityCard,
+  right: RankedActivityCard,
+) {
+  if (filters?.sort === "recentlyAdded") {
+    return (
+      right.createdAt.getTime() - left.createdAt.getTime() ||
+      left.card.id.localeCompare(right.card.id)
+    );
+  }
+
+  if (filters?.sort === "latest" || filters?.timeState === "ENDED") {
+    return compareRankedActivitiesByStartAt(left, right, "desc");
+  }
+
+  return compareRankedActivitiesByStartAt(left, right, "asc");
+}
+
 export async function getActivities(
   options: GetActivitiesOptions = {},
 ): Promise<ActivityCardViewModel[]> {
   const now = new Date();
+  const limit = normalizeLimit(options.limit);
   const baseWhere = getVisibleActivityWhere({
     includePast: options.includePast,
     now,
@@ -388,17 +793,46 @@ export async function getActivities(
       AND: [baseWhere, filterWhere, relationWhere],
     },
     orderBy,
-    take: normalizeLimit(options.limit),
+    take: limit,
     select: activityCardSelect,
   });
+  const publicEvents = shouldIncludePublicEvents(options.filters)
+    ? await prisma.publicEvent.findMany({
+        where: {
+          AND: [
+            getVisiblePublicEventWhere({
+              includePast: options.includePast,
+              now,
+            }),
+            getPublicEventFilterWhere(options.filters),
+          ],
+        },
+        orderBy:
+          options.filters?.sort === "recentlyAdded"
+            ? [{ createdAt: "desc" }, { id: "asc" }]
+            : [
+                {
+                  startAt: options.filters?.sort === "latest" ? "desc" : "asc",
+                },
+                { id: "asc" },
+              ],
+        take: limit,
+        select: publicEventCardSelect,
+      })
+    : [];
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getActivityRankedCardViewModel,
+    ),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ]
+    .sort((left, right) =>
+      compareRankedActivities(options.filters, left, right),
+    )
+    .slice(0, limit);
 
-  const activityViewModels = await attachActivityFriendSignals(
-    activities.map(getActivityCardViewModel),
-    options.viewerProfileId,
-  );
-
-  return attachActivityFavoriteStates(
-    activityViewModels,
+  return attachJoinableActivityStates(
+    rankedActivities,
     options.viewerProfileId,
   );
 }
@@ -415,6 +849,21 @@ function getActivityListOrderBy(
   filters: ActivityFilters,
   timeState?: ActivityTimeState,
 ): Prisma.ActivityOrderByWithRelationInput[] {
+  if (filters.sort === "recentlyAdded") {
+    return [{ createdAt: "desc" }, { id: "asc" }];
+  }
+
+  if (filters.sort === "latest" || timeState === "ENDED") {
+    return [{ startAt: "desc" }, { id: "asc" }];
+  }
+
+  return [{ startAt: "asc" }, { id: "asc" }];
+}
+
+function getPublicEventListOrderBy(
+  filters: ActivityFilters,
+  timeState?: ActivityTimeState,
+): Prisma.PublicEventOrderByWithRelationInput[] {
   if (filters.sort === "recentlyAdded") {
     return [{ createdAt: "desc" }, { id: "asc" }];
   }
@@ -483,6 +932,29 @@ async function getActivityListWhere(
   };
 }
 
+function getPublicEventListWhere(
+  filters: ActivityFilters,
+  now: Date,
+): Prisma.PublicEventWhereInput | null {
+  if (!shouldIncludePublicEvents(filters)) {
+    return null;
+  }
+
+  return {
+    AND: [
+      getVisiblePublicEventWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      }),
+      getPublicEventFilterWhere(filters),
+      ...(filters.timeState
+        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+        : []),
+    ],
+  };
+}
+
 async function getOrderedActivityList(
   filters: ActivityFilters,
   pageSize: number,
@@ -490,23 +962,45 @@ async function getOrderedActivityList(
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
   const where = await getActivityListWhere(filters, now, viewerProfileId);
-  const totalCount = await prisma.activity.count({ where });
+  const publicEventWhere = getPublicEventListWhere(filters, now);
+  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
+    prisma.activity.count({ where }),
+    publicEventWhere
+      ? prisma.publicEvent.count({ where: publicEventWhere })
+      : 0,
+  ]);
+  const totalCount = activityTotalCount + publicEventTotalCount;
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
-  const activities = await prisma.activity.findMany({
-    where,
-    orderBy: getActivityListOrderBy(filters, filters.timeState),
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    select: activityCardSelect,
-  });
+  const readLimit = page * pageSize;
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where,
+      orderBy: getActivityListOrderBy(filters, filters.timeState),
+      take: readLimit,
+      select: activityCardSelect,
+    }),
+    publicEventWhere
+      ? prisma.publicEvent.findMany({
+          where: publicEventWhere,
+          orderBy: getPublicEventListOrderBy(filters, filters.timeState),
+          take: readLimit,
+          select: publicEventCardSelect,
+        })
+      : [],
+  ]);
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getActivityRankedCardViewModel,
+    ),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ]
+    .sort((left, right) => compareRankedActivities(filters, left, right))
+    .slice((page - 1) * pageSize, page * pageSize);
 
   return {
-    activities: await attachActivityFavoriteStates(
-      await attachActivityFriendSignals(
-        activities.map(getActivityCardViewModel),
-        viewerProfileId,
-      ),
+    activities: await attachJoinableActivityStates(
+      rankedActivities,
       viewerProfileId,
     ),
     page,
@@ -514,6 +1008,96 @@ async function getOrderedActivityList(
     totalCount,
     totalPages,
   };
+}
+
+function getRecommendedActivityRank(
+  rankedActivity: RankedActivityCard,
+  now: Date,
+  dailySeed: string,
+) {
+  const startAt = new Date(rankedActivity.card.startAt);
+  const endAt = rankedActivity.card.endAt
+    ? new Date(rankedActivity.card.endAt)
+    : null;
+  const isActive = visibleActivityStatusSet.has(rankedActivity.card.status);
+  const freshOngoingBoundary = addDays(now, -freshOngoingWindowDays);
+  const endingSoonBoundary = addDays(now, endingSoonWindowDays);
+  const upcomingSoonBoundary = addDays(now, upcomingSoonWindowDays);
+  const upcomingWeekBoundary = addDays(now, upcomingWeekWindowDays);
+  const upcomingMonthBoundary = addDays(now, upcomingMonthWindowDays);
+  const isFreshOngoing =
+    isActive &&
+    startAt <= now &&
+    endAt !== null &&
+    endAt > now &&
+    startAt >= freshOngoingBoundary;
+  const isUpcoming = isActive && startAt > now;
+  const isOngoing = isActive && startAt <= now && endAt !== null && endAt > now;
+  const recommendationGroup = isFreshOngoing
+    ? 0
+    : isUpcoming
+      ? 1
+      : isOngoing
+        ? 2
+        : 3;
+  let proximityGroup = 0;
+
+  if (isFreshOngoing) {
+    proximityGroup = endAt !== null && endAt <= endingSoonBoundary ? 0 : 1;
+  } else if (isUpcoming) {
+    proximityGroup =
+      startAt <= upcomingSoonBoundary
+        ? 0
+        : startAt <= upcomingWeekBoundary
+          ? 1
+          : startAt <= upcomingMonthBoundary
+            ? 2
+            : 3;
+  }
+
+  return {
+    id: rankedActivity.card.id,
+    proximityGroup,
+    recommendationGroup,
+    seed: createHash("md5")
+      .update(
+        `${dailySeed}:${rankedActivity.card.type}:${rankedActivity.card.id}`,
+      )
+      .digest("hex"),
+    startAt,
+  };
+}
+
+function compareRecommendedRankedActivities(
+  now: Date,
+  dailySeed: string,
+  left: RankedActivityCard,
+  right: RankedActivityCard,
+) {
+  const leftRank = getRecommendedActivityRank(left, now, dailySeed);
+  const rightRank = getRecommendedActivityRank(right, now, dailySeed);
+
+  if (leftRank.recommendationGroup !== rightRank.recommendationGroup) {
+    return leftRank.recommendationGroup - rightRank.recommendationGroup;
+  }
+
+  if (leftRank.proximityGroup !== rightRank.proximityGroup) {
+    return leftRank.proximityGroup - rightRank.proximityGroup;
+  }
+
+  if (leftRank.seed < rightRank.seed) {
+    return -1;
+  }
+
+  if (leftRank.seed > rightRank.seed) {
+    return 1;
+  }
+
+  if (leftRank.startAt.getTime() !== rightRank.startAt.getTime()) {
+    return leftRank.startAt.getTime() - rightRank.startAt.getTime();
+  }
+
+  return leftRank.id.localeCompare(rightRank.id);
 }
 
 async function getRecommendedActivityList(
@@ -523,18 +1107,18 @@ async function getRecommendedActivityList(
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
   const where = await getActivityListWhere(filters, now, viewerProfileId);
-  const totalCount = await prisma.activity.count({ where });
+  const publicEventWhere = getPublicEventListWhere(filters, now);
+  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
+    prisma.activity.count({ where }),
+    publicEventWhere
+      ? prisma.publicEvent.count({ where: publicEventWhere })
+      : 0,
+  ]);
+  const totalCount = activityTotalCount + publicEventTotalCount;
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
-  const activityIds = await getRecommendedActivityIds({
-    filters,
-    now,
-    page,
-    pageSize,
-    viewerProfileId,
-  });
 
-  if (activityIds.length === 0) {
+  if (totalCount === 0) {
     return {
       activities: [],
       page,
@@ -544,29 +1128,33 @@ async function getRecommendedActivityList(
     };
   }
 
-  const activities = await prisma.activity.findMany({
-    where: {
-      id: {
-        in: activityIds,
-      },
-    },
-    select: activityCardSelect,
-  });
-  const activityById = new Map(
-    activities.map((activity) => [activity.id, activity]),
-  );
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where,
+      select: activityCardSelect,
+    }),
+    publicEventWhere
+      ? prisma.publicEvent.findMany({
+          where: publicEventWhere,
+          select: publicEventCardSelect,
+        })
+      : [],
+  ]);
+  const dailySeed = getDailyRankingSeed(now);
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getActivityRankedCardViewModel,
+    ),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ]
+    .sort((left, right) =>
+      compareRecommendedRankedActivities(now, dailySeed, left, right),
+    )
+    .slice((page - 1) * pageSize, page * pageSize);
 
   return {
-    activities: await attachActivityFavoriteStates(
-      await attachActivityFriendSignals(
-        activityIds
-          .map((activityId) => activityById.get(activityId))
-          .filter((activity): activity is ActivityQueryResult =>
-            Boolean(activity),
-          )
-          .map(getActivityCardViewModel),
-        viewerProfileId,
-      ),
+    activities: await attachJoinableActivityStates(
+      rankedActivities,
       viewerProfileId,
     ),
     page,
@@ -574,121 +1162,6 @@ async function getRecommendedActivityList(
     totalCount,
     totalPages,
   };
-}
-
-type RecommendedActivityIdRow = {
-  id: string;
-};
-
-async function getRecommendedActivityIds({
-  filters,
-  now,
-  page,
-  pageSize,
-  viewerProfileId,
-}: {
-  filters: ActivityFilters;
-  now: Date;
-  page: number;
-  pageSize: number;
-  viewerProfileId: string | null | undefined;
-}) {
-  const where = await getActivityListWhere(filters, now, viewerProfileId);
-  const totalCount = await prisma.activity.count({ where });
-  const totalPages = getActivityTotalPages(totalCount, pageSize);
-  const currentPage = getActivityPage(page, totalPages);
-  const offset = (currentPage - 1) * pageSize;
-  const activities = await prisma.activity.findMany({
-    where,
-    select: {
-      id: true,
-      startAt: true,
-      endAt: true,
-      status: true,
-    },
-  });
-  const dailySeed = getDailyRankingSeed(now);
-  const freshOngoingBoundary = addDays(now, -freshOngoingWindowDays);
-  const endingSoonBoundary = addDays(now, endingSoonWindowDays);
-  const upcomingSoonBoundary = addDays(now, upcomingSoonWindowDays);
-  const upcomingWeekBoundary = addDays(now, upcomingWeekWindowDays);
-  const upcomingMonthBoundary = addDays(now, upcomingMonthWindowDays);
-
-  const rankedActivityIds = activities
-    .map((activity) => {
-      const isActive = visibleActivityStatuses.includes(activity.status);
-      const isFreshOngoing =
-        isActive &&
-        activity.startAt <= now &&
-        activity.endAt !== null &&
-        activity.endAt > now &&
-        activity.startAt >= freshOngoingBoundary;
-      const isUpcoming = isActive && activity.startAt > now;
-      const isOngoing =
-        isActive &&
-        activity.startAt <= now &&
-        activity.endAt !== null &&
-        activity.endAt > now;
-      const recommendationGroup = isFreshOngoing
-        ? 0
-        : isUpcoming
-          ? 1
-          : isOngoing
-            ? 2
-            : 3;
-      let proximityGroup = 0;
-
-      if (isFreshOngoing) {
-        proximityGroup =
-          activity.endAt !== null && activity.endAt <= endingSoonBoundary ? 0 : 1;
-      } else if (isUpcoming) {
-        proximityGroup =
-          activity.startAt <= upcomingSoonBoundary
-            ? 0
-            : activity.startAt <= upcomingWeekBoundary
-              ? 1
-              : activity.startAt <= upcomingMonthBoundary
-                ? 2
-                : 3;
-      }
-
-      return {
-        id: activity.id,
-        startAt: activity.startAt,
-        recommendationGroup,
-        proximityGroup,
-        seed: createHash("md5")
-          .update(`${dailySeed}:${activity.id}`)
-          .digest("hex"),
-      };
-    })
-    .sort((left, right) => {
-      if (left.recommendationGroup !== right.recommendationGroup) {
-        return left.recommendationGroup - right.recommendationGroup;
-      }
-
-      if (left.proximityGroup !== right.proximityGroup) {
-        return left.proximityGroup - right.proximityGroup;
-      }
-
-      if (left.seed < right.seed) {
-        return -1;
-      }
-
-      if (left.seed > right.seed) {
-        return 1;
-      }
-
-      if (left.startAt.getTime() !== right.startAt.getTime()) {
-        return left.startAt.getTime() - right.startAt.getTime();
-      }
-
-      return left.id.localeCompare(right.id);
-    })
-    .slice(offset, offset + pageSize)
-    .map((activity) => activity.id);
-
-  return rankedActivityIds;
 }
 
 export async function getActivityList(
@@ -720,25 +1193,42 @@ export async function getActivityList(
 
 export async function getActivityFilterOptions() {
   const now = new Date();
-  const cities = await prisma.activity.findMany({
-    where: getVisibleActivityWhere({
-      includeEnded: true,
-      includePast: true,
-      now,
+  const [activityCities, publicEventCities] = await Promise.all([
+    prisma.activity.findMany({
+      where: getVisibleActivityWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      }),
+      select: {
+        city: true,
+      },
+      distinct: ["city"],
+      orderBy: {
+        city: "asc",
+      },
+      take: 50,
     }),
-    select: {
-      city: true,
-    },
-    distinct: ["city"],
-    orderBy: {
-      city: "asc",
-    },
-    take: 50,
-  });
+    prisma.publicEvent.findMany({
+      where: getVisiblePublicEventWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      }),
+      select: {
+        city: true,
+      },
+      distinct: ["city"],
+      orderBy: {
+        city: "asc",
+      },
+      take: 50,
+    }),
+  ]);
 
   return {
-    cities: cities
-      .map((activity) => activity.city.trim())
+    cities: [...activityCities, ...publicEventCities]
+      .map((item) => item.city.trim())
       .filter(
         (city, index, cityList) => city && cityList.indexOf(city) === index,
       ),

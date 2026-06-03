@@ -5,6 +5,7 @@ import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
+import { PublicEventCard } from "@/features/public-events/components/PublicEventCard";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import {
   getGlobalSearchResults,
@@ -129,7 +130,9 @@ export default async function SearchPage({
         })
     : { result: null, error: null };
   const totalCount = searchResult.result
-    ? searchResult.result.activityCount + searchResult.result.merchantCount
+    ? searchResult.result.activityCount +
+      searchResult.result.merchantCount +
+      searchResult.result.publicEventCount
     : 0;
   const hasResults = totalCount > 0;
 
@@ -206,6 +209,30 @@ export default async function SearchPage({
               ) : (
                 <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
                   {t.noActivityResults}
+                </p>
+              )}
+            </section>
+          ) : null}
+
+          {searchResult.result.publicEventCount > 0 ? (
+            <section className="space-y-3">
+              <SearchSectionHeader
+                title={t.publicEventsTitle}
+                count={searchResult.result.publicEventCount}
+              />
+              {searchResult.result.publicEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {searchResult.result.publicEvents.map((event) => (
+                    <PublicEventCard
+                      key={event.id}
+                      event={event}
+                      locale={locale}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                  {t.noPublicEventResults}
                 </p>
               )}
             </section>

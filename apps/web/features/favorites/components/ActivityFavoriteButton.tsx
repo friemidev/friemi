@@ -14,6 +14,8 @@ import {
 } from "../actions/toggleActivityFavorite";
 import { getActivityFavoriteCopy } from "../copy";
 
+type ActivityFavoriteCopy = ReturnType<typeof getActivityFavoriteCopy>;
+
 type ActivityFavoriteButtonProps = {
   activityId: string;
   isAuthenticated: boolean;
@@ -21,6 +23,7 @@ type ActivityFavoriteButtonProps = {
   locale: string;
   redirectPath: string;
   className?: string;
+  labelOverrides?: Partial<ActivityFavoriteCopy>;
 };
 
 const initialState: ToggleActivityFavoriteState = {};
@@ -38,14 +41,16 @@ function FavoriteSubmitButton({
   pendingAction,
   locale,
   className,
+  labelOverrides,
 }: {
   isFavorited: boolean;
   pendingAction: "favorite" | "unfavorite" | null;
   locale: string;
   className?: string;
+  labelOverrides?: Partial<ActivityFavoriteCopy>;
 }) {
   const { pending } = useFormStatus();
-  const t = getActivityFavoriteCopy(locale);
+  const t = { ...getActivityFavoriteCopy(locale), ...labelOverrides };
   const label = pending
     ? pendingAction === "unfavorite"
       ? t.unfavoriting
@@ -84,6 +89,7 @@ export function ActivityFavoriteButton({
   locale,
   redirectPath,
   className,
+  labelOverrides,
 }: ActivityFavoriteButtonProps) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -96,7 +102,7 @@ export function ActivityFavoriteButton({
   const [pendingAction, setPendingAction] = useState<
     "favorite" | "unfavorite" | null
   >(null);
-  const t = getActivityFavoriteCopy(locale);
+  const t = { ...getActivityFavoriteCopy(locale), ...labelOverrides };
 
   useEffect(() => {
     setDisplayIsFavorited(isFavorited);
@@ -123,7 +129,13 @@ export function ActivityFavoriteButton({
     startRefreshTransition(() => {
       router.refresh();
     });
-  }, [router, startRefreshTransition, state.isFavorited, state.ok, state.updatedAt]);
+  }, [
+    router,
+    startRefreshTransition,
+    state.isFavorited,
+    state.ok,
+    state.updatedAt,
+  ]);
 
   if (!isAuthenticated) {
     return (
@@ -169,6 +181,7 @@ export function ActivityFavoriteButton({
         isFavorited={displayIsFavorited}
         pendingAction={pendingAction}
         locale={locale}
+        labelOverrides={labelOverrides}
       />
     </form>
   );

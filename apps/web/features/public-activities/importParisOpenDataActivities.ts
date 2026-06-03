@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 const parisOpenDataDataset = "que-faire-a-paris-";
 const parisOpenDataSource = "paris-opendata:que-faire-a-paris";
-const publicActivityOrganizerClerkId = "system_public_api_paris_opendata";
 const defaultImportLimit = 20;
 const maxImportLimit = 50;
 const requestTimeoutMs = 10_000;
@@ -246,14 +245,6 @@ function getDescription(record: ParisOpenDataRecord) {
   return truncateText(text, MAX_ACTIVITY_DESCRIPTION_LENGTH);
 }
 
-function getItinerary(record: ParisOpenDataRecord) {
-  const dateDescription = stripHtml(record.date_description);
-  const accessType = stripHtml(record.access_type);
-  const audience = stripHtml(record.audience);
-
-  return [dateDescription, accessType, audience].filter(Boolean).join("\n");
-}
-
 function getExternalId(record: ParisOpenDataRecord) {
   return (
     normalizeText(record.id) ||
@@ -273,10 +264,9 @@ function buildParisOpenDataUrl(limit: number) {
   return url;
 }
 
-function toActivityData(
+function toPublicEventData(
   record: ParisOpenDataRecord,
-  organizerId: string,
-): Prisma.ActivityCreateInput | null {
+): Prisma.PublicEventCreateInput | null {
   const externalId = getExternalId(record);
   const title = normalizeText(record.title);
   const startAt = record.date_start ? new Date(record.date_start) : null;
@@ -292,8 +282,6 @@ function toActivityData(
   return {
     title,
     description: getDescription(record),
-    itinerary: getItinerary(record) || null,
-    type: "PUBLIC_EVENT",
     category: mapCategory(record),
     city: normalizeText(record.address_city) || "Paris",
     address: getAddress(record),
@@ -302,45 +290,44 @@ function toActivityData(
     startAt,
     endAt:
       endAt && !Number.isNaN(endAt.getTime()) && endAt > startAt ? endAt : null,
-    capacity: 100,
-    minParticipants: null,
-    requiresApproval: false,
     priceType: price.priceType,
     priceText: price.priceText,
     coverImageUrl: normalizeExternalImageUrl(record.cover_url),
+    officialUrl: normalizeText(record.url) || null,
+    source: parisOpenDataSource,
+    sourceUrl: normalizeText(record.url) || null,
     externalSource: parisOpenDataSource,
     externalId,
     externalUrl: normalizeText(record.url) || null,
     sourcePayload: toJsonValue(record),
     importedAt: new Date(),
-    status: "RECRUITING",
+    lastSyncedAt: new Date(),
+    status: "SCHEDULED",
     visibility: "PUBLIC",
-    organizer: {
-      connect: {
-        id: organizerId,
-      },
-    },
   };
 }
 
 function getSemanticDedupeCondition(
-  activityData: Prisma.ActivityCreateInput,
-): Prisma.ActivityWhereInput | null {
+  publicEventData: Prisma.PublicEventCreateInput,
+): Prisma.PublicEventWhereInput | null {
   const title =
-    typeof activityData.title === "string" ? activityData.title.trim() : "";
+    typeof publicEventData.title === "string"
+      ? publicEventData.title.trim()
+      : "";
   const city =
-    typeof activityData.city === "string" ? activityData.city.trim() : "";
+    typeof publicEventData.city === "string" ? publicEventData.city.trim() : "";
   const address =
-    typeof activityData.address === "string" ? activityData.address.trim() : "";
+    typeof publicEventData.address === "string"
+      ? publicEventData.address.trim()
+      : "";
   const startAt =
-    activityData.startAt instanceof Date ? activityData.startAt : null;
+    publicEventData.startAt instanceof Date ? publicEventData.startAt : null;
 
   if (!title || !city || !address || !startAt) {
     return null;
   }
 
   return {
-    type: "PUBLIC_EVENT",
     title: {
       equals: title,
       mode: "insensitive",
@@ -355,27 +342,6 @@ function getSemanticDedupeCondition(
     },
     startAt,
   };
-}
-
-async function ensurePublicActivityOrganizer() {
-  return prisma.userProfile.upsert({
-    where: {
-      clerkUserId: publicActivityOrganizerClerkId,
-    },
-    update: {
-      nickname: "Paris OpenData",
-      bio: "自动同步的巴黎公共活动信息源。",
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-    create: {
-      clerkUserId: publicActivityOrganizerClerkId,
-      nickname: "Paris OpenData",
-      bio: "自动同步的巴黎公共活动信息源。",
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-  });
 }
 
 async function fetchParisOpenDataEvents(limit: number) {
@@ -406,10 +372,7 @@ export async function importParisOpenDataActivities(
 ): Promise<PublicActivityImportSummary> {
   const limit = normalizeImportLimit(options.limit);
   const dryRun = Boolean(options.dryRun);
-  const [records, organizer] = await Promise.all([
-    fetchParisOpenDataEvents(limit),
-    ensurePublicActivityOrganizer(),
-  ]);
+  const records = await fetchParisOpenDataEvents(limit);
   const summary: PublicActivityImportSummary = {
     source: parisOpenDataSource,
     fetched: records.length,
@@ -420,34 +383,33 @@ export async function importParisOpenDataActivities(
   };
 
   for (const record of records) {
-    const activityData = toActivityData(record, organizer.id);
+    const publicEventData = toPublicEventData(record);
 
-    if (!activityData?.externalId || !activityData.externalSource) {
+    if (!publicEventData?.externalId || !publicEventData.externalSource) {
       summary.skipped += 1;
       continue;
     }
 
-    const dedupeConditions: Prisma.ActivityWhereInput[] = [
+    const dedupeConditions: Prisma.PublicEventWhereInput[] = [
       {
-        externalSource: activityData.externalSource,
-        externalId: activityData.externalId,
+        externalSource: publicEventData.externalSource,
+        externalId: publicEventData.externalId,
       },
     ];
 
-    if (activityData.externalUrl) {
+    if (publicEventData.externalUrl) {
       dedupeConditions.push({
-        externalUrl: activityData.externalUrl,
+        externalUrl: publicEventData.externalUrl,
       });
     }
 
-    const semanticDedupeCondition =
-      getSemanticDedupeCondition(activityData);
+    const semanticDedupeCondition = getSemanticDedupeCondition(publicEventData);
 
     if (semanticDedupeCondition) {
       dedupeConditions.push(semanticDedupeCondition);
     }
 
-    const existingActivity = await prisma.activity.findFirst({
+    const existingPublicEvent = await prisma.publicEvent.findFirst({
       where: {
         OR: dedupeConditions,
       },
@@ -456,36 +418,39 @@ export async function importParisOpenDataActivities(
       },
     });
 
-    if (existingActivity) {
+    if (existingPublicEvent) {
       if (dryRun) {
         summary.updated += 1;
         continue;
       }
 
-      await prisma.activity.update({
+      await prisma.publicEvent.update({
         where: {
-          id: existingActivity.id,
+          id: existingPublicEvent.id,
         },
         data: {
-          title: activityData.title,
-          description: activityData.description,
-          itinerary: activityData.itinerary,
-          category: activityData.category,
-          city: activityData.city,
-          address: activityData.address,
-          latitude: activityData.latitude,
-          longitude: activityData.longitude,
-          startAt: activityData.startAt,
-          endAt: activityData.endAt,
-          priceType: activityData.priceType,
-          priceText: activityData.priceText,
-          coverImageUrl: activityData.coverImageUrl,
-          type: "PUBLIC_EVENT",
-          externalSource: activityData.externalSource,
-          externalId: activityData.externalId,
-          externalUrl: activityData.externalUrl,
-          sourcePayload: activityData.sourcePayload,
-          importedAt: activityData.importedAt,
+          title: publicEventData.title,
+          description: publicEventData.description,
+          category: publicEventData.category,
+          city: publicEventData.city,
+          address: publicEventData.address,
+          latitude: publicEventData.latitude,
+          longitude: publicEventData.longitude,
+          startAt: publicEventData.startAt,
+          endAt: publicEventData.endAt,
+          priceType: publicEventData.priceType,
+          priceText: publicEventData.priceText,
+          coverImageUrl: publicEventData.coverImageUrl,
+          officialUrl: publicEventData.officialUrl,
+          source: publicEventData.source,
+          sourceUrl: publicEventData.sourceUrl,
+          externalSource: publicEventData.externalSource,
+          externalId: publicEventData.externalId,
+          externalUrl: publicEventData.externalUrl,
+          sourcePayload: publicEventData.sourcePayload,
+          importedAt: publicEventData.importedAt,
+          lastSyncedAt: publicEventData.lastSyncedAt,
+          status: "SCHEDULED",
           visibility: "PUBLIC",
         },
       });
@@ -498,8 +463,8 @@ export async function importParisOpenDataActivities(
       continue;
     }
 
-    await prisma.activity.create({
-      data: activityData,
+    await prisma.publicEvent.create({
+      data: publicEventData,
     });
     summary.created += 1;
   }
