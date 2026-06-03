@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import {
   AlertCircle,
   CalendarDays,
@@ -534,6 +534,21 @@ export function AddFriendDialog({
 }) {
   const t = getFriendsCopy(locale);
   const titleId = "add-friend-dialog-title";
+  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalElement(document.body);
+
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -547,9 +562,9 @@ export function AddFriendDialog({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  return (
+  const dialog = (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-paper sm:items-center sm:bg-black/35 sm:p-6"
+      className="fixed inset-0 z-[9999] isolate flex h-[100dvh] min-h-[100svh] w-full items-stretch justify-center overflow-hidden bg-paper sm:items-start sm:bg-black/35 sm:p-6 sm:pt-10 md:items-center md:pt-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -559,8 +574,8 @@ export function AddFriendDialog({
         }
       }}
     >
-      <div className="flex h-dvh w-full flex-col overflow-hidden bg-paper sm:h-auto sm:max-h-[calc(100dvh-3rem)] sm:max-w-xl sm:rounded-xl sm:shadow-2xl sm:ring-1 sm:ring-black/10">
-        <div className="flex items-center justify-between border-b border-black/10 px-4 py-4 sm:px-5">
+      <div className="flex h-[100dvh] min-h-[100svh] w-full flex-col overflow-hidden bg-paper sm:h-auto sm:min-h-0 sm:max-h-[min(42rem,calc(100dvh-3rem))] sm:max-w-xl sm:rounded-xl sm:shadow-2xl sm:ring-1 sm:ring-black/10">
+        <div className="flex items-center justify-between border-b border-black/10 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5 sm:pt-4">
           <div className="min-w-0">
             <p className="text-sm font-medium text-moss">{t.entryTitle}</p>
             <h2
@@ -580,9 +595,8 @@ export function AddFriendDialog({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:max-h-[calc(100dvh-9rem)] sm:p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:max-h-[calc(100dvh-10rem)] sm:p-5">
           <AddFriendForm
-            autoFocusSearch={incomingRequests.length === 0}
             className="border-0 bg-transparent p-0 shadow-none"
             currentUserFriendCode={currentUserFriendCode}
             locale={locale}
@@ -618,6 +632,12 @@ export function AddFriendDialog({
       </div>
     </div>
   );
+
+  if (!portalElement) {
+    return null;
+  }
+
+  return createPortal(dialog, portalElement);
 }
 
 export function RequestCountBadge({ count }: { count: number }) {

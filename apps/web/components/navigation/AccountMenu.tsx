@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
@@ -13,12 +14,23 @@ import {
   LogOut,
   MessageCircle,
   Settings,
+  UserPlus,
   type LucideIcon,
   UserRound,
 } from "lucide-react";
+import { getFriendsCopy } from "@/features/friends/copy";
+import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+
+const AddFriendDialog = dynamic(
+  () =>
+    import("@/features/friends/components/FriendsDashboard").then(
+      (mod) => mod.AddFriendDialog,
+    ),
+  { ssr: false },
+);
 
 type AccountMenuProps = {
   locale: string;
@@ -26,6 +38,7 @@ type AccountMenuProps = {
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
   viewerNickname?: string | null;
+  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 export function AccountMenu({
@@ -34,17 +47,21 @@ export function AccountMenu({
   unreadNotificationCount = 0,
   viewerFriendCode = null,
   viewerNickname = null,
+  incomingFriendRequests = [],
 }: AccountMenuProps) {
   const { signOut, openUserProfile } = useClerk();
   const { user } = useUser();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [friendCodeCopied, setFriendCodeCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const t = getCopy(locale).accountMenu;
   const profileCopy = getCopy(locale).profile;
+  const friendsCopy = getFriendsCopy(locale);
 
-  const displayName = viewerNickname?.trim() || user?.username || t.fallbackName;
+  const displayName =
+    viewerNickname?.trim() || user?.username || t.fallbackName;
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
@@ -83,6 +100,11 @@ export function AccountMenu({
 
   function closeMenu() {
     setOpen(false);
+  }
+
+  function openAddFriendDialog() {
+    setOpen(false);
+    setAddFriendOpen(true);
   }
 
   async function copyFriendCode() {
@@ -132,16 +154,18 @@ export function AccountMenu({
                 {displayName}
               </p>
               {viewerFriendCode ? (
-                <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {profileCopy.friendCodeLabel}
-                  </span>
-                  <span className="min-w-0 font-mono text-xs font-semibold tracking-[0.16em] text-ink">
-                    {viewerFriendCode}
-                  </span>
+                <div className="mt-2 flex min-w-0 items-center gap-2 rounded-xl bg-zinc-50 px-2.5 py-2 ring-1 ring-black/5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium leading-none text-zinc-500">
+                      {profileCopy.friendCodeLabel}
+                    </p>
+                    <p className="mt-1 font-mono text-xs font-semibold tracking-[0.18em] text-ink">
+                      {viewerFriendCode}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-50 text-zinc-600 ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-black/10 transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                     aria-label={
                       friendCodeCopied
                         ? profileCopy.friendCodeCopied
@@ -173,11 +197,16 @@ export function AccountMenu({
               active={pathname === profileHref}
               onClick={closeMenu}
             />
+            <MenuButton
+              icon={UserPlus}
+              label={friendsCopy.addTitle}
+              badgeCount={incomingFriendRequests.length}
+              onClick={openAddFriendDialog}
+            />
             <MenuLink
               href={messagesHref}
               icon={MessageCircle}
               label={t.messages}
-              description={t.messagesDescription}
               active={
                 pathname === messagesHref ||
                 pathname.startsWith(`${messagesHref}/`)
@@ -188,7 +217,6 @@ export function AccountMenu({
               href={notificationsHref}
               icon={Bell}
               label={t.notifications}
-              description={t.notificationsDescription}
               badgeCount={unreadNotificationCount}
               active={pathname === notificationsHref}
               onClick={closeMenu}
@@ -199,7 +227,6 @@ export function AccountMenu({
                   href={activityOpsHref}
                   icon={LayoutDashboard}
                   label={t.activityOps}
-                  description={t.activityOpsDescription}
                   active={pathname.startsWith(activityOpsHref)}
                   onClick={closeMenu}
                 />
@@ -207,7 +234,6 @@ export function AccountMenu({
                   href={merchantOpsHref}
                   icon={Building2}
                   label={t.merchantOps}
-                  description={t.merchantOpsDescription}
                   active={pathname.startsWith(merchantOpsHref)}
                   onClick={closeMenu}
                 />
@@ -239,6 +265,15 @@ export function AccountMenu({
             </button>
           </div>
         </div>
+      ) : null}
+      {addFriendOpen ? (
+        <AddFriendDialog
+          currentUserFriendCode={viewerFriendCode}
+          incomingRequests={incomingFriendRequests}
+          locale={locale}
+          onClose={() => setAddFriendOpen(false)}
+          returnTo="messages"
+        />
       ) : null}
     </div>
   );
@@ -315,5 +350,38 @@ function MenuLink({
         ) : null}
       </span>
     </Link>
+  );
+}
+
+function MenuButton({
+  icon: Icon,
+  label,
+  badgeCount = 0,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  badgeCount?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="relative flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
+    >
+      <Icon className="h-4 w-4 shrink-0 text-zinc-500" />
+      <span className="min-w-0">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">{label}</span>
+          {badgeCount > 0 ? (
+            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-moss px-1.5 text-[11px] font-semibold text-white">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          ) : null}
+        </span>
+      </span>
+    </button>
   );
 }
