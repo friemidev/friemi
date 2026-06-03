@@ -293,16 +293,23 @@ model Comment {
   id                String      @id @default(cuid())
   activityId        String
   authorId          String
+  parentId          String?
   type              CommentType @default(QUESTION)
   content           String
   pinnedByOrganizer Boolean     @default(false)
   activity          Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
   author            UserProfile @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent            Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies           Comment[]   @relation("CommentReplies")
+  deletedAt         DateTime?
+  editedAt          DateTime?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
   @@index([activityId, pinnedByOrganizer, createdAt])
+  @@index([activityId, parentId, createdAt])
   @@index([authorId])
+  @@index([parentId])
 }
 
 model Notification {

@@ -512,6 +512,7 @@ export default async function ActivityDetailPage({
             comments={comments}
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
+            viewerProfileId={viewerProfile?.id ?? null}
           />
         </article>
 
