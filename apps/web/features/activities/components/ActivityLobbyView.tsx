@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
 import { ActivityCard } from "./ActivityCard";
@@ -28,6 +29,13 @@ type FilterOption = {
   id: LobbyFilterId;
   count: number | null;
   label: string;
+};
+
+type EmptyLobbyAction = {
+  description: string;
+  href: string;
+  label: string;
+  tone: "primary" | "secondary" | "tertiary";
 };
 
 const lobbyFilterStyles: Record<
@@ -92,6 +100,7 @@ const lobbyFilterStyles: Record<
 type ActivityLobbySectionProps = {
   activities: ActivityCardViewModel[];
   description: string;
+  emptyDescription: string;
   locale: string;
   title: string;
 };
@@ -99,6 +108,7 @@ type ActivityLobbySectionProps = {
 function ActivityLobbySection({
   activities,
   description,
+  emptyDescription,
   locale,
   title,
 }: ActivityLobbySectionProps) {
@@ -126,7 +136,9 @@ function ActivityLobbySection({
           <p className="text-sm font-semibold text-zinc-700">
             {getCopy(locale).activityLobby.emptySectionTitle}
           </p>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {emptyDescription}
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -161,13 +173,13 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
   if (locale === "fr") {
     switch (id) {
       case "created":
-        return "Créées";
+        return "Creees";
       case "joined":
         return "Rejointes";
       case "favorites":
         return "Favoris";
       case "friendHosted":
-        return "Amis hôtes";
+        return "Amis hotes";
       case "friendJoined":
         return "Amis inscrits";
       default:
@@ -200,9 +212,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
     case "favorites":
       return "我收藏的";
     case "friendHosted":
-      return "朋友发起";
+      return "好友发起";
     case "friendJoined":
-      return "朋友参加";
+      return "好友参加";
     default:
       return fallback;
   }
@@ -211,9 +223,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
 function getEmptyCategoryCopy(locale: string) {
   if (locale === "fr") {
     return {
-      title: "Aucune activite dans cette categorie pour le moment.",
+      title: "Rien ici pour le moment.",
       description:
-        "Essayez une autre categorie pour retrouver vos activites et celles de vos amis.",
+        "Essayez une autre categorie, lancez un plan, ou decouvrez de nouvelles activites pour remplir votre hall.",
     };
   }
 
@@ -221,14 +233,92 @@ function getEmptyCategoryCopy(locale: string) {
     return {
       title: "Nothing in this section yet.",
       description:
-        "Try another section to see your activities, favorites, or friend-related plans.",
+        "Try another section, start a plan, or discover something new to bring this area to life.",
     };
   }
 
   return {
-    title: "这个分类里暂时还没有活动。",
-    description: "可以切换其他分类，查看我发起、我参加、我收藏或和朋友相关的活动。",
+    title: "这里暂时还没有内容。",
+    description: "可以切换看看其他分类，先组个局，或者去发现新的活动。",
   };
+}
+
+function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
+  if (locale === "fr") {
+    return [
+      {
+        href: "/friends",
+        label: "Ajouter des amis",
+        description:
+          "Ajoutez d'abord vos proches. Des qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
+        tone: "primary",
+      },
+      {
+        href: "/activities/new",
+        label: "Je lance un plan",
+        description:
+          "Parc, expo ou cinema... lancez quelque chose maintenant et voyez qui part avec vous.",
+        tone: "secondary",
+      },
+      {
+        href: "/activities",
+        label: "Decouvrir",
+        description:
+          "Regardez ce qui se passe deja, puis rejoignez ou gardez de cote ce qui vous attire.",
+        tone: "tertiary",
+      },
+    ];
+  }
+
+  if (locale === "en") {
+    return [
+      {
+        href: "/friends",
+        label: "Add friends first",
+        description:
+          "Bring your people in first. As soon as they start a plan or join one, it will show up here.",
+        tone: "primary",
+      },
+      {
+        href: "/activities/new",
+        label: "Start a plan",
+        description:
+          "Park, exhibit, or movie night. Start something now and see who wants in.",
+        tone: "secondary",
+      },
+      {
+        href: "/activities",
+        label: "Discover activities",
+        description:
+          "Browse what is already happening, then join or favorite whatever feels right.",
+        tone: "tertiary",
+      },
+    ];
+  }
+
+  return [
+    {
+      href: "/friends",
+      label: "先去加好友",
+      description:
+        "把常一起玩的人先加进来。他们一组局、一起报名，你马上就能在这里看到。",
+      tone: "primary",
+    },
+    {
+      href: "/activities/new",
+      label: "我来组局",
+      description:
+        "公园、逛展、看电影，想到什么就先组个局，看看谁会跟上你一起出发。",
+      tone: "secondary",
+    },
+    {
+      href: "/activities",
+      label: "去发现活动",
+      description:
+        "先逛逛大家都在玩什么，看到心动的活动就参加，或者先收藏起来。",
+      tone: "tertiary",
+    },
+  ];
 }
 
 export function ActivityLobbyView({
@@ -246,30 +336,35 @@ export function ActivityLobbyView({
       id: "created" as const,
       activities: createdActivities,
       description: t.createdDescription,
+      emptyDescription: t.createdEmptyDescription,
       title: t.createdTitle,
     },
     {
       id: "joined" as const,
       activities: joinedActivities,
       description: t.joinedDescription,
+      emptyDescription: t.joinedEmptyDescription,
       title: t.joinedTitle,
     },
     {
       id: "favorites" as const,
       activities: favoriteActivities,
       description: t.favoriteDescription,
+      emptyDescription: t.favoriteEmptyDescription,
       title: t.favoriteTitle,
     },
     {
       id: "friendHosted" as const,
       activities: friendHostedActivities,
       description: t.friendHostedDescription,
+      emptyDescription: t.friendHostedEmptyDescription,
       title: t.friendHostedTitle,
     },
     {
       id: "friendJoined" as const,
       activities: friendJoinedActivities,
       description: t.friendJoinedDescription,
+      emptyDescription: t.friendJoinedEmptyDescription,
       title: t.friendJoinedTitle,
     },
   ];
@@ -295,6 +390,19 @@ export function ActivityLobbyView({
     (section) => section.activities.length > 0,
   );
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
+  const emptyLobbyActions = getEmptyLobbyActions(locale);
+  const normalizedEmptyLobbyActions =
+    locale === "zh-CN"
+      ? emptyLobbyActions.map((action, index) =>
+          index === 0
+            ? {
+                ...action,
+                description:
+                  "把常一起玩的人先加进来，有新局、新活动时，你马上就能在这里看到。",
+              }
+            : action,
+        )
+      : emptyLobbyActions;
 
   return (
     <div className="space-y-8">
@@ -306,7 +414,7 @@ export function ActivityLobbyView({
           <p className="mt-3 text-base leading-7 text-zinc-600 sm:text-lg">
             {t.description}
           </p>
-        </div>
+          </div>
 
         <div className="mx-auto mt-6 max-w-4xl">
           <div className="rounded-[1.5rem] border border-[#e3d9c7] bg-[rgba(255,251,245,0.78)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
@@ -339,13 +447,58 @@ export function ActivityLobbyView({
                   </button>
                 );
               })}
-              </div>
             </div>
+          </div>
         </div>
       </section>
 
       {!hasActivities ? (
-        <EmptyState title={t.emptyTitle} description={t.emptyDescription} />
+        <section className="overflow-hidden rounded-[1.75rem] border border-[#dfceb0] bg-[linear-gradient(145deg,rgba(255,252,247,0.98),rgba(246,237,222,0.94))] p-5 shadow-[0_12px_30px_rgba(94,80,52,0.06)] sm:p-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-2xl font-semibold text-ink sm:text-3xl">
+              {t.emptyTitle}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-zinc-600 sm:text-base">
+              {t.emptyDescription}
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {normalizedEmptyLobbyActions.map((action) => (
+              <div
+                key={action.href}
+                className={cn(
+                  "rounded-[1.5rem] border p-5 text-left shadow-sm shadow-black/5",
+                  action.tone === "primary"
+                    ? "border-[#d8c39f] bg-[linear-gradient(145deg,rgba(242,229,206,0.98),rgba(230,213,185,0.95))]"
+                    : action.tone === "secondary"
+                      ? "border-[#d7c2b8] bg-[linear-gradient(145deg,rgba(246,233,228,0.96),rgba(239,223,216,0.94))]"
+                      : "border-[#dfd6c7] bg-[rgba(255,252,246,0.9)]",
+                )}
+              >
+                <p className="text-lg font-semibold text-ink">
+                  {action.label}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-zinc-600">
+                  {action.description}
+                </p>
+                <Link
+                  href={withLocale(locale, action.href)}
+                  className={cn(
+                    "mt-4 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition",
+                    action.tone === "primary"
+                      ? "bg-[#d39a78] text-white hover:bg-[#c88d69]"
+                      : action.tone === "secondary"
+                        ? "bg-white/85 text-[#8c5f4b] hover:bg-white"
+                        : "bg-[#f6efe3] text-[#7b6b56] hover:bg-[#efe5d5]",
+                  )}
+                >
+                  {action.label}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : !hasVisibleActivities ? (
         <div className="rounded-[1.75rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-5 py-8 text-center">
           <p className="text-base font-semibold text-[#433a30]">
@@ -362,6 +515,7 @@ export function ActivityLobbyView({
           key={section.title}
           activities={section.activities}
           description={section.description}
+          emptyDescription={section.emptyDescription}
           locale={locale}
           title={section.title}
         />

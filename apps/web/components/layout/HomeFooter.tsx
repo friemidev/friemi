@@ -44,7 +44,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1.2fr_0.9fr_0.7fr] lg:px-8">
         <div className="space-y-4">
           <Link
-            href={withLocale(locale, "/")}
+            href={withLocale(locale, "/home")}
             className="inline-flex items-center gap-3"
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ring-1 ring-white/20">
