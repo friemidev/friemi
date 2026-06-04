@@ -2,7 +2,7 @@ import type { ReportStatus, ReportTargetType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAnalyticsEnvironment } from "../events";
 
-const adminAnalyticsWindowDays = 30;
+const defaultAdminAnalyticsWindowDays = 30;
 
 const reportStatuses = [
   "PENDING",
@@ -47,9 +47,11 @@ function createReportTargetTypeCounts() {
   ) as Record<ReportTargetType, number>;
 }
 
-function createEmptyAdminOperationsAnalytics(): AdminOperationsAnalytics {
+function createEmptyAdminOperationsAnalytics(
+  windowDays = defaultAdminAnalyticsWindowDays,
+): AdminOperationsAnalytics {
   return {
-    windowDays: adminAnalyticsWindowDays,
+    windowDays,
     reports: {
       averageReviewHours: null,
       byStatus: createReportStatusCounts(),
@@ -88,10 +90,10 @@ function calculateAverageReviewHours(
   return Math.max(0, Math.round(averageMs / 1000 / 60 / 60));
 }
 
-export async function getAdminOperationsAnalytics(): Promise<AdminOperationsAnalytics> {
-  const since = new Date(
-    Date.now() - adminAnalyticsWindowDays * 24 * 60 * 60 * 1000,
-  );
+export async function getAdminOperationsAnalytics(
+  windowDays = defaultAdminAnalyticsWindowDays,
+): Promise<AdminOperationsAnalytics> {
+  const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
   const environment = getAnalyticsEnvironment();
 
   try {
@@ -184,7 +186,7 @@ export async function getAdminOperationsAnalytics(): Promise<AdminOperationsAnal
     }
 
     return {
-      windowDays: adminAnalyticsWindowDays,
+      windowDays,
       reports: {
         averageReviewHours: calculateAverageReviewHours(reviewedReports),
         byStatus,
@@ -205,6 +207,6 @@ export async function getAdminOperationsAnalytics(): Promise<AdminOperationsAnal
   } catch (error) {
     console.error("Failed to load admin operations analytics", error);
 
-    return createEmptyAdminOperationsAnalytics();
+    return createEmptyAdminOperationsAnalytics(windowDays);
   }
 }

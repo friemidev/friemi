@@ -1,21 +1,27 @@
 import Link from "next/link";
 import {
+  AlertCircle,
   ArrowRight,
   BarChart3,
-  Flag,
+  CalendarDays,
+  CheckCircle2,
+  Flame,
   MessageCircle,
-  MousePointerClick,
   Share2,
   ShieldQuestion,
   Sparkles,
+  SlidersHorizontal,
   TrendingUp,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import {
+  adminAnalyticsWindowOptions,
   getAdminAnalyticsDashboard,
+  getAdminAnalyticsWindowDays,
   type AdminAnalyticsDashboard,
+  type AdminAnalyticsWindowDays,
 } from "@/features/analytics/queries/getAdminAnalyticsDashboard";
 import { requireAdminPageAccess } from "@/lib/admin-auth";
 import { withLocale } from "@/lib/routes";
@@ -26,7 +32,26 @@ type AdminAnalyticsPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams: Promise<{
+    section?: string;
+    window?: string;
+  }>;
 };
+
+const adminAnalyticsSections = [
+  "overview",
+  "journey",
+  "sources",
+  "community",
+] as const;
+
+type AdminAnalyticsSection = (typeof adminAnalyticsSections)[number];
+
+function getAdminAnalyticsSection(value: unknown): AdminAnalyticsSection {
+  return adminAnalyticsSections.includes(value as AdminAnalyticsSection)
+    ? (value as AdminAnalyticsSection)
+    : "overview";
+}
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -34,9 +59,19 @@ function getCopy(locale: string) {
       actionUsers: "Utilisateurs actifs",
       activityDiscovery: "Découverte",
       activityDiscoveryDescription: "Les cartes donnent-elles envie d'ouvrir ?",
-      activityInfo: "Activités",
+      activityInfo: "Activités publiques",
       activityInfoDescription: "Les activités publiques créent-elles des groupes ?",
+      activityRankActivity: "Groupe",
+      activityRankEmpty: "Les contenus populaires apparaîtront ici.",
+      activityRankPublicEvent: "Activité",
+      activityRankTeam: "Groupe",
+      activityRankTitle: "Activités à suivre",
+      activityRankDescription:
+        "Classement par vues et actions utiles sur la période choisie.",
       adminShortcuts: "Actions",
+      communityRiskDescription:
+        "Suivre les signalements pour garder un espace lisible et sûr.",
+      communityRiskTitle: "Communauté",
       comments: "Commentaires",
       contact: "Contacts",
       conversations: "Discussions ouvertes",
@@ -44,21 +79,26 @@ function getCopy(locale: string) {
       createdTeams: "Groupes créés",
       dataWindow: (days: number) => `${days} derniers jours`,
       description:
-        "Vue courte pour suivre la découverte, les groupes, les inscriptions, la communauté et les sources publiques.",
+        "Vue d'ensemble pour lire la découverte, les groupes, les inscriptions, la communauté et la valeur des sources.",
       environment: "Environnement",
       fieldsCopied: "Champs copiés",
       friendAccepted: "Acceptées",
       friendRate: "Taux d'acceptation",
       friendSent: "Demandes",
       friendsTitle: "Amis",
+      range7: "7 jours",
+      range30: "30 jours",
+      range90: "90 jours",
+      rangeLabel: "Période",
       importSource: "Source",
       imported: "Importées",
-      intentActions: "Actions réelles",
+      intentActions: "Interactions utiles",
       intentWindow: (days: number) => `${days} jours`,
       join: "Inscriptions",
       joinDescription: "Les pages groupe déclenchent-elles une inscription ?",
       linksCopied: "Liens copiés",
       messages: "Messages",
+      newReports: "Nouveaux",
       noSources: "Pas encore assez de données de source.",
       pendingReports: "À traiter",
       posters: "Affiches",
@@ -67,8 +107,18 @@ function getCopy(locale: string) {
       publicEventSourcesDescription:
         "Comparer les sources par imports, clics et groupes créés.",
       qr: "QR codes",
+      reportActivity: "Groupes",
+      reportComment: "Commentaires",
+      reportPublicEvent: "Activités",
       reportTargets: "Signalements",
+      reportUser: "Utilisateurs",
       reviewTime: "Délai moyen",
+      reviewTimeEmpty: "À venir",
+      reviewedReports: "Traités",
+      sectionCommunity: "Communauté",
+      sectionJourney: "Parcours",
+      sectionOverview: "Vue d'ensemble",
+      sectionSources: "Sources",
       seeReports: "Traiter les signalements",
       seeScraper: "Gérer les imports",
       shareTitle: "Partage",
@@ -76,8 +126,15 @@ function getCopy(locale: string) {
       sourceSurfaceTitle: "Entrées des groupes",
       sourceSurfaceDescription: "D'où viennent les visites de pages groupe.",
       subtitle: "Données",
-      title: "Pilotage",
-      topDecision: "À suivre maintenant",
+      title: "Tableau de bord",
+      topDecision: "Vue d'ensemble",
+      trendCommunication: "Échanges",
+      trendDiscovery: "Découverte",
+      trendJoin: "Inscriptions",
+      trendTeam: "Groupes",
+      trendTitle: "Rythme des usages",
+      trendDescription:
+        "Lire rapidement les jours où la découverte, les groupes et les échanges progressent.",
       viewCount: "Vues",
       clickCount: "Clics",
       openRate: "Taux d'ouverture",
@@ -86,12 +143,22 @@ function getCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      actionUsers: "Active intent users",
+      actionUsers: "Active users",
       activityDiscovery: "Discovery",
       activityDiscoveryDescription: "Do cards make people open details?",
-      activityInfo: "Activity info",
+      activityInfo: "Public activities",
       activityInfoDescription: "Do public activities turn into crews?",
+      activityRankActivity: "Crew",
+      activityRankEmpty: "Popular items will appear here.",
+      activityRankPublicEvent: "Activity",
+      activityRankTeam: "Crew",
+      activityRankTitle: "Popular activity ranking",
+      activityRankDescription:
+        "Ranked by views and meaningful actions in the selected window.",
       adminShortcuts: "Actions",
+      communityRiskDescription:
+        "Track reports so community issues can be handled quickly.",
+      communityRiskTitle: "Community health",
       comments: "Comments",
       contact: "Organizer contact",
       conversations: "Chats opened",
@@ -99,21 +166,26 @@ function getCopy(locale: string) {
       createdTeams: "Crews created",
       dataWindow: (days: number) => `Last ${days} days`,
       description:
-        "A focused dashboard for discovery, crews, joins, community signals, and public activity sources.",
+        "A concise view of discovery, crew creation, joins, community health, and source value.",
       environment: "Environment",
       fieldsCopied: "Fields copied",
       friendAccepted: "Accepted",
       friendRate: "Accept rate",
       friendSent: "Requests",
       friendsTitle: "Friends",
+      range7: "7 days",
+      range30: "30 days",
+      range90: "90 days",
+      rangeLabel: "Range",
       importSource: "Source",
       imported: "Imported",
-      intentActions: "Real actions",
+      intentActions: "Useful interactions",
       intentWindow: (days: number) => `${days} days`,
       join: "Join funnel",
       joinDescription: "Do crew pages convert into joins?",
       linksCopied: "Links copied",
       messages: "Messages",
+      newReports: "New reports",
       noSources: "Not enough source data yet.",
       pendingReports: "Pending",
       posters: "Posters",
@@ -122,8 +194,18 @@ function getCopy(locale: string) {
       publicEventSourcesDescription:
         "Compare sources by imports, clicks, and crews created.",
       qr: "QR codes",
+      reportActivity: "Crews",
+      reportComment: "Comments",
+      reportPublicEvent: "Activities",
       reportTargets: "Reports",
+      reportUser: "Users",
       reviewTime: "Avg. review",
+      reviewTimeEmpty: "Not enough data",
+      reviewedReports: "Reviewed",
+      sectionCommunity: "Community",
+      sectionJourney: "Journey",
+      sectionOverview: "Overview",
+      sectionSources: "Sources",
       seeReports: "Review reports",
       seeScraper: "Manage imports",
       shareTitle: "Sharing",
@@ -132,7 +214,14 @@ function getCopy(locale: string) {
       sourceSurfaceDescription: "Where crew detail visits came from.",
       subtitle: "Data",
       title: "Operations dashboard",
-      topDecision: "Watch now",
+      topDecision: "Overview",
+      trendCommunication: "Communication",
+      trendDiscovery: "Discovery",
+      trendJoin: "Joins",
+      trendTeam: "Crews",
+      trendTitle: "Usage rhythm",
+      trendDescription:
+        "See which days bring discovery, crew creation, joins, and conversations.",
       viewCount: "Views",
       clickCount: "Clicks",
       openRate: "Open rate",
@@ -140,12 +229,21 @@ function getCopy(locale: string) {
   }
 
   return {
-    actionUsers: "真实行动用户",
+    actionUsers: "活跃用户",
     activityDiscovery: "活动发现",
     activityDiscoveryDescription: "活动卡片是否吸引用户点开。",
-    activityInfo: "活动信息",
+    activityInfo: "活动信息位",
     activityInfoDescription: "公共活动是否真的促成组队。",
+    activityRankActivity: "组队",
+    activityRankEmpty: "有足够浏览和互动后，这里会显示热门内容。",
+    activityRankPublicEvent: "活动",
+    activityRankTeam: "车队",
+    activityRankTitle: "热门活动排行",
+    activityRankDescription:
+      "按浏览和后续动作加权，帮助判断哪些内容值得继续运营。",
     adminShortcuts: "快捷处理",
+    communityRiskDescription: "关注举报处理进度，让社区环境保持清晰可控。",
+    communityRiskTitle: "社区反馈",
     comments: "评论回复",
     contact: "联系发起人",
     conversations: "打开私聊",
@@ -153,21 +251,26 @@ function getCopy(locale: string) {
     createdTeams: "转成组队",
     dataWindow: (days: number) => `最近 ${days} 天`,
     description:
-      "集中查看活动发现、组队、报名、沟通、分享、举报和公共来源表现。",
+      "给运营和管理员快速判断：用户是否发现活动、是否发起组队、报名沟通是否顺畅、来源是否值得维护。",
     environment: "环境",
     fieldsCopied: "字段复制",
     friendAccepted: "通过",
     friendRate: "通过率",
     friendSent: "申请",
     friendsTitle: "好友关系",
+    range7: "7 天",
+    range30: "30 天",
+    range90: "90 天",
+    rangeLabel: "时间范围",
     importSource: "来源",
     imported: "导入",
-    intentActions: "真实动作",
+    intentActions: "有效互动",
     intentWindow: (days: number) => `近 ${days} 天`,
     join: "报名转化",
     joinDescription: "组队详情是否能促成真实报名。",
     linksCopied: "链接复制",
     messages: "消息发送",
+    newReports: "新增举报",
     noSources: "暂无足够来源数据。",
     pendingReports: "待处理",
     posters: "宣传图",
@@ -175,8 +278,18 @@ function getCopy(locale: string) {
     publicEventSources: "公共活动来源",
     publicEventSourcesDescription: "对比来源的导入量、点击量和转组队结果。",
     qr: "二维码",
+    reportActivity: "组队",
+    reportComment: "评论",
+    reportPublicEvent: "活动信息",
     reportTargets: "举报对象",
+    reportUser: "用户",
     reviewTime: "平均处理",
+    reviewTimeEmpty: "暂无数据",
+    reviewedReports: "已处理",
+    sectionCommunity: "社区反馈",
+    sectionJourney: "用户路径",
+    sectionOverview: "总览",
+    sectionSources: "来源价值",
     seeReports: "处理举报",
     seeScraper: "管理导入",
     shareTitle: "分享传播",
@@ -184,8 +297,14 @@ function getCopy(locale: string) {
     sourceSurfaceTitle: "组队入口来源",
     sourceSurfaceDescription: "用户从哪里进入组队详情。",
     subtitle: "数据后台",
-    title: "运营看板",
-    topDecision: "现在重点",
+    title: "运营数据看台",
+    topDecision: "运营总览",
+    trendCommunication: "沟通",
+    trendDiscovery: "发现",
+    trendJoin: "报名",
+    trendTeam: "组队",
+    trendTitle: "使用趋势",
+    trendDescription: "快速观察发现、组队、报名和沟通在不同日期的变化。",
     viewCount: "浏览",
     clickCount: "点击",
     openRate: "打开率",
@@ -254,6 +373,150 @@ function getSourceLabel(locale: string, source: string) {
   return source;
 }
 
+type FocusItem = {
+  body: string;
+  href?: string;
+  severity: "good" | "watch";
+  title: string;
+};
+
+function getFocusCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      discoveryBody: "Les cartes sont vues, mais peu ouvertes.",
+      discoveryTitle: "À revoir : découverte",
+      joinBody: "Les pages groupe sont ouvertes, mais peu d'inscriptions suivent.",
+      joinTitle: "À revoir : inscription",
+      noIntentBody: "Surveillez d'abord les créations, inscriptions et messages.",
+      noIntentTitle: "Interactions à développer",
+      noSourcesBody: "Les imports sont en place. Les premiers clics aideront à comparer les sources.",
+      noSourcesTitle: "Sources en cours d'évaluation",
+      publicEventBody: "Les activités sont consultées, mais créent peu de groupes.",
+      publicEventTitle: "À revoir : création de groupe",
+      reportsBody: "Des signalements attendent une décision.",
+      reportsTitle: (count: number) => `${count} signalement(s) à traiter`,
+      stableBody: "Les principaux indicateurs n'ont pas d'alerte immédiate.",
+      stableTitle: "Vue stable",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      discoveryBody: "Cards are seen, but not opened often enough.",
+      discoveryTitle: "Review discovery",
+      joinBody: "Crew pages are viewed, but joins are still weak.",
+      joinTitle: "Review joins",
+      noIntentBody: "Watch creations, joins, comments, contacts and messages first.",
+      noIntentTitle: "Interactions are still building",
+      noSourcesBody: "Imports are ready. First clicks will make source value clearer.",
+      noSourcesTitle: "Sources under review",
+      publicEventBody: "Activity info gets views, but creates few crews.",
+      publicEventTitle: "Review crew creation",
+      reportsBody: "Reports are waiting for a decision.",
+      reportsTitle: (count: number) => `${count} report(s) pending`,
+      stableBody: "No urgent issue in the main signals right now.",
+      stableTitle: "Signals look stable",
+    };
+  }
+
+  return {
+    discoveryBody: "活动卡片有曝光，但点开比例偏低。",
+    discoveryTitle: "关注活动发现",
+    joinBody: "组队详情有人看，但报名转化偏弱。",
+    joinTitle: "关注报名转化",
+    noIntentBody: "优先观察发起组队、报名、评论、联系和私聊。",
+    noIntentTitle: "互动正在积累",
+    noSourcesBody: "导入已经就绪，后续点击和组队数据会帮助判断来源价值。",
+    noSourcesTitle: "来源价值待观察",
+    publicEventBody: "活动信息有人看，但转成组队还不明显。",
+    publicEventTitle: "关注组队发起",
+    reportsBody: "有举报等待处理，先保证社区反馈闭环。",
+    reportsTitle: (count: number) => `${count} 条举报待处理`,
+    stableBody: "核心指标暂时没有明显异常。",
+    stableTitle: "当前信号稳定",
+  };
+}
+
+function getFocusItems(
+  dashboard: AdminAnalyticsDashboard,
+  locale: string,
+): FocusItem[] {
+  const copy = getFocusCopy(locale);
+  const items: FocusItem[] = [];
+
+  if (dashboard.operations.reports.pendingCount > 0) {
+    items.push({
+      body: copy.reportsBody,
+      href: "/admin/reports",
+      severity: "watch",
+      title: copy.reportsTitle(dashboard.operations.reports.pendingCount),
+    });
+  }
+
+  if (
+    dashboard.discovery.listViews >= 20 &&
+    dashboard.discovery.clickRate < 15
+  ) {
+    items.push({
+      body: copy.discoveryBody,
+      href: "/activities",
+      severity: "watch",
+      title: copy.discoveryTitle,
+    });
+  }
+
+  if (
+    dashboard.publicEventConversion.detailViews >= 10 &&
+    dashboard.publicEventConversion.conversionRate < 5
+  ) {
+    items.push({
+      body: copy.publicEventBody,
+      href: "/admin/data-scraper",
+      severity: "watch",
+      title: copy.publicEventTitle,
+    });
+  }
+
+  if (dashboard.teamJoin.detailViews >= 10 && dashboard.teamJoin.joinRate < 8) {
+    items.push({
+      body: copy.joinBody,
+      href: "/activities",
+      severity: "watch",
+      title: copy.joinTitle,
+    });
+  }
+
+  if (
+    dashboard.northStar.activeIntentUsers === 0 &&
+    dashboard.northStar.intentActionCount === 0
+  ) {
+    items.push({
+      body: copy.noIntentBody,
+      severity: "watch",
+      title: copy.noIntentTitle,
+    });
+  }
+
+  if (dashboard.publicEventSources.length === 0) {
+    items.push({
+      body: copy.noSourcesBody,
+      href: "/admin/data-scraper",
+      severity: "watch",
+      title: copy.noSourcesTitle,
+    });
+  }
+
+  if (items.length === 0) {
+    items.push({
+      body: copy.stableBody,
+      severity: "good",
+      title: copy.stableTitle,
+    });
+  }
+
+  return items.slice(0, 4);
+}
+
 function MetricTile({
   icon: Icon,
   label,
@@ -266,7 +529,7 @@ function MetricTile({
   value: string | number;
 }) {
   return (
-    <div className="rounded-[1rem] bg-white/82 p-4 shadow-sm ring-1 ring-black/10">
+    <div className="min-w-0 border-l border-black/10 pl-3 sm:pl-4">
       <span
         className={`inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ${tone}`}
       >
@@ -277,6 +540,59 @@ function MetricTile({
       </p>
       <p className="mt-1 text-sm text-zinc-500">{label}</p>
     </div>
+  );
+}
+
+function FocusList({
+  items,
+  locale,
+}: {
+  items: FocusItem[];
+  locale: string;
+}) {
+  return (
+    <ul className="space-y-3">
+      {items.map((item) => {
+        const icon =
+          item.severity === "good" ? (
+            <CheckCircle2 className="h-4 w-4 text-moss" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-clay" />
+          );
+        const content = (
+          <>
+            <span
+              className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                item.severity === "good" ? "bg-[#eef5ea]" : "bg-[#f8eadf]"
+              }`}
+            >
+              {icon}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-ink">{item.title}</span>
+              <span className="mt-0.5 block text-sm leading-6 text-zinc-500">
+                {item.body}
+              </span>
+            </span>
+          </>
+        );
+
+        return (
+          <li key={`${item.title}-${item.body}`}>
+            {item.href ? (
+              <Link
+                className="flex gap-3 rounded-2xl px-1 py-1.5 transition hover:bg-white/70"
+                href={withLocale(locale, item.href)}
+              >
+                {content}
+              </Link>
+            ) : (
+              <div className="flex gap-3 px-1 py-1.5">{content}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -293,9 +609,9 @@ function FunnelPanel({
     <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm">
       <h2 className="text-lg font-semibold text-ink">{title}</h2>
       <p className="mt-1 text-sm leading-6 text-zinc-500">{description}</p>
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-black/10 pt-4">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-xl bg-paper/70 px-3 py-3">
+          <div key={metric.label} className="min-w-0">
             <p className="text-xl font-semibold text-ink">{metric.value}</p>
             <p className="mt-1 text-xs leading-4 text-zinc-500">
               {metric.label}
@@ -334,17 +650,368 @@ function DataBar({
   );
 }
 
+function SmallStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="min-w-0 rounded-2xl bg-paper/70 px-4 py-3 ring-1 ring-black/5">
+      <p className="text-2xl font-semibold tracking-normal text-ink">{value}</p>
+      <p className="mt-1 text-sm text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
+function formatReviewTime(locale: string, hours: number | null, fallback: string) {
+  if (hours === null) {
+    return fallback;
+  }
+
+  if (hours < 24) {
+    return locale === "fr"
+      ? `${hours} h`
+      : locale === "en"
+        ? `${hours}h`
+        : `${hours} 小时`;
+  }
+
+  const days = Math.round(hours / 24);
+  return locale === "fr"
+    ? `${days} j`
+    : locale === "en"
+      ? `${days}d`
+      : `${days} 天`;
+}
+
+function getReportTargetLabel(
+  locale: string,
+  targetType: string,
+  labels: {
+    reportActivity: string;
+    reportComment: string;
+    reportPublicEvent: string;
+    reportUser: string;
+  },
+) {
+  const targetLabels: Record<string, string> = {
+    ACTIVITY: labels.reportActivity,
+    COMMENT: labels.reportComment,
+    PUBLIC_EVENT: labels.reportPublicEvent,
+    USER_PROFILE: labels.reportUser,
+  };
+
+  return targetLabels[targetType] ?? targetType;
+}
+
+type AdminAnalyticsCopy = ReturnType<typeof getCopy>;
+
+function buildAnalyticsHref({
+  locale,
+  section,
+  windowDays,
+}: {
+  locale: string;
+  section: AdminAnalyticsSection;
+  windowDays: AdminAnalyticsWindowDays;
+}) {
+  return `${withLocale(
+    locale,
+    "/admin/analytics",
+  )}?window=${windowDays}&section=${section}`;
+}
+
+function DashboardControls({
+  activeSection,
+  locale,
+  t,
+  windowDays,
+}: {
+  activeSection: AdminAnalyticsSection;
+  locale: string;
+  t: AdminAnalyticsCopy;
+  windowDays: AdminAnalyticsWindowDays;
+}) {
+  const sectionLabels: Record<AdminAnalyticsSection, string> = {
+    community: t.sectionCommunity,
+    journey: t.sectionJourney,
+    overview: t.sectionOverview,
+    sources: t.sectionSources,
+  };
+  const windowLabels: Record<AdminAnalyticsWindowDays, string> = {
+    7: t.range7,
+    30: t.range30,
+    90: t.range90,
+  };
+
+  return (
+    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-4">
+      <div className="grid gap-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
+        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <CalendarDays className="h-4 w-4 text-moss" />
+          {t.rangeLabel}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {adminAnalyticsWindowOptions.map((option) => (
+            <Link
+              key={option}
+              className={`inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium ring-1 transition ${
+                option === windowDays
+                  ? "bg-ink text-white ring-ink"
+                  : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
+              }`}
+              href={buildAnalyticsHref({
+                locale,
+                section: activeSection,
+                windowDays: option,
+              })}
+            >
+              {windowLabels[option]}
+            </Link>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 border-t border-black/10 pt-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
+        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <SlidersHorizontal className="h-4 w-4 text-clay" />
+          {t.productSignals}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          {adminAnalyticsSections.map((section) => (
+            <Link
+              key={section}
+              className={`inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium ring-1 transition ${
+                section === activeSection
+                  ? "bg-[#eef5ea] text-moss ring-[#c1d2ba]"
+                  : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
+              }`}
+              href={buildAnalyticsHref({
+                locale,
+                section,
+                windowDays,
+              })}
+            >
+              {sectionLabels[section]}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrendPanel({
+  dashboard,
+  t,
+}: {
+  dashboard: AdminAnalyticsDashboard;
+  t: AdminAnalyticsCopy;
+}) {
+  const max = Math.max(1, ...dashboard.trend.map((item) => item.total));
+  const step = dashboard.trend.length > 45 ? 3 : dashboard.trend.length > 30 ? 2 : 1;
+  const visibleTrend = dashboard.trend.filter((_, index) => index % step === 0);
+  const legend = [
+    { color: "bg-moss", label: t.trendDiscovery },
+    { color: "bg-clay", label: t.trendTeam },
+    { color: "bg-sky-500", label: t.trendJoin },
+    { color: "bg-zinc-500", label: t.trendCommunication },
+  ];
+
+  return (
+    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">{t.trendTitle}</h2>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {t.trendDescription}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs text-zinc-500">
+          {legend.map((item) => (
+            <span key={item.label} className="inline-flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${item.color}`} />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex h-44 items-end gap-1.5 overflow-hidden rounded-2xl bg-paper/70 px-3 pb-3 pt-5 ring-1 ring-black/5">
+        {visibleTrend.map((item) => {
+          const height =
+            item.total > 0 ? Math.max(6, Math.round((item.total / max) * 136)) : 6;
+          const discoveryHeight =
+            item.total > 0
+              ? Math.round((item.discovery / item.total) * height)
+              : 0;
+          const teamHeight =
+            item.total > 0 ? Math.round((item.team / item.total) * height) : 0;
+          const joinHeight =
+            item.total > 0 ? Math.round((item.join / item.total) * height) : 0;
+          const communicationHeight =
+            item.total > 0
+              ? Math.max(2, height - discoveryHeight - teamHeight - joinHeight)
+              : 0;
+
+          return (
+            <div
+              key={item.dateKey}
+              className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"
+              title={`${item.label}: ${item.total}`}
+            >
+              <div
+                className="flex w-full max-w-5 flex-col justify-end overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5"
+                style={{ height }}
+              >
+                {communicationHeight > 0 ? (
+                  <span
+                    className="block bg-zinc-500"
+                    style={{ height: communicationHeight }}
+                  />
+                ) : null}
+                {joinHeight > 0 ? (
+                  <span
+                    className="block bg-sky-500"
+                    style={{ height: joinHeight }}
+                  />
+                ) : null}
+                {teamHeight > 0 ? (
+                  <span
+                    className="block bg-clay"
+                    style={{ height: teamHeight }}
+                  />
+                ) : null}
+                {discoveryHeight > 0 ? (
+                  <span
+                    className="block bg-moss"
+                    style={{ height: discoveryHeight }}
+                  />
+                ) : null}
+              </div>
+              {visibleTrend.length <= 16 ? (
+                <span className="truncate text-[0.68rem] text-zinc-400">
+                  {item.label}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function getPopularItemTypeLabel(
+  itemType: AdminAnalyticsDashboard["popularItems"][number]["type"],
+  t: AdminAnalyticsCopy,
+) {
+  if (itemType === "public_event") {
+    return t.activityRankPublicEvent;
+  }
+
+  if (itemType === "team") {
+    return t.activityRankTeam;
+  }
+
+  return t.activityRankActivity;
+}
+
+function PopularItemsPanel({
+  dashboard,
+  t,
+}: {
+  dashboard: AdminAnalyticsDashboard;
+  t: AdminAnalyticsCopy;
+}) {
+  const maxScore = Math.max(1, ...dashboard.popularItems.map((item) => item.score));
+
+  return (
+    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f8eadf] text-clay ring-1 ring-[#f1c6ae]">
+          <Flame className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-ink">
+            {t.activityRankTitle}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {t.activityRankDescription}
+          </p>
+        </div>
+      </div>
+
+      {dashboard.popularItems.length > 0 ? (
+        <ol className="mt-5 space-y-3">
+          {dashboard.popularItems.map((item, index) => {
+            const width = Math.max(8, Math.round((item.score / maxScore) * 100));
+
+            return (
+              <li
+                key={`${item.type}-${item.id}`}
+                className="rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-ink ring-1 ring-black/10">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate font-semibold text-ink">
+                        {item.title}
+                      </p>
+                      <span className="inline-flex h-6 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
+                        {getPopularItemTypeLabel(item.type, t)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {item.city} · {t.viewCount} {item.viewCount} ·{" "}
+                      {t.intentActions} {item.actionCount}
+                    </p>
+                    <div className="mt-2 h-2 rounded-full bg-white">
+                      <div
+                        className="h-full rounded-full bg-clay"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+          {t.activityRankEmpty}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default async function AdminAnalyticsPage({
   params,
+  searchParams,
 }: AdminAnalyticsPageProps) {
   const { locale } = await params;
+  const search = await searchParams;
   await requireAdminPageAccess(locale);
   const t = getCopy(locale);
-  const dashboard = await getAdminAnalyticsDashboard();
+  const windowDays = getAdminAnalyticsWindowDays(search.window);
+  const activeSection = getAdminAnalyticsSection(search.section);
+  const dashboard = await getAdminAnalyticsDashboard(windowDays);
   const maxSourceSurfaceCount = Math.max(
     0,
     ...dashboard.sourceSurfaces.map((source) => source.count),
   );
+  const reportTargets = Object.entries(dashboard.operations.reports.byTargetType);
+  const maxReportTargetCount = Math.max(
+    0,
+    ...reportTargets.map(([, count]) => count),
+  );
+  const focusItems = getFocusItems(dashboard, locale);
 
   return (
     <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
@@ -366,207 +1033,330 @@ export default async function AdminAnalyticsPage({
         </div>
       </div>
 
-      <section className="rounded-[1.5rem] border border-black/10 bg-[#f8f4ea] p-4 shadow-sm sm:p-5">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-clay" />
-          <h2 className="text-lg font-semibold text-ink">{t.topDecision}</h2>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricTile
-            icon={UsersRound}
-            label={`${t.actionUsers} · ${t.intentWindow(
-              dashboard.intentWindowDays,
-            )}`}
-            tone="bg-[#eef5ea] text-moss ring-[#c1d2ba]"
-            value={dashboard.northStar.activeIntentUsers}
-          />
-          <MetricTile
-            icon={TrendingUp}
-            label={t.intentActions}
-            tone="bg-white text-clay ring-[#f1c6ae]"
-            value={dashboard.northStar.intentActionCount}
-          />
-          <MetricTile
-            icon={BarChart3}
-            label={t.conversion}
-            tone="bg-sky-50 text-sky-800 ring-sky-200"
-            value={`${dashboard.teamJoin.joinRate}%`}
-          />
-          <MetricTile
-            icon={ShieldQuestion}
-            label={t.pendingReports}
-            tone="bg-amber-50 text-amber-800 ring-amber-200"
-            value={dashboard.operations.reports.pendingCount}
-          />
+      <DashboardControls
+        activeSection={activeSection}
+        locale={locale}
+        t={t}
+        windowDays={windowDays}
+      />
+
+      <section className="overflow-hidden rounded-[1.5rem] border border-black/10 bg-white/82 shadow-sm">
+        <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+          <div className="bg-[#f8f4ea] p-4 sm:p-5 md:p-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-clay" />
+              <h2 className="text-lg font-semibold text-ink">
+                {t.topDecision}
+              </h2>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricTile
+                icon={UsersRound}
+                label={`${t.actionUsers} · ${t.intentWindow(
+                  dashboard.intentWindowDays,
+                )}`}
+                tone="bg-[#eef5ea] text-moss ring-[#c1d2ba]"
+                value={dashboard.northStar.activeIntentUsers}
+              />
+              <MetricTile
+                icon={TrendingUp}
+                label={t.intentActions}
+                tone="bg-white text-clay ring-[#f1c6ae]"
+                value={dashboard.northStar.intentActionCount}
+              />
+              <MetricTile
+                icon={BarChart3}
+                label={t.conversion}
+                tone="bg-sky-50 text-sky-800 ring-sky-200"
+                value={`${dashboard.teamJoin.joinRate}%`}
+              />
+              <MetricTile
+                icon={ShieldQuestion}
+                label={t.pendingReports}
+                tone="bg-amber-50 text-amber-800 ring-amber-200"
+                value={dashboard.operations.reports.pendingCount}
+              />
+            </div>
+          </div>
+          <div className="border-t border-black/10 p-4 sm:p-5 md:p-6 lg:border-l lg:border-t-0">
+            <FocusList items={focusItems} locale={locale} />
+          </div>
         </div>
       </section>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <FunnelPanel
-          description={t.activityDiscoveryDescription}
-          metrics={[
-            { label: t.viewCount, value: dashboard.discovery.listViews },
-            { label: t.clickCount, value: dashboard.discovery.cardClicks },
-            { label: t.openRate, value: `${dashboard.discovery.clickRate}%` },
-          ]}
-          title={t.activityDiscovery}
-        />
-        <FunnelPanel
-          description={t.activityInfoDescription}
-          metrics={[
-            {
-              label: t.viewCount,
-              value: dashboard.publicEventConversion.detailViews,
-            },
-            {
-              label: t.createdTeams,
-              value: dashboard.publicEventConversion.createdTeams,
-            },
-            {
-              label: t.conversion,
-              value: `${dashboard.publicEventConversion.conversionRate}%`,
-            },
-          ]}
-          title={t.activityInfo}
-        />
-        <FunnelPanel
-          description={t.joinDescription}
-          metrics={[
-            { label: t.viewCount, value: dashboard.teamJoin.detailViews },
-            { label: t.clickCount, value: dashboard.teamJoin.joinClicks },
-            { label: t.conversion, value: `${dashboard.teamJoin.joinRate}%` },
-          ]}
-          title={t.join}
-        />
-      </div>
+      {activeSection === "overview" ? (
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+          <TrendPanel dashboard={dashboard} t={t} />
+          <PopularItemsPanel dashboard={dashboard} t={t} />
+        </div>
+      ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      {activeSection === "journey" ? (
+        <>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <FunnelPanel
+              description={t.activityDiscoveryDescription}
+              metrics={[
+                { label: t.viewCount, value: dashboard.discovery.listViews },
+                { label: t.clickCount, value: dashboard.discovery.cardClicks },
+                {
+                  label: t.openRate,
+                  value: `${dashboard.discovery.clickRate}%`,
+                },
+              ]}
+              title={t.activityDiscovery}
+            />
+            <FunnelPanel
+              description={t.activityInfoDescription}
+              metrics={[
+                {
+                  label: t.viewCount,
+                  value: dashboard.publicEventConversion.detailViews,
+                },
+                {
+                  label: t.createdTeams,
+                  value: dashboard.publicEventConversion.createdTeams,
+                },
+                {
+                  label: t.conversion,
+                  value: `${dashboard.publicEventConversion.conversionRate}%`,
+                },
+              ]}
+              title={t.activityInfo}
+            />
+            <FunnelPanel
+              description={t.joinDescription}
+              metrics={[
+                { label: t.viewCount, value: dashboard.teamJoin.detailViews },
+                { label: t.clickCount, value: dashboard.teamJoin.joinClicks },
+                { label: t.conversion, value: `${dashboard.teamJoin.joinRate}%` },
+              ]}
+              title={t.join}
+            />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-moss" />
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.productSignals}
+                </h2>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SmallStat
+                  label={t.comments}
+                  value={dashboard.communication.comments}
+                />
+                <SmallStat
+                  label={t.contact}
+                  value={dashboard.communication.contactClicks}
+                />
+                <SmallStat
+                  label={t.conversations}
+                  value={dashboard.communication.conversationsOpened}
+                />
+                <SmallStat
+                  label={t.messages}
+                  value={dashboard.communication.messagesSent}
+                />
+              </div>
+              <div className="mt-5 border-t border-black/10 pt-4">
+                <h3 className="font-semibold text-ink">{t.friendsTitle}</h3>
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  <SmallStat
+                    label={t.friendSent}
+                    value={dashboard.friends.sent}
+                  />
+                  <SmallStat
+                    label={t.friendAccepted}
+                    value={dashboard.friends.accepted}
+                  />
+                  <SmallStat
+                    label={t.friendRate}
+                    value={`${dashboard.friends.acceptanceRate}%`}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+              <div className="flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-moss" />
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.shareTitle}
+                </h2>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SmallStat
+                  label={t.linksCopied}
+                  value={dashboard.sharing.linksCopied}
+                />
+                <SmallStat
+                  label={t.fieldsCopied}
+                  value={dashboard.sharing.fieldsCopied}
+                />
+                <SmallStat
+                  label={t.posters}
+                  value={dashboard.sharing.postersDownloaded}
+                />
+                <SmallStat label={t.qr} value={dashboard.sharing.qrShared} />
+              </div>
+            </section>
+          </div>
+        </>
+      ) : null}
+
+      {activeSection === "sources" ? (
         <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-moss" />
-            <h2 className="text-lg font-semibold text-ink">
-              {t.productSignals}
-            </h2>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricTile icon={MessageCircle} label={t.comments} value={dashboard.communication.comments} />
-            <MetricTile icon={UsersRound} label={t.contact} value={dashboard.communication.contactClicks} />
-            <MetricTile icon={MessageCircle} label={t.conversations} value={dashboard.communication.conversationsOpened} />
-            <MetricTile icon={MessageCircle} label={t.messages} value={dashboard.communication.messagesSent} />
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <MetricTile icon={UsersRound} label={t.friendSent} value={dashboard.friends.sent} />
-            <MetricTile icon={UsersRound} label={t.friendAccepted} value={dashboard.friends.accepted} />
-            <MetricTile icon={TrendingUp} label={t.friendRate} value={`${dashboard.friends.acceptanceRate}%`} />
-          </div>
-        </section>
-
-        <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-          <div className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-moss" />
-            <h2 className="text-lg font-semibold text-ink">{t.shareTitle}</h2>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricTile icon={Share2} label={t.linksCopied} value={dashboard.sharing.linksCopied} />
-            <MetricTile icon={Share2} label={t.fieldsCopied} value={dashboard.sharing.fieldsCopied} />
-            <MetricTile icon={Share2} label={t.posters} value={dashboard.sharing.postersDownloaded} />
-            <MetricTile icon={Share2} label={t.qr} value={dashboard.sharing.qrShared} />
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-paper/70 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-ink">
-                  {t.sourceSurfaceTitle}
-                </h3>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  {t.sourceSurfaceDescription}
-                </p>
+          <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.75fr)_minmax(0,1.25fr)]">
+            <div className="lg:border-r lg:border-black/10 lg:pr-5">
+              <h2 className="text-lg font-semibold text-ink">
+                {t.sourceSurfaceTitle}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                {t.sourceSurfaceDescription}
+              </p>
+              <div className="mt-4 space-y-3">
+                {dashboard.sourceSurfaces.length > 0 ? (
+                  dashboard.sourceSurfaces.map((source) => (
+                    <DataBar
+                      key={source.sourceSurface}
+                      label={getSourceSurfaceLabel(locale, source.sourceSurface)}
+                      max={maxSourceSurfaceCount}
+                      value={source.count}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-zinc-500">{t.noSources}</p>
+                )}
               </div>
             </div>
-            <div className="mt-4 space-y-3">
-              {dashboard.sourceSurfaces.length > 0 ? (
-                dashboard.sourceSurfaces.map((source) => (
-                  <DataBar
-                    key={source.sourceSurface}
-                    label={getSourceSurfaceLabel(locale, source.sourceSurface)}
-                    max={maxSourceSurfaceCount}
-                    value={source.count}
-                  />
-                ))
+
+            <div>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+                <div>
+                  <h2 className="text-lg font-semibold text-ink">
+                    {t.publicEventSources}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">
+                    {t.publicEventSourcesDescription}
+                  </p>
+                </div>
+                <Link
+                  className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  href={withLocale(locale, "/admin/data-scraper")}
+                >
+                  {t.seeScraper}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+
+              {dashboard.publicEventSources.length > 0 ? (
+                <div className="mt-4 overflow-x-auto rounded-2xl ring-1 ring-black/10">
+                  <table className="min-w-full divide-y divide-black/10 text-left text-sm">
+                    <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      <tr>
+                        <th className="px-4 py-3">{t.importSource}</th>
+                        <th className="px-4 py-3">{t.imported}</th>
+                        <th className="px-4 py-3">{t.sourceClicks}</th>
+                        <th className="px-4 py-3">{t.createdTeams}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 bg-white">
+                      {dashboard.publicEventSources.map((source) => (
+                        <tr key={source.source}>
+                          <td className="px-4 py-3 font-medium text-ink">
+                            {getSourceLabel(locale, source.source)}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-600">
+                            {source.importedCount}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-600">
+                            {source.sourceClickCount}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-600">
+                            {source.convertedToTeamCount}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p className="text-sm text-zinc-500">{t.noSources}</p>
+                <p className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+                  {t.noSources}
+                </p>
               )}
             </div>
           </div>
         </section>
-      </div>
+      ) : null}
 
-      <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">
-              {t.publicEventSources}
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-zinc-500">
-              {t.publicEventSourcesDescription}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-              href={withLocale(locale, "/admin/data-scraper")}
-            >
-              {t.seeScraper}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
-              href={withLocale(locale, "/admin/reports")}
-            >
-              {t.seeReports}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
+      {activeSection === "community" ? (
+        <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <div>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShieldQuestion className="h-5 w-5 text-clay" />
+                    <h2 className="text-lg font-semibold text-ink">
+                      {t.communityRiskTitle}
+                    </h2>
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">
+                    {t.communityRiskDescription}
+                  </p>
+                </div>
+                <Link
+                  className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+                  href={withLocale(locale, "/admin/reports")}
+                >
+                  {t.seeReports}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SmallStat
+                  label={t.newReports}
+                  value={dashboard.operations.reports.newCount}
+                />
+                <SmallStat
+                  label={t.pendingReports}
+                  value={dashboard.operations.reports.pendingCount}
+                />
+                <SmallStat
+                  label={t.reviewedReports}
+                  value={dashboard.operations.reports.reviewedCount}
+                />
+                <SmallStat
+                  label={t.reviewTime}
+                  value={formatReviewTime(
+                    locale,
+                    dashboard.operations.reports.averageReviewHours,
+                    t.reviewTimeEmpty,
+                  )}
+                />
+              </div>
+            </div>
 
-        {dashboard.publicEventSources.length > 0 ? (
-          <div className="mt-4 overflow-x-auto rounded-2xl ring-1 ring-black/10">
-            <table className="min-w-full divide-y divide-black/10 text-left text-sm">
-              <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3">{t.importSource}</th>
-                  <th className="px-4 py-3">{t.imported}</th>
-                  <th className="px-4 py-3">{t.sourceClicks}</th>
-                  <th className="px-4 py-3">{t.createdTeams}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/5 bg-white">
-                {dashboard.publicEventSources.map((source) => (
-                  <tr key={source.source}>
-                    <td className="px-4 py-3 font-medium text-ink">
-                      {getSourceLabel(locale, source.source)}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {source.importedCount}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {source.sourceClickCount}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600">
-                      {source.convertedToTeamCount}
-                    </td>
-                  </tr>
+            <div className="border-t border-black/10 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+              <h3 className="font-semibold text-ink">{t.reportTargets}</h3>
+              <div className="mt-4 space-y-3">
+                {reportTargets.map(([targetType, count]) => (
+                  <DataBar
+                    key={targetType}
+                    label={getReportTargetLabel(locale, targetType, t)}
+                    max={maxReportTargetCount}
+                    value={count}
+                  />
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        ) : (
-          <p className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
-            {t.noSources}
-          </p>
-        )}
-      </section>
+        </section>
+      ) : null}
     </PageContainer>
   );
 }
