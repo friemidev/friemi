@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, UsersRound } from "lucide-react";
 import {
   Button,
   Card,
@@ -132,6 +132,8 @@ export function ActivityCard({
     isActivityInfo &&
     displayStatus !== "ENDED" &&
     displayStatus !== "CANCELLED";
+  const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
+  const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
   const actionEventName: AnalyticsEventName = canCreateTeam
     ? "team_create_started"
     : "activity_card_clicked";
@@ -224,6 +226,12 @@ export function ActivityCard({
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 line-clamp-1">{activity.city}</span>
             </span>
+            {shouldShowParticipantCount ? (
+              <span className="flex items-start gap-2">
+                <UsersRound className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0">{participantLabel}</span>
+              </span>
+            ) : null}
           </div>
         </CardContent>
       </AnalyticsLink>
