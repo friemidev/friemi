@@ -496,6 +496,9 @@ const copy = {
       closedTitle: "活动已结束",
       closedDescription: "这个活动已经结束或暂不可报名。",
       fullTitle: "名额已满",
+      pendingAction: "待审核",
+      joinedAction: "已报名",
+      fullAction: "已满员",
       fullDescription: "当前活动名额已满，不能继续报名。",
       signInTitle: "登录后报名",
       signInDescription: "登录后可以提交报名，并让发起人看到你的报名信息。",
@@ -1170,6 +1173,9 @@ const copy = {
       closedDescription:
         "This activity has ended or is not currently open for joining.",
       fullTitle: "No seats left",
+      pendingAction: "Pending",
+      joinedAction: "Joined",
+      fullAction: "Full",
       fullDescription:
         "This activity is full and cannot accept more participants.",
       signInTitle: "Sign in to join",
@@ -1879,6 +1885,9 @@ const copy = {
       closedDescription:
         "Cette activité est terminée ou n'accepte pas d'inscriptions.",
       fullTitle: "Complet",
+      pendingAction: "En attente",
+      joinedAction: "Inscrit",
+      fullAction: "Complet",
       fullDescription:
         "Cette activité est complète et ne peut plus accepter de participants.",
       signInTitle: "Connectez-vous pour rejoindre",

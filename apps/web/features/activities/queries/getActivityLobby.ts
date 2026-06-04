@@ -16,6 +16,7 @@ import {
 } from "./getActivities";
 
 const activityLobbySectionLimit = 6;
+const visibleLobbyParticipationStatuses = ["JOINED", "APPROVED", "PENDING"] as const;
 
 const lobbyParticipationSelect = {
   activity: {
@@ -191,6 +192,9 @@ export async function getActivityLobby(
     prisma.activityParticipant.findMany({
       where: {
         userProfileId: viewerProfileId,
+        status: {
+          in: [...visibleLobbyParticipationStatuses],
+        },
         activity: visibleWhere,
       },
       orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
@@ -234,6 +238,9 @@ export async function getActivityLobby(
           where: {
             userProfileId: {
               in: friendIds,
+            },
+            status: {
+              in: [...visibleLobbyParticipationStatuses],
             },
             activity: visibleWhere,
           },
