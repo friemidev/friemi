@@ -10,13 +10,13 @@ import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import {
-  toggleActivityFavoriteAction,
-  type ToggleActivityFavoriteState,
-} from "../actions/toggleActivityFavorite";
+  togglePublicEventFavoriteAction,
+  type TogglePublicEventFavoriteState,
+} from "../actions/togglePublicEventFavorite";
 import type { FavoriteButtonLabels } from "../types";
 
-type ActivityFavoriteButtonProps = {
-  activityId: string;
+type PublicEventFavoriteButtonProps = {
+  publicEventId: string;
   isAuthenticated: boolean;
   isFavorited: boolean;
   locale: string;
@@ -25,7 +25,7 @@ type ActivityFavoriteButtonProps = {
   labelOverrides?: Partial<FavoriteButtonLabels>;
 };
 
-const initialState: ToggleActivityFavoriteState = {};
+const initialState: TogglePublicEventFavoriteState = {};
 
 function FavoriteTooltip({ label }: { label: string }) {
   return (
@@ -81,19 +81,19 @@ function FavoriteSubmitButton({
   );
 }
 
-export function ActivityFavoriteButton({
-  activityId,
+export function PublicEventFavoriteButton({
+  publicEventId,
   isAuthenticated,
   isFavorited,
   locale,
   redirectPath,
   className,
   labelOverrides,
-}: ActivityFavoriteButtonProps) {
+}: PublicEventFavoriteButtonProps) {
   const tMessages = useTranslations("favorites.common");
   const router = useRouter();
   const [state, formAction] = useActionState(
-    toggleActivityFavoriteAction,
+    togglePublicEventFavoriteAction,
     initialState,
   );
   const [, startRefreshTransition] = useTransition();
@@ -175,7 +175,7 @@ export function ActivityFavoriteButton({
         setHasOptimisticUpdate(true);
       }}
     >
-      <input name="activityId" type="hidden" value={activityId} />
+      <input name="publicEventId" type="hidden" value={publicEventId} />
       <input name="locale" type="hidden" value={locale} />
       <input name="redirectPath" type="hidden" value={redirectPath} />
       {state.formError ? (

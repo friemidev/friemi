@@ -218,7 +218,9 @@ export function ProfileDashboardView({
                         <ActivityCard
                           key={favorite.id}
                           activity={favorite.activity}
+                          isAuthenticated={isAuthenticated}
                           locale={locale}
+                          showFavoriteButton
                           sourceSurface="profile"
                         />
                       ))}

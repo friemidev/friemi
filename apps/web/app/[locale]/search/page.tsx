@@ -245,7 +245,9 @@ export default async function SearchPage({
                       <ActivityCard
                         key={activity.id}
                         activity={activity}
+                        isAuthenticated={Boolean(viewerProfile)}
                         locale={locale}
+                        showFavoriteButton
                         sourceSurface="global_search"
                       />
                     ))}
@@ -286,7 +288,10 @@ export default async function SearchPage({
                     <PublicEventCard
                       key={event.id}
                       event={event}
+                      isAuthenticated={Boolean(viewerProfile)}
                       locale={locale}
+                      redirectPath="/search"
+                      showFavoriteButton
                     />
                   ))}
                 </div>

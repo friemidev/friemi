@@ -160,6 +160,7 @@ model UserProfile {
   reviewedReports        Report[]              @relation("ReportReviewer")
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
+  publicEventFavorites   PublicEventFavorite[]
 
   @@index([nickname])
   @@index([role, status])
@@ -245,6 +246,7 @@ model PublicEvent {
   importedAt     DateTime?
   lastSyncedAt   DateTime?
   teams          Activity[]
+  favorites      PublicEventFavorite[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -321,6 +323,18 @@ model ActivityFavorite {
   createdAt     DateTime    @default(now())
 
   @@unique([activityId, userProfileId])
+  @@index([userProfileId, createdAt])
+}
+
+model PublicEventFavorite {
+  id            String      @id @default(cuid())
+  publicEventId String
+  userProfileId String
+  publicEvent   PublicEvent @relation(fields: [publicEventId], references: [id], onDelete: Cascade)
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([publicEventId, userProfileId])
   @@index([userProfileId, createdAt])
 }
 

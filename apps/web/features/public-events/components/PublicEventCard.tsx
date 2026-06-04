@@ -23,10 +23,14 @@ import { withLocale } from "@/lib/routes";
 import type { PublicEventCardViewModel } from "../types";
 import { getPublicEventCopy } from "../copy";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 
 type PublicEventCardProps = {
   event: PublicEventCardViewModel;
+  isAuthenticated?: boolean;
   locale: string;
+  redirectPath?: string;
+  showFavoriteButton?: boolean;
 };
 
 function getEventDateLabel(event: PublicEventCardViewModel, locale: string) {
@@ -54,14 +58,32 @@ function getEventPriceLabel(event: PublicEventCardViewModel, locale: string) {
   return event.priceText || getPriceTypeLabel(event.priceType, locale);
 }
 
-export function PublicEventCard({ event, locale }: PublicEventCardProps) {
+export function PublicEventCard({
+  event,
+  isAuthenticated = false,
+  locale,
+  redirectPath = "/activities",
+  showFavoriteButton = false,
+}: PublicEventCardProps) {
   const t = getPublicEventCopy(locale);
   const eventHref = withLocale(locale, `/public-events/${event.id}`);
   const eventActionHref =
     event.teamCount > 0 ? `${eventHref}#public-event-teams` : eventHref;
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden border-[#ded2bc] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cdb88f] hover:shadow-lg">
+    <Card className="group relative flex h-full flex-col overflow-hidden border-[#ded2bc] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cdb88f] hover:shadow-lg">
+      {showFavoriteButton ? (
+        <div className="absolute right-3 top-3 z-20">
+          <PublicEventFavoriteButton
+            publicEventId={event.id}
+            className="h-9 w-9"
+            isAuthenticated={isAuthenticated}
+            isFavorited={Boolean(event.isFavorited)}
+            locale={locale}
+            redirectPath={redirectPath}
+          />
+        </div>
+      ) : null}
       <Link
         className="flex flex-1 flex-col"
         href={eventHref}

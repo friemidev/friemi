@@ -11,5 +11,21 @@
     "tagline": "What's next? Fun begins.",
     "description": "An activity planning and buddy-finding platform for Chinese-speaking users overseas.",
     "browseActivities": "Browse activities"
+  },
+  "favorites": {
+    "common": {
+      "favorite": "Add to favorites",
+      "unfavorite": "Favorited",
+      "favoriting": "Adding...",
+      "unfavoriting": "Removing...",
+      "signInToFavorite": "Sign in to favorite",
+      "invalidRequest": "Invalid request. Try again later."
+    },
+    "activity": {
+      "unavailable": "This activity does not exist or cannot be favorited right now."
+    },
+    "publicEvent": {
+      "unavailable": "This public event does not exist or cannot be favorited right now."
+    }
   }
 }

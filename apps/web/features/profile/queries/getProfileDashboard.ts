@@ -1,10 +1,15 @@
-import { prisma } from "@/lib/prisma";
+import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import type { ParticipantStatus, Prisma } from "@prisma/client";
 import {
   activityCardSelect,
+  getActivityCoverTone,
   getActivityCardViewModel,
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import {
+  getPublicEventCardViewModel,
+  publicEventSelect,
+} from "@/features/public-events/queries/getPublicEvents";
 
 export const profileActivityListLimit = 12;
 export const profileFollowListLimit = 12;
@@ -43,6 +48,19 @@ const profileFavoriteSelect = {
 type ProfileFavoriteQueryResult = Prisma.ActivityFavoriteGetPayload<{
   select: typeof profileFavoriteSelect;
 }>;
+
+const profilePublicEventFavoriteSelect = {
+  id: true,
+  createdAt: true,
+  publicEvent: {
+    select: publicEventSelect,
+  },
+} satisfies Prisma.PublicEventFavoriteSelect;
+
+type ProfilePublicEventFavoriteQueryResult =
+  Prisma.PublicEventFavoriteGetPayload<{
+    select: typeof profilePublicEventFavoriteSelect;
+  }>;
 
 export type ProfileParticipationViewModel = {
   id: string;
@@ -130,6 +148,47 @@ function mapFavorite(
   };
 }
 
+function mapPublicEventToActivityCard(
+  publicEvent: ReturnType<typeof getPublicEventCardViewModel>,
+): ActivityCardViewModel {
+  return {
+    id: publicEvent.id,
+    publicEventId: publicEvent.id,
+    title: publicEvent.title,
+    description: publicEvent.description,
+    type: "PUBLIC_EVENT",
+    category: publicEvent.category,
+    city: publicEvent.city,
+    address: publicEvent.address,
+    latitude: publicEvent.latitude,
+    longitude: publicEvent.longitude,
+    startAt: publicEvent.startAt,
+    endAt: publicEvent.endAt,
+    capacity: 0,
+    coverImageUrl: publicEvent.coverImageUrl,
+    participantCount: publicEvent.teamCount,
+    priceText: publicEvent.priceText ?? "",
+    status: "RECRUITING",
+    coverTone: getActivityCoverTone(publicEvent.id),
+    isActivityInfo: true,
+    officialUrl: publicEvent.officialUrl,
+    merchant: null,
+    isFavorited: publicEvent.isFavorited,
+  };
+}
+
+function mapPublicEventFavorite(
+  favorite: ProfilePublicEventFavoriteQueryResult,
+): ProfileFavoriteActivityViewModel {
+  return {
+    id: favorite.id,
+    createdAt: favorite.createdAt.toISOString(),
+    activity: mapPublicEventToActivityCard(
+      getPublicEventCardViewModel(favorite.publicEvent),
+    ),
+  };
+}
+
 function mapFollowUser(user: {
   id: string;
   nickname: string;
@@ -147,15 +206,18 @@ function mapFollowUser(user: {
 export async function getProfileDashboard(
   profileId: string,
 ): Promise<ProfileDashboardViewModel> {
+  const publicEventFavorite = getPublicEventFavoriteDelegate();
   const [
     createdActivityCount,
     participationCount,
     favoriteActivityCount,
+    publicEventFavoriteCount,
     followersCount,
     followingCount,
     createdActivities,
     participations,
     favoriteActivities,
+    favoritePublicEvents,
     followers,
     following,
   ] = await Promise.all([
@@ -174,6 +236,13 @@ export async function getProfileDashboard(
         userProfileId: profileId,
       },
     }),
+    publicEventFavorite
+      ? publicEventFavorite.count({
+          where: {
+            userProfileId: profileId,
+          },
+        })
+      : Promise.resolve(0),
     prisma.userFollow.count({
       where: {
         followingId: profileId,
@@ -208,6 +277,16 @@ export async function getProfileDashboard(
       take: profileActivityListLimit,
       select: profileFavoriteSelect,
     }),
+    publicEventFavorite
+      ? publicEventFavorite.findMany({
+          where: {
+            userProfileId: profileId,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+          take: profileActivityListLimit,
+          select: profilePublicEventFavoriteSelect,
+        })
+      : Promise.resolve([]),
     prisma.userFollow.findMany({
       where: {
         followingId: profileId,
@@ -244,15 +323,28 @@ export async function getProfileDashboard(
     }),
   ]);
 
+  const mergedFavorites = [
+    ...favoriteActivities.map(mapFavorite),
+    ...(favoritePublicEvents as ProfilePublicEventFavoriteQueryResult[]).map(
+      mapPublicEventFavorite,
+    ),
+  ]
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime() ||
+        left.id.localeCompare(right.id),
+    )
+    .slice(0, profileActivityListLimit);
+
   return {
     createdActivityCount,
     participationCount,
-    favoriteActivityCount,
+    favoriteActivityCount: favoriteActivityCount + publicEventFavoriteCount,
     followersCount,
     followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: participations.map(mapParticipation),
-    favoriteActivities: favoriteActivities.map(mapFavorite),
+    favoriteActivities: mergedFavorites,
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
   };

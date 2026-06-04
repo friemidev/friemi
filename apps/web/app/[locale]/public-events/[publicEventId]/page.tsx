@@ -32,6 +32,7 @@ import {
 } from "@/features/public-events/components/PublicEventCard";
 import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -114,7 +115,14 @@ export default async function PublicEventDetailPage({
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/64 via-black/22 to-black/8"
         />
-        <div className="absolute right-4 top-4 z-30 sm:right-6 sm:top-6">
+        <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
+          <PublicEventFavoriteButton
+            publicEventId={publicEvent.id}
+            isAuthenticated={Boolean(viewerProfile)}
+            isFavorited={Boolean(publicEvent.isFavorited)}
+            locale={locale}
+            redirectPath={`/public-events/${publicEvent.id}`}
+          />
           <ReportDialog
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}

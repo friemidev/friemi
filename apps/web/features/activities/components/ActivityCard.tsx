@@ -21,6 +21,7 @@ import {
 import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ActivityStatusBadge } from "./ActivityStatusBadge";
 import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
+import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
@@ -144,6 +145,19 @@ export function ActivityCard({
 
   return (
     <Card className="relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+      {showFavoriteButton && isActivityInfo && activity.publicEventId ? (
+        <div className="absolute right-3 top-3 z-20">
+          <PublicEventFavoriteButton
+            publicEventId={activity.publicEventId}
+            className="h-9 w-9"
+            isAuthenticated={isAuthenticated}
+            isFavorited={Boolean(activity.isFavorited)}
+            locale={locale}
+            redirectPath="/activities"
+            labelOverrides={getCardFavoriteLabels(locale)}
+          />
+        </div>
+      ) : null}
       {showFavoriteButton && !isActivityInfo ? (
         <div className="absolute right-3 top-3 z-20">
           <ActivityFavoriteButton

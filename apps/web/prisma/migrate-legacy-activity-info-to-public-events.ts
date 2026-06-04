@@ -42,8 +42,6 @@ type LegacyActivity = Prisma.ActivityGetPayload<{
 }>;
 
 type SkipReason =
-  | "hasParticipants"
-  | "hasComments"
   | "notLegacyActivityInfo"
   | "sourceUrlOnlyRequiresFlag";
 
@@ -55,11 +53,13 @@ type MigrationSummary = {
   eligible: number;
   created: number;
   updated: number;
+  linkedActivities: number;
   hiddenLegacyActivities: number;
   skipped: Record<SkipReason, number>;
   samples: {
     created: string[];
     updated: string[];
+    linked: string[];
     hidden: string[];
     skipped: string[];
   };
@@ -122,14 +122,6 @@ function getSkipReason(activity: LegacyActivity): SkipReason | null {
 
   if (!hasStrongSignal && hasSourceOnly && !includeSourceUrlOnly) {
     return "sourceUrlOnlyRequiresFlag";
-  }
-
-  if (activity._count.participants > 0) {
-    return "hasParticipants";
-  }
-
-  if (activity._count.comments > 0) {
-    return "hasComments";
   }
 
   return null;
@@ -287,16 +279,16 @@ function createSummary(scanned: number): MigrationSummary {
     eligible: 0,
     created: 0,
     updated: 0,
+    linkedActivities: 0,
     hiddenLegacyActivities: 0,
     skipped: {
-      hasParticipants: 0,
-      hasComments: 0,
       notLegacyActivityInfo: 0,
       sourceUrlOnlyRequiresFlag: 0,
     },
     samples: {
       created: [],
       updated: [],
+      linked: [],
       hidden: [],
       skipped: [],
     },
@@ -316,6 +308,7 @@ async function migrateActivity(
     },
   });
   const publicEventData = toPublicEventData(activity);
+  const publicEventId = existingPublicEvent?.id;
 
   if (!shouldWrite) {
     summary[existingPublicEvent ? "updated" : "created"] += 1;
@@ -323,6 +316,8 @@ async function migrateActivity(
       existingPublicEvent ? summary.samples.updated : summary.samples.created,
       `${activity.title} (${activity.id})`,
     );
+    summary.linkedActivities += 1;
+    addSample(summary.samples.linked, `${activity.title} (${activity.id})`);
   } else if (existingPublicEvent) {
     await prisma.publicEvent.update({
       where: {
@@ -333,11 +328,43 @@ async function migrateActivity(
     summary.updated += 1;
     addSample(summary.samples.updated, `${activity.title} (${activity.id})`);
   } else {
-    await prisma.publicEvent.create({
+    const createdPublicEvent = await prisma.publicEvent.create({
       data: publicEventData,
+      select: {
+        id: true,
+      },
     });
     summary.created += 1;
     addSample(summary.samples.created, `${activity.title} (${activity.id})`);
+    const linkResult = await prisma.activity.updateMany({
+      where: {
+        id: activity.id,
+        publicEventId: null,
+      },
+      data: {
+        publicEventId: createdPublicEvent.id,
+      },
+    });
+    if (linkResult.count > 0) {
+      summary.linkedActivities += 1;
+      addSample(summary.samples.linked, `${activity.title} (${activity.id})`);
+    }
+  }
+
+  if (shouldWrite && publicEventId) {
+    const linkResult = await prisma.activity.updateMany({
+      where: {
+        id: activity.id,
+        publicEventId: null,
+      },
+      data: {
+        publicEventId,
+      },
+    });
+    if (linkResult.count > 0) {
+      summary.linkedActivities += 1;
+      addSample(summary.samples.linked, `${activity.title} (${activity.id})`);
+    }
   }
 
   if (hideLegacyActivities) {

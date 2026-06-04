@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
+import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { Prisma } from "@prisma/client";
 import type {
   ActivityStatus,
@@ -32,7 +33,7 @@ const coverTones: ActivityCardViewModel["coverTone"][] = [
   "clay",
   "sky",
 ];
-const defaultActivityPageSize = 12;
+const defaultActivityPageSize = 15;
 const dailyRankingTimeZone = "Europe/Paris";
 const dayInMs = 24 * 60 * 60 * 1000;
 const freshOngoingWindowDays = 2;
@@ -709,25 +710,64 @@ async function attachJoinableActivityStates(
   rankedActivities: RankedActivityCard[],
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityCardViewModel[]> {
-  const joinableActivities = rankedActivities
-    .map((rankedActivity) => rankedActivity.card)
-    .filter((activity) => activity.type !== "PUBLIC_EVENT");
-  const joinableActivitiesWithState = await attachActivityFavoriteStates(
-    await attachActivityFriendSignals(joinableActivities, viewerProfileId),
-    viewerProfileId,
+  const cards = rankedActivities.map((rankedActivity) => rankedActivity.card);
+  const publicEventActivities = cards.filter(
+    (activity) => activity.type === "PUBLIC_EVENT" && Boolean(activity.publicEventId),
   );
-  const joinableActivityById = new Map(
-    joinableActivitiesWithState.map((activity) => [activity.id, activity]),
+  const teamActivities = cards.filter(
+    (activity) => activity.type !== "PUBLIC_EVENT",
+  );
+  const [publicEventActivitiesWithState, teamActivitiesWithState] =
+    await Promise.all([
+      attachPublicEventFavoriteStates(
+        publicEventActivities.map((activity) => ({
+          id: activity.publicEventId ?? activity.id,
+          title: activity.title,
+          description: activity.description,
+          category: activity.category,
+          city: activity.city,
+          address: activity.address,
+          latitude: activity.latitude,
+          longitude: activity.longitude,
+          startAt: activity.startAt,
+          endAt: activity.endAt,
+          priceType: "FREE",
+          priceText: activity.priceText,
+          coverImageUrl: activity.coverImageUrl,
+          officialUrl: activity.officialUrl ?? null,
+          status: "SCHEDULED",
+          teamCount: activity.participantCount,
+          isFavorited: activity.isFavorited,
+        })),
+        viewerProfileId,
+      ),
+      attachActivityFavoriteStates(
+        await attachActivityFriendSignals(teamActivities, viewerProfileId),
+        viewerProfileId,
+      ),
+    ]);
+  const teamActivityById = new Map(
+    teamActivitiesWithState.map((activity) => [activity.id, activity]),
+  );
+  const publicEventActivityById = new Map(
+    publicEventActivitiesWithState.map((activity) => [activity.id, activity]),
   );
 
   return rankedActivities.map((rankedActivity) => {
-    if (rankedActivity.card.type === "PUBLIC_EVENT") {
-      return rankedActivity.card;
+    if (
+      rankedActivity.card.type === "PUBLIC_EVENT" &&
+      rankedActivity.card.publicEventId
+    ) {
+      const publicEventId =
+        rankedActivity.card.publicEventId ?? rankedActivity.card.id;
+
+      return {
+        ...rankedActivity.card,
+        isFavorited: publicEventActivityById.get(publicEventId)?.isFavorited,
+      };
     }
 
-    return (
-      joinableActivityById.get(rankedActivity.card.id) ?? rankedActivity.card
-    );
+    return teamActivityById.get(rankedActivity.card.id) ?? rankedActivity.card;
   });
 }
 

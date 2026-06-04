@@ -6,16 +6,16 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
-import { prisma } from "@/lib/prisma";
+import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
-const toggleActivityFavoriteSchema = z.object({
-  activityId: z.string().min(1),
+const togglePublicEventFavoriteSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
+  publicEventId: z.string().min(1),
   redirectPath: z.string().min(1),
 });
 
-export type ToggleActivityFavoriteState = {
+export type TogglePublicEventFavoriteState = {
   formError?: string;
   isFavorited?: boolean;
   ok?: boolean;
@@ -57,18 +57,18 @@ async function getViewerProfileId(locale: string) {
   return ensureCurrentUserProfile(locale).then((profile) => profile.id);
 }
 
-export async function toggleActivityFavoriteAction(
-  _previousState: ToggleActivityFavoriteState,
+export async function togglePublicEventFavoriteAction(
+  _previousState: TogglePublicEventFavoriteState,
   formData: FormData,
-): Promise<ToggleActivityFavoriteState> {
+): Promise<TogglePublicEventFavoriteState> {
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
   const fallbackCommonT = await getTranslations({
     locale: fallbackLocale,
     namespace: "favorites.common",
   });
-  const result = toggleActivityFavoriteSchema.safeParse({
-    activityId: getString(formData, "activityId"),
+  const result = togglePublicEventFavoriteSchema.safeParse({
     locale: fallbackLocale,
+    publicEventId: getString(formData, "publicEventId"),
     redirectPath: getString(formData, "redirectPath"),
   });
 
@@ -78,54 +78,59 @@ export async function toggleActivityFavoriteAction(
     };
   }
 
-  const { activityId, locale, redirectPath } = result.data;
-  const activityT = await getTranslations({
-      locale,
-      namespace: "favorites.activity",
-    });
+  const { locale, publicEventId, redirectPath } = result.data;
+  const publicEventT = await getTranslations({
+    locale,
+    namespace: "favorites.publicEvent",
+  });
+  const publicEventFavorite = getPublicEventFavoriteDelegate();
   const viewerProfileId = await getViewerProfileId(locale);
-  const activity = await prisma.activity.findFirst({
+  const publicEvent = await prisma.publicEvent.findFirst({
     where: {
-      id: activityId,
+      id: publicEventId,
       visibility: "PUBLIC",
-      organizer: {
-        status: "ACTIVE",
-      },
+      status: "SCHEDULED",
     },
     select: {
       id: true,
     },
   });
 
-  if (!activity) {
+  if (!publicEvent) {
     return {
-      formError: activityT("unavailable"),
+      formError: publicEventT("unavailable"),
     };
   }
 
-  const existingFavorite = await prisma.activityFavorite.findUnique({
+  if (!publicEventFavorite) {
+    return {
+      formError: publicEventT("unavailable"),
+    };
+  }
+
+  const existingFavorite = (await publicEventFavorite.findUnique({
     where: {
-      activityId_userProfileId: {
-        activityId,
+      publicEventId_userProfileId: {
+        publicEventId,
         userProfileId: viewerProfileId,
       },
     },
     select: {
       id: true,
     },
-  });
+  })) as { id: string } | null;
 
   try {
     if (existingFavorite) {
-      await prisma.activityFavorite.delete({
+      await publicEventFavorite.delete({
         where: {
           id: existingFavorite.id,
         },
       });
     } else {
-      await prisma.activityFavorite.create({
+      await publicEventFavorite.create({
         data: {
-          activityId,
+          publicEventId,
           userProfileId: viewerProfileId,
         },
       });
@@ -139,6 +144,7 @@ export async function toggleActivityFavoriteAction(
   const localizedPath = withLocale(locale, redirectPath);
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/lobby"));
 
   return {
     formError: undefined,

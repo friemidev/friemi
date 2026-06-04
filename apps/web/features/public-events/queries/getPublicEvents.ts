@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
+import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
 import {
   activityCardSelect,
@@ -193,7 +194,7 @@ function sortPublicEventTeams(teams: ActivityCardViewModel[]) {
 }
 
 export async function getPublicEvents(
-  options: { limit?: number } = {},
+  options: { limit?: number; viewerProfileId?: string | null } = {},
 ): Promise<PublicEventCardViewModel[]> {
   const publicEvents = await prisma.publicEvent.findMany({
     where: getUpcomingPublicEventWhere(),
@@ -202,7 +203,10 @@ export async function getPublicEvents(
     select: publicEventSelect,
   });
 
-  return publicEvents.map(getPublicEventCardViewModel);
+  return attachPublicEventFavoriteStates(
+    publicEvents.map(getPublicEventCardViewModel),
+    options.viewerProfileId,
+  );
 }
 
 export async function getPublicEventById(
@@ -222,13 +226,17 @@ export async function getPublicEventById(
   }
 
   const card = getPublicEventCardViewModel(publicEvent);
+  const [favoriteState] = await attachPublicEventFavoriteStates(
+    [card],
+    viewerProfileId,
+  );
   const teams = await attachTeamStates(
     sortPublicEventTeams(publicEvent.teams.map(getActivityCardViewModel)),
     viewerProfileId,
   );
 
   return {
-    ...card,
+    ...favoriteState,
     teams,
   };
 }

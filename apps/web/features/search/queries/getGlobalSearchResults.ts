@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { attachActivityFavoriteStates, attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import {
   activityCardSelect,
   getActivityCardViewModel,
@@ -232,6 +233,17 @@ export async function getGlobalSearchResults(
     currentUserProfileId,
     users.map((user) => user.id),
   );
+  const [activityResultsWithFavoriteState, publicEventResultsWithFavoriteState] =
+    await Promise.all([
+      attachActivityFavoriteStates(
+        activities.map(getActivityCardViewModel),
+        currentUserProfileId,
+      ),
+      attachPublicEventFavoriteStates(
+        publicEvents.map(getPublicEventCardViewModel),
+        currentUserProfileId,
+      ),
+    ]);
 
   return {
     query,
@@ -244,9 +256,9 @@ export async function getGlobalSearchResults(
         userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
     })),
     userCount,
-    activities: activities.map(getActivityCardViewModel),
+    activities: activityResultsWithFavoriteState,
     activityCount,
-    publicEvents: publicEvents.map(getPublicEventCardViewModel),
+    publicEvents: publicEventResultsWithFavoriteState,
     publicEventCount,
     merchants: merchants.map((merchant) => ({
       id: merchant.id,
