@@ -116,6 +116,48 @@ test("assertAnalyticsEventRequirements requires safe friend request context", ()
   );
 });
 
+test("assertAnalyticsEventRequirements requires admin operations context", () => {
+  assert.throws(() =>
+    assertAnalyticsEventRequirements({
+      name: "report_submitted",
+      entityType: null,
+      entityId: "report_1",
+      sourceSurface: "report_dialog",
+      properties: {
+        reason: "SPAM",
+        target_type: "COMMENT",
+      },
+    }),
+  );
+
+  assert.doesNotThrow(() =>
+    assertAnalyticsEventRequirements({
+      name: "admin_report_status_updated",
+      entityType: "report",
+      entityId: "report_1",
+      sourceSurface: "admin_reports",
+      properties: {
+        from_status: "PENDING",
+        report_id: "report_1",
+        to_status: "RESOLVED",
+      },
+    }),
+  );
+
+  assert.doesNotThrow(() =>
+    assertAnalyticsEventRequirements({
+      name: "public_event_converted_to_team",
+      entityType: "public_event",
+      entityId: "public_event_1",
+      sourceSurface: "public_event_detail",
+      properties: {
+        activity_id: "activity_1",
+        public_event_id: "public_event_1",
+      },
+    }),
+  );
+});
+
 test("inferAnalyticsDeviceType classifies common user agents", () => {
   assert.equal(
     inferAnalyticsDeviceType(

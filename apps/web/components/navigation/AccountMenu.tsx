@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
+  BarChart3,
   Bell,
   Building2,
   Check,
@@ -68,6 +69,7 @@ export function AccountMenu({
   const profileHref = withLocale(locale, "/profile");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
+  const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
@@ -225,6 +227,13 @@ export function AccountMenu({
             />
             {showAdminLink ? (
               <>
+                <MenuLink
+                  href={analyticsOpsHref}
+                  icon={BarChart3}
+                  label={t.analyticsOps}
+                  active={pathname.startsWith(analyticsOpsHref)}
+                  onClick={closeMenu}
+                />
                 <MenuLink
                   href={activityOpsHref}
                   icon={LayoutDashboard}

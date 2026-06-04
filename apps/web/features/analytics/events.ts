@@ -173,15 +173,18 @@ const requiredByEvent: Partial<
     properties: ["accepted_from"],
   },
   report_submitted: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
     properties: ["target_type", "reason"],
   },
   admin_report_status_updated: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
     properties: ["report_id", "from_status", "to_status"],
   },
   public_event_source_clicked: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
   },
   public_event_converted_to_team: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
     properties: ["public_event_id", "activity_id"],
   },
   search_submitted: {

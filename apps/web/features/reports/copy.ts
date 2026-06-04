@@ -82,6 +82,22 @@ const reportCopy = {
       deletedTarget: "内容已不存在",
       noDescription: "用户未填写补充说明。",
       reviewedBy: (name: string) => `处理人：${name}`,
+      analytics: {
+        averageReviewTime: "平均处理",
+        conversionRate: "转组队率",
+        hours: (count: number) => `${count} 小时`,
+        lessThanOneHour: "< 1 小时",
+        newReports: "新举报",
+        noReviewTime: "暂无处理记录",
+        noTargetDistribution: "暂无举报分布",
+        operationsDescription: (days: number) =>
+          `最近 ${days} 天的举报处理和公共活动来源表现。`,
+        operationsTitle: "运营概览",
+        pendingReports: "待处理",
+        publicEventTeams: "转成组队",
+        sourceClicks: "来源点击",
+        targetDistribution: "举报对象",
+      },
     },
   },
   en: {
@@ -161,6 +177,22 @@ const reportCopy = {
       deletedTarget: "Content no longer exists",
       noDescription: "No extra details were provided.",
       reviewedBy: (name: string) => `Reviewed by ${name}`,
+      analytics: {
+        averageReviewTime: "Avg. review",
+        conversionRate: "Team rate",
+        hours: (count: number) => `${count}h`,
+        lessThanOneHour: "< 1h",
+        newReports: "New reports",
+        noReviewTime: "No reviewed reports yet",
+        noTargetDistribution: "No report distribution yet",
+        operationsDescription: (days: number) =>
+          `Report handling and public activity source performance from the last ${days} days.`,
+        operationsTitle: "Operations overview",
+        pendingReports: "Pending",
+        publicEventTeams: "New teams",
+        sourceClicks: "Source clicks",
+        targetDistribution: "Reported content",
+      },
     },
   },
   fr: {
@@ -242,6 +274,22 @@ const reportCopy = {
       deletedTarget: "Ce contenu n'existe plus",
       noDescription: "Aucun détail supplémentaire.",
       reviewedBy: (name: string) => `Traité par ${name}`,
+      analytics: {
+        averageReviewTime: "Délai moyen",
+        conversionRate: "Taux groupe",
+        hours: (count: number) => `${count} h`,
+        lessThanOneHour: "< 1 h",
+        newReports: "Nouveaux",
+        noReviewTime: "Aucun traitement récent",
+        noTargetDistribution: "Aucune répartition",
+        operationsDescription: (days: number) =>
+          `Signalements et sources d'activités des ${days} derniers jours.`,
+        operationsTitle: "Aperçu opérationnel",
+        pendingReports: "À traiter",
+        publicEventTeams: "Groupes créés",
+        sourceClicks: "Clics source",
+        targetDistribution: "Contenus signalés",
+      },
     },
   },
 } satisfies Record<
@@ -299,6 +347,21 @@ const reportCopy = {
       deletedTarget: string;
       noDescription: string;
       reviewedBy: (name: string) => string;
+      analytics: {
+        averageReviewTime: string;
+        conversionRate: string;
+        hours: (count: number) => string;
+        lessThanOneHour: string;
+        newReports: string;
+        noReviewTime: string;
+        noTargetDistribution: string;
+        operationsDescription: (days: number) => string;
+        operationsTitle: string;
+        pendingReports: string;
+        publicEventTeams: string;
+        sourceClicks: string;
+        targetDistribution: string;
+      };
     };
   }
 >;
