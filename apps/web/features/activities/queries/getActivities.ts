@@ -758,8 +758,7 @@ async function attachJoinableActivityStates(
       rankedActivity.card.type === "PUBLIC_EVENT" &&
       rankedActivity.card.publicEventId
     ) {
-      const publicEventId =
-        rankedActivity.card.publicEventId ?? rankedActivity.card.id;
+      const publicEventId = rankedActivity.card.publicEventId;
 
       return {
         ...rankedActivity.card,

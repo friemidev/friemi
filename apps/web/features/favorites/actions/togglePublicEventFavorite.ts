@@ -85,23 +85,6 @@ export async function togglePublicEventFavoriteAction(
   });
   const publicEventFavorite = getPublicEventFavoriteDelegate();
   const viewerProfileId = await getViewerProfileId(locale);
-  const publicEvent = await prisma.publicEvent.findFirst({
-    where: {
-      id: publicEventId,
-      visibility: "PUBLIC",
-      status: "SCHEDULED",
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!publicEvent) {
-    return {
-      formError: publicEventT("unavailable"),
-    };
-  }
-
   if (!publicEventFavorite) {
     return {
       formError: publicEventT("unavailable"),
@@ -119,6 +102,28 @@ export async function togglePublicEventFavoriteAction(
       id: true,
     },
   })) as { id: string } | null;
+  const publicEvent = await prisma.publicEvent.findFirst({
+    where: {
+      id: publicEventId,
+      visibility: "PUBLIC",
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!publicEvent) {
+    return {
+      formError: publicEventT("unavailable"),
+    };
+  }
+
+  if (!existingFavorite && publicEvent.status !== "SCHEDULED") {
+    return {
+      formError: publicEventT("unavailable"),
+    };
+  }
 
   try {
     if (existingFavorite) {

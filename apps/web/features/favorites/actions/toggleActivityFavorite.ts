@@ -80,9 +80,9 @@ export async function toggleActivityFavoriteAction(
 
   const { activityId, locale, redirectPath } = result.data;
   const activityT = await getTranslations({
-      locale,
-      namespace: "favorites.activity",
-    });
+    locale,
+    namespace: "favorites.activity",
+  });
   const viewerProfileId = await getViewerProfileId(locale);
   const activity = await prisma.activity.findFirst({
     where: {

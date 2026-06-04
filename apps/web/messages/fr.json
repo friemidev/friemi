@@ -1,16 +1,16 @@
 {
   "navigation": {
     "home": "Accueil",
-    "activities": "Activites",
-    "newActivity": "Creer",
+    "activities": "Activités",
+    "newActivity": "Créer",
     "profile": "Profil",
     "signIn": "Connexion"
   },
   "home": {
     "title": "Next Fun",
     "tagline": "La prochaine sortie commence ici.",
-    "description": "Une plateforme pour organiser des activites et trouver des compagnons parmi les utilisateurs sinophones a l'etranger, en commencant par Paris.",
-    "browseActivities": "Voir les activites"
+    "description": "Une plateforme pour organiser des activités et trouver des compagnons parmi les utilisateurs sinophones à l'étranger, en commençant par Paris.",
+    "browseActivities": "Voir les activités"
   },
   "favorites": {
     "common": {
@@ -19,13 +19,13 @@
       "favoriting": "Ajout...",
       "unfavoriting": "Retrait...",
       "signInToFavorite": "Se connecter pour ajouter aux favoris",
-      "invalidRequest": "Requete invalide. Reessayez plus tard."
+      "invalidRequest": "Requête invalide. Réessayez plus tard."
     },
     "activity": {
-      "unavailable": "Cette activite est introuvable ou ne peut pas etre ajoutee aux favoris."
+      "unavailable": "Cette activité est introuvable ou ne peut pas être ajoutée aux favoris."
     },
     "publicEvent": {
-      "unavailable": "Cette activite est introuvable ou ne peut pas etre ajoutee aux favoris."
+      "unavailable": "Cet événement public est introuvable ou ne peut pas être ajouté aux favoris."
     }
   }
 }
