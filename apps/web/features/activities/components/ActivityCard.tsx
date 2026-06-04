@@ -79,6 +79,49 @@ function getCardFavoriteLabels(locale: string) {
   };
 }
 
+function getParticipationActionLabel(
+  locale: string,
+  status: ActivityCardViewModel["viewerParticipationStatus"],
+) {
+  if (status === "PENDING") {
+    if (locale === "fr") {
+      return "En attente";
+    }
+
+    if (locale === "en") {
+      return "Pending";
+    }
+
+    return "待审核";
+  }
+
+  if (status === "JOINED" || status === "APPROVED") {
+    if (locale === "fr") {
+      return "Inscrit";
+    }
+
+    if (locale === "en") {
+      return "Joined";
+    }
+
+    return "已报名";
+  }
+
+  return null;
+}
+
+function getFullActionLabel(locale: string) {
+  if (locale === "fr") {
+    return "Complet";
+  }
+
+  if (locale === "en") {
+    return "Full";
+  }
+
+  return "已满员";
+}
+
 export function ActivityCard({
   activity,
   isAuthenticated = false,
@@ -105,6 +148,11 @@ export function ActivityCard({
     isActivityInfo && displayStatus !== "ENDED" && displayStatus !== "CANCELLED"
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
+  const participationActionLabel = getParticipationActionLabel(
+    locale,
+    activity.viewerParticipationStatus ?? null,
+  );
+  const fullActionLabel = getFullActionLabel(locale);
   const primaryActionLabel = isActivityInfo
     ? locale === "fr"
       ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
@@ -122,6 +170,11 @@ export function ActivityCard({
       : locale === "en"
         ? "Join now"
         : "立刻报名";
+  const actionLabel =
+    participationActionLabel ??
+    (!isActivityInfo && displayStatus === "FULL"
+      ? fullActionLabel
+      : primaryActionLabel);
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -247,7 +300,7 @@ export function ActivityCard({
           }}
         >
           <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
-            {primaryActionLabel}
+            {actionLabel}
           </Button>
         </AnalyticsLink>
       </div>

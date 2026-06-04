@@ -746,8 +746,35 @@ async function attachJoinableActivityStates(
         viewerProfileId,
       ),
     ]);
+  const viewerParticipationByActivityId =
+    viewerProfileId && teamActivitiesWithState.length > 0
+      ? new Map(
+          (
+            await prisma.activityParticipant.findMany({
+              where: {
+                userProfileId: viewerProfileId,
+                activityId: {
+                  in: teamActivitiesWithState.map((activity) => activity.id),
+                },
+              },
+              select: {
+                activityId: true,
+                status: true,
+              },
+              orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
+            })
+          ).map((participation) => [participation.activityId, participation.status]),
+        )
+      : new Map<string, ActivityCardViewModel["viewerParticipationStatus"]>();
   const teamActivityById = new Map(
-    teamActivitiesWithState.map((activity) => [activity.id, activity]),
+    teamActivitiesWithState.map((activity) => [
+      activity.id,
+      {
+        ...activity,
+        viewerParticipationStatus:
+          viewerParticipationByActivityId.get(activity.id) ?? null,
+      },
+    ]),
   );
   const publicEventActivityById = new Map(
     publicEventActivitiesWithState.map((activity) => [activity.id, activity]),

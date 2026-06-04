@@ -84,11 +84,35 @@ async function decorateLobbyActivities(
         viewerProfileId,
       ),
     ]);
+  const viewerParticipationByActivityId = new Map(
+    (
+      await prisma.activityParticipant.findMany({
+        where: {
+          userProfileId: viewerProfileId,
+          activityId: {
+            in: teamActivitiesWithState.map((activity) => activity.id),
+          },
+        },
+        select: {
+          activityId: true,
+          status: true,
+        },
+        orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
+      })
+    ).map((participation) => [participation.activityId, participation.status]),
+  );
   const publicEventFavoriteById = new Map(
     publicEventActivitiesWithState.map((activity) => [activity.id, activity]),
   );
   const teamActivityById = new Map(
-    teamActivitiesWithState.map((activity) => [activity.id, activity]),
+    teamActivitiesWithState.map((activity) => [
+      activity.id,
+      {
+        ...activity,
+        viewerParticipationStatus:
+          viewerParticipationByActivityId.get(activity.id) ?? null,
+      },
+    ]),
   );
 
   return activities.map((activity) => {

@@ -30,6 +30,13 @@ export type ActivityCardViewModel = ActivitySummary & {
   publicEventId?: string | null;
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
+  viewerParticipationStatus?:
+    | "JOINED"
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED"
+    | "CANCELLED"
+    | null;
 };
 
 export type ActivityMerchantViewModel = {
