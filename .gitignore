@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # System files
 .DS_Store
+
+# Local source frames for generated loading assets
+apps/web/public/loading_frames/

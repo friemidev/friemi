@@ -18,3 +18,5 @@ build
 out
 *.log
 *.tsbuildinfo
+
+apps/web/public/loading_frames/
