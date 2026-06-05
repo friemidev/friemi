@@ -101,17 +101,166 @@ type ActivityLobbySectionProps = {
   activities: ActivityCardViewModel[];
   description: string;
   emptyDescription: string;
+  id: LobbyFilterId;
   locale: string;
   title: string;
 };
+
+type SectionFilterId = "all" | "team" | "publicEvent" | "upcoming" | "past";
+
+type SectionFilterOption = {
+  id: SectionFilterId;
+  count: number;
+  label: string;
+};
+
+function isPublicEventCard(activity: ActivityCardViewModel) {
+  return activity.type === "PUBLIC_EVENT" || Boolean(activity.isActivityInfo);
+}
+
+function isPastActivity(activity: ActivityCardViewModel, now = new Date()) {
+  const endAt = activity.endAt ? new Date(activity.endAt) : null;
+  const startAt = new Date(activity.startAt);
+
+  return (endAt ?? startAt).getTime() < now.getTime();
+}
+
+function getSectionFilterLabel(locale: string, id: SectionFilterId) {
+  if (locale === "fr") {
+    switch (id) {
+      case "team":
+        return "Plans";
+      case "publicEvent":
+        return "Public";
+      case "upcoming":
+        return "A venir";
+      case "past":
+        return "Passees";
+      default:
+        return "Tout";
+    }
+  }
+
+  if (locale === "en") {
+    switch (id) {
+      case "team":
+        return "Plans";
+      case "publicEvent":
+        return "Public";
+      case "upcoming":
+        return "Upcoming";
+      case "past":
+        return "Past";
+      default:
+        return "All";
+    }
+  }
+
+  switch (id) {
+    case "team":
+      return "组队";
+    case "publicEvent":
+      return "公共活动";
+    case "upcoming":
+      return "待完成";
+    case "past":
+      return "已过期";
+    default:
+      return "全部";
+  }
+}
+
+function getSectionEmptyFilterDescription(locale: string) {
+  if (locale === "fr") {
+    return "Aucun contenu ne correspond a ce filtre pour le moment.";
+  }
+
+  if (locale === "en") {
+    return "Nothing matches this filter yet.";
+  }
+
+  return "这个筛选下暂时没有内容。";
+}
+
+function filterSectionActivities(
+  activities: ActivityCardViewModel[],
+  filterId: SectionFilterId,
+) {
+  if (filterId === "team") {
+    return activities.filter((activity) => !isPublicEventCard(activity));
+  }
+
+  if (filterId === "publicEvent") {
+    return activities.filter(isPublicEventCard);
+  }
+
+  if (filterId === "upcoming") {
+    return activities.filter((activity) => !isPastActivity(activity));
+  }
+
+  if (filterId === "past") {
+    return activities.filter((activity) => isPastActivity(activity));
+  }
+
+  return activities;
+}
+
+function getSectionFilterOptions(
+  activities: ActivityCardViewModel[],
+  locale: string,
+  sectionId: LobbyFilterId,
+): SectionFilterOption[] {
+  const now = new Date();
+  const filterIds: SectionFilterId[] = ["all"];
+
+  if (sectionId === "favorites") {
+    filterIds.push("team", "publicEvent");
+  }
+
+  filterIds.push("upcoming", "past");
+
+  return filterIds.map((id) => ({
+    id,
+    count:
+      id === "team"
+        ? activities.filter((activity) => !isPublicEventCard(activity)).length
+        : id === "publicEvent"
+          ? activities.filter(isPublicEventCard).length
+          : id === "upcoming"
+            ? activities.filter((activity) => !isPastActivity(activity, now))
+                .length
+            : id === "past"
+              ? activities.filter((activity) => isPastActivity(activity, now))
+                  .length
+              : activities.length,
+    label: getSectionFilterLabel(locale, id),
+  }));
+}
 
 function ActivityLobbySection({
   activities,
   description,
   emptyDescription,
+  id,
   locale,
   title,
 }: ActivityLobbySectionProps) {
+  const initialSectionFilter = activities.some(
+    (activity) => !isPastActivity(activity),
+  )
+    ? "upcoming"
+    : "all";
+  const [activeSectionFilter, setActiveSectionFilter] =
+    useState<SectionFilterId>(initialSectionFilter);
+  const sectionFilterOptions = useMemo(
+    () => getSectionFilterOptions(activities, locale, id),
+    [activities, id, locale],
+  );
+  const filteredActivities = useMemo(
+    () => filterSectionActivities(activities, activeSectionFilter),
+    [activities, activeSectionFilter],
+  );
+
   return (
     <section className="space-y-4 rounded-[1.75rem] border border-black/8 bg-white/78 p-4 shadow-sm shadow-black/5 sm:p-5">
       <div className="flex items-start justify-between gap-4">
@@ -127,9 +276,43 @@ function ActivityLobbySection({
               : "bg-zinc-100 text-zinc-500",
           )}
         >
-          {activities.length}
+          {filteredActivities.length}
         </span>
       </div>
+
+      {activities.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {sectionFilterOptions.map((option) => {
+            const active = option.id === activeSectionFilter;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setActiveSectionFilter(option.id)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                  active
+                    ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
+                    : "border-[#e7dfcf] bg-[#fffaf2] text-[#776b5f] hover:border-[#d7ccb5]",
+                )}
+              >
+                <span>{option.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                    active
+                      ? "bg-white/70 text-[#76552a]"
+                      : "bg-[#f4ecde] text-[#8a7455]",
+                  )}
+                >
+                  {option.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {activities.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-200 bg-paper/65 px-4 py-6">
@@ -140,9 +323,18 @@ function ActivityLobbySection({
             {emptyDescription}
           </p>
         </div>
+      ) : filteredActivities.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-zinc-200 bg-paper/65 px-4 py-6">
+          <p className="text-sm font-semibold text-zinc-700">
+            {getCopy(locale).activityLobby.emptySectionTitle}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            {getSectionEmptyFilterDescription(locale)}
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {activities.map((activity) => (
+          {filteredActivities.map((activity) => (
             <ActivityCard
               key={activity.id}
               activity={activity}
@@ -517,6 +709,7 @@ export function ActivityLobbyView({
           activities={section.activities}
           description={section.description}
           emptyDescription={section.emptyDescription}
+          id={section.id}
           locale={locale}
           title={section.title}
         />
