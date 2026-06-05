@@ -232,7 +232,7 @@ function getCopy(locale: string) {
     actionUsers: "活跃用户",
     activityDiscovery: "活动发现",
     activityDiscoveryDescription: "活动卡片是否吸引用户点开。",
-    activityInfo: "活动信息位",
+    activityInfo: "活动信息",
     activityInfoDescription: "公共活动是否真的促成组队。",
     activityRankActivity: "组队",
     activityRankEmpty: "有足够浏览和互动后，这里会显示热门内容。",

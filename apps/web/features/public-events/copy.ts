@@ -185,7 +185,7 @@ export function getPublicEventCopy(locale: string) {
     noTeamsEndedDescription: "这个活动已经结束，暂时没有历史车队。",
     noTeamsUnavailableDescription: "这个活动已不可用，暂时没有历史车队。",
     noTeamsCta: "发起第一个组局",
-    publicEventRuleTitle: "活动信息位",
+    publicEventRuleTitle: "活动信息",
     publicEventRuleDescription:
       "这里展示的是活动本身。想和平台用户一起去，请加入下方车队，或发起自己的组局。",
     teamCount: (count: number) =>
