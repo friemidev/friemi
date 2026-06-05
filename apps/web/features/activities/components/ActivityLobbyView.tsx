@@ -598,49 +598,44 @@ export function ActivityLobbyView({
       : emptyLobbyActions;
 
   return (
-    <div className="space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-[#e0d4bf] bg-[radial-gradient(circle_at_top_left,_rgba(210,181,122,0.14),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(136,157,151,0.1),_transparent_30%),linear-gradient(135deg,rgba(255,250,244,0.98),rgba(244,236,223,0.95))] px-5 py-6 shadow-[0_10px_26px_rgba(94,80,52,0.05)] sm:px-7 sm:py-8">
-        <div className="mx-auto min-w-0 max-w-3xl text-center">
-          <h1 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
-            {t.title}
-          </h1>
-          <p className="mt-3 text-base leading-7 text-zinc-600 sm:text-lg">
+    <div className="space-y-6">
+      <section className="space-y-3 text-center">
+        <div className="mx-auto max-w-3xl">
+          <p className="text-sm leading-6 text-zinc-600">
             {t.description}
           </p>
-          </div>
+        </div>
 
-        <div className="mx-auto mt-6 max-w-4xl">
-          <div className="rounded-[1.5rem] border border-[#e3d9c7] bg-[rgba(255,251,245,0.78)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-              {filterOptions.map((option) => {
-                const active = option.id === activeFilter;
-                const palette = lobbyFilterStyles[option.id];
+        <div className="px-1 pb-1">
+          <div className="mx-auto grid max-w-[22rem] grid-cols-3 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
+            {filterOptions.map((option) => {
+              const active = option.id === activeFilter;
+              const palette = lobbyFilterStyles[option.id];
 
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setActiveFilter(option.id)}
-                    className={cn(
-                      "inline-flex min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-1.5 text-[11px] font-medium whitespace-nowrap transition sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm",
-                      active ? palette.active : palette.idle,
-                    )}
-                  >
-                    <span className="truncate">{option.label}</span>
-                    {typeof option.count === "number" ? (
-                      <span
-                        className={cn(
-                          "rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
-                          active ? palette.badge : palette.idleBadge,
-                        )}
-                      >
-                        {option.count}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setActiveFilter(option.id)}
+                  className={cn(
+                    "inline-flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1.5 text-xs font-medium transition sm:px-3.5 sm:py-2 sm:text-sm",
+                    active ? palette.active : palette.idle,
+                  )}
+                >
+                  <span className="truncate">{option.label}</span>
+                  {typeof option.count === "number" ? (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
+                        active ? palette.badge : palette.idleBadge,
+                      )}
+                    >
+                      {option.count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
