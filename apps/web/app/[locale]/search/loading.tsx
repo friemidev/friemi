@@ -1,10 +1,14 @@
 import { Search } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { LocalizedBrandLoader } from "@/components/ui/LocalizedBrandLoader";
 
 export default function SearchLoading() {
   return (
     <PageContainer className="space-y-6 py-5 sm:py-8">
       <div className="space-y-4">
+        <div className="flex justify-center py-2">
+          <LocalizedBrandLoader size="sm" showLabel />
+        </div>
         <div className="space-y-3">
           <span className="inline-flex h-7 w-28 animate-pulse rounded-full bg-white/75 ring-1 ring-black/10" />
           <div className="h-9 w-56 animate-pulse rounded-md bg-white/70" />
