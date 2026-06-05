@@ -601,6 +601,7 @@ export function ActivityLobbyView({
     <div className="space-y-6">
       <section className="space-y-3 text-center">
         <div className="mx-auto max-w-3xl">
+          <h1 className="sr-only">{t.title}</h1>
           <p className="text-sm leading-6 text-zinc-600">
             {t.description}
           </p>
