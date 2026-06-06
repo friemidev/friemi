@@ -90,8 +90,11 @@ export default async function ActivityDetailPage({
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
-  const [activity, viewerProfile] = await perf.measure("activity.primary", () =>
-    Promise.all([getActivityById(activityId), getOptionalCurrentUserProfile()]),
+  const viewerProfile = await perf.measure("activity.viewerProfile", () =>
+    getOptionalCurrentUserProfile(),
+  );
+  const activity = await perf.measure("activity.primary", () =>
+    getActivityById(activityId, viewerProfile?.id ?? null),
   );
 
   if (!activity) {
@@ -412,7 +415,7 @@ export default async function ActivityDetailPage({
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
       getViewerFollowState(viewerProfile?.id, activity.organizer.id),
       getViewerActivityFavorite(activity.id, viewerProfile?.id),
-      getActivityComments(activity.id),
+      getActivityComments(activity.id, viewerProfile?.id ?? null),
       getActivityFriendSignal(activity.id, viewerProfile?.id),
     ]),
   );
@@ -437,6 +440,10 @@ export default async function ActivityDetailPage({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
+  const activityVisibilityLabel =
+    activity.visibility === "PRIVATE"
+      ? t.activityDetail.visibilityPrivate
+      : t.activityDetail.visibilityPublic;
   const [pendingParticipants, analyticsSummary] = await perf.measure(
     "activity.organizerData",
     () =>
@@ -681,6 +688,15 @@ export default async function ActivityDetailPage({
               </span>
               <span className="min-w-0 break-words text-right font-medium text-ink">
                 {getTypeLabel(activity.type, locale)}
+              </span>
+            </p>
+            <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
+                <UsersRound className="h-4 w-4 shrink-0" />
+                {t.activityDetail.visibility}
+              </span>
+              <span className="min-w-0 break-words text-right font-medium text-ink">
+                {activityVisibilityLabel}
               </span>
             </p>
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">

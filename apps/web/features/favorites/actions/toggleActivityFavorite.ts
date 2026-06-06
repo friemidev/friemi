@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, type ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +16,11 @@ const toggleActivityFavoriteSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   redirectPath: z.string().min(1),
 });
+const favoriteVisibleParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+  "PENDING",
+];
 
 export type ToggleActivityFavoriteState = {
   formError?: string;
@@ -84,13 +91,43 @@ export async function toggleActivityFavoriteAction(
     namespace: "favorites.activity",
   });
   const viewerProfileId = await getViewerProfileId(locale);
+  const friendIds = await getViewerFriendIds(viewerProfileId);
   const activity = await prisma.activity.findFirst({
     where: {
       id: activityId,
-      visibility: "PUBLIC",
       organizer: {
         status: "ACTIVE",
       },
+      OR: [
+        {
+          visibility: {
+            in: publicActivityVisibility,
+          },
+        },
+        {
+          organizerId: viewerProfileId,
+        },
+        {
+          participants: {
+            some: {
+              userProfileId: viewerProfileId,
+              status: {
+                in: favoriteVisibleParticipationStatuses,
+              },
+            },
+          },
+        },
+        ...(friendIds.length > 0
+          ? [
+              {
+                AND: [
+                  { visibility: "PRIVATE" as const },
+                  { organizerId: { in: friendIds } },
+                ],
+              },
+            ]
+          : []),
+      ],
     },
     select: {
       id: true,

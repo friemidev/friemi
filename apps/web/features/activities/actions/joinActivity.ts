@@ -24,7 +24,10 @@ const existingParticipantStatuses: ParticipantStatus[] = [
   "PENDING",
 ];
 const joinableActivityStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
-const joinableActivityVisibility: ActivityVisibility[] = ["PUBLIC"];
+const joinableActivityVisibility: ActivityVisibility[] = [
+  "PUBLIC",
+  "PRIVATE",
+];
 const activeOrganizerStatuses: UserProfileStatus[] = ["ACTIVE"];
 
 const joinActivitySchema = z.object({
@@ -199,6 +202,36 @@ export async function joinActivityAction(
             "活动不存在或已不可见。",
             "activity_unavailable",
           );
+        }
+
+        if (
+          activity.visibility === "PRIVATE" &&
+          activity.organizerId !== profile.id
+        ) {
+          const friendship = await tx.friendship.findFirst({
+            where: {
+              OR: [
+                {
+                  userAId: profile.id,
+                  userBId: activity.organizerId,
+                },
+                {
+                  userAId: activity.organizerId,
+                  userBId: profile.id,
+                },
+              ],
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          if (!friendship) {
+            return getJoinFailure(
+              "这是私人局，仅发起人的好友可以报名。",
+              "activity_unavailable",
+            );
+          }
         }
 
         if (activity.organizerId === profile.id) {

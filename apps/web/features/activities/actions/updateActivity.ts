@@ -207,6 +207,7 @@ export async function updateActivityAction(
           coverImageUrl: result.data.coverImageUrl,
           type: result.data.type,
           category: result.data.category,
+          visibility: result.data.visibility,
           city: result.data.city,
           destination: result.data.destination,
           address: result.data.address,

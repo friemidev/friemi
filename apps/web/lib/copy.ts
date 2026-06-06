@@ -149,6 +149,9 @@ const copy = {
       emptyDescription:
         "公园？逛展？还是看电影？先组个局，去逛逛活动，再加几个好友吧。",
       emptySectionTitle: "从这里开始吧",
+      openTitle: "开放局",
+      openDescription: "所有登录用户都能看到的公开车队，适合找新搭子。",
+      openEmptyDescription: "暂时没有开放局。可以先从活动详情页发起一个。",
       createdTitle: "我发起的",
       createdDescription: "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
       createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
@@ -214,6 +217,9 @@ const copy = {
       contactOrganizer: "联系发起人",
       contactOrganizerHint: "活动前有问题，可以直接确认。",
       type: "活动类型",
+      visibility: "可见范围",
+      visibilityPublic: "开放局",
+      visibilityPrivate: "私人局",
       destination: "目的地",
       participants: "已报名",
       minParticipants: "最少成团",
@@ -611,6 +617,11 @@ const copy = {
         "按巴黎时间保存。若填写结束时间且晚于现在，开始时间可早于当前时间。",
       endAt: "结束时间",
       endAtHint: "可选；填写时必须晚于开始时间。",
+      visibilityTitle: "谁可以看到这个局",
+      visibilityPublic: "开放局",
+      visibilityPublicHint: "会出现在组队大厅，登录用户都可以看到并申请加入。",
+      visibilityPrivate: "私人局",
+      visibilityPrivateHint: "只对你的好友可见，适合先和熟人约局。",
       peoplePrice: "人数和费用",
       capacityLimitToggle: "限制车队人数",
       capacityLimitHint: "默认不限制人数；需要控制名额时再开启。",
@@ -814,6 +825,11 @@ const copy = {
       emptyDescription:
         "Start a plan, discover activities, or add a few friends.",
       emptySectionTitle: "Begin here",
+      openTitle: "Open crews",
+      openDescription:
+        "Public crews visible to signed-in users. Good for meeting new people.",
+      openEmptyDescription:
+        "No open crews yet. Start one from an activity detail page.",
       createdTitle: "Created by me",
       createdDescription:
         "When you want to start a plan, begin here. The activities you create will show up in this section.",
@@ -890,6 +906,9 @@ const copy = {
       contactOrganizer: "Message organizer",
       contactOrganizerHint: "Ask before joining or heading out.",
       type: "Type",
+      visibility: "Visibility",
+      visibilityPublic: "Open crew",
+      visibilityPrivate: "Private crew",
       destination: "Destination",
       participants: "Joined",
       minParticipants: "Minimum group",
@@ -1316,6 +1335,13 @@ const copy = {
         "Saved in Paris time. If the end time is in the future, the start time may be in the past.",
       endAt: "End time",
       endAtHint: "Optional. Must be after the start time when filled.",
+      visibilityTitle: "Who can see this crew",
+      visibilityPublic: "Open crew",
+      visibilityPublicHint:
+        "Shown in the team lobby. Signed-in users can see it and request to join.",
+      visibilityPrivate: "Private crew",
+      visibilityPrivateHint:
+        "Only your friends can see it. Best for plans with people you know.",
       peoplePrice: "People and cost",
       capacityLimitToggle: "Limit crew size",
       capacityLimitHint:
@@ -1527,6 +1553,11 @@ const copy = {
       emptyDescription:
         "Lancez un plan, découvrez des activités ou ajoutez quelques amis.",
       emptySectionTitle: "Commencez par ici",
+      openTitle: "Groupes ouverts",
+      openDescription:
+        "Groupes visibles par les utilisateurs connectés, pratiques pour rencontrer de nouvelles personnes.",
+      openEmptyDescription:
+        "Aucun groupe ouvert pour le moment. Lancez-en un depuis une page d'activité.",
       createdTitle: "Créées par moi",
       createdDescription:
         "Quand vous voulez lancer un plan, commencez ici. Les activités que vous créez apparaîtront dans cette section.",
@@ -1604,6 +1635,9 @@ const copy = {
       contactOrganizer: "Contacter l'organisateur",
       contactOrganizerHint: "Posez vos questions avant de rejoindre.",
       type: "Type",
+      visibility: "Visibilité",
+      visibilityPublic: "Groupe ouvert",
+      visibilityPrivate: "Groupe privé",
       destination: "Destination",
       participants: "Inscrits",
       minParticipants: "Minimum",
@@ -2051,6 +2085,13 @@ const copy = {
         "Heure de Paris. Si la fin est dans le futur, le début peut être dans le passé.",
       endAt: "Fin",
       endAtHint: "Facultatif. Si renseignée, doit être après le début.",
+      visibilityTitle: "Qui peut voir ce groupe",
+      visibilityPublic: "Groupe ouvert",
+      visibilityPublicHint:
+        "Visible dans le hall d'équipe. Les utilisateurs connectés peuvent le voir et demander à rejoindre.",
+      visibilityPrivate: "Groupe privé",
+      visibilityPrivateHint:
+        "Visible uniquement par vos amis. Pratique pour organiser avec des proches.",
       peoplePrice: "Places et coût",
       capacityLimitToggle: "Limiter le nombre de places",
       capacityLimitHint:

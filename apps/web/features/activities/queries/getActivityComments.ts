@@ -1,9 +1,17 @@
-import type { Prisma } from "@prisma/client";
+import type { ParticipantStatus, Prisma } from "@prisma/client";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { prisma } from "@/lib/prisma";
 import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
 } from "../types";
+import { publicActivityVisibility } from "./getActivities";
+
+const visibleCommentParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+  "PENDING",
+];
 
 const activityCommentSelect = {
   id: true,
@@ -91,12 +99,55 @@ function getActivityCommentViewModel(
 
 export async function getActivityComments(
   activityId: string,
+  viewerProfileId?: string | null,
 ): Promise<ActivityCommentViewModel[]> {
+  const friendIds = viewerProfileId
+    ? await getViewerFriendIds(viewerProfileId)
+    : [];
+  const activityAccessWhere: Prisma.ActivityWhereInput = viewerProfileId
+    ? {
+        OR: [
+          {
+            visibility: {
+              in: publicActivityVisibility,
+            },
+          },
+          {
+            organizerId: viewerProfileId,
+          },
+          {
+            participants: {
+              some: {
+                userProfileId: viewerProfileId,
+                status: {
+                  in: visibleCommentParticipationStatuses,
+                },
+              },
+            },
+          },
+          ...(friendIds.length > 0
+            ? [
+                {
+                  AND: [
+                    { visibility: "PRIVATE" as const },
+                    { organizerId: { in: friendIds } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      }
+    : {
+        visibility: {
+          in: publicActivityVisibility,
+        },
+      };
+
   const comments = await prisma.comment.findMany({
     where: {
       activityId,
       activity: {
-        visibility: "PUBLIC",
+        ...activityAccessWhere,
         organizer: {
           status: "ACTIVE",
         },

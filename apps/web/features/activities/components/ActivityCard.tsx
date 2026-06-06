@@ -54,6 +54,33 @@ function getCardKindLabel(isActivityInfo: boolean, locale: string) {
   return isActivityInfo ? "活动信息" : "车队";
 }
 
+function getCardVisibilityLabel(
+  visibility: ActivityCardViewModel["visibility"],
+  locale: string,
+) {
+  if (visibility === "PRIVATE") {
+    if (locale === "fr") {
+      return "Prive";
+    }
+
+    if (locale === "en") {
+      return "Private";
+    }
+
+    return "私人局";
+  }
+
+  if (locale === "fr") {
+    return "Ouvert";
+  }
+
+  if (locale === "en") {
+    return "Open";
+  }
+
+  return "开放局";
+}
+
 function getCardFavoriteLabels(locale: string) {
   if (locale === "fr") {
     return {
@@ -235,6 +262,11 @@ export function ActivityCard({
             <span className="rounded-md bg-white/85 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
               {getCardKindLabel(isActivityInfo, locale)}
             </span>
+            {!isActivityInfo ? (
+              <span className="rounded-md bg-white/85 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
+                {getCardVisibilityLabel(activity.visibility, locale)}
+              </span>
+            ) : null}
           </div>
           <div className="relative flex shrink-0 flex-col items-end gap-2 rounded-xl bg-black/18 p-1.5 ring-1 ring-white/10 backdrop-blur-sm">
             {!isActivityInfo ? (

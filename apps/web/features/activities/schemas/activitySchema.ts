@@ -6,6 +6,7 @@ import { nonEmptyString } from "@/lib/validations";
 export const MAX_ACTIVITY_DESCRIPTION_LENGTH = 3000;
 
 const createActivityTypes = ["LOCAL", "TRIP"] as const;
+const activityVisibilityValues = ["PUBLIC", "PRIVATE"] as const;
 const activityCategoryValues = Object.keys(activityCategories) as [
   keyof typeof activityCategories,
   ...(keyof typeof activityCategories)[],
@@ -67,6 +68,7 @@ export const createActivitySchema = z
     coverImageUrl: optionalImageUrl,
     type: z.enum(createActivityTypes),
     category: z.enum(activityCategoryValues),
+    visibility: z.enum(activityVisibilityValues).default("PUBLIC"),
     otherCategoryText: optionalShortText,
     city: nonEmptyString.default("Paris"),
     destination: optionalText,

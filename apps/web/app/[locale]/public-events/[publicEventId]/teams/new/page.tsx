@@ -68,6 +68,7 @@ function getInitialValues(
     coverImageUrl: publicEvent.coverImageUrl ?? "",
     type: "LOCAL",
     category: publicEvent.category,
+    visibility: "PUBLIC",
     otherCategoryText: publicEvent.category === "OTHER" ? t.detailSource : "",
     city: publicEvent.city,
     destination: "",

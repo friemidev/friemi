@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import type { ActivityStatus, Prisma } from "@prisma/client";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import type { ActivityStatus, ParticipantStatus, Prisma } from "@prisma/client";
 import type { ActivityDetailViewModel } from "../types";
 import {
   activityCardSelect,
@@ -15,6 +16,11 @@ const detailActivityStatuses: ActivityStatus[] = [
   "CONFIRMED",
   "ENDED",
   "CANCELLED",
+];
+const visibleDetailParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+  "PENDING",
 ];
 
 const activityDetailSelect = {
@@ -79,6 +85,7 @@ function getActivityDetailViewModel(
     participantCount: isActivityInfo ? 0 : activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
+    visibility: activity.visibility,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -112,16 +119,57 @@ function getActivityDetailViewModel(
 
 export async function getActivityById(
   activityId: string,
+  viewerProfileId?: string | null,
 ): Promise<ActivityDetailViewModel | null> {
+  const friendIds = viewerProfileId
+    ? await getViewerFriendIds(viewerProfileId)
+    : [];
+  const accessWhere: Prisma.ActivityWhereInput = viewerProfileId
+    ? {
+        OR: [
+          {
+            visibility: {
+              in: publicActivityVisibility,
+            },
+          },
+          {
+            organizerId: viewerProfileId,
+          },
+          {
+            participants: {
+              some: {
+                userProfileId: viewerProfileId,
+                status: {
+                  in: visibleDetailParticipationStatuses,
+                },
+              },
+            },
+          },
+          ...(friendIds.length > 0
+            ? [
+                {
+                  AND: [
+                    { visibility: "PRIVATE" as const },
+                    { organizerId: { in: friendIds } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      }
+    : {
+        visibility: {
+          in: publicActivityVisibility,
+        },
+      };
+
   const activity = await prisma.activity.findFirst({
     where: {
       id: activityId,
       status: {
         in: detailActivityStatuses,
       },
-      visibility: {
-        in: publicActivityVisibility,
-      },
+      ...accessWhere,
       organizer: {
         status: "ACTIVE",
       },

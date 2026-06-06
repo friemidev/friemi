@@ -9,6 +9,7 @@ import type { ActivityCardViewModel } from "../types";
 import { ActivityCard } from "./ActivityCard";
 
 type ActivityLobbyViewProps = {
+  openActivities: ActivityCardViewModel[];
   createdActivities: ActivityCardViewModel[];
   joinedActivities: ActivityCardViewModel[];
   favoriteActivities: ActivityCardViewModel[];
@@ -19,6 +20,7 @@ type ActivityLobbyViewProps = {
 
 type LobbyFilterId =
   | "all"
+  | "open"
   | "created"
   | "joined"
   | "favorites"
@@ -54,6 +56,14 @@ const lobbyFilterStyles: Record<
     idle:
       "border-[#e7dfcf] bg-[rgba(255,252,246,0.94)] text-[#766b5d] hover:border-[#d7ccb5] hover:text-[#6d675c]",
     idleBadge: "bg-[#f4ecde] text-[#957d56]",
+  },
+  open: {
+    active:
+      "border-[#c5d0a7] bg-[linear-gradient(135deg,rgba(236,242,220,0.98),rgba(222,233,196,0.95))] text-[#64713c] shadow-[0_3px_8px_rgba(122,143,79,0.11)]",
+    badge: "bg-[rgba(250,253,242,0.82)] text-[#6f7f46]",
+    idle:
+      "border-[#e7dfcf] bg-[rgba(255,252,246,0.94)] text-[#766b5d] hover:border-[#c6d1a8] hover:text-[#6f7f46]",
+    idleBadge: "bg-[#edf3dc] text-[#7f8d53]",
   },
   created: {
     active:
@@ -366,6 +376,8 @@ function getAllLabel(locale: string) {
 function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
   if (locale === "fr") {
     switch (id) {
+      case "open":
+        return "Ouverts";
       case "created":
         return "Creees";
       case "joined":
@@ -383,6 +395,8 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
 
   if (locale === "en") {
     switch (id) {
+      case "open":
+        return "Open";
       case "created":
         return "Hosted by me";
       case "joined":
@@ -399,6 +413,8 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
   }
 
   switch (id) {
+    case "open":
+      return "开放局";
     case "created":
       return "我发起的";
     case "joined":
@@ -646,6 +662,7 @@ export function ActivityLobbyPreviewView({
 }
 
 export function ActivityLobbyView({
+  openActivities,
   createdActivities,
   joinedActivities,
   favoriteActivities,
@@ -656,6 +673,13 @@ export function ActivityLobbyView({
   const t = getCopy(locale).activityLobby;
   const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
   const sections = [
+    {
+      id: "open" as const,
+      activities: openActivities,
+      description: t.openDescription,
+      emptyDescription: t.openEmptyDescription,
+      title: t.openTitle,
+    },
     {
       id: "created" as const,
       activities: createdActivities,

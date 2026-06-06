@@ -13,8 +13,10 @@ import {
   activityCardSelect,
   getActivityCoverTone,
   getActivityCardViewModel,
+  getLegacyPublicActivityInfoWhere,
   getVisibleActivityWhere,
 } from "./getActivities";
+import type { Prisma } from "@prisma/client";
 
 const activityLobbySectionLimit = 6;
 const visibleLobbyParticipationStatuses = ["JOINED", "APPROVED", "PENDING"] as const;
@@ -40,6 +42,7 @@ const lobbyPublicEventFavoriteSelect = {
 } as const;
 
 type ActivityLobbyViewModel = {
+  openActivities: ActivityCardViewModel[];
   createdActivities: ActivityCardViewModel[];
   joinedActivities: ActivityCardViewModel[];
   favoriteActivities: ActivityCardViewModel[];
@@ -152,6 +155,7 @@ function mapPublicEventToActivityCard(
     participantCount: publicEvent.teamCount,
     priceText: publicEvent.priceText ?? "",
     status: "RECRUITING",
+    visibility: "PUBLIC",
     coverTone: getActivityCoverTone(publicEvent.id),
     isActivityInfo: true,
     officialUrl: publicEvent.officialUrl,
@@ -214,9 +218,51 @@ export async function getActivityLobby(
   const visibleWhere = getVisibleActivityWhere({
     includeEnded: true,
     includePast: true,
+    visibility: null,
   });
+  const openVisibleWhere = getVisibleActivityWhere({
+    includeEnded: false,
+    includePast: false,
+    visibility: null,
+  });
+  const accessibleWhere: Prisma.ActivityWhereInput = {
+    AND: [
+      visibleWhere,
+      {
+        OR: [
+          {
+            visibility: "PUBLIC",
+          },
+          {
+            organizerId: viewerProfileId,
+          },
+          {
+            participants: {
+              some: {
+                userProfileId: viewerProfileId,
+                status: {
+                  in: [...visibleLobbyParticipationStatuses],
+                },
+              },
+            },
+          },
+          ...(friendIds.length > 0
+            ? [
+                {
+                  AND: [
+                    { visibility: "PRIVATE" as const },
+                    { organizerId: { in: friendIds } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
+  };
 
   const [
+    openActivities,
     createdActivities,
     joinedParticipations,
     favoriteRecords,
@@ -224,6 +270,18 @@ export async function getActivityLobby(
     friendHostedActivities,
     friendJoinedParticipations,
   ] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        AND: [
+          openVisibleWhere,
+          { visibility: "PUBLIC" },
+          { NOT: getLegacyPublicActivityInfoWhere() },
+        ],
+      },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: activityLobbySectionLimit * 5,
+      select: activityCardSelect,
+    }),
     prisma.activity.findMany({
       where: {
         AND: [visibleWhere, { organizerId: viewerProfileId }],
@@ -247,7 +305,7 @@ export async function getActivityLobby(
     prisma.activityFavorite.findMany({
       where: {
         userProfileId: viewerProfileId,
-        activity: visibleWhere,
+        activity: accessibleWhere,
       },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: activityLobbySectionLimit,
@@ -285,7 +343,7 @@ export async function getActivityLobby(
             status: {
               in: [...visibleLobbyParticipationStatuses],
             },
-            activity: visibleWhere,
+            activity: accessibleWhere,
           },
           orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
           take: activityLobbySectionLimit * 2,
@@ -294,6 +352,10 @@ export async function getActivityLobby(
       : Promise.resolve([]),
   ]);
 
+  const openActivityCards = openActivities
+    .map(getActivityCardViewModel)
+    .filter(isJoinableTeamCard)
+    .slice(0, activityLobbySectionLimit);
   const joinedActivities = joinedParticipations
     .map((item) => getActivityCardViewModel(item.activity))
     .filter(isJoinableTeamCard);
@@ -339,6 +401,7 @@ export async function getActivityLobby(
     getActivityCardViewModel,
   );
   const [
+    decoratedOpenActivities,
     decoratedCreatedActivities,
     decoratedJoinedActivities,
     decoratedFavoriteActivities,
@@ -346,6 +409,7 @@ export async function getActivityLobby(
     decoratedFriendJoinedActivities,
   ] = await decorateLobbyActivitySections(
     [
+      openActivityCards,
       createdActivityCards,
       joinedActivities,
       mergedFavoriteActivities,
@@ -356,6 +420,7 @@ export async function getActivityLobby(
   );
 
   return {
+    openActivities: decoratedOpenActivities,
     createdActivities: decoratedCreatedActivities,
     joinedActivities: decoratedJoinedActivities,
     favoriteActivities: decoratedFavoriteActivities,

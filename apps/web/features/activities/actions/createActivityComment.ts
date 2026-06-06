@@ -1,15 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ActivityStatus, CommentType } from "@prisma/client";
+import type {
+  ActivityStatus,
+  CommentType,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { publicActivityVisibility } from "../queries/getActivities";
 
 const commentableActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -17,6 +24,11 @@ const commentableActivityStatuses: ActivityStatus[] = [
   "RECRUITING",
   "CONFIRMED",
   "ENDED",
+];
+const visibleCommentParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+  "PENDING",
 ];
 
 const createActivityCommentSchema = z.object({
@@ -69,6 +81,53 @@ const defaultValues: NonNullable<CreateActivityCommentState["values"]> = {
   content: "",
 };
 
+async function getCommentableActivityWhere(
+  activityId: string,
+  viewerProfileId: string,
+): Promise<Prisma.ActivityWhereInput> {
+  const friendIds = await getViewerFriendIds(viewerProfileId);
+
+  return {
+    id: activityId,
+    status: {
+      in: commentableActivityStatuses,
+    },
+    organizer: {
+      status: "ACTIVE",
+    },
+    OR: [
+      {
+        visibility: {
+          in: publicActivityVisibility,
+        },
+      },
+      {
+        organizerId: viewerProfileId,
+      },
+      {
+        participants: {
+          some: {
+            userProfileId: viewerProfileId,
+            status: {
+              in: visibleCommentParticipationStatuses,
+            },
+          },
+        },
+      },
+      ...(friendIds.length > 0
+        ? [
+            {
+              AND: [
+                { visibility: "PRIVATE" as const },
+                { organizerId: { in: friendIds } },
+              ],
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -103,16 +162,10 @@ export async function createActivityCommentAction(
   try {
     const profile = await ensureCurrentUserProfile(result.data.locale);
     const activity = await prisma.activity.findFirst({
-      where: {
-        id: result.data.activityId,
-        visibility: "PUBLIC",
-        status: {
-          in: commentableActivityStatuses,
-        },
-        organizer: {
-          status: "ACTIVE",
-        },
-      },
+      where: await getCommentableActivityWhere(
+        result.data.activityId,
+        profile.id,
+      ),
       select: {
         id: true,
         organizerId: true,
@@ -274,12 +327,10 @@ export async function updateActivityCommentAction(
         activityId: result.data.activityId,
         authorId: profile.id,
         deletedAt: null,
-        activity: {
-          visibility: "PUBLIC",
-          organizer: {
-            status: "ACTIVE",
-          },
-        },
+        activity: await getCommentableActivityWhere(
+          result.data.activityId,
+          profile.id,
+        ),
       },
       select: {
         id: true,
@@ -353,12 +404,10 @@ export async function deleteActivityCommentAction(
         activityId: result.data.activityId,
         authorId: profile.id,
         deletedAt: null,
-        activity: {
-          visibility: "PUBLIC",
-          organizer: {
-            status: "ACTIVE",
-          },
-        },
+        activity: await getCommentableActivityWhere(
+          result.data.activityId,
+          profile.id,
+        ),
       },
       select: {
         id: true,

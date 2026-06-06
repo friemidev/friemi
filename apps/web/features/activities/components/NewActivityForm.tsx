@@ -21,6 +21,7 @@ import {
   getPriceTypeLabel,
   getTypeLabel,
 } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import {
   createActivityAction,
   type CreateActivityState,
@@ -42,6 +43,7 @@ type NewActivityFormProps = {
 
 const initialState: CreateActivityState = {};
 const priceTypeOptions = ["FREE", "AA", "FIXED", "RANGE"] as const;
+const visibilityOptions = ["PUBLIC", "PRIVATE"] as const;
 const categoryOptions = (
   Object.keys(activityCategories) as ActivityCategory[]
 ).sort((left, right) => {
@@ -267,6 +269,9 @@ export function NewActivityForm({
   const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [visibility, setVisibility] = useState(
+    values?.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+  );
   const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
@@ -359,6 +364,49 @@ export function NewActivityForm({
               />
             </>
           ) : null}
+
+          <FormSection title={t.form.visibilityTitle}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {visibilityOptions.map((option) => {
+                const active = visibility === option;
+                const isPrivate = option === "PRIVATE";
+
+                return (
+                  <label
+                    key={option}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition",
+                      active
+                        ? "border-[#d09a77] bg-[#fff3ea] shadow-sm"
+                        : "border-zinc-200 bg-white hover:border-[#d9c0ad]",
+                    )}
+                  >
+                    <input
+                      className="mt-1"
+                      name="visibility"
+                      type="radio"
+                      value={option}
+                      checked={active}
+                      onChange={() => setVisibility(option)}
+                    />
+                    <span>
+                      <span className="block font-semibold text-ink">
+                        {isPrivate
+                          ? t.form.visibilityPrivate
+                          : t.form.visibilityPublic}
+                      </span>
+                      <span className="mt-1 block leading-6 text-zinc-500">
+                        {isPrivate
+                          ? t.form.visibilityPrivateHint
+                          : t.form.visibilityPublicHint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <FieldError errors={state.fieldErrors?.visibility} />
+          </FormSection>
 
           <FormSection
             title={

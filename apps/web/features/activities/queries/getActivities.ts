@@ -90,6 +90,7 @@ export const activityCardSelect = {
   coverImageUrl: true,
   priceText: true,
   status: true,
+  visibility: true,
   publicEventId: true,
   source: true,
   sourceUrl: true,
@@ -184,6 +185,7 @@ type VisibleActivityWhereOptions = {
   includeEnded?: boolean;
   includePast?: boolean;
   now?: Date;
+  visibility?: ActivityVisibility[] | null;
 };
 
 function normalizeLimit(limit: number | undefined) {
@@ -358,9 +360,13 @@ export function getVisibleActivityWhere(
         ? visibleArchivedActivityStatuses
         : visibleActivityStatuses,
     },
-    visibility: {
-      in: publicActivityVisibility,
-    },
+    ...(options.visibility === null
+      ? {}
+      : {
+          visibility: {
+            in: options.visibility ?? publicActivityVisibility,
+          },
+        }),
     organizer: {
       status: "ACTIVE",
     },
@@ -404,7 +410,7 @@ function shouldIncludePublicEvents(filters: ActivityFilters | undefined) {
   return !filters.type && filters.relation === "ALL";
 }
 
-function getLegacyPublicActivityInfoWhere(): Prisma.ActivityWhereInput {
+export function getLegacyPublicActivityInfoWhere(): Prisma.ActivityWhereInput {
   return {
     OR: [
       ...legacyPublicActivityIdPrefixes.map((prefix) => ({
@@ -715,6 +721,7 @@ export function getActivityCardViewModel(
     participantCount: isActivityInfo ? 0 : activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
+    visibility: activity.visibility,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -762,6 +769,7 @@ function getPublicEventActivityCardViewModel(
       participantCount: publicEvent._count.teams,
       priceText: publicEvent.priceText ?? "",
       status: "RECRUITING",
+      visibility: "PUBLIC",
       coverTone: getActivityCoverTone(publicEvent.id),
       isActivityInfo: true,
       officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,

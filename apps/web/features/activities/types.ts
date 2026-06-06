@@ -3,7 +3,7 @@ import type {
   ActivityType,
   PriceType,
 } from "@chill-club/shared";
-import type { CommentType } from "@prisma/client";
+import type { ActivityVisibility, CommentType } from "@prisma/client";
 import type { PublicEventStatus } from "@prisma/client";
 
 export type ActivityFriendSignalUserViewModel = {
@@ -24,6 +24,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   coverTone: "moss" | "clay" | "sky";
   latitude: number | null;
   longitude: number | null;
+  visibility?: ActivityVisibility;
   merchant: ActivityMerchantViewModel | null;
   isActivityInfo?: boolean;
   officialUrl?: string | null;

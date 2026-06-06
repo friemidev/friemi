@@ -286,7 +286,7 @@ export async function createActivityAction(
         sourceUrl: importSourceUrl,
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
-        visibility: "PUBLIC",
+        visibility: result.data.visibility,
         organizerId: profile.id,
       },
       select: {
@@ -328,6 +328,7 @@ export async function createActivityAction(
         has_public_event: Boolean(publicEvent?.id),
         public_event_id: publicEvent?.id ?? null,
         requires_approval: result.data.requiresApproval,
+        visibility: result.data.visibility,
       },
     },
     {
