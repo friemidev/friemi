@@ -13,6 +13,7 @@ import {
 import { Button, Input } from "@chill-club/ui";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import {
   activityCategoryOptions,
   activityFilterTypes,
@@ -30,6 +31,7 @@ type ActivityFiltersProps = {
   cities: string[];
   filters: ActivityFilters;
   locale: string;
+  publicInfoOnly?: boolean;
   resultCount: number;
 };
 
@@ -45,6 +47,7 @@ export function ActivityFilters({
   cities,
   filters,
   locale,
+  publicInfoOnly = false,
   resultCount,
 }: ActivityFiltersProps) {
   const router = useRouter();
@@ -64,6 +67,7 @@ export function ActivityFilters({
       ...filters,
       ...nextFilters,
       page: 1,
+      ...(publicInfoOnly ? { relation: "ALL" as const, type: undefined } : {}),
     };
 
     return getActivityFilterHref(
@@ -97,7 +101,7 @@ export function ActivityFilters({
           },
         ]
       : []),
-    ...(filters.relation !== "ALL"
+    ...(!publicInfoOnly && filters.relation !== "ALL"
       ? [
           {
             href: buildFilterHref({ relation: "ALL" }),
@@ -110,7 +114,7 @@ export function ActivityFilters({
           },
         ]
       : []),
-    ...(filters.type
+    ...(!publicInfoOnly && filters.type
       ? [
           {
             href: buildFilterHref({ type: undefined }),
@@ -147,6 +151,11 @@ export function ActivityFilters({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+    if (publicInfoOnly) {
+      formData.set("relation", "ALL");
+      formData.delete("type");
+    }
+
     router.push(
       getActivityFilterHref(
         activitiesHref,
@@ -206,42 +215,46 @@ export function ActivityFilters({
           </select>
         </label>
 
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.relationLabel}
-          <select
-            className={selectClassName}
-            defaultValue={filters.relation}
-            name="relation"
-          >
-            {activityRelationFilters.map((relation) => (
-              <option key={relation} value={relation}>
-                {relation === "ALL"
-                  ? t.activityFilters.allRelations
-                  : relation === "FRIEND_HOSTED"
-                    ? t.activityFilters.relationFriendHosted
-                    : relation === "FRIEND_JOINED"
-                      ? t.activityFilters.relationFriendJoined
-                      : t.activityFilters.relationMine}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!publicInfoOnly ? (
+          <>
+            <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
+              {t.activityFilters.relationLabel}
+              <select
+                className={selectClassName}
+                defaultValue={filters.relation}
+                name="relation"
+              >
+                {activityRelationFilters.map((relation) => (
+                  <option key={relation} value={relation}>
+                    {relation === "ALL"
+                      ? t.activityFilters.allRelations
+                      : relation === "FRIEND_HOSTED"
+                        ? t.activityFilters.relationFriendHosted
+                        : relation === "FRIEND_JOINED"
+                          ? t.activityFilters.relationFriendJoined
+                          : t.activityFilters.relationMine}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.typeLabel}
-          <select
-            className={selectClassName}
-            defaultValue={filters.type ?? ""}
-            name="type"
-          >
-            <option value="">{t.activityFilters.allTypes}</option>
-            {activityFilterTypes.map((type) => (
-              <option key={type} value={type}>
-                {getTypeLabel(type, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
+            <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
+              {t.activityFilters.typeLabel}
+              <select
+                className={selectClassName}
+                defaultValue={filters.type ?? ""}
+                name="type"
+              >
+                <option value="">{t.activityFilters.allTypes}</option>
+                {activityFilterTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {getTypeLabel(type, locale)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
 
         <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
           {t.activityFilters.timeStateLabel}
@@ -304,10 +317,14 @@ export function ActivityFilters({
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold text-ink">
             <SlidersHorizontal className="h-4 w-4 shrink-0" />
-            {t.activityFilters.title}
+            {publicInfoOnly
+              ? t.activityFilters.publicInfoTitle
+              : t.activityFilters.title}
           </p>
           <p className="mt-1 hidden text-sm leading-6 text-zinc-500 sm:block">
-            {t.activityFilters.description}
+            {publicInfoOnly
+              ? t.activityFilters.publicInfoDescription
+              : t.activityFilters.description}
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-medium text-moss sm:px-3">
@@ -329,7 +346,14 @@ export function ActivityFilters({
       </details>
 
       <div className="hidden md:block">
-        <FilterForm className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(180px,1.35fr)_repeat(6,minmax(116px,1fr))_auto_auto]" />
+        <FilterForm
+          className={cn(
+            "mt-4 grid gap-3 md:grid-cols-2",
+            publicInfoOnly
+              ? "lg:grid-cols-3 xl:grid-cols-[minmax(220px,1.5fr)_repeat(4,minmax(130px,1fr))_auto_auto]"
+              : "lg:grid-cols-4 xl:grid-cols-[minmax(180px,1.35fr)_repeat(6,minmax(116px,1fr))_auto_auto]",
+          )}
+        />
       </div>
 
       {activeFilterChips.length > 0 ? (

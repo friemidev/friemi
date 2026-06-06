@@ -20,6 +20,7 @@ import {
   hasActiveActivityFilters,
   isCanonicalActivityFilterSearchParams,
   normalizeActivityFilters,
+  normalizeActivityFilterValues,
   type ActivityFilterSearchParams,
 } from "@/features/activities/utils/activityFilters";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
@@ -119,7 +120,16 @@ export default async function ActivitiesPage({
 }: ActivitiesPageProps) {
   const { locale } = await params;
   const rawSearchParams = (await searchParams) ?? {};
-  const filters = normalizeActivityFilters(rawSearchParams);
+  const parsedFilters = normalizeActivityFilters(rawSearchParams);
+  const explicitSort =
+    typeof rawSearchParams.sort === "string" ? rawSearchParams.sort : undefined;
+  const filters = normalizeActivityFilterValues({
+    ...parsedFilters,
+    page: String(parsedFilters.page),
+    relation: "ALL",
+    sort: explicitSort,
+    type: undefined,
+  });
   const perf = createPerformanceTracker({
     locale,
     metadata: {
@@ -129,7 +139,12 @@ export default async function ActivitiesPage({
     route: "/activities",
   });
 
-  if (!isCanonicalActivityFilterSearchParams(rawSearchParams)) {
+  if (
+    !isCanonicalActivityFilterSearchParams(rawSearchParams) ||
+    parsedFilters.relation !== "ALL" ||
+    Boolean(parsedFilters.type) ||
+    parsedFilters.sort !== filters.sort
+  ) {
     redirect(getActivityFilterHref(withLocale(locale, "/activities"), filters));
   }
 
@@ -143,16 +158,21 @@ export default async function ActivitiesPage({
     "activity.data",
     () =>
       Promise.all([
-        getActivityList(filters, { viewerProfileId: viewerProfile?.id })
+        getActivityList(filters, {
+          publicInfoOnly: true,
+          viewerProfileId: viewerProfile?.id,
+        })
           .then((list) => ({ list, error: null }))
           .catch((error: unknown) => {
             console.error("Failed to load activities", error);
             return { list: null, error };
           }),
-        getActivityFilterOptions().catch((error: unknown) => {
-          console.error("Failed to load activity filter options", error);
-          return { cities: [] };
-        }),
+        getActivityFilterOptions({ publicInfoOnly: true }).catch(
+          (error: unknown) => {
+            console.error("Failed to load activity filter options", error);
+            return { cities: [] };
+          },
+        ),
       ]),
   );
 
@@ -171,9 +191,7 @@ export default async function ActivitiesPage({
     const userAgent = requestHeaders.get("user-agent");
     const activeFilterNames = getActiveActivityFilterNames(filters);
     const filterCount = getActiveActivityFilterCount(filters);
-    const publicEventCount = activitiesResult.list.activities.filter(
-      (activity) => activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
-    ).length;
+    const publicEventCount = activitiesResult.list.activities.length;
     const commonOptions = {
       referrer,
       userAgent,
@@ -194,7 +212,7 @@ export default async function ActivitiesPage({
           public_event_count: publicEventCount,
           result_count: activitiesResult.list.activities.length,
           sort: filters.sort,
-          team_count: activitiesResult.list.activities.length - publicEventCount,
+          team_count: 0,
           total_count: activitiesResult.list.totalCount,
         },
       },
@@ -212,7 +230,7 @@ export default async function ActivitiesPage({
             filter_count: filterCount,
             keyword_length: filters.keyword.length,
             result_count: activitiesResult.list.totalCount,
-            scope: "activities",
+            scope: "public_activity_info",
           },
         },
         commonOptions,
@@ -230,7 +248,7 @@ export default async function ActivitiesPage({
             filter_count: filterCount,
             filter_names: activeFilterNames,
             result_count: activitiesResult.list.totalCount,
-            scope: "activities",
+            scope: "public_activity_info",
           },
         },
         commonOptions,
@@ -259,7 +277,6 @@ export default async function ActivitiesPage({
           </div>
           <div className="mt-5 hidden flex-wrap justify-center gap-2 sm:flex">
             <Badge>{t.globalSearch.publicEventsTitle}</Badge>
-            <Badge>{t.globalSearch.activitiesTitle}</Badge>
             <Badge>{t.activityLabels.timeStates.ONGOING}</Badge>
             <Badge>{t.activityLabels.timeStates.UPCOMING}</Badge>
             <Badge>{t.activityLabels.timeStates.ENDED}</Badge>
@@ -271,6 +288,7 @@ export default async function ActivitiesPage({
         cities={filterOptions.cities}
         filters={filters}
         locale={locale}
+        publicInfoOnly
         resultCount={activitiesResult.list?.totalCount ?? 0}
       />
 
@@ -303,6 +321,7 @@ export default async function ActivitiesPage({
                 isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
                 showFavoriteButton
+                showPrimaryAction={false}
                 sourceSurface="activity_list"
               />
             ))}

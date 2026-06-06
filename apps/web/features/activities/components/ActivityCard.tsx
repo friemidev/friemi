@@ -32,6 +32,7 @@ type ActivityCardProps = {
   isAuthenticated?: boolean;
   locale: string;
   showFavoriteButton?: boolean;
+  showPrimaryAction?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
 };
 
@@ -43,14 +44,14 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
 
 function getCardKindLabel(isActivityInfo: boolean, locale: string) {
   if (locale === "fr") {
-    return isActivityInfo ? "Evenement" : "Equipe";
+    return isActivityInfo ? "Sortie" : "Equipe";
   }
 
   if (locale === "en") {
-    return isActivityInfo ? "Event" : "Team";
+    return isActivityInfo ? "Activity info" : "Crew";
   }
 
-  return isActivityInfo ? "活动" : "组局";
+  return isActivityInfo ? "活动信息" : "车队";
 }
 
 function getCardFavoriteLabels(locale: string) {
@@ -104,6 +105,7 @@ export function ActivityCard({
   isAuthenticated = false,
   locale,
   showFavoriteButton = false,
+  showPrimaryAction = true,
   sourceSurface = "activity_list",
 }: ActivityCardProps) {
   const t = getCopy(locale);
@@ -189,7 +191,7 @@ export function ActivityCard({
           />
         </div>
       ) : null}
-      {showFavoriteButton && !isActivityInfo ? (
+      {showFavoriteButton && (!isActivityInfo || !activity.publicEventId) ? (
         <div className="absolute right-3 top-3 z-20">
           <ActivityFavoriteButton
             activityId={activity.id}
@@ -272,22 +274,24 @@ export function ActivityCard({
         </CardContent>
       </AnalyticsLink>
 
-      <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
-        <AnalyticsLink
-          href={actionHref}
-          event={{
-            name: actionEventName,
-            entityId: analyticsEntity.entityId,
-            entityType: analyticsEntity.entityType,
-            sourceSurface,
-            properties: baseAnalyticsProperties,
-          }}
-        >
-          <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
-            {actionLabel}
-          </Button>
-        </AnalyticsLink>
-      </div>
+      {showPrimaryAction ? (
+        <div className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+          <AnalyticsLink
+            href={actionHref}
+            event={{
+              name: actionEventName,
+              entityId: analyticsEntity.entityId,
+              entityType: analyticsEntity.entityType,
+              sourceSurface,
+              properties: baseAnalyticsProperties,
+            }}
+          >
+            <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
+              {actionLabel}
+            </Button>
+          </AnalyticsLink>
+        </div>
+      ) : null}
     </Card>
   );
 }

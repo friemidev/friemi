@@ -43,6 +43,13 @@ const upcomingWeekWindowDays = 7;
 const upcomingMonthWindowDays = 30;
 const legacyPublicActivityIdPattern =
   /^(playinparis|sortiraparis|paris-opendata|paris_open_data|feverup)_/i;
+const legacyPublicActivityIdPrefixes = [
+  "playinparis_",
+  "sortiraparis_",
+  "paris-opendata_",
+  "paris_open_data_",
+  "feverup_",
+];
 const legacyPublicActivitySources = [
   "playinparis",
   "playinparis.com",
@@ -156,6 +163,12 @@ type GetActivitiesOptions = {
   filters?: ActivityFilters;
   includePast?: boolean;
   limit?: number;
+  viewerProfileId?: string | null;
+};
+
+type GetActivityListOptions = {
+  pageSize?: number;
+  publicInfoOnly?: boolean;
   viewerProfileId?: string | null;
 };
 
@@ -389,6 +402,58 @@ function shouldIncludePublicEvents(filters: ActivityFilters | undefined) {
   }
 
   return !filters.type && filters.relation === "ALL";
+}
+
+function getLegacyPublicActivityInfoWhere(): Prisma.ActivityWhereInput {
+  return {
+    OR: [
+      ...legacyPublicActivityIdPrefixes.map((prefix) => ({
+        id: {
+          startsWith: prefix,
+        },
+      })),
+      ...legacyPublicActivitySources.flatMap((source) => [
+        {
+          source: {
+            contains: source,
+            mode: "insensitive" as const,
+          },
+        },
+        {
+          sourceUrl: {
+            contains: source,
+            mode: "insensitive" as const,
+          },
+        },
+        {
+          externalUrl: {
+            contains: source,
+            mode: "insensitive" as const,
+          },
+        },
+      ]),
+      {
+        externalSource: {
+          not: null,
+        },
+      },
+      {
+        externalId: {
+          not: null,
+        },
+      },
+      {
+        externalUrl: {
+          not: null,
+        },
+      },
+      {
+        importedAt: {
+          not: null,
+        },
+      },
+    ],
+  };
 }
 
 function getPublicEventFilterWhere(
@@ -698,6 +763,8 @@ function getPublicEventActivityCardViewModel(
       priceText: publicEvent.priceText ?? "",
       status: "RECRUITING",
       coverTone: getActivityCoverTone(publicEvent.id),
+      isActivityInfo: true,
+      officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,
       merchant: null,
       friendSignal: null,
       isFavorited: false,
@@ -712,12 +779,20 @@ async function attachJoinableActivityStates(
 ): Promise<ActivityCardViewModel[]> {
   const cards = rankedActivities.map((rankedActivity) => rankedActivity.card);
   const publicEventActivities = cards.filter(
-    (activity) => activity.type === "PUBLIC_EVENT" && Boolean(activity.publicEventId),
+    (activity) =>
+      activity.type === "PUBLIC_EVENT" && Boolean(activity.publicEventId),
+  );
+  const legacyActivityInfoActivities = cards.filter(
+    (activity) => activity.type === "PUBLIC_EVENT" && !activity.publicEventId,
   );
   const teamActivities = cards.filter(
     (activity) => activity.type !== "PUBLIC_EVENT",
   );
-  const [publicEventActivitiesWithState, teamActivitiesWithState] =
+  const [
+    publicEventActivitiesWithState,
+    legacyActivityInfoActivitiesWithState,
+    teamActivitiesWithState,
+  ] =
     await Promise.all([
       attachPublicEventFavoriteStates(
         publicEventActivities.map((activity) => ({
@@ -739,6 +814,10 @@ async function attachJoinableActivityStates(
           teamCount: activity.participantCount,
           isFavorited: activity.isFavorited,
         })),
+        viewerProfileId,
+      ),
+      attachActivityFavoriteStates(
+        legacyActivityInfoActivities,
         viewerProfileId,
       ),
       attachActivityFavoriteStates(
@@ -779,6 +858,12 @@ async function attachJoinableActivityStates(
   const publicEventActivityById = new Map(
     publicEventActivitiesWithState.map((activity) => [activity.id, activity]),
   );
+  const legacyActivityInfoActivityById = new Map(
+    legacyActivityInfoActivitiesWithState.map((activity) => [
+      activity.id,
+      activity,
+    ]),
+  );
 
   return rankedActivities.map((rankedActivity) => {
     if (
@@ -791,6 +876,13 @@ async function attachJoinableActivityStates(
         ...rankedActivity.card,
         isFavorited: publicEventActivityById.get(publicEventId)?.isFavorited,
       };
+    }
+
+    if (rankedActivity.card.type === "PUBLIC_EVENT") {
+      return (
+        legacyActivityInfoActivityById.get(rankedActivity.card.id) ??
+        rankedActivity.card
+      );
     }
 
     return teamActivityById.get(rankedActivity.card.id) ?? rankedActivity.card;
@@ -1021,6 +1113,53 @@ function getPublicEventListWhere(
   };
 }
 
+function getPublicInfoActivityListWhere(
+  filters: ActivityFilters,
+  now: Date,
+): Prisma.ActivityWhereInput {
+  return {
+    AND: [
+      getVisibleActivityWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      }),
+      getLegacyPublicActivityInfoWhere(),
+      getActivityFilterWhere(filters),
+      ...(filters.timeState
+        ? [getActivityTimeStateWhere(filters.timeState, now)]
+        : []),
+    ],
+  };
+}
+
+function getPublicInfoPublicEventListWhere(
+  filters: ActivityFilters,
+  now: Date,
+): Prisma.PublicEventWhereInput {
+  return {
+    AND: [
+      getVisiblePublicEventWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      }),
+      getPublicEventFilterWhere(filters),
+      ...(filters.timeState
+        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+        : []),
+    ],
+  };
+}
+
+function getPublicInfoOnlyFilters(filters: ActivityFilters): ActivityFilters {
+  return {
+    ...filters,
+    relation: "ALL",
+    type: undefined,
+  };
+}
+
 async function getOrderedActivityList(
   filters: ActivityFilters,
   pageSize: number,
@@ -1230,12 +1369,90 @@ async function getRecommendedActivityList(
   };
 }
 
+async function getPublicInfoOnlyActivityList(
+  filters: ActivityFilters,
+  pageSize: number,
+  now: Date,
+  viewerProfileId: string | null | undefined,
+): Promise<ActivityListResult> {
+  const publicInfoFilters = getPublicInfoOnlyFilters(filters);
+  const activityWhere = getPublicInfoActivityListWhere(publicInfoFilters, now);
+  const publicEventWhere = getPublicInfoPublicEventListWhere(
+    publicInfoFilters,
+    now,
+  );
+  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
+    prisma.activity.count({ where: activityWhere }),
+    prisma.publicEvent.count({ where: publicEventWhere }),
+  ]);
+  const totalCount = activityTotalCount + publicEventTotalCount;
+  const totalPages = getActivityTotalPages(totalCount, pageSize);
+  const page = getActivityPage(filters.page, totalPages);
+  const useRecommendedSort =
+    publicInfoFilters.sort === "recommended" &&
+    !hasExplicitActivityListFilters(publicInfoFilters);
+  const readLimit = useRecommendedSort ? undefined : page * pageSize;
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where: activityWhere,
+      orderBy: getActivityListOrderBy(
+        publicInfoFilters,
+        publicInfoFilters.timeState,
+      ),
+      ...(readLimit ? { take: readLimit } : {}),
+      select: activityCardSelect,
+    }),
+    prisma.publicEvent.findMany({
+          where: publicEventWhere,
+          orderBy: getPublicEventListOrderBy(
+            publicInfoFilters,
+            publicInfoFilters.timeState,
+          ),
+      ...(readLimit ? { take: readLimit } : {}),
+      select: publicEventCardSelect,
+    }),
+  ]);
+  const dailySeed = useRecommendedSort ? getDailyRankingSeed(now) : null;
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getActivityRankedCardViewModel,
+    ),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ]
+    .sort((left, right) =>
+      dailySeed
+        ? compareRecommendedRankedActivities(now, dailySeed, left, right)
+        : compareRankedActivities(publicInfoFilters, left, right),
+    )
+    .slice((page - 1) * pageSize, page * pageSize);
+
+  return {
+    activities: await attachJoinableActivityStates(
+      rankedActivities,
+      viewerProfileId,
+    ),
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
+  };
+}
+
 export async function getActivityList(
   filters: ActivityFilters,
-  options: { pageSize?: number; viewerProfileId?: string | null } = {},
+  options: GetActivityListOptions = {},
 ): Promise<ActivityListResult> {
   const now = new Date();
   const pageSize = normalizeLimit(options.pageSize) ?? defaultActivityPageSize;
+
+  if (options.publicInfoOnly) {
+    return getPublicInfoOnlyActivityList(
+      filters,
+      pageSize,
+      now,
+      options.viewerProfileId,
+    );
+  }
 
   if (
     filters.sort === "recommended" &&
@@ -1257,15 +1474,29 @@ export async function getActivityList(
   );
 }
 
-export async function getActivityFilterOptions() {
+export async function getActivityFilterOptions(
+  options: { publicInfoOnly?: boolean } = {},
+) {
   const now = new Date();
-  const [activityCities, publicEventCities] = await Promise.all([
-    prisma.activity.findMany({
-      where: getVisibleActivityWhere({
+  const activityWhere = options.publicInfoOnly
+    ? {
+        AND: [
+          getVisibleActivityWhere({
+            includeEnded: true,
+            includePast: true,
+            now,
+          }),
+          getLegacyPublicActivityInfoWhere(),
+        ],
+      }
+    : getVisibleActivityWhere({
         includeEnded: true,
         includePast: true,
         now,
-      }),
+      });
+  const [activityCities, publicEventCities] = await Promise.all([
+    prisma.activity.findMany({
+      where: activityWhere,
       select: {
         city: true,
       },

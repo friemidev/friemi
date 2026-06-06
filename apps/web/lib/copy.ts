@@ -132,12 +132,12 @@ const copy = {
     activities: {
       title: "发现活动",
       description:
-        "先看看近期真实活动；想一起去，再进入详情查看车队或发起组局。",
+        "浏览近期公开活动资讯；想一起去，再进入详情查看车队或发起组局。",
       scopeTitle: "当前展示范围",
       scopeDescription:
-        "默认优先展示进行中和即将开始的活动，已结束活动会排在后面。",
-      emptyTitle: "暂无活动",
-      emptyDescription: "当前没有可展示的公开活动，创建新活动后会显示在这里。",
+        "默认优先展示进行中和即将开始的活动资讯，已结束活动会排在后面。",
+      emptyTitle: "暂无活动资讯",
+      emptyDescription: "当前没有可展示的公开活动资讯，请稍后再来看看。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
     },
@@ -167,8 +167,11 @@ const copy = {
     },
     activityFilters: {
       title: "搜索和筛选",
+      publicInfoTitle: "筛选活动资讯",
       description:
         "按关键词、主题、城市、关系、活动形式和进度快速缩小活动范围。",
+      publicInfoDescription:
+        "按关键词、主题、城市和进度快速缩小活动资讯范围。",
       mobileSummary: "搜索 / 筛选",
       keywordLabel: "关键词",
       keywordPlaceholder: "搜索标题或描述，例如：电影 Paris",
@@ -792,14 +795,14 @@ const copy = {
     activities: {
       title: "Discover activities",
       description:
-        "Browse real upcoming activities first, then open details to join or start a crew.",
+        "Browse public activity info first, then open details to view crews or start one.",
       scopeTitle: "Current scope",
       scopeDescription:
-        "Ongoing and upcoming activities come first, while ended activities stay lower in the list.",
-      emptyTitle: "No activities",
+        "Ongoing and upcoming activity info comes first, while ended activities stay lower in the list.",
+      emptyTitle: "No activity info",
       emptyDescription:
-        "There are no public activities to show right now. New activities will appear here.",
-      emptyFilteredTitle: "No matching activities",
+        "There is no public activity info to show right now. Check back later.",
+      emptyFilteredTitle: "No matching activity info",
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
     },
@@ -839,8 +842,11 @@ const copy = {
     },
     activityFilters: {
       title: "Search and filters",
+      publicInfoTitle: "Filter activity info",
       description:
         "Narrow activities by keyword, topic, city, relationship, format, and timing.",
+      publicInfoDescription:
+        "Narrow activity info by keyword, topic, city, and timing.",
       mobileSummary: "Search / Filter",
       keywordLabel: "Keyword",
       keywordPlaceholder: "Search title or description, e.g. film Paris",
@@ -1502,14 +1508,14 @@ const copy = {
     activities: {
       title: "Découvrir les sorties",
       description:
-        "Parcourez les sorties à venir, puis ouvrez le détail pour rejoindre ou lancer une équipe.",
+        "Parcourez les sorties publiques, puis ouvrez le détail pour voir ou lancer une équipe.",
       scopeTitle: "Périmètre affiché",
       scopeDescription:
         "Les sorties en cours ou à venir apparaissent d'abord, les sorties terminées restent plus bas.",
-      emptyTitle: "Aucune activité",
+      emptyTitle: "Aucune sortie",
       emptyDescription:
-        "Aucune activité publique à afficher pour le moment. Les nouvelles activités apparaîtront ici.",
-      emptyFilteredTitle: "Aucune activité trouvée",
+        "Aucune sortie publique à afficher pour le moment. Revenez un peu plus tard.",
+      emptyFilteredTitle: "Aucune sortie trouvée",
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
     },
@@ -1549,8 +1555,11 @@ const copy = {
     },
     activityFilters: {
       title: "Recherche et filtres",
+      publicInfoTitle: "Filtrer les sorties",
       description:
         "Affinez les activités par mot-clé, thème, ville, relation, format et avancement.",
+      publicInfoDescription:
+        "Affinez les sorties par mot-clé, thème, ville et avancement.",
       mobileSummary: "Recherche / Filtre",
       keywordLabel: "Mot-clé",
       keywordPlaceholder: "Titre ou description, ex. film Paris",
