@@ -164,6 +164,48 @@ function isJoinableTeamCard(activity: ActivityCardViewModel) {
   return activity.type !== "PUBLIC_EVENT" && !activity.isActivityInfo;
 }
 
+function getLobbyActivityKey(activity: ActivityCardViewModel) {
+  if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
+    return `public:${activity.publicEventId}`;
+  }
+
+  return `activity:${activity.id}`;
+}
+
+async function decorateLobbyActivitySections(
+  sections: ActivityCardViewModel[][],
+  viewerProfileId: string,
+) {
+  const activityByKey = new Map<string, ActivityCardViewModel>();
+
+  for (const section of sections) {
+    for (const activity of section) {
+      const key = getLobbyActivityKey(activity);
+
+      if (!activityByKey.has(key)) {
+        activityByKey.set(key, activity);
+      }
+    }
+  }
+
+  const decoratedActivities = await decorateLobbyActivities(
+    [...activityByKey.values()],
+    viewerProfileId,
+  );
+  const decoratedByKey = new Map(
+    decoratedActivities.map((activity) => [
+      getLobbyActivityKey(activity),
+      activity,
+    ]),
+  );
+
+  return sections.map((section) =>
+    section.map(
+      (activity) => decoratedByKey.get(getLobbyActivityKey(activity)) ?? activity,
+    ),
+  );
+}
+
 export async function getActivityLobby(
   viewerProfileId: string,
 ): Promise<ActivityLobbyViewModel> {
@@ -292,28 +334,33 @@ export async function getActivityLobby(
     )
     .map((item) => item.activity)
     .slice(0, activityLobbySectionLimit);
+  const createdActivityCards = createdActivities.map(getActivityCardViewModel);
+  const friendHostedActivityCards = friendHostedActivities.map(
+    getActivityCardViewModel,
+  );
+  const [
+    decoratedCreatedActivities,
+    decoratedJoinedActivities,
+    decoratedFavoriteActivities,
+    decoratedFriendHostedActivities,
+    decoratedFriendJoinedActivities,
+  ] = await decorateLobbyActivitySections(
+    [
+      createdActivityCards,
+      joinedActivities,
+      mergedFavoriteActivities,
+      friendHostedActivityCards,
+      friendJoinedActivities,
+    ],
+    viewerProfileId,
+  );
 
   return {
-    createdActivities: await decorateLobbyActivities(
-      createdActivities.map(getActivityCardViewModel),
-      viewerProfileId,
-    ),
-    joinedActivities: await decorateLobbyActivities(
-      joinedActivities,
-      viewerProfileId,
-    ),
-    favoriteActivities: await decorateLobbyActivities(
-      mergedFavoriteActivities,
-      viewerProfileId,
-    ),
-    friendHostedActivities: await decorateLobbyActivities(
-      friendHostedActivities.map(getActivityCardViewModel),
-      viewerProfileId,
-    ),
-    friendJoinedActivities: await decorateLobbyActivities(
-      friendJoinedActivities,
-      viewerProfileId,
-    ),
+    createdActivities: decoratedCreatedActivities,
+    joinedActivities: decoratedJoinedActivities,
+    favoriteActivities: decoratedFavoriteActivities,
+    friendHostedActivities: decoratedFriendHostedActivities,
+    friendJoinedActivities: decoratedFriendJoinedActivities,
   };
 }
 

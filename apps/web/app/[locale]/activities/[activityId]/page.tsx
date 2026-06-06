@@ -26,7 +26,7 @@ import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { ActivityAnalyticsSummaryPanel } from "@/features/analytics/components/ActivityAnalyticsSummaryPanel";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { getActivityAnalyticsSummary } from "@/features/analytics/queries/getActivityAnalyticsSummary";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
   getAnalyticsEntityForActivityDetail,
   inferAnalyticsSourceSurfaceFromReferrer,
@@ -66,6 +66,7 @@ import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 
 type ActivityDetailPageProps = {
@@ -81,14 +82,17 @@ export default async function ActivityDetailPage({
   params,
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/activities/[activityId]",
+  });
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
-  const [activity, viewerProfile] = await Promise.all([
-    getActivityById(activityId),
-    getOptionalCurrentUserProfile(),
-  ]);
+  const [activity, viewerProfile] = await perf.measure("activity.primary", () =>
+    Promise.all([getActivityById(activityId), getOptionalCurrentUserProfile()]),
+  );
 
   if (!activity) {
     notFound();
@@ -102,7 +106,7 @@ export default async function ActivityDetailPage({
     "activity_list",
   );
 
-  await trackAnalyticsEvent(
+  queueAnalyticsEvent(
     {
       locale: analyticsLocale,
       name: activity.isActivityInfo
@@ -141,6 +145,10 @@ export default async function ActivityDetailPage({
     const unavailableDescription = isEndedByTime
       ? publicEventCopy.teamSectionEndedDescription
       : publicEventCopy.teamSectionUnavailableDescription;
+    perf.finish({
+      itemKind: "public_event",
+      hasViewer: Boolean(viewerProfile),
+    });
 
     return (
       <PageContainer className="space-y-6">
@@ -399,13 +407,15 @@ export default async function ActivityDetailPage({
     isFavorited,
     comments,
     friendSignal,
-  ] = await Promise.all([
-    getActivityViewerParticipation(activity.id, viewerProfile?.id),
-    getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-    getViewerActivityFavorite(activity.id, viewerProfile?.id),
-    getActivityComments(activity.id),
-    getActivityFriendSignal(activity.id, viewerProfile?.id),
-  ]);
+  ] = await perf.measure("activity.viewerData", () =>
+    Promise.all([
+      getActivityViewerParticipation(activity.id, viewerProfile?.id),
+      getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+      getViewerActivityFavorite(activity.id, viewerProfile?.id),
+      getActivityComments(activity.id),
+      getActivityFriendSignal(activity.id, viewerProfile?.id),
+    ]),
+  );
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -427,13 +437,24 @@ export default async function ActivityDetailPage({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
-  const pendingParticipants =
-    isOrganizer && activity.requiresApproval && viewerProfile
-      ? await getPendingParticipants(activity.id, viewerProfile.id)
-      : [];
-  const analyticsSummary = isOrganizer
-    ? await getActivityAnalyticsSummary(activity.id)
-    : null;
+  const [pendingParticipants, analyticsSummary] = await perf.measure(
+    "activity.organizerData",
+    () =>
+      Promise.all([
+        isOrganizer && activity.requiresApproval && viewerProfile
+          ? getPendingParticipants(activity.id, viewerProfile.id)
+          : Promise.resolve([]),
+        isOrganizer
+          ? getActivityAnalyticsSummary(activity.id)
+          : Promise.resolve(null),
+      ]),
+  );
+  perf.finish({
+    commentCount: comments.length,
+    hasViewer: Boolean(viewerProfile),
+    isOrganizer,
+    itemKind: "team",
+  });
 
   return (
     <PageContainer className="space-y-6">

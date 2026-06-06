@@ -11,6 +11,7 @@ import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRe
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
+import { createPerformanceTracker } from "@/lib/performance";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -29,17 +30,27 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const messages = await getMessages();
-  const [showAdminNav, viewerProfile] = await Promise.all([
-    isCurrentUserAdmin(),
-    getOptionalCurrentUserProfile(),
-  ]);
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/[locale]/layout",
+  });
+  const messages = await perf.measure("i18n.messages", getMessages);
+  const [showAdminNav, viewerProfile] = await perf.measure(
+    "viewer.identity",
+    () => Promise.all([isCurrentUserAdmin(), getOptionalCurrentUserProfile()]),
+  );
   const [unreadNotificationCount, incomingFriendRequests] = viewerProfile
-    ? await Promise.all([
-        getUnreadNotificationCount(viewerProfile.id),
-        getPendingIncomingFriendRequests(viewerProfile.id),
-      ])
+    ? await perf.measure("nav.badges", () =>
+        Promise.all([
+          getUnreadNotificationCount(viewerProfile.id),
+          getPendingIncomingFriendRequests(viewerProfile.id),
+        ]),
+      )
     : [0, []];
+  perf.finish({
+    hasViewer: Boolean(viewerProfile),
+    showAdminNav,
+  });
   const content = (
     <NextIntlClientProvider messages={messages}>
       <div className="min-h-screen pb-24 md:pb-0">

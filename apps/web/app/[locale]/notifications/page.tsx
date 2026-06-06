@@ -26,6 +26,7 @@ import {
 } from "@/features/notifications/queries/getNotifications";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 type NotificationsPageProps = {
@@ -224,11 +225,22 @@ export default async function NotificationsPage({
   params,
 }: NotificationsPageProps) {
   const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale);
-  const { notifications, unreadCount } = await getNotificationCenter(
-    profile.id,
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/notifications",
+  });
+  const profile = await perf.measure("viewer.profile", () =>
+    ensureCurrentUserProfile(locale),
+  );
+  const { notifications, unreadCount } = await perf.measure(
+    "notifications.center",
+    () => getNotificationCenter(profile.id),
   );
   const t = getCopy(locale).notifications;
+  perf.finish({
+    notificationCount: notifications.length,
+    unreadCount,
+  });
 
   return (
     <PageContainer className="space-y-6">

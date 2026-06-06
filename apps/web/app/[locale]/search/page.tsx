@@ -10,7 +10,7 @@ import { PublicEventCard } from "@/features/public-events/components/PublicEvent
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
@@ -24,6 +24,7 @@ import {
 } from "@/features/search/utils/searchQuery";
 import { getCopy } from "@/lib/copy";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 
 type SearchPageProps = {
@@ -117,6 +118,10 @@ export default async function SearchPage({
   searchParams,
 }: SearchPageProps) {
   const { locale } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/search",
+  });
   const rawSearchParams = (await searchParams) ?? {};
   const rawQuery = getSingleGlobalSearchParam(rawSearchParams, "q");
   const query = normalizeGlobalSearchQuery(rawQuery);
@@ -128,18 +133,22 @@ export default async function SearchPage({
   const t = getCopy(locale).globalSearch;
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = query
-    ? await getOptionalCurrentUserProfile().catch((error: unknown) => {
-        console.error("Failed to load viewer profile for global search", error);
-        return null;
-      })
+    ? await perf.measure("viewer.profile", () =>
+        getOptionalCurrentUserProfile().catch((error: unknown) => {
+          console.error("Failed to load viewer profile for global search", error);
+          return null;
+        }),
+      )
     : null;
   const searchResult = query
-    ? await getGlobalSearchResults(query, viewerProfile?.id)
-        .then((result) => ({ result, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load global search results", error);
-          return { result: null, error };
-        })
+    ? await perf.measure("search.results", () =>
+        getGlobalSearchResults(query, viewerProfile?.id)
+          .then((result) => ({ result, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load global search results", error);
+            return { result: null, error };
+          }),
+      )
     : { result: null, error: null };
   const totalCount = searchResult.result
     ? searchResult.result.activityCount +
@@ -152,7 +161,7 @@ export default async function SearchPage({
   if (query && searchResult.result) {
     const requestHeaders = await headers();
 
-    await trackAnalyticsEvent(
+    queueAnalyticsEvent(
       {
         locale: analyticsLocale,
         name: "search_submitted",
@@ -175,6 +184,11 @@ export default async function SearchPage({
       },
     );
   }
+
+  perf.finish({
+    hasQuery: Boolean(query),
+    resultCount: totalCount,
+  });
 
   return (
     <PageContainer className="space-y-6 py-5 sm:py-8">

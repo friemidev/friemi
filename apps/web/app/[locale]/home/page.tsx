@@ -8,6 +8,7 @@ import { ActivityModeTabs } from "@/features/activities/components/ActivityModeT
 import { getActivities } from "@/features/activities/queries/getActivities";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 
 type HomePageProps = {
@@ -20,17 +21,30 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/home",
+  });
   const t = getCopy(locale);
-  const viewerProfile = await getOptionalCurrentUserProfile();
-  const activitiesResult = await getActivities({
-    limit: 4,
-    viewerProfileId: viewerProfile?.id,
-  })
-    .then((activities) => ({ activities, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load home activities", error);
-      return { activities: [], error };
-    });
+  const viewerProfile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfile(),
+  );
+  const activitiesResult = await perf.measure("home.activities", () =>
+    getActivities({
+      limit: 4,
+      viewerProfileId: viewerProfile?.id,
+    })
+      .then((activities) => ({ activities, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load home activities", error);
+        return { activities: [], error };
+      }),
+  );
+
+  perf.finish({
+    activityCount: activitiesResult.activities.length,
+    hasViewer: Boolean(viewerProfile),
+  });
 
   return (
     <>
