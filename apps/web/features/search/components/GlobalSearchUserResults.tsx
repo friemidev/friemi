@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  LoaderCircle,
   UserPlus,
   UserRound,
 } from "lucide-react";
@@ -204,8 +205,13 @@ function AddFriendSubmitButton({ locale }: { locale: string }) {
       type="submit"
       className={cn("w-full gap-2", pending ? "cursor-wait" : null)}
       disabled={pending}
+      aria-busy={pending}
     >
-      <UserPlus className="h-4 w-4" aria-hidden="true" />
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <UserPlus className="h-4 w-4" aria-hidden="true" />
+      )}
       {pending ? t.addingFriend : t.addFriend}
     </Button>
   );

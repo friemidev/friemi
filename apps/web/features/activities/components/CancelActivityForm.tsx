@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
 import {
@@ -33,11 +34,15 @@ function CancelActivityButton({
     <Button
       type="button"
       variant="secondary"
-      className="w-full text-red-700 hover:bg-red-50"
+      className="w-full gap-2 text-red-700 hover:bg-red-50"
       disabled={disabled || pending}
+      aria-busy={pending}
       onClick={onOpen}
     >
-      {pending ? t.cancelling : t.cancel}
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">{pending ? t.cancelling : t.cancel}</span>
     </Button>
   );
 }
@@ -90,10 +95,16 @@ function CancelActivityConfirmDialog({
             </Button>
             <Button
               type="submit"
-              className="h-11 rounded-full bg-[#9f4a3e] text-white hover:bg-[#8b3f35]"
+              className="h-11 gap-2 rounded-full bg-[#9f4a3e] text-white hover:bg-[#8b3f35]"
               disabled={pending}
+              aria-busy={pending}
             >
-              {pending ? t.cancelling : t.cancelConfirmSubmit}
+              {pending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              <span className="truncate">
+                {pending ? t.cancelling : t.cancelConfirmSubmit}
+              </span>
             </Button>
           </div>
         </div>

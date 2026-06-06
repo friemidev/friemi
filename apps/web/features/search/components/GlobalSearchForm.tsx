@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
+import { useFormStatus } from "react-dom";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -14,6 +17,50 @@ type GlobalSearchFormProps = {
   locale: string;
   variant?: "header" | "page";
 };
+
+function SearchSubmitButton({
+  isPage,
+  label,
+}: {
+  isPage: boolean;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+  const Icon = pending ? LoaderCircle : Search;
+
+  return (
+    <button
+      type="submit"
+      aria-busy={pending}
+      aria-label={label}
+      disabled={pending}
+      className={cn(
+        "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] font-medium text-white transition hover:bg-[#c87b61] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e6b3a1] disabled:pointer-events-none disabled:opacity-80",
+        isPage ? "h-10 w-10 px-0 text-sm sm:w-auto sm:px-4" : "h-8 w-8",
+      )}
+    >
+      {isPage ? (
+        <>
+          <Icon
+            className={cn("h-4 w-4 sm:hidden", pending && "animate-spin")}
+            aria-hidden="true"
+          />
+          <span className="hidden sm:inline-flex items-center gap-2">
+            {pending ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : null}
+            {label}
+          </span>
+        </>
+      ) : (
+        <Icon
+          className={cn("h-4 w-4", pending && "animate-spin")}
+          aria-hidden="true"
+        />
+      )}
+    </button>
+  );
+}
 
 export function GlobalSearchForm({
   className,
@@ -56,23 +103,7 @@ export function GlobalSearchForm({
           isPage ? "h-12 pr-14 text-base sm:pr-32" : "h-10 pr-12 text-sm",
         )}
       />
-      <button
-        type="submit"
-        aria-label={t.submit}
-        className={cn(
-          "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] font-medium text-white transition hover:bg-[#c87b61] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e6b3a1]",
-          isPage ? "h-10 w-10 px-0 text-sm sm:w-auto sm:px-4" : "h-8 w-8",
-        )}
-      >
-        {isPage ? (
-          <>
-            <Search className="h-4 w-4 sm:hidden" aria-hidden="true" />
-            <span className="hidden sm:inline">{t.submit}</span>
-          </>
-        ) : (
-          <Search className="h-4 w-4" aria-hidden="true" />
-        )}
-      </button>
+      <SearchSubmitButton isPage={isPage} label={t.submit} />
     </form>
   );
 }

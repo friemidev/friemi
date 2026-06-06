@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getCopy } from "@/lib/copy";
@@ -45,9 +46,42 @@ function SubmitButton({
   const t = getCopy(locale).join;
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? t.submitting : requiresApproval ? t.submitApproval : t.submit}
+    <Button
+      type="submit"
+      className="w-full gap-2"
+      disabled={pending}
+      aria-busy={pending}
+    >
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">
+        {pending
+          ? t.submitting
+          : requiresApproval
+            ? t.submitApproval
+            : t.submit}
+      </span>
     </Button>
+  );
+}
+
+function PendingSubmitNotice({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const t = getCopy(locale).join;
+
+  if (!pending) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+      aria-live="polite"
+    >
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <span>{t.submitting}</span>
+    </div>
   );
 }
 
@@ -228,6 +262,7 @@ export function JoinActivityForm({
         ) : null}
       </label>
 
+      <PendingSubmitNotice locale={locale} />
       <SubmitButton locale={locale} requiresApproval={requiresApproval} />
     </form>
   );

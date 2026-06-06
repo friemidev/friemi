@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Copy,
   Inbox,
+  LoaderCircle,
   MessageCircle,
   Send,
   ShieldCheck,
@@ -206,6 +207,8 @@ function AddFriendForm({
   });
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showSentSuccess, setShowSentSuccess] = useState(false);
+  const [optimisticTarget, setOptimisticTarget] =
+    useState<FriendPreviewUser | null>(null);
   const t = getFriendsCopy(locale);
   const hasSearchTerm = searchTerm.trim().length > 0;
   const submitDisabled =
@@ -219,10 +222,17 @@ function AddFriendForm({
       formRef.current?.reset();
       setSearchTerm("");
       setPreview({ user: null, status: null });
+      setOptimisticTarget(null);
       setShowSentSuccess(true);
       router.refresh();
     }
   }, [router, state.ok]);
+
+  useEffect(() => {
+    if (state.formError) {
+      setOptimisticTarget(null);
+    }
+  }, [state.formError]);
 
   useEffect(() => {
     const query = searchTerm.trim();
@@ -317,6 +327,15 @@ function AddFriendForm({
         action={formAction}
         className="mt-4 grid gap-4"
         noValidate
+        onSubmit={(event) => {
+          if (submitDisabled || !preview.user) {
+            event.preventDefault();
+            return;
+          }
+
+          setOptimisticTarget(preview.user);
+          setShowSentSuccess(false);
+        }}
       >
         <input name="locale" type="hidden" value={locale} />
         <input name="returnTo" type="hidden" value={returnTo} />
@@ -346,6 +365,17 @@ function AddFriendForm({
           preview={preview}
           locale={locale}
         />
+        {optimisticTarget ? (
+          <div
+            className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+            aria-live="polite"
+          >
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            <span className="min-w-0 truncate">
+              {t.sendingTo(optimisticTarget.nickname)}
+            </span>
+          </div>
+        ) : null}
         <label className="grid gap-2">
           <span className="text-sm font-medium text-zinc-700">
             {t.messageLabel}
@@ -1012,7 +1042,11 @@ function SubmitButton({
       disabled={pending || disabled}
       className={cn("gap-2 whitespace-nowrap", className)}
     >
-      <Icon className="h-4 w-4" />
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <Icon className="h-4 w-4" />
+      )}
       {pending ? pendingLabel : children}
     </Button>
   );
