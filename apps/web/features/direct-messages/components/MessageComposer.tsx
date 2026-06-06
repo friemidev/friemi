@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { SendHorizontal, Smile } from "lucide-react";
+import { LoaderCircle, SendHorizontal, Smile } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
 import {
@@ -67,8 +67,13 @@ function SubmitButton({ locale }: { locale: string }) {
       type="submit"
       disabled={pending}
       className="h-11 shrink-0 gap-2 px-4"
+      aria-busy={pending}
     >
-      <SendHorizontal className="h-4 w-4" />
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <SendHorizontal className="h-4 w-4" />
+      )}
       <span className="hidden whitespace-nowrap sm:inline">
         {pending ? t.sending : t.send}
       </span>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import {
   Button,
   Card,
@@ -171,19 +172,50 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="w-full sm:w-auto"
+      className="w-full gap-2 sm:w-auto"
       disabled={pending || disabled}
+      aria-busy={pending || disabled}
     >
-      {disabled && !pending
-        ? t.coverUploading
-        : pending
-          ? mode === "edit"
-            ? t.saving
-            : t.creating
-          : mode === "edit"
-            ? t.save
-            : t.create}
+      {pending || disabled ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">
+        {disabled && !pending
+          ? t.coverUploading
+          : pending
+            ? mode === "edit"
+              ? t.saving
+              : t.creating
+            : mode === "edit"
+              ? t.save
+              : t.create}
+      </span>
     </Button>
+  );
+}
+
+function PendingFormNotice({
+  locale,
+  mode,
+}: {
+  locale: string;
+  mode: "create" | "edit";
+}) {
+  const { pending } = useFormStatus();
+  const t = getCopy(locale).form;
+
+  if (!pending) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+      aria-live="polite"
+    >
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <span>{mode === "edit" ? t.saving : t.creating}</span>
+    </div>
   );
 }
 
@@ -201,16 +233,19 @@ function FormActions({
   const t = getCopy(locale).form;
 
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      {mode === "edit" && cancelHref ? (
-        <Link
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
-          href={cancelHref}
-        >
-          {t.cancelEdit}
-        </Link>
-      ) : null}
-      <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
+    <div className="grid gap-3">
+      <PendingFormNotice locale={locale} mode={mode} />
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        {mode === "edit" && cancelHref ? (
+          <Link
+            className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
+            href={cancelHref}
+          >
+            {t.cancelEdit}
+          </Link>
+        ) : null}
+        <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
+      </div>
     </div>
   );
 }

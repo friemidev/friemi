@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useFormStatus } from "react-dom";
-import { Heart } from "lucide-react";
+import { Heart, LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -65,16 +65,21 @@ function FavoriteSubmitButton({
         className={cn(
           "h-10 w-10 rounded-full bg-white/95 p-0 text-zinc-950 shadow-sm ring-1 ring-black/10 hover:bg-white",
           isFavorited ? "text-red-500" : null,
+          pending ? "ring-2 ring-[#e6b3a1]" : null,
           className,
         )}
         type="submit"
         variant="secondary"
         disabled={pending}
       >
-        <Heart
-          className="h-4 w-4"
-          fill={isFavorited ? "currentColor" : "none"}
-        />
+        {pending ? (
+          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Heart
+            className="h-4 w-4"
+            fill={isFavorited ? "currentColor" : "none"}
+          />
+        )}
       </Button>
       <FavoriteTooltip label={label} />
     </span>

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
 import {
@@ -24,11 +25,34 @@ function CancelButton({ locale }: { locale: string }) {
     <Button
       type="submit"
       variant="secondary"
-      className="w-full"
+      className="w-full gap-2"
       disabled={pending}
+      aria-busy={pending}
     >
-      {pending ? t.cancelPending : t.cancel}
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">{pending ? t.cancelPending : t.cancel}</span>
     </Button>
+  );
+}
+
+function PendingCancelNotice({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const t = getCopy(locale).join;
+
+  if (!pending) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+      aria-live="polite"
+    >
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <span>{t.cancelPending}</span>
+    </div>
   );
 }
 
@@ -62,6 +86,7 @@ export function CancelParticipationForm({
         </div>
       ) : null}
 
+      <PendingCancelNotice locale={locale} />
       <CancelButton locale={locale} />
     </form>
   );
