@@ -23,9 +23,10 @@ import {
   type ActivityFilterSearchParams,
 } from "@/features/activities/utils/activityFilters";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +120,14 @@ export default async function ActivitiesPage({
   const { locale } = await params;
   const rawSearchParams = (await searchParams) ?? {};
   const filters = normalizeActivityFilters(rawSearchParams);
+  const perf = createPerformanceTracker({
+    locale,
+    metadata: {
+      page: filters.page,
+      sort: filters.sort,
+    },
+    route: "/activities",
+  });
 
   if (!isCanonicalActivityFilterSearchParams(rawSearchParams)) {
     redirect(getActivityFilterHref(withLocale(locale, "/activities"), filters));
@@ -127,19 +136,25 @@ export default async function ActivitiesPage({
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const hasFilters = hasActiveActivityFilters(filters);
-  const viewerProfile = await getOptionalCurrentUserProfile();
-  const [activitiesResult, filterOptions] = await Promise.all([
-    getActivityList(filters, { viewerProfileId: viewerProfile?.id })
-      .then((list) => ({ list, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load activities", error);
-        return { list: null, error };
-      }),
-    getActivityFilterOptions().catch((error: unknown) => {
-      console.error("Failed to load activity filter options", error);
-      return { cities: [] };
-    }),
-  ]);
+  const viewerProfile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfile(),
+  );
+  const [activitiesResult, filterOptions] = await perf.measure(
+    "activity.data",
+    () =>
+      Promise.all([
+        getActivityList(filters, { viewerProfileId: viewerProfile?.id })
+          .then((list) => ({ list, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load activities", error);
+            return { list: null, error };
+          }),
+        getActivityFilterOptions().catch((error: unknown) => {
+          console.error("Failed to load activity filter options", error);
+          return { cities: [] };
+        }),
+      ]),
+  );
 
   if (activitiesResult.list && activitiesResult.list.page !== filters.page) {
     redirect(
@@ -165,64 +180,69 @@ export default async function ActivitiesPage({
       userProfileId: viewerProfile?.id,
     };
 
-    await Promise.all([
-      trackAnalyticsEvent(
+    queueAnalyticsEvent(
+      {
+        locale: analyticsLocale,
+        name: "activity_list_viewed",
+        route: `/${locale}/activities`,
+        sourceSurface: "activity_list",
+        properties: {
+          filter_count: filterCount,
+          has_keyword: Boolean(filters.keyword),
+          page: activitiesResult.list.page,
+          page_size: activitiesResult.list.pageSize,
+          public_event_count: publicEventCount,
+          result_count: activitiesResult.list.activities.length,
+          sort: filters.sort,
+          team_count: activitiesResult.list.activities.length - publicEventCount,
+          total_count: activitiesResult.list.totalCount,
+        },
+      },
+      commonOptions,
+    );
+
+    if (filters.keyword) {
+      queueAnalyticsEvent(
         {
           locale: analyticsLocale,
-          name: "activity_list_viewed",
+          name: "search_submitted",
           route: `/${locale}/activities`,
           sourceSurface: "activity_list",
           properties: {
             filter_count: filterCount,
-            has_keyword: Boolean(filters.keyword),
-            page: activitiesResult.list.page,
-            page_size: activitiesResult.list.pageSize,
-            public_event_count: publicEventCount,
-            result_count: activitiesResult.list.activities.length,
-            sort: filters.sort,
-            team_count:
-              activitiesResult.list.activities.length - publicEventCount,
-            total_count: activitiesResult.list.totalCount,
+            keyword_length: filters.keyword.length,
+            result_count: activitiesResult.list.totalCount,
+            scope: "activities",
           },
         },
         commonOptions,
-      ),
-      filters.keyword
-        ? trackAnalyticsEvent(
-            {
-              locale: analyticsLocale,
-              name: "search_submitted",
-              route: `/${locale}/activities`,
-              sourceSurface: "activity_list",
-              properties: {
-                filter_count: filterCount,
-                keyword_length: filters.keyword.length,
-                result_count: activitiesResult.list.totalCount,
-                scope: "activities",
-              },
-            },
-            commonOptions,
-          )
-        : Promise.resolve({ ok: true as const }),
-      filterCount > 0
-        ? trackAnalyticsEvent(
-            {
-              locale: analyticsLocale,
-              name: "filter_applied",
-              route: `/${locale}/activities`,
-              sourceSurface: "activity_list",
-              properties: {
-                filter_count: filterCount,
-                filter_names: activeFilterNames,
-                result_count: activitiesResult.list.totalCount,
-                scope: "activities",
-              },
-            },
-            commonOptions,
-          )
-        : Promise.resolve({ ok: true as const }),
-    ]);
+      );
+    }
+
+    if (filterCount > 0) {
+      queueAnalyticsEvent(
+        {
+          locale: analyticsLocale,
+          name: "filter_applied",
+          route: `/${locale}/activities`,
+          sourceSurface: "activity_list",
+          properties: {
+            filter_count: filterCount,
+            filter_names: activeFilterNames,
+            result_count: activitiesResult.list.totalCount,
+            scope: "activities",
+          },
+        },
+        commonOptions,
+      );
+    }
   }
+
+  perf.finish({
+    hasFilters,
+    resultCount: activitiesResult.list?.activities.length ?? 0,
+    totalCount: activitiesResult.list?.totalCount ?? 0,
+  });
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">

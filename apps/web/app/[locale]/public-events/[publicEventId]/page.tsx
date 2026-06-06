@@ -17,12 +17,13 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/utils";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { getCategoryLabel } from "@/lib/copy";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
@@ -47,12 +48,17 @@ export default async function PublicEventDetailPage({
   params,
 }: PublicEventDetailPageProps) {
   const { locale, publicEventId } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/public-events/[publicEventId]",
+  });
   const t = getPublicEventCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
-  const viewerProfile = await getOptionalCurrentUserProfile();
-  const publicEvent = await getPublicEventById(
-    publicEventId,
-    viewerProfile?.id,
+  const viewerProfile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfile(),
+  );
+  const publicEvent = await perf.measure("publicEvent.detail", () =>
+    getPublicEventById(publicEventId, viewerProfile?.id),
   );
 
   if (!publicEvent) {
@@ -66,7 +72,7 @@ export default async function PublicEventDetailPage({
     "activity_list",
   );
 
-  await trackAnalyticsEvent(
+  queueAnalyticsEvent(
     {
       locale: analyticsLocale,
       name: "public_event_detail_viewed",
@@ -99,6 +105,10 @@ export default async function PublicEventDetailPage({
     : isEnded
       ? t.teamSectionEndedDescription
       : t.teamSectionDescription;
+  perf.finish({
+    hasViewer: Boolean(viewerProfile),
+    teamCount: publicEvent.teamCount,
+  });
 
   return (
     <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">

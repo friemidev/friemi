@@ -7,6 +7,7 @@ import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries
 import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 
 type MessagesPageProps = {
   params: Promise<{
@@ -24,24 +25,39 @@ export default async function MessagesPage({
   searchParams,
 }: MessagesPageProps) {
   const { locale } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/messages",
+  });
   const query = await searchParams;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await perf.measure("viewer.profile", () =>
+    ensureCurrentUserProfile(locale),
+  );
   const commonCopy = getCopy(locale).common;
-  const [friendRosterResult, incomingRequests] = await Promise.all([
-    getDirectMessageFriendRoster(profile.id)
-      .then((friends) => ({ friends, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load direct message friend roster", error);
-        return { friends: [], error };
-      }),
-    getPendingIncomingFriendRequests(profile.id).catch((error: unknown) => {
-      console.error("Failed to load incoming friend requests", error);
+  const [friendRosterResult, incomingRequests] = await perf.measure(
+    "messages.roster",
+    () =>
+      Promise.all([
+        getDirectMessageFriendRoster(profile.id)
+          .then((friends) => ({ friends, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load direct message friend roster", error);
+            return { friends: [], error };
+          }),
+        getPendingIncomingFriendRequests(profile.id).catch((error: unknown) => {
+          console.error("Failed to load incoming friend requests", error);
 
-      return [];
-    }),
-  ]);
+          return [];
+        }),
+      ]),
+  );
   const openFriendRequests =
     query?.friendRequests === "1" && incomingRequests.length > 0;
+  perf.finish({
+    friendCount: friendRosterResult.friends.length,
+    incomingRequestCount: incomingRequests.length,
+    openFriendRequests,
+  });
 
   return (
     <PageContainer className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0">
