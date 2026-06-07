@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Flag,
   MessageCircle,
+  UserMinus,
   UserPlus,
   XCircle,
   type LucideIcon,
@@ -56,6 +57,7 @@ function getNotificationText(
 
   if (
     notification.type === "PARTICIPATION_PENDING" ||
+    notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
     notification.type === "ACTIVITY_COMMENTED" ||
     notification.type === "COMMENT_REPLY"
@@ -154,6 +156,18 @@ function getNotificationVisual(
       iconClassName: isUnread ? "bg-sky text-ink" : "bg-sky/40 text-zinc-600",
       cardClassName: isUnread
         ? "border-sky/80 bg-white"
+        : "border-black/10 bg-white/65",
+    };
+  }
+
+  if (type === "PARTICIPATION_CANCELLED") {
+    return {
+      icon: UserMinus,
+      iconClassName: isUnread
+        ? "bg-[#f0e5d6] text-[#8a5c3d]"
+        : "bg-[#f5efe6] text-[#8a6a40]",
+      cardClassName: isUnread
+        ? "border-[#e1cdb8] bg-white"
         : "border-black/10 bg-white/65",
     };
   }

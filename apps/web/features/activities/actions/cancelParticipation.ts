@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -34,7 +35,11 @@ function refreshActivityViews(locale: string, activityId: string) {
 
   revalidatePath(activityPath);
   revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/notifications"));
+  revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   return activityPath;
 }
@@ -60,49 +65,82 @@ export async function cancelParticipationAction(
   let alreadyCancelled = false;
 
   try {
-    const participation = await prisma.activityParticipant.findUnique({
-      where: {
-        activityId_userProfileId: {
-          activityId: result.data.activityId,
-          userProfileId: profile.id,
+    await prisma.$transaction(async (tx) => {
+      const participation = await tx.activityParticipant.findUnique({
+        where: {
+          activityId_userProfileId: {
+            activityId: result.data.activityId,
+            userProfileId: profile.id,
+          },
         },
-      },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
+        select: {
+          id: true,
+          status: true,
+          activity: {
+            select: {
+              id: true,
+              organizerId: true,
+            },
+          },
+        },
+      });
 
-    if (!participation) {
+      if (!participation) {
+        throw new Error("PARTICIPATION_NOT_FOUND");
+      }
+
+      if (!cancellableParticipantStatuses.includes(participation.status)) {
+        if (participation.status === "CANCELLED") {
+          alreadyCancelled = true;
+          return;
+        }
+
+        throw new Error("PARTICIPATION_NOT_CANCELLABLE");
+      }
+
+      await tx.activityParticipant.update({
+        where: {
+          id: participation.id,
+        },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+        },
+      });
+
+      if (participation.activity.organizerId !== profile.id) {
+        await createNotification(tx, {
+          actorId: profile.id,
+          activityId: participation.activity.id,
+          recipientId: participation.activity.organizerId,
+          type: "PARTICIPATION_CANCELLED",
+        });
+      }
+
+      cancelled = true;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "PARTICIPATION_NOT_FOUND") {
       return {
         formError: "你还没有报名这个活动。",
       };
     }
 
-    if (!cancellableParticipantStatuses.includes(participation.status)) {
-      if (participation.status === "CANCELLED") {
-        alreadyCancelled = true;
-        return {
-          formError: undefined,
-        };
-      }
-
+    if (
+      error instanceof Error &&
+      error.message === "PARTICIPATION_NOT_CANCELLABLE"
+    ) {
       return {
         formError: "当前报名状态不能取消。",
       };
     }
 
-    await prisma.activityParticipant.update({
-      where: {
-        id: participation.id,
-      },
-      data: {
-        status: "CANCELLED",
-        cancelledAt: new Date(),
-      },
-    });
-    cancelled = true;
-  } catch (error) {
+    if (alreadyCancelled) {
+      return {
+        formError: undefined,
+      };
+    }
+
     console.error("Failed to cancel participation", error);
 
     return {
