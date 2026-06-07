@@ -22,6 +22,7 @@ const isActivityLinkPreviewRoute = createRouteMatcher([
   "/api/activity-link-preview",
 ]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
+const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
@@ -71,6 +72,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isNotificationsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   if (isAnalyticsApiRoute(request)) {
     return NextResponse.next();
   }
@@ -87,6 +92,7 @@ export const config = {
     "/api/uploads/:path*",
     "/api/activity-link-preview",
     "/api/friends/:path*",
+    "/api/notifications/:path*",
     "/api/analytics/:path*",
   ],
 };
