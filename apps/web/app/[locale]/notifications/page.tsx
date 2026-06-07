@@ -25,6 +25,7 @@ import {
   getNotificationCenter,
   type NotificationViewModel,
 } from "@/features/notifications/queries/getNotifications";
+import { NotificationCountHydrator } from "@/features/notifications/components/NotificationCountHydrator";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -258,6 +259,7 @@ export default async function NotificationsPage({
 
   return (
     <PageContainer className="space-y-6">
+      <NotificationCountHydrator unreadCount={unreadCount} />
       <section className="flex flex-col gap-4 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold text-moss">

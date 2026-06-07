@@ -6,6 +6,7 @@ import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
+import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRequiredDialog";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
@@ -53,22 +54,27 @@ export default async function LocaleLayout({
   });
   const content = (
     <NextIntlClientProvider messages={messages}>
-      <div className="min-h-screen pb-24 md:pb-0">
-        <AppHeader
-          locale={locale}
-          showNotificationNav={Boolean(viewerProfile)}
-          showAdminNav={showAdminNav}
-          viewerFriendCode={viewerProfile?.friendCode ?? null}
-          viewerNickname={viewerProfile?.nickname ?? null}
-          incomingFriendRequests={incomingFriendRequests}
-          unreadNotificationCount={unreadNotificationCount}
-        />
-        {viewerProfile && viewerProfile.nickname.trim().length === 0 ? (
-          <NicknameRequiredDialog locale={locale} />
-        ) : null}
-        {children}
-        <MobileNav locale={locale} />
-      </div>
+      <NotificationBadgeProvider
+        enabled={Boolean(viewerProfile)}
+        initialUnreadNotificationCount={unreadNotificationCount}
+      >
+        <div className="min-h-screen pb-24 md:pb-0">
+          <AppHeader
+            locale={locale}
+            showNotificationNav={Boolean(viewerProfile)}
+            showAdminNav={showAdminNav}
+            viewerFriendCode={viewerProfile?.friendCode ?? null}
+            viewerNickname={viewerProfile?.nickname ?? null}
+            incomingFriendRequests={incomingFriendRequests}
+            unreadNotificationCount={unreadNotificationCount}
+          />
+          {viewerProfile && viewerProfile.nickname.trim().length === 0 ? (
+            <NicknameRequiredDialog locale={locale} />
+          ) : null}
+          {children}
+          <MobileNav locale={locale} />
+        </div>
+      </NotificationBadgeProvider>
     </NextIntlClientProvider>
   );
 
