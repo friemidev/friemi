@@ -195,6 +195,8 @@ export function ActivityCard({
   const actionEventName: AnalyticsEventName = canCreateTeam
     ? "team_create_started"
     : "activity_card_clicked";
+  const isInactiveCard =
+    displayStatus === "ENDED" || displayStatus === "CANCELLED";
   const baseAnalyticsProperties = {
     category: activity.category,
     city: activity.city,
@@ -204,7 +206,14 @@ export function ActivityCard({
   };
 
   return (
-    <Card className="relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+    <Card
+      className={cn(
+        "relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg",
+        isInactiveCard
+          ? "border-zinc-200 bg-zinc-50/90 text-zinc-500 saturate-0"
+          : null,
+      )}
+    >
       {showFavoriteButton && isActivityInfo && activity.publicEventId ? (
         <div className="absolute right-3 top-3 z-20">
           <PublicEventFavoriteButton
@@ -250,6 +259,7 @@ export function ActivityCard({
           className={cn(
             "relative flex h-28 items-end justify-between gap-2 overflow-hidden p-3 sm:h-36 sm:p-4",
             coverTones[activity.coverTone],
+            isInactiveCard ? "grayscale" : null,
           )}
         >
           <ActivityCoverImage
@@ -281,13 +291,23 @@ export function ActivityCard({
         </div>
 
         <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
-          <CardTitle className="line-clamp-2 text-base leading-snug sm:text-lg">
+          <CardTitle
+            className={cn(
+              "line-clamp-2 text-base leading-snug sm:text-lg",
+              isInactiveCard ? "text-zinc-600" : null,
+            )}
+          >
             {activity.title}
           </CardTitle>
         </CardHeader>
 
         <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-          <div className="grid gap-2 text-sm text-zinc-600">
+          <div
+            className={cn(
+              "grid gap-2 text-sm text-zinc-600",
+              isInactiveCard ? "text-zinc-500" : null,
+            )}
+          >
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0">
