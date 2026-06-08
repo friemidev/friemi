@@ -51,7 +51,7 @@ function getCardKindLabel(isActivityInfo: boolean, locale: string) {
     return isActivityInfo ? "Activity info" : "Crew";
   }
 
-  return isActivityInfo ? "活动信息" : "车队";
+  return isActivityInfo ? "活动信息" : "组局";
 }
 
 function getCardVisibilityLabel(

@@ -48,7 +48,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="w-full gap-2"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]"
       disabled={pending}
       aria-busy={pending}
     >
@@ -119,6 +119,41 @@ function getParticipationCopy(
   };
 }
 
+function ParticipationStatusCard({
+  description,
+  isPending,
+  title,
+}: {
+  description: string;
+  isPending: boolean;
+  title: string;
+}) {
+  return (
+    <div
+      className={
+        isPending
+          ? "rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm"
+          : "rounded-xl border border-[#d9cfbd] bg-white/90 px-3 py-3 text-sm"
+      }
+    >
+      <p
+        className={isPending ? "font-medium text-amber-900" : "font-medium text-ink"}
+      >
+        {title}
+      </p>
+      <p
+        className={
+          isPending
+            ? "mt-1 leading-6 text-amber-800"
+            : "mt-1 leading-6 text-zinc-500"
+        }
+      >
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function RejoinNotice({
   locale,
   status,
@@ -173,8 +208,12 @@ export function JoinActivityForm({
     const copy = getParticipationCopy(viewerParticipationStatus, locale);
 
     return (
-      <div className="grid gap-3">
-        <DisabledAction title={copy.title} description={copy.description} />
+      <div className="grid gap-2.5">
+        <ParticipationStatusCard
+          description={copy.description}
+          isPending={viewerParticipationStatus === "PENDING"}
+          title={copy.title}
+        />
         <CancelParticipationForm activityId={activityId} locale={locale} />
       </div>
     );
@@ -194,7 +233,7 @@ export function JoinActivityForm({
           description={t.signInDescription}
         />
         <Link
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+          className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] px-4 text-sm font-medium text-white transition hover:bg-[#c87b61]"
           href={withLocale(locale, "/sign-in")}
         >
           {t.signInTitle}

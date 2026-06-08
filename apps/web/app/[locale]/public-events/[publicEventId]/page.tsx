@@ -282,7 +282,7 @@ export default async function PublicEventDetailPage({
                     },
                   }}
                 >
-                  <Button className="w-full whitespace-nowrap sm:w-auto">
+                  <Button className="w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
                     {t.teamUp}
                   </Button>
                 </AnalyticsLink>
@@ -327,7 +327,7 @@ export default async function PublicEventDetailPage({
                         },
                       }}
                     >
-                      <Button className="w-full whitespace-nowrap rounded-full px-6 sm:w-auto">
+                      <Button className="w-full whitespace-nowrap rounded-full bg-[#d88d72] px-6 text-white hover:bg-[#c87b61] sm:w-auto">
                         {t.noTeamsCta}
                       </Button>
                     </AnalyticsLink>
@@ -388,7 +388,69 @@ export default async function PublicEventDetailPage({
         </article>
 
         <aside className="h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
-          <div className="mb-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+          <div className="rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6a40]">
+                  {t.teamUp}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-zinc-600">
+                  {t.teamCount(publicEvent.teamCount)}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-[#dccba8]">
+                {canCreateTeam ? t.jumpToTeams : unavailableReason}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {publicEvent.officialUrl ? (
+                <AnalyticsExternalLink
+                  className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  event={{
+                    name: "public_event_source_clicked",
+                    entityId: publicEvent.id,
+                    entityType: "public_event",
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      source_kind: "official_page",
+                    },
+                  }}
+                  href={publicEvent.officialUrl}
+                >
+                  {t.officialPage}
+                  <ExternalLink className="h-4 w-4" />
+                </AnalyticsExternalLink>
+              ) : null}
+              {!canCreateTeam ? (
+                <p className="rounded-xl bg-white/80 px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#dccba8]">
+                  {unavailableReason}
+                </p>
+              ) : (
+                <AnalyticsLink
+                  href={withLocale(
+                    locale,
+                    `/public-events/${publicEvent.id}/teams/new`,
+                  )}
+                  event={{
+                    name: "team_create_started",
+                    entityId: publicEvent.id,
+                    entityType: "public_event",
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      category: publicEvent.category,
+                      city: publicEvent.city,
+                    },
+                  }}
+                >
+                  <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61]">
+                    {t.teamUp}
+                  </Button>
+                </AnalyticsLink>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-5 mt-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
             <div className="flex items-center gap-2 font-semibold text-ink">
               <Ticket className="h-4 w-4 text-[#8a6a40]" />
               {t.publicEventRuleTitle}
@@ -428,52 +490,6 @@ export default async function PublicEventDetailPage({
             </p>
           </div>
 
-          <div className="mt-6 grid gap-3">
-            {publicEvent.officialUrl ? (
-              <AnalyticsExternalLink
-                className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                event={{
-                  name: "public_event_source_clicked",
-                  entityId: publicEvent.id,
-                  entityType: "public_event",
-                  sourceSurface: "public_event_detail",
-                  properties: {
-                    source_kind: "official_page",
-                  },
-                }}
-                href={publicEvent.officialUrl}
-              >
-                {t.officialPage}
-                <ExternalLink className="h-4 w-4" />
-              </AnalyticsExternalLink>
-            ) : null}
-            {!canCreateTeam ? (
-              <p className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-600">
-                {unavailableReason}
-              </p>
-            ) : (
-              <AnalyticsLink
-                href={withLocale(
-                  locale,
-                  `/public-events/${publicEvent.id}/teams/new`,
-                )}
-                event={{
-                  name: "team_create_started",
-                  entityId: publicEvent.id,
-                  entityType: "public_event",
-                  sourceSurface: "public_event_detail",
-                  properties: {
-                    category: publicEvent.category,
-                    city: publicEvent.city,
-                  },
-                }}
-              >
-                <Button className="h-11 w-full whitespace-nowrap rounded-full">
-                  {t.teamUp}
-                </Button>
-              </AnalyticsLink>
-            )}
-          </div>
         </aside>
       </section>
     </PageContainer>
