@@ -414,51 +414,58 @@ function shouldIncludePublicEvents(filters: ActivityFilters | undefined) {
 
 export function getLegacyPublicActivityInfoWhere(): Prisma.ActivityWhereInput {
   return {
-    OR: [
-      ...legacyPublicActivityIdPrefixes.map((prefix) => ({
-        id: {
-          startsWith: prefix,
-        },
-      })),
-      ...legacyPublicActivitySources.flatMap((source) => [
-        {
-          source: {
-            contains: source,
-            mode: "insensitive" as const,
-          },
-        },
-        {
-          sourceUrl: {
-            contains: source,
-            mode: "insensitive" as const,
-          },
-        },
-        {
-          externalUrl: {
-            contains: source,
-            mode: "insensitive" as const,
-          },
-        },
-      ]),
+    AND: [
       {
-        externalSource: {
-          not: null,
-        },
+        publicEventId: null,
       },
       {
-        externalId: {
-          not: null,
-        },
-      },
-      {
-        externalUrl: {
-          not: null,
-        },
-      },
-      {
-        importedAt: {
-          not: null,
-        },
+        OR: [
+          ...legacyPublicActivityIdPrefixes.map((prefix) => ({
+            id: {
+              startsWith: prefix,
+            },
+          })),
+          ...legacyPublicActivitySources.flatMap((source) => [
+            {
+              source: {
+                contains: source,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              sourceUrl: {
+                contains: source,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              externalUrl: {
+                contains: source,
+                mode: "insensitive" as const,
+              },
+            },
+          ]),
+          {
+            externalSource: {
+              not: null,
+            },
+          },
+          {
+            externalId: {
+              not: null,
+            },
+          },
+          {
+            externalUrl: {
+              not: null,
+            },
+          },
+          {
+            importedAt: {
+              not: null,
+            },
+          },
+        ],
       },
     ],
   };
@@ -564,6 +571,7 @@ function getPublicEventTimeStateWhere(
 
 export function isLegacyActivityInfoSource(activity: {
   id?: string | null;
+  publicEventId?: string | null;
   source?: string | null;
   sourceUrl?: string | null;
   externalSource?: string | null;
@@ -572,6 +580,10 @@ export function isLegacyActivityInfoSource(activity: {
   importedAt?: Date | string | null;
   sourcePayload?: unknown;
 }) {
+  if (activity.publicEventId) {
+    return false;
+  }
+
   const sourceLooksPublic =
     Boolean(activity.id && legacyPublicActivityIdPattern.test(activity.id)) ||
     includesKnownPublicActivitySource(activity.source) ||
