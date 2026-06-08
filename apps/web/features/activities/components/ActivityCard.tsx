@@ -208,6 +208,7 @@ export function ActivityCard({
       {showFavoriteButton && isActivityInfo && activity.publicEventId ? (
         <div className="absolute right-3 top-3 z-20">
           <PublicEventFavoriteButton
+            favoriteCount={activity.favoriteCount}
             publicEventId={activity.publicEventId}
             className="h-9 w-9"
             isAuthenticated={isAuthenticated}
@@ -223,6 +224,7 @@ export function ActivityCard({
           <ActivityFavoriteButton
             activityId={activity.id}
             className="h-9 w-9"
+            favoriteCount={activity.favoriteCount}
             isAuthenticated={isAuthenticated}
             isFavorited={Boolean(activity.isFavorited)}
             locale={locale}

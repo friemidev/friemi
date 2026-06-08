@@ -75,6 +75,7 @@ export function PublicEventCard({
       {showFavoriteButton ? (
         <div className="absolute right-3 top-3 z-20">
           <PublicEventFavoriteButton
+            favoriteCount={event.favoriteCount}
             publicEventId={event.id}
             className="h-9 w-9"
             isAuthenticated={isAuthenticated}

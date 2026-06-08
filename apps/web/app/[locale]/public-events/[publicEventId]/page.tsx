@@ -127,6 +127,7 @@ export default async function PublicEventDetailPage({
         />
         <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
           <PublicEventFavoriteButton
+            favoriteCount={publicEvent.favoriteCount}
             publicEventId={publicEvent.id}
             isAuthenticated={Boolean(viewerProfile)}
             isFavorited={Boolean(publicEvent.isFavorited)}

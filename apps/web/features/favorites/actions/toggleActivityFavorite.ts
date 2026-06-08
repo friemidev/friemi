@@ -23,6 +23,7 @@ const favoriteVisibleParticipationStatuses: ParticipantStatus[] = [
 ];
 
 export type ToggleActivityFavoriteState = {
+  favoriteCount?: number;
   formError?: string;
   isFavorited?: boolean;
   ok?: boolean;
@@ -173,11 +174,18 @@ export async function toggleActivityFavoriteAction(
     }
   }
 
+  const favoriteCount = await prisma.activityFavorite.count({
+    where: {
+      activityId,
+    },
+  });
+
   const localizedPath = withLocale(locale, redirectPath);
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
 
   return {
+    favoriteCount,
     formError: undefined,
     isFavorited: !existingFavorite,
     ok: true,

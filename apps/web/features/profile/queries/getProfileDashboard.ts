@@ -166,6 +166,7 @@ function mapPublicEventToActivityCard(
     endAt: publicEvent.endAt,
     capacity: 0,
     coverImageUrl: publicEvent.coverImageUrl,
+    favoriteCount: publicEvent.favoriteCount,
     participantCount: publicEvent.teamCount,
     priceText: publicEvent.priceText ?? "",
     status: "RECRUITING",

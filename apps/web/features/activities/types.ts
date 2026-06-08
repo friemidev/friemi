@@ -22,6 +22,7 @@ export type ActivityFriendSignalViewModel = {
 export type ActivityCardViewModel = ActivitySummary & {
   coverImageUrl: string | null;
   coverTone: "moss" | "clay" | "sky";
+  favoriteCount: number;
   latitude: number | null;
   longitude: number | null;
   visibility?: ActivityVisibility;

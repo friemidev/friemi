@@ -79,6 +79,7 @@ function getActivityDetailViewModel(
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
+    favoriteCount: activity._count.favorites,
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,

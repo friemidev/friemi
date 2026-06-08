@@ -16,6 +16,7 @@ const togglePublicEventFavoriteSchema = z.object({
 });
 
 export type TogglePublicEventFavoriteState = {
+  favoriteCount?: number;
   formError?: string;
   isFavorited?: boolean;
   ok?: boolean;
@@ -146,12 +147,19 @@ export async function togglePublicEventFavoriteAction(
     }
   }
 
+  const favoriteCount = await publicEventFavorite.count({
+    where: {
+      publicEventId,
+    },
+  });
+
   const localizedPath = withLocale(locale, redirectPath);
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/lobby"));
 
   return {
+    favoriteCount,
     formError: undefined,
     isFavorited: !existingFavorite,
     ok: true,

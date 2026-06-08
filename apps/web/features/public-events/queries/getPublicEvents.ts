@@ -44,6 +44,7 @@ export const publicEventSelect = {
   status: true,
   _count: {
     select: {
+      favorites: true,
       teams: {
         where: {
           status: {
@@ -128,6 +129,7 @@ export function getPublicEventCardViewModel(
     coverImageUrl: publicEvent.coverImageUrl,
     officialUrl: publicEvent.officialUrl,
     status: publicEvent.status,
+    favoriteCount: publicEvent._count.favorites,
     teamCount: publicEvent._count.teams,
   };
 }

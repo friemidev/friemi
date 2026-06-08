@@ -133,6 +133,10 @@ export default async function ActivityDetailPage({
     },
   );
 
+  const activityIsFavorited = await perf.measure("activity.favoriteState", () =>
+    getViewerActivityFavorite(activity.id, viewerProfile?.id),
+  );
+
   if (activity.isActivityInfo) {
     const activityCategoryLabel = getCategoryLabel(activity.category, locale);
     const activityDateLabel = getActivityDateLabel(activity, locale);
@@ -160,7 +164,15 @@ export default async function ActivityDetailPage({
             src={activity.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
           />
-          <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+          <div className="absolute right-4 top-4 z-30 flex items-start gap-2 sm:right-5 sm:top-5">
+            <ActivityFavoriteButton
+              activityId={activity.id}
+              favoriteCount={activity.favoriteCount}
+              isAuthenticated={Boolean(viewerProfile)}
+              isFavorited={activityIsFavorited}
+              locale={locale}
+              redirectPath={`/activities/${activity.id}`}
+            />
             <ReportDialog
               isAuthenticated={Boolean(viewerProfile)}
               locale={locale}
@@ -407,14 +419,12 @@ export default async function ActivityDetailPage({
   const [
     viewerParticipation,
     isFollowingOrganizer,
-    isFavorited,
     comments,
     friendSignal,
   ] = await perf.measure("activity.viewerData", () =>
     Promise.all([
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
       getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-      getViewerActivityFavorite(activity.id, viewerProfile?.id),
       getActivityComments(activity.id, viewerProfile?.id ?? null),
       getActivityFriendSignal(activity.id, viewerProfile?.id),
     ]),
@@ -473,8 +483,9 @@ export default async function ActivityDetailPage({
         <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
           <ActivityFavoriteButton
             activityId={activity.id}
+            favoriteCount={activity.favoriteCount}
             isAuthenticated={Boolean(viewerProfile)}
-            isFavorited={isFavorited}
+            isFavorited={activityIsFavorited}
             locale={locale}
             redirectPath={`/activities/${activity.id}`}
           />

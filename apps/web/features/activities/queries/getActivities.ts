@@ -111,6 +111,7 @@ export const activityCardSelect = {
   },
   _count: {
     select: {
+      favorites: true,
       participants: {
         where: {
           status: {
@@ -143,6 +144,7 @@ const publicEventCardSelect = {
   createdAt: true,
   _count: {
     select: {
+      favorites: true,
       teams: {
         where: {
           status: {
@@ -718,6 +720,7 @@ export function getActivityCardViewModel(
     endAt: activity.endAt?.toISOString() ?? null,
     capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
+    favoriteCount: activity._count.favorites,
     participantCount: isActivityInfo ? 0 : activity._count.participants,
     priceText: activity.priceText,
     status: activity.status,
@@ -766,6 +769,7 @@ function getPublicEventActivityCardViewModel(
       endAt: publicEvent.endAt?.toISOString() ?? null,
       capacity: 0,
       coverImageUrl: publicEvent.coverImageUrl,
+      favoriteCount: publicEvent._count.favorites,
       participantCount: publicEvent._count.teams,
       priceText: publicEvent.priceText ?? "",
       status: "RECRUITING",
@@ -819,6 +823,7 @@ async function attachJoinableActivityStates(
           coverImageUrl: activity.coverImageUrl,
           officialUrl: activity.officialUrl ?? null,
           status: "SCHEDULED",
+          favoriteCount: activity.favoriteCount,
           teamCount: activity.participantCount,
           isFavorited: activity.isFavorited,
         })),

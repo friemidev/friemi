@@ -16,6 +16,7 @@ import {
 import type { FavoriteButtonLabels } from "../types";
 
 type PublicEventFavoriteButtonProps = {
+  favoriteCount: number;
   publicEventId: string;
   isAuthenticated: boolean;
   isFavorited: boolean;
@@ -31,6 +32,18 @@ function FavoriteTooltip({ label }: { label: string }) {
   return (
     <span className="pointer-events-none absolute right-0 top-full z-30 mt-2 max-w-40 whitespace-nowrap rounded-md bg-zinc-950 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100">
       {label}
+    </span>
+  );
+}
+
+function FavoriteCountBadge({ count }: { count: number }) {
+  if (count < 1) {
+    return null;
+  }
+
+  return (
+    <span className="pointer-events-none absolute -right-1 -top-1 z-10 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-white/90">
+      {count}
     </span>
   );
 }
@@ -87,6 +100,7 @@ function FavoriteSubmitButton({
 }
 
 export function PublicEventFavoriteButton({
+  favoriteCount,
   publicEventId,
   isAuthenticated,
   isFavorited,
@@ -103,6 +117,7 @@ export function PublicEventFavoriteButton({
   );
   const [, startRefreshTransition] = useTransition();
   const [displayIsFavorited, setDisplayIsFavorited] = useState(isFavorited);
+  const [displayFavoriteCount, setDisplayFavoriteCount] = useState(favoriteCount);
   const [hasOptimisticUpdate, setHasOptimisticUpdate] = useState(false);
   const [pendingAction, setPendingAction] = useState<
     "favorite" | "unfavorite" | null
@@ -118,17 +133,19 @@ export function PublicEventFavoriteButton({
 
   useEffect(() => {
     setDisplayIsFavorited(isFavorited);
+    setDisplayFavoriteCount(favoriteCount);
     setHasOptimisticUpdate(false);
     setPendingAction(null);
-  }, [isFavorited]);
+  }, [favoriteCount, isFavorited]);
 
   useEffect(() => {
     if (state.formError && hasOptimisticUpdate) {
       setDisplayIsFavorited(isFavorited);
+      setDisplayFavoriteCount(favoriteCount);
       setHasOptimisticUpdate(false);
       setPendingAction(null);
     }
-  }, [hasOptimisticUpdate, isFavorited, state.formError]);
+  }, [favoriteCount, hasOptimisticUpdate, isFavorited, state.formError]);
 
   useEffect(() => {
     if (!state.ok || !state.updatedAt) {
@@ -136,6 +153,11 @@ export function PublicEventFavoriteButton({
     }
 
     setDisplayIsFavorited(Boolean(state.isFavorited));
+    setDisplayFavoriteCount(
+      typeof state.favoriteCount === "number"
+        ? state.favoriteCount
+        : favoriteCount,
+    );
     setHasOptimisticUpdate(false);
     setPendingAction(null);
     startRefreshTransition(() => {
@@ -143,6 +165,8 @@ export function PublicEventFavoriteButton({
     });
   }, [
     router,
+    favoriteCount,
+    state.favoriteCount,
     startRefreshTransition,
     state.isFavorited,
     state.ok,
@@ -165,6 +189,7 @@ export function PublicEventFavoriteButton({
             <Heart className="h-4 w-4" />
           </Button>
         </Link>
+        <FavoriteCountBadge count={displayFavoriteCount} />
         <FavoriteTooltip label={t.signInToFavorite} />
       </span>
     );
@@ -173,10 +198,15 @@ export function PublicEventFavoriteButton({
   return (
     <form
       action={formAction}
-      className="grid justify-start gap-2"
+      className="relative inline-flex"
       onSubmit={() => {
+        const nextIsFavorited = !displayIsFavorited;
+
         setPendingAction(displayIsFavorited ? "unfavorite" : "favorite");
         setDisplayIsFavorited((current) => !current);
+        setDisplayFavoriteCount((current) =>
+          Math.max(0, current + (nextIsFavorited ? 1 : -1)),
+        );
         setHasOptimisticUpdate(true);
       }}
     >
@@ -195,6 +225,7 @@ export function PublicEventFavoriteButton({
         pendingAction={pendingAction}
         labelOverrides={labelOverrides}
       />
+      <FavoriteCountBadge count={displayFavoriteCount} />
     </form>
   );
 }
