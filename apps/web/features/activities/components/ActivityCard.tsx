@@ -264,29 +264,31 @@ export function ActivityCard({
         >
           <ActivityCoverImage
             src={activity.coverImageUrl}
-            overlayClassName="bg-gradient-to-t from-black/68 via-black/30 to-black/10"
+            overlayClassName="bg-gradient-to-t from-black/54 via-black/14 to-black/6"
           />
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/55 to-transparent" />
-          <div className="relative flex min-w-0 flex-wrap gap-2 rounded-xl bg-black/18 p-1.5 ring-1 ring-white/10 backdrop-blur-sm">
-            <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold leading-none text-ink shadow-sm">
-              {getCategoryLabel(activity.category, locale)}
-            </span>
-            <span className="rounded-md bg-white/85 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
-              {getCardKindLabel(isActivityInfo, locale)}
-            </span>
-            {!isActivityInfo ? (
-              <span className="rounded-md bg-white/85 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
-                {getCardVisibilityLabel(activity.visibility, locale)}
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/10 to-transparent" />
+          <div className="relative mt-auto flex w-full items-end justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap gap-1.5">
+                <span className="rounded-md bg-[rgba(22,18,14,0.76)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#fffaf2] shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10">
+                  {getCategoryLabel(activity.category, locale)}
+                </span>
+                <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+                  {getCardKindLabel(isActivityInfo, locale)}
+                </span>
+                {!isActivityInfo ? (
+                  <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+                    {getCardVisibilityLabel(activity.visibility, locale)}
+                  </span>
+                ) : null}
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              {!isActivityInfo ? (
+                <ActivityStatusBadge status={displayStatus} locale={locale} />
+              ) : null}
+              <span className="rounded-md bg-[rgba(255,250,242,0.96)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+                {t.activityLabels.timeStates[timeState]}
               </span>
-            ) : null}
-          </div>
-          <div className="relative flex shrink-0 flex-col items-end gap-2 rounded-xl bg-black/18 p-1.5 ring-1 ring-white/10 backdrop-blur-sm">
-            {!isActivityInfo ? (
-              <ActivityStatusBadge status={displayStatus} locale={locale} />
-            ) : null}
-            <span className="rounded-md bg-white/88 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
-              {t.activityLabels.timeStates[timeState]}
-            </span>
+            </div>
           </div>
         </div>
 
