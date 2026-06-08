@@ -674,13 +674,6 @@ export function ActivityLobbyView({
   const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
   const sections = [
     {
-      id: "open" as const,
-      activities: openActivities,
-      description: t.openDescription,
-      emptyDescription: t.openEmptyDescription,
-      title: t.openTitle,
-    },
-    {
       id: "created" as const,
       activities: createdActivities,
       description: t.createdDescription,
@@ -714,6 +707,13 @@ export function ActivityLobbyView({
       description: t.friendJoinedDescription,
       emptyDescription: t.friendJoinedEmptyDescription,
       title: t.friendJoinedTitle,
+    },
+    {
+      id: "open" as const,
+      activities: openActivities,
+      description: t.openDescription,
+      emptyDescription: t.openEmptyDescription,
+      title: t.openTitle,
     },
   ];
   const filterOptions: FilterOption[] = [
