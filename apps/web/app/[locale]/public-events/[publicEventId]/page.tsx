@@ -123,7 +123,7 @@ export default async function PublicEventDetailPage({
       <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] bg-[#d9e9ee] p-4 shadow-[0_18px_42px_rgba(58,49,34,0.14)] sm:p-6 md:min-h-[26rem]">
         <ActivityCoverImage
           src={publicEvent.coverImageUrl}
-          overlayClassName="bg-gradient-to-t from-black/78 via-black/36 to-black/12"
+          overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"
         />
         <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
           <PublicEventFavoriteButton
@@ -143,8 +143,8 @@ export default async function PublicEventDetailPage({
             variant="icon"
           />
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/65 to-transparent" />
-        <div className="relative max-w-4xl space-y-4 rounded-[1.25rem] bg-black/28 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:p-4">
+        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/74 via-black/28 to-transparent" />
+        <div className="relative z-10 max-w-4xl space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
               {getCategoryLabel(publicEvent.category, locale)}
@@ -158,21 +158,23 @@ export default async function PublicEventDetailPage({
               </span>
             ) : null}
           </div>
-          <h1 className="text-3xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.48)] sm:text-4xl md:text-5xl">
-            {publicEvent.title}
-          </h1>
+          <div className="inline-block max-w-3xl rounded-[1.5rem] bg-[rgba(18,16,13,0.64)] px-4 py-3 shadow-[0_18px_36px_rgba(0,0,0,0.28)] ring-1 ring-white/10 sm:px-5 sm:py-4">
+            <h1 className="text-3xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_4px_24px_rgba(0,0,0,0.58)] sm:text-4xl md:text-5xl">
+              {publicEvent.title}
+            </h1>
+          </div>
           <div className="grid gap-2 text-sm text-white/92 sm:grid-cols-3">
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-black/24 px-3 py-2 backdrop-blur">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">{eventDateLabel}</span>
+            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
+              <span className="min-w-0 break-words font-medium">{eventDateLabel}</span>
             </span>
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-black/24 px-3 py-2 backdrop-blur">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">{publicEvent.address}</span>
+            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
+              <span className="min-w-0 break-words font-medium">{publicEvent.address}</span>
             </span>
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-black/24 px-3 py-2 backdrop-blur">
-              <UsersRound className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
+            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
+              <UsersRound className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
+              <span className="min-w-0 font-medium">
                 {t.teamCount(publicEvent.teamCount)}
               </span>
             </span>
