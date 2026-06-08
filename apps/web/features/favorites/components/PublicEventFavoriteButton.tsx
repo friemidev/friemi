@@ -41,9 +41,11 @@ function FavoriteCountBadge({ count }: { count: number }) {
     return null;
   }
 
+  const displayCount = count > 99 ? "99+" : String(count);
+
   return (
     <span className="pointer-events-none absolute -right-1 -top-1 z-10 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-white/90">
-      {count}
+      {displayCount}
     </span>
   );
 }
