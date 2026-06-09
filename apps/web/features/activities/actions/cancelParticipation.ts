@@ -6,6 +6,7 @@ import type { ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -53,13 +54,15 @@ export async function cancelParticipationAction(
     locale: getString(formData, "locale") || "zh-CN",
   };
   const result = cancelParticipationSchema.safeParse(rawInput);
+  const fallbackCopy = getCopy(rawInput.locale).join;
 
   if (!result.success) {
     return {
-      formError: "请稍后再试。",
+      formError: fallbackCopy.refreshError,
     };
   }
 
+  const actionCopy = getCopy(result.data.locale).join;
   const profile = await ensureCurrentUserProfile(result.data.locale);
   let cancelled = false;
   let alreadyCancelled = false;
@@ -122,7 +125,7 @@ export async function cancelParticipationAction(
   } catch (error) {
     if (error instanceof Error && error.message === "PARTICIPATION_NOT_FOUND") {
       return {
-        formError: "你还没有报名这个活动。",
+        formError: actionCopy.missingError,
       };
     }
 
@@ -131,7 +134,7 @@ export async function cancelParticipationAction(
       error.message === "PARTICIPATION_NOT_CANCELLABLE"
     ) {
       return {
-        formError: "当前报名状态不能取消。",
+        formError: actionCopy.statusError,
       };
     }
 
@@ -144,7 +147,7 @@ export async function cancelParticipationAction(
     console.error("Failed to cancel participation", error);
 
     return {
-      formError: "取消报名失败，请稍后重试。",
+      formError: actionCopy.failedError,
     };
   }
 
@@ -154,7 +157,7 @@ export async function cancelParticipationAction(
 
   if (!cancelled) {
     return {
-      formError: "取消报名失败，请稍后重试。",
+      formError: actionCopy.failedError,
     };
   }
 

@@ -415,6 +415,7 @@ const copy = {
       cancelConfirmTitle: "确认取消组局？",
       cancelConfirmDescription:
         "取消后，这场组局会停止报名。已报名的用户仍能看到状态变化。",
+      cancelContextLabel: "即将取消",
       cancelConfirmBack: "再想想",
       cancelConfirmSubmit: "确认取消",
       cancelledHint: "组局已取消，用户无法继续报名。",
@@ -425,6 +426,7 @@ const copy = {
       endedError: "活动已结束，不能再取消。",
       conflictError: "活动状态已更新，请稍后再试。",
       failedError: "取消活动失败，请稍后重试。",
+      cancelStateKept: "取消未生效，组局状态已保留。",
     },
     approval: {
       title: "报名审核",
@@ -530,6 +532,12 @@ const copy = {
       cancelPending: "取消中...",
       cancel: "取消报名",
       cancelConfirm: "确定要取消报名吗？取消后你的名额会释放给其他人。",
+      cancelContextLabel: "即将取消报名",
+      cancelStateKept: "取消未生效，你的报名状态已保留。",
+      refreshError: "请稍后再试。",
+      missingError: "你还没有报名这个活动。",
+      statusError: "当前报名状态不能取消。",
+      failedError: "取消报名失败，请稍后重试。",
     },
     form: {
       basicInfo: "组局信息",
@@ -1118,6 +1126,7 @@ const copy = {
       cancelConfirmTitle: "Cancel this crew?",
       cancelConfirmDescription:
         "This crew will stop taking new join requests. People who already joined can still see the status change.",
+      cancelContextLabel: "Crew to cancel",
       cancelConfirmBack: "Keep it",
       cancelConfirmSubmit: "Cancel crew",
       cancelledHint: "This crew is cancelled. Users can no longer join.",
@@ -1128,6 +1137,7 @@ const copy = {
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status changed. Try again later.",
       failedError: "Failed to cancel the activity. Try again later.",
+      cancelStateKept: "Cancellation did not go through. The crew is unchanged.",
     },
     approval: {
       title: "Participation review",
@@ -1244,6 +1254,13 @@ const copy = {
       cancelPending: "Cancelling...",
       cancel: "Cancel join",
       cancelConfirm: "Cancel your participation? Your seat will be released.",
+      cancelContextLabel: "Participation to cancel",
+      cancelStateKept:
+        "Cancellation did not go through. Your participation is unchanged.",
+      refreshError: "Try again later.",
+      missingError: "You have not joined this activity yet.",
+      statusError: "This participation status cannot be cancelled.",
+      failedError: "Failed to cancel your participation. Try again later.",
     },
     form: {
       basicInfo: "Plan details",
@@ -1857,6 +1874,7 @@ const copy = {
       cancelConfirmTitle: "Annuler cette équipe ?",
       cancelConfirmDescription:
         "Cette équipe n'acceptera plus de demandes. Les personnes déjà inscrites verront le changement de statut.",
+      cancelContextLabel: "Équipe à annuler",
       cancelConfirmBack: "Retour",
       cancelConfirmSubmit: "Confirmer",
       cancelledHint:
@@ -1868,6 +1886,8 @@ const copy = {
       endedError: "Cette activité est terminée et ne peut plus être annulée.",
       conflictError: "Le statut de l'activité a changé. Réessayez plus tard.",
       failedError: "Échec de l'annulation. Réessayez plus tard.",
+      cancelStateKept:
+        "L'annulation n'a pas été appliquée. L'équipe reste inchangée.",
     },
     approval: {
       title: "Validation des inscriptions",
@@ -1992,6 +2012,13 @@ const copy = {
       cancelPending: "Annulation...",
       cancel: "Annuler l'inscription",
       cancelConfirm: "Annuler votre participation ? Votre place sera libérée.",
+      cancelContextLabel: "Inscription à annuler",
+      cancelStateKept:
+        "L'annulation n'a pas été appliquée. Votre inscription reste inchangée.",
+      refreshError: "Réessayez plus tard.",
+      missingError: "Vous n'avez pas encore rejoint cette activité.",
+      statusError: "Ce statut d'inscription ne peut pas être annulé.",
+      failedError: "Échec de l'annulation de l'inscription. Réessayez plus tard.",
     },
     form: {
       basicInfo: "Détails de la sortie",

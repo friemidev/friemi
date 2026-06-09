@@ -24,6 +24,7 @@ type ViewerParticipationStatus =
 
 type JoinActivityFormProps = {
   activityId: string;
+  activityTitle: string;
   locale: string;
   requiresApproval: boolean;
   isFull: boolean;
@@ -183,6 +184,7 @@ function RejoinNotice({
 
 export function JoinActivityForm({
   activityId,
+  activityTitle,
   locale,
   requiresApproval,
   isFull,
@@ -214,7 +216,11 @@ export function JoinActivityForm({
           isPending={viewerParticipationStatus === "PENDING"}
           title={copy.title}
         />
-        <CancelParticipationForm activityId={activityId} locale={locale} />
+        <CancelParticipationForm
+          activityId={activityId}
+          activityTitle={activityTitle}
+          locale={locale}
+        />
       </div>
     );
   }
