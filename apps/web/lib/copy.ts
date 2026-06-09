@@ -68,6 +68,7 @@ const copy = {
       viewAll: "查看全部",
       loadFailed: "加载失败",
       retryDatabase: "暂时无法加载，请稍后再试。",
+      retry: "重新加载",
       people: "人",
       switchLanguage: (nextLanguage: string) => `切换到 ${nextLanguage}`,
     },
@@ -749,6 +750,7 @@ const copy = {
       viewAll: "View all",
       loadFailed: "Load failed",
       retryDatabase: "Unable to load right now. Try again later.",
+      retry: "Try again",
       people: "people",
       switchLanguage: (nextLanguage: string) => `Switch to ${nextLanguage}`,
     },
@@ -1487,6 +1489,7 @@ const copy = {
       loadFailed: "Échec du chargement",
       retryDatabase:
         "Chargement impossible pour le moment. Réessayez plus tard.",
+      retry: "Réessayer",
       people: "pers.",
       switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
     },

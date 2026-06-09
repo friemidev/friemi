@@ -80,6 +80,16 @@ a {
   }
 }
 
+@keyframes nextfun-shimmer {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(110%);
+  }
+}
+
 .nextfun-brand-loader {
   --loader-size: 8rem;
   --logo-size: 5.75rem;
@@ -162,11 +172,28 @@ a {
   animation-delay: 0.32s;
 }
 
+.nextfun-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(245, 238, 226, 0.92), rgba(255, 255, 255, 0.9), rgba(219, 232, 236, 0.72));
+  box-shadow: inset 0 0 0 1px rgba(128, 108, 77, 0.05);
+}
+
+.nextfun-shimmer::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent);
+  transform: translateX(-110%);
+  animation: nextfun-shimmer 1.65s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nextfun-brand-loader__halo,
   .nextfun-brand-loader__ring,
   .nextfun-brand-loader__logo,
-  .nextfun-loading-dots span {
+  .nextfun-loading-dots span,
+  .nextfun-shimmer::after {
     animation-duration: 3s;
   }
 }

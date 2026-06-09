@@ -1,5 +1,7 @@
-import { PageContainer } from "@/components/layout/PageContainer";
-import { LocalizedBrandLoader } from "@/components/ui/LocalizedBrandLoader";
+import {
+  LoadingPageShell,
+  ShimmerBlock,
+} from "@/components/ui/LoadingState";
 
 function NotificationSkeleton({ index }: { index: number }) {
   return (
@@ -7,16 +9,19 @@ function NotificationSkeleton({ index }: { index: number }) {
       className="flex gap-3 rounded-lg border border-black/10 bg-white/70 p-4 shadow-sm sm:p-5"
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-[#dbe8ec]" />
+      <ShimmerBlock className="h-8 w-8 shrink-0 rounded-full" delay={index * 45} />
       <div className="min-w-0 flex-1 space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <div className="h-5 w-36 animate-pulse rounded bg-zinc-100" />
-            <div className="h-4 w-full max-w-md animate-pulse rounded bg-zinc-100" />
+            <ShimmerBlock className="h-5 w-36" delay={index * 45 + 40} />
+            <ShimmerBlock
+              className="h-4 w-full max-w-md"
+              delay={index * 45 + 80}
+            />
           </div>
-          <div className="h-3 w-20 animate-pulse rounded bg-zinc-100" />
+          <ShimmerBlock className="h-3 w-20" delay={index * 45 + 120} />
         </div>
-        <div className="h-9 w-28 animate-pulse rounded-full bg-zinc-100" />
+        <ShimmerBlock className="h-9 w-28 rounded-full" delay={index * 45 + 160} />
       </div>
     </article>
   );
@@ -24,14 +29,13 @@ function NotificationSkeleton({ index }: { index: number }) {
 
 export default function NotificationsLoading() {
   return (
-    <PageContainer className="space-y-6">
+    <LoadingPageShell className="space-y-6">
       <section className="flex flex-col gap-4 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="min-w-0 space-y-3">
-          <LocalizedBrandLoader size="sm" showLabel />
-          <div className="h-8 w-36 animate-pulse rounded bg-zinc-100" />
-          <div className="h-4 w-full max-w-md animate-pulse rounded bg-zinc-100" />
+          <ShimmerBlock className="h-8 w-36" />
+          <ShimmerBlock className="h-4 w-full max-w-md" delay={60} />
         </div>
-        <div className="h-10 w-full animate-pulse rounded-full bg-zinc-100 sm:w-28" />
+        <ShimmerBlock className="h-10 w-full rounded-full sm:w-28" delay={100} />
       </section>
 
       <section className="grid gap-3">
@@ -39,6 +43,6 @@ export default function NotificationsLoading() {
           <NotificationSkeleton key={item} index={item} />
         ))}
       </section>
-    </PageContainer>
+    </LoadingPageShell>
   );
 }
