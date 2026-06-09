@@ -740,6 +740,7 @@ export default async function ActivityDetailPage({
                   ) : null}
                   <CancelActivityForm
                     activityId={activity.id}
+                    activityTitle={activity.title}
                     disabled={isCancelled || isEndedByTime}
                     locale={locale}
                   />
@@ -757,6 +758,7 @@ export default async function ActivityDetailPage({
                 <>
                   <JoinActivityForm
                     activityId={activity.id}
+                    activityTitle={activity.title}
                     locale={locale}
                     requiresApproval={activity.requiresApproval}
                     isFull={isFull}

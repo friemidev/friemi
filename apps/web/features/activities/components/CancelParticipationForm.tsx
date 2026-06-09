@@ -12,6 +12,7 @@ import {
 
 type CancelParticipationFormProps = {
   activityId: string;
+  activityTitle: string;
   locale: string;
 };
 
@@ -45,9 +46,11 @@ function CancelButton({
 }
 
 function CancelParticipationConfirmDialog({
+  activityTitle,
   locale,
   onClose,
 }: {
+  activityTitle: string;
   locale: string;
   onClose: () => void;
 }) {
@@ -61,6 +64,7 @@ function CancelParticipationConfirmDialog({
     >
       <div
         aria-describedby="cancel-participation-confirm-description"
+        aria-labelledby="cancel-participation-confirm-title"
         aria-modal="true"
         className="w-full max-w-md overflow-hidden rounded-[1.25rem] border border-[#e2d7c2] bg-[#fffaf1] shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
         role="alertdialog"
@@ -69,7 +73,10 @@ function CancelParticipationConfirmDialog({
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6a40]">
             {t.join.cancel}
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">
+          <h2
+            className="mt-1 text-xl font-semibold text-ink"
+            id="cancel-participation-confirm-title"
+          >
             {t.join.cancel}
           </h2>
         </div>
@@ -80,6 +87,14 @@ function CancelParticipationConfirmDialog({
           >
             {t.join.cancelConfirm}
           </p>
+          <div className="mt-4 rounded-xl border border-[#eadfcd] bg-white/70 px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a6a40]">
+              {t.join.cancelContextLabel}
+            </p>
+            <p className="mt-1 break-words text-sm font-semibold leading-5 text-ink">
+              {activityTitle}
+            </p>
+          </div>
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             <Button
               type="button"
@@ -131,6 +146,7 @@ function PendingCancelNotice({ locale }: { locale: string }) {
 
 export function CancelParticipationForm({
   activityId,
+  activityTitle,
   locale,
 }: CancelParticipationFormProps) {
   const [state, formAction] = useActionState(
@@ -138,6 +154,7 @@ export function CancelParticipationForm({
     initialState,
   );
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const t = getCopy(locale).join;
 
   useEffect(() => {
     if (state.formError) {
@@ -151,8 +168,12 @@ export function CancelParticipationForm({
       <input name="locale" type="hidden" value={locale} />
 
       {state.formError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
-          {state.formError}
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700"
+          role="alert"
+        >
+          <p className="font-medium">{state.formError}</p>
+          <p className="mt-1 text-red-700/80">{t.cancelStateKept}</p>
         </div>
       ) : null}
 
@@ -160,6 +181,7 @@ export function CancelParticipationForm({
       <CancelButton locale={locale} onOpen={() => setIsConfirmOpen(true)} />
       {isConfirmOpen ? (
         <CancelParticipationConfirmDialog
+          activityTitle={activityTitle}
           locale={locale}
           onClose={() => setIsConfirmOpen(false)}
         />

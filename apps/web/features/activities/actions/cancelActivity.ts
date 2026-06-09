@@ -53,6 +53,7 @@ function refreshActivityViews(locale: string, activityId: string) {
 
   revalidatePath(activityPath);
   revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/lobby"));
   revalidatePath(withLocale(locale, "/"));
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/notifications"));
