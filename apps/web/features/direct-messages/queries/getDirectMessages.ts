@@ -1,28 +1,17 @@
-import type {
-  ActivityStatus,
-  ParticipantStatus,
-  Prisma,
-} from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  compareOptionalFriendNearestActivities,
+  getFriendNearestActivitySignals,
+  type FriendNearestActivitySignalViewModel,
+} from "@/features/friends/queries/getFriendNearestActivitySignals";
 import { canSendDirectMessageToProfile } from "../services/directMessages";
 import {
   getConversationPair,
   getConversationPeerId,
 } from "../utils/conversation";
 
-const friendActivityWindowDays = 30;
 const friendActivitySignalLimitPerFriend = 4;
-const dayInMs = 24 * 60 * 60 * 1000;
-const effectiveParticipantStatuses: ParticipantStatus[] = [
-  "JOINED",
-  "APPROVED",
-];
-const visibleFriendActivityStatuses: ActivityStatus[] = [
-  "OPEN",
-  "FULL",
-  "RECRUITING",
-  "CONFIRMED",
-];
 
 const userSummarySelect = {
   id: true,
@@ -113,11 +102,8 @@ export type DirectMessagePreviewViewModel = {
   createdAt: string;
 };
 
-export type DirectConversationActivitySignalViewModel = {
-  id: string;
-  title: string;
-  startAt: string;
-};
+export type DirectConversationActivitySignalViewModel =
+  FriendNearestActivitySignalViewModel;
 
 export type DirectConversationListItemViewModel = {
   id: string;
@@ -290,74 +276,6 @@ async function getFriendPeerIds(
   );
 }
 
-async function getFriendActivitySignals(friendIds: string[]) {
-  if (friendIds.length === 0) {
-    return new Map<string, DirectConversationActivitySignalViewModel[]>();
-  }
-
-  const now = new Date();
-  const windowEnd = new Date(
-    now.getTime() + friendActivityWindowDays * dayInMs,
-  );
-  const participations = await prisma.activityParticipant.findMany({
-    where: {
-      userProfileId: {
-        in: friendIds,
-      },
-      status: {
-        in: effectiveParticipantStatuses,
-      },
-      activity: {
-        startAt: {
-          gte: now,
-          lte: windowEnd,
-        },
-        status: {
-          in: visibleFriendActivityStatuses,
-        },
-        visibility: "PUBLIC",
-        organizer: {
-          status: "ACTIVE",
-        },
-      },
-    },
-    orderBy: [{ activity: { startAt: "asc" } }, { id: "asc" }],
-    take: 250,
-    select: {
-      userProfileId: true,
-      activity: {
-        select: {
-          id: true,
-          title: true,
-          startAt: true,
-        },
-      },
-    },
-  });
-  const activitiesByFriendId = new Map<
-    string,
-    DirectConversationActivitySignalViewModel[]
-  >();
-
-  for (const participation of participations) {
-    const activities =
-      activitiesByFriendId.get(participation.userProfileId) ?? [];
-
-    if (activities.length >= friendActivitySignalLimitPerFriend) {
-      continue;
-    }
-
-    activities.push({
-      id: participation.activity.id,
-      title: participation.activity.title,
-      startAt: participation.activity.startAt.toISOString(),
-    });
-    activitiesByFriendId.set(participation.userProfileId, activities);
-  }
-
-  return activitiesByFriendId;
-}
-
 function sortFriendRosterItems(
   items: DirectMessageFriendRosterItemViewModel[],
 ) {
@@ -378,27 +296,22 @@ function sortFriendRosterItems(
       return 1;
     }
 
-    const firstActivityA = itemA.recentActivities[0]?.startAt;
-    const firstActivityB = itemB.recentActivities[0]?.startAt;
+    const firstActivityA = itemA.recentActivities[0];
+    const firstActivityB = itemB.recentActivities[0];
+    const activityOrder = compareOptionalFriendNearestActivities(
+      firstActivityA,
+      firstActivityB,
+    );
 
-    if (firstActivityA && firstActivityB) {
+    if (activityOrder !== 0 || firstActivityA || firstActivityB) {
       return (
-        new Date(firstActivityA).getTime() -
-          new Date(firstActivityB).getTime() ||
-        itemA.friendshipId.localeCompare(itemB.friendshipId)
+        activityOrder || itemA.friendshipId.localeCompare(itemB.friendshipId)
       );
     }
 
-    if (firstActivityA) {
-      return -1;
-    }
-
-    if (firstActivityB) {
-      return 1;
-    }
-
     return (
-      new Date(itemB.createdAt).getTime() - new Date(itemA.createdAt).getTime() ||
+      new Date(itemB.createdAt).getTime() -
+        new Date(itemA.createdAt).getTime() ||
       itemA.friendshipId.localeCompare(itemB.friendshipId)
     );
   });
@@ -440,7 +353,11 @@ export async function getDirectConversations(currentUserProfileId: string) {
 
   try {
     const friendPeerIds = await getFriendPeerIds(currentUserProfileId, peerIds);
-    activitiesByFriendId = await getFriendActivitySignals([...friendPeerIds]);
+    activitiesByFriendId = await getFriendNearestActivitySignals({
+      friendIds: [...friendPeerIds],
+      limitPerFriend: friendActivitySignalLimitPerFriend,
+      viewerProfileId: currentUserProfileId,
+    });
   } catch (error) {
     console.error("Failed to load direct conversation activity signals", error);
   }
@@ -488,7 +405,11 @@ export async function getDirectMessageFriendRoster(
           },
           select: conversationListSelect,
         }),
-    getFriendActivitySignals(friendIds).catch((error: unknown) => {
+    getFriendNearestActivitySignals({
+      friendIds,
+      limitPerFriend: friendActivitySignalLimitPerFriend,
+      viewerProfileId: currentUserProfileId,
+    }).catch((error: unknown) => {
       console.error("Failed to load mobile friend activity signals", error);
 
       return new Map<string, DirectConversationActivitySignalViewModel[]>();

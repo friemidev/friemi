@@ -1,20 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
+import {
+  compareOptionalFriendNearestActivities,
+  getFriendNearestActivitySignals,
+  type FriendNearestActivitySignalViewModel,
+} from "./getFriendNearestActivitySignals";
 
 export const friendListLimit = 50;
 export const friendRequestListLimit = 20;
-const friendActivityWindowDays = 30;
-const dayInMs = 24 * 60 * 60 * 1000;
-const effectiveParticipantStatuses: ParticipantStatus[] = [
-  "JOINED",
-  "APPROVED",
-];
-const visibleFriendActivityStatuses: ActivityStatus[] = [
-  "OPEN",
-  "FULL",
-  "RECRUITING",
-  "CONFIRMED",
-];
 
 export type FriendUserViewModel = {
   id: string;
@@ -24,11 +16,8 @@ export type FriendUserViewModel = {
   avatarUrl: string | null;
 };
 
-export type FriendActivitySummaryViewModel = {
-  id: string;
-  title: string;
-  startAt: string;
-};
+export type FriendActivitySummaryViewModel =
+  FriendNearestActivitySignalViewModel;
 
 export type FriendRequestViewModel = {
   id: string;
@@ -70,21 +59,13 @@ function sortFriendsForDashboard(friends: FriendViewModel[]) {
   return [...friends].sort((friendA, friendB) => {
     const firstActivityA = friendA.recentActivities[0]?.startAt;
     const firstActivityB = friendB.recentActivities[0]?.startAt;
+    const activityOrder = compareOptionalFriendNearestActivities(
+      friendA.recentActivities[0],
+      friendB.recentActivities[0],
+    );
 
-    if (firstActivityA && firstActivityB) {
-      return (
-        new Date(firstActivityA).getTime() -
-          new Date(firstActivityB).getTime() ||
-        friendA.id.localeCompare(friendB.id)
-      );
-    }
-
-    if (firstActivityA) {
-      return -1;
-    }
-
-    if (firstActivityB) {
-      return 1;
+    if (activityOrder !== 0 || firstActivityA || firstActivityB) {
+      return activityOrder || friendA.id.localeCompare(friendB.id);
     }
 
     return (
@@ -93,69 +74,6 @@ function sortFriendsForDashboard(friends: FriendViewModel[]) {
       friendA.id.localeCompare(friendB.id)
     );
   });
-}
-
-async function getFriendActivitySummaries(friendIds: string[]) {
-  if (friendIds.length === 0) {
-    return new Map<string, FriendActivitySummaryViewModel[]>();
-  }
-
-  const now = new Date();
-  const windowEnd = new Date(
-    now.getTime() + friendActivityWindowDays * dayInMs,
-  );
-  const participations = await prisma.activityParticipant.findMany({
-    where: {
-      userProfileId: {
-        in: friendIds,
-      },
-      status: {
-        in: effectiveParticipantStatuses,
-      },
-      activity: {
-        startAt: {
-          gte: now,
-          lte: windowEnd,
-        },
-        status: {
-          in: visibleFriendActivityStatuses,
-        },
-        visibility: "PUBLIC",
-        organizer: {
-          status: "ACTIVE",
-        },
-      },
-    },
-    orderBy: [{ activity: { startAt: "asc" } }, { id: "asc" }],
-    select: {
-      userProfileId: true,
-      activity: {
-        select: {
-          id: true,
-          title: true,
-          startAt: true,
-        },
-      },
-    },
-  });
-  const activitiesByFriendId = new Map<
-    string,
-    FriendActivitySummaryViewModel[]
-  >();
-
-  for (const participation of participations) {
-    const activities =
-      activitiesByFriendId.get(participation.userProfileId) ?? [];
-
-    activities.push({
-      id: participation.activity.id,
-      title: participation.activity.title,
-      startAt: participation.activity.startAt.toISOString(),
-    });
-    activitiesByFriendId.set(participation.userProfileId, activities);
-  }
-
-  return activitiesByFriendId;
 }
 
 export async function getPendingIncomingFriendRequests(
@@ -261,9 +179,10 @@ export async function getFriendsDashboard(
     ),
     recentActivities: [],
   }));
-  const activitiesByFriendId = await getFriendActivitySummaries(
-    mappedFriends.map((friend) => friend.user.id),
-  );
+  const activitiesByFriendId = await getFriendNearestActivitySignals({
+    friendIds: mappedFriends.map((friend) => friend.user.id),
+    viewerProfileId,
+  });
 
   const friends = mappedFriends.map((friend) => ({
     id: friend.id,

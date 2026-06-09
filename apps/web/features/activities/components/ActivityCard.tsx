@@ -192,6 +192,7 @@ export function ActivityCard({
     displayStatus !== "CANCELLED";
   const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
   const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
+  const friendSignal = !isActivityInfo ? activity.friendSignal : null;
   const actionEventName: AnalyticsEventName = canCreateTeam
     ? "team_create_started"
     : "activity_card_clicked";
@@ -327,6 +328,21 @@ export function ActivityCard({
               </span>
             ) : null}
           </div>
+          {friendSignal && friendSignal.count > 0 ? (
+            <span
+              className={cn(
+                "inline-flex min-w-0 items-center gap-1.5 rounded-md bg-moss/10 px-2.5 py-1.5 text-xs font-semibold text-moss ring-1 ring-moss/15",
+                isInactiveCard
+                  ? "bg-zinc-100 text-zinc-500 ring-zinc-200"
+                  : null,
+              )}
+            >
+              <UsersRound className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {t.activityFriendSignal.cardSummary(friendSignal.count)}
+              </span>
+            </span>
+          ) : null}
         </CardContent>
       </AnalyticsLink>
 

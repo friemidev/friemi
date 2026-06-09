@@ -38,8 +38,12 @@ export function getFriendsCopy(locale: string) {
       friendsDescription: (count: number) =>
         `${count} ami${count > 1 ? "s" : ""} · voyez leurs sorties récentes.`,
       friendsListDescription: "Voyez les sorties récentes de vos amis.",
-      friendActivitySummary: (date: string, title: string) =>
-        `${date} participe à « ${title} »`,
+      friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+        state === "ONGOING"
+          ? `En cours : « ${title} »`
+          : state === "ENDED"
+            ? `A rejoint « ${title} » le ${date}`
+            : `Prévoit « ${title} » le ${date}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
         `Voir ${count} activité${count > 1 ? "s" : ""} en plus`,
@@ -112,8 +116,12 @@ export function getFriendsCopy(locale: string) {
       friendsDescription: (count: number) =>
         `${count} friend${count === 1 ? "" : "s"} · see what they are up to.`,
       friendsListDescription: "See your friends' recent plans.",
-      friendActivitySummary: (date: string, title: string) =>
-        `${date} joined “${title}”`,
+      friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+        state === "ONGOING"
+          ? `At “${title}” now`
+          : state === "ENDED"
+            ? `Recently joined “${title}” on ${date}`
+            : `Plans to join “${title}” on ${date}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
         `Show ${count} more activit${count === 1 ? "y" : "ies"}`,
@@ -184,8 +192,12 @@ export function getFriendsCopy(locale: string) {
     friendsTitle: "好友列表",
     friendsDescription: (count: number) => `${count} 位好友 · 看看大家最近在干什么`,
     friendsListDescription: "看看好友最近在干什么",
-    friendActivitySummary: (date: string, title: string) =>
-      `${date}参加了「${title}」`,
+    friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+      state === "ONGOING"
+        ? `正在参加「${title}」`
+        : state === "ENDED"
+          ? `${date}参加过「${title}」`
+          : `${date}想去「${title}」`,
     moreActivities: (count: number) => `+${count}`,
     showMoreActivitiesLabel: (count: number) => `查看另外 ${count} 个活动`,
     collapseActivities: "收起",
