@@ -861,6 +861,7 @@ function FriendActivitySummary({
             {t.friendActivitySummary(
               formatActivityDateOnly(firstActivity.startAt, locale),
               firstActivity.title,
+              firstActivity.timeState,
             )}
           </span>
         </Link>

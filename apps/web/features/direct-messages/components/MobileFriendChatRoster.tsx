@@ -243,6 +243,7 @@ function MobileActivitySignalRow({
   const label = t.activitySignal(
     formatActivityDateOnly(activity.startAt, locale),
     activity.title,
+    activity.timeState,
   );
 
   return (

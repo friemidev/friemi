@@ -1,4 +1,5 @@
 import type { DirectMessageErrorCode } from "./services/directMessages";
+import type { FriendNearestActivityTimeState } from "@/features/friends/queries/getFriendNearestActivitySignals";
 
 type DirectMessagesCopy = {
   title: string;
@@ -30,7 +31,11 @@ type DirectMessagesCopy = {
   startConversation: string;
   addFriend: string;
   startChat: string;
-  activitySignal: (date: string, title: string) => string;
+  activitySignal: (
+    date: string,
+    title: string,
+    state: FriendNearestActivityTimeState,
+  ) => string;
   openActivity: (title: string) => string;
   moreActivities: (count: number) => string;
   showMoreActivitiesLabel: (count: number) => string;
@@ -78,8 +83,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       startConversation: "Message",
       addFriend: "Ajouter",
       startChat: "Démarrer la discussion",
-      activitySignal: (date: string, title: string) =>
-        `Participe à « ${title} » le ${date}`,
+      activitySignal: (date: string, title: string, state) =>
+        state === "ONGOING"
+          ? `En cours : « ${title} »`
+          : state === "ENDED"
+            ? `A rejoint « ${title} » le ${date}`
+            : `Prévoit « ${title} » le ${date}`,
       openActivity: (title: string) => `Voir l'activité : ${title}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
@@ -132,8 +141,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       startConversation: "Message",
       addFriend: "Add",
       startChat: "Start chat",
-      activitySignal: (date: string, title: string) =>
-        `Joined "${title}" on ${date}`,
+      activitySignal: (date: string, title: string, state) =>
+        state === "ONGOING"
+          ? `At "${title}" now`
+          : state === "ENDED"
+            ? `Recently joined "${title}" on ${date}`
+            : `Plans to join "${title}" on ${date}`,
       openActivity: (title: string) => `Open activity: ${title}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
@@ -182,8 +195,12 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     startConversation: "发消息",
     addFriend: "添加",
     startChat: "开始聊天",
-    activitySignal: (date: string, title: string) =>
-      `${date} 参加了「${title}」`,
+    activitySignal: (date: string, title: string, state) =>
+      state === "ONGOING"
+        ? `正在参加「${title}」`
+        : state === "ENDED"
+          ? `${date} 参加过「${title}」`
+          : `${date} 想去「${title}」`,
     openActivity: (title: string) => `查看活动：${title}`,
     moreActivities: (count: number) => `+${count}`,
     showMoreActivitiesLabel: (count: number) => `展开 ${count} 个近期活动`,
