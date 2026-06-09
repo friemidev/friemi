@@ -41,7 +41,7 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
+  "h-12 w-full rounded-2xl border border-[#ddc9a9] bg-white px-4 text-[15px] font-medium text-zinc-950 shadow-[0_8px_22px_rgba(92,66,32,0.05)] outline-none transition hover:border-[#cfb287] hover:shadow-[0_10px_26px_rgba(92,66,32,0.07)] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70";
 
 export function ActivityFilters({
   cities,
@@ -172,195 +172,203 @@ export function ActivityFilters({
         method="get"
         onSubmit={handleSubmit}
       >
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.keywordLabel}
-          <Input
-            defaultValue={filters.keyword}
-            enterKeyHint="search"
-            name="q"
-            placeholder={t.activityFilters.keywordPlaceholder}
-            type="search"
-          />
-        </label>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.keywordLabel}
+            <Input
+              className="h-12 rounded-2xl border-[#ddc9a9] bg-white px-4 text-[15px] shadow-[0_8px_22px_rgba(92,66,32,0.05)] placeholder:text-zinc-400 focus-visible:border-[#c7936c] focus-visible:ring-[#ecd2bb]/70"
+              defaultValue={filters.keyword}
+              enterKeyHint="search"
+              name="q"
+              placeholder={t.activityFilters.keywordPlaceholder}
+              type="search"
+            />
+          </label>
 
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.categoryLabel}
-          <select
-            className={selectClassName}
-            defaultValue={filters.category ?? ""}
-            name="category"
-          >
-            <option value="">{t.activityFilters.allCategories}</option>
-            {activityCategoryOptions.map((category) => (
-              <option key={category} value={category}>
-                {getCategoryLabel(category, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="flex items-end">
+            <Button
+              className="h-12 w-full gap-2 rounded-2xl bg-[linear-gradient(180deg,#d59c76,#bf8460)] px-5 text-[15px] font-semibold text-white shadow-[0_14px_28px_rgba(191,132,96,0.3)] hover:bg-[#b87f59] lg:min-w-[112px] lg:w-auto"
+              type="submit"
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              {t.activityFilters.apply}
+            </Button>
+          </div>
 
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.cityLabel}
-          <select
-            className={selectClassName}
-            defaultValue={selectedCity}
-            name="city"
-          >
-            <option value="">{t.activityFilters.allCities}</option>
-            {cityOptions.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {!publicInfoOnly ? (
-          <>
-            <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-              {t.activityFilters.relationLabel}
-              <select
-                className={selectClassName}
-                defaultValue={filters.relation}
-                name="relation"
-              >
-                {activityRelationFilters.map((relation) => (
-                  <option key={relation} value={relation}>
-                    {relation === "ALL"
-                      ? t.activityFilters.allRelations
-                      : relation === "FRIEND_HOSTED"
-                        ? t.activityFilters.relationFriendHosted
-                        : relation === "FRIEND_JOINED"
-                          ? t.activityFilters.relationFriendJoined
-                          : t.activityFilters.relationMine}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-              {t.activityFilters.typeLabel}
-              <select
-                className={selectClassName}
-                defaultValue={filters.type ?? ""}
-                name="type"
-              >
-                <option value="">{t.activityFilters.allTypes}</option>
-                {activityFilterTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {getTypeLabel(type, locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </>
-        ) : null}
-
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.timeStateLabel}
-          <select
-            className={selectClassName}
-            defaultValue={filters.timeState ?? ""}
-            name="time"
-          >
-            <option value="">{t.activityFilters.allTimeStates}</option>
-            {activityTimeStates.map((timeState) => (
-              <option key={timeState} value={timeState}>
-                {t.activityLabels.timeStates[timeState]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="grid gap-1.5 text-xs font-medium text-zinc-600">
-          {t.activityFilters.sortLabel}
-          <select
-            className={selectClassName}
-            defaultValue={filters.sort}
-            name="sort"
-          >
-            <option value="recommended">
-              {t.activityFilters.sortRecommended}
-            </option>
-            <option value="soonest">{t.activityFilters.sortSoonest}</option>
-            <option value="latest">{t.activityFilters.sortLatest}</option>
-            <option value="recentlyAdded">
-              {t.activityFilters.sortRecentlyAdded}
-            </option>
-          </select>
-        </label>
-
-        <div className="flex items-end">
-          <Button className="w-full gap-2 px-3 xl:w-auto" type="submit">
-            <Search className="h-4 w-4 shrink-0" />
-            {t.activityFilters.apply}
-          </Button>
+          <div className="flex items-end">
+            <Link
+              aria-disabled={!hasCustomFilterState}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-[#ddc9a9] bg-white px-4 text-[15px] font-medium text-zinc-700 shadow-[0_8px_22px_rgba(92,66,32,0.04)] transition hover:border-[#cfb287] hover:bg-[#fdfaf4] aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto"
+              href={activitiesHref}
+            >
+              <FilterX className="h-4 w-4 shrink-0" />
+              {t.activityFilters.reset}
+            </Link>
+          </div>
         </div>
 
-        <div className="flex items-end">
-          <Link
-            aria-disabled={!hasCustomFilterState}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 xl:w-auto"
-            href={activitiesHref}
-          >
-            <FilterX className="h-4 w-4 shrink-0" />
-            {t.activityFilters.reset}
-          </Link>
+        <div
+          className={cn(
+            "grid gap-3",
+            publicInfoOnly
+              ? "sm:grid-cols-2 xl:grid-cols-4"
+              : "sm:grid-cols-2 xl:grid-cols-6",
+          )}
+        >
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.categoryLabel}
+            <select
+              className={selectClassName}
+              defaultValue={filters.category ?? ""}
+              name="category"
+            >
+              <option value="">{t.activityFilters.allCategories}</option>
+              {activityCategoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {getCategoryLabel(category, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.cityLabel}
+            <select
+              className={selectClassName}
+              defaultValue={selectedCity}
+              name="city"
+            >
+              <option value="">{t.activityFilters.allCities}</option>
+              {cityOptions.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {!publicInfoOnly ? (
+            <>
+              <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+                {t.activityFilters.relationLabel}
+                <select
+                  className={selectClassName}
+                  defaultValue={filters.relation}
+                  name="relation"
+                >
+                  {activityRelationFilters.map((relation) => (
+                    <option key={relation} value={relation}>
+                      {relation === "ALL"
+                        ? t.activityFilters.allRelations
+                        : relation === "FRIEND_HOSTED"
+                          ? t.activityFilters.relationFriendHosted
+                          : relation === "FRIEND_JOINED"
+                            ? t.activityFilters.relationFriendJoined
+                            : t.activityFilters.relationMine}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+                {t.activityFilters.typeLabel}
+                <select
+                  className={selectClassName}
+                  defaultValue={filters.type ?? ""}
+                  name="type"
+                >
+                  <option value="">{t.activityFilters.allTypes}</option>
+                  {activityFilterTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {getTypeLabel(type, locale)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.timeStateLabel}
+            <select
+              className={selectClassName}
+              defaultValue={filters.timeState ?? ""}
+              name="time"
+            >
+              <option value="">{t.activityFilters.allTimeStates}</option>
+              {activityTimeStates.map((timeState) => (
+                <option key={timeState} value={timeState}>
+                  {t.activityLabels.timeStates[timeState]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.sortLabel}
+            <select
+              className={selectClassName}
+              defaultValue={filters.sort}
+              name="sort"
+            >
+              <option value="recommended">
+                {t.activityFilters.sortRecommended}
+              </option>
+              <option value="soonest">{t.activityFilters.sortSoonest}</option>
+              <option value="latest">{t.activityFilters.sortLatest}</option>
+              <option value="recentlyAdded">
+                {t.activityFilters.sortRecentlyAdded}
+              </option>
+            </select>
+          </label>
         </div>
       </form>
     );
   }
 
   return (
-    <section className="rounded-lg border border-black/10 bg-white/80 p-3 shadow-sm sm:p-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className="rounded-[1.75rem] border border-[#dcc9aa] bg-[linear-gradient(180deg,rgba(249,242,229,0.98),rgba(241,231,213,0.98))] p-4 shadow-[0_18px_42px_rgba(92,66,32,0.08)] sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <p className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.14em] text-[#9a7448]">
             <SlidersHorizontal className="h-4 w-4 shrink-0" />
             {publicInfoOnly
               ? t.activityFilters.publicInfoTitle
               : t.activityFilters.title}
           </p>
-          <p className="mt-1 hidden text-sm leading-6 text-zinc-500 sm:block">
+          <p className="mt-2 max-w-2xl text-[15px] leading-7 text-zinc-600 sm:text-[16px]">
             {publicInfoOnly
               ? t.activityFilters.publicInfoDescription
               : t.activityFilters.description}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-medium text-moss sm:px-3">
+        <span className="inline-flex shrink-0 items-center rounded-full border border-[#ddc9a9] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#9a7448] shadow-[0_8px_18px_rgba(92,66,32,0.05)]">
           {t.activityFilters.resultCount(resultCount)}
         </span>
       </div>
 
-      <details className="mt-3 rounded-md border border-zinc-200 bg-white md:hidden">
-        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+      <details className="mt-4 overflow-hidden rounded-[1.35rem] border border-[#dcc9aa] bg-[linear-gradient(180deg,rgba(252,246,236,0.99),rgba(244,235,220,0.98))] md:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
           <span className="inline-flex min-w-0 items-center gap-2">
             <Search className="h-4 w-4 shrink-0" />
             <span className="truncate">{t.activityFilters.mobileSummary}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
         </summary>
-        <div className="border-t border-zinc-100 p-3">
-          <FilterForm className="grid gap-3" />
+        <div className="border-t border-[#e7d8bf] p-4">
+          <FilterForm className="grid gap-4" />
         </div>
       </details>
 
       <div className="hidden md:block">
-        <FilterForm
-          className={cn(
-            "mt-4 grid gap-3 md:grid-cols-2",
-            publicInfoOnly
-              ? "lg:grid-cols-3 xl:grid-cols-[minmax(220px,1.5fr)_repeat(4,minmax(130px,1fr))_auto_auto]"
-              : "lg:grid-cols-4 xl:grid-cols-[minmax(180px,1.35fr)_repeat(6,minmax(116px,1fr))_auto_auto]",
-          )}
-        />
+        <FilterForm className="mt-5 grid gap-4" />
       </div>
 
       {activeFilterChips.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {activeFilterChips.map((chip) => (
             <Link
-              className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200"
+              className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-[#ddc9a9] bg-white px-3.5 text-[13px] font-medium text-zinc-700 shadow-[0_6px_14px_rgba(92,66,32,0.04)] transition hover:border-[#cfb287] hover:bg-[#fdfaf4]"
               href={chip.href}
               key={chip.label}
               prefetch={false}
