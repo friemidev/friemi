@@ -12,6 +12,7 @@ import type {
 } from "@prisma/client";
 import type { ActivityCardViewModel } from "../types";
 import type {
+  ActivityDateRange,
   ActivityFilters,
   ActivityRelationFilter,
   ActivityTimeState,
@@ -35,6 +36,7 @@ const coverTones: ActivityCardViewModel["coverTone"][] = [
 ];
 const defaultActivityPageSize = 15;
 const dailyRankingTimeZone = "Europe/Paris";
+const parisTimeZone = "Europe/Paris";
 const dayInMs = 24 * 60 * 60 * 1000;
 const freshOngoingWindowDays = 2;
 const endingSoonWindowDays = 1;
@@ -211,6 +213,100 @@ function getKeywordTerms(keyword: string | undefined) {
         .filter(Boolean),
     ),
   ).slice(0, 5);
+}
+
+function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
+  const offsetName = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(date)
+    .find((part) => part.type === "timeZoneName")?.value;
+  const match = offsetName?.match(
+    /^GMT(?:(?<sign>[+-])(?<hours>\d{1,2})(?::(?<minutes>\d{2}))?)?$/,
+  );
+
+  if (!match?.groups?.sign) {
+    return 0;
+  }
+
+  const sign = match.groups.sign === "+" ? 1 : -1;
+  const hours = Number(match.groups.hours ?? 0);
+  const minutes = Number(match.groups.minutes ?? 0);
+
+  return sign * (hours * 60 + minutes);
+}
+
+function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+function createDateInTimeZone(
+  timeZone: string,
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+) {
+  const utcGuess = new Date(
+    Date.UTC(year, monthIndex, day, hour, minute, 0, 0),
+  );
+  const offsetMinutes = getTimeZoneOffsetMinutes(utcGuess, timeZone);
+
+  return new Date(utcGuess.getTime() - offsetMinutes * 60_000);
+}
+
+function getTimeZoneDateParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  return {
+    day: Number(getDatePart(parts, "day")),
+    month: Number(getDatePart(parts, "month")),
+    year: Number(getDatePart(parts, "year")),
+  };
+}
+
+function getTimeZoneWeekdayIndex(date: Date, timeZone: string) {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  }).format(date);
+
+  switch (weekday) {
+    case "Mon":
+      return 1;
+    case "Tue":
+      return 2;
+    case "Wed":
+      return 3;
+    case "Thu":
+      return 4;
+    case "Fri":
+      return 5;
+    case "Sat":
+      return 6;
+    default:
+      return 0;
+  }
+}
+
+function addMonthsInTimeZone(
+  year: number,
+  monthIndex: number,
+  monthOffset: number,
+) {
+  const totalMonths = monthIndex + monthOffset;
+
+  return {
+    monthIndex: ((totalMonths % 12) + 12) % 12,
+    year: year + Math.floor(totalMonths / 12),
+  };
 }
 
 function getActivityFilterWhere(
@@ -713,6 +809,101 @@ export function getActivityTimeStateWhere(
   };
 }
 
+function getActivityDateRangeBounds(
+  dateRange: ActivityDateRange,
+  now = new Date(),
+) {
+  const { year, month, day } = getTimeZoneDateParts(now, parisTimeZone);
+  const todayStart = createDateInTimeZone(parisTimeZone, year, month - 1, day);
+  const tomorrowStart = addDays(todayStart, 1);
+
+  switch (dateRange) {
+    case "TODAY":
+      return { end: tomorrowStart, start: todayStart };
+    case "TOMORROW":
+      return { end: addDays(todayStart, 2), start: tomorrowStart };
+    case "NEXT_3_DAYS":
+      return { end: addDays(todayStart, 3), start: todayStart };
+    case "THIS_WEEK": {
+      const weekday = getTimeZoneWeekdayIndex(now, parisTimeZone);
+      const daysFromWeekStart = weekday === 0 ? 6 : weekday - 1;
+      const weekStart = addDays(todayStart, -daysFromWeekStart);
+
+      return { end: addDays(weekStart, 7), start: weekStart };
+    }
+    case "NEXT_WEEK": {
+      const weekday = getTimeZoneWeekdayIndex(now, parisTimeZone);
+      const daysFromWeekStart = weekday === 0 ? 6 : weekday - 1;
+      const nextWeekStart = addDays(todayStart, 7 - daysFromWeekStart);
+
+      return { end: addDays(nextWeekStart, 7), start: nextWeekStart };
+    }
+    case "THIS_MONTH": {
+      const monthStart = createDateInTimeZone(
+        parisTimeZone,
+        year,
+        month - 1,
+        1,
+      );
+      const nextMonth = addMonthsInTimeZone(year, month - 1, 1);
+      const nextMonthStart = createDateInTimeZone(
+        parisTimeZone,
+        nextMonth.year,
+        nextMonth.monthIndex,
+        1,
+      );
+
+      return { end: nextMonthStart, start: monthStart };
+    }
+    case "NEXT_MONTH": {
+      const nextMonth = addMonthsInTimeZone(year, month - 1, 1);
+      const monthAfterNext = addMonthsInTimeZone(year, month - 1, 2);
+      const nextMonthStart = createDateInTimeZone(
+        parisTimeZone,
+        nextMonth.year,
+        nextMonth.monthIndex,
+        1,
+      );
+      const monthAfterNextStart = createDateInTimeZone(
+        parisTimeZone,
+        monthAfterNext.year,
+        monthAfterNext.monthIndex,
+        1,
+      );
+
+      return { end: monthAfterNextStart, start: nextMonthStart };
+    }
+  }
+}
+
+function getActivityDateRangeWhere(
+  dateRange: ActivityDateRange,
+  now = new Date(),
+): Prisma.ActivityWhereInput {
+  const { end, start } = getActivityDateRangeBounds(dateRange, now);
+
+  return {
+    startAt: {
+      gte: start,
+      lt: end,
+    },
+  };
+}
+
+function getPublicEventDateRangeWhere(
+  dateRange: ActivityDateRange,
+  now = new Date(),
+): Prisma.PublicEventWhereInput {
+  const { end, start } = getActivityDateRangeBounds(dateRange, now);
+
+  return {
+    startAt: {
+      gte: start,
+      lt: end,
+    },
+  };
+}
+
 export function getActivityCardViewModel(
   activity: ActivityQueryResult,
 ): ActivityCardViewModel {
@@ -1061,11 +1252,12 @@ function getPublicEventListOrderBy(
 function hasExplicitActivityListFilters(filters: ActivityFilters) {
   return Boolean(
     filters.keyword ||
-    filters.category ||
-    filters.city ||
-    filters.relation !== "ALL" ||
-    filters.type ||
-    filters.timeState,
+      filters.category ||
+      filters.city ||
+      filters.dateRange ||
+      filters.relation !== "ALL" ||
+      filters.type ||
+      filters.timeState,
   );
 }
 
@@ -1108,6 +1300,9 @@ async function getActivityListWhere(
       }),
       getActivityFilterWhere(filters),
       relationWhere,
+      ...(filters.dateRange
+        ? [getActivityDateRangeWhere(filters.dateRange, now)]
+        : []),
       ...(filters.timeState
         ? [getActivityTimeStateWhere(filters.timeState, now)]
         : []),
@@ -1131,6 +1326,9 @@ function getPublicEventListWhere(
         now,
       }),
       getPublicEventFilterWhere(filters),
+      ...(filters.dateRange
+        ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
+        : []),
       ...(filters.timeState
         ? [getPublicEventTimeStateWhere(filters.timeState, now)]
         : []),
@@ -1151,6 +1349,9 @@ function getPublicInfoActivityListWhere(
       }),
       getLegacyPublicActivityInfoWhere(),
       getActivityFilterWhere(filters),
+      ...(filters.dateRange
+        ? [getActivityDateRangeWhere(filters.dateRange, now)]
+        : []),
       ...(filters.timeState
         ? [getActivityTimeStateWhere(filters.timeState, now)]
         : []),
@@ -1170,6 +1371,9 @@ function getPublicInfoPublicEventListWhere(
         now,
       }),
       getPublicEventFilterWhere(filters),
+      ...(filters.dateRange
+        ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
+        : []),
       ...(filters.timeState
         ? [getPublicEventTimeStateWhere(filters.timeState, now)]
         : []),

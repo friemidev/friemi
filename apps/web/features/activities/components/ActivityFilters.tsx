@@ -16,6 +16,7 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import {
   activityCategoryOptions,
+  activityDateRangeOptions,
   activityFilterTypes,
   activityRelationFilters,
   activityTimeStates,
@@ -98,6 +99,14 @@ export function ActivityFilters({
           {
             href: buildFilterHref({ city: undefined }),
             label: filters.city,
+          },
+        ]
+      : []),
+    ...(filters.dateRange
+      ? [
+          {
+            href: buildFilterHref({ dateRange: undefined }),
+            label: t.activityFilters.dateRangeOptions[filters.dateRange],
           },
         ]
       : []),
@@ -211,7 +220,7 @@ export function ActivityFilters({
           className={cn(
             "grid gap-3",
             publicInfoOnly
-              ? "sm:grid-cols-2 xl:grid-cols-4"
+              ? "sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1fr)]"
               : "sm:grid-cols-2 xl:grid-cols-6",
           )}
         >
@@ -242,6 +251,22 @@ export function ActivityFilters({
               {cityOptions.map((city) => (
                 <option key={city} value={city}>
                   {city}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+            {t.activityFilters.dateRangeLabel}
+            <select
+              className={selectClassName}
+              defaultValue={filters.dateRange ?? ""}
+              name="dateRange"
+            >
+              <option value="">{t.activityFilters.allDateRanges}</option>
+              {activityDateRangeOptions.map((dateRange) => (
+                <option key={dateRange} value={dateRange}>
+                  {t.activityFilters.dateRangeOptions[dateRange]}
                 </option>
               ))}
             </select>
