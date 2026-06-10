@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { PublicEventCard } from "@/features/public-events/components/PublicEventCard";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import { recordOperationLatency } from "@/features/analytics/latency";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
@@ -185,10 +186,35 @@ export default async function SearchPage({
     );
   }
 
-  perf.finish({
+  const perfResult = perf.finish({
     hasQuery: Boolean(query),
     resultCount: totalCount,
+  }, {
+    route: `/${locale}/search`,
+    routeKey: "search",
+    sourceSurface: "global_search",
+    userProfileId: viewerProfile?.id,
   });
+  const searchStep = perfResult.steps.find(
+    (step) => step.label === "search.results",
+  );
+
+  if (query) {
+    recordOperationLatency({
+      durationMs: searchStep?.durationMs ?? perfResult.totalMs,
+      locale,
+      operationKey: "search",
+      route: `/${locale}/search`,
+      sourceSurface: "global_search",
+      status: searchResult.error ? "failed" : "success",
+      statusReason: searchResult.error ? "search_failed" : null,
+      userProfileId: viewerProfile?.id,
+      properties: {
+        has_results: hasResults,
+        result_count: totalCount,
+      },
+    });
+  }
 
   return (
     <PageContainer className="space-y-6 py-5 sm:py-8">
@@ -306,6 +332,7 @@ export default async function SearchPage({
                       locale={locale}
                       redirectPath="/search"
                       showFavoriteButton
+                      sourceSurface="global_search"
                     />
                   ))}
                 </div>

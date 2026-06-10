@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useFormStatus } from "react-dom";
 import { Heart, LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +23,7 @@ type PublicEventFavoriteButtonProps = {
   isFavorited: boolean;
   locale: string;
   redirectPath: string;
+  sourceSurface?: AnalyticsSourceSurface;
   className?: string;
   labelOverrides?: Partial<FavoriteButtonLabels>;
 };
@@ -108,6 +110,7 @@ export function PublicEventFavoriteButton({
   isFavorited,
   locale,
   redirectPath,
+  sourceSurface = "public_event_detail",
   className,
   labelOverrides,
 }: PublicEventFavoriteButtonProps) {
@@ -215,6 +218,7 @@ export function PublicEventFavoriteButton({
       <input name="publicEventId" type="hidden" value={publicEventId} />
       <input name="locale" type="hidden" value={locale} />
       <input name="redirectPath" type="hidden" value={redirectPath} />
+      <input name="sourceSurface" type="hidden" value={sourceSurface} />
       {state.formError ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {state.formError}

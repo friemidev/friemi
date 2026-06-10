@@ -6,12 +6,14 @@ import {
   CalendarDays,
   CheckCircle2,
   Flame,
+  Gauge,
   MessageCircle,
   Share2,
   ShieldQuestion,
   Sparkles,
   SlidersHorizontal,
   TrendingUp,
+  TimerReset,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -41,6 +43,7 @@ type AdminAnalyticsPageProps = {
 const adminAnalyticsSections = [
   "overview",
   "journey",
+  "latency",
   "sources",
   "community",
 ] as const;
@@ -81,11 +84,25 @@ function getCopy(locale: string) {
       description:
         "Vue d'ensemble pour lire la découverte, les groupes, les inscriptions, la communauté et la valeur des sources.",
       environment: "Environnement",
+      environmentBreakdown: "Par environnement",
       fieldsCopied: "Champs copiés",
       friendAccepted: "Acceptées",
       friendRate: "Taux d'acceptation",
       friendSent: "Demandes",
       friendsTitle: "Amis",
+      latencyAverage: "Moy.",
+      latencyCount: "Échantillons",
+      latencyDescription:
+        "Repérer les pages et actions lentes, séparées par environnement.",
+      latencyFailed: "Échecs",
+      latencyKindOperation: "Action",
+      latencyKindPage: "Page",
+      latencyMax: "Max",
+      latencyNoData: "Les mesures de ressenti apparaîtront ici.",
+      latencyP95: "P95",
+      latencyPhase: "Étape",
+      latencySlow: "Lents",
+      latencyTitle: "Ressenti",
       range7: "7 jours",
       range30: "30 jours",
       range90: "90 jours",
@@ -117,6 +134,7 @@ function getCopy(locale: string) {
       reviewedReports: "Traités",
       sectionCommunity: "Communauté",
       sectionJourney: "Parcours",
+      sectionLatency: "Ressenti",
       sectionOverview: "Vue d'ensemble",
       sectionSources: "Sources",
       seeReports: "Traiter les signalements",
@@ -128,6 +146,7 @@ function getCopy(locale: string) {
       subtitle: "Données",
       title: "Tableau de bord",
       topDecision: "Vue d'ensemble",
+      totalSamples: "Mesures",
       trendCommunication: "Échanges",
       trendDiscovery: "Découverte",
       trendJoin: "Inscriptions",
@@ -168,11 +187,25 @@ function getCopy(locale: string) {
       description:
         "A concise view of discovery, crew creation, joins, community health, and source value.",
       environment: "Environment",
+      environmentBreakdown: "By environment",
       fieldsCopied: "Fields copied",
       friendAccepted: "Accepted",
       friendRate: "Accept rate",
       friendSent: "Requests",
       friendsTitle: "Friends",
+      latencyAverage: "Avg",
+      latencyCount: "Samples",
+      latencyDescription:
+        "Find slow pages and actions, separated by environment.",
+      latencyFailed: "Failed",
+      latencyKindOperation: "Action",
+      latencyKindPage: "Page",
+      latencyMax: "Max",
+      latencyNoData: "Perceived latency samples will appear here.",
+      latencyP95: "P95",
+      latencyPhase: "Phase",
+      latencySlow: "Slow",
+      latencyTitle: "Perceived latency",
       range7: "7 days",
       range30: "30 days",
       range90: "90 days",
@@ -204,6 +237,7 @@ function getCopy(locale: string) {
       reviewedReports: "Reviewed",
       sectionCommunity: "Community",
       sectionJourney: "Journey",
+      sectionLatency: "Latency",
       sectionOverview: "Overview",
       sectionSources: "Sources",
       seeReports: "Review reports",
@@ -215,6 +249,7 @@ function getCopy(locale: string) {
       subtitle: "Data",
       title: "Operations dashboard",
       topDecision: "Overview",
+      totalSamples: "Samples",
       trendCommunication: "Communication",
       trendDiscovery: "Discovery",
       trendJoin: "Joins",
@@ -253,11 +288,25 @@ function getCopy(locale: string) {
     description:
       "给运营和管理员快速判断：用户是否发现活动、是否发起组队、报名沟通是否顺畅、来源是否值得维护。",
     environment: "环境",
+    environmentBreakdown: "按环境拆分",
     fieldsCopied: "字段复制",
     friendAccepted: "通过",
     friendRate: "通过率",
     friendSent: "申请",
     friendsTitle: "好友关系",
+    latencyAverage: "平均",
+    latencyCount: "样本",
+    latencyDescription:
+      "区分页面加载和用户操作，按环境查看最近最慢的体感等待。",
+    latencyFailed: "失败",
+    latencyKindOperation: "操作",
+    latencyKindPage: "页面",
+    latencyMax: "最高",
+    latencyNoData: "有页面或操作耗时样本后，这里会显示排行。",
+    latencyP95: "P95",
+    latencyPhase: "阶段",
+    latencySlow: "慢样本",
+    latencyTitle: "体感耗时",
     range7: "7 天",
     range30: "30 天",
     range90: "90 天",
@@ -288,6 +337,7 @@ function getCopy(locale: string) {
     reviewedReports: "已处理",
     sectionCommunity: "社区反馈",
     sectionJourney: "用户路径",
+    sectionLatency: "体感耗时",
     sectionOverview: "总览",
     sectionSources: "来源价值",
     seeReports: "处理举报",
@@ -299,6 +349,7 @@ function getCopy(locale: string) {
     subtitle: "数据后台",
     title: "运营数据看台",
     topDecision: "运营总览",
+    totalSamples: "记录样本",
     trendCommunication: "沟通",
     trendDiscovery: "发现",
     trendJoin: "报名",
@@ -737,6 +788,7 @@ function DashboardControls({
   const sectionLabels: Record<AdminAnalyticsSection, string> = {
     community: t.sectionCommunity,
     journey: t.sectionJourney,
+    latency: t.sectionLatency,
     overview: t.sectionOverview,
     sources: t.sectionSources,
   };
@@ -991,6 +1043,186 @@ function PopularItemsPanel({
   );
 }
 
+function formatLatencyMs(value: number) {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}s`;
+  }
+
+  return `${value}ms`;
+}
+
+function getLatencyKindLabel(
+  kind: AdminAnalyticsDashboard["latency"]["slowest"][number]["kind"],
+  t: AdminAnalyticsCopy,
+) {
+  return kind === "page" ? t.latencyKindPage : t.latencyKindOperation;
+}
+
+function LatencyPanel({
+  dashboard,
+  t,
+}: {
+  dashboard: AdminAnalyticsDashboard;
+  t: AdminAnalyticsCopy;
+}) {
+  const maxP95 = Math.max(
+    1,
+    ...dashboard.latency.slowest.map((item) => item.p95Ms),
+  );
+  const summary = dashboard.latency.summary;
+
+  return (
+    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
+        <div className="xl:border-r xl:border-black/10 xl:pr-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-200">
+              <TimerReset className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-ink">
+                {t.latencyTitle}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                {t.latencyDescription}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <SmallStat label={t.totalSamples} value={summary.totalSamples} />
+            <SmallStat
+              label={t.latencyP95}
+              value={formatLatencyMs(summary.p95Ms)}
+            />
+            <SmallStat
+              label={t.latencyKindPage}
+              value={summary.pageSamples}
+            />
+            <SmallStat
+              label={t.latencyKindOperation}
+              value={summary.operationSamples}
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-ink">{t.latencySlow}</span>
+              <span className="font-semibold text-clay">
+                {summary.slowSamples}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              {t.latencyAverage}: {formatLatencyMs(summary.averageMs)}
+            </p>
+          </div>
+
+          <div className="mt-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Gauge className="h-4 w-4 text-moss" />
+              {t.environmentBreakdown}
+            </h3>
+            <div className="mt-3 space-y-2">
+              {dashboard.latency.environmentSummaries.length > 0 ? (
+                dashboard.latency.environmentSummaries.map((item) => (
+                  <div
+                    key={item.environment}
+                    className="rounded-2xl bg-paper/70 px-3 py-2.5 ring-1 ring-black/5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-semibold text-ink">
+                        {item.environment}
+                      </span>
+                      <span className="text-sm font-semibold text-moss">
+                        {formatLatencyMs(item.p95Ms)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {t.latencyAverage}: {formatLatencyMs(item.averageMs)} ·{" "}
+                      {t.latencyCount}: {item.count}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+                  {t.latencyNoData}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          {dashboard.latency.slowest.length > 0 ? (
+            <div className="space-y-3">
+              {dashboard.latency.slowest.map((item) => {
+                const width = Math.max(8, Math.round((item.p95Ms / maxP95) * 100));
+
+                return (
+                  <div
+                    key={`${item.kind}-${item.environment}-${item.key}`}
+                    className="rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5"
+                  >
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
+                        {getLatencyKindLabel(item.kind, t)}
+                      </span>
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#eef5ea] px-2 text-xs font-medium text-moss ring-1 ring-[#c1d2ba]">
+                        {item.environment}
+                      </span>
+                      <p className="min-w-0 flex-1 break-words text-sm font-semibold text-ink">
+                        {item.key}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs text-zinc-500 sm:grid-cols-5">
+                      <span>
+                        {t.latencyP95}:{" "}
+                        <strong className="text-ink">
+                          {formatLatencyMs(item.p95Ms)}
+                        </strong>
+                      </span>
+                      <span>
+                        {t.latencyAverage}: {formatLatencyMs(item.averageMs)}
+                      </span>
+                      <span>
+                        {t.latencyMax}: {formatLatencyMs(item.maxMs)}
+                      </span>
+                      <span>
+                        {t.latencySlow}: {item.slowCount}
+                      </span>
+                      <span>
+                        {t.latencyFailed}: {item.failedCount}
+                      </span>
+                    </div>
+
+                    {item.phaseLabel ? (
+                      <p className="mt-2 text-xs leading-5 text-zinc-500">
+                        {t.latencyPhase}: {item.phaseLabel}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-3 h-2 rounded-full bg-white">
+                      <div
+                        className="h-full rounded-full bg-sky-500"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+              {t.latencyNoData}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function AdminAnalyticsPage({
   params,
   searchParams,
@@ -1205,6 +1437,10 @@ export default async function AdminAnalyticsPage({
             </section>
           </div>
         </>
+      ) : null}
+
+      {activeSection === "latency" ? (
+        <LatencyPanel dashboard={dashboard} t={t} />
       ) : null}
 
       {activeSection === "sources" ? (

@@ -23,6 +23,7 @@ import { withLocale } from "@/lib/routes";
 import type { PublicEventCardViewModel } from "../types";
 import { getPublicEventCopy } from "../copy";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 
 type PublicEventCardProps = {
@@ -31,6 +32,7 @@ type PublicEventCardProps = {
   locale: string;
   redirectPath?: string;
   showFavoriteButton?: boolean;
+  sourceSurface?: AnalyticsSourceSurface;
 };
 
 function getEventDateLabel(event: PublicEventCardViewModel, locale: string) {
@@ -64,6 +66,7 @@ export function PublicEventCard({
   locale,
   redirectPath = "/activities",
   showFavoriteButton = false,
+  sourceSurface = "activity_list",
 }: PublicEventCardProps) {
   const t = getPublicEventCopy(locale);
   const eventHref = withLocale(locale, `/public-events/${event.id}`);
@@ -82,6 +85,7 @@ export function PublicEventCard({
             isFavorited={Boolean(event.isFavorited)}
             locale={locale}
             redirectPath={redirectPath}
+            sourceSurface={sourceSurface}
           />
         </div>
       ) : null}

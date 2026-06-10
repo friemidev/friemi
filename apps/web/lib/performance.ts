@@ -1,3 +1,6 @@
+import { recordPageLoadLatency } from "@/features/analytics/latency";
+import type { AnalyticsSourceSurface } from "@/features/analytics/events";
+
 type PerformanceStep = {
   durationMs: number;
   label: string;
@@ -7,6 +10,15 @@ type PerformanceTrackerOptions = {
   locale?: string;
   metadata?: Record<string, string | number | boolean | null | undefined>;
   route: string;
+};
+
+type PerformanceFinishAnalyticsOptions = {
+  referrer?: string | null;
+  route?: string;
+  routeKey: string;
+  sourceSurface?: AnalyticsSourceSurface | null;
+  userAgent?: string | null;
+  userProfileId?: string | null;
 };
 
 function nowMs() {
@@ -71,8 +83,27 @@ export function createPerformanceTracker({
       string,
       string | number | boolean | null | undefined
     > = {},
+    analytics?: PerformanceFinishAnalyticsOptions,
   ) {
     const totalMs = roundMs(nowMs() - startedAt);
+
+    if (analytics) {
+      recordPageLoadLatency({
+        durationMs: totalMs,
+        locale,
+        metadata: {
+          ...metadata,
+          ...extraMetadata,
+        },
+        referrer: analytics.referrer,
+        route: analytics.route ?? route,
+        routeKey: analytics.routeKey,
+        sourceSurface: analytics.sourceSurface,
+        steps,
+        userAgent: analytics.userAgent,
+        userProfileId: analytics.userProfileId,
+      });
+    }
 
     if (!isPerformanceDebugEnabled()) {
       return {

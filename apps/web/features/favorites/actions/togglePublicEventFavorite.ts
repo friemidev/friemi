@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
+import {
+  analyticsSourceSurfaces,
+  type AnalyticsSourceSurface,
+} from "@/features/analytics/events";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
@@ -13,6 +21,7 @@ const togglePublicEventFavoriteSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   publicEventId: z.string().min(1),
   redirectPath: z.string().min(1),
+  sourceSurface: z.enum(analyticsSourceSurfaces).default("public_event_detail"),
 });
 
 export type TogglePublicEventFavoriteState = {
@@ -33,6 +42,15 @@ function isPrismaUniqueError(error: unknown) {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   );
+}
+
+function getFavoriteSourceSurface(
+  value: string,
+  fallback: AnalyticsSourceSurface,
+) {
+  const result = z.enum(analyticsSourceSurfaces).safeParse(value);
+
+  return result.success ? result.data : fallback;
 }
 
 async function getViewerProfileId(locale: string) {
@@ -62,18 +80,56 @@ export async function togglePublicEventFavoriteAction(
   _previousState: TogglePublicEventFavoriteState,
   formData: FormData,
 ): Promise<TogglePublicEventFavoriteState> {
+  const getDurationMs = createLatencyTimer();
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
+  const rawPublicEventId = getString(formData, "publicEventId");
+  const rawRedirectPath = getString(formData, "redirectPath") || "/activities";
+  const sourceSurface = getFavoriteSourceSurface(
+    getString(formData, "sourceSurface"),
+    "public_event_detail",
+  );
+  const recordLatency = ({
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: rawPublicEventId || undefined,
+      entityType: rawPublicEventId ? "public_event" : undefined,
+      locale: fallbackLocale,
+      operationKey: "favorite_toggle",
+      route: withLocale(fallbackLocale, rawRedirectPath),
+      sourceSurface,
+      status,
+      statusReason,
+      userProfileId,
+      properties: {
+        target_type: "public_event",
+      },
+    });
+  };
   const fallbackCommonT = await getTranslations({
     locale: fallbackLocale,
     namespace: "favorites.common",
   });
   const result = togglePublicEventFavoriteSchema.safeParse({
     locale: fallbackLocale,
-    publicEventId: getString(formData, "publicEventId"),
-    redirectPath: getString(formData, "redirectPath"),
+    publicEventId: rawPublicEventId,
+    redirectPath: rawRedirectPath,
+    sourceSurface,
   });
 
   if (!result.success) {
+    recordLatency({
+      status: "failed",
+      statusReason: "invalid_request",
+    });
+
     return {
       formError: fallbackCommonT("invalidRequest"),
     };
@@ -87,6 +143,12 @@ export async function togglePublicEventFavoriteAction(
   const publicEventFavorite = getPublicEventFavoriteDelegate();
   const viewerProfileId = await getViewerProfileId(locale);
   if (!publicEventFavorite) {
+    recordLatency({
+      status: "failed",
+      statusReason: "favorite_store_unavailable",
+      userProfileId: viewerProfileId,
+    });
+
     return {
       formError: publicEventT("unavailable"),
     };
@@ -115,12 +177,24 @@ export async function togglePublicEventFavoriteAction(
   });
 
   if (!publicEvent) {
+    recordLatency({
+      status: "failed",
+      statusReason: "public_event_unavailable",
+      userProfileId: viewerProfileId,
+    });
+
     return {
       formError: publicEventT("unavailable"),
     };
   }
 
   if (!existingFavorite && publicEvent.status !== "SCHEDULED") {
+    recordLatency({
+      status: "failed",
+      statusReason: "public_event_unavailable",
+      userProfileId: viewerProfileId,
+    });
+
     return {
       formError: publicEventT("unavailable"),
     };
@@ -143,6 +217,12 @@ export async function togglePublicEventFavoriteAction(
     }
   } catch (error) {
     if (!isPrismaUniqueError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "toggle_failed",
+        userProfileId: viewerProfileId,
+      });
+
       throw error;
     }
   }
@@ -157,6 +237,10 @@ export async function togglePublicEventFavoriteAction(
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/lobby"));
+  recordLatency({
+    status: "success",
+    userProfileId: viewerProfileId,
+  });
 
   return {
     favoriteCount,

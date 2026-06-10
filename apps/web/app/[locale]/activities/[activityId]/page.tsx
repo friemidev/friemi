@@ -155,6 +155,13 @@ export default async function ActivityDetailPage({
     perf.finish({
       itemKind: "public_event",
       hasViewer: Boolean(viewerProfile),
+    }, {
+      referrer,
+      route: `/${locale}/activities/${activity.id}`,
+      routeKey: "public_event_detail",
+      sourceSurface: "public_event_detail",
+      userAgent: requestHeaders.get("user-agent"),
+      userProfileId: viewerProfile?.id,
     });
 
     return (
@@ -172,6 +179,7 @@ export default async function ActivityDetailPage({
               isFavorited={activityIsFavorited}
               locale={locale}
               redirectPath={`/activities/${activity.id}`}
+              sourceSurface="public_event_detail"
             />
             <ReportDialog
               isAuthenticated={Boolean(viewerProfile)}
@@ -471,6 +479,13 @@ export default async function ActivityDetailPage({
     hasViewer: Boolean(viewerProfile),
     isOrganizer,
     itemKind: "team",
+  }, {
+    referrer,
+    route: `/${locale}/activities/${activity.id}`,
+    routeKey: "activity_detail",
+    sourceSurface: "activity_detail",
+    userAgent: requestHeaders.get("user-agent"),
+    userProfileId: viewerProfile?.id,
   });
 
   return (
@@ -488,6 +503,7 @@ export default async function ActivityDetailPage({
             isFavorited={activityIsFavorited}
             locale={locale}
             redirectPath={`/activities/${activity.id}`}
+            sourceSurface="activity_detail"
           />
           <ReportDialog
             isAuthenticated={Boolean(viewerProfile)}

@@ -57,6 +57,11 @@ export default async function MessagesPage({
     friendCount: friendRosterResult.friends.length,
     incomingRequestCount: incomingRequests.length,
     openFriendRequests,
+  }, {
+    route: `/${locale}/messages`,
+    routeKey: "messages",
+    sourceSurface: "messages",
+    userProfileId: profile.id,
   });
 
   return (

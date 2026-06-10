@@ -255,6 +255,11 @@ export default async function NotificationsPage({
   perf.finish({
     notificationCount: notifications.length,
     unreadCount,
+  }, {
+    route: `/${locale}/notifications`,
+    routeKey: "notifications",
+    sourceSurface: "notification",
+    userProfileId: profile.id,
   });
 
   return (

@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { Prisma, type ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
+import {
+  analyticsSourceSurfaces,
+  type AnalyticsSourceSurface,
+} from "@/features/analytics/events";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
@@ -15,6 +23,7 @@ const toggleActivityFavoriteSchema = z.object({
   activityId: z.string().min(1),
   locale: z.string().min(1).default("zh-CN"),
   redirectPath: z.string().min(1),
+  sourceSurface: z.enum(analyticsSourceSurfaces).default("activity_detail"),
 });
 const favoriteVisibleParticipationStatuses: ParticipantStatus[] = [
   "JOINED",
@@ -40,6 +49,15 @@ function isPrismaUniqueError(error: unknown) {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   );
+}
+
+function getFavoriteSourceSurface(
+  value: string,
+  fallback: AnalyticsSourceSurface,
+) {
+  const result = z.enum(analyticsSourceSurfaces).safeParse(value);
+
+  return result.success ? result.data : fallback;
 }
 
 async function getViewerProfileId(locale: string) {
@@ -69,18 +87,56 @@ export async function toggleActivityFavoriteAction(
   _previousState: ToggleActivityFavoriteState,
   formData: FormData,
 ): Promise<ToggleActivityFavoriteState> {
+  const getDurationMs = createLatencyTimer();
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
+  const rawActivityId = getString(formData, "activityId");
+  const rawRedirectPath = getString(formData, "redirectPath") || "/activities";
+  const sourceSurface = getFavoriteSourceSurface(
+    getString(formData, "sourceSurface"),
+    "activity_detail",
+  );
+  const recordLatency = ({
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: rawActivityId || undefined,
+      entityType: rawActivityId ? "activity" : undefined,
+      locale: fallbackLocale,
+      operationKey: "favorite_toggle",
+      route: withLocale(fallbackLocale, rawRedirectPath),
+      sourceSurface,
+      status,
+      statusReason,
+      userProfileId,
+      properties: {
+        target_type: "activity",
+      },
+    });
+  };
   const fallbackCommonT = await getTranslations({
     locale: fallbackLocale,
     namespace: "favorites.common",
   });
   const result = toggleActivityFavoriteSchema.safeParse({
-    activityId: getString(formData, "activityId"),
+    activityId: rawActivityId,
     locale: fallbackLocale,
-    redirectPath: getString(formData, "redirectPath"),
+    redirectPath: rawRedirectPath,
+    sourceSurface,
   });
 
   if (!result.success) {
+    recordLatency({
+      status: "failed",
+      statusReason: "invalid_request",
+    });
+
     return {
       formError: fallbackCommonT("invalidRequest"),
     };
@@ -136,6 +192,12 @@ export async function toggleActivityFavoriteAction(
   });
 
   if (!activity) {
+    recordLatency({
+      status: "failed",
+      statusReason: "activity_unavailable",
+      userProfileId: viewerProfileId,
+    });
+
     return {
       formError: activityT("unavailable"),
     };
@@ -170,6 +232,12 @@ export async function toggleActivityFavoriteAction(
     }
   } catch (error) {
     if (!isPrismaUniqueError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "toggle_failed",
+        userProfileId: viewerProfileId,
+      });
+
       throw error;
     }
   }
@@ -183,6 +251,10 @@ export async function toggleActivityFavoriteAction(
   const localizedPath = withLocale(locale, redirectPath);
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
+  recordLatency({
+    status: "success",
+    userProfileId: viewerProfileId,
+  });
 
   return {
     favoriteCount,
