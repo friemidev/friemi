@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
 import {
@@ -9,8 +7,9 @@ import {
   recordOperationLatency,
 } from "@/features/analytics/latency";
 import { createNotification } from "@/features/notifications/utils/createNotification";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -26,6 +25,7 @@ const cancelParticipationSchema = z.object({
 });
 
 export type CancelParticipationState = {
+  success?: boolean;
   formError?: string;
 };
 
@@ -33,20 +33,6 @@ function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
-}
-
-function refreshActivityViews(locale: string, activityId: string) {
-  const activityPath = withLocale(locale, `/activities/${activityId}`);
-
-  revalidatePath(activityPath);
-  revalidatePath(withLocale(locale, "/activities"));
-  revalidatePath(withLocale(locale, "/lobby"));
-  revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, "/profile"));
-  revalidatePath(withLocale(locale, "/"));
-  revalidatePath(withLocale(locale, "/"), "layout");
-
-  return activityPath;
 }
 
 export async function cancelParticipationAction(
@@ -84,6 +70,13 @@ export async function cancelParticipationAction(
   };
   const result = cancelParticipationSchema.safeParse(rawInput);
   const fallbackCopy = getCopy(rawInput.locale).join;
+  const perf = createActionPerformanceTracker({
+    action: "cancel_participation",
+    metadata: {
+      locale: rawInput.locale,
+      targetId: rawInput.activityId || undefined,
+    },
+  });
 
   if (!result.success) {
     recordLatency({
@@ -97,82 +90,101 @@ export async function cancelParticipationAction(
   }
 
   const actionCopy = getCopy(result.data.locale).join;
-  const profile = await ensureCurrentUserProfile(result.data.locale);
-  let cancelled = false;
-  let alreadyCancelled = false;
+  let profile: Awaited<
+    ReturnType<typeof ensureCurrentUserProfileSnapshot>
+  >;
+  try {
+    profile = await perf.measure("viewer_profile", () =>
+      ensureCurrentUserProfileSnapshot(result.data.locale),
+    );
+  } catch (error) {
+    console.error("Failed to resolve viewer profile for cancellation", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "cancel_failed",
+    });
+
+    return {
+      formError: actionCopy.failedError,
+    };
+  }
+  const participation = await perf.measure("participation_lookup", () =>
+    prisma.activityParticipant.findUnique({
+      where: {
+        activityId_userProfileId: {
+          activityId: result.data.activityId,
+          userProfileId: profile.id,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        activity: {
+          select: {
+            id: true,
+            organizerId: true,
+          },
+        },
+      },
+    }),
+  );
+
+  if (!participation) {
+    recordLatency({
+      status: "failed",
+      statusReason: "participation_not_found",
+      userProfileId: profile.id,
+    });
+
+    return {
+      formError: actionCopy.missingError,
+    };
+  }
+
+  if (participation.status === "CANCELLED") {
+    recordLatency({
+      status: "success",
+      statusReason: "already_cancelled",
+      userProfileId: profile.id,
+    });
+    perf.finish({
+      result: "already_cancelled",
+      userProfileId: profile.id,
+    });
+    return {
+      success: true,
+    };
+  }
+
+  if (!cancellableParticipantStatuses.includes(participation.status)) {
+    recordLatency({
+      status: "failed",
+      statusReason: "participation_not_cancellable",
+      userProfileId: profile.id,
+    });
+
+    return {
+      formError: actionCopy.statusError,
+    };
+  }
 
   try {
-    await prisma.$transaction(async (tx) => {
-      const participation = await tx.activityParticipant.findUnique({
-        where: {
-          activityId_userProfileId: {
-            activityId: result.data.activityId,
-            userProfileId: profile.id,
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          activity: {
-            select: {
-              id: true,
-              organizerId: true,
-            },
-          },
-        },
-      });
-
-      if (!participation) {
-        throw new Error("PARTICIPATION_NOT_FOUND");
-      }
-
-      if (!cancellableParticipantStatuses.includes(participation.status)) {
-        if (participation.status === "CANCELLED") {
-          alreadyCancelled = true;
-          return;
-        }
-
-        throw new Error("PARTICIPATION_NOT_CANCELLABLE");
-      }
-
-      await tx.activityParticipant.update({
+    const updateResult = await perf.measure("participation_update", () =>
+      prisma.activityParticipant.updateMany({
         where: {
           id: participation.id,
+          status: {
+            in: cancellableParticipantStatuses,
+          },
         },
         data: {
           status: "CANCELLED",
           cancelledAt: new Date(),
         },
-      });
+      }),
+    );
 
-      if (participation.activity.organizerId !== profile.id) {
-        await createNotification(tx, {
-          actorId: profile.id,
-          activityId: participation.activity.id,
-          recipientId: participation.activity.organizerId,
-          type: "PARTICIPATION_CANCELLED",
-        });
-      }
-
-      cancelled = true;
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === "PARTICIPATION_NOT_FOUND") {
-      recordLatency({
-        status: "failed",
-        statusReason: "participation_not_found",
-        userProfileId: profile.id,
-      });
-
-      return {
-        formError: actionCopy.missingError,
-      };
-    }
-
-    if (
-      error instanceof Error &&
-      error.message === "PARTICIPATION_NOT_CANCELLABLE"
-    ) {
+    if (updateResult.count === 0) {
       recordLatency({
         status: "failed",
         statusReason: "participation_not_cancellable",
@@ -183,42 +195,8 @@ export async function cancelParticipationAction(
         formError: actionCopy.statusError,
       };
     }
-
-    if (alreadyCancelled) {
-      recordLatency({
-        status: "success",
-        statusReason: "already_cancelled",
-        userProfileId: profile.id,
-      });
-
-      return {
-        formError: undefined,
-      };
-    }
-
+  } catch (error) {
     console.error("Failed to cancel participation", error);
-    recordLatency({
-      status: "failed",
-      statusReason: "cancel_failed",
-      userProfileId: profile.id,
-    });
-
-    return {
-      formError: actionCopy.failedError,
-    };
-  }
-
-  if (alreadyCancelled) {
-    recordLatency({
-      status: "success",
-      statusReason: "already_cancelled",
-      userProfileId: profile.id,
-    });
-
-    redirect(refreshActivityViews(result.data.locale, result.data.activityId));
-  }
-
-  if (!cancelled) {
     recordLatency({
       status: "failed",
       statusReason: "cancel_failed",
@@ -234,6 +212,21 @@ export async function cancelParticipationAction(
     status: "success",
     userProfileId: profile.id,
   });
-
-  redirect(refreshActivityViews(result.data.locale, result.data.activityId));
+  if (participation.activity.organizerId !== profile.id) {
+    void createNotification(prisma, {
+      actorId: profile.id,
+      activityId: result.data.activityId,
+      recipientId: participation.activity.organizerId,
+      type: "PARTICIPATION_CANCELLED",
+    }).catch((error) => {
+      console.error("Failed to create cancellation notification", error);
+    });
+  }
+  perf.finish({
+    result: "success",
+    userProfileId: profile.id,
+  });
+  return {
+    success: true,
+  };
 }

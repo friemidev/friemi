@@ -138,3 +138,77 @@ export function createPerformanceTracker({
     measure,
   };
 }
+
+type ActionPerformanceTrackerOptions = {
+  action: string;
+  metadata?: Record<string, string | number | boolean | null | undefined>;
+};
+
+export function createActionPerformanceTracker({
+  action,
+  metadata = {},
+}: ActionPerformanceTrackerOptions) {
+  const startedAt = nowMs();
+  const steps: PerformanceStep[] = [];
+
+  async function measure<T>(label: string, task: () => Promise<T>): Promise<T> {
+    const stepStartedAt = nowMs();
+
+    try {
+      return await task();
+    } finally {
+      steps.push({
+        durationMs: roundMs(nowMs() - stepStartedAt),
+        label,
+      });
+    }
+  }
+
+  function mark(label: string, durationMs: number) {
+    steps.push({
+      durationMs: roundMs(durationMs),
+      label,
+    });
+  }
+
+  function finish(
+    extraMetadata: Record<
+      string,
+      string | number | boolean | null | undefined
+    > = {},
+  ) {
+    const totalMs = roundMs(nowMs() - startedAt);
+
+    if (!isPerformanceDebugEnabled()) {
+      return {
+        steps,
+        totalMs,
+      };
+    }
+
+    const stepSummary = steps
+      .map((step) => `${step.label}:${step.durationMs}ms`)
+      .join(" ");
+    const metadataSummary = formatMetadata({
+      action,
+      env: getRuntimeEnvironment(),
+      ...metadata,
+      ...extraMetadata,
+    });
+
+    console.info(
+      `[perf-action] total=${totalMs}ms ${metadataSummary} ${stepSummary}`.trim(),
+    );
+
+    return {
+      steps,
+      totalMs,
+    };
+  }
+
+  return {
+    finish,
+    mark,
+    measure,
+  };
+}

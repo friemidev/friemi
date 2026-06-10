@@ -58,6 +58,14 @@ type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
   select: typeof activityDetailSelect;
 }>;
 
+function toIsoString(value: Date | string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
 ): ActivityDetailViewModel {
@@ -75,8 +83,8 @@ function getActivityDetailViewModel(
     address: activity.address,
     latitude: activity.latitude,
     longitude: activity.longitude,
-    startAt: activity.startAt.toISOString(),
-    endAt: activity.endAt?.toISOString() ?? null,
+    startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+    endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
@@ -121,9 +129,10 @@ function getActivityDetailViewModel(
 export async function getActivityById(
   activityId: string,
   viewerProfileId?: string | null,
+  viewerFriendIds?: string[],
 ): Promise<ActivityDetailViewModel | null> {
   const friendIds = viewerProfileId
-    ? await getViewerFriendIds(viewerProfileId)
+    ? (viewerFriendIds ?? (await getViewerFriendIds(viewerProfileId)))
     : [];
   const accessWhere: Prisma.ActivityWhereInput = viewerProfileId
     ? {

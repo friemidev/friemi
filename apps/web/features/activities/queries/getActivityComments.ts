@@ -100,9 +100,10 @@ function getActivityCommentViewModel(
 export async function getActivityComments(
   activityId: string,
   viewerProfileId?: string | null,
+  viewerFriendIds?: string[],
 ): Promise<ActivityCommentViewModel[]> {
   const friendIds = viewerProfileId
-    ? await getViewerFriendIds(viewerProfileId)
+    ? (viewerFriendIds ?? (await getViewerFriendIds(viewerProfileId)))
     : [];
   const activityAccessWhere: Prisma.ActivityWhereInput = viewerProfileId
     ? {

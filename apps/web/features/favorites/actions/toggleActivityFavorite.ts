@@ -1,6 +1,4 @@
 "use server";
-
-import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { Prisma, type ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
@@ -16,6 +14,7 @@ import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendId
 import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -120,18 +119,27 @@ export async function toggleActivityFavoriteAction(
       },
     });
   };
-  const fallbackCommonT = await getTranslations({
-    locale: fallbackLocale,
-    namespace: "favorites.common",
-  });
   const result = toggleActivityFavoriteSchema.safeParse({
     activityId: rawActivityId,
     locale: fallbackLocale,
     redirectPath: rawRedirectPath,
     sourceSurface,
   });
+  const perf = createActionPerformanceTracker({
+    action: "toggle_activity_favorite",
+    metadata: {
+      locale: fallbackLocale,
+      sourceSurface,
+      targetId: rawActivityId || undefined,
+    },
+  });
 
   if (!result.success) {
+    const fallbackCommonT = await getTranslations({
+      locale: fallbackLocale,
+      namespace: "favorites.common",
+    });
+
     recordLatency({
       status: "failed",
       statusReason: "invalid_request",
@@ -143,55 +151,31 @@ export async function toggleActivityFavoriteAction(
   }
 
   const { activityId, locale, redirectPath } = result.data;
-  const activityT = await getTranslations({
-    locale,
-    namespace: "favorites.activity",
-  });
-  const viewerProfileId = await getViewerProfileId(locale);
-  const friendIds = await getViewerFriendIds(viewerProfileId);
-  const activity = await prisma.activity.findFirst({
-    where: {
-      id: activityId,
-      organizer: {
-        status: "ACTIVE",
+  const [viewerProfileId, activity] = await Promise.all([
+    perf.measure("viewer_profile", () => getViewerProfileId(locale)),
+    perf.measure("activity_lookup", () =>
+      prisma.activity.findFirst({
+      where: {
+        id: activityId,
+        organizer: {
+          status: "ACTIVE",
+        },
       },
-      OR: [
-        {
-          visibility: {
-            in: publicActivityVisibility,
-          },
-        },
-        {
-          organizerId: viewerProfileId,
-        },
-        {
-          participants: {
-            some: {
-              userProfileId: viewerProfileId,
-              status: {
-                in: favoriteVisibleParticipationStatuses,
-              },
-            },
-          },
-        },
-        ...(friendIds.length > 0
-          ? [
-              {
-                AND: [
-                  { visibility: "PRIVATE" as const },
-                  { organizerId: { in: friendIds } },
-                ],
-              },
-            ]
-          : []),
-      ],
-    },
-    select: {
-      id: true,
-    },
-  });
+      select: {
+        id: true,
+        organizerId: true,
+        visibility: true,
+      },
+      }),
+    ),
+  ]);
 
   if (!activity) {
+    const activityT = await getTranslations({
+      locale,
+      namespace: "favorites.activity",
+    });
+
     recordLatency({
       status: "failed",
       statusReason: "activity_unavailable",
@@ -203,63 +187,110 @@ export async function toggleActivityFavoriteAction(
     };
   }
 
-  const existingFavorite = await prisma.activityFavorite.findUnique({
-    where: {
-      activityId_userProfileId: {
-        activityId,
-        userProfileId: viewerProfileId,
-      },
-    },
-    select: {
-      id: true,
-    },
-  });
+  const isAccessible = await perf.measure("access_check", async () => {
+    if (
+      activity.visibility === "PUBLIC" ||
+      activity.organizerId === viewerProfileId
+    ) {
+      return true;
+    }
 
-  try {
-    if (existingFavorite) {
-      await prisma.activityFavorite.delete({
-        where: {
-          id: existingFavorite.id,
-        },
-      });
-    } else {
-      await prisma.activityFavorite.create({
-        data: {
+    const participation = await prisma.activityParticipant.findUnique({
+      where: {
+        activityId_userProfileId: {
           activityId,
           userProfileId: viewerProfileId,
         },
-      });
-    }
-  } catch (error) {
-    if (!isPrismaUniqueError(error)) {
-      recordLatency({
-        status: "failed",
-        statusReason: "toggle_failed",
-        userProfileId: viewerProfileId,
-      });
+      },
+      select: {
+        status: true,
+      },
+    });
 
-      throw error;
+    if (
+      participation &&
+      favoriteVisibleParticipationStatuses.includes(participation.status)
+    ) {
+      return true;
     }
-  }
 
-  const favoriteCount = await prisma.activityFavorite.count({
-    where: {
-      activityId,
-    },
+    const friendIds = await getViewerFriendIds(viewerProfileId);
+    return friendIds.includes(activity.organizerId);
   });
 
-  const localizedPath = withLocale(locale, redirectPath);
-  revalidatePath(localizedPath);
-  revalidatePath(withLocale(locale, "/profile"));
+  if (!isAccessible) {
+    const activityT = await getTranslations({
+      locale,
+      namespace: "favorites.activity",
+    });
+
+    recordLatency({
+      status: "failed",
+      statusReason: "activity_unavailable",
+      userProfileId: viewerProfileId,
+    });
+
+    return {
+      formError: activityT("unavailable"),
+    };
+  }
+
+  let isFavorited = false;
+
+  try {
+    await perf.measure("favorite_write", async () => {
+      try {
+        await prisma.activityFavorite.create({
+          data: {
+            activityId,
+            userProfileId: viewerProfileId,
+          },
+        });
+        isFavorited = true;
+      } catch (error) {
+        if (!isPrismaUniqueError(error)) {
+          throw error;
+        }
+
+        await prisma.activityFavorite.delete({
+          where: {
+            activityId_userProfileId: {
+              activityId,
+              userProfileId: viewerProfileId,
+            },
+          },
+        });
+        isFavorited = false;
+      }
+    });
+  } catch (error) {
+    recordLatency({
+      status: "failed",
+      statusReason: "toggle_failed",
+      userProfileId: viewerProfileId,
+    });
+    perf.finish({
+      result: "failed",
+      statusReason: "toggle_failed",
+      userProfileId: viewerProfileId,
+    });
+
+    throw error;
+  }
+
   recordLatency({
     status: "success",
     userProfileId: viewerProfileId,
   });
+  perf.finish({
+    isFavorited,
+    result: "success",
+    userProfileId: viewerProfileId,
+  });
 
   return {
-    favoriteCount,
     formError: undefined,
-    isFavorited: !existingFavorite,
+    isFavorited,
     ok: true,
     updatedAt: Date.now(),
   };

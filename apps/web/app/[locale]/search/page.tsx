@@ -24,7 +24,7 @@ import {
   type GlobalSearchParams,
 } from "@/features/search/utils/searchQuery";
 import { getCopy } from "@/lib/copy";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 
@@ -135,7 +135,7 @@ export default async function SearchPage({
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = query
     ? await perf.measure("viewer.profile", () =>
-        getOptionalCurrentUserProfile().catch((error: unknown) => {
+        getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
           console.error("Failed to load viewer profile for global search", error);
           return null;
         }),

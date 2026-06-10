@@ -58,6 +58,9 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [friendCodeCopied, setFriendCodeCopied] = useState(false);
+  const [liveIncomingFriendRequests, setLiveIncomingFriendRequests] = useState(
+    incomingFriendRequests,
+  );
   const menuRef = useRef<HTMLDivElement>(null);
   const { unreadNotificationCount: liveUnreadNotificationCount } =
     useNotificationBadge(unreadNotificationCount);
@@ -76,6 +79,44 @@ export function AccountMenu({
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
+
+  useEffect(() => {
+    setLiveIncomingFriendRequests(incomingFriendRequests);
+  }, [incomingFriendRequests]);
+
+  useEffect(() => {
+    if (!open || !user) {
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    void fetch("/api/friends/incoming-requests", {
+      cache: "no-store",
+      signal: abortController.signal,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Incoming requests failed: ${response.status}`);
+        }
+
+        return response.json() as Promise<{
+          incomingRequests?: FriendRequestViewModel[];
+        }>;
+      })
+      .then((payload) => {
+        setLiveIncomingFriendRequests(payload.incomingRequests ?? []);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [open, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -207,7 +248,7 @@ export function AccountMenu({
             <MenuButton
               icon={UserPlus}
               label={friendsCopy.addTitle}
-              badgeCount={incomingFriendRequests.length}
+              badgeCount={liveIncomingFriendRequests.length}
               onClick={openAddFriendDialog}
             />
             <MenuLink
@@ -290,7 +331,7 @@ export function AccountMenu({
       {addFriendOpen ? (
         <AddFriendDialog
           currentUserFriendCode={viewerFriendCode}
-          incomingRequests={incomingFriendRequests}
+          incomingRequests={liveIncomingFriendRequests}
           locale={locale}
           onClose={() => setAddFriendOpen(false)}
           returnTo="messages"

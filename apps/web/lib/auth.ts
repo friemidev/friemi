@@ -151,3 +151,59 @@ export async function getOptionalCurrentUserProfile() {
 
   return upsertClerkUserProfile(user);
 }
+
+export async function ensureCurrentUserProfileSnapshot(locale = "zh-CN") {
+  const clerkUserId = await requireUser(locale);
+
+  if (!hasClerkKeys()) {
+    return upsertLocalUserProfile(clerkUserId);
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId,
+    },
+  });
+
+  if (existingProfile) {
+    return ensureUserProfileFriendCode(existingProfile);
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    redirect(`/${locale}/sign-in`);
+  }
+
+  return upsertClerkUserProfile(user);
+}
+
+export async function getOptionalCurrentUserProfileSnapshot() {
+  if (!hasClerkKeys()) {
+    return upsertLocalUserProfile("local-dev-user");
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+  });
+
+  if (existingProfile) {
+    return ensureUserProfileFriendCode(existingProfile);
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    return null;
+  }
+
+  return upsertClerkUserProfile(user);
+}

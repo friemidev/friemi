@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
@@ -160,19 +161,13 @@ function RejoinNotice({
   status,
 }: {
   locale: string;
-  status: "REJECTED" | "CANCELLED";
+  status: "REJECTED";
 }) {
   const t = getCopy(locale).join;
-  const copy =
-    status === "REJECTED"
-      ? {
-          title: t.rejectedTitle,
-          description: t.rejectedDescription,
-        }
-      : {
-          title: t.cancelledTitle,
-          description: t.cancelledDescription,
-        };
+  const copy = {
+    title: t.rejectedTitle,
+    description: t.rejectedDescription,
+  };
 
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
@@ -194,7 +189,26 @@ export function JoinActivityForm({
   viewerParticipationStatus,
 }: JoinActivityFormProps) {
   const [state, formAction] = useActionState(joinActivityAction, initialState);
+  const [effectiveParticipationStatus, setEffectiveParticipationStatus] =
+    useState<ViewerParticipationStatus>(viewerParticipationStatus);
+  const [, startTransition] = useTransition();
+  const router = useRouter();
   const t = getCopy(locale).join;
+
+  useEffect(() => {
+    setEffectiveParticipationStatus(viewerParticipationStatus);
+  }, [viewerParticipationStatus]);
+
+  useEffect(() => {
+    if (!state.success || !state.participantStatus) {
+      return;
+    }
+
+    setEffectiveParticipationStatus(state.participantStatus);
+    startTransition(() => {
+      router.refresh();
+    });
+  }, [router, startTransition, state.participantStatus, state.success]);
 
   if (isClosed) {
     return (
@@ -203,23 +217,24 @@ export function JoinActivityForm({
   }
 
   if (
-    viewerParticipationStatus &&
-    viewerParticipationStatus !== "REJECTED" &&
-    viewerParticipationStatus !== "CANCELLED"
+    effectiveParticipationStatus &&
+    effectiveParticipationStatus !== "REJECTED" &&
+    effectiveParticipationStatus !== "CANCELLED"
   ) {
-    const copy = getParticipationCopy(viewerParticipationStatus, locale);
+    const copy = getParticipationCopy(effectiveParticipationStatus, locale);
 
     return (
       <div className="grid gap-2.5">
         <ParticipationStatusCard
           description={copy.description}
-          isPending={viewerParticipationStatus === "PENDING"}
+          isPending={effectiveParticipationStatus === "PENDING"}
           title={copy.title}
         />
         <CancelParticipationForm
           activityId={activityId}
           activityTitle={activityTitle}
           locale={locale}
+          onCancelled={() => setEffectiveParticipationStatus(null)}
         />
       </div>
     );
@@ -277,9 +292,8 @@ export function JoinActivityForm({
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 
-      {viewerParticipationStatus === "REJECTED" ||
-      viewerParticipationStatus === "CANCELLED" ? (
-        <RejoinNotice locale={locale} status={viewerParticipationStatus} />
+      {effectiveParticipationStatus === "REJECTED" ? (
+        <RejoinNotice locale={locale} status={effectiveParticipationStatus} />
       ) : null}
 
       {state.formError ? (

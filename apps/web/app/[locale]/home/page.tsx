@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
 import { getActivities } from "@/features/activities/queries/getActivities";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -27,7 +27,7 @@ export default async function HomePage({ params }: HomePageProps) {
   });
   const t = getCopy(locale);
   const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfile(),
+    getOptionalCurrentUserProfileSnapshot(),
   );
   const activitiesResult = await perf.measure("home.activities", () =>
     getActivities({

@@ -24,7 +24,7 @@ import {
 } from "@/features/activities/utils/activityFilters";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -151,7 +151,7 @@ export default async function ActivitiesPage({
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const hasFilters = hasActiveActivityFilters(filters);
   const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfile(),
+    getOptionalCurrentUserProfileSnapshot(),
   );
   const [activitiesResult, filterOptions] = await perf.measure(
     "activity.data",

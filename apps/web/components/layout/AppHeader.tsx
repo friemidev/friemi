@@ -63,6 +63,7 @@ export function AppHeader({
         <Link
           href={withLocale(locale, "/home")}
           className="flex shrink-0 items-center gap-2"
+          prefetch
         >
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
             <Image
@@ -83,6 +84,7 @@ export function AppHeader({
           <Link
             className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
             href={withLocale(locale, "/lobby")}
+            prefetch
           >
             <UsersRound className="h-4 w-4" />
             {lobbyLabel}
@@ -90,6 +92,7 @@ export function AppHeader({
           <Link
             className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
             href={withLocale(locale, "/activities")}
+            prefetch
           >
             <Compass className="h-4 w-4" />
             {t.nav.activities}
@@ -97,11 +100,16 @@ export function AppHeader({
           <Link
             className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
             href={withLocale(locale, "/messages")}
+            prefetch
           >
             <MessageCircle className="h-4 w-4" />
             {messagesLabel}
           </Link>
-          <Link href={withLocale(locale, "/activities/new")} className="ml-2">
+          <Link
+            href={withLocale(locale, "/activities/new")}
+            className="ml-2"
+            prefetch
+          >
             <Button className="gap-1.5 rounded-full border-0 bg-[#d88d72] px-4 text-white shadow-[0_8px_20px_rgba(216,141,114,0.28)] hover:bg-[#c87b61] xl:gap-2 xl:px-5">
               <CalendarPlus className="h-4 w-4" />
               {newActivityLabel}
