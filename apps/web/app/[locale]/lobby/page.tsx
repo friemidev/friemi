@@ -63,6 +63,7 @@ export default async function ActivityLobbyPage({
       console.error("Failed to load activity lobby", error);
 
       return {
+        allActivities: [],
         openActivities: [],
         createdActivities: [],
         joinedActivities: [],
@@ -87,6 +88,7 @@ export default async function ActivityLobbyPage({
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
       <ActivityModeTabs current="lobby" locale={locale} />
       <ActivityLobbyView
+        allActivities={lobby.allActivities}
         openActivities={lobby.openActivities}
         createdActivities={lobby.createdActivities}
         joinedActivities={lobby.joinedActivities}
