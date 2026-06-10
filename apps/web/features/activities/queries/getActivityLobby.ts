@@ -20,6 +20,8 @@ import {
 import type { Prisma } from "@prisma/client";
 
 const activityLobbySectionLimit = 6;
+const activityLobbyFeedLimit = 48;
+const activityLobbyArchivedFeedLimit = 12;
 const visibleLobbyParticipationStatuses = ["JOINED", "APPROVED", "PENDING"] as const;
 
 const lobbyParticipationSelect = {
@@ -66,6 +68,7 @@ const getCachedOpenLobbyActivities = unstable_cache(
 );
 
 type ActivityLobbyViewModel = {
+  allActivities: ActivityCardViewModel[];
   openActivities: ActivityCardViewModel[];
   createdActivities: ActivityCardViewModel[];
   joinedActivities: ActivityCardViewModel[];
@@ -254,14 +257,30 @@ export async function getActivityLobby(
 ): Promise<ActivityLobbyViewModel> {
   const publicEventFavorite = getPublicEventFavoriteDelegate();
   const friendIds = await getViewerFriendIds(viewerProfileId);
+  const now = new Date();
   const visibleWhere = getVisibleActivityWhere({
     includeEnded: true,
     includePast: true,
     visibility: null,
+    now,
   });
-  const accessibleWhere: Prisma.ActivityWhereInput = {
+  const activeVisibleWhere = getVisibleActivityWhere({
+    includeEnded: false,
+    includePast: false,
+    visibility: null,
+    now,
+  });
+  const teamCardWhere: Prisma.ActivityWhereInput = {
     AND: [
-      visibleWhere,
+      { type: { not: "PUBLIC_EVENT" } },
+      { NOT: getLegacyPublicActivityInfoWhere() },
+    ],
+  };
+  const getAccessibleWhere = (
+    baseWhere: Prisma.ActivityWhereInput,
+  ): Prisma.ActivityWhereInput => ({
+    AND: [
+      baseWhere,
       {
         OR: [
           {
@@ -293,9 +312,37 @@ export async function getActivityLobby(
         ],
       },
     ],
+  });
+  const accessibleWhere = getAccessibleWhere(visibleWhere);
+  const accessibleActiveWhere = getAccessibleWhere(activeVisibleWhere);
+  const archivedWhere: Prisma.ActivityWhereInput = {
+    OR: [
+      {
+        status: "ENDED",
+      },
+      {
+        endAt: {
+          lt: now,
+        },
+      },
+      {
+        AND: [
+          {
+            endAt: null,
+          },
+          {
+            startAt: {
+              lt: now,
+            },
+          },
+        ],
+      },
+    ],
   };
 
   const [
+    activeFeedActivities,
+    archivedFeedActivities,
     openActivities,
     createdActivities,
     joinedParticipations,
@@ -304,15 +351,26 @@ export async function getActivityLobby(
     friendHostedActivities,
     friendJoinedParticipations,
   ] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        AND: [accessibleActiveWhere, teamCardWhere],
+      },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: activityLobbyFeedLimit,
+      select: activityCardSelect,
+    }),
+    prisma.activity.findMany({
+      where: {
+        AND: [accessibleWhere, teamCardWhere, archivedWhere],
+      },
+      orderBy: [{ startAt: "desc" }, { id: "asc" }],
+      take: activityLobbyArchivedFeedLimit,
+      select: activityCardSelect,
+    }),
     getCachedOpenLobbyActivities(),
     prisma.activity.findMany({
       where: {
-        AND: [
-          visibleWhere,
-          { organizerId: viewerProfileId },
-          { type: { not: "PUBLIC_EVENT" } },
-          { NOT: getLegacyPublicActivityInfoWhere() },
-        ],
+        AND: [visibleWhere, { organizerId: viewerProfileId }, teamCardWhere],
       },
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: activityLobbySectionLimit,
@@ -325,11 +383,7 @@ export async function getActivityLobby(
           in: [...visibleLobbyParticipationStatuses],
         },
         activity: {
-          AND: [
-            visibleWhere,
-            { type: { not: "PUBLIC_EVENT" } },
-            { NOT: getLegacyPublicActivityInfoWhere() },
-          ],
+          AND: [visibleWhere, teamCardWhere],
         },
       },
       orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
@@ -361,12 +415,7 @@ export async function getActivityLobby(
     friendIds.length > 0
       ? prisma.activity.findMany({
           where: {
-            AND: [
-              visibleWhere,
-              { organizerId: { in: friendIds } },
-              { type: { not: "PUBLIC_EVENT" } },
-              { NOT: getLegacyPublicActivityInfoWhere() },
-            ],
+            AND: [visibleWhere, { organizerId: { in: friendIds } }, teamCardWhere],
           },
           orderBy: [{ startAt: "asc" }, { id: "asc" }],
           take: activityLobbySectionLimit,
@@ -383,11 +432,7 @@ export async function getActivityLobby(
               in: [...visibleLobbyParticipationStatuses],
             },
             activity: {
-              AND: [
-                accessibleWhere,
-                { type: { not: "PUBLIC_EVENT" } },
-                { NOT: getLegacyPublicActivityInfoWhere() },
-              ],
+              AND: [accessibleWhere, teamCardWhere],
             },
           },
           orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
@@ -397,6 +442,10 @@ export async function getActivityLobby(
       : Promise.resolve([]),
   ]);
 
+  const feedActivityCards = [
+    ...activeFeedActivities,
+    ...archivedFeedActivities,
+  ].map(getActivityCardViewModel);
   const openActivityCards = openActivities.map(getActivityCardViewModel);
   const joinedActivities = joinedParticipations
     .map((item) => getActivityCardViewModel(item.activity))
@@ -442,6 +491,7 @@ export async function getActivityLobby(
     getActivityCardViewModel,
   );
   const [
+    decoratedAllActivities,
     decoratedOpenActivities,
     decoratedCreatedActivities,
     decoratedJoinedActivities,
@@ -450,6 +500,7 @@ export async function getActivityLobby(
     decoratedFriendJoinedActivities,
   ] = await decorateLobbyActivitySections(
     [
+      feedActivityCards,
       openActivityCards,
       createdActivityCards,
       joinedActivities,
@@ -462,6 +513,7 @@ export async function getActivityLobby(
   );
 
   return {
+    allActivities: decoratedAllActivities,
     openActivities: decoratedOpenActivities,
     createdActivities: decoratedCreatedActivities,
     joinedActivities: decoratedJoinedActivities,
