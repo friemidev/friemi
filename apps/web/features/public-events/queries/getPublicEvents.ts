@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
-import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
+import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import {
   activityCardSelect,
   getActivityCardViewModel,
@@ -89,6 +90,14 @@ type PublicEventDetailQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventDetailSelect;
 }>;
 
+function toIsoString(value: Date | string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 export function getUpcomingPublicEventWhere(
   now = new Date(),
 ): Prisma.PublicEventWhereInput {
@@ -122,8 +131,8 @@ export function getPublicEventCardViewModel(
     address: publicEvent.address,
     latitude: publicEvent.latitude,
     longitude: publicEvent.longitude,
-    startAt: publicEvent.startAt.toISOString(),
-    endAt: publicEvent.endAt?.toISOString() ?? null,
+    startAt: toIsoString(publicEvent.startAt) ?? new Date().toISOString(),
+    endAt: toIsoString(publicEvent.endAt),
     priceType: publicEvent.priceType,
     priceText: publicEvent.priceText,
     coverImageUrl: publicEvent.coverImageUrl,
@@ -138,10 +147,26 @@ async function attachTeamStates(
   teams: ActivityCardViewModel[],
   viewerProfileId: string | null | undefined,
 ) {
-  return attachActivityFavoriteStates(
-    await attachActivityFriendSignals(teams, viewerProfileId),
-    viewerProfileId,
-  );
+  if (teams.length === 0) {
+    return teams;
+  }
+
+  const viewerFriendIds = viewerProfileId
+    ? await getViewerFriendIds(viewerProfileId)
+    : [];
+  const [teamsWithFavoriteState, friendSignalMap] = await Promise.all([
+    attachActivityFavoriteStates(teams, viewerProfileId),
+    getActivityFriendSignalMap(
+      teams.map((team) => team.id),
+      viewerProfileId,
+      viewerFriendIds,
+    ),
+  ]);
+
+  return teamsWithFavoriteState.map((team) => ({
+    ...team,
+    friendSignal: friendSignalMap.get(team.id) ?? null,
+  }));
 }
 
 function getPublicEventTeamPriority(team: ActivityCardViewModel, now: Date) {

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { attachActivityFriendSignals } from "@/features/friends/queries/getActivityFriendSignals";
+import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -700,7 +701,7 @@ function getActivityInfoDedupeKeys(item: {
   title: string;
   city: string;
   address: string;
-  startAt: Date;
+  startAt: Date | string;
   sourceUrl?: string | null;
   externalSource?: string | null;
   externalId?: string | null;
@@ -723,7 +724,7 @@ function getActivityInfoDedupeKeys(item: {
   keys.push(
     `semantic:${item.title.trim().toLowerCase()}:${item.city
       .trim()
-      .toLowerCase()}:${item.address.trim().toLowerCase()}:${item.startAt.toISOString()}`,
+      .toLowerCase()}:${item.address.trim().toLowerCase()}:${toIsoString(item.startAt)}`,
   );
 
   return keys;
@@ -919,8 +920,8 @@ export function getActivityCardViewModel(
     address: activity.address,
     latitude: activity.latitude,
     longitude: activity.longitude,
-    startAt: activity.startAt.toISOString(),
-    endAt: activity.endAt?.toISOString() ?? null,
+    startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+    endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
@@ -968,8 +969,8 @@ function getPublicEventActivityCardViewModel(
       address: publicEvent.address,
       latitude: publicEvent.latitude,
       longitude: publicEvent.longitude,
-      startAt: publicEvent.startAt.toISOString(),
-      endAt: publicEvent.endAt?.toISOString() ?? null,
+        startAt: toIsoString(publicEvent.startAt) ?? new Date().toISOString(),
+        endAt: toIsoString(publicEvent.endAt),
       capacity: 0,
       coverImageUrl: publicEvent.coverImageUrl,
       favoriteCount: publicEvent._count.favorites,
@@ -1003,10 +1004,16 @@ async function attachJoinableActivityStates(
   const teamActivities = cards.filter(
     (activity) => activity.type !== "PUBLIC_EVENT",
   );
+  const viewerFriendIds =
+    viewerProfileId && teamActivities.length > 0
+      ? await getViewerFriendIds(viewerProfileId)
+      : [];
   const [
     publicEventActivitiesWithState,
     legacyActivityInfoActivitiesWithState,
     teamActivitiesWithState,
+    teamActivitySignalMap,
+    viewerParticipationByActivityId,
   ] =
     await Promise.all([
       attachPublicEventFavoriteStates(
@@ -1036,36 +1043,44 @@ async function attachJoinableActivityStates(
         legacyActivityInfoActivities,
         viewerProfileId,
       ),
-      attachActivityFavoriteStates(
-        await attachActivityFriendSignals(teamActivities, viewerProfileId),
+      attachActivityFavoriteStates(teamActivities, viewerProfileId),
+      getActivityFriendSignalMap(
+        teamActivities.map((activity) => activity.id),
         viewerProfileId,
+        viewerFriendIds,
       ),
+      viewerProfileId && teamActivities.length > 0
+        ? prisma.activityParticipant.findMany({
+            where: {
+              userProfileId: viewerProfileId,
+              activityId: {
+                in: teamActivities.map((activity) => activity.id),
+              },
+            },
+            select: {
+              activityId: true,
+              status: true,
+            },
+            orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
+          }).then(
+            (participations) =>
+              new Map(
+                participations.map((participation) => [
+                  participation.activityId,
+                  participation.status,
+                ]),
+              ),
+          )
+        : Promise.resolve(
+            new Map<string, ActivityCardViewModel["viewerParticipationStatus"]>(),
+          ),
     ]);
-  const viewerParticipationByActivityId =
-    viewerProfileId && teamActivitiesWithState.length > 0
-      ? new Map(
-          (
-            await prisma.activityParticipant.findMany({
-              where: {
-                userProfileId: viewerProfileId,
-                activityId: {
-                  in: teamActivitiesWithState.map((activity) => activity.id),
-                },
-              },
-              select: {
-                activityId: true,
-                status: true,
-              },
-              orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
-            })
-          ).map((participation) => [participation.activityId, participation.status]),
-        )
-      : new Map<string, ActivityCardViewModel["viewerParticipationStatus"]>();
   const teamActivityById = new Map(
     teamActivitiesWithState.map((activity) => [
       activity.id,
       {
         ...activity,
+        friendSignal: teamActivitySignalMap.get(activity.id) ?? null,
         viewerParticipationStatus:
           viewerParticipationByActivityId.get(activity.id) ?? null,
       },
@@ -1263,6 +1278,14 @@ function hasExplicitActivityListFilters(filters: ActivityFilters) {
 
 function addDays(value: Date, days: number) {
   return new Date(value.getTime() + days * dayInMs);
+}
+
+function toIsoString(value: Date | string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
 function getDailyRankingSeed(now: Date) {
@@ -1706,23 +1729,74 @@ export async function getActivityList(
 export async function getActivityFilterOptions(
   options: { publicInfoOnly?: boolean } = {},
 ) {
+  const loadFilterOptions = options.publicInfoOnly
+    ? getCachedPublicInfoActivityFilterOptions
+    : getCachedActivityFilterOptions;
+
+  return loadFilterOptions();
+}
+
+const getCachedActivityFilterOptions = unstable_cache(
+  async () => {
+    const now = new Date();
+    const [activityCities, publicEventCities] = await Promise.all([
+      prisma.activity.findMany({
+        where: getVisibleActivityWhere({
+          includeEnded: true,
+          includePast: true,
+          now,
+        }),
+        select: {
+          city: true,
+        },
+        distinct: ["city"],
+        orderBy: {
+          city: "asc",
+        },
+        take: 50,
+      }),
+      prisma.publicEvent.findMany({
+        where: getVisiblePublicEventWhere({
+          includeEnded: true,
+          includePast: true,
+          now,
+        }),
+        select: {
+          city: true,
+        },
+        distinct: ["city"],
+        orderBy: {
+          city: "asc",
+        },
+        take: 50,
+      }),
+    ]);
+
+    return {
+      cities: [...activityCities, ...publicEventCities]
+        .map((item) => item.city.trim())
+        .filter(
+          (city, index, cityList) => city && cityList.indexOf(city) === index,
+        ),
+    };
+  },
+  ["activity-filter-options"],
+  { revalidate: 300 },
+);
+
+const getCachedPublicInfoActivityFilterOptions = unstable_cache(
+  async () => {
   const now = new Date();
-  const activityWhere = options.publicInfoOnly
-    ? {
-        AND: [
-          getVisibleActivityWhere({
-            includeEnded: true,
-            includePast: true,
-            now,
-          }),
-          getLegacyPublicActivityInfoWhere(),
-        ],
-      }
-    : getVisibleActivityWhere({
+  const activityWhere = {
+    AND: [
+      getVisibleActivityWhere({
         includeEnded: true,
         includePast: true,
         now,
-      });
+      }),
+      getLegacyPublicActivityInfoWhere(),
+    ],
+  };
   const [activityCities, publicEventCities] = await Promise.all([
     prisma.activity.findMany({
       where: activityWhere,
@@ -1759,4 +1833,7 @@ export async function getActivityFilterOptions(
         (city, index, cityList) => city && cityList.indexOf(city) === index,
       ),
   };
-}
+  },
+  ["activity-filter-options-public-info"],
+  { revalidate: 300 },
+);

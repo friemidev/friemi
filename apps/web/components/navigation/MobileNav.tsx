@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   CircleUserRound,
   Compass,
+  LoaderCircle,
   MessageCircle,
   UsersRound,
 } from "lucide-react";
@@ -21,6 +23,8 @@ type MobileNavProps = {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
+  const router = useRouter();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
@@ -36,6 +40,16 @@ export function MobileNav({ locale }: MobileNavProps) {
     { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
     { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
   ];
+
+  useEffect(() => {
+    items.forEach((item) => {
+      router.prefetch(withLocale(currentLocale, item.href));
+    });
+  }, [currentLocale, items, router]);
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   function isItemActive(href: string) {
     const localizedHref = withLocale(currentLocale, href);
@@ -62,7 +76,13 @@ export function MobileNav({ locale }: MobileNavProps) {
               href={withLocale(currentLocale, item.href)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
+              prefetch
               title={item.label}
+              onClick={() => {
+                if (!active) {
+                  setPendingHref(item.href);
+                }
+              }}
               className={cn(
                 "flex min-w-0 items-center justify-center rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
                 item.isPrimary
@@ -72,12 +92,22 @@ export function MobileNav({ locale }: MobileNavProps) {
                   : active
                     ? "text-ink"
                     : "text-zinc-600 hover:bg-white/65 hover:text-ink",
+                pendingHref === item.href && "scale-[0.97] opacity-80",
               )}
             >
-              <Icon
-                className={cn(item.isPrimary ? "h-7 w-7" : "h-6 w-6")}
-                strokeWidth={active ? 2.4 : 2}
-              />
+              {pendingHref === item.href ? (
+                <LoaderCircle
+                  className={cn(
+                    "animate-spin",
+                    item.isPrimary ? "h-7 w-7" : "h-6 w-6",
+                  )}
+                />
+              ) : (
+                <Icon
+                  className={cn(item.isPrimary ? "h-7 w-7" : "h-6 w-6")}
+                  strokeWidth={active ? 2.4 : 2}
+                />
+              )}
               <span className="sr-only">{item.label}</span>
             </Link>
           );

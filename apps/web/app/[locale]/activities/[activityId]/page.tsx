@@ -61,10 +61,11 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -91,11 +92,22 @@ export default async function ActivityDetailPage({
   const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
   const viewerProfile = await perf.measure("activity.viewerProfile", () =>
-    getOptionalCurrentUserProfile(),
+    getOptionalCurrentUserProfileSnapshot(),
   );
-  const activity = await perf.measure("activity.primary", () =>
-    getActivityById(activityId, viewerProfile?.id ?? null),
-  );
+  const viewerFriendIds =
+    viewerProfile?.id
+      ? await perf.measure("activity.viewerFriends", () =>
+          getViewerFriendIds(viewerProfile.id),
+        )
+      : [];
+  const [activity, activityIsFavorited] = await Promise.all([
+    perf.measure("activity.primary", () =>
+      getActivityById(activityId, viewerProfile?.id ?? null, viewerFriendIds),
+    ),
+    perf.measure("activity.favoriteState", () =>
+      getViewerActivityFavorite(activityId, viewerProfile?.id),
+    ),
+  ]);
 
   if (!activity) {
     notFound();
@@ -131,10 +143,6 @@ export default async function ActivityDetailPage({
       userAgent: requestHeaders.get("user-agent"),
       userProfileId: viewerProfile?.id,
     },
-  );
-
-  const activityIsFavorited = await perf.measure("activity.favoriteState", () =>
-    getViewerActivityFavorite(activity.id, viewerProfile?.id),
   );
 
   if (activity.isActivityInfo) {
@@ -433,8 +441,12 @@ export default async function ActivityDetailPage({
     Promise.all([
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
       getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-      getActivityComments(activity.id, viewerProfile?.id ?? null),
-      getActivityFriendSignal(activity.id, viewerProfile?.id),
+      getActivityComments(
+        activity.id,
+        viewerProfile?.id ?? null,
+        viewerFriendIds,
+      ),
+      getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
     ]),
   );
   const participantPercent = getActivityParticipantPercent(activity);

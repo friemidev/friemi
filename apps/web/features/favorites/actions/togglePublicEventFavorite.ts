@@ -1,6 +1,4 @@
 "use server";
-
-import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -14,6 +12,7 @@ import {
 } from "@/features/analytics/events";
 import { ensureCurrentUserProfile, requireUser } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -113,18 +112,27 @@ export async function togglePublicEventFavoriteAction(
       },
     });
   };
-  const fallbackCommonT = await getTranslations({
-    locale: fallbackLocale,
-    namespace: "favorites.common",
-  });
   const result = togglePublicEventFavoriteSchema.safeParse({
     locale: fallbackLocale,
     publicEventId: rawPublicEventId,
     redirectPath: rawRedirectPath,
     sourceSurface,
   });
+  const perf = createActionPerformanceTracker({
+    action: "toggle_public_event_favorite",
+    metadata: {
+      locale: fallbackLocale,
+      sourceSurface,
+      targetId: rawPublicEventId || undefined,
+    },
+  });
 
   if (!result.success) {
+    const fallbackCommonT = await getTranslations({
+      locale: fallbackLocale,
+      namespace: "favorites.common",
+    });
+
     recordLatency({
       status: "failed",
       statusReason: "invalid_request",
@@ -136,13 +144,29 @@ export async function togglePublicEventFavoriteAction(
   }
 
   const { locale, publicEventId, redirectPath } = result.data;
-  const publicEventT = await getTranslations({
-    locale,
-    namespace: "favorites.publicEvent",
-  });
   const publicEventFavorite = getPublicEventFavoriteDelegate();
-  const viewerProfileId = await getViewerProfileId(locale);
+  const [viewerProfileId, publicEvent] = await Promise.all([
+    perf.measure("viewer_profile", () => getViewerProfileId(locale)),
+    perf.measure("public_event_lookup", () =>
+      prisma.publicEvent.findFirst({
+      where: {
+        id: publicEventId,
+        visibility: "PUBLIC",
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+      }),
+    ),
+  ]);
+
   if (!publicEventFavorite) {
+    const publicEventT = await getTranslations({
+      locale,
+      namespace: "favorites.publicEvent",
+    });
+
     recordLatency({
       status: "failed",
       statusReason: "favorite_store_unavailable",
@@ -154,29 +178,12 @@ export async function togglePublicEventFavoriteAction(
     };
   }
 
-  const existingFavorite = (await publicEventFavorite.findUnique({
-    where: {
-      publicEventId_userProfileId: {
-        publicEventId,
-        userProfileId: viewerProfileId,
-      },
-    },
-    select: {
-      id: true,
-    },
-  })) as { id: string } | null;
-  const publicEvent = await prisma.publicEvent.findFirst({
-    where: {
-      id: publicEventId,
-      visibility: "PUBLIC",
-    },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
-
   if (!publicEvent) {
+    const publicEventT = await getTranslations({
+      locale,
+      namespace: "favorites.publicEvent",
+    });
+
     recordLatency({
       status: "failed",
       statusReason: "public_event_unavailable",
@@ -188,64 +195,122 @@ export async function togglePublicEventFavoriteAction(
     };
   }
 
-  if (!existingFavorite && publicEvent.status !== "SCHEDULED") {
-    recordLatency({
-      status: "failed",
-      statusReason: "public_event_unavailable",
-      userProfileId: viewerProfileId,
-    });
+  if (publicEvent.status !== "SCHEDULED") {
+    const existingFavorite = (await perf.measure(
+      "existing_favorite_lookup",
+      () =>
+        publicEventFavorite.findUnique({
+          where: {
+            publicEventId_userProfileId: {
+              publicEventId,
+              userProfileId: viewerProfileId,
+            },
+          },
+          select: {
+            id: true,
+          },
+        }),
+    )) as { id: string } | null;
 
-    return {
-      formError: publicEventT("unavailable"),
-    };
-  }
+    if (!existingFavorite) {
+      const publicEventT = await getTranslations({
+        locale,
+        namespace: "favorites.publicEvent",
+      });
 
-  try {
-    if (existingFavorite) {
-      await publicEventFavorite.delete({
+      recordLatency({
+        status: "failed",
+        statusReason: "public_event_unavailable",
+        userProfileId: viewerProfileId,
+      });
+
+      return {
+        formError: publicEventT("unavailable"),
+      };
+    }
+
+    await perf.measure("favorite_write", () =>
+      publicEventFavorite.delete({
         where: {
           id: existingFavorite.id,
         },
-      });
-    } else {
-      await publicEventFavorite.create({
-        data: {
-          publicEventId,
-          userProfileId: viewerProfileId,
-        },
-      });
-    }
-  } catch (error) {
-    if (!isPrismaUniqueError(error)) {
-      recordLatency({
-        status: "failed",
-        statusReason: "toggle_failed",
-        userProfileId: viewerProfileId,
-      });
+      }),
+    );
 
-      throw error;
-    }
+    recordLatency({
+      status: "success",
+      userProfileId: viewerProfileId,
+    });
+    perf.finish({
+      isFavorited: false,
+      result: "success",
+      userProfileId: viewerProfileId,
+    });
+
+    return {
+      formError: undefined,
+      isFavorited: false,
+      ok: true,
+      updatedAt: Date.now(),
+    };
   }
 
-  const favoriteCount = await publicEventFavorite.count({
-    where: {
-      publicEventId,
-    },
-  });
+  let isFavorited = false;
 
-  const localizedPath = withLocale(locale, redirectPath);
-  revalidatePath(localizedPath);
-  revalidatePath(withLocale(locale, "/profile"));
-  revalidatePath(withLocale(locale, "/lobby"));
+  try {
+    await perf.measure("favorite_write", async () => {
+      try {
+        await publicEventFavorite.create({
+          data: {
+            publicEventId,
+            userProfileId: viewerProfileId,
+          },
+        });
+        isFavorited = true;
+      } catch (error) {
+        if (!isPrismaUniqueError(error)) {
+          throw error;
+        }
+
+        await publicEventFavorite.delete({
+          where: {
+            publicEventId_userProfileId: {
+              publicEventId,
+              userProfileId: viewerProfileId,
+            },
+          },
+        });
+        isFavorited = false;
+      }
+    });
+  } catch (error) {
+    recordLatency({
+      status: "failed",
+      statusReason: "toggle_failed",
+      userProfileId: viewerProfileId,
+    });
+    perf.finish({
+      result: "failed",
+      statusReason: "toggle_failed",
+      userProfileId: viewerProfileId,
+    });
+
+    throw error;
+  }
+
   recordLatency({
     status: "success",
     userProfileId: viewerProfileId,
   });
+  perf.finish({
+    isFavorited,
+    result: "success",
+    userProfileId: viewerProfileId,
+  });
 
   return {
-    favoriteCount,
     formError: undefined,
-    isFavorited: !existingFavorite,
+    isFavorited,
     ok: true,
     updatedAt: Date.now(),
   };

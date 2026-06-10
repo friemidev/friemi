@@ -22,7 +22,7 @@ import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/ut
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { getCategoryLabel } from "@/lib/copy";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import { getPublicEventCopy } from "@/features/public-events/copy";
@@ -55,7 +55,7 @@ export default async function PublicEventDetailPage({
   const t = getPublicEventCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfile(),
+    getOptionalCurrentUserProfileSnapshot(),
   );
   const publicEvent = await perf.measure("publicEvent.detail", () =>
     getPublicEventById(publicEventId, viewerProfile?.id),

@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { Compass, UsersRound } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Compass, LoaderCircle, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +13,9 @@ type ActivityModeTabsProps = {
 };
 
 export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [pendingTabId, setPendingTabId] = useState<string | null>(null);
   const tabs = [
     {
       id: "lobby" as const,
@@ -34,6 +41,16 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
     },
   ];
 
+  useEffect(() => {
+    tabs.forEach((tab) => {
+      router.prefetch(tab.href);
+    });
+  }, [router, tabs]);
+
+  useEffect(() => {
+    setPendingTabId(null);
+  }, [pathname]);
+
   return (
     <div className="mx-auto flex w-full justify-center">
       <div className="inline-flex w-full max-w-2xl rounded-[1.35rem] border border-[#d8ccb4] bg-[linear-gradient(135deg,rgba(252,249,243,0.98),rgba(243,238,228,0.96))] p-1 shadow-[0_8px_22px_rgba(88,71,45,0.05)]">
@@ -47,6 +64,12 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
               href={tab.href}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
+              prefetch
+              onClick={() => {
+                if (!active) {
+                  setPendingTabId(tab.id);
+                }
+              }}
               className={cn(
                 "flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[1rem] px-2.5 py-2.5 transition sm:gap-2.5 sm:px-3",
                 active
@@ -54,6 +77,7 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
                     ? "border border-[#b9cbe0] bg-[linear-gradient(135deg,rgba(224,235,244,0.98),rgba(206,220,234,0.95))] text-[#496983] shadow-[inset_0_1px_0_rgba(249,253,255,0.82),0_3px_10px_rgba(98,123,150,0.1)]"
                     : "border border-[#afc4a9] bg-[linear-gradient(135deg,rgba(212,228,207,0.98),rgba(194,214,187,0.95))] text-[#436042] shadow-[inset_0_1px_0_rgba(247,252,245,0.82),0_3px_10px_rgba(101,128,92,0.12)]"
                   : "text-[#726759] hover:bg-white/70 hover:text-[#64788f]",
+                pendingTabId === tab.id && "scale-[0.99] opacity-85",
               )}
             >
               <span
@@ -71,6 +95,9 @@ export function ActivityModeTabs({ current, locale }: ActivityModeTabsProps) {
               <span className="min-w-0 truncate text-xs font-semibold sm:text-sm">
                 {tab.label}
               </span>
+              {pendingTabId === tab.id ? (
+                <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin opacity-80" />
+              ) : null}
             </Link>
           );
         })}

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFormStatus } from "react-dom";
 import { Heart, LoaderCircle } from "lucide-react";
@@ -115,12 +114,10 @@ export function ActivityFavoriteButton({
   labelOverrides,
 }: ActivityFavoriteButtonProps) {
   const tMessages = useTranslations("favorites.common");
-  const router = useRouter();
   const [state, formAction] = useActionState(
     toggleActivityFavoriteAction,
     initialState,
   );
-  const [, startRefreshTransition] = useTransition();
   const [displayIsFavorited, setDisplayIsFavorited] = useState(isFavorited);
   const [displayFavoriteCount, setDisplayFavoriteCount] = useState(favoriteCount);
   const [hasOptimisticUpdate, setHasOptimisticUpdate] = useState(false);
@@ -158,21 +155,13 @@ export function ActivityFavoriteButton({
     }
 
     setDisplayIsFavorited(Boolean(state.isFavorited));
-    setDisplayFavoriteCount(
-      typeof state.favoriteCount === "number"
-        ? state.favoriteCount
-        : favoriteCount,
+    setDisplayFavoriteCount((current) =>
+      typeof state.favoriteCount === "number" ? state.favoriteCount : current,
     );
     setHasOptimisticUpdate(false);
     setPendingAction(null);
-    startRefreshTransition(() => {
-      router.refresh();
-    });
   }, [
-    router,
-    favoriteCount,
     state.favoriteCount,
-    startRefreshTransition,
     state.isFavorited,
     state.ok,
     state.updatedAt,

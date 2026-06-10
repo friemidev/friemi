@@ -8,7 +8,7 @@ import {
   getActivityLobby,
   getActivityLobbyPreview,
 } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 
 type ActivityLobbyPageProps = {
@@ -28,7 +28,7 @@ export default async function ActivityLobbyPage({
     route: "/lobby",
   });
   const profile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfile(),
+    getOptionalCurrentUserProfileSnapshot(),
   );
 
   if (!profile) {

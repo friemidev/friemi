@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
@@ -14,6 +15,7 @@ type CancelParticipationFormProps = {
   activityId: string;
   activityTitle: string;
   locale: string;
+  onCancelled?: () => void;
 };
 
 const initialState: CancelParticipationState = {};
@@ -148,12 +150,15 @@ export function CancelParticipationForm({
   activityId,
   activityTitle,
   locale,
+  onCancelled,
 }: CancelParticipationFormProps) {
   const [state, formAction] = useActionState(
     cancelParticipationAction,
     initialState,
   );
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [, startTransition] = useTransition();
+  const router = useRouter();
   const t = getCopy(locale).join;
 
   useEffect(() => {
@@ -161,6 +166,18 @@ export function CancelParticipationForm({
       setIsConfirmOpen(false);
     }
   }, [state.formError]);
+
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    setIsConfirmOpen(false);
+    onCancelled?.();
+    startTransition(() => {
+      router.refresh();
+    });
+  }, [onCancelled, router, startTransition, state.success]);
 
   return (
     <form action={formAction} className="grid gap-3" noValidate>
