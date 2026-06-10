@@ -8,6 +8,10 @@ import {
   getAdminOperationsAnalytics,
   type AdminOperationsAnalytics,
 } from "./getAdminOperationsAnalytics";
+import {
+  getUxLatencyAnalytics,
+  type UxLatencyAnalytics,
+} from "./getUxLatencyAnalytics";
 
 export const adminAnalyticsWindowOptions = [7, 30, 90] as const;
 
@@ -184,6 +188,7 @@ export type AdminAnalyticsDashboard = {
     source: string;
     sourceClickCount: number;
   }>;
+  latency: UxLatencyAnalytics;
   operations: AdminOperationsAnalytics;
 };
 
@@ -329,6 +334,7 @@ function createPopularRows(events: ChartAnalyticsEvent[]) {
 }
 
 function createEmptyDashboard(
+  latency: UxLatencyAnalytics,
   operations: AdminOperationsAnalytics,
   windowDays = defaultDashboardWindowDays,
 ): AdminAnalyticsDashboard {
@@ -379,6 +385,7 @@ function createEmptyDashboard(
     trend: buildTrend(windowDays, []),
     popularItems: [],
     publicEventSources: [],
+    latency,
     operations,
   };
 }
@@ -396,7 +403,10 @@ export async function getAdminAnalyticsDashboard(
   const environment = getAnalyticsEnvironment();
   const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
   const intentSince = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
-  const operations = await getAdminOperationsAnalytics(windowDays);
+  const [operations, latency] = await Promise.all([
+    getAdminOperationsAnalytics(windowDays),
+    getUxLatencyAnalytics(windowDays),
+  ]);
 
   try {
     const [
@@ -748,11 +758,12 @@ export async function getAdminAnalyticsDashboard(
             right.importedCount - left.importedCount,
         )
         .slice(0, 8),
+      latency,
       operations,
     };
   } catch (error) {
     console.error("Failed to load admin analytics dashboard", error);
 
-    return createEmptyDashboard(operations, windowDays);
+    return createEmptyDashboard(latency, operations, windowDays);
   }
 }

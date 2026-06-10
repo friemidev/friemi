@@ -133,6 +133,7 @@ export default async function PublicEventDetailPage({
             isFavorited={Boolean(publicEvent.isFavorited)}
             locale={locale}
             redirectPath={`/public-events/${publicEvent.id}`}
+            sourceSurface="public_event_detail"
           />
           <ReportDialog
             isAuthenticated={Boolean(viewerProfile)}

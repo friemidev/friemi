@@ -8,6 +8,10 @@ import {
   normalizeAnalyticsLocale,
   type AnalyticsSourceSurface,
 } from "@/features/analytics/events";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { createNotification } from "@/features/notifications/utils/createNotification";
@@ -123,6 +127,39 @@ function trackFriendRequestSent({
   );
 }
 
+function recordFriendRequestLatency({
+  durationMs,
+  locale,
+  route,
+  sourceSurface,
+  status,
+  statusReason,
+  targetProfileId,
+  viewerProfileId,
+}: {
+  durationMs: number;
+  locale: string;
+  route: string;
+  sourceSurface: AnalyticsSourceSurface;
+  status: "failed" | "success";
+  statusReason?: string | null;
+  targetProfileId?: string | null;
+  viewerProfileId?: string | null;
+}) {
+  recordOperationLatency({
+    durationMs,
+    entityId: targetProfileId || undefined,
+    entityType: targetProfileId ? "user" : undefined,
+    locale,
+    operationKey: "friend_request",
+    route,
+    sourceSurface,
+    status,
+    statusReason,
+    userProfileId: viewerProfileId,
+  });
+}
+
 function trackFriendRequestAccepted({
   locale,
   requesterId,
@@ -198,6 +235,7 @@ async function hasPendingFriendRequest(userId: string, otherUserId: string) {
 
 async function createPendingFriendRequest({
   analytics,
+  getDurationMs,
   locale,
   logContext,
   message,
@@ -211,6 +249,7 @@ async function createPendingFriendRequest({
     route: string;
     sourceSurface: AnalyticsSourceSurface;
   };
+  getDurationMs: () => number;
   locale: string;
   logContext: string;
   message?: string;
@@ -219,6 +258,17 @@ async function createPendingFriendRequest({
   viewerProfileId: string;
 }): Promise<FriendActionState> {
   if (targetProfileId === viewerProfileId) {
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale,
+      route: analytics.route,
+      sourceSurface: analytics.sourceSurface,
+      status: "failed",
+      statusReason: "self_request",
+      targetProfileId,
+      viewerProfileId,
+    });
+
     return {
       formError: t.cannotAddSelf,
     };
@@ -231,12 +281,34 @@ async function createPendingFriendRequest({
     ]);
 
     if (existingFriendship) {
+      recordFriendRequestLatency({
+        durationMs: getDurationMs(),
+        locale,
+        route: analytics.route,
+        sourceSurface: analytics.sourceSurface,
+        status: "failed",
+        statusReason: "already_friends",
+        targetProfileId,
+        viewerProfileId,
+      });
+
       return {
         formError: t.alreadyFriends,
       };
     }
 
     if (pendingRequestExists) {
+      recordFriendRequestLatency({
+        durationMs: getDurationMs(),
+        locale,
+        route: analytics.route,
+        sourceSurface: analytics.sourceSurface,
+        status: "failed",
+        statusReason: "pending_exists",
+        targetProfileId,
+        viewerProfileId,
+      });
+
       return {
         formError: t.pendingExists,
       };
@@ -260,6 +332,21 @@ async function createPendingFriendRequest({
     });
   } catch (error) {
     console.error(logContext, error);
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale,
+      route: analytics.route,
+      sourceSurface: analytics.sourceSurface,
+      status: "failed",
+      statusReason:
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+          ? "pending_exists"
+          : "request_failed",
+      targetProfileId,
+      viewerProfileId,
+    });
+
     return {
       formError:
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -282,6 +369,15 @@ async function createPendingFriendRequest({
     targetProfileId,
     viewerProfileId,
   });
+  recordFriendRequestLatency({
+    durationMs: getDurationMs(),
+    locale,
+    route: analytics.route,
+    sourceSurface: analytics.sourceSurface,
+    status: "success",
+    targetProfileId,
+    viewerProfileId,
+  });
 
   return {
     ok: true,
@@ -292,16 +388,34 @@ export async function sendFriendRequestAction(
   _previousState: FriendActionState,
   formData: FormData,
 ): Promise<FriendActionState> {
+  const getDurationMs = createLatencyTimer();
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
   const fallbackCopy = getFriendsCopy(fallbackLocale);
+  const rawReturnTo = getString(formData, "returnTo") || "friends";
   const result = sendFriendRequestSchema.safeParse({
     locale: fallbackLocale,
     searchTerm: getString(formData, "searchTerm"),
     message: getString(formData, "message") || undefined,
-    returnTo: getString(formData, "returnTo") || "friends",
+    returnTo: rawReturnTo,
   });
 
   if (!result.success) {
+    const route = getFriendActionRoute(
+      fallbackLocale,
+      rawReturnTo === "messages" ? "messages" : "friends",
+    );
+
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale: fallbackLocale,
+      route,
+      sourceSurface: getFriendAnalyticsSourceSurface(
+        rawReturnTo === "messages" ? "messages" : "friends",
+      ),
+      status: "failed",
+      statusReason: "invalid_request",
+    });
+
     return {
       formError: fallbackCopy.invalidRequest,
     };
@@ -318,12 +432,32 @@ export async function sendFriendRequestAction(
   const targetUser = targetUsers[0];
 
   if (!targetUser) {
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale,
+      route: getFriendActionRoute(locale, returnTo),
+      sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
+      status: "failed",
+      statusReason: "target_not_found",
+      viewerProfileId: viewerProfile.id,
+    });
+
     return {
       formError: t.targetNotFound,
     };
   }
 
   if (targetUsers.length > 1) {
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale,
+      route: getFriendActionRoute(locale, returnTo),
+      sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
+      status: "failed",
+      statusReason: "ambiguous_target",
+      viewerProfileId: viewerProfile.id,
+    });
+
     return {
       formError: t.ambiguousTarget,
     };
@@ -336,6 +470,7 @@ export async function sendFriendRequestAction(
       route: getFriendActionRoute(locale, returnTo),
       sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
     },
+    getDurationMs,
     locale,
     logContext: "Failed to send friend request",
     message,
@@ -349,16 +484,34 @@ export async function sendFriendRequestToProfileAction(
   _previousState: FriendActionState,
   formData: FormData,
 ): Promise<FriendActionState> {
+  const getDurationMs = createLatencyTimer();
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
   const fallbackCopy = getFriendsCopy(fallbackLocale);
+  const rawReturnTo = getString(formData, "returnTo") || "friends";
   const result = sendFriendRequestToProfileSchema.safeParse({
     locale: fallbackLocale,
     targetProfileId: getString(formData, "targetProfileId"),
     message: getString(formData, "message") || undefined,
-    returnTo: getString(formData, "returnTo") || "friends",
+    returnTo: rawReturnTo,
   });
 
   if (!result.success) {
+    const route = getFriendActionRoute(
+      fallbackLocale,
+      rawReturnTo === "messages" ? "messages" : "friends",
+    );
+
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale: fallbackLocale,
+      route,
+      sourceSurface: getFriendAnalyticsSourceSurface(
+        rawReturnTo === "messages" ? "messages" : "friends",
+      ),
+      status: "failed",
+      statusReason: "invalid_request",
+    });
+
     return {
       formError: fallbackCopy.invalidRequest,
     };
@@ -379,6 +532,16 @@ export async function sendFriendRequestToProfileAction(
   });
 
   if (!targetUser) {
+    recordFriendRequestLatency({
+      durationMs: getDurationMs(),
+      locale,
+      route: `/${locale}/profile/${result.data.targetProfileId}`,
+      sourceSurface: "profile",
+      status: "failed",
+      statusReason: "target_not_found",
+      viewerProfileId: viewerProfile.id,
+    });
+
     return {
       formError: t.targetNotFound,
     };
@@ -391,6 +554,7 @@ export async function sendFriendRequestToProfileAction(
       route: `/${locale}/profile/${targetUser.id}`,
       sourceSurface: "profile",
     },
+    getDurationMs,
     locale,
     logContext: "Failed to send friend request to profile",
     message,

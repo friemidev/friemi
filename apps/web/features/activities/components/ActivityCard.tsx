@@ -225,6 +225,7 @@ export function ActivityCard({
             isFavorited={Boolean(activity.isFavorited)}
             locale={locale}
             redirectPath={favoriteRedirectPath}
+            sourceSurface={sourceSurface}
             labelOverrides={getCardFavoriteLabels(locale)}
           />
         </div>
@@ -239,6 +240,7 @@ export function ActivityCard({
             isFavorited={Boolean(activity.isFavorited)}
             locale={locale}
             redirectPath={favoriteRedirectPath}
+            sourceSurface={sourceSurface}
             labelOverrides={getCardFavoriteLabels(locale)}
           />
         </div>

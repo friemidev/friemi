@@ -259,6 +259,11 @@ export default async function ActivitiesPage({
     hasFilters,
     resultCount: activitiesResult.list?.activities.length ?? 0,
     totalCount: activitiesResult.list?.totalCount ?? 0,
+  }, {
+    route: `/${locale}/activities`,
+    routeKey: "activity_list",
+    sourceSurface: "activity_list",
+    userProfileId: viewerProfile?.id,
   });
 
   return (

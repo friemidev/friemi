@@ -11,6 +11,10 @@ import type {
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -126,14 +130,47 @@ export async function joinActivityAction(
   _previousState: JoinActivityState,
   formData: FormData,
 ): Promise<JoinActivityState> {
+  const getDurationMs = createLatencyTimer();
   const rawInput = {
     activityId: getString(formData, "activityId"),
     locale: getString(formData, "locale") || "zh-CN",
     message: getString(formData, "message"),
   };
+  const recordLatency = ({
+    properties,
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    properties?: Record<string, string | number | boolean | null | undefined>;
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: rawInput.activityId || undefined,
+      entityType: rawInput.activityId ? "team" : undefined,
+      locale: rawInput.locale,
+      operationKey: "join_activity",
+      route: rawInput.activityId
+        ? `/${rawInput.locale}/activities/${rawInput.activityId}`
+        : `/${rawInput.locale}/activities`,
+      sourceSurface: "activity_detail",
+      status,
+      statusReason,
+      userProfileId,
+      properties,
+    });
+  };
   const result = joinActivitySchema.safeParse(rawInput);
 
   if (!result.success) {
+    recordLatency({
+      status: "failed",
+      statusReason: "required_field_missing",
+    });
+
     await trackJoinFormFailure({
       activityId: rawInput.activityId,
       locale: rawInput.locale,
@@ -342,6 +379,12 @@ export async function joinActivityAction(
     );
 
     if (!joinResult.ok) {
+      recordLatency({
+        status: "failed",
+        statusReason: joinResult.reasonCode,
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -374,8 +417,22 @@ export async function joinActivityAction(
         userProfileId: profile.id,
       },
     );
+    recordLatency({
+      properties: {
+        participant_status: joinResult.participantStatus,
+        requires_approval: joinResult.requiresApproval,
+      },
+      status: "success",
+      userProfileId: profile.id,
+    });
   } catch (error) {
     if (isPrismaUniqueError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "already_joined",
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -392,6 +449,12 @@ export async function joinActivityAction(
     }
 
     if (isPrismaTransactionConflictError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "concurrency_conflict",
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -408,6 +471,12 @@ export async function joinActivityAction(
     }
 
     console.error("Failed to join activity", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "submit_failed",
+      userProfileId: profile.id,
+    });
+
     await trackJoinFormFailure({
       activityId: result.data.activityId,
       locale: result.data.locale,

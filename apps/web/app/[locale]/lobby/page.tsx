@@ -42,6 +42,9 @@ export default async function ActivityLobbyPage({
     perf.finish({
       hasViewer: false,
       previewCount: previewActivities.length,
+    }, {
+      route: `/${locale}/lobby`,
+      routeKey: "lobby",
     });
 
     return (
@@ -74,6 +77,10 @@ export default async function ActivityLobbyPage({
     favoriteCount: lobby.favoriteActivities.length,
     hasViewer: true,
     joinedCount: lobby.joinedActivities.length,
+  }, {
+    route: `/${locale}/lobby`,
+    routeKey: "lobby",
+    userProfileId: profile.id,
   });
 
   return (
