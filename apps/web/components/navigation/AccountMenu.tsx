@@ -79,6 +79,8 @@ export function AccountMenu({
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
+  const profileActive =
+    pathname === profileHref || pathname.startsWith(`${profileHref}/`);
 
   useEffect(() => {
     setLiveIncomingFriendRequests(incomingFriendRequests);
@@ -175,7 +177,11 @@ export function AccountMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rose-500 text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+        className={cn(
+          "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rose-500 text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+          profileActive &&
+            "ring-2 ring-[#d8c9b3] ring-offset-2 ring-offset-paper after:absolute after:inset-[3px] after:rounded-full after:ring-2 after:ring-white/85",
+        )}
       >
         <AvatarCircle
           avatarUrl={avatarUrl}
@@ -242,7 +248,7 @@ export function AccountMenu({
               href={profileHref}
               icon={UserRound}
               label={t.profile}
-              active={pathname === profileHref}
+              active={profileActive}
               onClick={closeMenu}
             />
             <MenuButton
@@ -392,10 +398,16 @@ function MenuLink({
       className={cn(
         "flex items-start gap-3 px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50",
         description ? "items-start" : "items-center",
-        active && "bg-zinc-50 text-ink",
+        active && "bg-[#fff7ec] text-ink",
       )}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+      <Icon
+        className={cn(
+          "mt-0.5 h-4 w-4 shrink-0 text-zinc-500",
+          active && "text-[#9b654f]",
+        )}
+        strokeWidth={active ? 2.4 : 2}
+      />
       <span className="min-w-0">
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{label}</span>

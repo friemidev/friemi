@@ -6,7 +6,6 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
-import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
 import {
   getActivityList,
   getActivityFilterOptions,
@@ -268,15 +267,6 @@ export default async function ActivitiesPage({
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
-      <div className="space-y-4">
-        <ActivityModeTabs current="activities" locale={locale} />
-        <div className="flex flex-col items-center gap-2 px-1 pt-1 text-center sm:gap-3">
-          <p className="max-w-[42rem] text-base font-medium leading-7 text-ink [text-wrap:balance] sm:text-[1.05rem] sm:leading-8">
-            {t.activities.description}
-          </p>
-        </div>
-      </div>
-
       <ActivityFilters
         cities={filterOptions.cities}
         filters={filters}
@@ -284,6 +274,12 @@ export default async function ActivitiesPage({
         publicInfoOnly
         resultCount={activitiesResult.list?.totalCount ?? 0}
       />
+
+      <div className="flex flex-col items-center gap-2 px-1 text-center sm:gap-3">
+        <p className="max-w-[42rem] text-base font-medium leading-7 text-ink [text-wrap:balance] sm:text-[1.05rem] sm:leading-8">
+          {t.activities.description}
+        </p>
+      </div>
 
       {activitiesResult.error ? (
         <EmptyState

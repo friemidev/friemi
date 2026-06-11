@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
@@ -28,18 +28,27 @@ export function MobileNav({ locale }: MobileNavProps) {
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
-  const items = [
-    { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
-    { href: "/activities", label: t.nav.activities, icon: Compass },
-    {
-      href: "/activities/new",
-      label: t.nav.newActivityShort,
-      icon: CalendarPlus,
-      isPrimary: true,
-    },
-    { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
-    { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
-  ];
+  const items = useMemo(
+    () => [
+      { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
+      { href: "/activities", label: t.nav.activities, icon: Compass },
+      {
+        href: "/activities/new",
+        label: t.nav.newActivityShort,
+        icon: CalendarPlus,
+        isPrimary: true,
+      },
+      { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
+      { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
+    ],
+    [
+      t.nav.activities,
+      t.nav.lobbyShort,
+      t.nav.messagesShort,
+      t.nav.newActivityShort,
+      t.nav.profileShort,
+    ],
+  );
 
   useEffect(() => {
     items.forEach((item) => {
@@ -58,14 +67,22 @@ export function MobileNav({ locale }: MobileNavProps) {
       return pathname === localizedHref;
     }
 
-    return (
-      pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
-    );
+    if (href === "/activities") {
+      const newActivityHref = withLocale(currentLocale, "/activities/new");
+
+      return (
+        pathname === localizedHref ||
+        (pathname.startsWith(`${localizedHref}/`) &&
+          !pathname.startsWith(newActivityHref))
+      );
+    }
+
+    return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-paper/95 shadow-[0_-8px_24px_rgba(21,21,21,0.08)] backdrop-blur md:hidden">
-      <div className="mx-auto grid h-[4.5rem] max-w-md grid-cols-5 gap-1 px-3">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbb] bg-paper pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_rgba(21,21,21,0.08)] md:hidden">
+      <div className="mx-auto grid h-[4.75rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -84,31 +101,44 @@ export function MobileNav({ locale }: MobileNavProps) {
                 }
               }}
               className={cn(
-                "flex min-w-0 items-center justify-center rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+                "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-semibold leading-none transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
                 item.isPrimary
                   ? active
-                    ? "-mt-3 rounded-2xl bg-[#d88d72] text-white shadow-[0_12px_24px_rgba(216,141,114,0.32)]"
-                    : "-mt-3 rounded-2xl bg-[#e6a189] text-white shadow-[0_10px_22px_rgba(216,141,114,0.22)] hover:bg-[#d88d72]"
+                    ? "-mt-3 h-[4.4rem] bg-[#c97d62] text-white shadow-[0_12px_24px_rgba(216,141,114,0.32)]"
+                    : "-mt-3 h-[4.4rem] bg-[#e6a189] text-white shadow-[0_10px_22px_rgba(216,141,114,0.22)] hover:bg-[#d88d72]"
                   : active
-                    ? "text-ink"
+                    ? "bg-white text-ink shadow-sm"
                     : "text-zinc-600 hover:bg-white/65 hover:text-ink",
                 pendingHref === item.href && "scale-[0.97] opacity-80",
               )}
             >
-              {pendingHref === item.href ? (
-                <LoaderCircle
-                  className={cn(
-                    "animate-spin",
-                    item.isPrimary ? "h-7 w-7" : "h-6 w-6",
-                  )}
-                />
-              ) : (
-                <Icon
-                  className={cn(item.isPrimary ? "h-7 w-7" : "h-6 w-6")}
-                  strokeWidth={active ? 2.4 : 2}
-                />
-              )}
-              <span className="sr-only">{item.label}</span>
+              <span
+                className={cn(
+                  "absolute top-1.5 h-1 w-5 rounded-full transition",
+                  active ? "bg-[#d88d72]" : "bg-transparent",
+                )}
+                aria-hidden="true"
+              />
+              <span className="relative inline-flex h-5 min-w-5 items-center justify-center">
+                {pendingHref === item.href ? (
+                  <LoaderCircle
+                    className={cn(
+                      "animate-spin",
+                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
+                    )}
+                  />
+                ) : (
+                  <Icon
+                    className={cn(
+                      "shrink-0",
+                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
+                      active ? "text-[#9b654f]" : "",
+                    )}
+                    strokeWidth={active ? 2.4 : 2}
+                  />
+                )}
+              </span>
+              <span className="max-w-full truncate">{item.label}</span>
             </Link>
           );
         })}

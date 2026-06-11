@@ -3,7 +3,6 @@ import {
   ActivityLobbyPreviewView,
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
-import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
 import {
   getActivityLobby,
   getActivityLobbyPreview,
@@ -49,7 +48,6 @@ export default async function ActivityLobbyPage({
 
     return (
       <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-        <ActivityModeTabs current="lobby" locale={locale} />
         <ActivityLobbyPreviewView
           activities={previewActivities}
           locale={locale}
@@ -86,7 +84,6 @@ export default async function ActivityLobbyPage({
 
   return (
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-      <ActivityModeTabs current="lobby" locale={locale} />
       <ActivityLobbyView
         allActivities={lobby.allActivities}
         openActivities={lobby.openActivities}

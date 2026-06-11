@@ -1,13 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  CalendarPlus,
-  Compass,
-  MessageCircle,
-  UsersRound,
-} from "lucide-react";
-import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
+import { DesktopNav } from "@/components/navigation/DesktopNav";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { UserMenu } from "@/components/navigation/UserMenu";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
@@ -16,7 +10,6 @@ import {
   GlobalSearchIconLink,
 } from "@/features/search/components/GlobalSearchForm";
 import { NotificationHeaderLink } from "@/features/notifications/components/NotificationHeaderLink";
-import { getCopy } from "@/lib/copy";
 
 type AppHeaderProps = {
   locale: string;
@@ -37,28 +30,8 @@ export function AppHeader({
   viewerNickname = null,
   incomingFriendRequests = [],
 }: AppHeaderProps) {
-  const t = getCopy(locale);
-  const messagesLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.messagesShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.messages}</span>
-    </>
-  );
-  const lobbyLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.lobbyShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.lobby}</span>
-    </>
-  );
-  const newActivityLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.newActivityShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.newActivity}</span>
-    </>
-  );
-
   return (
-    <header className="sticky top-0 z-40 border-b border-black/10 bg-paper/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[#d8cdbb] bg-paper shadow-[0_2px_10px_rgba(36,30,20,0.06)]">
       <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
@@ -80,42 +53,7 @@ export function AppHeader({
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 items-center justify-center gap-1 lg:gap-1.5 md:flex">
-          <Link
-            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
-            href={withLocale(locale, "/lobby")}
-            prefetch
-          >
-            <UsersRound className="h-4 w-4" />
-            {lobbyLabel}
-          </Link>
-          <Link
-            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
-            href={withLocale(locale, "/activities")}
-            prefetch
-          >
-            <Compass className="h-4 w-4" />
-            {t.nav.activities}
-          </Link>
-          <Link
-            className="flex whitespace-nowrap items-center gap-1.5 rounded-md px-2 py-2 text-xs text-zinc-700 hover:bg-white/70 lg:px-2.5 lg:text-sm"
-            href={withLocale(locale, "/messages")}
-            prefetch
-          >
-            <MessageCircle className="h-4 w-4" />
-            {messagesLabel}
-          </Link>
-          <Link
-            href={withLocale(locale, "/activities/new")}
-            className="ml-2"
-            prefetch
-          >
-            <Button className="gap-1.5 rounded-full border-0 bg-[#d88d72] px-4 text-white shadow-[0_8px_20px_rgba(216,141,114,0.28)] hover:bg-[#c87b61] xl:gap-2 xl:px-5">
-              <CalendarPlus className="h-4 w-4" />
-              {newActivityLabel}
-            </Button>
-          </Link>
-        </nav>
+        <DesktopNav locale={locale} />
 
         <div className="flex min-w-0 items-center justify-end gap-2">
           <GlobalSearchForm
