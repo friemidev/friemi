@@ -153,9 +153,9 @@ export function getPublicEventCopy(locale: string) {
   return {
     navLabel: "活动发现",
     listTitle: "活动发现",
-    listDescription: "先查看活动信息，再加入已有组局或发起自己的组局。",
-    listScope: "这里展示的是活动信息，报名和沟通发生在组局里。",
-    publicEventGuideTitle: "活动信息",
+    listDescription: "先查看活动，再加入已有组局或发起自己的组局。",
+    listScope: "这里展示的是活动，报名和沟通发生在组局里。",
+    publicEventGuideTitle: "活动",
     publicEventGuideDescription:
       "来自官方、开放数据或爬虫的信息，用来确认时间、地点和来源链接。",
     teamGuideTitle: "组局",
@@ -165,7 +165,7 @@ export function getPublicEventCopy(locale: string) {
     emptyDescription: "导入的活动会显示在这里。",
     loadFailedTitle: "加载失败",
     loadFailedDescription: "请检查数据库连接，或稍后重试。",
-    detailSource: "活动信息",
+    detailSource: "活动",
     eventInfoTitle: "活动介绍",
     officialPage: "官方页面",
     viewEvent: "查看活动",
@@ -187,14 +187,14 @@ export function getPublicEventCopy(locale: string) {
     noTeamsEndedDescription: "这个活动已经结束，暂时没有历史组局。",
     noTeamsUnavailableDescription: "这个活动已不可用，暂时没有历史组局。",
     noTeamsCta: "发起第一个组局",
-    publicEventRuleTitle: "活动信息",
+    publicEventRuleTitle: "活动",
     publicEventRuleDescription:
       "这里展示的是活动本身。想和平台用户一起去，请加入下方组局，或发起自己的组局。",
     teamCount: (count: number) =>
       count === 0 ? "暂无组局" : `${count} 个组局`,
     createTeamTitle: "发起组局",
     createTeamDescription:
-      "活动信息已预填，你只需要补充集合方式、人数和同行说明。",
+      "活动已预填，你只需要补充集合方式、人数和同行说明。",
     teamTitle: (title: string) => `一起去：${title}`,
     backToEvent: "返回活动",
     backToPublicEvents: "返回活动发现",

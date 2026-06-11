@@ -239,7 +239,7 @@ function getDescription(record: ParisOpenDataRecord) {
   const leadText = stripHtml(record.lead_text);
   const description = stripHtml(record.description);
   const officialUrl = normalizeText(record.url);
-  const body = leadText || description || "公共活动信息来自 Paris OpenData。";
+  const body = leadText || description || "公共活动来自 Paris OpenData。";
   const text = officialUrl ? `${body}\n\n官方链接：${officialUrl}` : body;
 
   return truncateText(text, MAX_ACTIVITY_DESCRIPTION_LENGTH);

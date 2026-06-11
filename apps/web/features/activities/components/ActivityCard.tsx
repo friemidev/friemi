@@ -24,7 +24,6 @@ import {
   getActivityTimeState,
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
-import { ActivityStatusBadge } from "./ActivityStatusBadge";
 
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
@@ -51,7 +50,7 @@ function getCardKindLabel(isActivityInfo: boolean, locale: string) {
     return isActivityInfo ? "Activity info" : "Crew";
   }
 
-  return isActivityInfo ? "活动信息" : "组局";
+  return isActivityInfo ? "活动" : "组局";
 }
 
 function getCardVisibilityLabel(
@@ -401,6 +400,23 @@ export function ActivityCard({
               isTeamCard ? "from-[#4a2e1c]/24" : "from-black/10",
             )}
           />
+          <span
+            className={cn(
+              "absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold leading-none shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur sm:left-4 sm:top-4",
+              isTeamCard
+                ? "border-[#f0b79f] bg-[#d88d72]/95 text-white"
+                : "border-[#9fc8d9] bg-[#eefaff]/95 text-[#245e76]",
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                isTeamCard ? "bg-white/85" : "bg-[#4e9ab8]",
+              )}
+              aria-hidden="true"
+            />
+            {getCardKindLabel(isActivityInfo, locale)}
+          </span>
           <div className="relative mt-auto flex w-full items-end justify-between gap-2">
             <div className="flex min-w-0 flex-wrap gap-1.5">
               <span
@@ -413,16 +429,6 @@ export function ActivityCard({
               >
                 {getCategoryLabel(activity.category, locale)}
               </span>
-              <span
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-[11px] font-semibold leading-none shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
-                  isTeamCard
-                    ? "bg-[#fff2e7] text-[#8b563b]"
-                    : "bg-[#e8f6fb] text-[#346b82]",
-                )}
-              >
-                {getCardKindLabel(isActivityInfo, locale)}
-              </span>
               {!isActivityInfo ? (
                 <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-[#6f4d34] shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
                   {getCardVisibilityLabel(activity.visibility, locale)}
@@ -430,9 +436,6 @@ export function ActivityCard({
               ) : null}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
-              {!isActivityInfo ? (
-                <ActivityStatusBadge status={displayStatus} locale={locale} />
-              ) : null}
               <span className="rounded-md bg-[rgba(255,250,242,0.96)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
                 {t.activityLabels.timeStates[timeState]}
               </span>

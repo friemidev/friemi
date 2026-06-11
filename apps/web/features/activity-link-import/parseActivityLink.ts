@@ -67,7 +67,7 @@ const localeCopy = {
   },
   zh: {
     externalPriceText: "以外部页面为准",
-    fallbackDescription: "活动信息来自外部链接，请在发布前补充和确认。",
+    fallbackDescription: "活动来自外部链接，请在发布前补充和确认。",
     freePriceText: "免费",
     sourceLabel: "来源链接",
   },

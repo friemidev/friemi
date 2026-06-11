@@ -418,7 +418,7 @@ apps/web/prisma/migrate-legacy-activity-info-to-public-events.ts
 - 默认 dry-run，不写数据库。
 - `--write` 才会创建或更新 `PublicEvent`。
 - 正式写入时，默认只创建或更新 `PublicEvent`，不删除也不隐藏旧 `Activity`。
-- 前端会把已知 API/爬虫来源的旧 `Activity` 兼容渲染为活动信息，不再按组队显示报名人数和报名按钮。
+- 前端会把已知 API/爬虫来源的旧 `Activity` 兼容渲染为活动，不再按组队显示报名人数和报名按钮。
 - 已经有人报名或评论的旧 `Activity` 会跳过，避免把真实组队误迁移。
 - 只有 `source/sourceUrl`、没有强导入标记的记录默认跳过，需要确认后加 `--include-source-url-only`。
 
@@ -442,7 +442,7 @@ npm run db:migrate-legacy-public-events -- --write
 npm run db:migrate-legacy-public-events -- --write --hide-legacy-activities
 ```
 
-如果 dry-run 输出里 `sourceUrlOnlyRequiresFlag` 很多，且确认这些记录确实是旧导入活动信息，再执行：
+如果 dry-run 输出里 `sourceUrlOnlyRequiresFlag` 很多，且确认这些记录确实是旧导入活动，再执行：
 
 ```bash
 npm run db:migrate-legacy-public-events -- --write --include-source-url-only

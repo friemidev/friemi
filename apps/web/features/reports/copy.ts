@@ -30,7 +30,7 @@ const reportCopy = {
     failedError: "举报提交失败，请稍后再试。",
     targetTypes: {
       USER_PROFILE: "用户",
-      PUBLIC_EVENT: "活动信息",
+      PUBLIC_EVENT: "活动",
       ACTIVITY: "活动 / 组队",
       COMMENT: "评论",
     },
