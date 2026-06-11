@@ -47,7 +47,7 @@ export async function updateActivityAction(
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "缺少活动信息，请返回详情页后重试。",
+      "缺少活动，请返回详情页后重试。",
     );
   }
 

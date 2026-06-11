@@ -69,7 +69,7 @@ function getSourceLabel(locale: string, sourceSurface: string | null) {
     messages: "消息",
     notification: "通知",
     profile: "个人空间",
-    public_event_detail: "活动信息页",
+    public_event_detail: "活动页",
     share_link: "分享链接",
   };
   const en: Record<string, string> = {

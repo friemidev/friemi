@@ -1,6 +1,6 @@
 # Scrapers
 
-独立的巴黎活动爬虫工具，用来从以下来源抓取最近的活动信息，并同步到 Supabase/Postgres：
+独立的巴黎活动爬虫工具，用来从以下来源抓取最近的活动，并同步到 Supabase/Postgres：
 
 - Sortir à Paris
 - Play in Paris

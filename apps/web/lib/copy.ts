@@ -75,7 +75,7 @@ const copy = {
     globalSearch: {
       eyebrow: "全站搜索",
       title: "搜索 Next Fun",
-      description: "快速查找活动信息、组局、好友和商家。",
+      description: "快速查找活动、组局、好友和商家。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、好友号、昵称或商家",
       mobileOpen: "打开全站搜索",
@@ -92,11 +92,11 @@ const copy = {
       viewMoreActivities: (_shown: number, total: number) =>
         `查看全部 ${total} 个活动`,
       activitiesTitle: "正在组局",
-      publicEventsTitle: "活动信息",
+      publicEventsTitle: "活动",
       merchantsTitle: "商家",
       usersTitle: "好友",
       noActivityResults: "没有匹配的组局。",
-      noPublicEventResults: "没有匹配的活动信息。",
+      noPublicEventResults: "没有匹配的活动。",
       noMerchantResults: "没有匹配的商家。",
       noUserResults: "没有匹配的用户。",
       friendCodeLabel: "好友号",
@@ -127,7 +127,7 @@ const copy = {
       emptyPreviewTitle: "暂无活动",
       emptyPreviewDescription: "有新活动后会显示在这里。",
       recentTitle: "最近活动",
-      recentDescription: "按开始时间展示最近的活动信息和正在组局的内容。",
+      recentDescription: "按开始时间展示最近的活动和正在组局的内容。",
       emptyRecentDescription: "有新的活动后会显示在这里。",
     },
     activities: {
@@ -136,9 +136,9 @@ const copy = {
         "最近想去哪儿？在这里发现活动，和朋友、新搭子一起组队出发。",
       scopeTitle: "当前展示范围",
       scopeDescription:
-        "默认优先展示进行中和即将开始的活动信息，已结束的会排在后面。",
-      emptyTitle: "暂无活动信息",
-      emptyDescription: "当前没有可展示的公开活动信息，请稍后再来看看。",
+        "默认优先展示进行中和即将开始的活动，已结束的会排在后面。",
+      emptyTitle: "暂无活动",
+      emptyDescription: "当前没有可展示的公开活动，请稍后再来看看。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
     },
@@ -171,11 +171,11 @@ const copy = {
     },
     activityFilters: {
       title: "搜索和筛选",
-      publicInfoTitle: "筛选活动信息",
+      publicInfoTitle: "筛选活动",
       description:
         "按关键词、主题、城市、日期范围、关系、活动形式和进度快速缩小活动范围。",
       publicInfoDescription:
-        "按关键词、主题、城市、日期范围和进度快速缩小活动信息范围。",
+        "按关键词、主题、城市、日期范围和进度快速缩小活动范围。",
       mobileSummary: "搜索 / 筛选",
       keywordLabel: "关键词",
       keywordPlaceholder: "搜索标题或描述，例如：电影展",
@@ -392,7 +392,7 @@ const copy = {
             `${actorName}已取消「${activityTitle}」。`,
         },
         ACTIVITY_UPDATED: {
-          title: "活动信息已更新",
+          title: "活动已更新",
           body: (activityTitle: string, actorName = "发起人") =>
             `${actorName}更新了「${activityTitle}」的时间或地点。`,
         },
@@ -464,7 +464,7 @@ const copy = {
     },
     editActivity: {
       title: "编辑活动",
-      description: "修改活动信息，保存后回到详情页。",
+      description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人可以编辑这个活动。",
       lockedTitle: "活动不可编辑",
@@ -694,7 +694,7 @@ const copy = {
         ENDED: "已结束",
       },
       types: {
-        PUBLIC_EVENT: "活动信息",
+        PUBLIC_EVENT: "活动",
         USER_HOSTED: "用户发起",
         LOCAL: "本地局",
         TRIP: "旅游搭子",
