@@ -216,6 +216,78 @@ function getLobbyActivityKey(activity: ActivityCardViewModel) {
   return `activity:${activity.id}`;
 }
 
+function isEndedLobbyActivity(activity: ActivityCardViewModel) {
+  if (activity.status === "ENDED" || activity.status === "CANCELLED") {
+    return true;
+  }
+
+  const endBoundary = activity.endAt ?? activity.startAt;
+
+  return new Date(endBoundary).getTime() < Date.now();
+}
+
+function compareLobbyActivityTime(
+  left: ActivityCardViewModel,
+  right: ActivityCardViewModel,
+) {
+  const leftEnded = isEndedLobbyActivity(left);
+  const rightEnded = isEndedLobbyActivity(right);
+
+  if (leftEnded !== rightEnded) {
+    return leftEnded ? 1 : -1;
+  }
+
+  const leftTime = new Date(left.startAt).getTime();
+  const rightTime = new Date(right.startAt).getTime();
+
+  return leftEnded
+    ? rightTime - leftTime || left.id.localeCompare(right.id)
+    : leftTime - rightTime || left.id.localeCompare(right.id);
+}
+
+function buildLobbyPriorityFeed({
+  createdActivities,
+  favoriteActivities,
+  feedActivities,
+  friendHostedActivities,
+  friendJoinedActivities,
+  joinedActivities,
+  openActivities,
+}: {
+  createdActivities: ActivityCardViewModel[];
+  favoriteActivities: ActivityCardViewModel[];
+  feedActivities: ActivityCardViewModel[];
+  friendHostedActivities: ActivityCardViewModel[];
+  friendJoinedActivities: ActivityCardViewModel[];
+  joinedActivities: ActivityCardViewModel[];
+  openActivities: ActivityCardViewModel[];
+}) {
+  const priorityGroups = [
+    createdActivities,
+    joinedActivities,
+    favoriteActivities,
+    friendHostedActivities,
+    friendJoinedActivities,
+    openActivities,
+  ].map((activities) => [...activities].sort(compareLobbyActivityTime));
+  const priorityKeys = new Set(
+    priorityGroups.flatMap((activities) => activities.map(getLobbyActivityKey)),
+  );
+  const remainingFeedActivities = [...feedActivities]
+    .filter((activity) => !priorityKeys.has(getLobbyActivityKey(activity)))
+    .sort(compareLobbyActivityTime);
+  const orderedActivities = [
+    ...priorityGroups.flat(),
+    ...remainingFeedActivities,
+  ];
+
+  return Array.from(
+    new Map(
+      orderedActivities.map((activity) => [getLobbyActivityKey(activity), activity]),
+    ).values(),
+  );
+}
+
 async function decorateLobbyActivitySections(
   sections: ActivityCardViewModel[][],
   viewerProfileId: string,
@@ -490,6 +562,15 @@ export async function getActivityLobby(
   const friendHostedActivityCards = friendHostedActivities.map(
     getActivityCardViewModel,
   );
+  const priorityFeedActivities = buildLobbyPriorityFeed({
+    feedActivities: feedActivityCards,
+    openActivities: openActivityCards,
+    createdActivities: createdActivityCards,
+    joinedActivities,
+    favoriteActivities: mergedFavoriteActivities,
+    friendHostedActivities: friendHostedActivityCards,
+    friendJoinedActivities,
+  });
   const [
     decoratedAllActivities,
     decoratedOpenActivities,
@@ -500,7 +581,7 @@ export async function getActivityLobby(
     decoratedFriendJoinedActivities,
   ] = await decorateLobbyActivitySections(
     [
-      feedActivityCards,
+      priorityFeedActivities,
       openActivityCards,
       createdActivityCards,
       joinedActivities,

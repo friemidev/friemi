@@ -625,14 +625,6 @@ export function ActivityLobbyView({
         label: getAllLabel(locale),
       },
       {
-        id: "open" as const,
-        activities:
-          openActivities.length > 0
-            ? openActivities
-            : allActivities.filter((activity) => activity.visibility === "PUBLIC"),
-        label: getFilterLabel(locale, "open", t.openTitle),
-      },
-      {
         id: "created" as const,
         activities: createdActivities,
         label: getFilterLabel(locale, "created", t.createdTitle),
@@ -657,6 +649,14 @@ export function ActivityLobbyView({
         activities: friendJoinedActivities,
         label: getFilterLabel(locale, "friendJoined", t.friendJoinedTitle),
       },
+      {
+        id: "open" as const,
+        activities:
+          openActivities.length > 0
+            ? openActivities
+            : allActivities.filter((activity) => activity.visibility === "PUBLIC"),
+        label: getFilterLabel(locale, "open", t.openTitle),
+      },
     ],
     [
       allActivities,
@@ -678,7 +678,13 @@ export function ActivityLobbyView({
   const activeCategoryActivities = useMemo(() => {
     const group = categoryGroups.find((item) => item.id === activeFilter);
 
-    return sortLobbyActivities(dedupeLobbyActivities(group?.activities ?? []));
+    const dedupedActivities = dedupeLobbyActivities(group?.activities ?? []);
+
+    if (activeFilter === "all") {
+      return dedupedActivities;
+    }
+
+    return sortLobbyActivities(dedupedActivities);
   }, [activeFilter, categoryGroups]);
   const statusFilterOptions = useMemo(
     () => getStatusFilterOptions(activeCategoryActivities, locale),
