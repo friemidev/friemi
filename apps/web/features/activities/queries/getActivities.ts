@@ -956,7 +956,7 @@ export function getActivityCardViewModel(
     publicEventId: activity.publicEventId,
     participantPreview: isActivityInfo
       ? []
-      : activity.participants.map((participant) => ({
+      : (activity.participants ?? []).map((participant) => ({
           id: participant.userProfile.id,
           nickname: participant.userProfile.nickname,
           avatarUrl: participant.userProfile.avatarUrl,
