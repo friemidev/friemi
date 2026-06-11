@@ -42,7 +42,7 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-12 w-full rounded-2xl border border-[#ddc9a9] bg-white px-4 text-[15px] font-medium text-zinc-950 shadow-[0_8px_22px_rgba(92,66,32,0.05)] outline-none transition hover:border-[#cfb287] hover:shadow-[0_10px_26px_rgba(92,66,32,0.07)] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70";
+  "h-11 w-full rounded-xl border border-[#ddc9a9] bg-white/92 px-3 text-sm font-medium text-zinc-950 shadow-[0_5px_14px_rgba(92,66,32,0.04)] outline-none transition hover:border-[#cfb287] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70 sm:h-10";
 
 export function ActivityFilters({
   cities,
@@ -181,11 +181,11 @@ export function ActivityFilters({
         method="get"
         onSubmit={handleSubmit}
       >
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <label className="col-span-2 grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448] sm:col-span-1">
             {t.activityFilters.keywordLabel}
             <Input
-              className="h-12 rounded-2xl border-[#ddc9a9] bg-white px-4 text-[15px] shadow-[0_8px_22px_rgba(92,66,32,0.05)] placeholder:text-zinc-400 focus-visible:border-[#c7936c] focus-visible:ring-[#ecd2bb]/70"
+              className="h-11 rounded-xl border-[#ddc9a9] bg-white/92 px-3 text-sm shadow-[0_5px_14px_rgba(92,66,32,0.04)] placeholder:text-zinc-400 focus-visible:border-[#c7936c] focus-visible:ring-[#ecd2bb]/70 sm:h-10"
               defaultValue={filters.keyword}
               enterKeyHint="search"
               name="q"
@@ -196,7 +196,7 @@ export function ActivityFilters({
 
           <div className="flex items-end">
             <Button
-              className="h-12 w-full gap-2 rounded-2xl bg-[linear-gradient(180deg,#d59c76,#bf8460)] px-5 text-[15px] font-semibold text-white shadow-[0_14px_28px_rgba(191,132,96,0.3)] hover:bg-[#b87f59] lg:min-w-[112px] lg:w-auto"
+              className="h-11 w-full gap-2 rounded-xl bg-[#d88d72] px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(216,141,114,0.22)] hover:bg-[#c87b61] sm:h-10 sm:min-w-[104px] sm:w-auto"
               type="submit"
             >
               <Search className="h-4 w-4 shrink-0" />
@@ -207,7 +207,12 @@ export function ActivityFilters({
           <div className="flex items-end">
             <Link
               aria-disabled={!hasCustomFilterState}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-[#ddc9a9] bg-white px-4 text-[15px] font-medium text-zinc-700 shadow-[0_8px_22px_rgba(92,66,32,0.04)] transition hover:border-[#cfb287] hover:bg-[#fdfaf4] aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto"
+              className={cn(
+                "inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition sm:h-10 sm:w-auto",
+                hasCustomFilterState
+                  ? "border-[#ddc9a9] bg-white/92 text-zinc-700 shadow-[0_5px_14px_rgba(92,66,32,0.04)] hover:border-[#cfb287] hover:bg-[#fdfaf4]"
+                  : "border-transparent bg-transparent text-zinc-400",
+              )}
               href={activitiesHref}
             >
               <FilterX className="h-4 w-4 shrink-0" />
@@ -218,13 +223,13 @@ export function ActivityFilters({
 
         <div
           className={cn(
-            "grid gap-3",
+            "grid grid-cols-2 gap-2 sm:gap-3",
             publicInfoOnly
-              ? "sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1fr)]"
+              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1fr)]"
               : "sm:grid-cols-2 xl:grid-cols-6",
           )}
         >
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
             {t.activityFilters.categoryLabel}
             <select
               className={selectClassName}
@@ -240,7 +245,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
             {t.activityFilters.cityLabel}
             <select
               className={selectClassName}
@@ -256,7 +261,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
             {t.activityFilters.dateRangeLabel}
             <select
               className={selectClassName}
@@ -274,7 +279,7 @@ export function ActivityFilters({
 
           {!publicInfoOnly ? (
             <>
-              <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+              <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
                 {t.activityFilters.relationLabel}
                 <select
                   className={selectClassName}
@@ -295,7 +300,7 @@ export function ActivityFilters({
                 </select>
               </label>
 
-              <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+              <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
                 {t.activityFilters.typeLabel}
                 <select
                   className={selectClassName}
@@ -313,7 +318,7 @@ export function ActivityFilters({
             </>
           ) : null}
 
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
             {t.activityFilters.timeStateLabel}
             <select
               className={selectClassName}
@@ -329,7 +334,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-2 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
             {t.activityFilters.sortLabel}
             <select
               className={selectClassName}
@@ -352,48 +357,87 @@ export function ActivityFilters({
   }
 
   return (
-    <section className="rounded-[1.75rem] border border-[#dcc9aa] bg-[linear-gradient(180deg,rgba(249,242,229,0.98),rgba(241,231,213,0.98))] p-4 shadow-[0_18px_42px_rgba(92,66,32,0.08)] sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.14em] text-[#9a7448]">
-            <SlidersHorizontal className="h-4 w-4 shrink-0" />
-            {publicInfoOnly
-              ? t.activityFilters.publicInfoTitle
-              : t.activityFilters.title}
-          </p>
-          <p className="mt-2 max-w-2xl text-[15px] leading-7 text-zinc-600 sm:text-[16px]">
-            {publicInfoOnly
-              ? t.activityFilters.publicInfoDescription
-              : t.activityFilters.description}
-          </p>
+    <section className="space-y-3">
+      <div className="hidden flex-wrap items-center justify-between gap-2 px-1 md:flex">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff8ec] text-[#9a7448] ring-1 ring-[#ead7b8]">
+            <SlidersHorizontal className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-ink">
+              {publicInfoOnly
+                ? t.activityFilters.publicInfoTitle
+                : t.activityFilters.title}
+            </p>
+            <p className="text-xs leading-5 text-zinc-500">
+              {publicInfoOnly
+                ? t.activityFilters.publicInfoDescription
+                : t.activityFilters.description}
+            </p>
+          </div>
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-[#ddc9a9] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#9a7448] shadow-[0_8px_18px_rgba(92,66,32,0.05)]">
+        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-white/82 px-3 text-xs font-semibold text-[#9a7448] shadow-sm ring-1 ring-[#ead7b8]">
           {t.activityFilters.resultCount(resultCount)}
         </span>
       </div>
 
-      <details className="mt-4 overflow-hidden rounded-[1.35rem] border border-[#dcc9aa] bg-[linear-gradient(180deg,rgba(252,246,236,0.99),rgba(244,235,220,0.98))] md:hidden">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
-          <span className="inline-flex min-w-0 items-center gap-2">
-            <Search className="h-4 w-4 shrink-0" />
-            <span className="truncate">{t.activityFilters.mobileSummary}</span>
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
-        </summary>
-        <div className="border-t border-[#e7d8bf] p-4">
-          <FilterForm className="grid gap-4" />
-        </div>
-      </details>
+      <div className="md:hidden">
+        <details className="group overflow-hidden rounded-[1.35rem] bg-white/86 shadow-sm ring-1 ring-[#e6d5bb]">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#9a7448]" />
+              <span className="truncate">{t.activityFilters.mobileSummary}</span>
+              {activeFilterChips.length > 0 ? (
+                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#d88d72] px-1.5 text-[11px] font-bold leading-none text-white">
+                  {activeFilterChips.length}
+                </span>
+              ) : null}
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-2">
+              <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+                {t.activityFilters.resultCount(resultCount)}
+              </span>
+              <ChevronDown className="h-4 w-4 text-zinc-500 transition group-open:rotate-180" />
+            </span>
+          </summary>
+          <div className="border-t border-[#ead7b8] bg-[#fff9ef]/72 p-3">
+            <FilterForm className="grid gap-3" />
+          </div>
+        </details>
 
-      <div className="hidden md:block">
-        <FilterForm className="mt-5 grid gap-4" />
+        {activeFilterChips.length > 0 ? (
+          <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {activeFilterChips.map((chip) => (
+              <Link
+                className="inline-flex h-8 max-w-[13rem] shrink-0 items-center gap-1.5 rounded-full bg-white/86 px-3 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-[#ead7b8]"
+                href={chip.href}
+                key={chip.label}
+                prefetch={false}
+                title={t.activityFilters.removeFilter(chip.label)}
+              >
+                <span className="truncate">{chip.label}</span>
+                <X
+                  aria-hidden
+                  className="h-3.5 w-3.5 shrink-0 text-zinc-500"
+                />
+                <span className="sr-only">
+                  {t.activityFilters.removeFilter(chip.label)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#ead7b8] md:block">
+        <FilterForm className="grid gap-3" />
       </div>
 
       {activeFilterChips.length > 0 ? (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 px-1 md:flex">
           {activeFilterChips.map((chip) => (
             <Link
-              className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-[#ddc9a9] bg-white px-3.5 text-[13px] font-medium text-zinc-700 shadow-[0_6px_14px_rgba(92,66,32,0.04)] transition hover:border-[#cfb287] hover:bg-[#fdfaf4]"
+              className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full bg-white/86 px-3 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-[#ead7b8] transition hover:bg-white hover:ring-[#d8b895]"
               href={chip.href}
               key={chip.label}
               prefetch={false}
