@@ -7,6 +7,7 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
 import { ActivityCard } from "./ActivityCard";
+import { isPublicEventCard } from "../utils/activityCardKind";
 import { getActivityDisplayStatus } from "../utils/activityDisplay";
 
 type ActivityLobbyViewProps = {
@@ -286,10 +287,6 @@ function isEndedLobbyActivity(activity: ActivityCardViewModel) {
   return getActivityDisplayStatus(activity) === "ENDED";
 }
 
-function isPublicEventCard(activity: ActivityCardViewModel) {
-  return activity.type === "PUBLIC_EVENT" || Boolean(activity.isActivityInfo);
-}
-
 function getLobbyActivityKey(activity: ActivityCardViewModel) {
   return isPublicEventCard(activity) && activity.publicEventId
     ? `public:${activity.publicEventId}`
@@ -496,6 +493,7 @@ export function ActivityLobbyPreviewView({
                 isAuthenticated={false}
                 locale={locale}
                 showFavoriteButton
+                showPrimaryAction={!isPublicEventCard(activity)}
                 sourceSurface="activity_list"
               />
             ))}
@@ -793,6 +791,7 @@ export function ActivityLobbyView({
                 isAuthenticated
                 locale={locale}
                 showFavoriteButton
+                showPrimaryAction={!isPublicEventCard(activity)}
                 sourceSurface="activity_list"
               />
             ))}

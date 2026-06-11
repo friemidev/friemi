@@ -190,6 +190,7 @@ export function ActivityCard({
     isActivityInfo &&
     displayStatus !== "ENDED" &&
     displayStatus !== "CANCELLED";
+  const isTeamCard = !isActivityInfo;
   const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
   const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
@@ -212,6 +213,14 @@ export function ActivityCard({
         "relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg",
         isInactiveCard
           ? "border-zinc-200 bg-zinc-50/90 text-zinc-500 saturate-0"
+          : isTeamCard
+            ? "border-[#e1b89c] bg-[#fffaf4] shadow-[0_8px_24px_rgba(142,94,61,0.08)] ring-1 ring-[#efd8c7]"
+            : "border-[#b9d7e5] bg-[#f8fdff] shadow-[0_6px_18px_rgba(54,107,130,0.06)]",
+        isTeamCard
+          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-[#d88d72]"
+          : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-[#7eb7cf]",
+        !isInactiveCard && isTeamCard
+          ? "hover:border-[#d79c78] hover:ring-[#e8c2aa]"
           : null,
       )}
     >
@@ -267,19 +276,42 @@ export function ActivityCard({
         >
           <ActivityCoverImage
             src={activity.coverImageUrl}
-            overlayClassName="bg-gradient-to-t from-black/54 via-black/14 to-black/6"
+            overlayClassName={cn(
+              isTeamCard
+                ? "bg-gradient-to-t from-black/62 via-black/20 to-[#2b1d12]/12"
+                : "bg-gradient-to-t from-black/46 via-black/10 to-transparent",
+            )}
           />
-          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/10 to-transparent" />
+          <div
+            className={cn(
+              "absolute inset-x-0 top-0 h-8 bg-gradient-to-b to-transparent",
+              isTeamCard ? "from-[#4a2e1c]/24" : "from-black/10",
+            )}
+          />
           <div className="relative mt-auto flex w-full items-end justify-between gap-2">
             <div className="flex min-w-0 flex-wrap gap-1.5">
-              <span className="rounded-md bg-[rgba(22,18,14,0.76)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#fffaf2] shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10">
+              <span
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-[11px] font-semibold leading-none shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10",
+                  isTeamCard
+                    ? "bg-[rgba(103,59,34,0.84)] text-[#fff7ed]"
+                    : "bg-[rgba(22,18,14,0.72)] text-[#fffaf2]",
+                )}
+              >
                 {getCategoryLabel(activity.category, locale)}
               </span>
-              <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+              <span
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-[11px] font-semibold leading-none shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
+                  isTeamCard
+                    ? "bg-[#fff2e7] text-[#8b563b]"
+                    : "bg-[#e8f6fb] text-[#346b82]",
+                )}
+              >
                 {getCardKindLabel(isActivityInfo, locale)}
               </span>
               {!isActivityInfo ? (
-                <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
+                <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-[#6f4d34] shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
                   {getCardVisibilityLabel(activity.visibility, locale)}
                 </span>
               ) : null}
@@ -300,6 +332,7 @@ export function ActivityCard({
             className={cn(
               "line-clamp-2 text-base leading-snug sm:text-lg",
               isInactiveCard ? "text-zinc-600" : null,
+              !isInactiveCard && isTeamCard ? "text-[#24160f]" : null,
             )}
           >
             {activity.title}
@@ -360,7 +393,16 @@ export function ActivityCard({
               properties: baseAnalyticsProperties,
             }}
           >
-            <Button className="h-10 w-full rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]">
+            <Button
+              className={cn(
+                "h-10 w-full rounded-full border-0",
+                isInactiveCard
+                  ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
+                  : isTeamCard
+                    ? "bg-[#d88d72] text-white shadow-[0_8px_18px_rgba(216,141,114,0.2)] hover:bg-[#c87b61]"
+                    : "bg-[#e8f6fb] text-[#346b82] ring-1 ring-[#b9d7e5] hover:bg-[#d9eef6]",
+              )}
+            >
               {actionLabel}
             </Button>
           </AnalyticsLink>
