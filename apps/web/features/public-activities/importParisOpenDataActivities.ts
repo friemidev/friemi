@@ -3,7 +3,7 @@ import { MAX_ACTIVITY_DESCRIPTION_LENGTH } from "@/features/activities/schemas/a
 import { prisma } from "@/lib/prisma";
 
 const parisOpenDataDataset = "que-faire-a-paris-";
-const parisOpenDataSource = "paris-opendata:que-faire-a-paris";
+export const parisOpenDataSource = "paris-opendata:que-faire-a-paris";
 const defaultImportLimit = 20;
 const maxImportLimit = 50;
 const requestTimeoutMs = 10_000;
@@ -44,12 +44,49 @@ type ParisOpenDataRecord = {
 
 export type PublicActivityImportSummary = {
   source: typeof parisOpenDataSource;
+  limit: number;
   fetched: number;
   created: number;
   updated: number;
   skipped: number;
+  skippedInvalidRecords: number;
+  emptyResult: boolean;
   dryRun: boolean;
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
 };
+
+export type PublicActivityImportFailureStage =
+  | "external_api"
+  | "database"
+  | "unexpected";
+
+export class PublicActivityImportError extends Error {
+  code: string;
+  stage: PublicActivityImportFailureStage;
+  status?: number;
+
+  constructor({
+    cause,
+    code,
+    message,
+    stage,
+    status,
+  }: {
+    cause?: unknown;
+    code: string;
+    message: string;
+    stage: PublicActivityImportFailureStage;
+    status?: number;
+  }) {
+    super(message, { cause });
+    this.name = "PublicActivityImportError";
+    this.code = code;
+    this.stage = stage;
+    this.status = status;
+  }
+}
 
 function normalizeImportLimit(limit: number | undefined) {
   if (!limit || Number.isNaN(limit)) {
@@ -346,20 +383,47 @@ function getSemanticDedupeCondition(
 
 async function fetchParisOpenDataEvents(limit: number) {
   const signal = AbortSignal.timeout(requestTimeoutMs);
-  const response = await fetch(buildParisOpenDataUrl(limit), {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "NextFunClub/1.0 public-activity-import",
-    },
-    cache: "no-store",
-    signal,
-  });
+  let response: Response;
 
-  if (!response.ok) {
-    throw new Error(`Paris OpenData request failed: ${response.status}`);
+  try {
+    response = await fetch(buildParisOpenDataUrl(limit), {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "NextFunClub/1.0 public-activity-import",
+      },
+      cache: "no-store",
+      signal,
+    });
+  } catch (error) {
+    throw new PublicActivityImportError({
+      cause: error,
+      code: "EXTERNAL_API_REQUEST_FAILED",
+      message: "Paris OpenData request failed before receiving a response.",
+      stage: "external_api",
+    });
   }
 
-  const payload = (await response.json()) as ParisOpenDataResponse;
+  if (!response.ok) {
+    throw new PublicActivityImportError({
+      code: "EXTERNAL_API_BAD_STATUS",
+      message: `Paris OpenData request failed with status ${response.status}.`,
+      stage: "external_api",
+      status: response.status,
+    });
+  }
+
+  let payload: ParisOpenDataResponse;
+
+  try {
+    payload = (await response.json()) as ParisOpenDataResponse;
+  } catch (error) {
+    throw new PublicActivityImportError({
+      cause: error,
+      code: "EXTERNAL_API_INVALID_JSON",
+      message: "Paris OpenData returned invalid JSON.",
+      stage: "external_api",
+    });
+  }
 
   return Array.isArray(payload.results) ? payload.results : [];
 }
@@ -372,14 +436,21 @@ export async function importParisOpenDataActivities(
 ): Promise<PublicActivityImportSummary> {
   const limit = normalizeImportLimit(options.limit);
   const dryRun = Boolean(options.dryRun);
+  const startedAt = new Date();
   const records = await fetchParisOpenDataEvents(limit);
   const summary: PublicActivityImportSummary = {
     source: parisOpenDataSource,
+    limit,
     fetched: records.length,
     created: 0,
     updated: 0,
     skipped: 0,
+    skippedInvalidRecords: 0,
+    emptyResult: records.length === 0,
     dryRun,
+    startedAt: startedAt.toISOString(),
+    completedAt: startedAt.toISOString(),
+    durationMs: 0,
   };
 
   for (const record of records) {
@@ -387,6 +458,7 @@ export async function importParisOpenDataActivities(
 
     if (!publicEventData?.externalId || !publicEventData.externalSource) {
       summary.skipped += 1;
+      summary.skippedInvalidRecords += 1;
       continue;
     }
 
@@ -409,14 +481,25 @@ export async function importParisOpenDataActivities(
       dedupeConditions.push(semanticDedupeCondition);
     }
 
-    const existingPublicEvent = await prisma.publicEvent.findFirst({
-      where: {
-        OR: dedupeConditions,
-      },
-      select: {
-        id: true,
-      },
-    });
+    let existingPublicEvent: { id: string } | null;
+
+    try {
+      existingPublicEvent = await prisma.publicEvent.findFirst({
+        where: {
+          OR: dedupeConditions,
+        },
+        select: {
+          id: true,
+        },
+      });
+    } catch (error) {
+      throw new PublicActivityImportError({
+        cause: error,
+        code: "DATABASE_DEDUPE_LOOKUP_FAILED",
+        message: "Failed to look up existing public activity before import.",
+        stage: "database",
+      });
+    }
 
     if (existingPublicEvent) {
       if (dryRun) {
@@ -424,36 +507,45 @@ export async function importParisOpenDataActivities(
         continue;
       }
 
-      await prisma.publicEvent.update({
-        where: {
-          id: existingPublicEvent.id,
-        },
-        data: {
-          title: publicEventData.title,
-          description: publicEventData.description,
-          category: publicEventData.category,
-          city: publicEventData.city,
-          address: publicEventData.address,
-          latitude: publicEventData.latitude,
-          longitude: publicEventData.longitude,
-          startAt: publicEventData.startAt,
-          endAt: publicEventData.endAt,
-          priceType: publicEventData.priceType,
-          priceText: publicEventData.priceText,
-          coverImageUrl: publicEventData.coverImageUrl,
-          officialUrl: publicEventData.officialUrl,
-          source: publicEventData.source,
-          sourceUrl: publicEventData.sourceUrl,
-          externalSource: publicEventData.externalSource,
-          externalId: publicEventData.externalId,
-          externalUrl: publicEventData.externalUrl,
-          sourcePayload: publicEventData.sourcePayload,
-          importedAt: publicEventData.importedAt,
-          lastSyncedAt: publicEventData.lastSyncedAt,
-          status: "SCHEDULED",
-          visibility: "PUBLIC",
-        },
-      });
+      try {
+        await prisma.publicEvent.update({
+          where: {
+            id: existingPublicEvent.id,
+          },
+          data: {
+            title: publicEventData.title,
+            description: publicEventData.description,
+            category: publicEventData.category,
+            city: publicEventData.city,
+            address: publicEventData.address,
+            latitude: publicEventData.latitude,
+            longitude: publicEventData.longitude,
+            startAt: publicEventData.startAt,
+            endAt: publicEventData.endAt,
+            priceType: publicEventData.priceType,
+            priceText: publicEventData.priceText,
+            coverImageUrl: publicEventData.coverImageUrl,
+            officialUrl: publicEventData.officialUrl,
+            source: publicEventData.source,
+            sourceUrl: publicEventData.sourceUrl,
+            externalSource: publicEventData.externalSource,
+            externalId: publicEventData.externalId,
+            externalUrl: publicEventData.externalUrl,
+            sourcePayload: publicEventData.sourcePayload,
+            importedAt: publicEventData.importedAt,
+            lastSyncedAt: publicEventData.lastSyncedAt,
+            status: "SCHEDULED",
+            visibility: "PUBLIC",
+          },
+        });
+      } catch (error) {
+        throw new PublicActivityImportError({
+          cause: error,
+          code: "DATABASE_UPDATE_FAILED",
+          message: "Failed to update existing public activity.",
+          stage: "database",
+        });
+      }
       summary.updated += 1;
       continue;
     }
@@ -463,11 +555,24 @@ export async function importParisOpenDataActivities(
       continue;
     }
 
-    await prisma.publicEvent.create({
-      data: publicEventData,
-    });
+    try {
+      await prisma.publicEvent.create({
+        data: publicEventData,
+      });
+    } catch (error) {
+      throw new PublicActivityImportError({
+        cause: error,
+        code: "DATABASE_CREATE_FAILED",
+        message: "Failed to create imported public activity.",
+        stage: "database",
+      });
+    }
     summary.created += 1;
   }
+
+  const completedAt = new Date();
+  summary.completedAt = completedAt.toISOString();
+  summary.durationMs = completedAt.getTime() - startedAt.getTime();
 
   return summary;
 }
