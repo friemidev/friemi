@@ -27,6 +27,21 @@ const publicEventTeamStatuses: ActivityStatus[] = [
   "ENDED",
 ];
 
+const publicEventTeamWhere = {
+  status: {
+    in: publicEventTeamStatuses,
+  },
+  visibility: {
+    in: publicActivityVisibility,
+  },
+  type: {
+    not: "PUBLIC_EVENT" as const,
+  },
+  organizer: {
+    status: "ACTIVE" as const,
+  },
+} satisfies Prisma.ActivityWhereInput;
+
 export const publicEventSelect = {
   id: true,
   title: true,
@@ -47,17 +62,7 @@ export const publicEventSelect = {
     select: {
       favorites: true,
       teams: {
-        where: {
-          status: {
-            in: publicEventTeamStatuses,
-          },
-          visibility: {
-            in: publicActivityVisibility,
-          },
-          organizer: {
-            status: "ACTIVE",
-          },
-        },
+        where: publicEventTeamWhere,
       },
     },
   },
@@ -66,17 +71,7 @@ export const publicEventSelect = {
 const publicEventDetailSelect = {
   ...publicEventSelect,
   teams: {
-    where: {
-      status: {
-        in: publicEventTeamStatuses,
-      },
-      visibility: {
-        in: publicActivityVisibility,
-      },
-      organizer: {
-        status: "ACTIVE",
-      },
-    },
+    where: publicEventTeamWhere,
     orderBy: [{ startAt: "asc" }, { id: "asc" }],
     select: activityCardSelect,
   },
@@ -95,7 +90,9 @@ function toIsoString(value: Date | string | null | undefined) {
     return null;
   }
 
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 export function getUpcomingPublicEventWhere(

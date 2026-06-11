@@ -26,6 +26,7 @@ type ViewerParticipationStatus =
 type JoinActivityFormProps = {
   activityId: string;
   activityTitle: string;
+  compactUnauthenticated?: boolean;
   locale: string;
   requiresApproval: boolean;
   isFull: boolean;
@@ -102,6 +103,44 @@ function DisabledAction({
   );
 }
 
+function SignInPrompt({
+  compact,
+  locale,
+}: {
+  compact: boolean;
+  locale: string;
+}) {
+  const t = getCopy(locale).join;
+
+  if (compact) {
+    return (
+      <div className="grid gap-2.5">
+        <p className="text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
+          {t.signInDescription}
+        </p>
+        <Link
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full border border-[#d9c6ad] bg-white px-4 text-sm font-semibold text-[#6f5434] transition hover:bg-[#fff8ed]"
+          href={withLocale(locale, "/sign-in")}
+        >
+          {t.signInTitle}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      <DisabledAction title={t.signInTitle} description={t.signInDescription} />
+      <Link
+        className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] px-4 text-sm font-medium text-white transition hover:bg-[#c87b61]"
+        href={withLocale(locale, "/sign-in")}
+      >
+        {t.signInTitle}
+      </Link>
+    </div>
+  );
+}
+
 function getParticipationCopy(
   status: Exclude<ViewerParticipationStatus, null>,
   locale: string,
@@ -139,7 +178,9 @@ function ParticipationStatusCard({
       }
     >
       <p
-        className={isPending ? "font-medium text-amber-900" : "font-medium text-ink"}
+        className={
+          isPending ? "font-medium text-amber-900" : "font-medium text-ink"
+        }
       >
         {title}
       </p>
@@ -180,6 +221,7 @@ function RejoinNotice({
 export function JoinActivityForm({
   activityId,
   activityTitle,
+  compactUnauthenticated = false,
   locale,
   requiresApproval,
   isFull,
@@ -247,20 +289,7 @@ export function JoinActivityForm({
   }
 
   if (!isAuthenticated) {
-    return (
-      <div className="grid gap-3">
-        <DisabledAction
-          title={t.signInTitle}
-          description={t.signInDescription}
-        />
-        <Link
-          className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] px-4 text-sm font-medium text-white transition hover:bg-[#c87b61]"
-          href={withLocale(locale, "/sign-in")}
-        >
-          {t.signInTitle}
-        </Link>
-      </div>
-    );
+    return <SignInPrompt compact={compactUnauthenticated} locale={locale} />;
   }
 
   if (isOrganizer) {

@@ -5,16 +5,12 @@ import {
   ArrowLeft,
   CalendarDays,
   CircleX,
-  ExternalLink,
-  Handshake,
-  Info,
   MapPin,
   Ticket,
   UsersRound,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
@@ -136,6 +132,7 @@ export default async function PublicEventDetailPage({
             sourceSurface="public_event_detail"
           />
           <ReportDialog
+            className="bg-white/95 text-zinc-900 shadow-sm ring-1 ring-black/10 hover:bg-white hover:text-ink"
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
             redirectPath={`/public-events/${publicEvent.id}`}
@@ -164,185 +161,56 @@ export default async function PublicEventDetailPage({
               {publicEvent.title}
             </h1>
           </div>
-          <div className="grid gap-2 text-sm text-white/92 sm:grid-cols-3">
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
-              <span className="min-w-0 break-words font-medium">{eventDateLabel}</span>
-            </span>
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
-              <span className="min-w-0 break-words font-medium">{publicEvent.address}</span>
-            </span>
-            <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-2xl bg-[rgba(255,250,242,0.94)] px-3 py-2 text-zinc-900 shadow-[0_12px_28px_rgba(0,0,0,0.2)] ring-1 ring-black/8">
-              <UsersRound className="mt-0.5 h-4 w-4 shrink-0 text-[#7e5f3a]" />
-              <span className="min-w-0 font-medium">
-                {t.teamCount(publicEvent.teamCount)}
-              </span>
-            </span>
-          </div>
         </div>
       </div>
 
-      <section className="grid gap-4 rounded-[1.25rem] border border-[#d8ccb4] bg-white/85 p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
-        <div className="flex min-w-0 gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#fff8ec] text-[#8a6a40] ring-1 ring-[#dccba8]">
-            {canCreateTeam ? (
-              <Handshake className="h-5 w-5" />
-            ) : (
-              <Info className="h-5 w-5" />
-            )}
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-ink sm:text-lg">
-              {canCreateTeam ? t.actionTitle : unavailableReason}
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-zinc-600">
-              {canCreateTeam ? t.actionDescription : teamSectionDescription}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-          {publicEvent.teamCount > 0 ? (
-            <a
-              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#eef5ea] px-4 text-sm font-semibold text-moss ring-1 ring-[#c1d2ba] transition hover:bg-[#e5f0df] hover:text-ink"
-              href="#public-event-teams"
-            >
-              <UsersRound className="h-4 w-4" />
-              {t.jumpToTeams}
-            </a>
-          ) : null}
-          {publicEvent.officialUrl ? (
-            <AnalyticsExternalLink
-              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-              event={{
-                name: "public_event_source_clicked",
-                entityId: publicEvent.id,
-                entityType: "public_event",
-                sourceSurface: "public_event_detail",
-                properties: {
-                  source_kind: "official_page",
-                },
-              }}
-              href={publicEvent.officialUrl}
-            >
-              {t.officialPage}
-              <ExternalLink className="h-4 w-4" />
-            </AnalyticsExternalLink>
-          ) : null}
-          {canCreateTeam ? (
-            <AnalyticsLink
-              href={withLocale(
-                locale,
-                `/public-events/${publicEvent.id}/teams/new`,
-              )}
-              event={{
-                name: "team_create_started",
-                entityId: publicEvent.id,
-                entityType: "public_event",
-                sourceSurface: "public_event_detail",
-                properties: {
-                  category: publicEvent.category,
-                  city: publicEvent.city,
-                },
-              }}
-            >
-              <Button className="h-10 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
-                {t.teamUp}
-              </Button>
-            </AnalyticsLink>
-          ) : null}
-        </div>
-      </section>
-
       <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
-          <section className="space-y-4 scroll-mt-24" id="public-event-teams">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-normal text-ink">
-                  {t.existingTeams}
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-zinc-600">
-                  {teamSectionDescription}
-                </p>
-              </div>
-              {canCreateTeam ? (
-                <AnalyticsLink
-                  className="hidden sm:block"
-                  href={withLocale(
-                    locale,
-                    `/public-events/${publicEvent.id}/teams/new`,
-                  )}
-                  event={{
-                    name: "team_create_started",
-                    entityId: publicEvent.id,
-                    entityType: "public_event",
-                    sourceSurface: "public_event_detail",
-                    properties: {
-                      category: publicEvent.category,
-                      city: publicEvent.city,
-                    },
-                  }}
-                >
-                  <Button className="w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
-                    {t.teamUp}
-                  </Button>
-                </AnalyticsLink>
-              ) : null}
-            </div>
+          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+            <h2 className="text-lg font-semibold text-ink">
+              {t.eventInfoTitle}
+            </h2>
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
+              {publicEvent.description}
+            </p>
+          </div>
 
-            {publicEvent.teams.length === 0 ? (
-              <div className="rounded-[1.25rem] border border-dashed border-[#d8ccb4] bg-white/70 p-5 sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef5ea] text-moss ring-1 ring-[#c1d2ba]">
-                      <UsersRound className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-ink">
-                        {t.noTeamsTitle}
-                      </h3>
-                      <p className="mt-1 text-sm leading-6 text-zinc-600">
-                        {isCancelled
-                          ? t.noTeamsUnavailableDescription
-                          : isEnded
-                            ? t.noTeamsEndedDescription
-                            : t.noTeamsDescription}
-                      </p>
-                    </div>
-                  </div>
-                  {canCreateTeam ? (
-                    <AnalyticsLink
-                      className="shrink-0"
-                      href={withLocale(
-                        locale,
-                        `/public-events/${publicEvent.id}/teams/new`,
-                      )}
-                      event={{
-                        name: "team_create_started",
-                        entityId: publicEvent.id,
-                        entityType: "public_event",
-                        sourceSurface: "public_event_detail",
-                        properties: {
-                          category: publicEvent.category,
-                          city: publicEvent.city,
-                        },
-                      }}
-                    >
-                      <Button className="w-full whitespace-nowrap rounded-full bg-[#d88d72] px-6 text-white hover:bg-[#c87b61] sm:w-auto">
-                        {t.noTeamsCta}
-                      </Button>
-                    </AnalyticsLink>
-                  ) : null}
+          {publicEvent.teams.length > 0 ? (
+            <section className="space-y-4 scroll-mt-24" id="public-event-teams">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-normal text-ink">
+                    {t.existingTeams}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-600">
+                    {teamSectionDescription}
+                  </p>
                 </div>
                 {canCreateTeam ? (
-                  <p className="mt-4 rounded-2xl bg-[#fff8ec] px-3 py-2 text-sm leading-6 text-zinc-600 ring-1 ring-[#dccba8]">
-                    {t.publicEventRuleDescription}
-                  </p>
+                  <AnalyticsLink
+                    className="hidden sm:block"
+                    href={withLocale(
+                      locale,
+                      `/public-events/${publicEvent.id}/teams/new`,
+                    )}
+                    event={{
+                      name: "team_create_started",
+                      entityId: publicEvent.id,
+                      entityType: "public_event",
+                      sourceSurface: "public_event_detail",
+                      properties: {
+                        category: publicEvent.category,
+                        city: publicEvent.city,
+                      },
+                    }}
+                  >
+                    <Button className="w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
+                      {t.teamUp}
+                    </Button>
+                  </AnalyticsLink>
                 ) : null}
               </div>
-            ) : (
+
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {publicEvent.teams.map((activity) => (
                   <ActivityCard
@@ -355,17 +223,8 @@ export default async function PublicEventDetailPage({
                   />
                 ))}
               </div>
-            )}
-          </section>
-
-          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
-            <h2 className="text-lg font-semibold text-ink">
-              {t.eventInfoTitle}
-            </h2>
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
-              {publicEvent.description}
-            </p>
-          </div>
+            </section>
+          ) : null}
 
           {publicEvent.latitude !== null && publicEvent.longitude !== null ? (
             <ActivityMapPreview
@@ -390,70 +249,8 @@ export default async function PublicEventDetailPage({
           ) : null}
         </article>
 
-        <aside className="h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
-          <div className="rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6a40]">
-                  {t.teamUp}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-zinc-600">
-                  {t.teamCount(publicEvent.teamCount)}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-[#dccba8]">
-                {canCreateTeam ? t.jumpToTeams : unavailableReason}
-              </span>
-            </div>
-            <div className="mt-4 grid gap-3">
-              {publicEvent.officialUrl ? (
-                <AnalyticsExternalLink
-                  className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                  event={{
-                    name: "public_event_source_clicked",
-                    entityId: publicEvent.id,
-                    entityType: "public_event",
-                    sourceSurface: "public_event_detail",
-                    properties: {
-                      source_kind: "official_page",
-                    },
-                  }}
-                  href={publicEvent.officialUrl}
-                >
-                  {t.officialPage}
-                  <ExternalLink className="h-4 w-4" />
-                </AnalyticsExternalLink>
-              ) : null}
-              {!canCreateTeam ? (
-                <p className="rounded-xl bg-white/80 px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#dccba8]">
-                  {unavailableReason}
-                </p>
-              ) : (
-                <AnalyticsLink
-                  href={withLocale(
-                    locale,
-                    `/public-events/${publicEvent.id}/teams/new`,
-                  )}
-                  event={{
-                    name: "team_create_started",
-                    entityId: publicEvent.id,
-                    entityType: "public_event",
-                    sourceSurface: "public_event_detail",
-                    properties: {
-                      category: publicEvent.category,
-                      city: publicEvent.city,
-                    },
-                  }}
-                >
-                  <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61]">
-                    {t.teamUp}
-                  </Button>
-                </AnalyticsLink>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-5 mt-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+        <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
+          <div className="mb-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
             <div className="flex items-center gap-2 font-semibold text-ink">
               <Ticket className="h-4 w-4 text-[#8a6a40]" />
               {t.publicEventRuleTitle}
@@ -492,7 +289,33 @@ export default async function PublicEventDetailPage({
               </span>
             </p>
           </div>
-
+          {!canCreateTeam ? (
+            <p className="mt-5 rounded-xl bg-white/80 px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#dccba8]">
+              {unavailableReason}
+            </p>
+          ) : (
+            <AnalyticsLink
+              className="mt-5 block"
+              href={withLocale(
+                locale,
+                `/public-events/${publicEvent.id}/teams/new`,
+              )}
+              event={{
+                name: "team_create_started",
+                entityId: publicEvent.id,
+                entityType: "public_event",
+                sourceSurface: "public_event_detail",
+                properties: {
+                  category: publicEvent.category,
+                  city: publicEvent.city,
+                },
+              }}
+            >
+              <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61]">
+                {t.teamUp}
+              </Button>
+            </AnalyticsLink>
+          )}
         </aside>
       </section>
     </PageContainer>
