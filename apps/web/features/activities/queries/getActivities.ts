@@ -112,6 +112,27 @@ export const activityCardSelect = {
       isActive: true,
     },
   },
+  participants: {
+    where: {
+      status: {
+        in: participantStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      userProfile: {
+        select: {
+          id: true,
+          nickname: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  },
   _count: {
     select: {
       favorites: true,
@@ -933,6 +954,13 @@ export function getActivityCardViewModel(
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     publicEventId: activity.publicEventId,
+    participantPreview: isActivityInfo
+      ? []
+      : activity.participants.map((participant) => ({
+          id: participant.userProfile.id,
+          nickname: participant.userProfile.nickname,
+          avatarUrl: participant.userProfile.avatarUrl,
+        })),
     merchant: activity.merchant?.isActive
       ? {
           id: activity.merchant.id,

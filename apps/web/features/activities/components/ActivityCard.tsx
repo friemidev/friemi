@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin, UsersRound } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, UsersRound } from "lucide-react";
 import {
   Button,
   Card,
@@ -111,6 +111,65 @@ function getCardFavoriteLabels(locale: string) {
   };
 }
 
+function getCountdownLabel(activity: ActivityCardViewModel, locale: string) {
+  const startAt = new Date(activity.startAt);
+  const now = new Date();
+  const hourMs = 60 * 60 * 1000;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diffMs = startAt.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return null;
+  }
+
+  const hoursUntilStart = Math.ceil(diffMs / hourMs);
+  const daysUntilStart = Math.ceil(diffMs / dayMs);
+
+  if (locale === "fr") {
+    if (diffMs < hourMs) return "Dans moins d'1 h";
+    if (hoursUntilStart < 24) return `Dans ${hoursUntilStart} h`;
+    if (daysUntilStart === 1) return "Demain";
+
+    return `Dans ${daysUntilStart} j`;
+  }
+
+  if (locale === "en") {
+    if (diffMs < hourMs) return "Starts in <1h";
+    if (hoursUntilStart < 24) return `Starts in ${hoursUntilStart}h`;
+    if (daysUntilStart === 1) return "Starts tomorrow";
+
+    return `${daysUntilStart}d to start`;
+  }
+
+  if (diffMs < hourMs) return "不到 1 小时开始";
+  if (hoursUntilStart < 24) return `还有 ${hoursUntilStart} 小时开始`;
+  if (daysUntilStart === 1) return "明天开始";
+
+  return `还有 ${daysUntilStart} 天开始`;
+}
+
+const avatarTones = [
+  "bg-[#e98472] text-white",
+  "bg-[#72a7cf] text-white",
+  "bg-[#72b68a] text-white",
+  "bg-[#c795d8] text-white",
+  "bg-[#d8aa64] text-white",
+  "bg-[#7f88d8] text-white",
+];
+
+function getStableAvatarTone(value: string) {
+  const total = [...value].reduce(
+    (sum, char) => sum + char.charCodeAt(0),
+    0,
+  );
+
+  return avatarTones[total % avatarTones.length];
+}
+
+function getAvatarInitial(nickname: string) {
+  return nickname.trim().charAt(0).toUpperCase() || "N";
+}
+
 function getParticipationActionLabel(
   activityCopy: ReturnType<typeof getCopy>,
   status: ActivityCardViewModel["viewerParticipationStatus"],
@@ -193,12 +252,23 @@ export function ActivityCard({
   const isTeamCard = !isActivityInfo;
   const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
   const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
+  const participantPreview = isTeamCard
+    ? (activity.participantPreview ?? [])
+    : [];
+  const participantExtraCount = Math.max(
+    activity.participantCount - participantPreview.length,
+    0,
+  );
+  const isInactiveCard =
+    displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const countdownLabel =
+    isActivityInfo && timeState === "UPCOMING" && !isInactiveCard
+      ? getCountdownLabel(activity, locale)
+      : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
   const actionEventName: AnalyticsEventName = canCreateTeam
     ? "team_create_started"
     : "activity_card_clicked";
-  const isInactiveCard =
-    displayStatus === "ENDED" || displayStatus === "CANCELLED";
   const baseAnalyticsProperties = {
     category: activity.category,
     city: activity.city,
@@ -206,6 +276,49 @@ export function ActivityCard({
     item_kind: analyticsEntity.itemKind,
     time_state: timeState,
   };
+  const participantAvatarStack =
+    participantPreview.length > 0 ? (
+      <span className="flex shrink-0 -space-x-2">
+        {participantPreview.slice(0, 4).map((participant) => (
+          <span
+            key={participant.id}
+            className={cn(
+              "flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold ring-2",
+              participant.avatarUrl
+                ? "bg-white"
+                : getStableAvatarTone(participant.id),
+              isTeamCard ? "ring-[#fffaf4]" : "ring-[#f8fdff]",
+              isInactiveCard ? "ring-zinc-50 grayscale" : null,
+            )}
+            title={participant.nickname}
+          >
+            {participant.avatarUrl ? (
+              // User avatars are stored as remote profile URLs.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={participant.avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              getAvatarInitial(participant.nickname)
+            )}
+          </span>
+        ))}
+        {participantExtraCount > 0 ? (
+          <span
+            className={cn(
+              "flex h-6 min-w-6 items-center justify-center rounded-full bg-[#f0ddcf] px-1.5 text-[10px] font-semibold text-[#6f4d34] ring-2 ring-[#fffaf4]",
+              isInactiveCard
+                ? "bg-zinc-200 text-zinc-500 ring-zinc-50"
+                : null,
+            )}
+          >
+            +{participantExtraCount}
+          </span>
+        ) : null}
+      </span>
+    ) : null;
 
   return (
     <Card
@@ -346,6 +459,12 @@ export function ActivityCard({
               isInactiveCard ? "text-zinc-500" : null,
             )}
           >
+            {countdownLabel ? (
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#e8f6fb] px-2.5 py-1 text-xs font-semibold text-[#346b82] ring-1 ring-[#b9d7e5]">
+                <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                {countdownLabel}
+              </span>
+            ) : null}
             <span className="flex items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0">
@@ -357,9 +476,17 @@ export function ActivityCard({
               <span className="min-w-0 line-clamp-1">{activity.city}</span>
             </span>
             {shouldShowParticipantCount ? (
-              <span className="flex items-start gap-2">
+              <span className="flex min-w-0 items-center gap-2">
                 <UsersRound className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="min-w-0">{participantLabel}</span>
+                {participantAvatarStack ? (
+                  <span className="ml-auto">{participantAvatarStack}</span>
+                ) : null}
+              </span>
+            ) : null}
+            {!shouldShowParticipantCount && participantAvatarStack ? (
+              <span className="flex min-w-0 items-center pl-6">
+                {participantAvatarStack}
               </span>
             ) : null}
           </div>

@@ -19,6 +19,12 @@ export type ActivityFriendSignalViewModel = {
   extraCount: number;
 };
 
+export type ActivityParticipantPreviewViewModel = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+};
+
 export type ActivityCardViewModel = ActivitySummary & {
   coverImageUrl: string | null;
   coverTone: "moss" | "clay" | "sky";
@@ -30,6 +36,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   isActivityInfo?: boolean;
   officialUrl?: string | null;
   publicEventId?: string | null;
+  participantPreview?: ActivityParticipantPreviewViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
   viewerParticipationStatus?:
