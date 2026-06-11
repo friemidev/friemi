@@ -63,6 +63,11 @@ enum ParticipantStatus {
   CANCELLED
 }
 
+enum GuestRegistrationStatus {
+  ACTIVE
+  CANCELLED
+}
+
 enum UserProfileStatus {
   ACTIVE
   DELETED
@@ -124,91 +129,93 @@ enum ReportStatus {
 }
 
 model UserProfile {
-  id                     String                @id @default(cuid())
-  clerkUserId            String                @unique
-  email                  String?
-  friendCode             String?               @unique @db.Char(6)
-  nickname               String
-  firstName              String?
-  lastName               String?
-  username               String?
-  avatarUrl              String?
-  bio                    String?
-  interests              String[]              @default([])
-  status                 UserProfileStatus     @default(ACTIVE)
-  role                   UserRole              @default(USER)
-  lastSignInAt           DateTime?
-  clerkCreatedAt         DateTime?
-  clerkUpdatedAt         DateTime?
-  clerkDeletedAt         DateTime?
-  syncedAt               DateTime?
-  activities             Activity[]            @relation("ActivityOrganizer")
-  participations         ActivityParticipant[]
-  comments               Comment[]
-  notifications          Notification[]        @relation("NotificationRecipient")
-  sentNotifications      Notification[]        @relation("NotificationActor")
-  favoriteActivities     ActivityFavorite[]
-  following              UserFollow[]          @relation("UserFollowing")
-  followers              UserFollow[]          @relation("UserFollowers")
-  sentFriendRequests     FriendRequest[]       @relation("FriendRequestRequester")
-  receivedFriendRequests FriendRequest[]       @relation("FriendRequestReceiver")
-  friendshipsAsUserA     Friendship[]          @relation("FriendshipUserA")
-  friendshipsAsUserB     Friendship[]          @relation("FriendshipUserB")
-  conversationsAsUserA   Conversation[]        @relation("ConversationUserA")
-  conversationsAsUserB   Conversation[]        @relation("ConversationUserB")
-  sentDirectMessages     DirectMessage[]       @relation("DirectMessageSender")
-  submittedReports       Report[]              @relation("ReportReporter")
-  reviewedReports        Report[]              @relation("ReportReviewer")
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
-  publicEventFavorites   PublicEventFavorite[]
+  id                        String                      @id @default(cuid())
+  clerkUserId               String                      @unique
+  email                     String?
+  friendCode                String?                     @unique @db.Char(6)
+  nickname                  String
+  firstName                 String?
+  lastName                  String?
+  username                  String?
+  avatarUrl                 String?
+  bio                       String?
+  interests                 String[]                    @default([])
+  status                    UserProfileStatus           @default(ACTIVE)
+  role                      UserRole                    @default(USER)
+  lastSignInAt              DateTime?
+  clerkCreatedAt            DateTime?
+  clerkUpdatedAt            DateTime?
+  clerkDeletedAt            DateTime?
+  syncedAt                  DateTime?
+  activities                Activity[]                  @relation("ActivityOrganizer")
+  participations            ActivityParticipant[]
+  comments                  Comment[]
+  notifications             Notification[]              @relation("NotificationRecipient")
+  sentNotifications         Notification[]              @relation("NotificationActor")
+  favoriteActivities        ActivityFavorite[]
+  following                 UserFollow[]                @relation("UserFollowing")
+  followers                 UserFollow[]                @relation("UserFollowers")
+  sentFriendRequests        FriendRequest[]             @relation("FriendRequestRequester")
+  receivedFriendRequests    FriendRequest[]             @relation("FriendRequestReceiver")
+  friendshipsAsUserA        Friendship[]                @relation("FriendshipUserA")
+  friendshipsAsUserB        Friendship[]                @relation("FriendshipUserB")
+  conversationsAsUserA      Conversation[]              @relation("ConversationUserA")
+  conversationsAsUserB      Conversation[]              @relation("ConversationUserB")
+  sentDirectMessages        DirectMessage[]             @relation("DirectMessageSender")
+  submittedReports          Report[]                    @relation("ReportReporter")
+  reviewedReports           Report[]                    @relation("ReportReviewer")
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  publicEventFavorites      PublicEventFavorite[]
+  claimedGuestRegistrations ActivityGuestRegistration[]
 
   @@index([nickname])
   @@index([role, status])
 }
 
 model Activity {
-  id               String                @id @default(cuid())
-  title            String
-  description      String
-  itinerary        String?
-  type             ActivityType          @default(LOCAL)
-  category         ActivityCategory      @default(OTHER)
-  city             String                @default("Paris")
-  destination      String?
-  address          String
-  latitude         Float?
-  longitude        Float?
-  startAt          DateTime
-  endAt            DateTime?
-  capacity         Int
-  minParticipants  Int?
-  requiresApproval Boolean               @default(false)
-  priceType        PriceType             @default(FREE)
-  priceText        String
-  coverImageUrl    String?
-  source           String?
-  sourceUrl        String?               @unique
-  externalSource   String?
-  externalId       String?
-  externalUrl      String?
-  sourcePayload    Json?
-  importedAt       DateTime?
-  status           ActivityStatus        @default(RECRUITING)
-  visibility       ActivityVisibility    @default(PUBLIC)
-  organizerId      String
-  organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
-  publicEventId    String?
-  publicEvent      PublicEvent?          @relation(fields: [publicEventId], references: [id], onDelete: SetNull)
-  merchantId       String?
-  merchant         Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
-  participants     ActivityParticipant[]
-  comments         Comment[]
-  notifications    Notification[]
-  sourceLinks      ActivitySourceLink[]
-  favorites        ActivityFavorite[]
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  id                 String                      @id @default(cuid())
+  title              String
+  description        String
+  itinerary          String?
+  type               ActivityType                @default(LOCAL)
+  category           ActivityCategory            @default(OTHER)
+  city               String                      @default("Paris")
+  destination        String?
+  address            String
+  latitude           Float?
+  longitude          Float?
+  startAt            DateTime
+  endAt              DateTime?
+  capacity           Int
+  minParticipants    Int?
+  requiresApproval   Boolean                     @default(false)
+  priceType          PriceType                   @default(FREE)
+  priceText          String
+  coverImageUrl      String?
+  source             String?
+  sourceUrl          String?                     @unique
+  externalSource     String?
+  externalId         String?
+  externalUrl        String?
+  sourcePayload      Json?
+  importedAt         DateTime?
+  status             ActivityStatus              @default(RECRUITING)
+  visibility         ActivityVisibility          @default(PUBLIC)
+  organizerId        String
+  organizer          UserProfile                 @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  publicEventId      String?
+  publicEvent        PublicEvent?                @relation(fields: [publicEventId], references: [id], onDelete: SetNull)
+  merchantId         String?
+  merchant           Merchant?                   @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+  participants       ActivityParticipant[]
+  guestRegistrations ActivityGuestRegistration[]
+  comments           Comment[]
+  notifications      Notification[]
+  sourceLinks        ActivitySourceLink[]
+  favorites          ActivityFavorite[]
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
 
   @@index([city, startAt])
   @@index([city, latitude, longitude])
@@ -222,24 +229,24 @@ model Activity {
 }
 
 model PublicEvent {
-  id             String             @id @default(cuid())
+  id             String                @id @default(cuid())
   title          String
   description    String
-  category       ActivityCategory   @default(OTHER)
-  city           String             @default("Paris")
+  category       ActivityCategory      @default(OTHER)
+  city           String                @default("Paris")
   address        String
   latitude       Float?
   longitude      Float?
   startAt        DateTime
   endAt          DateTime?
-  priceType      PriceType          @default(FREE)
+  priceType      PriceType             @default(FREE)
   priceText      String?
   coverImageUrl  String?
   officialUrl    String?
-  status         PublicEventStatus  @default(SCHEDULED)
-  visibility     ActivityVisibility @default(PUBLIC)
+  status         PublicEventStatus     @default(SCHEDULED)
+  visibility     ActivityVisibility    @default(PUBLIC)
   source         String?
-  sourceUrl      String?            @unique
+  sourceUrl      String?               @unique
   externalSource String?
   externalId     String?
   externalUrl    String?
@@ -248,8 +255,8 @@ model PublicEvent {
   lastSyncedAt   DateTime?
   teams          Activity[]
   favorites      PublicEventFavorite[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   @@index([city, startAt])
   @@index([status, startAt])
@@ -313,6 +320,49 @@ model ActivityParticipant {
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+}
+
+model GuestIdentity {
+  id                     String                      @id @default(cuid())
+  displayName            String
+  contactHash            String?
+  contactEncrypted       String?
+  browserFingerprintHash String?
+  registrations          ActivityGuestRegistration[]
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+
+  @@index([contactHash])
+  @@index([createdAt])
+}
+
+model ActivityGuestRegistration {
+  id                    String                  @id @default(cuid())
+  activityId            String
+  guestId               String
+  claimedByUserId       String?
+  displayName           String
+  contactHash           String?
+  contactEncrypted      String?
+  attendeeCount         Int                     @default(1)
+  note                  String?
+  status                GuestRegistrationStatus @default(ACTIVE)
+  registrationTokenHash String                  @unique
+  claimTokenHash        String                  @unique
+  source                String?
+  shareToken            String?
+  joinedAt              DateTime                @default(now())
+  cancelledAt           DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  activity              Activity                @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  guest                 GuestIdentity           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  claimedByUser         UserProfile?            @relation(fields: [claimedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([activityId, status, joinedAt])
+  @@index([guestId, createdAt])
+  @@index([claimedByUserId])
+  @@index([shareToken])
 }
 
 model ActivityFavorite {

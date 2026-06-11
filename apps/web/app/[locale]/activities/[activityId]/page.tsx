@@ -761,6 +761,23 @@ export default async function ActivityDetailPage({
                       {t.activityDetail.editActivity}
                     </Link>
                   ) : null}
+                  <Link
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#eef5ea] px-4 text-sm font-semibold text-moss ring-1 ring-[#c7d9bf] transition hover:bg-[#e4efdc]"
+                    href={withLocale(locale, `/e/${activity.id}`)}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    公开 H5 报名页
+                  </Link>
+                  <Link
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                    href={withLocale(
+                      locale,
+                      `/activities/${activity.id}/registrations`,
+                    )}
+                  >
+                    <UsersRound className="h-4 w-4" />
+                    游客报名名单
+                  </Link>
                   {!isCancelled && !isEndedByTime ? (
                     <p className="text-xs leading-5 text-zinc-500">
                       {t.activityOwner.cancelDescription}
