@@ -578,13 +578,14 @@ export function ActivityLobbyPreviewView({
               {visibleActivities.map((activity) => (
                 <ActivityCard
                   key={getLobbyActivityKey(activity)}
+                  actionContext="lobby"
                   activity={activity}
                   favoriteRedirectPath="/lobby"
                   isAuthenticated={false}
                   locale={locale}
                   mobileDense
                   showFavoriteButton
-                  showPrimaryAction={!isPublicEventCard(activity)}
+                  showPrimaryAction
                   sourceSurface="activity_list"
                 />
               ))}
@@ -617,6 +618,10 @@ export function ActivityLobbyView({
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
   const [page, setPage] = useState(1);
+  const createdActivityKeys = useMemo(
+    () => new Set(createdActivities.map((activity) => getLobbyActivityKey(activity))),
+    [createdActivities],
+  );
   const categoryGroups = useMemo(
     () => [
       {
@@ -906,13 +911,17 @@ export function ActivityLobbyView({
             {visiblePageActivities.map((activity) => (
               <ActivityCard
                 key={getLobbyActivityKey(activity)}
+                actionContext="lobby"
                 activity={activity}
                 favoriteRedirectPath="/lobby"
                 isAuthenticated
+                isOwnActivity={createdActivityKeys.has(
+                  getLobbyActivityKey(activity),
+                )}
                 locale={locale}
                 mobileDense
                 showFavoriteButton
-                showPrimaryAction={!isPublicEventCard(activity)}
+                showPrimaryAction
                 sourceSurface="activity_list"
               />
             ))}
