@@ -55,7 +55,7 @@ export function ProfileIdentityForm({
   }
 
   return (
-    <div className="grid gap-2 rounded-xl border border-black/10 bg-white/65 px-3 py-2.5 shadow-sm shadow-black/[0.02]">
+    <div className="grid gap-2 rounded-xl border border-sand bg-white/70 px-3 py-2.5 shadow-sm shadow-black/[0.02]">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-zinc-500">
@@ -68,7 +68,7 @@ export function ProfileIdentityForm({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-sand transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
             aria-label={copied ? t.friendCodeCopied : t.copyFriendCode}
             title={copied ? t.friendCodeCopied : t.copyFriendCode}
             onClick={copyFriendCode}
@@ -81,7 +81,7 @@ export function ProfileIdentityForm({
           </button>
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-sand transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
             onClick={() => setEditing((current) => !current)}
           >
             {editing ? (
@@ -97,7 +97,7 @@ export function ProfileIdentityForm({
       {editing ? (
         <form
           action={formAction}
-          className="grid gap-2 border-t border-black/10 pt-2"
+          className="grid gap-2 border-t border-sand pt-2"
           noValidate
         >
           <input name="locale" type="hidden" value={locale} />

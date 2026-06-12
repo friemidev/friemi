@@ -85,10 +85,10 @@ export function ProfileDashboardView({
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 md:space-y-8">
+    <div className="mx-auto w-full max-w-7xl space-y-5 pb-8 md:space-y-7">
       <section className="border-b border-black/10 pb-4 md:pb-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,auto)] lg:items-start">
-          <div className="grid min-w-0 gap-3 sm:max-w-xl">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] lg:items-start">
+          <div className="grid min-w-0 gap-3">
             <div className="flex min-w-0 items-center gap-4">
               {profile.avatarUrl ? (
                 // User avatars are stored as remote URLs from Clerk/user data.
@@ -96,10 +96,10 @@ export function ProfileDashboardView({
                 <img
                   src={profile.avatarUrl}
                   alt={profile.nickname}
-                  className="h-14 w-14 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
+                  className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
                 />
               ) : (
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-moss text-xl font-semibold text-white sm:h-16 sm:w-16">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-lg font-semibold text-white sm:h-16 sm:w-16 sm:text-xl">
                   {profileInitial}
                 </div>
               )}
@@ -118,7 +118,7 @@ export function ProfileDashboardView({
               </div>
             </div>
             {isSelf && profile.friendCode ? (
-              <div className="max-w-md">
+              <div className="max-w-xl">
                 <ProfileIdentityForm
                   friendCode={profile.friendCode}
                   locale={locale}
@@ -128,7 +128,7 @@ export function ProfileDashboardView({
             ) : null}
           </div>
 
-          <div className="flex min-w-0 flex-col gap-3 lg:items-end">
+          <div className="flex min-w-0 flex-col gap-3">
             <ProfileOverviewPanel
               activeActivitySection={activeProfileSection}
               createdCount={dashboard.createdActivityCount}
@@ -153,7 +153,7 @@ export function ProfileDashboardView({
             {isSelf ? (
               <Link
                 href={withLocale(locale, "/messages")}
-                className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-fit"
+                className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
               >
                 <UsersRound className="h-4 w-4" />
                 {friendsCopy.openFriends}

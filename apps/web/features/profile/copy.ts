@@ -21,6 +21,12 @@ export function getProfileFollowCopy(locale: string) {
         "Quand quelqu'un vous suivra, son profil apparaitra ici.",
       noBio: "Cette personne n'a pas encore ajoute de bio.",
       closePanel: "Fermer",
+      searchLabel: "Rechercher",
+      searchPlaceholder: "Rechercher un pseudo",
+      searchEmptyTitle: "Aucun resultat",
+      searchEmptyDescription: (query: string) =>
+        `Aucun profil ne correspond a « ${query} ».`,
+      clearSearch: "Effacer",
       showMoreUsers: (count: number) =>
         `+ ${count} autre${count > 1 ? "s" : ""}`,
     };
@@ -48,6 +54,12 @@ export function getProfileFollowCopy(locale: string) {
         "Once someone follows you, their profile will appear here.",
       noBio: "This user has not added a bio yet.",
       closePanel: "Close",
+      searchLabel: "Search",
+      searchPlaceholder: "Search by nickname",
+      searchEmptyTitle: "No matching profile",
+      searchEmptyDescription: (query: string) =>
+        `No profile matches "${query}".`,
+      clearSearch: "Clear search",
       showMoreUsers: (count: number) => `+ ${count} more`,
     };
   }
@@ -71,6 +83,11 @@ export function getProfileFollowCopy(locale: string) {
     followersEmptyDescription: "当有人关注你后，他们的资料会显示在这里。",
     noBio: "这个用户还没有填写简介。",
     closePanel: "收起",
+    searchLabel: "搜索",
+    searchPlaceholder: "搜索昵称",
+    searchEmptyTitle: "没有匹配用户",
+    searchEmptyDescription: (query: string) => `没有找到「${query}」相关用户。`,
+    clearSearch: "清空搜索",
     showMoreUsers: (count: number) => `还有 ${count} 位`,
   };
 }

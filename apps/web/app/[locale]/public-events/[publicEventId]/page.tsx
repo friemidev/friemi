@@ -110,13 +110,16 @@ export default async function PublicEventDetailPage({
   return (
     <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">
       <DetailSourceRestore sourceKey="public_event" />
-      <DetailSourceReturnLink locale={locale} />
-      <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] bg-[#d9e9ee] p-4 shadow-[0_18px_42px_rgba(58,49,34,0.14)] sm:p-6 md:min-h-[26rem]">
+      <DetailSourceReturnLink
+        className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
+        locale={locale}
+      />
+      <div className="relative flex min-h-[13rem] items-end overflow-hidden rounded-[1.25rem] bg-[#d9e9ee] p-3 shadow-[0_18px_42px_rgba(58,49,34,0.14)] sm:min-h-64 sm:p-6 md:min-h-[26rem]">
         <ActivityCoverImage
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"
         />
-        <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
+        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
           <PublicEventFavoriteButton
             favoriteCount={publicEvent.favoriteCount}
             publicEventId={publicEvent.id}
@@ -137,7 +140,7 @@ export default async function PublicEventDetailPage({
           />
         </div>
         <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/74 via-black/28 to-transparent" />
-        <div className="relative z-10 max-w-4xl space-y-4">
+        <div className="relative z-10 max-w-4xl space-y-3 sm:space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
               {getCategoryLabel(publicEvent.category, locale)}
@@ -151,8 +154,8 @@ export default async function PublicEventDetailPage({
               </span>
             ) : null}
           </div>
-          <div className="inline-block max-w-3xl rounded-[1.5rem] bg-[rgba(18,16,13,0.64)] px-4 py-3 shadow-[0_18px_36px_rgba(0,0,0,0.28)] ring-1 ring-white/10 sm:px-5 sm:py-4">
-            <h1 className="text-3xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_4px_24px_rgba(0,0,0,0.58)] sm:text-4xl md:text-5xl">
+          <div className="inline-block max-w-3xl rounded-[1.25rem] bg-[rgba(18,16,13,0.58)] px-3 py-3 shadow-[0_18px_36px_rgba(0,0,0,0.28)] ring-1 ring-white/10 sm:rounded-[1.5rem] sm:px-5 sm:py-4">
+            <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_4px_24px_rgba(0,0,0,0.58)] sm:text-4xl md:text-5xl">
               {publicEvent.title}
             </h1>
           </div>
@@ -228,8 +231,8 @@ export default async function PublicEventDetailPage({
           ) : null}
         </article>
 
-        <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
-          <div className="mb-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+        <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-sand bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
+          <div className="mb-4 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
             <div className="flex items-center gap-2 font-semibold text-ink">
               <Ticket className="h-4 w-4 text-[#8a6a40]" />
               {t.publicEventRuleTitle}
@@ -248,7 +251,7 @@ export default async function PublicEventDetailPage({
             </div>
           ) : null}
 
-          <div className="space-y-4 text-sm text-zinc-700">
+          <div className="space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
             <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{eventDateLabel}</span>
