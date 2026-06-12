@@ -583,13 +583,13 @@ function MetricTile({
   value: string | number;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-white/65 p-2.5 ring-1 ring-black/5 sm:border-l sm:border-black/10 sm:bg-transparent sm:p-0 sm:pl-4 sm:ring-0">
+    <div className="min-w-0 rounded-xl bg-white/65 p-2 ring-1 ring-black/5 sm:rounded-2xl sm:border-l sm:border-black/10 sm:bg-transparent sm:p-0 sm:pl-4 sm:ring-0">
       <span
-        className={`inline-flex h-7 w-7 items-center justify-center rounded-full ring-1 sm:h-9 sm:w-9 ${tone}`}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-full ring-1 sm:h-9 sm:w-9 ${tone}`}
       >
-        <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
       </span>
-      <p className="mt-1.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-3 sm:text-2xl">
+      <p className="mt-1 truncate text-lg font-semibold tracking-normal text-ink sm:mt-3 sm:text-2xl">
         {value}
       </p>
       <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500 sm:text-sm">
@@ -710,8 +710,8 @@ function SmallStat({
   value: string | number;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-paper/70 px-3 py-2.5 ring-1 ring-black/5 sm:px-4 sm:py-3">
-      <p className="truncate text-xl font-semibold tracking-normal text-ink sm:text-2xl">
+    <div className="min-w-0 rounded-xl bg-paper/70 px-2.5 py-2 ring-1 ring-black/5 sm:rounded-2xl sm:px-4 sm:py-3">
+      <p className="truncate text-lg font-semibold tracking-normal text-ink sm:text-2xl">
         {value}
       </p>
       <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500 sm:text-sm">
@@ -890,7 +890,7 @@ function TrendPanel({
             {t.trendDescription}
           </p>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-xs text-zinc-500 sm:flex sm:flex-wrap sm:gap-x-3 sm:gap-y-2">
+        <div className="grid grid-cols-2 gap-2 text-xs text-zinc-500 sm:flex sm:flex-wrap sm:gap-x-3 sm:gap-y-2">
           {legend.map((item) => (
             <span
               key={item.label}
@@ -903,11 +903,11 @@ function TrendPanel({
         </div>
       </div>
 
-      <div className="mt-4 flex h-40 min-w-0 items-end gap-1 overflow-hidden rounded-2xl bg-paper/70 px-2 pb-3 pt-4 ring-1 ring-black/5 sm:mt-5 sm:h-44 sm:gap-1.5 sm:px-3 sm:pt-5">
+      <div className="mt-4 flex h-36 min-w-0 items-end gap-0.5 overflow-hidden rounded-2xl bg-paper/70 px-2 pb-3 pt-4 ring-1 ring-black/5 sm:mt-5 sm:h-44 sm:gap-1.5 sm:px-3 sm:pt-5">
         {visibleTrend.map((item) => {
           const height =
             item.total > 0
-              ? Math.max(6, Math.round((item.total / max) * 136))
+              ? Math.max(6, Math.round((item.total / max) * 112))
               : 6;
           const discoveryHeight =
             item.total > 0
@@ -1032,7 +1032,7 @@ function PopularItemsPanel({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="grid min-w-0 gap-1 sm:flex sm:items-center sm:gap-2">
-                      <p className="min-w-0 truncate font-semibold text-ink sm:flex-1">
+                      <p className="min-w-0 line-clamp-2 font-semibold text-ink sm:flex-1 sm:truncate">
                         {item.title}
                       </p>
                       <span className="inline-flex h-6 w-fit max-w-full items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
@@ -1269,7 +1269,7 @@ export default async function AdminAnalyticsPage({
   const focusItems = getFocusItems(dashboard, locale);
 
   return (
-    <PageContainer className="max-w-full space-y-5 overflow-x-hidden pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
+    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -1295,7 +1295,7 @@ export default async function AdminAnalyticsPage({
         windowDays={windowDays}
       />
 
-      <section className="min-w-0 overflow-hidden rounded-[1.5rem] border border-black/10 bg-white/82 shadow-sm">
+      <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 shadow-sm sm:rounded-[1.5rem]">
         <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
           <div className="min-w-0 bg-[#f8f4ea] p-3 sm:p-5 md:p-6">
             <div className="flex items-center gap-2">
@@ -1304,7 +1304,7 @@ export default async function AdminAnalyticsPage({
                 {t.topDecision}
               </h2>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-4 xl:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-4 xl:grid-cols-4">
               <MetricTile
                 icon={UsersRound}
                 label={`${t.actionUsers} · ${t.intentWindow(

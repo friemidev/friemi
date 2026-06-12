@@ -276,10 +276,10 @@ export function AdminDashboardClient({
   }
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="min-w-0 space-y-5 overflow-x-hidden md:space-y-6">
       <Toaster position="top-center" richColors closeButton />
 
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <Button
           type="button"
           className="w-full sm:w-auto"
@@ -299,7 +299,7 @@ export function AdminDashboardClient({
       </div>
 
       {activeTab === "activities" ? (
-        <section className="space-y-5">
+        <section className="min-w-0 space-y-5">
           <Card>
             <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
               <CardTitle>活动管理</CardTitle>
@@ -704,7 +704,7 @@ export function AdminDashboardClient({
                 {activities.map((activity) => (
                   <article
                     key={activity.id}
-                    className="rounded-xl border border-black/10 bg-white/80 p-3"
+                  className="min-w-0 rounded-xl border border-black/10 bg-white/80 p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -786,7 +786,7 @@ export function AdminDashboardClient({
                   </article>
                 ))}
               </div>
-              <div className="hidden max-h-[70vh] overflow-auto rounded-md border border-black/10 md:block">
+              <div className="hidden max-h-[70vh] max-w-full overflow-auto rounded-xl border border-black/10 md:block">
                 <table className="min-w-[980px] text-left text-sm">
                   <thead className="bg-zinc-50 text-zinc-500">
                     <tr>

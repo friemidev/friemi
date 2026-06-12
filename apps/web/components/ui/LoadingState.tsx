@@ -50,8 +50,8 @@ export function LoadingHeroSkeleton({
   return (
     <section
       className={cn(
-        "rounded-[2rem] border border-[#ded2bc] bg-white/62 px-5 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)]",
-        compact ? "py-5 sm:py-6" : "py-7 sm:px-8 sm:py-9",
+        "rounded-[1.35rem] border border-sand bg-white/62 px-4 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)] sm:rounded-[2rem]",
+        compact ? "py-4 sm:py-6" : "py-5 sm:px-8 sm:py-9",
       )}
     >
       <ShimmerBlock className="mx-auto h-7 w-28 rounded-full bg-white/75" />
@@ -68,13 +68,16 @@ export function LoadingToolbarSkeleton({
   columns?: number;
 }) {
   return (
-    <section className="rounded-xl border border-black/10 bg-white/75 p-3 shadow-sm">
-      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_repeat(var(--filter-columns),10rem)]" style={{ "--filter-columns": columns } as CSSProperties}>
-        <ShimmerBlock className="h-11 rounded-lg" />
+    <section className="rounded-[1.1rem] border border-sand bg-white/70 p-2.5 shadow-sm sm:p-3">
+      <div
+        className="grid gap-2 md:grid-cols-[minmax(0,1fr)_repeat(var(--filter-columns),10rem)]"
+        style={{ "--filter-columns": columns } as CSSProperties}
+      >
+        <ShimmerBlock className="h-10 rounded-xl sm:h-11" />
         {Array.from({ length: columns }).map((_, index) => (
           <ShimmerBlock
             key={index}
-            className="hidden h-11 rounded-lg md:block"
+            className="hidden h-11 rounded-xl md:block"
             delay={index * 45}
           />
         ))}
@@ -93,10 +96,10 @@ export function LoadingCardSkeleton({
   return (
     <article className="overflow-hidden rounded-lg border border-black/10 bg-white/80 shadow-sm">
       <ShimmerBlock
-        className={cn("rounded-none", compact ? "h-24 sm:h-36" : "h-36")}
+        className={cn("rounded-none", compact ? "h-24 sm:h-32" : "h-36")}
         delay={delay}
       />
-      <div className={cn("space-y-3 p-4", compact ? "p-3 sm:p-4" : null)}>
+      <div className={cn("space-y-2.5 p-4", compact ? "p-3 sm:p-4" : null)}>
         <ShimmerBlock className="h-5 w-4/5" delay={delay + 50} />
         <ShimmerBlock className="h-5 w-3/5" delay={delay + 80} />
         <div className="space-y-2 pt-1">
@@ -131,7 +134,10 @@ export function LoadingRowSkeleton({
         <ShimmerBlock className="h-3 w-2/3 max-w-44" delay={delay + 90} />
       </div>
       {action ? (
-        <ShimmerBlock className="hidden h-8 w-20 rounded-full sm:block" delay={delay + 130} />
+        <ShimmerBlock
+          className="hidden h-8 w-20 rounded-full sm:block"
+          delay={delay + 130}
+        />
       ) : null}
     </article>
   );

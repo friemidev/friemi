@@ -200,6 +200,10 @@ a {
   .nextfun-brand-loader__logo,
   .nextfun-loading-dots span,
   .nextfun-shimmer::after {
-    animation-duration: 3s;
+    animation: none;
+  }
+
+  .nextfun-shimmer::after {
+    opacity: 0;
   }
 }
