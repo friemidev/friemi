@@ -7,6 +7,12 @@ import { ActivityCardMasonryGrid } from "@/features/activities/components/Activi
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityCardMasonryWeight } from "@/features/activities/utils/activityCardMasonry";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import {
+  getDetailSourceTargetSelector,
+  isDetailSourceReturnPage,
+  readDetailSourceContext,
+  type DetailSourceContext,
+} from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
 import { SearchHighlightedText } from "./SearchHighlightedText";
 
@@ -115,6 +121,8 @@ export function SearchActivityResultsFeed({
   const [relatedStarted, setRelatedStarted] = useState(
     initialRelatedActivities.length > 0,
   );
+  const [restoreContext, setRestoreContext] =
+    useState<DetailSourceContext | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -285,6 +293,58 @@ export function SearchActivityResultsFeed({
   ]);
 
   useEffect(() => {
+    const context = readDetailSourceContext();
+
+    if (context && isDetailSourceReturnPage(context, "search")) {
+      setRestoreContext(context);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!restoreContext) {
+      return;
+    }
+
+    const target = document.querySelector<HTMLElement>(
+      getDetailSourceTargetSelector(restoreContext.targetKey),
+    );
+
+    if (target) {
+      target.scrollIntoView({
+        block: "center",
+        behavior: "auto",
+      });
+      target.classList.add("detail-source-restored");
+      window.setTimeout(() => {
+        target.classList.remove("detail-source-restored");
+      }, 1600);
+      setRestoreContext(null);
+      return;
+    }
+
+    if (hasMore && !loading && !loadFailed) {
+      void loadMore();
+      return;
+    }
+
+    if (relatedHasMore && !relatedLoading && !relatedLoadFailed) {
+      void loadRelatedMore();
+    }
+  }, [
+    activities,
+    hasMore,
+    loadFailed,
+    loading,
+    loadMore,
+    loadRelatedMore,
+    relatedActivities,
+    relatedHasMore,
+    relatedLoadFailed,
+    relatedLoading,
+    restoreContext,
+  ]);
+
+  useEffect(() => {
     const sentinel = sentinelRef.current;
 
     if (
@@ -340,6 +400,7 @@ export function SearchActivityResultsFeed({
               showFavoriteButton
               showPrimaryAction={!isPublicEventCard(activity)}
               sourceSurface="global_search"
+              detailSourceKey="search"
               titleContent={
                 <SearchHighlightedText text={activity.title} query={query} />
               }
@@ -371,6 +432,7 @@ export function SearchActivityResultsFeed({
                 showFavoriteButton
                 showPrimaryAction={!isPublicEventCard(activity)}
                 sourceSurface="global_search"
+                detailSourceKey="search"
                 titleContent={
                   <SearchHighlightedText text={activity.title} query={query} />
                 }

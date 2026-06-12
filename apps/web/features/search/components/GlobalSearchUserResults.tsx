@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -12,6 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import {
   sendFriendRequestToProfileAction,
@@ -125,8 +125,14 @@ function GlobalSearchUserCard({
 
   return (
     <article className="flex min-w-0 flex-col gap-4 rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
-      <Link
+      <ContextualDetailLink
         href={profileHref}
+        detailSource={{
+          sourceKey: "search",
+          targetKey: `profile:${user.id}`,
+          targetKind: "profile",
+        }}
+        data-detail-source-target={`profile:${user.id}`}
         className="group flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
         aria-label={t.openUserProfile(user.nickname)}
       >
@@ -161,7 +167,7 @@ function GlobalSearchUserCard({
             </span>
           </span>
         </span>
-      </Link>
+      </ContextualDetailLink>
 
       <div className="shrink-0 sm:w-32">
         <FriendRequestCta

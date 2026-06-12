@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -70,7 +71,8 @@ export default async function PublicProfilePage({
     });
 
   return (
-    <PageContainer>
+    <PageContainer className="space-y-4">
+      <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}

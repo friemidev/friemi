@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
-  ArrowLeft,
   CalendarDays,
   CircleX,
   MapPin,
@@ -30,6 +29,8 @@ import {
 import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -108,14 +109,8 @@ export default async function PublicEventDetailPage({
 
   return (
     <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">
-      <Link
-        className="inline-flex items-center gap-2 text-sm font-medium text-moss transition hover:text-ink"
-        href={withLocale(locale, "/activities")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t.backToPublicEvents}
-      </Link>
-
+      <DetailSourceRestore sourceKey="public_event" />
+      <DetailSourceReturnLink locale={locale} />
       <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] bg-[#d9e9ee] p-4 shadow-[0_18px_42px_rgba(58,49,34,0.14)] sm:p-6 md:min-h-[26rem]">
         <ActivityCoverImage
           src={publicEvent.coverImageUrl}
@@ -203,6 +198,7 @@ export default async function PublicEventDetailPage({
                     mobileDense
                     showFavoriteButton
                     sourceSurface="public_event_detail"
+                    detailSourceKey="public_event"
                   />
                 ))}
               </div>

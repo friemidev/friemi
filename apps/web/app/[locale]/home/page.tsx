@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getActivities } from "@/features/activities/queries/getActivities";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -71,6 +72,7 @@ export default async function HomePage({ params }: HomePageProps) {
   return (
     <>
       <PageContainer className="space-y-9 pb-6 md:space-y-12">
+        <DetailSourceRestore sourceKey="home" />
         <section className="py-3 md:py-10">
           <div className="max-w-3xl space-y-5">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/78 px-3 py-1 text-xs text-zinc-600 ring-1 ring-black/10 sm:text-sm">
@@ -156,6 +158,7 @@ export default async function HomePage({ params }: HomePageProps) {
                   showFavoriteButton
                   showPrimaryAction={!isPublicEventCard(activity)}
                   sourceSurface="home_recent"
+                  detailSourceKey="home"
                 />
               ))}
             </div>

@@ -13,6 +13,10 @@ import type {
   AnalyticsSourceSurface,
 } from "@/features/analytics/events";
 import { getAnalyticsEntityForActivity } from "@/features/analytics/utils";
+import type {
+  DetailSourceInput,
+  DetailSourceKind,
+} from "@/features/navigation/contextualDetailReturn";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
@@ -37,6 +41,10 @@ type ActivityCardProps = {
   showFavoriteButton?: boolean;
   showPrimaryAction?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
+  detailSourceKey?: DetailSourceKind;
+  detailSourceLabel?: string;
+  detailSourceHref?: string;
+  detailSourceState?: DetailSourceInput["sourceState"];
   titleContent?: ReactNode;
 };
 
@@ -318,6 +326,10 @@ export function ActivityCard({
   showFavoriteButton = false,
   showPrimaryAction = true,
   sourceSurface = "activity_list",
+  detailSourceKey,
+  detailSourceLabel,
+  detailSourceHref,
+  detailSourceState,
   titleContent,
 }: ActivityCardProps) {
   const t = getCopy(locale);
@@ -387,6 +399,17 @@ export function ActivityCard({
     activity.city,
   );
   const analyticsEntity = getAnalyticsEntityForActivity(activity);
+  const detailSourceTargetKey = `${analyticsEntity.itemKind}:${analyticsEntity.entityId}`;
+  const detailSource: DetailSourceInput | undefined = detailSourceKey
+    ? {
+        sourceHref: detailSourceHref,
+        sourceKey: detailSourceKey,
+        sourceLabel: detailSourceLabel,
+        sourceState: detailSourceState,
+        targetKey: detailSourceTargetKey,
+        targetKind: isActivityInfo ? "public_event" : "activity",
+      }
+    : undefined;
   const canCreateTeam =
     isActivityInfo &&
     displayStatus !== "ENDED" &&
@@ -468,7 +491,7 @@ export function ActivityCard({
       : resolvedActionConfig.tone === "neutral"
         ? "bg-[#fffaf4] text-[#6f4d34] ring-1 ring-[#dcc7b4] hover:bg-[#fff1e4]"
         : resolvedActionConfig.tone === "joined"
-          ? "bg-[#dcefd7] text-[#36543c] ring-1 ring-[#a8c79f] shadow-[0_8px_18px_rgba(113,146,104,0.14)] hover:bg-[#d0e6ca]"
+          ? "bg-[#fff2e7] text-[#8f553b] ring-1 ring-[#e2b79d] shadow-[0_8px_18px_rgba(184,112,78,0.12)] hover:bg-[#ffe8d9]"
           : resolvedActionConfig.tone === "pending"
             ? "bg-[#f8e6b8] text-[#7b5622] ring-1 ring-[#e2c27c] shadow-[0_8px_18px_rgba(198,156,73,0.15)] hover:bg-[#f4dda1]"
             : resolvedActionConfig.tone === "activity"
@@ -477,6 +500,7 @@ export function ActivityCard({
 
   return (
     <Card
+      data-detail-source-target={detailSourceTargetKey}
       className={cn(
         "relative flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg",
         isInactiveCard
@@ -492,7 +516,7 @@ export function ActivityCard({
           : null,
       )}
     >
-      {showFavoriteButton && isActivityInfo && activity.publicEventId ? (
+      {showFavoriteButton && !isOwnActivity && isActivityInfo && activity.publicEventId ? (
         <div
           className={cn(
             "absolute right-3 top-3 z-20",
@@ -515,7 +539,7 @@ export function ActivityCard({
           />
         </div>
       ) : null}
-      {showFavoriteButton && (!isActivityInfo || !activity.publicEventId) ? (
+      {showFavoriteButton && !isOwnActivity && (!isActivityInfo || !activity.publicEventId) ? (
         <div
           className={cn(
             "absolute right-3 top-3 z-20",
@@ -550,6 +574,7 @@ export function ActivityCard({
           sourceSurface,
           properties: baseAnalyticsProperties,
         }}
+        detailSource={detailSource}
       >
         <div
           className={cn(
@@ -597,7 +622,7 @@ export function ActivityCard({
             <span
               className={cn(
                 "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#f5c8b7] bg-[#fff7ed]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur sm:right-4 sm:top-4",
-                showFavoriteButton ? "right-14 sm:right-16" : null,
+                showFavoriteButton && !isOwnActivity ? "right-14 sm:right-16" : null,
                 mobileDenseClass(
                   "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
@@ -762,6 +787,7 @@ export function ActivityCard({
         >
           <AnalyticsLink
             href={actionHref}
+            detailSource={actionHref === cardHref ? detailSource : undefined}
             event={{
               name: actionEventName,
               entityId: analyticsEntity.entityId,
