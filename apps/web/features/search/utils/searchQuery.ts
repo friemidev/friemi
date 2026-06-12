@@ -32,7 +32,13 @@ export function getGlobalSearchTerms(query: string) {
   ).slice(0, 5);
 }
 
-export function getGlobalSearchHref(locale: string, query: string) {
+export function getGlobalSearchHref(
+  locale: string,
+  query: string,
+  options: {
+    includeEnded?: boolean;
+  } = {},
+) {
   const normalizedQuery = normalizeGlobalSearchQuery(query);
 
   if (!normalizedQuery) {
@@ -40,6 +46,10 @@ export function getGlobalSearchHref(locale: string, query: string) {
   }
 
   const params = new URLSearchParams({ q: normalizedQuery });
+
+  if (options.includeEnded) {
+    params.set("ended", "1");
+  }
 
   return `${withLocale(locale, "/search")}?${params.toString()}`;
 }
@@ -51,11 +61,18 @@ export function isCanonicalGlobalSearchParams(
   const rawQuery = getSingleGlobalSearchParam(searchParams, "q");
   const normalizedQuery = normalizeGlobalSearchQuery(rawQuery);
 
-  if (keys.some((key) => key !== "q")) {
+  if (keys.some((key) => key !== "q" && key !== "ended")) {
     return false;
   }
 
-  if (Array.isArray(searchParams.q)) {
+  if (Array.isArray(searchParams.q) || Array.isArray(searchParams.ended)) {
+    return false;
+  }
+
+  if (
+    searchParams.ended !== undefined &&
+    (searchParams.ended !== "1" || !normalizedQuery)
+  ) {
     return false;
   }
 

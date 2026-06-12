@@ -105,6 +105,20 @@ const copy = {
       noUserResults: "没有匹配的用户。",
       usersPreviewHint: (shown: number, total: number) =>
         `先显示前 ${shown} 位好友结果，共 ${total} 位。`,
+      expandUserResults: (shown: number, total: number) =>
+        `查看更多好友 ${shown}/${total}`,
+      collapseUserResults: "收起好友",
+      userResultsLimited: (shown: number, total: number) =>
+        `已加载 ${shown} 位好友结果，共 ${total} 位。可以换更具体的昵称或好友号继续缩小范围。`,
+      showEndedResults: "显示已结束",
+      hideEndedResults: "隐藏已结束",
+      endedResultsHiddenHint: "默认只看仍可参与的内容。",
+      endedResultsHiddenWithCount: (count: number) =>
+        `已隐藏 ${count} 个已结束结果。`,
+      endedResultsShownHint: "当前包含已结束内容。",
+      onlyEndedResultsTitle: "当前只找到已结束内容",
+      onlyEndedResultsDescription: (count: number) =>
+        `默认隐藏了 ${count} 个已结束的活动或组局。你可以打开历史结果继续查看。`,
       friendCodeLabel: "好友号",
       friendCodeMissing: "暂无好友号",
       addFriend: "加好友",
@@ -805,6 +819,20 @@ const copy = {
       noUserResults: "No matching users.",
       usersPreviewHint: (shown: number, total: number) =>
         `Showing the first ${shown} friend results out of ${total}.`,
+      expandUserResults: (shown: number, total: number) =>
+        `Show more friends ${shown}/${total}`,
+      collapseUserResults: "Show fewer friends",
+      userResultsLimited: (shown: number, total: number) =>
+        `${shown} friend results loaded out of ${total}. Try a more specific nickname or friend code to narrow it down.`,
+      showEndedResults: "Show ended",
+      hideEndedResults: "Hide ended",
+      endedResultsHiddenHint: "Only available items are shown by default.",
+      endedResultsHiddenWithCount: (count: number) =>
+        `${count} ended result${count === 1 ? "" : "s"} hidden.`,
+      endedResultsShownHint: "Ended items are currently included.",
+      onlyEndedResultsTitle: "Only ended items were found",
+      onlyEndedResultsDescription: (count: number) =>
+        `${count} ended activit${count === 1 ? "y or crew was" : "ies or crews were"} hidden by default. Show history to keep browsing.`,
       friendCodeLabel: "Friend code",
       friendCodeMissing: "No friend code yet",
       addFriend: "Add friend",
@@ -1563,6 +1591,21 @@ const copy = {
       noUserResults: "Aucun utilisateur correspondant.",
       usersPreviewHint: (shown: number, total: number) =>
         `Affichage des ${shown} premiers résultats amis sur ${total}.`,
+      expandUserResults: (shown: number, total: number) =>
+        `Voir plus d'amis ${shown}/${total}`,
+      collapseUserResults: "Réduire les amis",
+      userResultsLimited: (shown: number, total: number) =>
+        `${shown} résultats amis chargés sur ${total}. Essayez un pseudo ou un code ami plus précis.`,
+      showEndedResults: "Afficher les terminées",
+      hideEndedResults: "Masquer les terminées",
+      endedResultsHiddenHint:
+        "Par défaut, seuls les contenus encore disponibles sont affichés.",
+      endedResultsHiddenWithCount: (count: number) =>
+        `${count} résultat${count > 1 ? "s" : ""} terminé${count > 1 ? "s" : ""} masqué${count > 1 ? "s" : ""}.`,
+      endedResultsShownHint: "Les contenus terminés sont inclus.",
+      onlyEndedResultsTitle: "Seuls des contenus terminés ont été trouvés",
+      onlyEndedResultsDescription: (count: number) =>
+        `${count} activité${count > 1 ? "s" : ""} ou groupe${count > 1 ? "s" : ""} terminé${count > 1 ? "s ont" : " a"} été masqué${count > 1 ? "s" : ""} par défaut. Affichez l'historique pour continuer.`,
       friendCodeLabel: "Code ami",
       friendCodeMissing: "Aucun code ami",
       addFriend: "Ajouter",

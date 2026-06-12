@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import {
   sendFriendRequestToProfileAction,
   type FriendActionState,
@@ -20,32 +21,92 @@ import type { GlobalSearchUserViewModel } from "@/features/search/queries/getGlo
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { SearchHighlightedText } from "./SearchHighlightedText";
 
 const initialFriendActionState: FriendActionState = {};
 
 type GlobalSearchUserResultsProps = {
   locale: string;
+  query: string;
+  totalCount: number;
   users: GlobalSearchUserViewModel[];
 };
 
 export function GlobalSearchUserResults({
   locale,
+  query,
+  totalCount,
   users,
 }: GlobalSearchUserResultsProps) {
+  const t = getCopy(locale).globalSearch;
+  const previewLimit = 3;
+  const [expanded, setExpanded] = useState(false);
+  const visibleUsers = expanded ? users : users.slice(0, previewLimit);
+  const canExpand = users.length > previewLimit;
+
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      {users.map((user) => (
-        <GlobalSearchUserCard key={user.id} locale={locale} user={user} />
-      ))}
+    <div className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-2">
+        {visibleUsers.map((user) => (
+          <GlobalSearchUserCard
+            key={user.id}
+            locale={locale}
+            query={query}
+            user={user}
+          />
+        ))}
+      </div>
+      {canExpand ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-black/10 transition hover:bg-zinc-50"
+            onClick={() =>
+              setExpanded((current) => {
+                const nextExpanded = !current;
+
+                trackClientAnalyticsEvent({
+                  name: "filter_applied",
+                  sourceSurface: "global_search",
+                  properties: {
+                    filter_count: nextExpanded ? 1 : 0,
+                    filter_names: ["friend_results_expanded"],
+                    next_expanded: nextExpanded,
+                    shown_count: users.length,
+                    total_count: totalCount,
+                  },
+                });
+
+                return nextExpanded;
+              })
+            }
+          >
+            {expanded
+              ? t.collapseUserResults
+              : t.expandUserResults(users.length, totalCount)}
+          </button>
+          {totalCount > users.length ? (
+            <span className="text-xs leading-5 text-zinc-500">
+              {t.userResultsLimited(users.length, totalCount)}
+            </span>
+          ) : null}
+        </div>
+      ) : totalCount > users.length ? (
+        <p className="rounded-lg bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-black/5">
+          {t.userResultsLimited(users.length, totalCount)}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 function GlobalSearchUserCard({
   locale,
+  query,
   user,
 }: {
   locale: string;
+  query: string;
   user: GlobalSearchUserViewModel;
 }) {
   const t = getCopy(locale).globalSearch;
@@ -85,7 +146,7 @@ function GlobalSearchUserCard({
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate text-base font-semibold text-ink">
-              {user.nickname}
+              <SearchHighlightedText text={user.nickname} query={query} />
             </span>
             <ArrowRight
               className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
