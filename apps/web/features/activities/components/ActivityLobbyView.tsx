@@ -789,7 +789,7 @@ export function ActivityLobbyView({
                       "inline-flex h-8 min-w-0 items-center justify-center gap-1 rounded-full border px-2 text-[11px] font-medium transition sm:h-9 sm:shrink-0 sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
                         ? "border-[#b8cda8] bg-[#e4efd9] text-[#526a39] shadow-[0_3px_8px_rgba(96,124,69,0.1)]"
-                        : "border-[#e4d9c9] bg-white/86 text-[#665c51] hover:border-[#cfc2af] hover:bg-white",
+                        : "border-sand bg-white/86 text-[#665c51] hover:border-sand-strong hover:bg-white",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -822,7 +822,7 @@ export function ActivityLobbyView({
                       "inline-flex h-8 min-w-0 items-center justify-center gap-1 rounded-full border px-2 text-[11px] font-medium transition sm:h-9 sm:shrink-0 sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
                         ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
-                        : "border-[#e7dfcf] bg-[#fffaf2] text-[#776b5f] hover:border-[#d7ccb5]",
+                        : "border-sand bg-team-bg text-[#776b5f] hover:border-sand-strong",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -879,7 +879,7 @@ export function ActivityLobbyView({
                   className={cn(
                     "mt-3 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition",
                     action.tone === "primary"
-                      ? "bg-[#d39a78] text-white hover:bg-[#c88d69]"
+                      ? "bg-coral text-white hover:bg-coral-dark"
                       : action.tone === "secondary"
                         ? "bg-white/85 text-[#8c5f4b] hover:bg-white"
                         : "bg-[#f6efe3] text-[#7b6b56] hover:bg-[#efe5d5]",
@@ -901,15 +901,22 @@ export function ActivityLobbyView({
           </p>
         </div>
       ) : (
-        <section id="lobby-results" className="space-y-3">
+        <section
+          id="lobby-results"
+          className="space-y-3 border-t border-sand pt-4 sm:space-y-4"
+        >
           <div className="flex items-center justify-between gap-3 px-1">
-            <div>
-              <h2 className="text-lg font-semibold text-ink">
-                {activeCategoryLabel}
-              </h2>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
+                  {activeCategoryLabel}
+                </h2>
+                <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#8a7455] ring-1 ring-sand">
+                  {visibleActivities.length}
+                </span>
+              </div>
               <p className="mt-0.5 text-xs text-zinc-500">
-                {getStatusFilterLabel(locale, activeStatusFilter)} ·{" "}
-                {visibleActivities.length}
+                {getStatusFilterLabel(locale, activeStatusFilter)}
               </p>
             </div>
           </div>

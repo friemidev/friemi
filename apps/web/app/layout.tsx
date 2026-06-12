@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description:
     "Next Fun helps overseas Chinese-speaking users discover, create, and join local activities.",
   icons: {
-    icon: "/logo-icon.png",
-    apple: "/logo-icon.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 

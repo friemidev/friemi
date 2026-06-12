@@ -12,6 +12,7 @@ import {
   Input,
   Textarea,
 } from "@chill-club/ui";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type {
   ScraperImportMode,
   ScraperPreviewItem,
@@ -283,7 +284,7 @@ export function ScraperImportSection({
         <CardTitle>公共活动导入</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
-        <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50/70 px-3 py-3 text-sm text-amber-900">
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-3 py-3 text-sm text-amber-900">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <div className="space-y-1">
             <p className="font-medium">先预览，再导入</p>
@@ -453,7 +454,7 @@ export function ScraperImportSection({
           </Button>
         </div>
 
-        <div className="grid gap-3 rounded-md border border-black/10 bg-zinc-50 px-3 py-3 text-sm sm:grid-cols-[minmax(10rem,0.75fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
+        <div className="grid min-w-0 gap-3 rounded-2xl border border-sand bg-paper/70 px-3 py-3 text-sm sm:grid-cols-[minmax(10rem,0.75fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
           <FormField label="导入模式">
             <select
               className={compactSelectClassName}
@@ -551,19 +552,18 @@ export function ScraperImportSection({
 
         <div className="relative">
           {isBusy ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-md bg-white/80 text-sm text-zinc-700">
+            <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-2xl bg-white/82 text-sm text-zinc-700">
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
               {isPreviewing ? "正在读取公共活动，请稍候…" : "正在导入，请稍候…"}
             </div>
           ) : null}
           <div className="grid gap-3 md:hidden">
             {resolvedPreviewItems.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-black/10 bg-white/70 px-3 py-8 text-center">
-                <p className="font-medium text-zinc-800">还没有预览结果</p>
-                <p className="mt-2 text-sm text-zinc-500">
-                  点击“预览活动”后，系统会先展示新增和相似活动，再由你选择是否导入。
-                </p>
-              </div>
+              <EmptyState
+                className="px-3 py-6"
+                title="还没有预览结果"
+                description="先点预览活动，确认新增和相似内容后再导入。"
+              />
             ) : null}
             {resolvedPreviewItems.map((item) => {
               const selected = selectedPreviewIds.includes(item.id);
@@ -573,10 +573,10 @@ export function ScraperImportSection({
                   key={item.id}
                   className={
                     item.duplicateStatus === "duplicate"
-                      ? "rounded-xl border border-amber-200 bg-amber-50 p-3"
+                        ? "min-w-0 rounded-xl border border-amber-200 bg-amber-50 p-3"
                       : item.duplicateStatus === "existing"
-                        ? "rounded-xl border border-zinc-200 bg-zinc-50 p-3"
-                        : "rounded-xl border border-black/10 bg-white/80 p-3"
+                        ? "min-w-0 rounded-xl border border-zinc-200 bg-zinc-50 p-3"
+                        : "min-w-0 rounded-xl border border-black/10 bg-white/80 p-3"
                   }
                 >
                   <div className="flex items-start gap-3">
@@ -654,7 +654,7 @@ export function ScraperImportSection({
               );
             })}
           </div>
-          <div className="hidden overflow-auto rounded-md border border-black/10 md:block">
+          <div className="hidden max-w-full overflow-auto rounded-xl border border-black/10 md:block">
             <table className="min-w-[980px] text-left text-sm">
               <thead className="bg-zinc-50 text-zinc-500">
                 <tr>
@@ -766,7 +766,7 @@ export function ScraperImportSection({
 
         {editingItem ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-6">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[1.25rem] bg-white p-4 shadow-xl sm:p-6">
               <h3 className="text-lg font-semibold text-zinc-950">
                 导入前编辑
               </h3>

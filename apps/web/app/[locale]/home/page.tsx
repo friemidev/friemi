@@ -93,9 +93,9 @@ export default async function HomePage({ params }: HomePageProps) {
             <div className="grid max-w-[30rem] grid-cols-2 gap-2 pt-2 sm:gap-3">
               <Link
                 href={withLocale(locale, "/lobby")}
-                className="group inline-flex min-w-0 items-center gap-2 rounded-2xl border border-[#e1b89c] bg-[#fff8f3] p-2.5 text-sm font-semibold text-[#8b563b] shadow-[0_8px_20px_rgba(142,94,61,0.08)] transition hover:-translate-y-0.5 hover:border-[#d79c78] hover:bg-[#fff2e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35 sm:p-3"
+                className="group inline-flex min-w-0 items-center gap-2 rounded-2xl border border-team-border bg-team-bg p-2.5 text-sm font-semibold text-[#8b563b] shadow-[0_8px_20px_rgba(142,94,61,0.08)] transition hover:-translate-y-0.5 hover:border-[#d79c78] hover:bg-coral-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:p-3"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#d88d72] text-white shadow-[0_6px_14px_rgba(216,141,114,0.22)]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-coral text-white shadow-[0_6px_14px_rgba(216,141,114,0.22)]">
                   <UsersRound className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-left">
@@ -105,9 +105,9 @@ export default async function HomePage({ params }: HomePageProps) {
               </Link>
               <Link
                 href={withLocale(locale, "/activities")}
-                className="group inline-flex min-w-0 items-center gap-2 rounded-2xl border border-[#b9d7e5] bg-[#f7fcff] p-2.5 text-sm font-semibold text-[#346b82] shadow-[0_8px_20px_rgba(54,107,130,0.06)] transition hover:-translate-y-0.5 hover:border-[#8ec3d8] hover:bg-[#edf9fd] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7eb7cf]/40 sm:p-3"
+                className="group inline-flex min-w-0 items-center gap-2 rounded-2xl border border-event-border bg-event-bg p-2.5 text-sm font-semibold text-[#346b82] shadow-[0_8px_20px_rgba(54,107,130,0.06)] transition hover:-translate-y-0.5 hover:border-[#8ec3d8] hover:bg-[#edf9fd] focus:outline-none focus-visible:ring-2 focus-visible:ring-event-accent/40 sm:p-3"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e8f6fb] text-[#346b82] ring-1 ring-[#b9d7e5]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e8f6fb] text-[#346b82] ring-1 ring-event-border">
                   <Compass className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-left">
@@ -120,17 +120,22 @@ export default async function HomePage({ params }: HomePageProps) {
         </section>
 
         <section className="space-y-3 sm:space-y-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-normal text-ink">
-                {t.home.recentTitle}
-              </h2>
+          <div className="flex items-end justify-between gap-4 border-t border-sand pt-5 sm:pt-6">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-2xl font-semibold tracking-normal text-ink">
+                  {t.home.recentTitle}
+                </h2>
+                <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#8a7455] ring-1 ring-sand">
+                  {activitiesResult.activities.length}
+                </span>
+              </div>
               <p className="mt-1 text-sm text-zinc-600">
                 {t.home.recentDescription}
               </p>
             </div>
             <Link
-              className="hidden text-sm font-medium text-moss sm:inline"
+              className="hidden h-9 shrink-0 items-center rounded-full bg-white/82 px-3.5 text-sm font-semibold text-moss shadow-sm ring-1 ring-black/10 transition hover:bg-white sm:inline-flex"
               href={withLocale(locale, "/activities")}
             >
               {t.common.viewAll}
@@ -143,11 +148,13 @@ export default async function HomePage({ params }: HomePageProps) {
             />
           ) : activitiesResult.activities.length === 0 ? (
             <EmptyState
+              actionHref={withLocale(locale, "/activities")}
+              actionLabel={t.common.viewAll}
               title={t.home.emptyPreviewTitle}
               description={t.home.emptyRecentDescription}
             />
           ) : (
-            <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
               {activitiesResult.activities.map((activity) => (
                 <ActivityCard
                   key={activity.id}

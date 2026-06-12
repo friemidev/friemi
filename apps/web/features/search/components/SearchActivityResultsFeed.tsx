@@ -410,8 +410,8 @@ export function SearchActivityResultsFeed({
       ) : null}
 
       {relatedStarted && relatedActivities.length > 0 ? (
-        <section className="space-y-3 border-t border-[#eadcc7] pt-4">
-          <div className="space-y-1">
+        <section className="space-y-3 border-t border-sand pt-4">
+          <div className="rounded-xl border border-dashed border-sand-strong bg-white/55 px-3 py-3">
             <h3 className="text-base font-semibold tracking-normal text-ink">
               {t.relatedMainResultsTitle}
             </h3>
@@ -448,14 +448,14 @@ export function SearchActivityResultsFeed({
         aria-live="polite"
       >
         {loading ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-black/5">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-sand">
             <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             {t.loadingMoreMainResults}
           </span>
         ) : loadFailed ? (
           <button
             type="button"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#dfccb2] bg-white/88 px-4 text-sm font-semibold text-[#5b4b3a] shadow-sm transition hover:bg-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-sand-strong bg-white/88 px-4 text-sm font-semibold text-[#5b4b3a] shadow-sm transition hover:bg-white"
             onClick={() => {
               setLoadFailed(false);
               void loadMore(true);
@@ -464,14 +464,14 @@ export function SearchActivityResultsFeed({
             {t.retryLoadMoreMainResults}
           </button>
         ) : relatedLoading ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-black/5">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-sand">
             <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             {t.loadingRelatedMainResults}
           </span>
         ) : relatedLoadFailed ? (
           <button
             type="button"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#dfccb2] bg-white/88 px-4 text-sm font-semibold text-[#5b4b3a] shadow-sm transition hover:bg-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-sand-strong bg-white/88 px-4 text-sm font-semibold text-[#5b4b3a] shadow-sm transition hover:bg-white"
             onClick={() => {
               setRelatedLoadFailed(false);
               void loadRelatedMore(true);

@@ -115,15 +115,15 @@ function SignInPrompt({
   if (compact) {
     return (
       <div className="grid gap-2.5">
-        <p className="text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
-          {t.signInDescription}
-        </p>
         <Link
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full border border-[#d9c6ad] bg-white px-4 text-sm font-semibold text-[#6f5434] transition hover:bg-[#fff8ed]"
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-coral px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-dark"
           href={withLocale(locale, "/sign-in")}
         >
           {t.signInTitle}
         </Link>
+        <p className="px-1 text-xs leading-5 text-zinc-500">
+          {t.signInDescription}
+        </p>
       </div>
     );
   }

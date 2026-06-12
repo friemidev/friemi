@@ -48,7 +48,7 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-11 w-full rounded-xl border border-[#ddc9a9] bg-white/92 px-3 text-sm font-medium text-zinc-950 shadow-[0_5px_14px_rgba(92,66,32,0.04)] outline-none transition hover:border-[#cfb287] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70 sm:h-10";
+  "h-11 w-full rounded-xl border border-sand-strong bg-white/92 px-3 text-sm font-medium text-zinc-950 shadow-[0_5px_14px_rgba(92,66,32,0.04)] outline-none transition hover:border-[#cfb287] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70 sm:h-10";
 
 export function ActivityFilters({
   cities,
@@ -206,7 +206,7 @@ export function ActivityFilters({
 
           <div className="flex items-end">
             <Button
-              className="h-11 w-full gap-2 rounded-xl bg-[#d88d72] px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(216,141,114,0.22)] hover:bg-[#c87b61] sm:h-10 sm:min-w-[104px] sm:w-auto"
+              className="h-11 w-full gap-2 rounded-xl bg-coral px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(216,141,114,0.22)] hover:bg-coral-dark sm:h-10 sm:min-w-[104px] sm:w-auto"
               type="submit"
             >
               <Search className="h-4 w-4 shrink-0" />
@@ -441,7 +441,7 @@ export function ActivityFilters({
               <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#9a7448]" />
               <span className="truncate">{t.activityFilters.mobileSummary}</span>
               {activeFilterChips.length > 0 ? (
-                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#d88d72] px-1.5 text-[11px] font-bold leading-none text-white">
+              <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-coral px-1.5 text-[11px] font-bold leading-none text-white">
                   {activeFilterChips.length}
                 </span>
               ) : null}
@@ -482,7 +482,7 @@ export function ActivityFilters({
         ) : null}
       </div>
 
-      <div className="hidden rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#ead7b8] md:block">
+      <div className="hidden border-t border-sand pt-3 md:block">
         <FilterForm className="grid gap-3" />
       </div>
 

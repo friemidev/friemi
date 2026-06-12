@@ -489,14 +489,14 @@ export function ActivityCard({
     resolvedActionConfig.tone === "muted"
       ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
       : resolvedActionConfig.tone === "neutral"
-        ? "bg-[#fffaf4] text-[#6f4d34] ring-1 ring-[#dcc7b4] hover:bg-[#fff1e4]"
+        ? "bg-team-bg text-[#6f4d34] ring-1 ring-[#dcc7b4] hover:bg-[#fff1e4]"
         : resolvedActionConfig.tone === "joined"
-          ? "bg-[#fff2e7] text-[#8f553b] ring-1 ring-[#e2b79d] shadow-[0_8px_18px_rgba(184,112,78,0.12)] hover:bg-[#ffe8d9]"
+          ? "bg-coral-soft text-[#8f553b] ring-1 ring-[#e2b79d] shadow-[0_8px_18px_rgba(184,112,78,0.12)] hover:bg-[#ffe8d9]"
           : resolvedActionConfig.tone === "pending"
             ? "bg-[#f8e6b8] text-[#7b5622] ring-1 ring-[#e2c27c] shadow-[0_8px_18px_rgba(198,156,73,0.15)] hover:bg-[#f4dda1]"
             : resolvedActionConfig.tone === "activity"
               ? "bg-[#dceef7] text-[#245e76] ring-1 ring-[#9fc6d8] shadow-[0_8px_18px_rgba(84,139,167,0.14)] hover:bg-[#cde6f2]"
-              : "bg-[#d88d72] text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] hover:bg-[#c87b61]";
+              : "bg-coral text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] hover:bg-coral-dark";
 
   return (
     <Card
@@ -506,11 +506,11 @@ export function ActivityCard({
         isInactiveCard
           ? "border-zinc-200 bg-zinc-50/90 text-zinc-500 saturate-0"
           : isTeamCard
-            ? "border-[#e1b89c] bg-[#fffaf4] shadow-[0_8px_24px_rgba(142,94,61,0.08)] ring-1 ring-[#efd8c7]"
-            : "border-[#b9d7e5] bg-[#f8fdff] shadow-[0_6px_18px_rgba(54,107,130,0.06)]",
+            ? "border-team-border bg-team-bg shadow-[0_8px_24px_rgba(142,94,61,0.08)] ring-1 ring-[#efd8c7]"
+            : "border-event-border bg-event-bg shadow-[0_6px_18px_rgba(54,107,130,0.06)]",
         isTeamCard
-          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-[#d88d72]"
-          : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-[#7eb7cf]",
+          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-coral"
+          : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-event-accent",
         !isInactiveCard && isTeamCard
           ? "hover:border-[#d79c78] hover:ring-[#e8c2aa]"
           : null,
@@ -606,7 +606,7 @@ export function ActivityCard({
               ),
               isTeamCard
                 ? "border-[#f0b79f] bg-[#d88d72]/95 text-white"
-                : "border-[#9fc8d9] bg-[#eefaff]/95 text-[#245e76]",
+                : "border-event-border bg-[#eefaff]/95 text-[#245e76]",
             )}
           >
             <span

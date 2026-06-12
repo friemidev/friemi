@@ -257,6 +257,8 @@ export default async function ActivitiesPage({
       ) : !activitiesResult.list ||
         activitiesResult.list.activities.length === 0 ? (
         <EmptyState
+          actionHref={hasFilters ? withLocale(locale, "/activities") : undefined}
+          actionLabel={hasFilters ? t.activityFilters.reset : undefined}
           title={
             hasFilters
               ? t.activities.emptyFilteredTitle
@@ -269,7 +271,20 @@ export default async function ActivitiesPage({
           }
         />
       ) : (
-        <>
+        <section className="space-y-3 border-t border-sand pt-4 sm:space-y-4">
+          <div className="flex items-end justify-between gap-3 px-1">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
+                {t.activities.title}
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500 sm:text-sm">
+                {t.activityFilters.resultCount(
+                  activitiesResult.list.totalCount,
+                )}
+              </p>
+            </div>
+          </div>
+
           <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
             {activitiesResult.list.activities.map((activity) => (
               <ActivityCard
@@ -294,7 +309,7 @@ export default async function ActivitiesPage({
             list={activitiesResult.list}
             locale={locale}
           />
-        </>
+        </section>
       )}
     </PageContainer>
   );

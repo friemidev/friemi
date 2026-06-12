@@ -10,7 +10,6 @@ import {
   UserPlus,
   UserRound,
 } from "lucide-react";
-import { Button } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import {
@@ -60,7 +59,7 @@ export function GlobalSearchUserResults({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-black/10 transition hover:bg-zinc-50"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#5b4b3a] ring-1 ring-sand transition hover:bg-white"
             onClick={() =>
               setExpanded((current) => {
                 const nextExpanded = !current;
@@ -92,7 +91,7 @@ export function GlobalSearchUserResults({
           ) : null}
         </div>
       ) : totalCount > users.length ? (
-        <p className="rounded-lg bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-black/5">
+        <p className="rounded-xl bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-sand">
           {t.userResultsLimited(users.length, totalCount)}
         </p>
       ) : null}
@@ -124,7 +123,7 @@ function GlobalSearchUserCard({
   }, [state.ok]);
 
   return (
-    <article className="flex min-w-0 flex-col gap-4 rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
+    <article className="flex min-w-0 flex-col gap-4 rounded-xl border border-sand bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
       <ContextualDetailLink
         href={profileHref}
         detailSource={{
@@ -133,10 +132,10 @@ function GlobalSearchUserCard({
           targetKind: "profile",
         }}
         data-detail-source-target={`profile:${user.id}`}
-        className="group flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+        className="group flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
         aria-label={t.openUserProfile(user.nickname)}
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-clay/15 text-clay ring-1 ring-black/10">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-clay/15 text-clay ring-1 ring-clay/20">
           {user.avatarUrl ? (
             // Avatar URLs come from Clerk/Google and are already thumbnail-sized.
             // eslint-disable-next-line @next/next/no-img-element
@@ -159,7 +158,7 @@ function GlobalSearchUserCard({
               aria-hidden="true"
             />
           </span>
-          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#6b5b48] ring-1 ring-sand">
             <span className="truncate">
               {user.friendCode
                 ? `${t.friendCodeLabel} ${user.friendCode}`
@@ -251,10 +250,10 @@ function RelationshipStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium ring-1",
+        "inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 text-sm font-medium ring-1",
         tone === "good"
           ? "bg-moss/10 text-moss ring-moss/20"
-          : "bg-zinc-100 text-zinc-600 ring-zinc-200",
+          : "bg-white/70 text-zinc-600 ring-sand",
       )}
     >
       <Icon className="h-4 w-4" aria-hidden="true" />
@@ -268,9 +267,12 @@ function AddFriendSubmitButton({ locale }: { locale: string }) {
   const t = getCopy(locale).globalSearch;
 
   return (
-    <Button
+    <button
       type="submit"
-      className={cn("w-full gap-2", pending ? "cursor-wait" : null)}
+      className={cn(
+        "inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-moss px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#465a40] disabled:pointer-events-none disabled:opacity-60",
+        pending ? "cursor-wait" : null,
+      )}
       disabled={pending}
       aria-busy={pending}
     >
@@ -280,6 +282,6 @@ function AddFriendSubmitButton({ locale }: { locale: string }) {
         <UserPlus className="h-4 w-4" aria-hidden="true" />
       )}
       {pending ? t.addingFriend : t.addFriend}
-    </Button>
+    </button>
   );
 }

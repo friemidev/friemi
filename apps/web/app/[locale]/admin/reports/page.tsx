@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
@@ -259,8 +260,8 @@ function ReportCard({
   const statusTone = getStatusTone(report.status);
 
   return (
-    <article className="overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 shadow-sm">
-      <div className="grid gap-4 border-b border-black/10 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5">
+    <article className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 shadow-sm">
+      <div className="grid min-w-0 gap-3 border-b border-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-[#eef5ea] px-2.5 py-1 text-xs font-semibold text-moss ring-1 ring-moss/15">
@@ -272,7 +273,7 @@ function ReportCard({
               {t.statuses[report.status]}
             </span>
           </div>
-          <h2 className="mt-3 line-clamp-2 text-xl font-semibold tracking-normal text-ink">
+          <h2 className="mt-3 line-clamp-2 text-lg font-semibold tracking-normal text-ink sm:text-xl">
             {targetLabel}
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500">
@@ -308,9 +309,9 @@ function ReportCard({
         ) : null}
       </div>
 
-      <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-paper/80 p-4">
+      <div className="grid min-w-0 gap-3 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="rounded-2xl bg-paper/80 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
               {t.admin.reporter}
             </p>
@@ -341,7 +342,7 @@ function ReportCard({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/70 p-4">
+          <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/70 p-3 sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
               {t.descriptionLabel}
             </p>
@@ -357,7 +358,7 @@ function ReportCard({
           ) : null}
         </div>
 
-        <div className="rounded-2xl bg-paper/80 p-4">
+        <div className="rounded-2xl bg-paper/80 p-3 sm:p-4">
           <AdminReportReviewForm
             locale={locale}
             reportId={report.id}
@@ -389,7 +390,7 @@ export default async function AdminReportsPage({
   ]);
 
   return (
-    <PageContainer className="max-w-full space-y-5 overflow-x-hidden pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
+    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
       <DetailSourceRestore sourceKey="admin_reports" />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
@@ -453,15 +454,14 @@ export default async function AdminReportsPage({
       </nav>
 
       {reports.length === 0 ? (
-        <section className="rounded-[1.5rem] border border-dashed border-zinc-300 bg-white/70 p-8 text-center">
-          <Flag className="mx-auto h-8 w-8 text-zinc-400" />
-          <h2 className="mt-3 text-xl font-semibold text-ink">
-            {isFiltered ? t.emptyFilteredTitle : t.emptyTitle}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            {isFiltered ? t.emptyFilteredDescription : t.emptyDescription}
-          </p>
-        </section>
+        <EmptyState
+          actionHref={isFiltered ? withLocale(locale, "/admin/reports") : undefined}
+          actionLabel={isFiltered ? t.statusFilters.ALL : undefined}
+          title={isFiltered ? t.emptyFilteredTitle : t.emptyTitle}
+          description={
+            isFiltered ? t.emptyFilteredDescription : t.emptyDescription
+          }
+        />
       ) : (
         <div className="grid gap-4">
           {reports.map((report) => (

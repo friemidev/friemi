@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getFollowCopy } from "@/features/follow/copy";
@@ -56,13 +56,15 @@ function InteractiveStatCard({
     <button
       aria-expanded={active}
       className={cn(
-        "min-w-0 rounded-lg bg-zinc-50 px-2.5 py-2.5 text-left ring-1 ring-transparent transition hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40 sm:px-3",
-        active && "bg-white ring-clay/30 shadow-sm",
+        "min-w-0 rounded-lg bg-white/72 px-2 py-2 text-left ring-1 ring-transparent transition hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40 sm:px-3 sm:py-2.5",
+        active && "bg-white ring-clay/45 shadow-sm",
       )}
       onClick={onClick}
       type="button"
     >
-      <p className="text-xl font-semibold text-ink sm:text-2xl">{value}</p>
+      <p className="text-lg font-semibold leading-none text-ink sm:text-2xl">
+        {value}
+      </p>
       <p className="mt-0.5 truncate text-[11px] leading-4 text-zinc-500 sm:text-xs">
         {label}
       </p>
@@ -161,6 +163,7 @@ export function ProfileOverviewPanel({
   showJoinedCount = true,
 }: ProfileOverviewPanelProps) {
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const t = getProfileFollowCopy(locale);
   const statsGridClass = showJoinedCount
     ? "grid w-full grid-cols-5 gap-2"
@@ -202,6 +205,27 @@ export function ProfileOverviewPanel({
       : activePanel === "followers"
         ? t.followersEmptyDescription
         : t.followingEmptyDescription;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredList = normalizedQuery
+    ? activeList.filter((user) =>
+        [user.nickname, user.bio ?? ""].some((value) =>
+          value.toLowerCase().includes(normalizedQuery),
+        ),
+      )
+    : activeList;
+  const showSearchEmpty = activeList.length > 0 && filteredList.length === 0;
+
+  function openPanel(panel: Exclude<SocialPanelKey, null>) {
+    setActivePanel((current) => {
+      const nextPanel = current === panel ? null : panel;
+
+      if (nextPanel !== current) {
+        setSearchQuery("");
+      }
+
+      return nextPanel;
+    });
+  }
 
   return (
     <div className="relative">
@@ -223,31 +247,19 @@ export function ProfileOverviewPanel({
         <InteractiveStatCard
           active={activePanel === "following"}
           label={t.followingCount}
-          onClick={() =>
-            setActivePanel((current) =>
-              current === "following" ? null : "following",
-            )
-          }
+          onClick={() => openPanel("following")}
           value={followingCount}
         />
         <InteractiveStatCard
           active={activePanel === "followers"}
           label={t.followersCount}
-          onClick={() =>
-            setActivePanel((current) =>
-              current === "followers" ? null : "followers",
-            )
-          }
+          onClick={() => openPanel("followers")}
           value={followersCount}
         />
         <InteractiveStatCard
           active={activePanel === "friends"}
           label={t.friendCount}
-          onClick={() =>
-            setActivePanel((current) =>
-              current === "friends" ? null : "friends",
-            )
-          }
+          onClick={() => openPanel("friends")}
           value={friendCount}
         />
       </div>
@@ -259,7 +271,7 @@ export function ProfileOverviewPanel({
           role="dialog"
         >
           <div className="flex min-h-0 w-full flex-col bg-paper shadow-2xl sm:mx-auto sm:max-w-2xl sm:overflow-hidden sm:rounded-[1.5rem] sm:border sm:border-black/10">
-            <div className="border-b border-black/10 bg-white/82 px-5 py-4">
+            <div className="border-b border-sand bg-white/82 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -283,6 +295,22 @@ export function ProfileOverviewPanel({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              {activeList.length > 0 ? (
+                <label className="relative mt-4 block">
+                  <span className="sr-only">{t.searchLabel}</span>
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                    aria-hidden="true"
+                  />
+                  <input
+                    className="h-10 w-full rounded-full border border-sand bg-white/86 pl-9 pr-3 text-sm text-ink outline-none transition placeholder:text-zinc-400 focus:border-sand-strong focus:ring-2 focus:ring-sand"
+                    placeholder={t.searchPlaceholder}
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </label>
+              ) : null}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -293,9 +321,25 @@ export function ProfileOverviewPanel({
                     description={emptyDescription}
                   />
                 </div>
+              ) : showSearchEmpty ? (
+                <div className="rounded-2xl border border-dashed border-sand-strong bg-white/72 p-4 text-center">
+                  <p className="text-sm font-semibold text-ink">
+                    {t.searchEmptyTitle}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-500">
+                    {t.searchEmptyDescription(searchQuery)}
+                  </p>
+                  <button
+                    className="mt-3 inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-sand transition hover:bg-team-bg"
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    {t.clearSearch}
+                  </button>
+                </div>
               ) : (
                 <div className="grid gap-3">
-                  {activeList.map((user) => (
+                  {filteredList.map((user) => (
                     <CompactUserRow
                       canUnfollow={activePanel === "following"}
                       key={user.id}
