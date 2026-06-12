@@ -148,7 +148,7 @@ export function PaginationControl(props: PaginationControlProps) {
     const className = cn(
       "hidden h-8 min-w-8 items-center justify-center rounded-full px-2.5 text-sm font-semibold transition min-[520px]:inline-flex",
       isCurrent
-        ? "bg-[#d88d72] text-white shadow-sm"
+        ? "bg-coral text-white shadow-sm"
         : "text-[#695946] hover:bg-white/75",
     );
 
@@ -180,7 +180,7 @@ export function PaginationControl(props: PaginationControlProps) {
   };
 
   const sideButtonClassName =
-    "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#5b4b3a] ring-1 ring-[#e1d1ba] transition hover:bg-white/80 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:ring-[#eadfce]";
+    "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#5b4b3a] ring-1 ring-sand-strong transition hover:bg-white/80 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:ring-sand";
 
   const sideButton = (
     page: number,
@@ -236,17 +236,17 @@ export function PaginationControl(props: PaginationControlProps) {
   return (
     <nav
       aria-label={t.ariaLabel}
-      className="mx-auto flex w-full max-w-[46rem] flex-col items-stretch gap-2 border-t border-[#eadfce] pt-3 sm:flex-row sm:items-center sm:justify-center sm:gap-3"
+      className="mx-auto flex w-full max-w-[46rem] flex-col items-stretch gap-2 border-t border-sand pt-3 sm:flex-row sm:items-center sm:justify-center sm:gap-3"
     >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-full bg-white/42 p-1 ring-1 ring-[#eadfce] sm:inline-flex sm:grid-cols-none sm:justify-center">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-full bg-white/42 p-1 ring-1 ring-sand sm:inline-flex sm:grid-cols-none sm:justify-center">
         {sideButton(previousPage, previousDisabled, "previous")}
         <div className="min-w-20 text-center min-[520px]:hidden">
           <p className="text-xs font-semibold text-[#5b4b3a]">
             {t.pageSummary(currentPage, totalPages)}
           </p>
-          <div className="mx-auto mt-1 h-1 w-14 overflow-hidden rounded-full bg-[#eadfce]">
+          <div className="mx-auto mt-1 h-1 w-14 overflow-hidden rounded-full bg-sand">
             <div
-              className="h-full rounded-full bg-[#d88d72]"
+              className="h-full rounded-full bg-coral"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -299,7 +299,7 @@ export function PaginationControl(props: PaginationControlProps) {
           }}
           placeholder={String(currentPage)}
           className={cn(
-            "h-8 w-14 rounded-full border bg-white/78 px-2 text-center text-sm font-semibold text-ink outline-none transition focus:border-[#d88d72] focus:ring-2 focus:ring-[#f0c8b8]",
+            "h-8 w-14 rounded-full border bg-white/78 px-2 text-center text-sm font-semibold text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-[#f0c8b8]",
             error ? "border-[#d96f55]" : "border-[#dfccb2]",
           )}
         />
