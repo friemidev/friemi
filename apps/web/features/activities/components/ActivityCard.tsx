@@ -218,6 +218,7 @@ function getCardActionCopy(locale: string) {
     return {
       createTeam: "Organiser un plan",
       joinTeam: "Rejoindre le plan",
+      manageTeam: "Gerer le plan",
       viewActivity: "Voir l'activite",
       viewDetails: "Voir les details",
     };
@@ -227,6 +228,7 @@ function getCardActionCopy(locale: string) {
     return {
       createTeam: "Start a plan",
       joinTeam: "Join the plan",
+      manageTeam: "Manage plan",
       viewActivity: "View activity",
       viewDetails: "View details",
     };
@@ -235,6 +237,7 @@ function getCardActionCopy(locale: string) {
   return {
     createTeam: "去组局",
     joinTeam: "报名加入",
+    manageTeam: "管理组局",
     viewActivity: "查看活动",
     viewDetails: "查看详情",
   };
@@ -267,11 +270,9 @@ function getCardActionConfig({
   if (isOwnActivity) {
     return {
       label:
-        actionContext === "profile"
-          ? cardCopy.viewDetails
-          : isActivityInfo
-            ? cardCopy.viewActivity
-            : cardCopy.viewDetails,
+        isActivityInfo
+          ? cardCopy.viewActivity
+          : cardCopy.manageTeam,
       tone: "neutral",
     };
   }
