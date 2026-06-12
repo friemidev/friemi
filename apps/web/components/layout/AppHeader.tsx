@@ -40,7 +40,7 @@ export function AppHeader({
         >
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
             <Image
-              src="/logo-icon.png"
+              src="/logo.png"
               alt="Next Fun"
               width={40}
               height={40}

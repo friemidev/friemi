@@ -112,7 +112,7 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
       <div className="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-xs flex-col py-8">
         <div className="space-y-6 pt-[7svh]">
           <img
-            src="/logo-icon.png"
+            src="/logo.png"
             alt="Next Fun"
             className="h-20 w-20 rounded-full border border-black/10 bg-white object-cover shadow-sm"
           />

@@ -49,7 +49,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ring-1 ring-white/20">
               <Image
-                src="/logo-icon.png"
+                src="/logo.png"
                 alt="Next Fun Club"
                 width={44}
                 height={44}
