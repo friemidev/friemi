@@ -9,14 +9,23 @@ type FriendsPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    friendCode?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function FriendsPage({ params }: FriendsPageProps) {
+export default async function FriendsPage({
+  params,
+  searchParams,
+}: FriendsPageProps) {
   const { locale } = await params;
+  const query = await searchParams;
   const commonCopy = getCopy(locale).common;
   const profile = await ensureCurrentUserProfile(locale);
+  const initialFriendCode =
+    typeof query?.friendCode === "string" ? query.friendCode.trim() : "";
   const dashboardResult = await getFriendsDashboard(profile.id)
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {
@@ -42,6 +51,7 @@ export default async function FriendsPage({ params }: FriendsPageProps) {
         <FriendsDashboard
           currentUserFriendCode={profile.friendCode}
           dashboard={dashboardResult.dashboard}
+          initialAddFriendCode={initialFriendCode || undefined}
           locale={locale}
         />
       )}
