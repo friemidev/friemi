@@ -685,8 +685,9 @@ export function NewActivityForm({
                 <Select
                   name="priceType"
                   aria-invalid={Boolean(state.fieldErrors?.priceType)}
-                  defaultValue={values?.priceType}
+                  onChange={(event) => setPriceType(event.target.value)}
                   required
+                  value={priceType}
                 >
                   {priceTypeOptions.map((value) => (
                     <option key={value} value={value}>
@@ -704,7 +705,7 @@ export function NewActivityForm({
                   aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
                   placeholder={t.form.priceTextPlaceholder}
-                  required
+                  required={priceType !== "FREE"}
                 />
                 <FieldError errors={state.fieldErrors?.priceText} />
               </label>
