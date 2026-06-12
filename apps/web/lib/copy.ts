@@ -85,6 +85,7 @@ const copy = {
       noResultsTitle: "没有找到结果",
       noResultsDescription: (query: string) =>
         `没有找到与「${query}」匹配的结果。`,
+      browseRecentActivities: "看看近期活动",
       loadFailedTitle: "搜索加载失败",
       loadFailedDescription: "暂时无法搜索，请稍后再试。",
       resultSummary: (count: number, query: string) =>
@@ -820,6 +821,7 @@ const copy = {
         "Try an activity name, place, friend code, nickname, or merchant name.",
       noResultsTitle: "No results found",
       noResultsDescription: (query: string) => `No results matched "${query}".`,
+      browseRecentActivities: "Browse recent activities",
       loadFailedTitle: "Search failed to load",
       loadFailedDescription:
         "Search is unavailable right now. Try again later.",
@@ -1617,6 +1619,7 @@ const copy = {
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
         `Aucun résultat ne correspond à « ${query} ».`,
+      browseRecentActivities: "Voir les activités récentes",
       loadFailedTitle: "Échec de la recherche",
       loadFailedDescription:
         "La recherche est indisponible pour le moment. Réessayez plus tard.",

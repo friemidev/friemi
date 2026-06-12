@@ -57,7 +57,7 @@ function SearchSectionHeader({
         <h2 className="text-lg font-semibold tracking-normal text-ink">
           {title}
         </h2>
-        <Badge className="shrink-0 bg-white text-zinc-600 ring-1 ring-zinc-200">
+        <Badge className="shrink-0 bg-white/85 text-[#6b5b48] ring-1 ring-sand">
           {count}
         </Badge>
       </div>
@@ -89,8 +89,8 @@ function SearchEndedFilterBar({
         aria-pressed={includeEnded}
         className={
           includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#f4e4d3] px-3.5 text-sm font-semibold text-[#8f553b] ring-1 ring-[#d6aa82] transition hover:bg-[#f0dcc8]"
-            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/86 px-3.5 text-sm font-semibold text-[#5f5448] ring-1 ring-[#ddcfbc] transition hover:bg-white"
+            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-coral-soft px-3.5 text-sm font-semibold text-[#8f553b] ring-1 ring-sand-strong transition hover:bg-[#f7e5d5]"
+            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#5f5448] ring-1 ring-sand transition hover:bg-white"
         }
         event={{
           name: "filter_applied",
@@ -107,8 +107,8 @@ function SearchEndedFilterBar({
         <span
           className={
             includeEnded
-              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#d88d72] text-white"
-              : "h-4 w-4 rounded-[0.32rem] border border-[#c8b79f] bg-white"
+              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-coral text-white shadow-sm"
+              : "h-4 w-4 rounded-[0.32rem] border border-sand-strong bg-white shadow-inner"
           }
           aria-hidden="true"
         >
@@ -116,7 +116,7 @@ function SearchEndedFilterBar({
             <span className="text-[11px] font-bold leading-none">✓</span>
           ) : null}
         </span>
-        {t.endedResultsToggleLabel}
+        {includeEnded ? t.hideEndedResults : t.showEndedResults}
       </AnalyticsLink>
       <span className="text-xs leading-5 text-zinc-500">
         {includeEnded
@@ -141,8 +141,8 @@ function SearchEndedOnlyEmptyState({
   const t = getCopy(locale).globalSearch;
 
   return (
-    <div className="rounded-[1.25rem] border border-dashed border-[#d8c9b5] bg-white/70 p-6 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)] sm:p-8">
-      <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f7efe2] text-[#8a6a40] ring-1 ring-[#eadcc6]">
+    <div className="rounded-[1.25rem] border border-dashed border-sand-strong bg-white/70 p-6 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)] sm:p-8">
+      <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-team-bg text-[#8a6a40] ring-1 ring-sand">
         <Clock3 className="h-5 w-5" aria-hidden="true" />
       </span>
       <h2 className="mt-4 text-base font-semibold text-zinc-950">
@@ -153,7 +153,7 @@ function SearchEndedOnlyEmptyState({
       </p>
       <AnalyticsLink
         href={getGlobalSearchHref(locale, query, { includeEnded: true })}
-        className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c9785f]"
+        className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-coral px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-dark"
         event={{
           name: "filter_applied",
           sourceSurface: "global_search",
@@ -197,10 +197,10 @@ function MerchantResultCard({
         targetKind: "merchant",
       }}
       data-detail-source-target={`merchant:${merchant.slug}`}
-      className="group flex min-w-0 items-start gap-3 rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+      className="group flex min-w-0 items-start gap-3 rounded-xl border border-sand bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sand-strong"
       aria-label={t.openMerchant(merchant.name)}
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-moss/10 text-moss ring-1 ring-black/10">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-moss/10 text-moss ring-1 ring-moss/15">
         {merchant.logoUrl ? (
           // Merchant logos are tiny thumbnails; using img keeps remote source
           // support independent from Next image domain config.
@@ -231,7 +231,7 @@ function MerchantResultCard({
           <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">{location || merchant.city}</span>
         </span>
-        <span className="mt-2 inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">
+        <span className="mt-2 inline-flex rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#6b5b48] ring-1 ring-sand">
           {t.merchantActivityCount(merchant.activityCount)}
         </span>
       </span>
@@ -408,7 +408,7 @@ export default async function SearchPage({
       <DetailSourceRestore sourceKey="search" />
       <div className="space-y-4">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-zinc-600 ring-1 ring-black/10">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#6b5b48] ring-1 ring-sand">
             <Search className="h-4 w-4" aria-hidden="true" />
             {t.eyebrow}
           </p>
@@ -440,10 +440,12 @@ export default async function SearchPage({
         <EmptyState
           title={t.noResultsTitle}
           description={t.noResultsDescription(query)}
+          actionHref={withLocale(locale, "/activities")}
+          actionLabel={t.browseRecentActivities}
         />
       ) : searchResult.result ? (
         <div className="space-y-8">
-          <p className="rounded-lg border border-black/10 bg-white/70 px-4 py-3 text-sm text-zinc-600">
+          <p className="rounded-xl border border-sand bg-white/70 px-4 py-3 text-sm leading-6 text-zinc-600 shadow-sm">
             {totalCount > 0
               ? t.resultSummary(totalCount, query)
               : t.relatedOnlySummary(query)}
@@ -465,7 +467,7 @@ export default async function SearchPage({
                   />
                 </>
               ) : (
-                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
                   {t.noUserResults}
                 </p>
               )}
@@ -516,11 +518,11 @@ export default async function SearchPage({
                   totalCount={mainActivityResult.result.totalCount}
                 />
               ) : mainActivityResult.error ? (
-                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
                   {t.loadFailedDescription}
                 </p>
               ) : (
-                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
                   {t.noMainResults}
                 </p>
               )}
@@ -545,7 +547,7 @@ export default async function SearchPage({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
+                <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">
                   {t.noMerchantResults}
                 </p>
               )}
