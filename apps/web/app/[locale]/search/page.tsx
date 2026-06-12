@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { ArrowRight, Clock3, MapPin, Search, Store } from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -41,20 +42,25 @@ type SearchPageProps = {
 export const dynamic = "force-dynamic";
 
 function SearchSectionHeader({
+  action,
   count,
   title,
 }: {
+  action?: ReactNode;
   count: number;
   title: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold tracking-normal text-ink">
-        {title}
-      </h2>
-      <Badge className="shrink-0 bg-white text-zinc-600 ring-1 ring-zinc-200">
-        {count}
-      </Badge>
+    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold tracking-normal text-ink">
+          {title}
+        </h2>
+        <Badge className="shrink-0 bg-white text-zinc-600 ring-1 ring-zinc-200">
+          {count}
+        </Badge>
+      </div>
+      {action ? <div className="sm:shrink-0">{action}</div> : null}
     </div>
   );
 }
@@ -79,10 +85,11 @@ function SearchEndedFilterBar({
     <div className="flex flex-wrap items-center gap-2">
       <AnalyticsLink
         href={nextHref}
+        aria-pressed={includeEnded}
         className={
           includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#f4e7d8] px-3.5 text-sm font-semibold text-[#8f553b] ring-1 ring-[#d9b99c] transition hover:bg-[#f0dcc8]"
-            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/80 px-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-black/10 transition hover:bg-white"
+            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#f4e4d3] px-3.5 text-sm font-semibold text-[#8f553b] ring-1 ring-[#d6aa82] transition hover:bg-[#f0dcc8]"
+            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/86 px-3.5 text-sm font-semibold text-[#5f5448] ring-1 ring-[#ddcfbc] transition hover:bg-white"
         }
         event={{
           name: "filter_applied",
@@ -96,8 +103,19 @@ function SearchEndedFilterBar({
           },
         }}
       >
-        <Clock3 className="h-4 w-4" aria-hidden="true" />
-        {includeEnded ? t.hideEndedResults : t.showEndedResults}
+        <span
+          className={
+            includeEnded
+              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#d88d72] text-white"
+              : "h-4 w-4 rounded-[0.32rem] border border-[#c8b79f] bg-white"
+          }
+          aria-hidden="true"
+        >
+          {includeEnded ? (
+            <span className="text-[11px] font-bold leading-none">✓</span>
+          ) : null}
+        </span>
+        {t.endedResultsToggleLabel}
       </AnalyticsLink>
       <span className="text-xs leading-5 text-zinc-500">
         {includeEnded
@@ -395,14 +413,6 @@ export default async function SearchPage({
         </div>
 
         <GlobalSearchForm locale={locale} defaultQuery={query} variant="page" />
-        {query ? (
-          <SearchEndedFilterBar
-            hiddenEndedCount={hiddenEndedMainCount}
-            includeEnded={includeEnded}
-            locale={locale}
-            query={query}
-          />
-        ) : null}
       </div>
 
       {searchResult.error ? (
@@ -457,6 +467,16 @@ export default async function SearchPage({
           {mixedActivityResultCount > 0 || relatedActivityCount > 0 ? (
             <section className="space-y-3">
               <SearchSectionHeader
+                action={
+                  query ? (
+                    <SearchEndedFilterBar
+                      hiddenEndedCount={hiddenEndedMainCount}
+                      includeEnded={includeEnded}
+                      locale={locale}
+                      query={query}
+                    />
+                  ) : null
+                }
                 title={t.mainResultsTitle}
                 count={
                   mixedActivityResultCount > 0
@@ -485,12 +505,6 @@ export default async function SearchPage({
                   isAuthenticated={Boolean(viewerProfile)}
                   locale={locale}
                   query={query}
-                  renderTitle={(activity) => (
-                    <SearchHighlightedText
-                      text={activity.title}
-                      query={query}
-                    />
-                  )}
                   totalCount={mainActivityResult.result.totalCount}
                 />
               ) : mainActivityResult.error ? (

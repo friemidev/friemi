@@ -125,6 +125,7 @@ const copy = {
       collapseUserResults: "收起好友",
       userResultsLimited: (shown: number, total: number) =>
         `已加载 ${shown} 位好友结果，共 ${total} 位。可以换更具体的昵称或好友号继续缩小范围。`,
+      endedResultsToggleLabel: "已结束",
       showEndedResults: "显示已结束",
       hideEndedResults: "隐藏已结束",
       endedResultsHiddenHint: "默认只看仍可参与的内容。",
@@ -250,8 +251,14 @@ const copy = {
       resultCount: (count: number) => `${count} 个结果`,
     },
     activityPagination: {
+      ariaLabel: "分页",
       previous: "上一页",
       next: "下一页",
+      jumpLabel: "跳到",
+      jumpInputLabel: "输入页码",
+      jumpAction: "前往",
+      totalPages: (totalPages: number) => `共 ${totalPages} 页`,
+      invalidPage: (totalPages: number) => `请输入 1 到 ${totalPages} 之间的页码`,
       pageSummary: (page: number, totalPages: number) =>
         `第 ${page} / ${totalPages} 页`,
     },
@@ -855,6 +862,7 @@ const copy = {
       collapseUserResults: "Show fewer friends",
       userResultsLimited: (shown: number, total: number) =>
         `${shown} friend results loaded out of ${total}. Try a more specific nickname or friend code to narrow it down.`,
+      endedResultsToggleLabel: "Ended",
       showEndedResults: "Show ended",
       hideEndedResults: "Hide ended",
       endedResultsHiddenHint: "Only available items are shown by default.",
@@ -1000,8 +1008,16 @@ const copy = {
         `${count} result${count === 1 ? "" : "s"}`,
     },
     activityPagination: {
+      ariaLabel: "Pagination",
       previous: "Previous",
       next: "Next",
+      jumpLabel: "Go to",
+      jumpInputLabel: "Enter page number",
+      jumpAction: "Go",
+      totalPages: (totalPages: number) =>
+        `${totalPages} page${totalPages === 1 ? "" : "s"}`,
+      invalidPage: (totalPages: number) =>
+        `Enter a page from 1 to ${totalPages}`,
       pageSummary: (page: number, totalPages: number) =>
         `Page ${page} / ${totalPages}`,
     },
@@ -1643,6 +1659,7 @@ const copy = {
       collapseUserResults: "Réduire les amis",
       userResultsLimited: (shown: number, total: number) =>
         `${shown} résultats amis chargés sur ${total}. Essayez un pseudo ou un code ami plus précis.`,
+      endedResultsToggleLabel: "Terminées",
       showEndedResults: "Afficher les terminées",
       hideEndedResults: "Masquer les terminées",
       endedResultsHiddenHint:
@@ -1791,8 +1808,16 @@ const copy = {
         `${count} résultat${count > 1 ? "s" : ""}`,
     },
     activityPagination: {
+      ariaLabel: "Pagination",
       previous: "Précédent",
       next: "Suivant",
+      jumpLabel: "Aller à",
+      jumpInputLabel: "Saisir un numéro de page",
+      jumpAction: "Aller",
+      totalPages: (totalPages: number) =>
+        `${totalPages} page${totalPages > 1 ? "s" : ""}`,
+      invalidPage: (totalPages: number) =>
+        `Saisissez une page entre 1 et ${totalPages}`,
       pageSummary: (page: number, totalPages: number) =>
         `Page ${page} / ${totalPages}`,
     },

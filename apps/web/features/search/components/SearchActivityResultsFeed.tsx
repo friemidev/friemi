@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityCardMasonryGrid } from "@/features/activities/components/ActivityCardMasonryGrid";
@@ -9,6 +8,7 @@ import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityCardMasonryWeight } from "@/features/activities/utils/activityCardMasonry";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { getCopy } from "@/lib/copy";
+import { SearchHighlightedText } from "./SearchHighlightedText";
 
 type SearchActivityResultsFeedProps = {
   initialActivities: ActivityCardViewModel[];
@@ -22,7 +22,6 @@ type SearchActivityResultsFeedProps = {
   isAuthenticated: boolean;
   locale: string;
   query: string;
-  renderTitle?: (activity: ActivityCardViewModel) => ReactNode;
   totalCount: number;
 };
 
@@ -93,7 +92,6 @@ export function SearchActivityResultsFeed({
   isAuthenticated,
   locale,
   query,
-  renderTitle,
   totalCount,
 }: SearchActivityResultsFeedProps) {
   const t = getCopy(locale).globalSearch;
@@ -342,7 +340,9 @@ export function SearchActivityResultsFeed({
               showFavoriteButton
               showPrimaryAction={!isPublicEventCard(activity)}
               sourceSurface="global_search"
-              titleContent={renderTitle?.(activity)}
+              titleContent={
+                <SearchHighlightedText text={activity.title} query={query} />
+              }
             />
           ))}
         </ActivityCardMasonryGrid>
@@ -371,7 +371,9 @@ export function SearchActivityResultsFeed({
                 showFavoriteButton
                 showPrimaryAction={!isPublicEventCard(activity)}
                 sourceSurface="global_search"
-                titleContent={renderTitle?.(activity)}
+                titleContent={
+                  <SearchHighlightedText text={activity.title} query={query} />
+                }
               />
             ))}
           </ActivityCardMasonryGrid>
