@@ -27,7 +27,7 @@ import type { Prisma } from "@prisma/client";
 const activityResultLimit = 6;
 const publicEventResultLimit = 6;
 const merchantResultLimit = 5;
-const userResultLimit = 6;
+const userResultLimit = 12;
 
 export type GlobalSearchUserRelationshipStatus =
   | "AVAILABLE"
@@ -64,14 +64,102 @@ export type GlobalSearchResults = {
   publicEventCount: number;
   merchants: GlobalSearchMerchantViewModel[];
   merchantCount: number;
+  hiddenEndedActivityCount: number;
+  hiddenEndedPublicEventCount: number;
 };
+
+export type GlobalSearchOptions = {
+  includeEnded?: boolean;
+};
+
+function getActivityTermSearchWhere(term: string): Prisma.ActivityWhereInput {
+  return {
+    OR: [
+      { title: { contains: term, mode: "insensitive" } },
+      { description: { contains: term, mode: "insensitive" } },
+      { city: { contains: term, mode: "insensitive" } },
+      { address: { contains: term, mode: "insensitive" } },
+    ],
+  };
+}
+
+function getPublicEventTermSearchWhere(
+  term: string,
+): Prisma.PublicEventWhereInput {
+  return {
+    OR: [
+      { title: { contains: term, mode: "insensitive" } },
+      { description: { contains: term, mode: "insensitive" } },
+      { city: { contains: term, mode: "insensitive" } },
+      { address: { contains: term, mode: "insensitive" } },
+    ],
+  };
+}
+
+function getStrictActivitySearchWhere(
+  terms: string[],
+): Prisma.ActivityWhereInput {
+  return {
+    AND: terms.map(getActivityTermSearchWhere),
+  };
+}
+
+function getStrictPublicEventSearchWhere(
+  terms: string[],
+): Prisma.PublicEventWhereInput {
+  return {
+    AND: terms.map(getPublicEventTermSearchWhere),
+  };
+}
+
+function getPublicEventBaseWhere(
+  includeEnded: boolean,
+  now: Date,
+): Prisma.PublicEventWhereInput {
+  if (!includeEnded) {
+    return getUpcomingPublicEventWhere(now);
+  }
+
+  return {
+    status: "SCHEDULED",
+    visibility: "PUBLIC",
+  };
+}
+
+function getEndedPublicEventWhere(now: Date): Prisma.PublicEventWhereInput {
+  return {
+    status: "SCHEDULED",
+    visibility: "PUBLIC",
+    OR: [
+      {
+        endAt: {
+          lte: now,
+        },
+      },
+      {
+        AND: [
+          {
+            endAt: null,
+          },
+          {
+            startAt: {
+              lte: now,
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 export async function getGlobalSearchResults(
   rawQuery: string,
   currentUserProfileId?: string | null,
+  options: GlobalSearchOptions = {},
 ): Promise<GlobalSearchResults> {
   const query = normalizeGlobalSearchQuery(rawQuery);
   const terms = getGlobalSearchTerms(query);
+  const includeEnded = options.includeEnded ?? false;
 
   if (terms.length === 0) {
     return {
@@ -84,27 +172,22 @@ export async function getGlobalSearchResults(
       publicEventCount: 0,
       merchants: [],
       merchantCount: 0,
+      hiddenEndedActivityCount: 0,
+      hiddenEndedPublicEventCount: 0,
     };
   }
 
   const now = new Date();
-  const searchableActivityWhere = getVisibleActivityWhere({
-    includeEnded: true,
-    includePast: true,
-    now,
-  });
   const activeActivityWhere = getVisibleActivityWhere({ now });
+  const searchableActivityWhere = includeEnded
+    ? getVisibleActivityWhere({
+        includeEnded: true,
+        includePast: true,
+        now,
+      })
+    : activeActivityWhere;
   const endedActivityWhere = getActivityTimeStateWhere("ENDED", now);
-  const activitySearchWhere = {
-    AND: terms.map((term) => ({
-      OR: [
-        { title: { contains: term, mode: "insensitive" as const } },
-        { description: { contains: term, mode: "insensitive" as const } },
-        { city: { contains: term, mode: "insensitive" as const } },
-        { address: { contains: term, mode: "insensitive" as const } },
-      ],
-    })),
-  };
+  const activitySearchWhere = getStrictActivitySearchWhere(terms);
   const activityWhere = {
     AND: [searchableActivityWhere, activitySearchWhere],
   };
@@ -116,18 +199,19 @@ export async function getGlobalSearchResults(
   };
   const publicEventSearchWhere = {
     AND: [
-      getUpcomingPublicEventWhere(now),
-      {
-        AND: terms.map((term) => ({
-          OR: [
-            { title: { contains: term, mode: "insensitive" as const } },
-            { description: { contains: term, mode: "insensitive" as const } },
-            { city: { contains: term, mode: "insensitive" as const } },
-            { address: { contains: term, mode: "insensitive" as const } },
-          ],
-        })),
-      },
+      getPublicEventBaseWhere(includeEnded, now),
+      getStrictPublicEventSearchWhere(terms),
     ],
+  };
+  const hiddenEndedActivityWhere = {
+    AND: [
+      getVisibleActivityWhere({ includeEnded: true, includePast: true, now }),
+      activitySearchWhere,
+      endedActivityWhere,
+    ],
+  };
+  const hiddenEndedPublicEventWhere = {
+    AND: [getEndedPublicEventWhere(now), getStrictPublicEventSearchWhere(terms)],
   };
   const merchantSearchWhere = {
     isActive: true,
@@ -173,6 +257,8 @@ export async function getGlobalSearchResults(
     publicEvents,
     merchantCount,
     merchants,
+    hiddenEndedActivityCount,
+    hiddenEndedPublicEventCount,
   ] = await Promise.all([
     prisma.userProfile.count({
       where: userSearchWhere,
@@ -193,7 +279,7 @@ export async function getGlobalSearchResults(
     }),
     getSearchActivityResults(
       activeActivityResultWhere,
-      endedActivityResultWhere,
+      includeEnded ? endedActivityResultWhere : null,
     ),
     prisma.publicEvent.count({
       where: publicEventSearchWhere,
@@ -228,6 +314,16 @@ export async function getGlobalSearchResults(
         },
       },
     }),
+    includeEnded
+      ? Promise.resolve(0)
+      : prisma.activity.count({
+          where: hiddenEndedActivityWhere,
+        }),
+    includeEnded
+      ? Promise.resolve(0)
+      : prisma.publicEvent.count({
+          where: hiddenEndedPublicEventWhere,
+        }),
   ]);
   const userRelationshipStatuses = await getSearchUserRelationshipStatuses(
     currentUserProfileId,
@@ -271,6 +367,8 @@ export async function getGlobalSearchResults(
       activityCount: merchant._count.activities,
     })),
     merchantCount,
+    hiddenEndedActivityCount,
+    hiddenEndedPublicEventCount,
   };
 }
 
@@ -383,7 +481,7 @@ function getSearchUserDisplayName(user: {
 
 async function getSearchActivityResults(
   activeActivityWhere: Prisma.ActivityWhereInput,
-  endedActivityWhere: Prisma.ActivityWhereInput,
+  endedActivityWhere: Prisma.ActivityWhereInput | null,
 ) {
   const activeActivities = await prisma.activity.findMany({
     where: activeActivityWhere,
@@ -392,7 +490,7 @@ async function getSearchActivityResults(
     select: activityCardSelect,
   });
 
-  if (activeActivities.length >= activityResultLimit) {
+  if (activeActivities.length >= activityResultLimit || !endedActivityWhere) {
     return activeActivities;
   }
 

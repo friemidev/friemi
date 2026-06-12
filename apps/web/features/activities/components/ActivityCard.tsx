@@ -1,4 +1,5 @@
 import { CalendarDays, Clock3, Crown, MapPin, UsersRound } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   Button,
   Card,
@@ -35,6 +36,7 @@ type ActivityCardProps = {
   showFavoriteButton?: boolean;
   showPrimaryAction?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
+  titleContent?: ReactNode;
 };
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
@@ -214,6 +216,7 @@ export function ActivityCard({
   showFavoriteButton = false,
   showPrimaryAction = true,
   sourceSurface = "activity_list",
+  titleContent,
 }: ActivityCardProps) {
   const t = getCopy(locale);
   const isActivityInfo = Boolean(
@@ -536,7 +539,7 @@ export function ActivityCard({
               !isInactiveCard && isTeamCard ? "text-[#24160f]" : null,
             )}
           >
-            {activity.title}
+            {titleContent ?? activity.title}
           </CardTitle>
         </CardHeader>
 

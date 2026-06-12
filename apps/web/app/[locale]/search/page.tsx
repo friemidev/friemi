@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowRight, MapPin, Search, Store } from "lucide-react";
+import { ArrowRight, Clock3, MapPin, Search, Store } from "lucide-react";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,10 +10,12 @@ import { getActivityCoverTone } from "@/features/activities/queries/getActivitie
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import type { PublicEventCardViewModel } from "@/features/public-events/types";
+import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { recordOperationLatency } from "@/features/analytics/latency";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
+import { SearchHighlightedText } from "@/features/search/components/SearchHighlightedText";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
   getGlobalSearchResults,
@@ -39,8 +41,6 @@ type SearchPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-
-const userPreviewLimit = 3;
 
 function mapPublicEventToSearchActivityCard(
   event: PublicEventCardViewModel,
@@ -103,12 +103,109 @@ function SearchSectionHeader({
   );
 }
 
+function SearchEndedFilterBar({
+  hiddenEndedCount,
+  includeEnded,
+  locale,
+  query,
+}: {
+  hiddenEndedCount: number;
+  includeEnded: boolean;
+  locale: string;
+  query: string;
+}) {
+  const t = getCopy(locale).globalSearch;
+  const nextHref = getGlobalSearchHref(locale, query, {
+    includeEnded: !includeEnded,
+  });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <AnalyticsLink
+        href={nextHref}
+        className={
+          includeEnded
+            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#f4e7d8] px-3.5 text-sm font-semibold text-[#8f553b] ring-1 ring-[#d9b99c] transition hover:bg-[#f0dcc8]"
+            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/80 px-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-black/10 transition hover:bg-white"
+        }
+        event={{
+          name: "filter_applied",
+          sourceSurface: "global_search",
+          properties: {
+            filter_count: includeEnded ? 0 : 1,
+            filter_names: ["include_ended"],
+            next_include_ended: !includeEnded,
+            hidden_ended_count: hiddenEndedCount,
+            scope: "global_search",
+          },
+        }}
+      >
+        <Clock3 className="h-4 w-4" aria-hidden="true" />
+        {includeEnded ? t.hideEndedResults : t.showEndedResults}
+      </AnalyticsLink>
+      <span className="text-xs leading-5 text-zinc-500">
+        {includeEnded
+          ? t.endedResultsShownHint
+          : hiddenEndedCount > 0
+            ? t.endedResultsHiddenWithCount(hiddenEndedCount)
+            : t.endedResultsHiddenHint}
+      </span>
+    </div>
+  );
+}
+
+function SearchEndedOnlyEmptyState({
+  endedCount,
+  locale,
+  query,
+}: {
+  endedCount: number;
+  locale: string;
+  query: string;
+}) {
+  const t = getCopy(locale).globalSearch;
+
+  return (
+    <div className="rounded-[1.25rem] border border-dashed border-[#d8c9b5] bg-white/70 p-6 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)] sm:p-8">
+      <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f7efe2] text-[#8a6a40] ring-1 ring-[#eadcc6]">
+        <Clock3 className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <h2 className="mt-4 text-base font-semibold text-zinc-950">
+        {t.onlyEndedResultsTitle}
+      </h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
+        {t.onlyEndedResultsDescription(endedCount)}
+      </p>
+      <AnalyticsLink
+        href={getGlobalSearchHref(locale, query, { includeEnded: true })}
+        className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c9785f]"
+        event={{
+          name: "filter_applied",
+          sourceSurface: "global_search",
+          properties: {
+            filter_count: 1,
+            filter_names: ["include_ended"],
+            next_include_ended: true,
+            hidden_ended_count: endedCount,
+            scope: "global_search",
+          },
+        }}
+      >
+        <Clock3 className="h-4 w-4" aria-hidden="true" />
+        {t.showEndedResults}
+      </AnalyticsLink>
+    </div>
+  );
+}
+
 function MerchantResultCard({
   locale,
   merchant,
+  query,
 }: {
   locale: string;
   merchant: GlobalSearchMerchantViewModel;
+  query: string;
 }) {
   const t = getCopy(locale).globalSearch;
   const href = withLocale(locale, `/merchants/${merchant.slug}`);
@@ -139,7 +236,7 @@ function MerchantResultCard({
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center justify-between gap-3">
           <span className="truncate text-base font-semibold text-ink">
-            {merchant.name}
+            <SearchHighlightedText text={merchant.name} query={query} />
           </span>
           <ArrowRight
             className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
@@ -172,12 +269,19 @@ export default async function SearchPage({
   });
   const rawSearchParams = (await searchParams) ?? {};
   const rawQuery = getSingleGlobalSearchParam(rawSearchParams, "q");
+  const rawIncludeEnded =
+    getSingleGlobalSearchParam(rawSearchParams, "ended") === "1";
   const query = normalizeGlobalSearchQuery(rawQuery);
 
   if (!isCanonicalGlobalSearchParams(rawSearchParams)) {
-    redirect(getGlobalSearchHref(locale, query));
+    redirect(
+      getGlobalSearchHref(locale, query, {
+        includeEnded: rawIncludeEnded,
+      }),
+    );
   }
 
+  const includeEnded = Boolean(query && rawIncludeEnded);
   const t = getCopy(locale).globalSearch;
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = query
@@ -193,7 +297,9 @@ export default async function SearchPage({
     : null;
   const searchResult = query
     ? await perf.measure("search.results", () =>
-        getGlobalSearchResults(query, viewerProfile?.id)
+        getGlobalSearchResults(query, viewerProfile?.id, {
+          includeEnded,
+        })
           .then((result) => ({ result, error: null }))
           .catch((error: unknown) => {
             console.error("Failed to load global search results", error);
@@ -208,9 +314,10 @@ export default async function SearchPage({
       searchResult.result.publicEventCount
     : 0;
   const hasResults = totalCount > 0;
-  const userPreview = searchResult.result
-    ? searchResult.result.users.slice(0, userPreviewLimit)
-    : [];
+  const hiddenEndedMainCount = searchResult.result
+    ? searchResult.result.hiddenEndedActivityCount +
+      searchResult.result.hiddenEndedPublicEventCount
+    : 0;
   const activityInfoPublicEventIds = new Set(
     searchResult.result
       ? searchResult.result.activities
@@ -246,6 +353,8 @@ export default async function SearchPage({
           public_event_count: searchResult.result.publicEventCount,
           result_count: totalCount,
           scope: "global",
+          has_hidden_ended_results: hiddenEndedMainCount > 0,
+          include_ended: includeEnded,
           user_count: searchResult.result.userCount,
         },
       },
@@ -285,6 +394,8 @@ export default async function SearchPage({
       userProfileId: viewerProfile?.id,
       properties: {
         has_results: hasResults,
+        hidden_ended_count: hiddenEndedMainCount,
+        include_ended: includeEnded,
         result_count: totalCount,
       },
     });
@@ -307,6 +418,14 @@ export default async function SearchPage({
         </div>
 
         <GlobalSearchForm locale={locale} defaultQuery={query} variant="page" />
+        {query ? (
+          <SearchEndedFilterBar
+            hiddenEndedCount={hiddenEndedMainCount}
+            includeEnded={includeEnded}
+            locale={locale}
+            query={query}
+          />
+        ) : null}
       </div>
 
       {searchResult.error ? (
@@ -316,6 +435,12 @@ export default async function SearchPage({
         />
       ) : !query ? (
         <EmptyState title={t.emptyTitle} description={t.emptyDescription} />
+      ) : !hasResults && hiddenEndedMainCount > 0 ? (
+        <SearchEndedOnlyEmptyState
+          endedCount={hiddenEndedMainCount}
+          locale={locale}
+          query={query}
+        />
       ) : !hasResults ? (
         <EmptyState
           title={t.noResultsTitle}
@@ -333,20 +458,14 @@ export default async function SearchPage({
                 title={t.usersTitle}
                 count={searchResult.result.userCount}
               />
-              {userPreview.length > 0 ? (
+              {searchResult.result.users.length > 0 ? (
                 <>
                   <GlobalSearchUserResults
-                    users={userPreview}
                     locale={locale}
+                    query={query}
+                    totalCount={searchResult.result.userCount}
+                    users={searchResult.result.users}
                   />
-                  {searchResult.result.userCount > userPreview.length ? (
-                    <p className="rounded-lg bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-black/5">
-                      {t.usersPreviewHint(
-                        userPreview.length,
-                        searchResult.result.userCount,
-                      )}
-                    </p>
-                  ) : null}
                 </>
               ) : (
                 <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
@@ -378,6 +497,12 @@ export default async function SearchPage({
                         showFavoriteButton
                         showPrimaryAction={!isPublicEventCard(activity)}
                         sourceSurface="global_search"
+                        titleContent={
+                          <SearchHighlightedText
+                            text={activity.title}
+                            query={query}
+                          />
+                        }
                       />
                     ))}
                   </div>
@@ -417,6 +542,7 @@ export default async function SearchPage({
                       key={merchant.id}
                       merchant={merchant}
                       locale={locale}
+                      query={query}
                     />
                   ))}
                 </div>

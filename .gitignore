@@ -40,3 +40,6 @@ pnpm-debug.log*
 
 # Local source frames for generated loading assets
 apps/web/public/loading_frames/
+
+# Local Codex / frontend skill packages
+skills-folder/
