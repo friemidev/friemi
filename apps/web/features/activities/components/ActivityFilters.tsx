@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
+import type { ActivityCategory } from "@chill-club/shared";
 import {
   ChevronDown,
   FilterX,
@@ -20,12 +21,17 @@ import {
   activityFilterTypes,
   activityRelationFilters,
   activityTimeStates,
+  type ActivityDateRange,
   getActivityFilterHref,
   getDefaultActivitySort,
   hasActiveActivityFilters,
   normalizeActivityFilterFormData,
   normalizeActivityFilterValues,
   type ActivityFilters,
+  type ActivityFilterType,
+  type ActivityRelationFilter,
+  type ActivitySortOption,
+  type ActivityTimeState,
 } from "../utils/activityFilters";
 
 type ActivityFiltersProps = {
@@ -75,6 +81,10 @@ export function ActivityFilters({
       activitiesHref,
       normalizeActivityFilterValues(mergedFilters),
     );
+  }
+
+  function applyFilterChange(nextFilters: Partial<ActivityFilters>) {
+    router.push(buildFilterHref(nextFilters));
   }
 
   const activeFilterChips: ActiveFilterChip[] = [
@@ -235,6 +245,13 @@ export function ActivityFilters({
               className={selectClassName}
               defaultValue={filters.category ?? ""}
               name="category"
+              onChange={(event) =>
+                applyFilterChange({
+                  category: event.target.value
+                    ? (event.target.value as ActivityCategory)
+                    : undefined,
+                })
+              }
             >
               <option value="">{t.activityFilters.allCategories}</option>
               {activityCategoryOptions.map((category) => (
@@ -251,6 +268,11 @@ export function ActivityFilters({
               className={selectClassName}
               defaultValue={selectedCity}
               name="city"
+              onChange={(event) =>
+                applyFilterChange({
+                  city: event.target.value || undefined,
+                })
+              }
             >
               <option value="">{t.activityFilters.allCities}</option>
               {cityOptions.map((city) => (
@@ -267,6 +289,13 @@ export function ActivityFilters({
               className={selectClassName}
               defaultValue={filters.dateRange ?? ""}
               name="dateRange"
+              onChange={(event) =>
+                applyFilterChange({
+                  dateRange: event.target.value
+                    ? (event.target.value as ActivityDateRange)
+                    : undefined,
+                })
+              }
             >
               <option value="">{t.activityFilters.allDateRanges}</option>
               {activityDateRangeOptions.map((dateRange) => (
@@ -285,6 +314,11 @@ export function ActivityFilters({
                   className={selectClassName}
                   defaultValue={filters.relation}
                   name="relation"
+                  onChange={(event) =>
+                    applyFilterChange({
+                      relation: event.target.value as ActivityRelationFilter,
+                    })
+                  }
                 >
                   {activityRelationFilters.map((relation) => (
                     <option key={relation} value={relation}>
@@ -306,6 +340,13 @@ export function ActivityFilters({
                   className={selectClassName}
                   defaultValue={filters.type ?? ""}
                   name="type"
+                  onChange={(event) =>
+                    applyFilterChange({
+                      type: event.target.value
+                        ? (event.target.value as ActivityFilterType)
+                        : undefined,
+                    })
+                  }
                 >
                   <option value="">{t.activityFilters.allTypes}</option>
                   {activityFilterTypes.map((type) => (
@@ -324,6 +365,13 @@ export function ActivityFilters({
               className={selectClassName}
               defaultValue={filters.timeState ?? ""}
               name="time"
+              onChange={(event) =>
+                applyFilterChange({
+                  timeState: event.target.value
+                    ? (event.target.value as ActivityTimeState)
+                    : undefined,
+                })
+              }
             >
               <option value="">{t.activityFilters.allTimeStates}</option>
               {activityTimeStates.map((timeState) => (
@@ -340,6 +388,11 @@ export function ActivityFilters({
               className={selectClassName}
               defaultValue={filters.sort}
               name="sort"
+              onChange={(event) =>
+                applyFilterChange({
+                  sort: event.target.value as ActivitySortOption,
+                })
+              }
             >
               <option value="recommended">
                 {t.activityFilters.sortRecommended}
