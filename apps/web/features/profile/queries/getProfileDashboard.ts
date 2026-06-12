@@ -240,6 +240,14 @@ function getTeamActivityWhere(): Prisma.ActivityWhereInput {
   };
 }
 
+function getOwnTeamActivityWhere(): Prisma.ActivityWhereInput {
+  return {
+    type: {
+      not: "PUBLIC_EVENT",
+    },
+  };
+}
+
 function getCreatedActivitiesWhere({
   isFriend,
   isSelf,
@@ -267,7 +275,7 @@ function getCreatedActivitiesWhere({
             }
           : {}),
       },
-      getTeamActivityWhere(),
+      isSelf ? getOwnTeamActivityWhere() : getTeamActivityWhere(),
     ],
   };
 }

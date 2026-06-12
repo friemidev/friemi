@@ -23,6 +23,15 @@ const activityLobbySectionLimit = 6;
 const activityLobbyFeedLimit = 48;
 const activityLobbyArchivedFeedLimit = 12;
 const visibleLobbyParticipationStatuses = ["JOINED", "APPROVED", "PENDING"] as const;
+export const OPEN_LOBBY_ACTIVITIES_TAG = "open-lobby-activities";
+
+const baseTeamCardWhere: Prisma.ActivityWhereInput = {
+  type: { not: "PUBLIC_EVENT" },
+};
+
+const strictTeamCardWhere: Prisma.ActivityWhereInput = {
+  AND: [baseTeamCardWhere, { NOT: getLegacyPublicActivityInfoWhere() }],
+};
 
 const lobbyParticipationSelect = {
   activity: {
@@ -55,8 +64,7 @@ const getCachedOpenLobbyActivities = unstable_cache(
             visibility: null,
           }),
           { visibility: "PUBLIC" },
-          { type: { not: "PUBLIC_EVENT" } },
-          { NOT: getLegacyPublicActivityInfoWhere() },
+          strictTeamCardWhere,
         ],
       },
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
@@ -64,7 +72,7 @@ const getCachedOpenLobbyActivities = unstable_cache(
       select: activityCardSelect,
     }),
   ["open-lobby-activities"],
-  { revalidate: 60 },
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
 );
 
 type ActivityLobbyViewModel = {
@@ -342,10 +350,14 @@ export async function getActivityLobby(
     visibility: null,
     now,
   });
-  const teamCardWhere: Prisma.ActivityWhereInput = {
-    AND: [
-      { type: { not: "PUBLIC_EVENT" } },
-      { NOT: getLegacyPublicActivityInfoWhere() },
+  const teamCardWhere = strictTeamCardWhere;
+  const ownTeamCardWhere = baseTeamCardWhere;
+  const accessibleFeedTeamWhere: Prisma.ActivityWhereInput = {
+    OR: [
+      strictTeamCardWhere,
+      {
+        AND: [{ organizerId: viewerProfileId }, ownTeamCardWhere],
+      },
     ],
   };
   const getAccessibleWhere = (
@@ -416,6 +428,7 @@ export async function getActivityLobby(
     activeFeedActivities,
     archivedFeedActivities,
     openActivities,
+    ownedOpenActivities,
     createdActivities,
     joinedParticipations,
     favoriteRecords,
@@ -425,7 +438,7 @@ export async function getActivityLobby(
   ] = await Promise.all([
     prisma.activity.findMany({
       where: {
-        AND: [accessibleActiveWhere, teamCardWhere],
+        AND: [accessibleActiveWhere, accessibleFeedTeamWhere],
       },
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: activityLobbyFeedLimit,
@@ -433,7 +446,7 @@ export async function getActivityLobby(
     }),
     prisma.activity.findMany({
       where: {
-        AND: [accessibleWhere, teamCardWhere, archivedWhere],
+        AND: [accessibleWhere, accessibleFeedTeamWhere, archivedWhere],
       },
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: activityLobbyArchivedFeedLimit,
@@ -442,7 +455,20 @@ export async function getActivityLobby(
     getCachedOpenLobbyActivities(),
     prisma.activity.findMany({
       where: {
-        AND: [visibleWhere, { organizerId: viewerProfileId }, teamCardWhere],
+        AND: [
+          activeVisibleWhere,
+          { organizerId: viewerProfileId },
+          { visibility: "PUBLIC" },
+          ownTeamCardWhere,
+        ],
+      },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: activityLobbySectionLimit,
+      select: activityCardSelect,
+    }),
+    prisma.activity.findMany({
+      where: {
+        AND: [visibleWhere, { organizerId: viewerProfileId }, ownTeamCardWhere],
       },
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: activityLobbySectionLimit,
@@ -518,7 +544,14 @@ export async function getActivityLobby(
     ...activeFeedActivities,
     ...archivedFeedActivities,
   ].map(getActivityCardViewModel);
-  const openActivityCards = openActivities.map(getActivityCardViewModel);
+  const openActivityCards = Array.from(
+    new Map(
+      [...openActivities, ...ownedOpenActivities].map((activity) => [
+        activity.id,
+        getActivityCardViewModel(activity),
+      ]),
+    ).values(),
+  );
   const joinedActivities = joinedParticipations
     .map((item) => getActivityCardViewModel(item.activity))
     .filter(isJoinableTeamCard);

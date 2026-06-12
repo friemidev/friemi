@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
@@ -17,6 +17,7 @@ import {
   type ActivityFormState,
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -255,8 +256,11 @@ export async function updateActivityAction(
 
   revalidatePath(withLocale(locale, `/activities/${activityId}`));
   revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
 
   redirect(withLocale(locale, `/activities/${activityId}`));
 }

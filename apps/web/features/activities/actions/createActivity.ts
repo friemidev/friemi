@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
@@ -21,6 +22,7 @@ import {
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
 
@@ -456,6 +458,13 @@ export async function createActivityAction(
     status: "success",
     userProfileId: profile.id,
   });
+
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   redirect(withLocale(locale, `/activities/${activityId}`));
 }

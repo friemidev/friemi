@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActivityStatus, ParticipantStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -10,6 +10,7 @@ import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 
 const cancellableActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -51,6 +52,7 @@ function getString(formData: FormData, key: string) {
 function refreshActivityViews(locale: string, activityId: string) {
   const activityPath = withLocale(locale, `/activities/${activityId}`);
 
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
   revalidatePath(activityPath);
   revalidatePath(withLocale(locale, "/activities"));
   revalidatePath(withLocale(locale, "/lobby"));
