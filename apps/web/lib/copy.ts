@@ -40,7 +40,7 @@ const copy = {
       messages: "消息",
       messagesShort: "消息",
       profile: "个人空间",
-      profileShort: "我的",
+      profileShort: "主页",
       signIn: "登录",
     },
     accountMenu: {
@@ -91,14 +91,20 @@ const copy = {
         `找到 ${count} 个与「${query}」相关的结果。`,
       viewMoreActivities: (_shown: number, total: number) =>
         `查看全部 ${total} 个活动`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `查看全部 ${total} 个活动与组局`,
       activitiesTitle: "正在组局",
+      mainResultsTitle: "活动与组局",
       publicEventsTitle: "活动",
       merchantsTitle: "商家",
       usersTitle: "好友",
       noActivityResults: "没有匹配的组局。",
+      noMainResults: "没有匹配的活动或组局。",
       noPublicEventResults: "没有匹配的活动。",
       noMerchantResults: "没有匹配的商家。",
       noUserResults: "没有匹配的用户。",
+      usersPreviewHint: (shown: number, total: number) =>
+        `先显示前 ${shown} 位好友结果，共 ${total} 位。`,
       friendCodeLabel: "好友号",
       friendCodeMissing: "暂无好友号",
       addFriend: "加好友",
@@ -785,14 +791,20 @@ const copy = {
         `${count} result${count === 1 ? "" : "s"} found for "${query}".`,
       viewMoreActivities: (_shown: number, total: number) =>
         `View all ${total} activities`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `View all ${total} activities and crews`,
       activitiesTitle: "Crews forming",
+      mainResultsTitle: "Activities and crews",
       publicEventsTitle: "Activity info",
       merchantsTitle: "Merchants",
       usersTitle: "Friends",
       noActivityResults: "No matching crews.",
+      noMainResults: "No matching activities or crews.",
       noPublicEventResults: "No matching activity info.",
       noMerchantResults: "No matching merchants.",
       noUserResults: "No matching users.",
+      usersPreviewHint: (shown: number, total: number) =>
+        `Showing the first ${shown} friend results out of ${total}.`,
       friendCodeLabel: "Friend code",
       friendCodeMissing: "No friend code yet",
       addFriend: "Add friend",
@@ -1537,14 +1549,20 @@ const copy = {
         `${count} résultat${count > 1 ? "s" : ""} pour « ${query} ».`,
       viewMoreActivities: (_shown: number, total: number) =>
         `Voir les ${total} activités`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `Voir les ${total} activités et groupes`,
       activitiesTitle: "Groupes en cours",
+      mainResultsTitle: "Activités et groupes",
       publicEventsTitle: "Activités",
       merchantsTitle: "Partenaires",
       usersTitle: "Amis",
       noActivityResults: "Aucun groupe correspondant.",
+      noMainResults: "Aucune activité ou groupe correspondant.",
       noPublicEventResults: "Aucune activité correspondante.",
       noMerchantResults: "Aucun partenaire correspondant.",
       noUserResults: "Aucun utilisateur correspondant.",
+      usersPreviewHint: (shown: number, total: number) =>
+        `Affichage des ${shown} premiers résultats amis sur ${total}.`,
       friendCodeLabel: "Code ami",
       friendCodeMissing: "Aucun code ami",
       addFriend: "Ajouter",

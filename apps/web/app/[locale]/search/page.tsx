@@ -6,7 +6,10 @@ import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { PublicEventCard } from "@/features/public-events/components/PublicEventCard";
+import { getActivityCoverTone } from "@/features/activities/queries/getActivities";
+import type { ActivityCardViewModel } from "@/features/activities/types";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import type { PublicEventCardViewModel } from "@/features/public-events/types";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { recordOperationLatency } from "@/features/analytics/latency";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
@@ -36,6 +39,50 @@ type SearchPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+const userPreviewLimit = 3;
+
+function mapPublicEventToSearchActivityCard(
+  event: PublicEventCardViewModel,
+): ActivityCardViewModel {
+  return {
+    id: event.id,
+    publicEventId: event.id,
+    title: event.title,
+    description: event.description,
+    type: "PUBLIC_EVENT",
+    category: event.category,
+    city: event.city,
+    address: event.address,
+    latitude: event.latitude,
+    longitude: event.longitude,
+    startAt: event.startAt,
+    endAt: event.endAt,
+    capacity: 0,
+    coverImageUrl: event.coverImageUrl,
+    favoriteCount: event.favoriteCount,
+    participantCount: event.teamCount,
+    priceText: event.priceText ?? "",
+    status: "RECRUITING",
+    visibility: "PUBLIC",
+    coverTone: getActivityCoverTone(event.id),
+    isActivityInfo: true,
+    officialUrl: event.officialUrl,
+    merchant: null,
+    friendSignal: null,
+    isFavorited: event.isFavorited,
+  };
+}
+
+function sortSearchActivityCards(
+  left: ActivityCardViewModel,
+  right: ActivityCardViewModel,
+) {
+  const leftTime = new Date(left.startAt).getTime();
+  const rightTime = new Date(right.startAt).getTime();
+
+  return leftTime - rightTime || left.id.localeCompare(right.id);
+}
 
 function SearchSectionHeader({
   count,
@@ -161,6 +208,27 @@ export default async function SearchPage({
       searchResult.result.publicEventCount
     : 0;
   const hasResults = totalCount > 0;
+  const userPreview = searchResult.result
+    ? searchResult.result.users.slice(0, userPreviewLimit)
+    : [];
+  const activityInfoPublicEventIds = new Set(
+    searchResult.result
+      ? searchResult.result.activities
+          .filter(isPublicEventCard)
+          .map((activity) => activity.publicEventId ?? activity.id)
+      : [],
+  );
+  const mixedActivityResults = searchResult.result
+    ? [
+        ...searchResult.result.activities,
+        ...searchResult.result.publicEvents
+          .filter((event) => !activityInfoPublicEventIds.has(event.id))
+          .map(mapPublicEventToSearchActivityCard),
+      ].sort(sortSearchActivityCards)
+    : [];
+  const mixedActivityResultCount = searchResult.result
+    ? searchResult.result.activityCount + searchResult.result.publicEventCount
+    : 0;
 
   if (query && searchResult.result) {
     const requestHeaders = await headers();
@@ -265,11 +333,21 @@ export default async function SearchPage({
                 title={t.usersTitle}
                 count={searchResult.result.userCount}
               />
-              {searchResult.result.users.length > 0 ? (
-                <GlobalSearchUserResults
-                  users={searchResult.result.users}
-                  locale={locale}
-                />
+              {userPreview.length > 0 ? (
+                <>
+                  <GlobalSearchUserResults
+                    users={userPreview}
+                    locale={locale}
+                  />
+                  {searchResult.result.userCount > userPreview.length ? (
+                    <p className="rounded-lg bg-white/60 px-3 py-2 text-xs text-zinc-500 ring-1 ring-black/5">
+                      {t.usersPreviewHint(
+                        userPreview.length,
+                        searchResult.result.userCount,
+                      )}
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
                   {t.noUserResults}
@@ -278,36 +356,40 @@ export default async function SearchPage({
             </section>
           ) : null}
 
-          {searchResult.result.activityCount > 0 ? (
+          {mixedActivityResultCount > 0 ? (
             <section className="space-y-3">
               <SearchSectionHeader
-                title={t.activitiesTitle}
-                count={searchResult.result.activityCount}
+                title={t.mainResultsTitle}
+                count={mixedActivityResultCount}
               />
-              {searchResult.result.activities.length > 0 ? (
+              {mixedActivityResults.length > 0 ? (
                 <>
                   <div className="grid gap-3 min-[380px]:grid-cols-2 md:gap-4 lg:grid-cols-3">
-                    {searchResult.result.activities.map((activity) => (
+                    {mixedActivityResults.map((activity) => (
                       <ActivityCard
-                        key={activity.id}
+                        key={
+                          isPublicEventCard(activity)
+                            ? `event-${activity.publicEventId ?? activity.id}`
+                            : `crew-${activity.id}`
+                        }
                         activity={activity}
                         isAuthenticated={Boolean(viewerProfile)}
                         locale={locale}
                         showFavoriteButton
+                        showPrimaryAction={!isPublicEventCard(activity)}
                         sourceSurface="global_search"
                       />
                     ))}
                   </div>
-                  {searchResult.result.activityCount >
-                  searchResult.result.activities.length ? (
+                  {mixedActivityResultCount > mixedActivityResults.length ? (
                     <Link
                       href={`${withLocale(locale, "/activities")}?${new URLSearchParams({ q: query }).toString()}`}
                       className="inline-flex h-10 max-w-full items-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                     >
                       <span className="truncate">
-                        {t.viewMoreActivities(
-                          searchResult.result.activities.length,
-                          searchResult.result.activityCount,
+                        {t.viewMoreMainResults(
+                          mixedActivityResults.length,
+                          mixedActivityResultCount,
                         )}
                       </span>
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -316,35 +398,7 @@ export default async function SearchPage({
                 </>
               ) : (
                 <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
-                  {t.noActivityResults}
-                </p>
-              )}
-            </section>
-          ) : null}
-
-          {searchResult.result.publicEventCount > 0 ? (
-            <section className="space-y-3">
-              <SearchSectionHeader
-                title={t.publicEventsTitle}
-                count={searchResult.result.publicEventCount}
-              />
-              {searchResult.result.publicEvents.length > 0 ? (
-                <div className="grid gap-3 min-[380px]:grid-cols-2 md:gap-4 lg:grid-cols-3">
-                  {searchResult.result.publicEvents.map((event) => (
-                    <PublicEventCard
-                      key={event.id}
-                      event={event}
-                      isAuthenticated={Boolean(viewerProfile)}
-                      locale={locale}
-                      redirectPath="/search"
-                      showFavoriteButton
-                      sourceSurface="global_search"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-lg border border-dashed border-zinc-300 bg-white/60 p-4 text-sm text-zinc-500">
-                  {t.noPublicEventResults}
+                  {t.noMainResults}
                 </p>
               )}
             </section>

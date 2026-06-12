@@ -1,10 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { UsersRound } from "lucide-react";
 import { getFriendsCopy } from "@/features/friends/copy";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ProfileActivitySections } from "./ProfileActivitySections";
+import {
+  ProfileActivitySections,
+  type ProfileSectionKey,
+} from "./ProfileActivitySections";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
@@ -56,6 +62,8 @@ export function ProfileDashboardView({
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
   const showPrivateParticipation = isSelf;
+  const [activeProfileSection, setActiveProfileSection] =
+    useState<ProfileSectionKey>("created");
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 md:space-y-8">
@@ -103,6 +111,7 @@ export function ProfileDashboardView({
 
           <div className="flex min-w-0 flex-col gap-3 lg:items-end">
             <ProfileOverviewPanel
+              activeActivitySection={activeProfileSection}
               createdCount={dashboard.createdActivityCount}
               joinedCount={dashboard.participationCount}
               friendCount={dashboard.friendCount}
@@ -118,6 +127,7 @@ export function ProfileDashboardView({
               joinedLabel={
                 isSelf ? selfMetricLabels.joined : t.profile.participationCount
               }
+              onActivitySectionChange={setActiveProfileSection}
               redirectPath={isSelf ? "/profile" : `/profile/${profile.id}`}
               showJoinedCount={showPrivateParticipation}
             />
@@ -148,10 +158,12 @@ export function ProfileDashboardView({
         />
       ) : (
         <ProfileActivitySections
+          activeSection={activeProfileSection}
           dashboard={dashboard}
           isAuthenticated={isAuthenticated}
           isSelf={showPrivateParticipation}
           locale={locale}
+          onActiveSectionChange={setActiveProfileSection}
         />
       )}
     </div>
