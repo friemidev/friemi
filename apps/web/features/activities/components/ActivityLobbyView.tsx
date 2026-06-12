@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { PaginationControl } from "@/components/ui/PaginationControl";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -434,63 +434,26 @@ function LobbyPagination({
   locale,
   onPageChange,
   page,
+  scrollTargetId,
   totalItems,
 }: {
   locale: string;
   onPageChange: (page: number) => void;
   page: number;
+  scrollTargetId: string;
   totalItems: number;
 }) {
   const totalPages = getLobbyTotalPages(totalItems);
 
-  if (totalPages <= 1) {
-    return null;
-  }
-
-  const t = getCopy(locale).activityPagination;
-  const previousDisabled = page <= 1;
-  const nextDisabled = page >= totalPages;
-  const progressPercent = Math.round((page / totalPages) * 100);
-  const buttonClassName =
-    "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#dfccb2] bg-white/88 px-2 text-xs font-semibold text-[#5b4b3a] shadow-sm shadow-black/5 transition hover:border-[#d8b895] hover:bg-white disabled:cursor-not-allowed disabled:border-[#eadfce] disabled:bg-[#fbf7ef]/72 disabled:text-zinc-400 disabled:shadow-none sm:px-3 sm:text-sm";
-
   return (
-    <nav
-      aria-label="Lobby pagination"
-      className="mx-auto flex w-full max-w-[34rem] flex-col gap-2 rounded-[1.5rem] border border-[#e4d5bd] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(249,241,229,0.92))] p-2 shadow-[0_12px_26px_rgba(94,80,52,0.08)] sm:rounded-full sm:p-2.5"
-    >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <button
-          type="button"
-          className={buttonClassName}
-          disabled={previousDisabled}
-          onClick={() => onPageChange(Math.max(page - 1, 1))}
-        >
-          <ChevronLeft className="h-4 w-4 shrink-0" />
-          {t.previous}
-        </button>
-        <div className="min-w-20 text-center">
-          <p className="text-xs font-semibold text-[#5b4b3a] sm:text-sm">
-            {t.pageSummary(page, totalPages)}
-          </p>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#eadfce]">
-            <div
-              className="h-full rounded-full bg-[#df8d6e]"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-        <button
-          type="button"
-          className={buttonClassName}
-          disabled={nextDisabled}
-          onClick={() => onPageChange(Math.min(page + 1, totalPages))}
-        >
-          {t.next}
-          <ChevronRight className="h-4 w-4 shrink-0" />
-        </button>
-      </div>
-    </nav>
+    <PaginationControl
+      currentPage={page}
+      locale={locale}
+      mode="callback"
+      onPageChange={onPageChange}
+      scrollTargetId={scrollTargetId}
+      totalPages={totalPages}
+    />
   );
 }
 
@@ -556,7 +519,10 @@ export function ActivityLobbyPreviewView({
         </div>
       </section>
 
-      <section className="space-y-4 sm:rounded-[1.5rem] sm:border sm:border-black/8 sm:bg-white/78 sm:p-5 sm:shadow-sm sm:shadow-black/5">
+      <section
+        id="lobby-preview-results"
+        className="space-y-4 sm:rounded-[1.5rem] sm:border sm:border-black/8 sm:bg-white/78 sm:p-5 sm:shadow-sm sm:shadow-black/5"
+      >
         <div>
           <h2 className="text-xl font-semibold text-ink">
             {previewCopy.sectionTitle}
@@ -594,6 +560,7 @@ export function ActivityLobbyPreviewView({
               locale={locale}
               onPageChange={setPage}
               page={page}
+              scrollTargetId="lobby-preview-results"
               totalItems={dedupedActivities.length}
             />
           </>
@@ -894,7 +861,7 @@ export function ActivityLobbyView({
           </p>
         </div>
       ) : (
-        <section className="space-y-3">
+        <section id="lobby-results" className="space-y-3">
           <div className="flex items-center justify-between gap-3 px-1">
             <div>
               <h2 className="text-lg font-semibold text-ink">
@@ -930,6 +897,7 @@ export function ActivityLobbyView({
             locale={locale}
             onPageChange={setPage}
             page={page}
+            scrollTargetId="lobby-results"
             totalItems={visibleActivities.length}
           />
         </section>

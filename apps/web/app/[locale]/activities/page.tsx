@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
 import {
@@ -29,7 +28,6 @@ import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
-import { cn } from "@/lib/utils";
 
 type ActivitiesPageProps = {
   params: Promise<{
@@ -55,73 +53,26 @@ function ActivityPagination({
     return null;
   }
 
-  const t = getCopy(locale);
   const activitiesHref = withLocale(locale, "/activities");
-  const previousHref = getActivityFilterHref(activitiesHref, {
-    ...filters,
-    page: Math.max(list.page - 1, 1),
-  });
-  const nextHref = getActivityFilterHref(activitiesHref, {
-    ...filters,
-    page: Math.min(list.page + 1, list.totalPages),
-  });
-  const previousDisabled = list.page <= 1;
-  const nextDisabled = list.page >= list.totalPages;
-  const progressPercent = Math.round((list.page / list.totalPages) * 100);
-  const linkClassName =
-    "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#dfccb2] bg-white/88 px-2 text-xs font-semibold text-[#5b4b3a] shadow-sm shadow-black/5 transition hover:border-[#d8b895] hover:bg-white sm:px-3 sm:text-sm";
-  const disabledClassName =
-    "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#eadfce] bg-[#fbf7ef]/72 px-2 text-xs font-semibold text-zinc-400 sm:px-3 sm:text-sm";
 
   return (
-    <nav
-      aria-label="Activity pagination"
-      className="mx-auto flex w-full max-w-[34rem] flex-col gap-2 rounded-[1.5rem] border border-[#e4d5bd] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(249,241,229,0.92))] p-2 shadow-[0_12px_26px_rgba(94,80,52,0.08)] sm:rounded-full sm:p-2.5"
-    >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        {previousDisabled ? (
-          <span className={cn(disabledClassName, "justify-self-stretch")}>
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            {t.activityPagination.previous}
-          </span>
-        ) : (
-          <Link
-            className={cn(linkClassName, "justify-self-stretch")}
-            href={previousHref}
-            prefetch={false}
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            {t.activityPagination.previous}
-          </Link>
-        )}
-        <div className="min-w-20 text-center">
-          <p className="text-xs font-semibold text-[#5b4b3a] sm:text-sm">
-            {t.activityPagination.pageSummary(list.page, list.totalPages)}
-          </p>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#eadfce]">
-            <div
-              className="h-full rounded-full bg-[#df8d6e]"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-        {nextDisabled ? (
-          <span className={cn(disabledClassName, "justify-self-stretch")}>
-            {t.activityPagination.next}
-            <ChevronRight className="h-4 w-4 shrink-0" />
-          </span>
-        ) : (
-          <Link
-            className={cn(linkClassName, "justify-self-stretch")}
-            href={nextHref}
-            prefetch={false}
-          >
-            {t.activityPagination.next}
-            <ChevronRight className="h-4 w-4 shrink-0" />
-          </Link>
-        )}
-      </div>
-    </nav>
+    <PaginationControl
+      basePath={activitiesHref}
+      currentPage={list.page}
+      locale={locale}
+      mode="link"
+      query={{
+        category: filters.category,
+        city: filters.city,
+        dateRange: filters.dateRange,
+        q: filters.keyword,
+        relation: filters.relation !== "ALL" ? filters.relation : undefined,
+        sort: filters.sort !== "recommended" ? filters.sort : undefined,
+        time: filters.timeState,
+        type: filters.type,
+      }}
+      totalPages={list.totalPages}
+    />
   );
 }
 
