@@ -40,9 +40,11 @@ const unfollowInitialState: ToggleFollowState = {};
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-zinc-50 p-3">
-      <p className="text-2xl font-semibold text-ink">{value}</p>
-      <p className="mt-1 text-xs text-zinc-500">{label}</p>
+    <div className="min-w-0 rounded-lg bg-zinc-50 px-2.5 py-2.5 sm:px-3">
+      <p className="text-xl font-semibold text-ink sm:text-2xl">{value}</p>
+      <p className="mt-0.5 truncate text-[11px] leading-4 text-zinc-500 sm:text-xs">
+        {label}
+      </p>
     </div>
   );
 }
@@ -62,14 +64,16 @@ function InteractiveStatCard({
     <button
       aria-expanded={active}
       className={cn(
-        "rounded-lg bg-zinc-50 p-3 text-left ring-1 ring-transparent transition hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40",
+        "min-w-0 rounded-lg bg-zinc-50 px-2.5 py-2.5 text-left ring-1 ring-transparent transition hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40 sm:px-3",
         active && "bg-white ring-clay/30 shadow-sm",
       )}
       onClick={onClick}
       type="button"
     >
-      <p className="text-2xl font-semibold text-ink">{value}</p>
-      <p className="mt-1 text-xs text-zinc-500">{label}</p>
+      <p className="text-xl font-semibold text-ink sm:text-2xl">{value}</p>
+      <p className="mt-0.5 truncate text-[11px] leading-4 text-zinc-500 sm:text-xs">
+        {label}
+      </p>
     </button>
   );
 }
@@ -161,8 +165,8 @@ export function ProfileOverviewPanel({
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
   const t = getProfileFollowCopy(locale);
   const statsGridClass = showJoinedCount
-    ? "grid grid-cols-2 gap-3 sm:min-w-[420px] lg:grid-cols-5"
-    : "grid grid-cols-2 gap-3 sm:min-w-[340px] sm:grid-cols-4";
+    ? "grid w-full grid-cols-5 gap-2"
+    : "grid w-full grid-cols-4 gap-2";
 
   const activeList =
     activePanel === "friends"
