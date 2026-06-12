@@ -57,7 +57,18 @@ function getEventDateLabel(event: PublicEventCardViewModel, locale: string) {
 }
 
 function getEventPriceLabel(event: PublicEventCardViewModel, locale: string) {
-  return event.priceText || getPriceTypeLabel(event.priceType, locale);
+  const priceTypeLabel = getPriceTypeLabel(event.priceType, locale);
+  const priceText = event.priceText?.trim() ?? "";
+
+  if (priceText.length === 0) {
+    return priceTypeLabel;
+  }
+
+  if (event.priceType === "FREE" && priceText === "0") {
+    return priceTypeLabel;
+  }
+
+  return priceText;
 }
 
 export function PublicEventCard({

@@ -143,6 +143,14 @@ export function getActivityPriceLabel(
   const priceTypeLabel = getPriceTypeLabel(activity.priceType, locale);
   const priceText = activity.priceText.trim();
 
+  if (priceText.length === 0) {
+    return priceTypeLabel;
+  }
+
+  if (activity.priceType === "FREE" && priceText === "0") {
+    return priceTypeLabel;
+  }
+
   if (
     priceText === priceTypeLabel ||
     priceText.startsWith(`${priceTypeLabel} `)
