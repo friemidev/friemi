@@ -2,13 +2,13 @@ import Link from "next/link";
 import { UsersRound } from "lucide-react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getFriendsCopy } from "@/features/friends/copy";
-import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileParticipationCard } from "./ProfileParticipationCard";
+import { ProfileSocialActions } from "./ProfileSocialActions";
 import {
   profileActivityListLimit,
   type ProfileDashboardViewModel,
@@ -95,6 +95,8 @@ export function ProfileDashboardView({
             <ProfileOverviewPanel
               createdCount={dashboard.createdActivityCount}
               joinedCount={dashboard.participationCount}
+              friendCount={dashboard.friendCount}
+              friends={dashboard.friends}
               followers={dashboard.followers}
               followersCount={dashboard.followersCount}
               following={dashboard.following}
@@ -102,6 +104,7 @@ export function ProfileDashboardView({
               locale={locale}
               createdLabel={t.profile.createdCount}
               joinedLabel={t.profile.participationCount}
+              redirectPath={isSelf ? "/profile" : `/profile/${profile.id}`}
               showJoinedCount={showPrivateParticipation}
             />
             {isSelf ? (
@@ -113,12 +116,11 @@ export function ProfileDashboardView({
                 {friendsCopy.openFriends}
               </Link>
             ) : (
-              <ReportDialog
+              <ProfileSocialActions
                 isAuthenticated={isAuthenticated}
                 locale={locale}
-                redirectPath={`/profile/${profile.id}`}
-                targetId={profile.id}
-                targetType="USER_PROFILE"
+                profileId={profile.id}
+                relationship={dashboard.viewerRelationship}
               />
             )}
           </div>

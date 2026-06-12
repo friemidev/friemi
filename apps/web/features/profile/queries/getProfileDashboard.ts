@@ -1,11 +1,20 @@
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
-import type { ParticipantStatus, Prisma } from "@prisma/client";
+import type {
+  ActivityVisibility,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import {
   activityCardSelect,
   getActivityCoverTone,
   getActivityCardViewModel,
+  getLegacyPublicActivityInfoWhere,
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import {
+  getFriendshipPair,
+  getFriendshipPairKey,
+} from "@/features/friends/utils/friendship";
 import {
   getPublicEventCardViewModel,
   publicEventSelect,
@@ -74,13 +83,16 @@ export type ProfileDashboardViewModel = {
   createdActivityCount: number;
   participationCount: number;
   favoriteActivityCount: number;
+  friendCount: number;
   followersCount: number;
   followingCount: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
   favoriteActivities: ProfileFavoriteActivityViewModel[];
+  friends: ProfileFriendUserViewModel[];
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
+  viewerRelationship: ProfileViewerRelationshipViewModel;
 };
 
 export type ProfileFavoriteActivityViewModel = {
@@ -102,6 +114,15 @@ export type ProfileFollowUserViewModel = {
   nickname: string;
   bio: string | null;
   avatarUrl: string | null;
+};
+
+export type ProfileFriendUserViewModel = ProfileFollowUserViewModel;
+
+export type ProfileViewerRelationshipViewModel = {
+  friendshipId: string | null;
+  isFriend: boolean;
+  isFollowing: boolean;
+  pendingFriendRequest: "sent" | "received" | null;
 };
 
 function mapPublicProfile(profile: {
@@ -204,28 +225,162 @@ function mapFollowUser(user: {
   };
 }
 
+function getTeamActivityWhere(): Prisma.ActivityWhereInput {
+  return {
+    AND: [
+      {
+        type: {
+          not: "PUBLIC_EVENT",
+        },
+      },
+      {
+        NOT: getLegacyPublicActivityInfoWhere(),
+      },
+    ],
+  };
+}
+
+function getCreatedActivitiesWhere({
+  isFriend,
+  isSelf,
+  profileId,
+}: {
+  isFriend: boolean;
+  isSelf: boolean;
+  profileId: string;
+}): Prisma.ActivityWhereInput {
+  const visibilityValues: ActivityVisibility[] | null = isSelf
+    ? null
+    : isFriend
+      ? ["PUBLIC", "PRIVATE"]
+      : ["PUBLIC"];
+
+  return {
+    AND: [
+      {
+        organizerId: profileId,
+        ...(visibilityValues
+          ? {
+              visibility: {
+                in: visibilityValues,
+              },
+            }
+          : {}),
+      },
+      getTeamActivityWhere(),
+    ],
+  };
+}
+
+function mapFriendUser(
+  friendship: {
+    userAId: string;
+    userBId: string;
+    userA: ProfileFollowUserViewModel;
+    userB: ProfileFollowUserViewModel;
+  },
+  profileId: string,
+): ProfileFriendUserViewModel {
+  return friendship.userAId === profileId ? friendship.userB : friendship.userA;
+}
+
+async function getProfileViewerRelationship(
+  profileId: string,
+  viewerProfileId?: string | null,
+): Promise<ProfileViewerRelationshipViewModel> {
+  if (!viewerProfileId || viewerProfileId === profileId) {
+    return {
+      friendshipId: null,
+      isFriend: false,
+      isFollowing: false,
+      pendingFriendRequest: null,
+    };
+  }
+
+  const [friendship, follow, pendingRequest] = await Promise.all([
+    prisma.friendship.findUnique({
+      where: {
+        userAId_userBId: getFriendshipPair(viewerProfileId, profileId),
+      },
+      select: {
+        id: true,
+      },
+    }),
+    prisma.userFollow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: viewerProfileId,
+          followingId: profileId,
+        },
+      },
+      select: {
+        id: true,
+      },
+    }),
+    prisma.friendRequest.findFirst({
+      where: {
+        status: "PENDING",
+        OR: [
+          {
+            pendingPairKey: getFriendshipPairKey(viewerProfileId, profileId),
+          },
+          {
+            requesterId: viewerProfileId,
+            receiverId: profileId,
+          },
+          {
+            requesterId: profileId,
+            receiverId: viewerProfileId,
+          },
+        ],
+      },
+      select: {
+        requesterId: true,
+        receiverId: true,
+      },
+    }),
+  ]);
+
+  return {
+    friendshipId: friendship?.id ?? null,
+    isFriend: Boolean(friendship),
+    isFollowing: Boolean(follow),
+    pendingFriendRequest: pendingRequest
+      ? pendingRequest.requesterId === viewerProfileId
+        ? "sent"
+        : "received"
+      : null,
+  };
+}
+
 export async function getProfileDashboard(
   profileId: string,
 ): Promise<ProfileDashboardViewModel> {
   const publicEventFavorite = getPublicEventFavoriteDelegate();
+  const relationship = await getProfileViewerRelationship(profileId, profileId);
+  const createdWhere = getCreatedActivitiesWhere({
+    isFriend: false,
+    isSelf: true,
+    profileId,
+  });
   const [
     createdActivityCount,
     participationCount,
     favoriteActivityCount,
     publicEventFavoriteCount,
+    friendCount,
     followersCount,
     followingCount,
     createdActivities,
     participations,
     favoriteActivities,
     favoritePublicEvents,
+    friendships,
     followers,
     following,
   ] = await Promise.all([
     prisma.activity.count({
-      where: {
-        organizerId: profileId,
-      },
+      where: createdWhere,
     }),
     prisma.activityParticipant.count({
       where: {
@@ -244,6 +399,11 @@ export async function getProfileDashboard(
           },
         })
       : Promise.resolve(0),
+    prisma.friendship.count({
+      where: {
+        OR: [{ userAId: profileId }, { userBId: profileId }],
+      },
+    }),
     prisma.userFollow.count({
       where: {
         followingId: profileId,
@@ -255,9 +415,7 @@ export async function getProfileDashboard(
       },
     }),
     prisma.activity.findMany({
-      where: {
-        organizerId: profileId,
-      },
+      where: createdWhere,
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: profileActivityListLimit,
       select: activityCardSelect,
@@ -288,6 +446,33 @@ export async function getProfileDashboard(
           select: profilePublicEventFavoriteSelect,
         })
       : Promise.resolve([]),
+    prisma.friendship.findMany({
+      where: {
+        OR: [{ userAId: profileId }, { userBId: profileId }],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        userAId: true,
+        userBId: true,
+        userA: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+        userB: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    }),
     prisma.userFollow.findMany({
       where: {
         followingId: profileId,
@@ -332,8 +517,8 @@ export async function getProfileDashboard(
   ]
     .sort(
       (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime() ||
-        left.id.localeCompare(right.id),
+        new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime() || left.id.localeCompare(right.id),
     )
     .slice(0, profileActivityListLimit);
 
@@ -341,30 +526,50 @@ export async function getProfileDashboard(
     createdActivityCount,
     participationCount,
     favoriteActivityCount: favoriteActivityCount + publicEventFavoriteCount,
+    friendCount,
     followersCount,
     followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: participations.map(mapParticipation),
     favoriteActivities: mergedFavorites,
+    friends: friendships.map((friendship) =>
+      mapFriendUser(friendship, profileId),
+    ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    viewerRelationship: relationship,
   };
 }
 
 export async function getPublicProfileDashboard(
   profileId: string,
+  viewerProfileId?: string | null,
 ): Promise<ProfileDashboardViewModel> {
+  const relationship = await getProfileViewerRelationship(
+    profileId,
+    viewerProfileId,
+  );
+  const createdWhere = getCreatedActivitiesWhere({
+    isFriend: relationship.isFriend,
+    isSelf: viewerProfileId === profileId,
+    profileId,
+  });
   const [
     createdActivityCount,
+    friendCount,
     followersCount,
     followingCount,
     createdActivities,
+    friendships,
     followers,
     following,
   ] = await Promise.all([
     prisma.activity.count({
+      where: createdWhere,
+    }),
+    prisma.friendship.count({
       where: {
-        organizerId: profileId,
+        OR: [{ userAId: profileId }, { userBId: profileId }],
       },
     }),
     prisma.userFollow.count({
@@ -378,12 +583,37 @@ export async function getPublicProfileDashboard(
       },
     }),
     prisma.activity.findMany({
-      where: {
-        organizerId: profileId,
-      },
+      where: createdWhere,
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: profileActivityListLimit,
       select: activityCardSelect,
+    }),
+    prisma.friendship.findMany({
+      where: {
+        OR: [{ userAId: profileId }, { userBId: profileId }],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileFollowListLimit,
+      select: {
+        userAId: true,
+        userBId: true,
+        userA: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+        userB: {
+          select: {
+            id: true,
+            nickname: true,
+            bio: true,
+            avatarUrl: true,
+          },
+        },
+      },
     }),
     prisma.userFollow.findMany({
       where: {
@@ -425,13 +655,18 @@ export async function getPublicProfileDashboard(
     createdActivityCount,
     participationCount: 0,
     favoriteActivityCount: 0,
+    friendCount,
     followersCount,
     followingCount,
     createdActivities: createdActivities.map(getActivityCardViewModel),
     participations: [],
     favoriteActivities: [],
+    friends: friendships.map((friendship) =>
+      mapFriendUser(friendship, profileId),
+    ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    viewerRelationship: relationship,
   };
 }
 

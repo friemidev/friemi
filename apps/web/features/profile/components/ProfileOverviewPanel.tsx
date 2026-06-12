@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
@@ -9,33 +10,35 @@ import {
   toggleFollowUserAction,
   type ToggleFollowState,
 } from "@/features/follow/actions/toggleFollowUser";
+import { withLocale } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { getProfileFollowCopy } from "../copy";
-import type { ProfileFollowUserViewModel } from "../queries/getProfileDashboard";
+import type {
+  ProfileFollowUserViewModel,
+  ProfileFriendUserViewModel,
+} from "../queries/getProfileDashboard";
 
 type ProfileOverviewPanelProps = {
   createdCount: number;
   joinedCount: number;
+  friendCount: number;
   followersCount: number;
   followingCount: number;
+  friends: ProfileFriendUserViewModel[];
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
   locale: string;
   createdLabel: string;
   joinedLabel: string;
+  redirectPath: string;
   showJoinedCount?: boolean;
 };
 
-type SocialPanelKey = "followers" | "following" | null;
+type SocialPanelKey = "friends" | "followers" | "following" | null;
 const previewLimit = 5;
 const unfollowInitialState: ToggleFollowState = {};
 
-function StatCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg bg-zinc-50 p-3">
       <p className="text-2xl font-semibold text-ink">{value}</p>
@@ -44,17 +47,47 @@ function StatCard({
   );
 }
 
+function InteractiveStatCard({
+  active,
+  label,
+  onClick,
+  value,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  value: number;
+}) {
+  return (
+    <button
+      aria-expanded={active}
+      className={cn(
+        "rounded-lg bg-zinc-50 p-3 text-left ring-1 ring-transparent transition hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40",
+        active && "bg-white ring-clay/30 shadow-sm",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <p className="text-2xl font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs text-zinc-500">{label}</p>
+    </button>
+  );
+}
+
 function CompactUserRow({
   locale,
+  redirectPath,
   user,
   canUnfollow = false,
 }: {
   locale: string;
+  redirectPath: string;
   user: ProfileFollowUserViewModel;
   canUnfollow?: boolean;
 }) {
   const t = getProfileFollowCopy(locale);
   const userInitial = user.nickname.trim().slice(0, 1) || "N";
+  const profileHref = withLocale(locale, `/profile/${user.id}`);
   const [state, formAction] = useActionState(
     toggleFollowUserAction,
     unfollowInitialState,
@@ -73,15 +106,15 @@ function CompactUserRow({
           {userInitial}
         </div>
       )}
-      <div className="min-w-0">
+      <Link className="min-w-0 flex-1" href={profileHref}>
         <p className="truncate text-sm font-medium text-ink">{user.nickname}</p>
         <p className="truncate text-xs text-zinc-500">{user.bio ?? t.noBio}</p>
-      </div>
+      </Link>
       {canUnfollow ? (
         <form action={formAction} className="ml-auto shrink-0">
           <input name="locale" type="hidden" value={locale} />
           <input name="targetUserProfileId" type="hidden" value={user.id} />
-          <input name="redirectPath" type="hidden" value="/profile" />
+          <input name="redirectPath" type="hidden" value={redirectPath} />
           <UnfollowButton locale={locale} />
           {state.formError ? (
             <p className="mt-1 max-w-40 text-right text-[11px] text-red-600">
@@ -113,36 +146,54 @@ function UnfollowButton({ locale }: { locale: string }) {
 export function ProfileOverviewPanel({
   createdCount,
   joinedCount,
+  friendCount,
   followersCount,
   followingCount,
+  friends,
   followers,
   following,
   locale,
   createdLabel,
   joinedLabel,
+  redirectPath,
   showJoinedCount = true,
 }: ProfileOverviewPanelProps) {
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
   const t = getProfileFollowCopy(locale);
   const statsGridClass = showJoinedCount
-    ? "grid grid-cols-2 gap-3 sm:min-w-80 lg:grid-cols-4"
-    : "grid grid-cols-2 gap-3 sm:min-w-80 sm:grid-cols-3";
+    ? "grid grid-cols-2 gap-3 sm:min-w-[420px] lg:grid-cols-5"
+    : "grid grid-cols-2 gap-3 sm:min-w-[340px] sm:grid-cols-4";
 
-  const activeList = activePanel === "followers" ? followers : following;
+  const activeList =
+    activePanel === "friends"
+      ? friends
+      : activePanel === "followers"
+        ? followers
+        : following;
   const activeTitle =
-    activePanel === "followers" ? t.followersTitle : t.followingTitle;
+    activePanel === "friends"
+      ? t.friendsTitle
+      : activePanel === "followers"
+        ? t.followersTitle
+        : t.followingTitle;
   const activeDescription =
-    activePanel === "followers"
-      ? t.followersDescription
-      : t.followingDescription;
+    activePanel === "friends"
+      ? t.friendsDescription
+      : activePanel === "followers"
+        ? t.followersDescription
+        : t.followingDescription;
   const emptyTitle =
-    activePanel === "followers"
-      ? t.followersEmptyTitle
-      : t.followingEmptyTitle;
+    activePanel === "friends"
+      ? t.friendsEmptyTitle
+      : activePanel === "followers"
+        ? t.followersEmptyTitle
+        : t.followingEmptyTitle;
   const emptyDescription =
-    activePanel === "followers"
-      ? t.followersEmptyDescription
-      : t.followingEmptyDescription;
+    activePanel === "friends"
+      ? t.friendsEmptyDescription
+      : activePanel === "followers"
+        ? t.followersEmptyDescription
+        : t.followingEmptyDescription;
   const previewUsers = activeList.slice(0, previewLimit);
   const hiddenCount = Math.max(activeList.length - previewUsers.length, 0);
 
@@ -153,37 +204,45 @@ export function ProfileOverviewPanel({
         {showJoinedCount ? (
           <StatCard label={joinedLabel} value={joinedCount} />
         ) : null}
-        <button
-          className="rounded-lg bg-zinc-50 p-3 text-left transition hover:bg-zinc-100"
+        <InteractiveStatCard
+          active={activePanel === "friends"}
+          label={t.friendCount}
+          onClick={() =>
+            setActivePanel((current) =>
+              current === "friends" ? null : "friends",
+            )
+          }
+          value={friendCount}
+        />
+        <InteractiveStatCard
+          active={activePanel === "followers"}
+          label={t.followersCount}
           onClick={() =>
             setActivePanel((current) =>
               current === "followers" ? null : "followers",
             )
           }
-          type="button"
-        >
-          <p className="text-2xl font-semibold text-ink">{followersCount}</p>
-          <p className="mt-1 text-xs text-zinc-500">{t.followersCount}</p>
-        </button>
-        <button
-          className="rounded-lg bg-zinc-50 p-3 text-left transition hover:bg-zinc-100"
+          value={followersCount}
+        />
+        <InteractiveStatCard
+          active={activePanel === "following"}
+          label={t.followingCount}
           onClick={() =>
             setActivePanel((current) =>
               current === "following" ? null : "following",
             )
           }
-          type="button"
-        >
-          <p className="text-2xl font-semibold text-ink">{followingCount}</p>
-          <p className="mt-1 text-xs text-zinc-500">{t.followingCount}</p>
-        </button>
+          value={followingCount}
+        />
       </div>
 
       {activePanel ? (
         <section className="absolute left-0 right-0 top-full z-20 mt-3 rounded-lg border border-black/10 bg-white p-3 shadow-lg sm:left-auto sm:w-[360px] sm:min-w-[320px] sm:p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-ink">{activeTitle}</h2>
+              <h2 className="text-base font-semibold text-ink">
+                {activeTitle}
+              </h2>
               <p className="mt-1 text-xs text-zinc-500">{activeDescription}</p>
             </div>
             <button
@@ -197,10 +256,7 @@ export function ProfileOverviewPanel({
 
           <div className="mt-3">
             {activeList.length === 0 ? (
-              <EmptyState
-                title={emptyTitle}
-                description={emptyDescription}
-              />
+              <EmptyState title={emptyTitle} description={emptyDescription} />
             ) : (
               <div className="space-y-2">
                 {previewUsers.map((user) => (
@@ -208,6 +264,7 @@ export function ProfileOverviewPanel({
                     canUnfollow={activePanel === "following"}
                     key={user.id}
                     locale={locale}
+                    redirectPath={redirectPath}
                     user={user}
                   />
                 ))}

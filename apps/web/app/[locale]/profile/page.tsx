@@ -19,13 +19,21 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
+    friendCount: 0,
     followersCount: 0,
     followingCount: 0,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
+    friends: [],
     followers: [],
     following: [],
+    viewerRelationship: {
+      friendshipId: null,
+      isFriend: false,
+      isFollowing: false,
+      pendingFriendRequest: null,
+    },
   };
 }
 

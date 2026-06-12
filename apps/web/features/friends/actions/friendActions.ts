@@ -55,6 +55,7 @@ const requestActionSchema = z.object({
 const friendshipActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   friendshipId: z.string().min(1),
+  redirectPath: z.string().trim().min(1).optional(),
 });
 
 function getString(formData: FormData, key: string) {
@@ -319,7 +320,10 @@ async function createPendingFriendRequest({
         data: {
           requesterId: viewerProfileId,
           receiverId: targetProfileId,
-          pendingPairKey: getFriendshipPairKey(viewerProfileId, targetProfileId),
+          pendingPairKey: getFriendshipPairKey(
+            viewerProfileId,
+            targetProfileId,
+          ),
           message: message || null,
         },
       });
@@ -805,6 +809,7 @@ export async function removeFriendshipAction(
   const result = friendshipActionSchema.safeParse({
     locale: fallbackLocale,
     friendshipId: getString(formData, "friendshipId"),
+    redirectPath: getString(formData, "redirectPath") || undefined,
   });
 
   if (!result.success) {
@@ -813,7 +818,7 @@ export async function removeFriendshipAction(
     };
   }
 
-  const { locale, friendshipId } = result.data;
+  const { locale, friendshipId, redirectPath } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(locale);
 
@@ -838,5 +843,9 @@ export async function removeFriendshipAction(
   }
 
   refreshFriends(locale);
+  if (redirectPath) {
+    revalidatePath(withLocale(locale, redirectPath));
+    redirect(withLocale(locale, redirectPath));
+  }
   redirectAfterFriendAction(locale);
 }

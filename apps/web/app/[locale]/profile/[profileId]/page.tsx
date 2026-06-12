@@ -23,13 +23,21 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
+    friendCount: 0,
     followersCount: 0,
     followingCount: 0,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
+    friends: [],
     followers: [],
     following: [],
+    viewerRelationship: {
+      friendshipId: null,
+      isFriend: false,
+      isFollowing: false,
+      pendingFriendRequest: null,
+    },
   };
 }
 
@@ -47,8 +55,10 @@ export default async function PublicProfilePage({
   }
 
   const isSelf = viewerProfile?.id === profile.id;
-  const loadDashboard = isSelf ? getProfileDashboard : getPublicProfileDashboard;
-  const dashboardResult = await loadDashboard(profile.id)
+  const dashboardPromise = isSelf
+    ? getProfileDashboard(profile.id)
+    : getPublicProfileDashboard(profile.id, viewerProfile?.id);
+  const dashboardResult = await dashboardPromise
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {
       console.error("Failed to load public profile dashboard", error);
