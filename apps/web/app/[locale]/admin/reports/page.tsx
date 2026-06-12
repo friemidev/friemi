@@ -146,8 +146,8 @@ function AdminOperationsOverview({
   ];
 
   return (
-    <section className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.75fr)]">
-      <div className="rounded-[1.5rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+    <section className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.75fr)]">
+      <div className="min-w-0 rounded-[1.5rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-ink">
@@ -159,61 +159,63 @@ function AdminOperationsOverview({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 xl:grid-cols-4">
           {metrics.map((metric) => {
             const Icon = metric.icon;
 
             return (
               <div
                 key={metric.label}
-                className="rounded-2xl bg-paper/70 p-4 ring-1 ring-black/5"
+                className="min-w-0 rounded-2xl bg-paper/70 p-2.5 ring-1 ring-black/5 sm:p-4"
               >
                 <span
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ${metric.tone}`}
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-full ring-1 sm:h-9 sm:w-9 ${metric.tone}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </span>
-                <p className="mt-3 text-2xl font-semibold tracking-normal text-ink">
+                <p className="mt-1.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-3 sm:text-2xl">
                   {metric.value}
                 </p>
-                <p className="mt-1 text-sm text-zinc-500">{metric.label}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500 sm:text-sm">
+                  {metric.label}
+                </p>
               </div>
             );
           })}
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl bg-paper/70 p-4 ring-1 ring-black/5">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+          <div className="min-w-0 rounded-2xl bg-paper/70 p-2.5 ring-1 ring-black/5 sm:p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
               <MousePointerClick className="h-4 w-4 text-moss" />
-              {analytics.sourceClicks}
+              <span className="truncate">{analytics.sourceClicks}</span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-1.5 text-xl font-semibold text-ink sm:mt-2 sm:text-2xl">
               {operations.publicEvents.sourceClickCount}
             </p>
           </div>
-          <div className="rounded-2xl bg-paper/70 p-4 ring-1 ring-black/5">
+          <div className="min-w-0 rounded-2xl bg-paper/70 p-2.5 ring-1 ring-black/5 sm:p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
               <TrendingUp className="h-4 w-4 text-moss" />
-              {analytics.conversionRate}
+              <span className="truncate">{analytics.conversionRate}</span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-1.5 text-xl font-semibold text-ink sm:mt-2 sm:text-2xl">
               {operations.publicEvents.conversionRate}%
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+      <div className="min-w-0 rounded-[1.5rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-ink">
           {analytics.targetDistribution}
         </h2>
         {targetTotal === 0 ? (
-          <p className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+          <p className="mt-3 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-3 text-sm text-zinc-500 sm:mt-4 sm:p-4">
             {analytics.noTargetDistribution}
           </p>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2.5 sm:mt-4 sm:space-y-3">
             {reportTargetTypeOrder.map((targetType) => {
               const count = operations.reports.byTargetType[targetType];
               const percentage =
@@ -272,16 +274,19 @@ function ReportCard({
             {targetLabel}
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500">
-            <span>{t.admin.reason}: {t.reasons[report.reason]}</span>
             <span>
-              {t.admin.submittedAt}: {formatActivityDate(report.createdAt, locale)}
+              {t.admin.reason}: {t.reasons[report.reason]}
+            </span>
+            <span>
+              {t.admin.submittedAt}:{" "}
+              {formatActivityDate(report.createdAt, locale)}
             </span>
           </div>
         </div>
 
         {report.targetHref ? (
           <Link
-            className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 sm:w-auto"
             href={withLocale(locale, report.targetHref)}
           >
             {t.admin.openTarget}
@@ -371,8 +376,8 @@ export default async function AdminReportsPage({
   ]);
 
   return (
-    <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+    <PageContainer className="max-w-full space-y-5 overflow-x-hidden pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
             {t.eyebrow}
@@ -385,22 +390,22 @@ export default async function AdminReportsPage({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:w-[22rem]">
-          <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/10">
-            <ShieldQuestion className="h-5 w-5 text-amber-700" />
-            <p className="mt-2 text-2xl font-semibold text-ink">
+        <div className="grid grid-cols-2 gap-2 sm:w-[22rem] sm:gap-3">
+          <div className="min-w-0 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-black/10 sm:p-4">
+            <ShieldQuestion className="h-4 w-4 text-amber-700 sm:h-5 sm:w-5" />
+            <p className="mt-1.5 text-xl font-semibold text-ink sm:mt-2 sm:text-2xl">
               {summary.pending}
             </p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500">
               {t.pending(summary.pending)}
             </p>
           </div>
-          <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-black/10">
-            <ShieldCheck className="h-5 w-5 text-moss" />
-            <p className="mt-2 text-2xl font-semibold text-ink">
+          <div className="min-w-0 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-black/10 sm:p-4">
+            <ShieldCheck className="h-4 w-4 text-moss sm:h-5 sm:w-5" />
+            <p className="mt-1.5 text-xl font-semibold text-ink sm:mt-2 sm:text-2xl">
               {summary.total}
             </p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500">
               {t.total(summary.total)}
             </p>
           </div>
@@ -411,7 +416,7 @@ export default async function AdminReportsPage({
 
       <nav
         aria-label={t.statusFilterLabel}
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        className="grid grid-cols-2 gap-2 min-[430px]:grid-cols-3 sm:flex sm:flex-wrap"
       >
         {reportStatusFilters.map((filter) => {
           const isActive = selectedStatus === filter;
@@ -420,7 +425,7 @@ export default async function AdminReportsPage({
             <Link
               key={filter}
               aria-current={isActive ? "page" : undefined}
-              className={`inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium ring-1 transition ${
+              className={`inline-flex h-10 min-w-0 items-center justify-center rounded-full px-3 text-sm font-medium ring-1 transition ${
                 isActive
                   ? "bg-ink text-white ring-ink"
                   : "bg-white/80 text-zinc-600 ring-black/10 hover:bg-white hover:text-ink"

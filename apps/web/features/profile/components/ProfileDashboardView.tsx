@@ -22,6 +22,27 @@ type ProfileDashboardViewProps = {
   profile: PublicProfileViewModel;
 };
 
+function getSelfProfileMetricLabels(locale: string) {
+  if (locale === "fr") {
+    return {
+      created: "Mes créations",
+      joined: "Mes participations",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      created: "My created",
+      joined: "My joined",
+    };
+  }
+
+  return {
+    created: "我的发起",
+    joined: "我的参与",
+  };
+}
+
 export function ProfileDashboardView({
   dashboard,
   hasDashboardError = false,
@@ -32,6 +53,7 @@ export function ProfileDashboardView({
 }: ProfileDashboardViewProps) {
   const t = getCopy(locale);
   const friendsCopy = getFriendsCopy(locale);
+  const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
   const showPrivateParticipation = isSelf;
 
@@ -90,8 +112,12 @@ export function ProfileDashboardView({
               following={dashboard.following}
               followingCount={dashboard.followingCount}
               locale={locale}
-              createdLabel={t.profile.createdCount}
-              joinedLabel={t.profile.participationCount}
+              createdLabel={
+                isSelf ? selfMetricLabels.created : t.profile.createdCount
+              }
+              joinedLabel={
+                isSelf ? selfMetricLabels.joined : t.profile.participationCount
+              }
               redirectPath={isSelf ? "/profile" : `/profile/${profile.id}`}
               showJoinedCount={showPrivateParticipation}
             />

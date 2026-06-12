@@ -22,26 +22,35 @@ const profileActivityListLimit = 12;
 function getProfileSpaceCopy(locale: string) {
   if (locale === "en") {
     return {
+      createdTitle: "My created",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Start a crew",
+      participationTitle: "My joined",
       participationAction: "Discover activities",
+      favoriteTitle: "My saved",
       favoriteAction: "Discover activities",
     };
   }
 
   if (locale === "fr") {
     return {
+      createdTitle: "Mes créations",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Créer une sortie",
+      participationTitle: "Mes participations",
       participationAction: "Découvrir",
+      favoriteTitle: "Mes favoris",
       favoriteAction: "Découvrir",
     };
   }
 
   return {
+    createdTitle: "我的发起",
     sectionCount: (count: number) => `${count}`,
     createdAction: "发起组局",
+    participationTitle: "我的参与",
     participationAction: "发现活动",
+    favoriteTitle: "我的收藏",
     favoriteAction: "发现活动",
   };
 }
@@ -116,23 +125,32 @@ export function ProfileActivitySections({
     dashboard.favoriteActivityCount - dashboard.favoriteActivities.length,
     0,
   );
+  const createdTitle = isSelf
+    ? profileSpaceCopy.createdTitle
+    : t.profile.createdTitle;
+  const participationTitle = isSelf
+    ? profileSpaceCopy.participationTitle
+    : t.profile.participationTitle;
+  const favoriteTitle = isSelf
+    ? profileSpaceCopy.favoriteTitle
+    : t.profile.favoriteTitle;
   const tabs = useMemo(
     () => [
       {
         key: "created" as const,
-        title: t.profile.createdTitle,
+        title: createdTitle,
         count: dashboard.createdActivityCount,
       },
       ...(isSelf
         ? [
             {
               key: "participation" as const,
-              title: t.profile.participationTitle,
+              title: participationTitle,
               count: dashboard.participationCount,
             },
             {
               key: "favorite" as const,
-              title: t.profile.favoriteTitle,
+              title: favoriteTitle,
               count: dashboard.favoriteActivityCount,
             },
           ]
@@ -142,10 +160,10 @@ export function ProfileActivitySections({
       dashboard.createdActivityCount,
       dashboard.favoriteActivityCount,
       dashboard.participationCount,
+      createdTitle,
+      favoriteTitle,
       isSelf,
-      t.profile.createdTitle,
-      t.profile.favoriteTitle,
-      t.profile.participationTitle,
+      participationTitle,
     ],
   );
   const [activeSection, setActiveSection] = useState<ProfileSectionKey>(
@@ -200,7 +218,7 @@ export function ProfileActivitySections({
           <SectionHeader
             count={dashboard.createdActivityCount}
             locale={locale}
-            title={t.profile.createdTitle}
+            title={createdTitle}
           />
           {dashboard.createdActivities.length === 0 ? (
             <CompactEmptyState
@@ -216,6 +234,7 @@ export function ProfileActivitySections({
                   <ActivityCard
                     key={activity.id}
                     activity={activity}
+                    isOwnActivity={isSelf}
                     locale={locale}
                     sourceSurface="profile"
                   />
@@ -244,7 +263,7 @@ export function ProfileActivitySections({
               <SectionHeader
                 count={dashboard.participationCount}
                 locale={locale}
-                title={t.profile.participationTitle}
+                title={participationTitle}
               />
               {dashboard.participations.length === 0 ? (
                 <CompactEmptyState
@@ -285,7 +304,7 @@ export function ProfileActivitySections({
               <SectionHeader
                 count={dashboard.favoriteActivityCount}
                 locale={locale}
-                title={t.profile.favoriteTitle}
+                title={favoriteTitle}
               />
               {dashboard.favoriteActivities.length === 0 ? (
                 <CompactEmptyState

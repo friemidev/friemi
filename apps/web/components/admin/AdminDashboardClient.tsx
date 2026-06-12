@@ -279,9 +279,10 @@ export function AdminDashboardClient({
     <div className="space-y-5 md:space-y-6">
       <Toaster position="top-center" richColors closeButton />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <Button
           type="button"
+          className="w-full sm:w-auto"
           variant={activeTab === "activities" ? "primary" : "secondary"}
           onClick={() => setActiveTab("activities")}
         >
@@ -289,6 +290,7 @@ export function AdminDashboardClient({
         </Button>
         <Button
           type="button"
+          className="w-full sm:w-auto"
           variant={activeTab === "scraper" ? "primary" : "secondary"}
           onClick={() => setActiveTab("scraper")}
         >
@@ -698,7 +700,93 @@ export function AdminDashboardClient({
               <CardTitle>数据库活动列表</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-              <div className="max-h-[70vh] overflow-auto rounded-md border border-black/10">
+              <div className="grid gap-3 md:hidden">
+                {activities.map((activity) => (
+                  <article
+                    key={activity.id}
+                    className="rounded-xl border border-black/10 bg-white/80 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 font-medium text-zinc-950">
+                          {activity.title}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
+                          {activity.address}
+                        </p>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700">
+                        {getAdminStatusLabel(activity.status)}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-600">
+                      <span>{dateOnly(activity.startAt)}</span>
+                      <span className="truncate text-right">
+                        {activity.merchantName ?? "-"}
+                      </span>
+                      <span className="col-span-2 truncate">
+                        {getSourceLabel(activity.source, activity.sourceUrl)}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() =>
+                          setActivityForm({
+                            id: activity.id,
+                            title: activity.title,
+                            description: activity.description,
+                            itinerary: activity.itinerary ?? "",
+                            type: activity.type,
+                            category:
+                              activity.category as ActivityFormState["category"],
+                            city: activity.city,
+                            destination: activity.destination ?? "",
+                            address: activity.address,
+                            latitude:
+                              activity.latitude === null
+                                ? ""
+                                : String(activity.latitude),
+                            longitude:
+                              activity.longitude === null
+                                ? ""
+                                : String(activity.longitude),
+                            startAt: toDatetimeLocal(activity.startAt),
+                            endAt: toDatetimeLocal(activity.endAt),
+                            capacity: String(activity.capacity),
+                            coverImageUrl: activity.coverImageUrl ?? "",
+                            minParticipants: activity.minParticipants
+                              ? String(activity.minParticipants)
+                              : "",
+                            requiresApproval: activity.requiresApproval,
+                            priceType: activity.priceType,
+                            priceText: activity.priceText,
+                            status:
+                              activity.status as ActivityFormState["status"],
+                            visibility:
+                              activity.visibility as ActivityFormState["visibility"],
+                            organizerId:
+                              activity.organizerId || defaultOrganizerId,
+                            merchantId: activity.merchantId ?? "",
+                          })
+                        }
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => deleteActivity(activity.id)}
+                        disabled={busy === activity.id}
+                      >
+                        {busy === activity.id ? "删除中" : "删除"}
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden max-h-[70vh] overflow-auto rounded-md border border-black/10 md:block">
                 <table className="min-w-[980px] text-left text-sm">
                   <thead className="bg-zinc-50 text-zinc-500">
                     <tr>

@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, MapPin, UsersRound } from "lucide-react";
+import { CalendarDays, Clock3, Crown, MapPin, UsersRound } from "lucide-react";
 import {
   Button,
   Card,
@@ -29,6 +29,7 @@ type ActivityCardProps = {
   activity: ActivityCardViewModel;
   favoriteRedirectPath?: string;
   isAuthenticated?: boolean;
+  isOwnActivity?: boolean;
   locale: string;
   mobileDense?: boolean;
   showFavoriteButton?: boolean;
@@ -158,10 +159,7 @@ const avatarTones = [
 ];
 
 function getStableAvatarTone(value: string) {
-  const total = [...value].reduce(
-    (sum, char) => sum + char.charCodeAt(0),
-    0,
-  );
+  const total = [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
   return avatarTones[total % avatarTones.length];
 }
@@ -185,10 +183,32 @@ function getParticipationActionLabel(
   return null;
 }
 
+function getOwnActivityLabels(locale: string) {
+  if (locale === "fr") {
+    return {
+      action: "Voir la sortie",
+      badge: "Ma sortie",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      action: "View activity",
+      badge: "Mine",
+    };
+  }
+
+  return {
+    action: "查看活动",
+    badge: "我发起",
+  };
+}
+
 export function ActivityCard({
   activity,
   favoriteRedirectPath = "/activities",
   isAuthenticated = false,
+  isOwnActivity = false,
   locale,
   mobileDense = false,
   showFavoriteButton = false,
@@ -210,8 +230,11 @@ export function ActivityCard({
   const cardHref = isActivityInfo
     ? withLocale(locale, activityInfoHref)
     : withLocale(locale, `/activities/${activity.id}`);
-  const actionHref =
-    isActivityInfo && displayStatus !== "ENDED" && displayStatus !== "CANCELLED"
+  const actionHref = isOwnActivity
+    ? cardHref
+    : isActivityInfo &&
+        displayStatus !== "ENDED" &&
+        displayStatus !== "CANCELLED"
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
   const participationActionLabel = getParticipationActionLabel(
@@ -235,11 +258,13 @@ export function ActivityCard({
       : locale === "en"
         ? "Join now"
         : "立刻报名";
-  const actionLabel =
-    participationActionLabel ??
-    (!isActivityInfo && displayStatus === "FULL"
-      ? t.join.fullAction
-      : primaryActionLabel);
+  const ownActivityLabels = getOwnActivityLabels(locale);
+  const actionLabel = isOwnActivity
+    ? ownActivityLabels.action
+    : (participationActionLabel ??
+      (!isActivityInfo && displayStatus === "FULL"
+        ? t.join.fullAction
+        : primaryActionLabel));
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -267,9 +292,10 @@ export function ActivityCard({
       ? getCountdownLabel(activity, locale)
       : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
-  const actionEventName: AnalyticsEventName = canCreateTeam
-    ? "team_create_started"
-    : "activity_card_clicked";
+  const actionEventName: AnalyticsEventName =
+    canCreateTeam && !isOwnActivity
+      ? "team_create_started"
+      : "activity_card_clicked";
   const baseAnalyticsProperties = {
     category: activity.category,
     city: activity.city,
@@ -310,9 +336,7 @@ export function ActivityCard({
           <span
             className={cn(
               "flex h-6 min-w-6 items-center justify-center rounded-full bg-[#f0ddcf] px-1.5 text-[10px] font-semibold text-[#6f4d34] ring-2 ring-[#fffaf4]",
-              isInactiveCard
-                ? "bg-zinc-200 text-zinc-500 ring-zinc-50"
-                : null,
+              isInactiveCard ? "bg-zinc-200 text-zinc-500 ring-zinc-50" : null,
             )}
           >
             +{participantExtraCount}
@@ -441,6 +465,20 @@ export function ActivityCard({
             />
             {getCardKindLabel(isActivityInfo, locale)}
           </span>
+          {isOwnActivity ? (
+            <span
+              className={cn(
+                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#f5c8b7] bg-[#fff7ed]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur sm:right-4 sm:top-4",
+                showFavoriteButton ? "right-14 sm:right-16" : null,
+                mobileDenseClass(
+                  "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
+                ),
+              )}
+            >
+              <Crown className="h-3.5 w-3.5 shrink-0" />
+              {ownActivityLabels.badge}
+            </span>
+          ) : null}
           <div className="relative mt-auto flex w-full items-end justify-between gap-2">
             <div className="flex min-w-0 flex-wrap gap-1.5">
               <span
@@ -561,7 +599,9 @@ export function ActivityCard({
                 ) : null}
               </span>
             ) : null}
-            {!mobileDense && !shouldShowParticipantCount && participantAvatarStack ? (
+            {!mobileDense &&
+            !shouldShowParticipantCount &&
+            participantAvatarStack ? (
               <span className="flex min-w-0 items-center pl-6">
                 {participantAvatarStack}
               </span>

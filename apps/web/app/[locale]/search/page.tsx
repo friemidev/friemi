@@ -136,7 +136,10 @@ export default async function SearchPage({
   const viewerProfile = query
     ? await perf.measure("viewer.profile", () =>
         getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
-          console.error("Failed to load viewer profile for global search", error);
+          console.error(
+            "Failed to load viewer profile for global search",
+            error,
+          );
           return null;
         }),
       )
@@ -186,15 +189,18 @@ export default async function SearchPage({
     );
   }
 
-  const perfResult = perf.finish({
-    hasQuery: Boolean(query),
-    resultCount: totalCount,
-  }, {
-    route: `/${locale}/search`,
-    routeKey: "search",
-    sourceSurface: "global_search",
-    userProfileId: viewerProfile?.id,
-  });
+  const perfResult = perf.finish(
+    {
+      hasQuery: Boolean(query),
+      resultCount: totalCount,
+    },
+    {
+      route: `/${locale}/search`,
+      routeKey: "search",
+      sourceSurface: "global_search",
+      userProfileId: viewerProfile?.id,
+    },
+  );
   const searchStep = perfResult.steps.find(
     (step) => step.label === "search.results",
   );
@@ -280,7 +286,7 @@ export default async function SearchPage({
               />
               {searchResult.result.activities.length > 0 ? (
                 <>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-3 min-[380px]:grid-cols-2 md:gap-4 lg:grid-cols-3">
                     {searchResult.result.activities.map((activity) => (
                       <ActivityCard
                         key={activity.id}
@@ -323,7 +329,7 @@ export default async function SearchPage({
                 count={searchResult.result.publicEventCount}
               />
               {searchResult.result.publicEvents.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 min-[380px]:grid-cols-2 md:gap-4 lg:grid-cols-3">
                   {searchResult.result.publicEvents.map((event) => (
                     <PublicEventCard
                       key={event.id}
