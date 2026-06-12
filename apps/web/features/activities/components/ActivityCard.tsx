@@ -27,6 +27,7 @@ import { ActivityCoverImage } from "./ActivityCoverImage";
 
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
+  actionContext?: "default" | "lobby" | "profile";
   favoriteRedirectPath?: string;
   isAuthenticated?: boolean;
   isOwnActivity?: boolean;
@@ -36,6 +37,14 @@ type ActivityCardProps = {
   showPrimaryAction?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
 };
+
+type ActivityCardActionTone =
+  | "activity"
+  | "joined"
+  | "muted"
+  | "neutral"
+  | "pending"
+  | "team";
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   moss: "bg-moss",
@@ -186,14 +195,14 @@ function getParticipationActionLabel(
 function getOwnActivityLabels(locale: string) {
   if (locale === "fr") {
     return {
-      action: "Voir la sortie",
+      action: "Voir le detail",
       badge: "Ma sortie",
     };
   }
 
   if (locale === "en") {
     return {
-      action: "View activity",
+      action: "View details",
       badge: "Mine",
     };
   }
@@ -204,8 +213,100 @@ function getOwnActivityLabels(locale: string) {
   };
 }
 
+function getCardActionCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      createTeam: "Organiser un plan",
+      joinTeam: "Rejoindre le plan",
+      viewActivity: "Voir l'activite",
+      viewDetails: "Voir les details",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      createTeam: "Start a plan",
+      joinTeam: "Join the plan",
+      viewActivity: "View activity",
+      viewDetails: "View details",
+    };
+  }
+
+  return {
+    createTeam: "去组局",
+    joinTeam: "报名加入",
+    viewActivity: "查看活动",
+    viewDetails: "查看详情",
+  };
+}
+
+function getCardActionConfig({
+  actionContext,
+  activityCopy,
+  cardCopy,
+  displayStatus,
+  isActivityInfo,
+  isOwnActivity,
+  viewerParticipationStatus,
+}: {
+  actionContext: "default" | "lobby" | "profile";
+  activityCopy: ReturnType<typeof getCopy>;
+  cardCopy: ReturnType<typeof getCardActionCopy>;
+  displayStatus: ReturnType<typeof getActivityDisplayStatus>;
+  isActivityInfo: boolean;
+  isOwnActivity: boolean;
+  viewerParticipationStatus: ActivityCardViewModel["viewerParticipationStatus"];
+}): { label: string; tone: ActivityCardActionTone } {
+  const isInactive =
+    displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const participationActionLabel = getParticipationActionLabel(
+    activityCopy,
+    viewerParticipationStatus ?? null,
+  );
+
+  if (isOwnActivity) {
+    return {
+      label:
+        actionContext === "profile"
+          ? cardCopy.viewDetails
+          : isActivityInfo
+            ? cardCopy.viewActivity
+            : cardCopy.viewDetails,
+      tone: "neutral",
+    };
+  }
+
+  if (participationActionLabel) {
+    return {
+      label: participationActionLabel,
+      tone:
+        viewerParticipationStatus === "PENDING" ? "pending" : "joined",
+    };
+  }
+
+  if (!isActivityInfo && displayStatus === "FULL") {
+    return {
+      label: activityCopy.join.fullAction,
+      tone: "muted",
+    };
+  }
+
+  if (isActivityInfo) {
+    return {
+      label: isInactive ? cardCopy.viewActivity : cardCopy.createTeam,
+      tone: isInactive ? "muted" : "activity",
+    };
+  }
+
+  return {
+    label: isInactive ? cardCopy.viewDetails : cardCopy.joinTeam,
+    tone: isInactive ? "muted" : "team",
+  };
+}
+
 export function ActivityCard({
   activity,
+  actionContext = "default",
   favoriteRedirectPath = "/activities",
   isAuthenticated = false,
   isOwnActivity = false,
@@ -237,6 +338,7 @@ export function ActivityCard({
         displayStatus !== "CANCELLED"
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
+  const cardActionCopy = getCardActionCopy(locale);
   const participationActionLabel = getParticipationActionLabel(
     t,
     activity.viewerParticipationStatus ?? null,
@@ -265,6 +367,16 @@ export function ActivityCard({
       (!isActivityInfo && displayStatus === "FULL"
         ? t.join.fullAction
         : primaryActionLabel));
+  const resolvedActionConfig = getCardActionConfig({
+    actionContext,
+    activityCopy: t,
+    cardCopy: cardActionCopy,
+    displayStatus,
+    isActivityInfo,
+    isOwnActivity,
+    viewerParticipationStatus: activity.viewerParticipationStatus ?? null,
+  });
+  const buttonLabel = resolvedActionConfig.label;
   const activityLabel = t.activityLabels.activityAria(
     activity.title,
     getActivityDateLabel(activity, locale),
@@ -346,6 +458,18 @@ export function ActivityCard({
     ) : null;
   const mobileDenseClass = (className: string) =>
     mobileDense ? className : null;
+  const actionToneClassName =
+    resolvedActionConfig.tone === "muted"
+      ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
+      : resolvedActionConfig.tone === "neutral"
+        ? "bg-[#fffaf4] text-[#6f4d34] ring-1 ring-[#dcc7b4] hover:bg-[#fff1e4]"
+        : resolvedActionConfig.tone === "joined"
+          ? "bg-[#dcefd7] text-[#36543c] ring-1 ring-[#a8c79f] shadow-[0_8px_18px_rgba(113,146,104,0.14)] hover:bg-[#d0e6ca]"
+          : resolvedActionConfig.tone === "pending"
+            ? "bg-[#f8e6b8] text-[#7b5622] ring-1 ring-[#e2c27c] shadow-[0_8px_18px_rgba(198,156,73,0.15)] hover:bg-[#f4dda1]"
+            : resolvedActionConfig.tone === "activity"
+              ? "bg-[#dceef7] text-[#245e76] ring-1 ring-[#9fc6d8] shadow-[0_8px_18px_rgba(84,139,167,0.14)] hover:bg-[#cde6f2]"
+              : "bg-[#d88d72] text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] hover:bg-[#c87b61]";
 
   return (
     <Card
@@ -645,14 +769,10 @@ export function ActivityCard({
             <Button
               className={cn(
                 "h-10 w-full rounded-full border-0",
-                isInactiveCard
-                  ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
-                  : isTeamCard
-                    ? "bg-[#d88d72] text-white shadow-[0_8px_18px_rgba(216,141,114,0.2)] hover:bg-[#c87b61]"
-                    : "bg-[#e8f6fb] text-[#346b82] ring-1 ring-[#b9d7e5] hover:bg-[#d9eef6]",
+                actionToneClassName,
               )}
             >
-              {actionLabel}
+              {buttonLabel}
             </Button>
           </AnalyticsLink>
         </div>

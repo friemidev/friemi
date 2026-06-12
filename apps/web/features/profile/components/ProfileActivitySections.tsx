@@ -300,6 +300,7 @@ export function ProfileActivitySections({
                 {sortedCreatedActivities.map((activity) => (
                   <ActivityCard
                     key={activity.id}
+                    actionContext="profile"
                     activity={activity}
                     isOwnActivity={isSelf}
                     locale={locale}
