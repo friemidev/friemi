@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { Badge } from "@chill-club/ui";
 import { formatActivityDate } from "@chill-club/shared";
@@ -6,6 +5,8 @@ import type { ParticipantStatus } from "@prisma/client";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import type { DetailSourceInput } from "@/features/navigation/contextualDetailReturn";
 import { getCopy, getStatusLabel } from "@/lib/copy";
 import {
   getActivityDateLabel,
@@ -15,6 +16,7 @@ import {
 import type { ProfileParticipationViewModel } from "../queries/getProfileDashboard";
 
 type ProfileParticipationCardProps = {
+  detailSourceState?: DetailSourceInput["sourceState"];
   participation: ProfileParticipationViewModel;
   locale: string;
 };
@@ -28,6 +30,7 @@ const participationStatusColors: Record<ParticipantStatus, string> = {
 };
 
 export function ProfileParticipationCard({
+  detailSourceState,
   participation,
   locale,
 }: ProfileParticipationCardProps) {
@@ -47,8 +50,17 @@ export function ProfileParticipationCard({
         );
 
   return (
-    <Link
+    <ContextualDetailLink
       href={withLocale(locale, `/activities/${activity.id}`)}
+      detailSource={{
+        sourceKey: "profile",
+        sourceState: detailSourceState ?? {
+          section: "participation",
+        },
+        targetKey: `activity:${activity.id}`,
+        targetKind: "activity",
+      }}
+      data-detail-source-target={`activity:${activity.id}`}
       aria-label={t.profile.participationAria(
         activity.title,
         statusLabel,
@@ -90,6 +102,6 @@ export function ProfileParticipationCard({
           <span className="min-w-0">{getActivityLocationLabel(activity)}</span>
         </span>
       </div>
-    </Link>
+    </ContextualDetailLink>
   );
 }

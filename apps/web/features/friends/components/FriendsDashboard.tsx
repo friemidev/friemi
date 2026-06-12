@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
@@ -104,6 +106,7 @@ export function FriendsDashboard({
 
   return (
     <div className="space-y-5">
+      <DetailSourceRestore sourceKey="friends" />
       <div
         className={cn(
           "grid gap-4",
@@ -1226,9 +1229,15 @@ function FriendActivitySummary({
     <div className="mt-3 rounded-md bg-moss/5 p-2.5 ring-1 ring-moss/10">
       <div className="flex min-w-0 items-start gap-2">
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-moss" />
-        <Link
+        <ContextualDetailLink
           className="min-w-0 flex-1 text-xs font-medium leading-5 text-ink transition hover:text-moss"
           href={withLocale(locale, `/activities/${firstActivity.id}`)}
+          detailSource={{
+            sourceKey: "friends",
+            targetKey: `activity:${firstActivity.id}`,
+            targetKind: "activity",
+          }}
+          data-detail-source-target={`activity:${firstActivity.id}`}
           title={firstActivity.title}
         >
           <span className="line-clamp-2">
@@ -1238,7 +1247,7 @@ function FriendActivitySummary({
               firstActivity.timeState,
             )}
           </span>
-        </Link>
+        </ContextualDetailLink>
         {hasMore ? (
           <button
             type="button"
@@ -1267,17 +1276,23 @@ function FriendActivitySummary({
       {isExpanded ? (
         <div className="mt-2 grid max-h-32 gap-1 overflow-y-auto pr-1">
           {remainingActivities.map((activity) => (
-            <Link
+            <ContextualDetailLink
               key={activity.id}
               className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs leading-5 text-zinc-600 ring-1 ring-black/5 transition hover:bg-white hover:text-ink"
               href={withLocale(locale, `/activities/${activity.id}`)}
+              detailSource={{
+                sourceKey: "friends",
+                targetKey: `activity:${activity.id}`,
+                targetKind: "activity",
+              }}
+              data-detail-source-target={`activity:${activity.id}`}
               title={activity.title}
             >
               <span className="shrink-0 whitespace-nowrap text-zinc-500">
                 {formatActivityDateOnly(activity.startAt, locale)}
               </span>
               <span className="truncate font-medium">{activity.title}</span>
-            </Link>
+            </ContextualDetailLink>
           ))}
         </div>
       ) : null}

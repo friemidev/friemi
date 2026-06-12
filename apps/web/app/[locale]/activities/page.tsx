@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   getActivityList,
   getActivityFilterOptions,
@@ -233,6 +234,7 @@ export default async function ActivitiesPage({
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
+      <DetailSourceRestore sourceKey="activity_list" />
       <ActivityFilters
         cities={filterOptions.cities}
         filters={filters}
@@ -283,6 +285,7 @@ export default async function ActivitiesPage({
                 showFavoriteButton
                 showPrimaryAction={false}
                 sourceSurface="activity_list"
+                detailSourceKey="activity_list"
               />
             ))}
           </div>

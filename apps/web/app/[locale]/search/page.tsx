@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { ArrowRight, Clock3, MapPin, Search, Store } from "lucide-react";
 import type { ReactNode } from "react";
@@ -7,6 +6,8 @@ import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { recordOperationLatency } from "@/features/analytics/latency";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
@@ -188,8 +189,14 @@ function MerchantResultCard({
     .join(" · ");
 
   return (
-    <Link
+    <ContextualDetailLink
       href={href}
+      detailSource={{
+        sourceKey: "search",
+        targetKey: `merchant:${merchant.slug}`,
+        targetKind: "merchant",
+      }}
+      data-detail-source-target={`merchant:${merchant.slug}`}
       className="group flex min-w-0 items-start gap-3 rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
       aria-label={t.openMerchant(merchant.name)}
     >
@@ -228,7 +235,7 @@ function MerchantResultCard({
           {t.merchantActivityCount(merchant.activityCount)}
         </span>
       </span>
-    </Link>
+    </ContextualDetailLink>
   );
 }
 
@@ -398,6 +405,7 @@ export default async function SearchPage({
 
   return (
     <PageContainer className="space-y-6 py-5 sm:py-8">
+      <DetailSourceRestore sourceKey="search" />
       <div className="space-y-4">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-zinc-600 ring-1 ring-black/10">

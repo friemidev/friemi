@@ -31,6 +31,12 @@ a {
   text-decoration: none;
 }
 
+.detail-source-restored {
+  outline: 2px solid rgba(216, 141, 114, 0.7);
+  outline-offset: 4px;
+  transition: outline-color 0.3s ease;
+}
+
 @keyframes nextfun-loader-ring {
   to {
     transform: rotate(360deg);

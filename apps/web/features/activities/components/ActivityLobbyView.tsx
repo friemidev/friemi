@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PaginationControl } from "@/components/ui/PaginationControl";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import {
+  isDetailSourceReturnPage,
+  readDetailSourceContext,
+} from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -419,11 +424,11 @@ function getActivityLobbyPreviewCopy(locale: string) {
 
 function FilterGroupRow({ children, label }: FilterGroupRowProps) {
   return (
-    <div className="grid gap-2 rounded-2xl bg-[#fffaf2]/78 p-2 ring-1 ring-black/5 sm:grid-cols-[4.25rem_minmax(0,1fr)] sm:items-center">
-      <p className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7455] sm:px-0 sm:text-center">
+    <div className="grid gap-1.5 sm:grid-cols-[4.25rem_minmax(0,1fr)] sm:items-center sm:gap-2">
+      <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a7455] sm:px-0 sm:text-left sm:text-xs sm:tracking-[0.14em]">
         {label}
       </p>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+      <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
         {children}
       </div>
     </div>
@@ -488,6 +493,7 @@ export function ActivityLobbyPreviewView({
 
   return (
     <div className="space-y-6">
+      <DetailSourceRestore sourceKey="lobby" />
       <section className="rounded-[1.5rem] border border-[#dfceb0] bg-[linear-gradient(145deg,rgba(255,252,247,0.98),rgba(246,237,222,0.94))] px-5 py-5 shadow-[0_12px_30px_rgba(94,80,52,0.06)] sm:px-6 sm:py-6">
         <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <div className="max-w-2xl">
@@ -553,6 +559,8 @@ export function ActivityLobbyPreviewView({
                   showFavoriteButton
                   showPrimaryAction
                   sourceSurface="activity_list"
+                  detailSourceKey="lobby"
+                  detailSourceState={{ page }}
                 />
               ))}
             </div>
@@ -585,6 +593,37 @@ export function ActivityLobbyView({
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
   const [page, setPage] = useState(1);
+  useEffect(() => {
+    const context = readDetailSourceContext();
+
+    if (!context || !isDetailSourceReturnPage(context, "lobby")) {
+      return;
+    }
+
+    const filter = context.sourceState?.filter;
+    const status = context.sourceState?.status;
+    const restoredPage = Number(context.sourceState?.page);
+
+    if (
+      filter === "all" ||
+      filter === "open" ||
+      filter === "created" ||
+      filter === "joined" ||
+      filter === "favorites" ||
+      filter === "friendHosted" ||
+      filter === "friendJoined"
+    ) {
+      setActiveFilter(filter);
+    }
+
+    if (status === "all" || status === "ongoing" || status === "ended") {
+      setActiveStatusFilter(status);
+    }
+
+    if (Number.isInteger(restoredPage) && restoredPage > 0) {
+      setPage(restoredPage);
+    }
+  }, []);
   const createdActivityKeys = useMemo(
     () => new Set(createdActivities.map((activity) => getLobbyActivityKey(activity))),
     [createdActivities],
@@ -711,16 +750,17 @@ export function ActivityLobbyView({
   }, [page, totalPages]);
 
   return (
-    <div className="space-y-5">
-      <section className="sm:rounded-[1.5rem] sm:border sm:border-[#e1d5c2] sm:bg-[linear-gradient(180deg,rgba(255,252,246,0.94),rgba(250,244,234,0.9))] sm:p-4 sm:shadow-[0_10px_26px_rgba(94,80,52,0.05)]">
-        <div className="flex flex-col gap-3">
+    <div className="space-y-4">
+      <DetailSourceRestore sourceKey="lobby" />
+      <section>
+        <div className="flex flex-col gap-2.5 sm:gap-3">
           <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <h1 className="sr-only">{t.title}</h1>
             <div>
               <p className="text-sm font-semibold text-ink">
                 {filterCopy.title}
               </p>
-              <p className="mt-0.5 text-xs leading-5 text-zinc-500 sm:text-sm">
+              <p className="mt-0.5 hidden text-xs leading-5 text-zinc-500 min-[430px]:block sm:text-sm">
                 {t.description}
               </p>
             </div>
@@ -746,16 +786,16 @@ export function ActivityLobbyView({
                       setActiveStatusFilter("all");
                     }}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-medium transition sm:px-3.5 sm:text-sm",
+                      "inline-flex h-8 min-w-0 items-center justify-center gap-1 rounded-full border px-2 text-[11px] font-medium transition sm:h-9 sm:shrink-0 sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
                         ? "border-[#b8cda8] bg-[#e4efd9] text-[#526a39] shadow-[0_3px_8px_rgba(96,124,69,0.1)]"
                         : "border-[#e4d9c9] bg-white/86 text-[#665c51] hover:border-[#cfc2af] hover:bg-white",
                     )}
                   >
-                    <span>{option.label}</span>
+                    <span className="min-w-0 truncate">{option.label}</span>
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
+                        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
                           ? "bg-white/78 text-[#526a39]"
                           : "bg-[#f3ecdf] text-[#8a7a65]",
@@ -779,16 +819,16 @@ export function ActivityLobbyView({
                     aria-pressed={active}
                     onClick={() => setActiveStatusFilter(option.id)}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-medium transition sm:text-sm",
+                      "inline-flex h-8 min-w-0 items-center justify-center gap-1 rounded-full border px-2 text-[11px] font-medium transition sm:h-9 sm:shrink-0 sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
                         ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
                         : "border-[#e7dfcf] bg-[#fffaf2] text-[#776b5f] hover:border-[#d7ccb5]",
                     )}
                   >
-                    <span>{option.label}</span>
+                    <span className="min-w-0 truncate">{option.label}</span>
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
+                        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
                           ? "bg-white/70 text-[#76552a]"
                           : "bg-[#f4ecde] text-[#8a7455]",
@@ -890,6 +930,12 @@ export function ActivityLobbyView({
                 showFavoriteButton
                 showPrimaryAction
                 sourceSurface="activity_list"
+                detailSourceKey="lobby"
+                detailSourceState={{
+                  filter: activeFilter,
+                  page,
+                  status: activeStatusFilter,
+                }}
               />
             ))}
           </div>

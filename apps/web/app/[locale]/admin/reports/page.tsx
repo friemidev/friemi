@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   getAdminOperationsAnalytics,
   type AdminOperationsAnalytics,
@@ -285,13 +287,24 @@ function ReportCard({
         </div>
 
         {report.targetHref ? (
-          <Link
+          <ContextualDetailLink
             className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50 sm:w-auto"
             href={withLocale(locale, report.targetHref)}
+            detailSource={{
+              sourceKey: "admin_reports",
+              targetKey: `report:${report.id}`,
+              targetKind:
+                report.targetType === "USER_PROFILE"
+                  ? "profile"
+                  : report.targetType === "PUBLIC_EVENT"
+                    ? "public_event"
+                    : "activity",
+            }}
+            data-detail-source-target={`report:${report.id}`}
           >
             {t.admin.openTarget}
             <ExternalLink className="h-4 w-4" />
-          </Link>
+          </ContextualDetailLink>
         ) : null}
       </div>
 
@@ -377,6 +390,7 @@ export default async function AdminReportsPage({
 
   return (
     <PageContainer className="max-w-full space-y-5 overflow-x-hidden pb-32 md:space-y-6 md:pb-10 lg:!max-w-[96rem]">
+      <DetailSourceRestore sourceKey="admin_reports" />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">

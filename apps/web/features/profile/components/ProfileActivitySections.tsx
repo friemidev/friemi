@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { ArrowDownUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import {
+  isDetailSourceReturnPage,
+  readDetailSourceContext,
+} from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -208,6 +213,18 @@ export function ProfileActivitySections({
     ],
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>("latest");
+  useEffect(() => {
+    const context = readDetailSourceContext();
+    const restoredSort = context?.sourceState?.sortDirection;
+
+    if (
+      context &&
+      isDetailSourceReturnPage(context, "profile") &&
+      (restoredSort === "latest" || restoredSort === "oldest")
+    ) {
+      setSortDirection(restoredSort);
+    }
+  }, []);
   const sortedCreatedActivities = useMemo(
     () =>
       [...dashboard.createdActivities].sort((left, right) =>
@@ -237,6 +254,7 @@ export function ProfileActivitySections({
 
   return (
     <section className="space-y-5">
+      <DetailSourceRestore sourceKey="profile" />
       {isSelf && tabs.length > 1 ? (
         <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-10 grid grid-cols-3 gap-2 bg-paper/90 py-2 backdrop-blur md:static md:rounded-2xl md:bg-white/55 md:p-2 md:backdrop-blur-0 md:ring-1 md:ring-black/10">
           {tabs.map((tab) => {
@@ -307,6 +325,8 @@ export function ProfileActivitySections({
                     isOwnActivity={isSelf}
                     locale={locale}
                     sourceSurface="profile"
+                    detailSourceKey="profile"
+                    detailSourceState={{ section: "created", sortDirection }}
                   />
                 ))}
               </div>
@@ -356,6 +376,10 @@ export function ProfileActivitySections({
                         key={participation.id}
                         participation={participation}
                         locale={locale}
+                        detailSourceState={{
+                          section: "participation",
+                          sortDirection,
+                        }}
                       />
                     ))}
                   </div>
@@ -409,6 +433,8 @@ export function ProfileActivitySections({
                           !isPublicEventCard(favorite.activity)
                         }
                         sourceSurface="profile"
+                        detailSourceKey="profile"
+                        detailSourceState={{ section: "favorite", sortDirection }}
                       />
                     ))}
                   </div>

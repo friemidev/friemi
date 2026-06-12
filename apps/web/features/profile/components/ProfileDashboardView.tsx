@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { UsersRound } from "lucide-react";
 import { getFriendsCopy } from "@/features/friends/copy";
+import {
+  isDetailSourceReturnPage,
+  readDetailSourceContext,
+} from "@/features/navigation/contextualDetailReturn";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -64,6 +68,21 @@ export function ProfileDashboardView({
   const showPrivateParticipation = isSelf;
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
+
+  useEffect(() => {
+    const context = readDetailSourceContext();
+    const section = context?.sourceState?.section;
+
+    if (
+      context &&
+      isDetailSourceReturnPage(context, "profile") &&
+      (section === "created" ||
+        section === "participation" ||
+        section === "favorite")
+    ) {
+      setActiveProfileSection(section);
+    }
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 md:space-y-8">

@@ -60,6 +60,9 @@ import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewe
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
@@ -171,6 +174,8 @@ export default async function ActivityDetailPage({
 
     return (
       <PageContainer className="space-y-6">
+        <DetailSourceRestore sourceKey="activity_detail" />
+        <DetailSourceReturnLink locale={locale} />
         <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] bg-moss p-4 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:p-5 md:min-h-72">
           <ActivityCoverImage
             src={activity.coverImageUrl}
@@ -434,6 +439,8 @@ export default async function ActivityDetailPage({
 
   return (
     <PageContainer className="space-y-6">
+      <DetailSourceRestore sourceKey="activity_detail" />
+      <DetailSourceReturnLink locale={locale} />
       <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] bg-moss p-4 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:p-5 md:min-h-72">
         <ActivityCoverImage
           src={activity.coverImageUrl}
@@ -585,16 +592,22 @@ export default async function ActivityDetailPage({
                     {activity.merchant.city}
                   </p>
                 </div>
-                <Link
+                <ContextualDetailLink
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
                   href={withLocale(
                     locale,
                     `/merchants/${activity.merchant.slug}`,
                   )}
+                  detailSource={{
+                    sourceKey: "activity_detail",
+                    targetKey: `merchant:${activity.merchant.slug}`,
+                    targetKind: "merchant",
+                  }}
+                  data-detail-source-target={`merchant:${activity.merchant.slug}`}
                 >
                   {t.merchant.viewProfile}
                   <ExternalLink className="h-4 w-4" />
-                </Link>
+                </ContextualDetailLink>
               </div>
             </div>
           ) : null}
