@@ -80,7 +80,7 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
   if (locale === "fr") {
     switch (id) {
       case "open":
-        return "Ouverts";
+        return "Publics";
       case "created":
         return "Creees";
       case "joined":

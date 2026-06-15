@@ -91,7 +91,7 @@ function getCardVisibilityLabel(
   }
 
   if (locale === "fr") {
-    return "Ouvert";
+    return "Public";
   }
 
   if (locale === "en") {
