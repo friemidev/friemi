@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import type { AnalyticsEventInput } from "@/features/analytics/events";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
@@ -13,6 +14,7 @@ type ActivityCopyButtonProps = {
   label: string;
   successLabel: string;
   value: string;
+  children?: ReactNode;
 };
 
 async function copyText(value: string) {
@@ -44,6 +46,7 @@ export function ActivityCopyButton({
   label,
   successLabel,
   value,
+  children,
 }: ActivityCopyButtonProps) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -74,6 +77,8 @@ export function ActivityCopyButton({
       : state === "failed"
         ? failedLabel
         : label;
+  const visibleLabel =
+    state === "copied" || state === "failed" ? title : children;
 
   return (
     <button
@@ -93,6 +98,7 @@ export function ActivityCopyButton({
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
+      {children ? <span>{visibleLabel}</span> : null}
       <span aria-live="polite" className="sr-only">
         {title}
       </span>

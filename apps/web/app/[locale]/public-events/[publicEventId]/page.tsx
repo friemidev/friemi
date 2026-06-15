@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
@@ -11,6 +10,7 @@ import {
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/utils";
@@ -27,10 +27,12 @@ import {
   getEventPriceLabel,
 } from "@/features/public-events/components/PublicEventCard";
 import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
+import { getPublicEventLocationDisplay } from "@/features/public-events/utils/locationDisplay";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { getCopy } from "@/lib/copy";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -50,6 +52,7 @@ export default async function PublicEventDetailPage({
     route: "/public-events/[publicEventId]",
   });
   const t = getPublicEventCopy(locale);
+  const appCopy = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
@@ -64,6 +67,15 @@ export default async function PublicEventDetailPage({
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
+  const host =
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (host?.startsWith("localhost") ? "http" : "https");
+  const publicEventPath = withLocale(locale, `/public-events/${publicEvent.id}`);
+  const publicEventUrl = host
+    ? `${protocol}://${host}${publicEventPath}`
+    : publicEventPath;
   const sourceSurface = inferAnalyticsSourceSurfaceFromReferrer(
     referrer,
     "activity_list",
@@ -92,6 +104,14 @@ export default async function PublicEventDetailPage({
 
   const eventDateLabel = getEventDateLabel(publicEvent, locale);
   const eventPriceLabel = getEventPriceLabel(publicEvent, locale);
+  const eventLocation = getPublicEventLocationDisplay(publicEvent, locale);
+  const eventSummaryCopyValue = [
+    publicEvent.title,
+    eventDateLabel,
+    eventLocation.copyValue,
+    eventPriceLabel,
+    publicEventUrl,
+  ].join("\n");
   const eventEndBoundary = new Date(publicEvent.endAt ?? publicEvent.startAt);
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
@@ -162,9 +182,18 @@ export default async function PublicEventDetailPage({
         </div>
       </div>
 
+      <div className="rounded-[1.25rem] border border-[#d8ccb4] bg-white/78 p-4 shadow-sm lg:hidden">
+        <h2 className="text-lg font-semibold text-ink">
+          {t.eventInfoTitle}
+        </h2>
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
+          {publicEvent.description}
+        </p>
+      </div>
+
       <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
-          <div className="rounded-[1.25rem] border border-[#d8ccb4] bg-white/78 p-4 shadow-sm sm:p-5">
+          <div className="hidden rounded-[1.25rem] border border-[#d8ccb4] bg-white/78 p-4 shadow-sm sm:p-5 lg:block">
             <h2 className="text-lg font-semibold text-ink">
               {t.eventInfoTitle}
             </h2>
@@ -210,7 +239,7 @@ export default async function PublicEventDetailPage({
 
           {publicEvent.latitude !== null && publicEvent.longitude !== null ? (
             <ActivityMapPreview
-              address={publicEvent.address}
+              address={eventLocation.mapAddress}
               latitude={publicEvent.latitude}
               longitude={publicEvent.longitude}
               openLabel={
@@ -241,6 +270,25 @@ export default async function PublicEventDetailPage({
               {t.publicEventRuleDescription}
             </p>
           </div>
+          <ActivityCopyButton
+            analyticsEvent={{
+              name: "field_copied",
+              entityId: publicEvent.id,
+              entityType: "public_event",
+              sourceSurface: "public_event_detail",
+              properties: {
+                field_name: "event_summary",
+                location_is_generic: eventLocation.isGenericAddress,
+              },
+            }}
+            className="mb-4 h-10 w-full gap-2 rounded-full bg-white px-4 text-sm font-semibold text-ink ring-1 ring-[#dccba8] hover:bg-[#fff8ec]"
+            failedLabel={appCopy.activityShare.copyFailed}
+            label={t.copyEventInfo}
+            successLabel={t.copyEventInfoSuccess}
+            value={eventSummaryCopyValue}
+          >
+            {t.copyEventInfo}
+          </ActivityCopyButton>
           {isCancelled ? (
             <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm leading-6 text-red-700">
               <div className="flex items-center gap-2 font-semibold">
@@ -252,17 +300,65 @@ export default async function PublicEventDetailPage({
           ) : null}
 
           <div className="space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{eventDateLabel}</span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "time",
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyTime}
+                successLabel={appCopy.activityShare.copied}
+                value={eventDateLabel}
+              />
             </p>
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">{publicEvent.address}</span>
+              <span className="min-w-0 break-words">
+                {eventLocation.displayLabel}
+              </span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "location",
+                    location_is_generic: eventLocation.isGenericAddress,
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyLocation}
+                successLabel={appCopy.activityShare.copied}
+                value={eventLocation.copyValue}
+              />
             </p>
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <Ticket className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{eventPriceLabel}</span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "price",
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyPrice}
+                successLabel={appCopy.activityShare.copied}
+                value={eventPriceLabel}
+              />
             </p>
             <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
               <UsersRound className="mt-0.5 h-4 w-4 shrink-0" />
