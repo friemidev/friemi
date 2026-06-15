@@ -1,10 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { ParticipantStatus } from "@prisma/client";
 import { z } from "zod";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
+import { createNotification } from "@/features/notifications/utils/createNotification";
+import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getCopy } from "@/lib/copy";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 
@@ -20,6 +25,7 @@ const cancelParticipationSchema = z.object({
 });
 
 export type CancelParticipationState = {
+  success?: boolean;
   formError?: string;
 };
 
@@ -29,38 +35,81 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-function refreshActivityViews(locale: string, activityId: string) {
-  const activityPath = withLocale(locale, `/activities/${activityId}`);
-
-  revalidatePath(activityPath);
-  revalidatePath(withLocale(locale, "/activities"));
-  revalidatePath(withLocale(locale, "/"));
-
-  return activityPath;
-}
-
 export async function cancelParticipationAction(
   _previousState: CancelParticipationState,
   formData: FormData,
 ): Promise<CancelParticipationState> {
+  const getDurationMs = createLatencyTimer();
   const rawInput = {
     activityId: getString(formData, "activityId"),
     locale: getString(formData, "locale") || "zh-CN",
   };
+  const recordLatency = ({
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: rawInput.activityId || undefined,
+      entityType: rawInput.activityId ? "team" : undefined,
+      locale: rawInput.locale,
+      operationKey: "cancel_participation",
+      route: rawInput.activityId
+        ? `/${rawInput.locale}/activities/${rawInput.activityId}`
+        : `/${rawInput.locale}/activities`,
+      sourceSurface: "activity_detail",
+      status,
+      statusReason,
+      userProfileId,
+    });
+  };
   const result = cancelParticipationSchema.safeParse(rawInput);
+  const fallbackCopy = getCopy(rawInput.locale).join;
+  const perf = createActionPerformanceTracker({
+    action: "cancel_participation",
+    metadata: {
+      locale: rawInput.locale,
+      targetId: rawInput.activityId || undefined,
+    },
+  });
 
   if (!result.success) {
+    recordLatency({
+      status: "failed",
+      statusReason: "invalid_request",
+    });
+
     return {
-      formError: "请稍后再试。",
+      formError: fallbackCopy.refreshError,
     };
   }
 
-  const profile = await ensureCurrentUserProfile(result.data.locale);
-  let cancelled = false;
-  let alreadyCancelled = false;
-
+  const actionCopy = getCopy(result.data.locale).join;
+  let profile: Awaited<
+    ReturnType<typeof ensureCurrentUserProfileSnapshot>
+  >;
   try {
-    const participation = await prisma.activityParticipant.findUnique({
+    profile = await perf.measure("viewer_profile", () =>
+      ensureCurrentUserProfileSnapshot(result.data.locale),
+    );
+  } catch (error) {
+    console.error("Failed to resolve viewer profile for cancellation", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "cancel_failed",
+    });
+
+    return {
+      formError: actionCopy.failedError,
+    };
+  }
+  const participation = await perf.measure("participation_lookup", () =>
+    prisma.activityParticipant.findUnique({
       where: {
         activityId_userProfileId: {
           activityId: result.data.activityId,
@@ -70,55 +119,114 @@ export async function cancelParticipationAction(
       select: {
         id: true,
         status: true,
+        activity: {
+          select: {
+            id: true,
+            organizerId: true,
+          },
+        },
       },
+    }),
+  );
+
+  if (!participation) {
+    recordLatency({
+      status: "failed",
+      statusReason: "participation_not_found",
+      userProfileId: profile.id,
     });
 
-    if (!participation) {
-      return {
-        formError: "你还没有报名这个活动。",
-      };
-    }
+    return {
+      formError: actionCopy.missingError,
+    };
+  }
 
-    if (!cancellableParticipantStatuses.includes(participation.status)) {
-      if (participation.status === "CANCELLED") {
-        alreadyCancelled = true;
-        return {
-          formError: undefined,
-        };
-      }
-
-      return {
-        formError: "当前报名状态不能取消。",
-      };
-    }
-
-    await prisma.activityParticipant.update({
-      where: {
-        id: participation.id,
-      },
-      data: {
-        status: "CANCELLED",
-        cancelledAt: new Date(),
-      },
+  if (participation.status === "CANCELLED") {
+    recordLatency({
+      status: "success",
+      statusReason: "already_cancelled",
+      userProfileId: profile.id,
     });
-    cancelled = true;
+    perf.finish({
+      result: "already_cancelled",
+      userProfileId: profile.id,
+    });
+    return {
+      success: true,
+    };
+  }
+
+  if (!cancellableParticipantStatuses.includes(participation.status)) {
+    recordLatency({
+      status: "failed",
+      statusReason: "participation_not_cancellable",
+      userProfileId: profile.id,
+    });
+
+    return {
+      formError: actionCopy.statusError,
+    };
+  }
+
+  try {
+    const updateResult = await perf.measure("participation_update", () =>
+      prisma.activityParticipant.updateMany({
+        where: {
+          id: participation.id,
+          status: {
+            in: cancellableParticipantStatuses,
+          },
+        },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+        },
+      }),
+    );
+
+    if (updateResult.count === 0) {
+      recordLatency({
+        status: "failed",
+        statusReason: "participation_not_cancellable",
+        userProfileId: profile.id,
+      });
+
+      return {
+        formError: actionCopy.statusError,
+      };
+    }
   } catch (error) {
     console.error("Failed to cancel participation", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "cancel_failed",
+      userProfileId: profile.id,
+    });
 
     return {
-      formError: "取消报名失败，请稍后重试。",
+      formError: actionCopy.failedError,
     };
   }
 
-  if (alreadyCancelled) {
-    redirect(refreshActivityViews(result.data.locale, result.data.activityId));
+  recordLatency({
+    status: "success",
+    userProfileId: profile.id,
+  });
+  if (participation.activity.organizerId !== profile.id) {
+    void createNotification(prisma, {
+      actorId: profile.id,
+      activityId: result.data.activityId,
+      recipientId: participation.activity.organizerId,
+      type: "PARTICIPATION_CANCELLED",
+    }).catch((error) => {
+      console.error("Failed to create cancellation notification", error);
+    });
   }
-
-  if (!cancelled) {
-    return {
-      formError: "取消报名失败，请稍后重试。",
-    };
-  }
-
-  redirect(refreshActivityViews(result.data.locale, result.data.activityId));
+  perf.finish({
+    result: "success",
+    userProfileId: profile.id,
+  });
+  return {
+    success: true,
+  };
 }

@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
+import jsQR from "jsqr";
 import {
   Children,
   useActionState,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -14,14 +17,18 @@ import { createPortal, useFormStatus } from "react-dom";
 import {
   AlertCircle,
   CalendarDays,
+  Camera,
   Check,
   CheckCircle2,
   ChevronDown,
   Copy,
   Inbox,
+  LoaderCircle,
   MessageCircle,
+  QrCode,
   Send,
   ShieldCheck,
+  ScanLine,
   Trash2,
   type LucideIcon,
   UserPlus,
@@ -30,6 +37,8 @@ import {
 } from "lucide-react";
 import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
@@ -52,6 +61,7 @@ import type {
 type FriendsDashboardProps = {
   dashboard: FriendsDashboardViewModel;
   currentUserFriendCode?: string | null;
+  initialAddFriendCode?: string;
   locale: string;
 };
 
@@ -84,15 +94,19 @@ type FriendPreview = {
 export function FriendsDashboard({
   dashboard,
   currentUserFriendCode = null,
+  initialAddFriendCode,
   locale,
 }: FriendsDashboardProps) {
   const t = getFriendsCopy(locale);
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(
+    Boolean(initialAddFriendCode),
+  );
   const hasOutgoingRequests = dashboard.outgoingRequests.length > 0;
   const incomingRequestCount = dashboard.incomingRequests.length;
 
   return (
     <div className="space-y-5">
+      <DetailSourceRestore sourceKey="friends" />
       <div
         className={cn(
           "grid gap-4",
@@ -169,6 +183,7 @@ export function FriendsDashboard({
       {addFriendOpen ? (
         <AddFriendDialog
           currentUserFriendCode={currentUserFriendCode}
+          initialSearchTerm={initialAddFriendCode}
           incomingRequests={dashboard.incomingRequests}
           locale={locale}
           onClose={() => setAddFriendOpen(false)}
@@ -182,6 +197,7 @@ function AddFriendForm({
   className,
   autoFocusSearch = false,
   currentUserFriendCode = null,
+  initialSearchTerm = "",
   locale,
   returnTo = "friends",
   showHeader = true,
@@ -189,6 +205,7 @@ function AddFriendForm({
   autoFocusSearch?: boolean;
   className?: string;
   currentUserFriendCode?: string | null;
+  initialSearchTerm?: string;
   locale: string;
   returnTo?: "friends" | "messages";
   showHeader?: boolean;
@@ -199,13 +216,16 @@ function AddFriendForm({
     sendFriendRequestAction,
     initialState,
   );
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [preview, setPreview] = useState<FriendPreview>({
     user: null,
     status: null,
   });
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showSentSuccess, setShowSentSuccess] = useState(false);
+  const [optimisticTarget, setOptimisticTarget] =
+    useState<FriendPreviewUser | null>(null);
   const t = getFriendsCopy(locale);
   const hasSearchTerm = searchTerm.trim().length > 0;
   const submitDisabled =
@@ -219,10 +239,24 @@ function AddFriendForm({
       formRef.current?.reset();
       setSearchTerm("");
       setPreview({ user: null, status: null });
+      setOptimisticTarget(null);
       setShowSentSuccess(true);
       router.refresh();
     }
   }, [router, state.ok]);
+
+  useEffect(() => {
+    if (initialSearchTerm) {
+      setSearchTerm(initialSearchTerm);
+      setShowSentSuccess(false);
+    }
+  }, [initialSearchTerm]);
+
+  useEffect(() => {
+    if (state.formError) {
+      setOptimisticTarget(null);
+    }
+  }, [state.formError]);
 
   useEffect(() => {
     const query = searchTerm.trim();
@@ -312,11 +346,34 @@ function AddFriendForm({
         <OwnFriendCodeBlock friendCode={currentUserFriendCode} locale={locale} />
       ) : null}
 
+      <div className="mt-4 grid gap-2 sm:hidden">
+        <button
+          type="button"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d9c8ad] bg-white/82 px-4 text-sm font-semibold text-[#5f4f3f] shadow-sm shadow-black/5 transition hover:bg-white"
+          onClick={() => setQrScannerOpen(true)}
+        >
+          <ScanLine className="h-4 w-4" aria-hidden="true" />
+          {t.scanQrAdd}
+        </button>
+        <p className="text-center text-xs leading-5 text-zinc-500">
+          {t.scanQrHint}
+        </p>
+      </div>
+
       <form
         ref={formRef}
         action={formAction}
         className="mt-4 grid gap-4"
         noValidate
+        onSubmit={(event) => {
+          if (submitDisabled || !preview.user) {
+            event.preventDefault();
+            return;
+          }
+
+          setOptimisticTarget(preview.user);
+          setShowSentSuccess(false);
+        }}
       >
         <input name="locale" type="hidden" value={locale} />
         <input name="returnTo" type="hidden" value={returnTo} />
@@ -346,6 +403,17 @@ function AddFriendForm({
           preview={preview}
           locale={locale}
         />
+        {optimisticTarget ? (
+          <div
+            className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+            aria-live="polite"
+          >
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            <span className="min-w-0 truncate">
+              {t.sendingTo(optimisticTarget.nickname)}
+            </span>
+          </div>
+        ) : null}
         <label className="grid gap-2">
           <span className="text-sm font-medium text-zinc-700">
             {t.messageLabel}
@@ -377,6 +445,18 @@ function AddFriendForm({
           {t.send}
         </SubmitButton>
       </form>
+
+      {qrScannerOpen ? (
+        <FriendQrScannerDialog
+          locale={locale}
+          onClose={() => setQrScannerOpen(false)}
+          onScan={(friendCode) => {
+            setSearchTerm(friendCode);
+            setShowSentSuccess(false);
+            setQrScannerOpen(false);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -521,12 +601,14 @@ function PreviewAvatar({ user }: { user: FriendPreviewUser }) {
 
 export function AddFriendDialog({
   currentUserFriendCode = null,
+  initialSearchTerm = "",
   incomingRequests = [],
   locale,
   onClose,
   returnTo = "friends",
 }: {
   currentUserFriendCode?: string | null;
+  initialSearchTerm?: string;
   incomingRequests?: FriendRequestViewModel[];
   locale: string;
   onClose: () => void;
@@ -599,6 +681,7 @@ export function AddFriendDialog({
           <AddFriendForm
             className="border-0 bg-transparent p-0 shadow-none"
             currentUserFriendCode={currentUserFriendCode}
+            initialSearchTerm={initialSearchTerm}
             locale={locale}
             returnTo={returnTo}
             showHeader={false}
@@ -663,7 +746,14 @@ function OwnFriendCodeBlock({
   locale: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrFailed, setQrFailed] = useState(false);
   const t = getFriendsCopy(locale);
+  const qrValue = useMemo(
+    () => getFriendQrValue(friendCode, locale),
+    [friendCode, locale],
+  );
 
   async function copyFriendCode() {
     try {
@@ -675,28 +765,345 @@ function OwnFriendCodeBlock({
     }
   }
 
+  useEffect(() => {
+    if (!qrOpen) {
+      return;
+    }
+
+    let active = true;
+    setQrFailed(false);
+
+    QRCode.toDataURL(qrValue, {
+      color: {
+        dark: "#1f1712",
+        light: "#fffaf2",
+      },
+      margin: 1,
+      width: 220,
+    })
+      .then((dataUrl) => {
+        if (active) {
+          setQrDataUrl(dataUrl);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to generate friend QR code", error);
+        if (active) {
+          setQrFailed(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [qrOpen, qrValue]);
+
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white/75 px-3 py-3">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-zinc-500">{t.ownFriendCode}</p>
-        <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-ink">
-          {friendCode}
-        </p>
+    <div className="mt-4 rounded-lg border border-black/10 bg-white/75 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-zinc-500">{t.ownFriendCode}</p>
+          <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-ink">
+            {friendCode}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 sm:hidden"
+            aria-label={t.showMyQr}
+            title={t.showMyQr}
+            onClick={() => setQrOpen((current) => !current)}
+          >
+            <QrCode className="h-4 w-4" />
+            {t.myQrAction}
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            aria-label={copied ? t.ownFriendCodeCopied : t.copyOwnFriendCode}
+            title={copied ? t.ownFriendCodeCopied : t.copyOwnFriendCode}
+            onClick={copyFriendCode}
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-moss" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
-      <button
-        type="button"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-        aria-label={copied ? t.ownFriendCodeCopied : t.copyOwnFriendCode}
-        title={copied ? t.ownFriendCodeCopied : t.copyOwnFriendCode}
-        onClick={copyFriendCode}
-      >
-        {copied ? (
-          <Check className="h-4 w-4 text-moss" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
-      </button>
+
+      {qrOpen ? (
+        <div className="mt-3 grid justify-items-center rounded-2xl border border-[#e5d6bf] bg-[#fffaf2] px-4 py-4 text-center sm:hidden">
+          <p className="text-sm font-semibold text-ink">{t.myQrTitle}</p>
+          <p className="mt-1 max-w-64 text-xs leading-5 text-zinc-500">
+            {t.myQrDescription}
+          </p>
+          <div className="mt-3 flex h-56 w-56 items-center justify-center rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/10">
+            {qrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={qrDataUrl}
+                alt={t.myQrTitle}
+                className="h-full w-full object-contain"
+              />
+            ) : qrFailed ? (
+              <p className="px-4 text-sm leading-6 text-clay">
+                {t.qrGenerateFailed}
+              </p>
+            ) : (
+              <LoaderCircle className="h-6 w-6 animate-spin text-zinc-400" />
+            )}
+          </div>
+          <p className="mt-3 font-mono text-base font-semibold tracking-[0.18em] text-ink">
+            {friendCode}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">{t.myQrFallback}</p>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function getFriendQrValue(friendCode: string, locale: string) {
+  if (typeof window === "undefined") {
+    return friendCode;
+  }
+
+  const url = new URL(`/${locale}/friends`, window.location.origin);
+  url.searchParams.set("friendCode", friendCode);
+
+  return url.toString();
+}
+
+function extractFriendCodeFromQrValue(rawValue: string) {
+  const value = rawValue.trim();
+  const directCode = value.replace(/[\s-]/g, "");
+
+  if (/^\d{6}$/.test(directCode)) {
+    return directCode;
+  }
+
+  try {
+    const url = new URL(value);
+    const friendCode = url.searchParams.get("friendCode")?.trim() ?? "";
+
+    if (
+      url.origin === window.location.origin &&
+      /^\/[^/]+\/friends\/?$/.test(url.pathname) &&
+      /^\d{6}$/.test(friendCode)
+    ) {
+      return friendCode;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function FriendQrScannerDialog({
+  locale,
+  onClose,
+  onScan,
+}: {
+  locale: string;
+  onClose: () => void;
+  onScan: (friendCode: string) => void;
+}) {
+  const t = getFriendsCopy(locale);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [detected, setDetected] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    let closed = false;
+
+    function stopCamera() {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError(t.cameraUnsupported);
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+          },
+        });
+
+        if (closed) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          setReady(true);
+          scanFrame();
+        }
+      } catch (cameraError) {
+        console.error("Failed to start friend QR scanner", cameraError);
+        setError(t.cameraPermissionDenied);
+      }
+    }
+
+    function scanFrame() {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext("2d", { willReadFrequently: true });
+
+      if (!video || !canvas || !context || closed) {
+        return;
+      }
+
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        if (width > 0 && height > 0) {
+          canvas.width = width;
+          canvas.height = height;
+          context.drawImage(video, 0, 0, width, height);
+
+          const imageData = context.getImageData(0, 0, width, height);
+          const result = jsQR(imageData.data, width, height);
+
+          if (result?.data) {
+            const friendCode = extractFriendCodeFromQrValue(result.data);
+
+            if (friendCode) {
+              setDetected(true);
+              stopCamera();
+              window.setTimeout(() => onScan(friendCode), 180);
+              return;
+            }
+
+            setError(t.invalidQrCode);
+          }
+        }
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(scanFrame);
+    }
+
+    void startCamera();
+
+    return () => {
+      closed = true;
+      stopCamera();
+    };
+  }, [onScan, t.cameraPermissionDenied, t.cameraUnsupported, t.invalidQrCode]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex min-h-[100svh] items-end justify-center bg-black/40 p-3 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.scanQrAdd}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-[1.5rem] bg-paper shadow-2xl ring-1 ring-black/10">
+        <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-moss">{t.scanQrEyebrow}</p>
+            <h3 className="text-lg font-semibold text-ink">{t.scanQrTitle}</h3>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10"
+            aria-label={t.close}
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-4">
+          <div className="relative aspect-square overflow-hidden rounded-[1.25rem] bg-[#171310]">
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+            />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="pointer-events-none absolute inset-8 rounded-[1rem] border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
+            {!ready && !error ? (
+              <div className="absolute inset-0 flex items-center justify-center text-white">
+                <LoaderCircle className="h-7 w-7 animate-spin" />
+              </div>
+            ) : null}
+            {detected ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-white">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-moss shadow-lg">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {t.scanQrDetected}
+                </span>
+              </div>
+            ) : null}
+          </div>
+          {error ? (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-clay/20 bg-clay/5 px-3 py-3 text-sm text-clay">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p className="leading-5">{error}</p>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              {t.scanQrDescription}
+            </p>
+          )}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
+              <Camera className="h-3.5 w-3.5" />
+              {t.scanQrManualFallback}
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#5f4f3f] shadow-sm ring-1 ring-black/10"
+              onClick={onClose}
+            >
+              {t.manualInput}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -822,18 +1229,25 @@ function FriendActivitySummary({
     <div className="mt-3 rounded-md bg-moss/5 p-2.5 ring-1 ring-moss/10">
       <div className="flex min-w-0 items-start gap-2">
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-moss" />
-        <Link
+        <ContextualDetailLink
           className="min-w-0 flex-1 text-xs font-medium leading-5 text-ink transition hover:text-moss"
           href={withLocale(locale, `/activities/${firstActivity.id}`)}
+          detailSource={{
+            sourceKey: "friends",
+            targetKey: `activity:${firstActivity.id}`,
+            targetKind: "activity",
+          }}
+          data-detail-source-target={`activity:${firstActivity.id}`}
           title={firstActivity.title}
         >
           <span className="line-clamp-2">
             {t.friendActivitySummary(
               formatActivityDateOnly(firstActivity.startAt, locale),
               firstActivity.title,
+              firstActivity.timeState,
             )}
           </span>
-        </Link>
+        </ContextualDetailLink>
         {hasMore ? (
           <button
             type="button"
@@ -862,17 +1276,23 @@ function FriendActivitySummary({
       {isExpanded ? (
         <div className="mt-2 grid max-h-32 gap-1 overflow-y-auto pr-1">
           {remainingActivities.map((activity) => (
-            <Link
+            <ContextualDetailLink
               key={activity.id}
               className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs leading-5 text-zinc-600 ring-1 ring-black/5 transition hover:bg-white hover:text-ink"
               href={withLocale(locale, `/activities/${activity.id}`)}
+              detailSource={{
+                sourceKey: "friends",
+                targetKey: `activity:${activity.id}`,
+                targetKind: "activity",
+              }}
+              data-detail-source-target={`activity:${activity.id}`}
               title={activity.title}
             >
               <span className="shrink-0 whitespace-nowrap text-zinc-500">
                 {formatActivityDateOnly(activity.startAt, locale)}
               </span>
               <span className="truncate font-medium">{activity.title}</span>
-            </Link>
+            </ContextualDetailLink>
           ))}
         </div>
       ) : null}
@@ -1012,7 +1432,11 @@ function SubmitButton({
       disabled={pending || disabled}
       className={cn("gap-2 whitespace-nowrap", className)}
     >
-      <Icon className="h-4 w-4" />
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <Icon className="h-4 w-4" />
+      )}
       {pending ? pendingLabel : children}
     </Button>
   );

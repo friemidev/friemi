@@ -7,6 +7,15 @@ export const activitySortOptions = [
   "latest",
   "recentlyAdded",
 ] as const;
+export const activityDateRangeOptions = [
+  "TODAY",
+  "TOMORROW",
+  "NEXT_3_DAYS",
+  "THIS_WEEK",
+  "NEXT_WEEK",
+  "THIS_MONTH",
+  "NEXT_MONTH",
+] as const;
 export const activityTimeStates = ["ONGOING", "UPCOMING", "ENDED"] as const;
 export const activityRelationFilters = [
   "ALL",
@@ -17,6 +26,7 @@ export const activityRelationFilters = [
 
 export type ActivityFilterType = (typeof activityFilterTypes)[number];
 export type ActivitySortOption = (typeof activitySortOptions)[number];
+export type ActivityDateRange = (typeof activityDateRangeOptions)[number];
 export type ActivityTimeState = (typeof activityTimeStates)[number];
 export type ActivityRelationFilter =
   (typeof activityRelationFilters)[number];
@@ -24,6 +34,7 @@ export type ActivityRelationFilter =
 export type ActivityFilters = {
   category?: ActivityCategory;
   city?: string;
+  dateRange?: ActivityDateRange;
   keyword?: string;
   page: number;
   relation: ActivityRelationFilter;
@@ -41,6 +52,7 @@ const activityFilterQueryKeys = [
   "q",
   "category",
   "city",
+  "dateRange",
   "type",
   "time",
   "relation",
@@ -51,6 +63,7 @@ const activityFilterQueryKeys = [
 type ActivityFilterRawValues = {
   category?: unknown;
   city?: unknown;
+  dateRange?: unknown;
   keyword?: unknown;
   page?: unknown;
   relation?: unknown;
@@ -117,6 +130,10 @@ function isActivitySortOption(value: string): value is ActivitySortOption {
   return activitySortOptions.some((sort) => sort === value);
 }
 
+function isActivityDateRange(value: string): value is ActivityDateRange {
+  return activityDateRangeOptions.some((dateRange) => dateRange === value);
+}
+
 function isActivityTimeState(value: string): value is ActivityTimeState {
   return activityTimeStates.some((timeState) => timeState === value);
 }
@@ -140,15 +157,17 @@ function normalizePageParam(value: string | undefined) {
 export function hasActiveActivityFilters(filters: {
   category?: unknown;
   city?: unknown;
+  dateRange?: unknown;
   keyword?: unknown;
   relation?: unknown;
   timeState?: unknown;
   type?: unknown;
 }) {
   return Boolean(
-    filters.keyword ||
+      filters.keyword ||
       filters.category ||
       filters.city ||
+      filters.dateRange ||
       (filters.relation && filters.relation !== "ALL") ||
       filters.type ||
       filters.timeState,
@@ -158,6 +177,7 @@ export function hasActiveActivityFilters(filters: {
 export function getActiveActivityFilterNames(filters: {
   category?: unknown;
   city?: unknown;
+  dateRange?: unknown;
   relation?: ActivityRelationFilter;
   timeState?: unknown;
   type?: unknown;
@@ -166,6 +186,7 @@ export function getActiveActivityFilterNames(filters: {
 
   if (filters.category) filterNames.push("category");
   if (filters.city) filterNames.push("city");
+  if (filters.dateRange) filterNames.push("date_range");
   if (filters.type) filterNames.push("type");
   if (filters.timeState) filterNames.push("time_state");
   if (filters.relation && filters.relation !== "ALL") {
@@ -178,6 +199,7 @@ export function getActiveActivityFilterNames(filters: {
 export function getActiveActivityFilterCount(filters: {
   category?: unknown;
   city?: unknown;
+  dateRange?: unknown;
   relation?: ActivityRelationFilter;
   timeState?: unknown;
   type?: unknown;
@@ -188,6 +210,7 @@ export function getActiveActivityFilterCount(filters: {
 export function getDefaultActivitySort(filters: {
   category?: unknown;
   city?: unknown;
+  dateRange?: unknown;
   keyword?: unknown;
   timeState?: unknown;
   type?: unknown;
@@ -201,6 +224,7 @@ export function normalizeActivityFilters(
   return normalizeActivityFilterValues({
     category: getSingleParam(searchParams, "category"),
     city: getSingleParam(searchParams, "city"),
+    dateRange: getSingleParam(searchParams, "dateRange"),
     keyword: getSingleParam(searchParams, "q"),
     page: getSingleParam(searchParams, "page"),
     relation: getSingleParam(searchParams, "relation"),
@@ -215,6 +239,7 @@ export function normalizeActivityFilterValues(
 ): ActivityFilters {
   const category = getStringValue(values.category);
   const city = normalizeTextParam(getStringValue(values.city), 60);
+  const dateRange = getStringValue(values.dateRange);
   const keyword = normalizeTextParam(getStringValue(values.keyword), 80);
   const page = getStringValue(values.page);
   const relation = getStringValue(values.relation);
@@ -224,6 +249,8 @@ export function normalizeActivityFilterValues(
   const filters = {
     category: category && isActivityCategory(category) ? category : undefined,
     city,
+    dateRange:
+      dateRange && isActivityDateRange(dateRange) ? dateRange : undefined,
     keyword,
     relation:
       relation && isActivityRelationFilter(relation) ? relation : "ALL",
@@ -248,6 +275,7 @@ export function normalizeActivityFilterFormData(
   return normalizeActivityFilterValues({
     category: formData.get("category"),
     city: formData.get("city"),
+    dateRange: formData.get("dateRange"),
     keyword: formData.get("q"),
     page: formData.get("page"),
     relation: formData.get("relation"),
@@ -263,6 +291,7 @@ export function getActivityFilterQueryString(filters: ActivityFilters) {
   if (filters.keyword) query.set("q", filters.keyword);
   if (filters.category) query.set("category", filters.category);
   if (filters.city) query.set("city", filters.city);
+  if (filters.dateRange) query.set("dateRange", filters.dateRange);
   if (filters.type) query.set("type", filters.type);
   if (filters.timeState) query.set("time", filters.timeState);
   if (filters.relation !== "ALL") query.set("relation", filters.relation);

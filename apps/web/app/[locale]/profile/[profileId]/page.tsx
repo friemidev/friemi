@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -23,13 +24,21 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
+    friendCount: 0,
     followersCount: 0,
     followingCount: 0,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
+    friends: [],
     followers: [],
     following: [],
+    viewerRelationship: {
+      friendshipId: null,
+      isFriend: false,
+      isFollowing: false,
+      pendingFriendRequest: null,
+    },
   };
 }
 
@@ -47,8 +56,10 @@ export default async function PublicProfilePage({
   }
 
   const isSelf = viewerProfile?.id === profile.id;
-  const loadDashboard = isSelf ? getProfileDashboard : getPublicProfileDashboard;
-  const dashboardResult = await loadDashboard(profile.id)
+  const dashboardPromise = isSelf
+    ? getProfileDashboard(profile.id)
+    : getPublicProfileDashboard(profile.id, viewerProfile?.id);
+  const dashboardResult = await dashboardPromise
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {
       console.error("Failed to load public profile dashboard", error);
@@ -60,7 +71,8 @@ export default async function PublicProfilePage({
     });
 
   return (
-    <PageContainer>
+    <PageContainer className="space-y-4">
+      <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}

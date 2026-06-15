@@ -3,6 +3,10 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import { defaultLocale, locales } from "@chill-club/shared";
 import { hasClerkKeys } from "./lib/clerk";
+import {
+  getMobileRootLobbyRedirectPath,
+  localeCookieName,
+} from "./lib/mobile-root-lobby-entry";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -22,9 +26,22 @@ const isActivityLinkPreviewRoute = createRouteMatcher([
   "/api/activity-link-preview",
 ]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
+const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
+  const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
+    acceptLanguage: request.headers.get("accept-language"),
+    localeCookie: request.cookies.get(localeCookieName)?.value,
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    userAgent: request.headers.get("user-agent"),
+  });
+
+  if (mobileRootLobbyPath) {
+    return NextResponse.redirect(new URL(mobileRootLobbyPath, request.url));
+  }
+
   if (hasClerkKeys() && isProtectedRoute(request)) {
     await auth.protect();
   }
@@ -71,6 +88,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isNotificationsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   if (isAnalyticsApiRoute(request)) {
     return NextResponse.next();
   }
@@ -87,6 +108,7 @@ export const config = {
     "/api/uploads/:path*",
     "/api/activity-link-preview",
     "/api/friends/:path*",
+    "/api/notifications/:path*",
     "/api/analytics/:path*",
   ],
 };

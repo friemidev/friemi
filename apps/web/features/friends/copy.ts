@@ -14,6 +14,28 @@ export function getFriendsCopy(locale: string) {
       friendCodeLabel: "Code ami",
       copyOwnFriendCode: "Copier mon code ami",
       ownFriendCodeCopied: "Copié",
+      showMyQr: "Afficher mon QR code",
+      myQrAction: "QR",
+      myQrTitle: "Mon QR ami",
+      myQrDescription:
+        "Montrez ce QR code à un ami pour qu'il confirme votre profil.",
+      myQrFallback: "Le code ami reste disponible en cas d'échec du scan.",
+      qrGenerateFailed: "Impossible de générer le QR code.",
+      scanQrAdd: "Scanner un QR ami",
+      scanQrHint: "Le scan remplira le code ami sans envoyer la demande.",
+      scanQrEyebrow: "Ajout rapide",
+      scanQrTitle: "Scanner le QR ami",
+      scanQrDescription:
+        "Placez le QR code dans le cadre. Vous confirmerez avant l'envoi.",
+      scanQrDetected: "QR détecté",
+      scanQrManualFallback: "Vous pouvez saisir le code ami manuellement.",
+      manualInput: "Saisie manuelle",
+      cameraUnsupported:
+        "Ce navigateur ne permet pas d'ouvrir la caméra. Utilisez le code ami.",
+      cameraPermissionDenied:
+        "La caméra est indisponible ou refusée. Utilisez le code ami.",
+      invalidQrCode:
+        "Ce QR code ne correspond pas à un code ami Next Fun.",
       searchLabel: "Code ami ou pseudo",
       searchPlaceholder: "ex. 123456",
       searchHint: "Le code ami est le plus fiable.",
@@ -29,6 +51,7 @@ export function getFriendsCopy(locale: string) {
       previewAmbiguous: "Plusieurs personnes correspondent. Utilisez le code ami.",
       previewError: "Aperçu indisponible. Réessayez.",
       sentSuccess: "Demande envoyée.",
+      sendingTo: (name: string) => `Envoi à ${name}...`,
       messageLabel: "Message",
       messagePlaceholder: "Message optionnel",
       send: "Envoyer",
@@ -37,8 +60,12 @@ export function getFriendsCopy(locale: string) {
       friendsDescription: (count: number) =>
         `${count} ami${count > 1 ? "s" : ""} · voyez leurs sorties récentes.`,
       friendsListDescription: "Voyez les sorties récentes de vos amis.",
-      friendActivitySummary: (date: string, title: string) =>
-        `${date} participe à « ${title} »`,
+      friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+        state === "ONGOING"
+          ? `En cours : « ${title} »`
+          : state === "ENDED"
+            ? `A rejoint « ${title} » le ${date}`
+            : `Prévoit « ${title} » le ${date}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
         `Voir ${count} activité${count > 1 ? "s" : ""} en plus`,
@@ -87,6 +114,28 @@ export function getFriendsCopy(locale: string) {
       friendCodeLabel: "Friend code",
       copyOwnFriendCode: "Copy my friend code",
       ownFriendCodeCopied: "Copied",
+      showMyQr: "Show my QR code",
+      myQrAction: "QR",
+      myQrTitle: "My friend QR",
+      myQrDescription:
+        "Show this QR code so a friend can confirm your profile.",
+      myQrFallback: "Use the friend code if scanning fails.",
+      qrGenerateFailed: "Could not generate the QR code.",
+      scanQrAdd: "Scan friend QR",
+      scanQrHint: "Scanning fills the friend code. It will not send automatically.",
+      scanQrEyebrow: "Quick add",
+      scanQrTitle: "Scan friend QR",
+      scanQrDescription:
+        "Place the QR code in the frame. You will confirm before sending.",
+      scanQrDetected: "QR found",
+      scanQrManualFallback: "You can still enter the friend code manually.",
+      manualInput: "Enter manually",
+      cameraUnsupported:
+        "This browser cannot open the camera. Use the friend code instead.",
+      cameraPermissionDenied:
+        "Camera permission was denied or unavailable. Use the friend code.",
+      invalidQrCode:
+        "This QR code is not a valid Next Fun friend code.",
       searchLabel: "Friend code or nickname",
       searchPlaceholder: "e.g. 123456",
       searchHint: "Friend code is the most accurate.",
@@ -102,6 +151,7 @@ export function getFriendsCopy(locale: string) {
       previewAmbiguous: "Multiple people matched. Use the exact friend code.",
       previewError: "Preview unavailable. Try again.",
       sentSuccess: "Request sent.",
+      sendingTo: (name: string) => `Sending to ${name}...`,
       messageLabel: "Message",
       messagePlaceholder: "Optional message",
       send: "Send",
@@ -110,8 +160,12 @@ export function getFriendsCopy(locale: string) {
       friendsDescription: (count: number) =>
         `${count} friend${count === 1 ? "" : "s"} · see what they are up to.`,
       friendsListDescription: "See your friends' recent plans.",
-      friendActivitySummary: (date: string, title: string) =>
-        `${date} joined “${title}”`,
+      friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+        state === "ONGOING"
+          ? `At “${title}” now`
+          : state === "ENDED"
+            ? `Recently joined “${title}” on ${date}`
+            : `Plans to join “${title}” on ${date}`,
       moreActivities: (count: number) => `+${count}`,
       showMoreActivitiesLabel: (count: number) =>
         `Show ${count} more activit${count === 1 ? "y" : "ies"}`,
@@ -159,6 +213,23 @@ export function getFriendsCopy(locale: string) {
     friendCodeLabel: "好友号",
     copyOwnFriendCode: "复制我的好友号",
     ownFriendCodeCopied: "已复制",
+    showMyQr: "显示我的二维码",
+    myQrAction: "二维码",
+    myQrTitle: "我的好友二维码",
+    myQrDescription: "把这个二维码给朋友扫码，对方确认后再发送好友申请。",
+    myQrFallback: "扫码失败时，也可以直接输入上方好友号。",
+    qrGenerateFailed: "二维码生成失败，请使用好友号。",
+    scanQrAdd: "扫码添加",
+    scanQrHint: "扫码只会填入好友号，不会自动发送申请。",
+    scanQrEyebrow: "快速添加",
+    scanQrTitle: "扫描好友二维码",
+    scanQrDescription: "把好友二维码放进框内，识别后会进入确认流程。",
+    scanQrDetected: "已识别二维码",
+    scanQrManualFallback: "相机不可用时，可手动输入好友号。",
+    manualInput: "手动输入",
+    cameraUnsupported: "当前浏览器不支持打开相机，请手动输入好友号。",
+    cameraPermissionDenied: "相机权限被拒绝或不可用，请手动输入好友号。",
+    invalidQrCode: "这个二维码不是有效的 Next Fun 好友二维码。",
     searchLabel: "好友号或昵称",
     searchPlaceholder: "例如：123456",
     searchHint: "好友号最准确。",
@@ -174,6 +245,7 @@ export function getFriendsCopy(locale: string) {
     previewAmbiguous: "找到多个同名用户，请使用对方好友号。",
     previewError: "预览暂时不可用，请稍后再试。",
     sentSuccess: "好友申请已发送。",
+    sendingTo: (name: string) => `正在发送给 ${name}...`,
     messageLabel: "留言",
     messagePlaceholder: "可选，简单说明你是谁",
     send: "发送申请",
@@ -181,8 +253,12 @@ export function getFriendsCopy(locale: string) {
     friendsTitle: "好友列表",
     friendsDescription: (count: number) => `${count} 位好友 · 看看大家最近在干什么`,
     friendsListDescription: "看看好友最近在干什么",
-    friendActivitySummary: (date: string, title: string) =>
-      `${date}参加了「${title}」`,
+    friendActivitySummary: (date: string, title: string, state = "UPCOMING") =>
+      state === "ONGOING"
+        ? `正在参加「${title}」`
+        : state === "ENDED"
+          ? `${date}参加过「${title}」`
+          : `${date}想去「${title}」`,
     moreActivities: (count: number) => `+${count}`,
     showMoreActivitiesLabel: (count: number) => `查看另外 ${count} 个活动`,
     collapseActivities: "收起",

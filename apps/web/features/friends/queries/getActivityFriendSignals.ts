@@ -39,6 +39,7 @@ function getSignalFromFriends(
 export async function getActivityFriendSignalMap(
   activityIds: string[],
   viewerProfileId: string | null | undefined,
+  viewerFriendIds?: string[],
 ) {
   const uniqueActivityIds = Array.from(new Set(activityIds.filter(Boolean)));
 
@@ -46,22 +47,23 @@ export async function getActivityFriendSignalMap(
     return new Map<string, ActivityFriendSignalViewModel>();
   }
 
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
-    },
-    select: {
-      userAId: true,
-      userBId: true,
-    },
-  });
-  const friendIds = Array.from(
-    new Set(
-      friendships.map((friendship) =>
-        getOtherFriendId(friendship, viewerProfileId),
+  const friendIds =
+    viewerFriendIds ??
+    Array.from(
+      new Set(
+        (
+          await prisma.friendship.findMany({
+            where: {
+              OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
+            },
+            select: {
+              userAId: true,
+              userBId: true,
+            },
+          })
+        ).map((friendship) => getOtherFriendId(friendship, viewerProfileId)),
       ),
-    ),
-  );
+    );
 
   if (friendIds.length === 0) {
     return new Map<string, ActivityFriendSignalViewModel>();
@@ -129,10 +131,12 @@ export async function getActivityFriendSignalMap(
 export async function getActivityFriendSignal(
   activityId: string,
   viewerProfileId: string | null | undefined,
+  viewerFriendIds?: string[],
 ) {
   const signalMap = await getActivityFriendSignalMap(
     [activityId],
     viewerProfileId,
+    viewerFriendIds,
   );
 
   return signalMap.get(activityId) ?? null;

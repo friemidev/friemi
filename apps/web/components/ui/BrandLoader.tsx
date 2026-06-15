@@ -37,15 +37,20 @@ export function BrandLoader({
       aria-live="polite"
       aria-label={screenReaderLabel}
     >
-      <span className={cn("nextfun-brand-loader", loaderSizes[size])} aria-hidden="true">
-        <span className="nextfun-brand-loader__halo" />
-        <span className="nextfun-brand-loader__ring" />
-        <span className="nextfun-brand-loader__logo">
-          <img src="/logo-icon.png" alt="" />
-        </span>
+      <span
+        className={cn("nextfun-brand-loader", loaderSizes[size])}
+        aria-hidden="true"
+      >
+        <picture className="nextfun-brand-loader__media">
+          <source
+            srcSet="/logo.png"
+            media="(prefers-reduced-motion: reduce)"
+          />
+          <img src="/nextfun_loading.gif" alt="" />
+        </picture>
       </span>
       {showLabel ? (
-        <span className="inline-flex items-baseline text-base font-semibold text-zinc-700">
+        <span className="inline-flex items-baseline text-base font-semibold text-ink">
           <span>{label}</span>
           <span className="nextfun-loading-dots" aria-hidden="true">
             <span>.</span>

@@ -22,6 +22,7 @@ export type PublicEventCardViewModel = {
   officialUrl: string | null;
   status: PublicEventStatus;
   teamCount: number;
+  favoriteCount: number;
   isFavorited?: boolean;
 };
 

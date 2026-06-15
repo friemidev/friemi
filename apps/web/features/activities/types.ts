@@ -3,7 +3,7 @@ import type {
   ActivityType,
   PriceType,
 } from "@chill-club/shared";
-import type { CommentType } from "@prisma/client";
+import type { ActivityVisibility, CommentType } from "@prisma/client";
 import type { PublicEventStatus } from "@prisma/client";
 
 export type ActivityFriendSignalUserViewModel = {
@@ -19,15 +19,24 @@ export type ActivityFriendSignalViewModel = {
   extraCount: number;
 };
 
+export type ActivityParticipantPreviewViewModel = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+};
+
 export type ActivityCardViewModel = ActivitySummary & {
   coverImageUrl: string | null;
   coverTone: "moss" | "clay" | "sky";
+  favoriteCount: number;
   latitude: number | null;
   longitude: number | null;
+  visibility?: ActivityVisibility;
   merchant: ActivityMerchantViewModel | null;
   isActivityInfo?: boolean;
   officialUrl?: string | null;
   publicEventId?: string | null;
+  participantPreview?: ActivityParticipantPreviewViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
   viewerParticipationStatus?:

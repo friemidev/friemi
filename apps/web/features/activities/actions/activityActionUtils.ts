@@ -8,6 +8,7 @@ export type ActivityFormValues = {
   coverImageUrl: string;
   type: string;
   category: string;
+  visibility: string;
   otherCategoryText: string;
   city: string;
   destination: string;
@@ -126,6 +127,7 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     coverImageUrl: getString(formData, "coverImageUrl"),
     type: getString(formData, "type"),
     category: getString(formData, "category"),
+    visibility: getString(formData, "visibility") || "PUBLIC",
     otherCategoryText: getString(formData, "otherCategoryText"),
     city: getString(formData, "city"),
     destination: getString(formData, "destination"),

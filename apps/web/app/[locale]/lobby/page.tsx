@@ -3,12 +3,12 @@ import {
   ActivityLobbyPreviewView,
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
-import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
 import {
   getActivityLobby,
   getActivityLobbyPreview,
 } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { createPerformanceTracker } from "@/lib/performance";
 
 type ActivityLobbyPageProps = {
   params: Promise<{
@@ -22,20 +22,32 @@ export default async function ActivityLobbyPage({
   params,
 }: ActivityLobbyPageProps) {
   const { locale } = await params;
-  const profile = await getOptionalCurrentUserProfile();
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/lobby",
+  });
+  const profile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfileSnapshot(),
+  );
 
   if (!profile) {
-    const previewActivities = await getActivityLobbyPreview().catch(
-      (error: unknown) => {
+    const previewActivities = await perf.measure("lobby.preview", () =>
+      getActivityLobbyPreview().catch((error: unknown) => {
         console.error("Failed to load public activity lobby preview", error);
 
         return [];
-      },
+      }),
     );
+    perf.finish({
+      hasViewer: false,
+      previewCount: previewActivities.length,
+    }, {
+      route: `/${locale}/lobby`,
+      routeKey: "lobby",
+    });
 
     return (
       <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-        <ActivityModeTabs current="lobby" locale={locale} />
         <ActivityLobbyPreviewView
           activities={previewActivities}
           locale={locale}
@@ -44,22 +56,37 @@ export default async function ActivityLobbyPage({
     );
   }
 
-  const lobby = await getActivityLobby(profile.id).catch((error: unknown) => {
-    console.error("Failed to load activity lobby", error);
+  const lobby = await perf.measure("lobby.data", () =>
+    getActivityLobby(profile.id).catch((error: unknown) => {
+      console.error("Failed to load activity lobby", error);
 
-    return {
-      createdActivities: [],
-      joinedActivities: [],
-      favoriteActivities: [],
-      friendHostedActivities: [],
-      friendJoinedActivities: [],
-    };
+      return {
+        allActivities: [],
+        openActivities: [],
+        createdActivities: [],
+        joinedActivities: [],
+        favoriteActivities: [],
+        friendHostedActivities: [],
+        friendJoinedActivities: [],
+      };
+    }),
+  );
+  perf.finish({
+    createdCount: lobby.createdActivities.length,
+    favoriteCount: lobby.favoriteActivities.length,
+    hasViewer: true,
+    joinedCount: lobby.joinedActivities.length,
+  }, {
+    route: `/${locale}/lobby`,
+    routeKey: "lobby",
+    userProfileId: profile.id,
   });
 
   return (
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-      <ActivityModeTabs current="lobby" locale={locale} />
       <ActivityLobbyView
+        allActivities={lobby.allActivities}
+        openActivities={lobby.openActivities}
         createdActivities={lobby.createdActivities}
         joinedActivities={lobby.joinedActivities}
         favoriteActivities={lobby.favoriteActivities}

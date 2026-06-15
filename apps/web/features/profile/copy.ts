@@ -1,11 +1,16 @@
 export function getProfileFollowCopy(locale: string) {
   if (locale === "fr") {
     return {
+      friendCount: "Amis",
+      friendsTitle: "Amis",
+      friendsDescription: "Vos amis apparaissent ici.",
+      friendsEmptyTitle: "Aucun ami",
+      friendsEmptyDescription:
+        "Quand vous ajoutez des amis, leurs profils apparaitront ici.",
       followersCount: "Abonnes",
       followingCount: "Abonnements",
       followingTitle: "Abonnements",
-      followingDescription:
-        "Les personnes que vous suivez apparaissent ici.",
+      followingDescription: "Les personnes que vous suivez apparaissent ici.",
       followingEmptyTitle: "Aucun abonnement",
       followingEmptyDescription:
         "Quand vous suivrez des organisateurs ou d'autres utilisateurs, ils apparaitront ici.",
@@ -16,12 +21,25 @@ export function getProfileFollowCopy(locale: string) {
         "Quand quelqu'un vous suivra, son profil apparaitra ici.",
       noBio: "Cette personne n'a pas encore ajoute de bio.",
       closePanel: "Fermer",
-      showMoreUsers: (count: number) => `+ ${count} autre${count > 1 ? "s" : ""}`,
+      searchLabel: "Rechercher",
+      searchPlaceholder: "Rechercher un pseudo",
+      searchEmptyTitle: "Aucun resultat",
+      searchEmptyDescription: (query: string) =>
+        `Aucun profil ne correspond a « ${query} ».`,
+      clearSearch: "Effacer",
+      showMoreUsers: (count: number) =>
+        `+ ${count} autre${count > 1 ? "s" : ""}`,
     };
   }
 
   if (locale === "en") {
     return {
+      friendCount: "Friends",
+      friendsTitle: "Friends",
+      friendsDescription: "People you are friends with will appear here.",
+      friendsEmptyTitle: "No friends yet",
+      friendsEmptyDescription:
+        "Once you add friends, their profiles will show up here.",
       followersCount: "Followers",
       followingCount: "Following",
       followingTitle: "Following",
@@ -36,11 +54,22 @@ export function getProfileFollowCopy(locale: string) {
         "Once someone follows you, their profile will appear here.",
       noBio: "This user has not added a bio yet.",
       closePanel: "Close",
+      searchLabel: "Search",
+      searchPlaceholder: "Search by nickname",
+      searchEmptyTitle: "No matching profile",
+      searchEmptyDescription: (query: string) =>
+        `No profile matches "${query}".`,
+      clearSearch: "Clear search",
       showMoreUsers: (count: number) => `+ ${count} more`,
     };
   }
 
   return {
+    friendCount: "好友",
+    friendsTitle: "好友",
+    friendsDescription: "你的好友会显示在这里。",
+    friendsEmptyTitle: "还没有好友",
+    friendsEmptyDescription: "添加好友后，他们的资料会显示在这里。",
     followersCount: "粉丝",
     followingCount: "关注",
     followingTitle: "关注",
@@ -51,10 +80,14 @@ export function getProfileFollowCopy(locale: string) {
     followersTitle: "粉丝",
     followersDescription: "关注你的人会显示在这里。",
     followersEmptyTitle: "还没有粉丝",
-    followersEmptyDescription:
-      "当有人关注你后，他们的资料会显示在这里。",
+    followersEmptyDescription: "当有人关注你后，他们的资料会显示在这里。",
     noBio: "这个用户还没有填写简介。",
     closePanel: "收起",
+    searchLabel: "搜索",
+    searchPlaceholder: "搜索昵称",
+    searchEmptyTitle: "没有匹配用户",
+    searchEmptyDescription: (query: string) => `没有找到「${query}」相关用户。`,
+    clearSearch: "清空搜索",
     showMoreUsers: (count: number) => `还有 ${count} 位`,
   };
 }

@@ -19,7 +19,7 @@ export default async function AdminDataScraperPage({
   const state = await getAdminState();
 
   return (
-    <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[110rem]">
+    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[110rem]">
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
           运营工具 · {locale}

@@ -1,5 +1,6 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -19,13 +20,21 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
+    friendCount: 0,
     followersCount: 0,
     followingCount: 0,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
+    friends: [],
     followers: [],
     following: [],
+    viewerRelationship: {
+      friendshipId: null,
+      isFriend: false,
+      isFollowing: false,
+      pendingFriendRequest: null,
+    },
   };
 }
 
@@ -44,7 +53,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     });
 
   return (
-    <PageContainer>
+    <PageContainer className="space-y-4">
+      <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}

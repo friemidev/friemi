@@ -49,7 +49,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ring-1 ring-white/20">
               <Image
-                src="/logo-icon.png"
+                src="/logo.png"
                 alt="Next Fun Club"
                 width={44}
                 height={44}
@@ -86,9 +86,9 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             {t.versionLabel}{" "}
             <Link
               className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-              href={withLocale(locale, "/updates/v1_2")}
+              href={withLocale(locale, "/updates/v1_3")}
             >
-              v1.2
+              v1.3
             </Link>
           </p>
           <p className="inline-flex items-center gap-2 text-xs text-white/45 md:justify-end">

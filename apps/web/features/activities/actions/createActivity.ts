@@ -1,8 +1,13 @@
 "use server";
 
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createActivitySchema } from "@/features/activities/schemas/activitySchema";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
 import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +22,7 @@ import {
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
 
@@ -68,14 +74,54 @@ export async function createActivityAction(
   previousState: CreateActivityState,
   formData: FormData,
 ): Promise<CreateActivityState> {
+  const getDurationMs = createLatencyTimer();
   const locale = getString(formData, "locale") || "zh-CN";
   const publicEventCopy = getPublicEventCopy(locale);
   const rawInput = getActivityFormValues(formData);
+  const recordLatency = ({
+    activityId,
+    properties,
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    activityId?: string | null;
+    properties?: Record<string, string | number | boolean | null | undefined>;
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    const hasPublicEvent = Boolean(rawInput.publicEventId);
+
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: activityId ?? rawInput.publicEventId ?? undefined,
+      entityType: activityId ? "team" : rawInput.publicEventId ? "public_event" : undefined,
+      locale,
+      operationKey: "create_team",
+      route: rawInput.publicEventId
+        ? `/${locale}/public-events/${rawInput.publicEventId}/teams/new`
+        : `/${locale}/activities/new`,
+      sourceSurface: hasPublicEvent ? "public_event_detail" : "activity_detail",
+      status,
+      statusReason,
+      userProfileId,
+      properties: {
+        ...properties,
+        has_public_event: hasPublicEvent,
+      },
+    });
+  };
 
   const result = createActivitySchema.safeParse(rawInput);
 
   if (!result.success) {
     const flattened = result.error.flatten();
+
+    recordLatency({
+      status: "failed",
+      statusReason: "required_field_missing",
+    });
 
     await trackCreateActivityFailure({
       locale,
@@ -97,6 +143,11 @@ export async function createActivityAction(
     : null;
 
   if (!startAt) {
+    recordLatency({
+      status: "failed",
+      statusReason: "schedule_invalid",
+    });
+
     await trackCreateActivityFailure({
       locale,
       publicEventId: result.data.publicEventId,
@@ -114,6 +165,11 @@ export async function createActivityAction(
   }
 
   if (result.data.endAt && !endAt) {
+    recordLatency({
+      status: "failed",
+      statusReason: "schedule_invalid",
+    });
+
     await trackCreateActivityFailure({
       locale,
       publicEventId: result.data.publicEventId,
@@ -136,6 +192,11 @@ export async function createActivityAction(
   });
 
   if (!scheduleValidation.ok) {
+    recordLatency({
+      status: "failed",
+      statusReason: "schedule_invalid",
+    });
+
     await trackCreateActivityFailure({
       locale,
       publicEventId: result.data.publicEventId,
@@ -172,6 +233,12 @@ export async function createActivityAction(
     : null;
 
   if (publicEventId && !publicEvent) {
+    recordLatency({
+      status: "failed",
+      statusReason: "event_unavailable",
+      userProfileId: profile.id,
+    });
+
     await trackCreateActivityFailure({
       locale,
       publicEventId,
@@ -188,6 +255,12 @@ export async function createActivityAction(
 
   if (publicEvent) {
     if (publicEvent.status === "CANCELLED") {
+      recordLatency({
+        status: "failed",
+        statusReason: "event_ended",
+        userProfileId: profile.id,
+      });
+
       await trackCreateActivityFailure({
         locale,
         publicEventId: publicEvent.id,
@@ -205,6 +278,12 @@ export async function createActivityAction(
     const publicEventEndBoundary = publicEvent.endAt ?? publicEvent.startAt;
 
     if (publicEventEndBoundary <= new Date()) {
+      recordLatency({
+        status: "failed",
+        statusReason: "event_ended",
+        userProfileId: profile.id,
+      });
+
       await trackCreateActivityFailure({
         locale,
         publicEventId: publicEvent.id,
@@ -233,6 +312,12 @@ export async function createActivityAction(
     });
 
     if (existingTeam) {
+      recordLatency({
+        status: "failed",
+        statusReason: "duplicate_team",
+        userProfileId: profile.id,
+      });
+
       await trackCreateActivityFailure({
         locale,
         publicEventId: publicEvent.id,
@@ -286,7 +371,7 @@ export async function createActivityAction(
         sourceUrl: importSourceUrl,
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
-        visibility: "PUBLIC",
+        visibility: result.data.visibility,
         organizerId: profile.id,
       },
       select: {
@@ -297,6 +382,12 @@ export async function createActivityAction(
     activityId = activity.id;
   } catch (error) {
     console.error("Failed to create activity", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "submit_failed",
+      userProfileId: profile.id,
+    });
+
     await trackCreateActivityFailure({
       locale,
       publicEventId: publicEvent?.id ?? result.data.publicEventId,
@@ -328,6 +419,7 @@ export async function createActivityAction(
         has_public_event: Boolean(publicEvent?.id),
         public_event_id: publicEvent?.id ?? null,
         requires_approval: result.data.requiresApproval,
+        visibility: result.data.visibility,
       },
     },
     {
@@ -354,6 +446,25 @@ export async function createActivityAction(
       },
     );
   }
+
+  recordLatency({
+    activityId,
+    properties: {
+      category: result.data.category,
+      city: result.data.city,
+      requires_approval: result.data.requiresApproval,
+      visibility: result.data.visibility,
+    },
+    status: "success",
+    userProfileId: profile.id,
+  });
+
+  revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
+  revalidatePath(withLocale(locale, "/lobby"));
+  revalidatePath(withLocale(locale, "/activities"));
+  revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/"));
+  revalidatePath(withLocale(locale, "/"), "layout");
 
   redirect(withLocale(locale, `/activities/${activityId}`));
 }

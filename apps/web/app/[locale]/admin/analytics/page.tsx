@@ -6,12 +6,14 @@ import {
   CalendarDays,
   CheckCircle2,
   Flame,
+  Gauge,
   MessageCircle,
   Share2,
   ShieldQuestion,
   Sparkles,
   SlidersHorizontal,
   TrendingUp,
+  TimerReset,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -41,6 +43,7 @@ type AdminAnalyticsPageProps = {
 const adminAnalyticsSections = [
   "overview",
   "journey",
+  "latency",
   "sources",
   "community",
 ] as const;
@@ -60,7 +63,8 @@ function getCopy(locale: string) {
       activityDiscovery: "Découverte",
       activityDiscoveryDescription: "Les cartes donnent-elles envie d'ouvrir ?",
       activityInfo: "Activités publiques",
-      activityInfoDescription: "Les activités publiques créent-elles des groupes ?",
+      activityInfoDescription:
+        "Les activités publiques créent-elles des groupes ?",
       activityRankActivity: "Groupe",
       activityRankEmpty: "Les contenus populaires apparaîtront ici.",
       activityRankPublicEvent: "Activité",
@@ -81,11 +85,25 @@ function getCopy(locale: string) {
       description:
         "Vue d'ensemble pour lire la découverte, les groupes, les inscriptions, la communauté et la valeur des sources.",
       environment: "Environnement",
+      environmentBreakdown: "Par environnement",
       fieldsCopied: "Champs copiés",
       friendAccepted: "Acceptées",
       friendRate: "Taux d'acceptation",
       friendSent: "Demandes",
       friendsTitle: "Amis",
+      latencyAverage: "Moy.",
+      latencyCount: "Échantillons",
+      latencyDescription:
+        "Repérer les pages et actions lentes, séparées par environnement.",
+      latencyFailed: "Échecs",
+      latencyKindOperation: "Action",
+      latencyKindPage: "Page",
+      latencyMax: "Max",
+      latencyNoData: "Les mesures de ressenti apparaîtront ici.",
+      latencyP95: "P95",
+      latencyPhase: "Étape",
+      latencySlow: "Lents",
+      latencyTitle: "Ressenti",
       range7: "7 jours",
       range30: "30 jours",
       range90: "90 jours",
@@ -117,6 +135,7 @@ function getCopy(locale: string) {
       reviewedReports: "Traités",
       sectionCommunity: "Communauté",
       sectionJourney: "Parcours",
+      sectionLatency: "Ressenti",
       sectionOverview: "Vue d'ensemble",
       sectionSources: "Sources",
       seeReports: "Traiter les signalements",
@@ -128,6 +147,7 @@ function getCopy(locale: string) {
       subtitle: "Données",
       title: "Tableau de bord",
       topDecision: "Vue d'ensemble",
+      totalSamples: "Mesures",
       trendCommunication: "Échanges",
       trendDiscovery: "Découverte",
       trendJoin: "Inscriptions",
@@ -168,11 +188,25 @@ function getCopy(locale: string) {
       description:
         "A concise view of discovery, crew creation, joins, community health, and source value.",
       environment: "Environment",
+      environmentBreakdown: "By environment",
       fieldsCopied: "Fields copied",
       friendAccepted: "Accepted",
       friendRate: "Accept rate",
       friendSent: "Requests",
       friendsTitle: "Friends",
+      latencyAverage: "Avg",
+      latencyCount: "Samples",
+      latencyDescription:
+        "Find slow pages and actions, separated by environment.",
+      latencyFailed: "Failed",
+      latencyKindOperation: "Action",
+      latencyKindPage: "Page",
+      latencyMax: "Max",
+      latencyNoData: "Perceived latency samples will appear here.",
+      latencyP95: "P95",
+      latencyPhase: "Phase",
+      latencySlow: "Slow",
+      latencyTitle: "Perceived latency",
       range7: "7 days",
       range30: "30 days",
       range90: "90 days",
@@ -204,6 +238,7 @@ function getCopy(locale: string) {
       reviewedReports: "Reviewed",
       sectionCommunity: "Community",
       sectionJourney: "Journey",
+      sectionLatency: "Latency",
       sectionOverview: "Overview",
       sectionSources: "Sources",
       seeReports: "Review reports",
@@ -215,6 +250,7 @@ function getCopy(locale: string) {
       subtitle: "Data",
       title: "Operations dashboard",
       topDecision: "Overview",
+      totalSamples: "Samples",
       trendCommunication: "Communication",
       trendDiscovery: "Discovery",
       trendJoin: "Joins",
@@ -232,12 +268,12 @@ function getCopy(locale: string) {
     actionUsers: "活跃用户",
     activityDiscovery: "活动发现",
     activityDiscoveryDescription: "活动卡片是否吸引用户点开。",
-    activityInfo: "活动信息",
+    activityInfo: "活动",
     activityInfoDescription: "公共活动是否真的促成组队。",
     activityRankActivity: "组队",
     activityRankEmpty: "有足够浏览和互动后，这里会显示热门内容。",
     activityRankPublicEvent: "活动",
-    activityRankTeam: "车队",
+    activityRankTeam: "组局",
     activityRankTitle: "热门活动排行",
     activityRankDescription:
       "按浏览和后续动作加权，帮助判断哪些内容值得继续运营。",
@@ -253,11 +289,25 @@ function getCopy(locale: string) {
     description:
       "给运营和管理员快速判断：用户是否发现活动、是否发起组队、报名沟通是否顺畅、来源是否值得维护。",
     environment: "环境",
+    environmentBreakdown: "按环境拆分",
     fieldsCopied: "字段复制",
     friendAccepted: "通过",
     friendRate: "通过率",
     friendSent: "申请",
     friendsTitle: "好友关系",
+    latencyAverage: "平均",
+    latencyCount: "样本",
+    latencyDescription:
+      "区分页面加载和用户操作，按环境查看最近最慢的体感等待。",
+    latencyFailed: "失败",
+    latencyKindOperation: "操作",
+    latencyKindPage: "页面",
+    latencyMax: "最高",
+    latencyNoData: "有页面或操作耗时样本后，这里会显示排行。",
+    latencyP95: "P95",
+    latencyPhase: "阶段",
+    latencySlow: "慢样本",
+    latencyTitle: "体感耗时",
     range7: "7 天",
     range30: "30 天",
     range90: "90 天",
@@ -280,7 +330,7 @@ function getCopy(locale: string) {
     qr: "二维码",
     reportActivity: "组队",
     reportComment: "评论",
-    reportPublicEvent: "活动信息",
+    reportPublicEvent: "活动",
     reportTargets: "举报对象",
     reportUser: "用户",
     reviewTime: "平均处理",
@@ -288,6 +338,7 @@ function getCopy(locale: string) {
     reviewedReports: "已处理",
     sectionCommunity: "社区反馈",
     sectionJourney: "用户路径",
+    sectionLatency: "体感耗时",
     sectionOverview: "总览",
     sectionSources: "来源价值",
     seeReports: "处理举报",
@@ -299,6 +350,7 @@ function getCopy(locale: string) {
     subtitle: "数据后台",
     title: "运营数据看台",
     topDecision: "运营总览",
+    totalSamples: "记录样本",
     trendCommunication: "沟通",
     trendDiscovery: "发现",
     trendJoin: "报名",
@@ -321,7 +373,7 @@ function getSourceSurfaceLabel(locale: string, sourceSurface: string) {
     messages: "消息",
     notification: "通知",
     profile: "个人空间",
-    public_event_detail: "活动信息",
+    public_event_detail: "活动",
     share_link: "分享链接",
   };
   const en: Record<string, string> = {
@@ -355,11 +407,7 @@ function getSourceSurfaceLabel(locale: string, sourceSurface: string) {
 
 function getSourceLabel(locale: string, source: string) {
   if (source === "manual") {
-    return locale === "fr"
-      ? "Manuel"
-      : locale === "en"
-        ? "Manual"
-        : "手动维护";
+    return locale === "fr" ? "Manuel" : locale === "en" ? "Manual" : "手动维护";
   }
 
   if (source === "unknown") {
@@ -385,13 +433,17 @@ function getFocusCopy(locale: string) {
     return {
       discoveryBody: "Les cartes sont vues, mais peu ouvertes.",
       discoveryTitle: "À revoir : découverte",
-      joinBody: "Les pages groupe sont ouvertes, mais peu d'inscriptions suivent.",
+      joinBody:
+        "Les pages groupe sont ouvertes, mais peu d'inscriptions suivent.",
       joinTitle: "À revoir : inscription",
-      noIntentBody: "Surveillez d'abord les créations, inscriptions et messages.",
+      noIntentBody:
+        "Surveillez d'abord les créations, inscriptions et messages.",
       noIntentTitle: "Interactions à développer",
-      noSourcesBody: "Les imports sont en place. Les premiers clics aideront à comparer les sources.",
+      noSourcesBody:
+        "Les imports sont en place. Les premiers clics aideront à comparer les sources.",
       noSourcesTitle: "Sources en cours d'évaluation",
-      publicEventBody: "Les activités sont consultées, mais créent peu de groupes.",
+      publicEventBody:
+        "Les activités sont consultées, mais créent peu de groupes.",
       publicEventTitle: "À revoir : création de groupe",
       reportsBody: "Des signalements attendent une décision.",
       reportsTitle: (count: number) => `${count} signalement(s) à traiter`,
@@ -406,9 +458,11 @@ function getFocusCopy(locale: string) {
       discoveryTitle: "Review discovery",
       joinBody: "Crew pages are viewed, but joins are still weak.",
       joinTitle: "Review joins",
-      noIntentBody: "Watch creations, joins, comments, contacts and messages first.",
+      noIntentBody:
+        "Watch creations, joins, comments, contacts and messages first.",
       noIntentTitle: "Interactions are still building",
-      noSourcesBody: "Imports are ready. First clicks will make source value clearer.",
+      noSourcesBody:
+        "Imports are ready. First clicks will make source value clearer.",
       noSourcesTitle: "Sources under review",
       publicEventBody: "Activity info gets views, but creates few crews.",
       publicEventTitle: "Review crew creation",
@@ -428,7 +482,7 @@ function getFocusCopy(locale: string) {
     noIntentTitle: "互动正在积累",
     noSourcesBody: "导入已经就绪，后续点击和组队数据会帮助判断来源价值。",
     noSourcesTitle: "来源价值待观察",
-    publicEventBody: "活动信息有人看，但转成组队还不明显。",
+    publicEventBody: "活动有人看，但转成组队还不明显。",
     publicEventTitle: "关注组队发起",
     reportsBody: "有举报等待处理，先保证社区反馈闭环。",
     reportsTitle: (count: number) => `${count} 条举报待处理`,
@@ -529,27 +583,23 @@ function MetricTile({
   value: string | number;
 }) {
   return (
-    <div className="min-w-0 border-l border-black/10 pl-3 sm:pl-4">
+    <div className="min-w-0 rounded-xl bg-white/65 p-2 ring-1 ring-black/5 sm:rounded-2xl sm:border-l sm:border-black/10 sm:bg-transparent sm:p-0 sm:pl-4 sm:ring-0">
       <span
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ${tone}`}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-full ring-1 sm:h-9 sm:w-9 ${tone}`}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
       </span>
-      <p className="mt-3 text-2xl font-semibold tracking-normal text-ink">
+      <p className="mt-1 truncate text-lg font-semibold tracking-normal text-ink sm:mt-3 sm:text-2xl">
         {value}
       </p>
-      <p className="mt-1 text-sm text-zinc-500">{label}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500 sm:text-sm">
+        {label}
+      </p>
     </div>
   );
 }
 
-function FocusList({
-  items,
-  locale,
-}: {
-  items: FocusItem[];
-  locale: string;
-}) {
+function FocusList({ items, locale }: { items: FocusItem[]; locale: string }) {
   return (
     <ul className="space-y-3">
       {items.map((item) => {
@@ -606,13 +656,15 @@ function FunnelPanel({
   title: string;
 }) {
   return (
-    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm">
+    <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-4">
       <h2 className="text-lg font-semibold text-ink">{title}</h2>
       <p className="mt-1 text-sm leading-6 text-zinc-500">{description}</p>
-      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-black/10 pt-4">
+      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-black/10 pt-3 sm:mt-4 sm:gap-3 sm:pt-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="min-w-0">
-            <p className="text-xl font-semibold text-ink">{metric.value}</p>
+            <p className="truncate text-lg font-semibold text-ink sm:text-xl">
+              {metric.value}
+            </p>
             <p className="mt-1 text-xs leading-4 text-zinc-500">
               {metric.label}
             </p>
@@ -658,14 +710,22 @@ function SmallStat({
   value: string | number;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-paper/70 px-4 py-3 ring-1 ring-black/5">
-      <p className="text-2xl font-semibold tracking-normal text-ink">{value}</p>
-      <p className="mt-1 text-sm text-zinc-500">{label}</p>
+    <div className="min-w-0 rounded-xl bg-paper/70 px-2.5 py-2 ring-1 ring-black/5 sm:rounded-2xl sm:px-4 sm:py-3">
+      <p className="truncate text-lg font-semibold tracking-normal text-ink sm:text-2xl">
+        {value}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs leading-4 text-zinc-500 sm:text-sm">
+        {label}
+      </p>
     </div>
   );
 }
 
-function formatReviewTime(locale: string, hours: number | null, fallback: string) {
+function formatReviewTime(
+  locale: string,
+  hours: number | null,
+  fallback: string,
+) {
   if (hours === null) {
     return fallback;
   }
@@ -737,6 +797,7 @@ function DashboardControls({
   const sectionLabels: Record<AdminAnalyticsSection, string> = {
     community: t.sectionCommunity,
     journey: t.sectionJourney,
+    latency: t.sectionLatency,
     overview: t.sectionOverview,
     sources: t.sectionSources,
   };
@@ -747,17 +808,17 @@ function DashboardControls({
   };
 
   return (
-    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-4">
-      <div className="grid gap-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
+    <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-4">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink">
           <CalendarDays className="h-4 w-4 text-moss" />
           {t.rangeLabel}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid min-w-0 grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           {adminAnalyticsWindowOptions.map((option) => (
             <Link
               key={option}
-              className={`inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium ring-1 transition ${
+              className={`inline-flex h-9 min-w-0 items-center justify-center rounded-full px-3 text-sm font-medium ring-1 transition ${
                 option === windowDays
                   ? "bg-ink text-white ring-ink"
                   : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
@@ -768,21 +829,21 @@ function DashboardControls({
                 windowDays: option,
               })}
             >
-              {windowLabels[option]}
+              <span className="truncate">{windowLabels[option]}</span>
             </Link>
           ))}
         </div>
       </div>
-      <div className="mt-3 grid gap-3 border-t border-black/10 pt-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
+      <div className="mt-3 grid min-w-0 gap-3 border-t border-black/10 pt-3 lg:grid-cols-[minmax(17rem,0.62fr)_minmax(0,1.38fr)] lg:items-center">
         <div className="flex items-center gap-2 text-sm font-semibold text-ink">
           <SlidersHorizontal className="h-4 w-4 text-clay" />
           {t.productSignals}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {adminAnalyticsSections.map((section) => (
             <Link
               key={section}
-              className={`inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium ring-1 transition ${
+              className={`inline-flex h-9 min-w-0 items-center justify-center rounded-full px-3 text-sm font-medium ring-1 transition ${
                 section === activeSection
                   ? "bg-[#eef5ea] text-moss ring-[#c1d2ba]"
                   : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
@@ -793,7 +854,7 @@ function DashboardControls({
                 windowDays,
               })}
             >
-              {sectionLabels[section]}
+              <span className="truncate">{sectionLabels[section]}</span>
             </Link>
           ))}
         </div>
@@ -810,7 +871,8 @@ function TrendPanel({
   t: AdminAnalyticsCopy;
 }) {
   const max = Math.max(1, ...dashboard.trend.map((item) => item.total));
-  const step = dashboard.trend.length > 45 ? 3 : dashboard.trend.length > 30 ? 2 : 1;
+  const step =
+    dashboard.trend.length > 45 ? 3 : dashboard.trend.length > 30 ? 2 : 1;
   const visibleTrend = dashboard.trend.filter((_, index) => index % step === 0);
   const legend = [
     { color: "bg-moss", label: t.trendDiscovery },
@@ -820,28 +882,33 @@ function TrendPanel({
   ];
 
   return (
-    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        <div>
+    <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-ink">{t.trendTitle}</h2>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
             {t.trendDescription}
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs text-zinc-500">
+        <div className="grid grid-cols-2 gap-2 text-xs text-zinc-500 sm:flex sm:flex-wrap sm:gap-x-3 sm:gap-y-2">
           {legend.map((item) => (
-            <span key={item.label} className="inline-flex items-center gap-1.5">
-              <span className={`h-2 w-2 rounded-full ${item.color}`} />
-              {item.label}
+            <span
+              key={item.label}
+              className="inline-flex min-w-0 items-center gap-1.5"
+            >
+              <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
+              <span className="truncate">{item.label}</span>
             </span>
           ))}
         </div>
       </div>
 
-      <div className="mt-5 flex h-44 items-end gap-1.5 overflow-hidden rounded-2xl bg-paper/70 px-3 pb-3 pt-5 ring-1 ring-black/5">
+      <div className="mt-4 flex h-36 min-w-0 items-end gap-0.5 overflow-hidden rounded-2xl bg-paper/70 px-2 pb-3 pt-4 ring-1 ring-black/5 sm:mt-5 sm:h-44 sm:gap-1.5 sm:px-3 sm:pt-5">
         {visibleTrend.map((item) => {
           const height =
-            item.total > 0 ? Math.max(6, Math.round((item.total / max) * 136)) : 6;
+            item.total > 0
+              ? Math.max(6, Math.round((item.total / max) * 112))
+              : 6;
           const discoveryHeight =
             item.total > 0
               ? Math.round((item.discovery / item.total) * height)
@@ -925,13 +992,16 @@ function PopularItemsPanel({
   dashboard: AdminAnalyticsDashboard;
   t: AdminAnalyticsCopy;
 }) {
-  const maxScore = Math.max(1, ...dashboard.popularItems.map((item) => item.score));
+  const maxScore = Math.max(
+    1,
+    ...dashboard.popularItems.map((item) => item.score),
+  );
 
   return (
-    <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f8eadf] text-clay ring-1 ring-[#f1c6ae]">
-          <Flame className="h-5 w-5" />
+    <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8eadf] text-clay ring-1 ring-[#f1c6ae] sm:h-10 sm:w-10">
+          <Flame className="h-4 w-4 sm:h-5 sm:w-5" />
         </span>
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-ink">
@@ -944,33 +1014,36 @@ function PopularItemsPanel({
       </div>
 
       {dashboard.popularItems.length > 0 ? (
-        <ol className="mt-5 space-y-3">
+        <ol className="mt-4 space-y-3 sm:mt-5">
           {dashboard.popularItems.map((item, index) => {
-            const width = Math.max(8, Math.round((item.score / maxScore) * 100));
+            const width = Math.max(
+              8,
+              Math.round((item.score / maxScore) * 100),
+            );
 
             return (
               <li
                 key={`${item.type}-${item.id}`}
-                className="rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5"
+                className="min-w-0 overflow-hidden rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 items-start gap-3">
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-ink ring-1 ring-black/10">
                     {index + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="min-w-0 flex-1 truncate font-semibold text-ink">
+                    <div className="grid min-w-0 gap-1 sm:flex sm:items-center sm:gap-2">
+                      <p className="min-w-0 line-clamp-2 font-semibold text-ink sm:flex-1 sm:truncate">
                         {item.title}
                       </p>
-                      <span className="inline-flex h-6 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
+                      <span className="inline-flex h-6 w-fit max-w-full items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
                         {getPopularItemTypeLabel(item.type, t)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 truncate text-xs text-zinc-500">
                       {item.city} · {t.viewCount} {item.viewCount} ·{" "}
                       {t.intentActions} {item.actionCount}
                     </p>
-                    <div className="mt-2 h-2 rounded-full bg-white">
+                    <div className="mt-2 h-2 min-w-0 overflow-hidden rounded-full bg-white">
                       <div
                         className="h-full rounded-full bg-clay"
                         style={{ width: `${width}%` }}
@@ -991,6 +1064,186 @@ function PopularItemsPanel({
   );
 }
 
+function formatLatencyMs(value: number) {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}s`;
+  }
+
+  return `${value}ms`;
+}
+
+function getLatencyKindLabel(
+  kind: AdminAnalyticsDashboard["latency"]["slowest"][number]["kind"],
+  t: AdminAnalyticsCopy,
+) {
+  return kind === "page" ? t.latencyKindPage : t.latencyKindOperation;
+}
+
+function LatencyPanel({
+  dashboard,
+  t,
+}: {
+  dashboard: AdminAnalyticsDashboard;
+  t: AdminAnalyticsCopy;
+}) {
+  const maxP95 = Math.max(
+    1,
+    ...dashboard.latency.slowest.map((item) => item.p95Ms),
+  );
+  const summary = dashboard.latency.summary;
+
+  return (
+    <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
+        <div className="xl:border-r xl:border-black/10 xl:pr-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-sky-200">
+              <TimerReset className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-ink">
+                {t.latencyTitle}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                {t.latencyDescription}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
+            <SmallStat label={t.totalSamples} value={summary.totalSamples} />
+            <SmallStat
+              label={t.latencyP95}
+              value={formatLatencyMs(summary.p95Ms)}
+            />
+            <SmallStat label={t.latencyKindPage} value={summary.pageSamples} />
+            <SmallStat
+              label={t.latencyKindOperation}
+              value={summary.operationSamples}
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-ink">{t.latencySlow}</span>
+              <span className="font-semibold text-clay">
+                {summary.slowSamples}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              {t.latencyAverage}: {formatLatencyMs(summary.averageMs)}
+            </p>
+          </div>
+
+          <div className="mt-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Gauge className="h-4 w-4 text-moss" />
+              {t.environmentBreakdown}
+            </h3>
+            <div className="mt-3 space-y-2">
+              {dashboard.latency.environmentSummaries.length > 0 ? (
+                dashboard.latency.environmentSummaries.map((item) => (
+                  <div
+                    key={item.environment}
+                    className="rounded-2xl bg-paper/70 px-3 py-2.5 ring-1 ring-black/5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-semibold text-ink">
+                        {item.environment}
+                      </span>
+                      <span className="text-sm font-semibold text-moss">
+                        {formatLatencyMs(item.p95Ms)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {t.latencyAverage}: {formatLatencyMs(item.averageMs)} ·{" "}
+                      {t.latencyCount}: {item.count}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+                  {t.latencyNoData}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          {dashboard.latency.slowest.length > 0 ? (
+            <div className="space-y-3">
+              {dashboard.latency.slowest.map((item) => {
+                const width = Math.max(
+                  8,
+                  Math.round((item.p95Ms / maxP95) * 100),
+                );
+
+                return (
+                  <div
+                    key={`${item.kind}-${item.environment}-${item.key}`}
+                    className="rounded-2xl bg-paper/70 p-3 ring-1 ring-black/5"
+                  >
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
+                        {getLatencyKindLabel(item.kind, t)}
+                      </span>
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#eef5ea] px-2 text-xs font-medium text-moss ring-1 ring-[#c1d2ba]">
+                        {item.environment}
+                      </span>
+                      <p className="min-w-0 flex-1 break-words text-sm font-semibold text-ink">
+                        {item.key}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-500 sm:grid-cols-5">
+                      <span>
+                        {t.latencyP95}:{" "}
+                        <strong className="text-ink">
+                          {formatLatencyMs(item.p95Ms)}
+                        </strong>
+                      </span>
+                      <span>
+                        {t.latencyAverage}: {formatLatencyMs(item.averageMs)}
+                      </span>
+                      <span>
+                        {t.latencyMax}: {formatLatencyMs(item.maxMs)}
+                      </span>
+                      <span>
+                        {t.latencySlow}: {item.slowCount}
+                      </span>
+                      <span>
+                        {t.latencyFailed}: {item.failedCount}
+                      </span>
+                    </div>
+
+                    {item.phaseLabel ? (
+                      <p className="mt-2 text-xs leading-5 text-zinc-500">
+                        {t.latencyPhase}: {item.phaseLabel}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-3 h-2 rounded-full bg-white">
+                      <div
+                        className="h-full rounded-full bg-sky-500"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
+              {t.latencyNoData}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function AdminAnalyticsPage({
   params,
   searchParams,
@@ -1006,7 +1259,9 @@ export default async function AdminAnalyticsPage({
     0,
     ...dashboard.sourceSurfaces.map((source) => source.count),
   );
-  const reportTargets = Object.entries(dashboard.operations.reports.byTargetType);
+  const reportTargets = Object.entries(
+    dashboard.operations.reports.byTargetType,
+  );
   const maxReportTargetCount = Math.max(
     0,
     ...reportTargets.map(([, count]) => count),
@@ -1014,7 +1269,7 @@ export default async function AdminAnalyticsPage({
   const focusItems = getFocusItems(dashboard, locale);
 
   return (
-    <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
+    <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -1040,16 +1295,16 @@ export default async function AdminAnalyticsPage({
         windowDays={windowDays}
       />
 
-      <section className="overflow-hidden rounded-[1.5rem] border border-black/10 bg-white/82 shadow-sm">
-        <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
-          <div className="bg-[#f8f4ea] p-4 sm:p-5 md:p-6">
+      <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 shadow-sm sm:rounded-[1.5rem]">
+        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+          <div className="min-w-0 bg-[#f8f4ea] p-3 sm:p-5 md:p-6">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-clay" />
               <h2 className="text-lg font-semibold text-ink">
                 {t.topDecision}
               </h2>
             </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-4 xl:grid-cols-4">
               <MetricTile
                 icon={UsersRound}
                 label={`${t.actionUsers} · ${t.intentWindow(
@@ -1078,14 +1333,14 @@ export default async function AdminAnalyticsPage({
               />
             </div>
           </div>
-          <div className="border-t border-black/10 p-4 sm:p-5 md:p-6 lg:border-l lg:border-t-0">
+          <div className="min-w-0 border-t border-black/10 p-3 sm:p-5 md:p-6 lg:border-l lg:border-t-0">
             <FocusList items={focusItems} locale={locale} />
           </div>
         </div>
       </section>
 
       {activeSection === "overview" ? (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
           <TrendPanel dashboard={dashboard} t={t} />
           <PopularItemsPanel dashboard={dashboard} t={t} />
         </div>
@@ -1093,7 +1348,7 @@ export default async function AdminAnalyticsPage({
 
       {activeSection === "journey" ? (
         <>
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-3 lg:grid-cols-3">
             <FunnelPanel
               description={t.activityDiscoveryDescription}
               metrics={[
@@ -1129,21 +1384,24 @@ export default async function AdminAnalyticsPage({
               metrics={[
                 { label: t.viewCount, value: dashboard.teamJoin.detailViews },
                 { label: t.clickCount, value: dashboard.teamJoin.joinClicks },
-                { label: t.conversion, value: `${dashboard.teamJoin.joinRate}%` },
+                {
+                  label: t.conversion,
+                  value: `${dashboard.teamJoin.joinRate}%`,
+                },
               ]}
               title={t.join}
             />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
-            <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+          <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+            <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-moss" />
                 <h2 className="text-lg font-semibold text-ink">
                   {t.productSignals}
                 </h2>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
                 <SmallStat
                   label={t.comments}
                   value={dashboard.communication.comments}
@@ -1163,7 +1421,7 @@ export default async function AdminAnalyticsPage({
               </div>
               <div className="mt-5 border-t border-black/10 pt-4">
                 <h3 className="font-semibold text-ink">{t.friendsTitle}</h3>
-                <div className="mt-3 grid grid-cols-3 gap-3">
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
                   <SmallStat
                     label={t.friendSent}
                     value={dashboard.friends.sent}
@@ -1180,14 +1438,14 @@ export default async function AdminAnalyticsPage({
               </div>
             </section>
 
-            <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
+            <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
               <div className="flex items-center gap-2">
                 <Share2 className="h-5 w-5 text-moss" />
                 <h2 className="text-lg font-semibold text-ink">
                   {t.shareTitle}
                 </h2>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
                 <SmallStat
                   label={t.linksCopied}
                   value={dashboard.sharing.linksCopied}
@@ -1207,9 +1465,13 @@ export default async function AdminAnalyticsPage({
         </>
       ) : null}
 
+      {activeSection === "latency" ? (
+        <LatencyPanel dashboard={dashboard} t={t} />
+      ) : null}
+
       {activeSection === "sources" ? (
-        <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-          <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.75fr)_minmax(0,1.25fr)]">
+        <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(18rem,0.75fr)_minmax(0,1.25fr)] lg:gap-6">
             <div className="lg:border-r lg:border-black/10 lg:pr-5">
               <h2 className="text-lg font-semibold text-ink">
                 {t.sourceSurfaceTitle}
@@ -1222,7 +1484,10 @@ export default async function AdminAnalyticsPage({
                   dashboard.sourceSurfaces.map((source) => (
                     <DataBar
                       key={source.sourceSurface}
-                      label={getSourceSurfaceLabel(locale, source.sourceSurface)}
+                      label={getSourceSurfaceLabel(
+                        locale,
+                        source.sourceSurface,
+                      )}
                       max={maxSourceSurfaceCount}
                       value={source.count}
                     />
@@ -1234,7 +1499,7 @@ export default async function AdminAnalyticsPage({
             </div>
 
             <div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+              <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
                 <div>
                   <h2 className="text-lg font-semibold text-ink">
                     {t.publicEventSources}
@@ -1244,45 +1509,73 @@ export default async function AdminAnalyticsPage({
                   </p>
                 </div>
                 <Link
-                  className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                  className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
                   href={withLocale(locale, "/admin/data-scraper")}
                 >
-                  {t.seeScraper}
+                  <span className="truncate">{t.seeScraper}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
 
               {dashboard.publicEventSources.length > 0 ? (
-                <div className="mt-4 overflow-x-auto rounded-2xl ring-1 ring-black/10">
-                  <table className="min-w-full divide-y divide-black/10 text-left text-sm">
-                    <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                      <tr>
-                        <th className="px-4 py-3">{t.importSource}</th>
-                        <th className="px-4 py-3">{t.imported}</th>
-                        <th className="px-4 py-3">{t.sourceClicks}</th>
-                        <th className="px-4 py-3">{t.createdTeams}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/5 bg-white">
-                      {dashboard.publicEventSources.map((source) => (
-                        <tr key={source.source}>
-                          <td className="px-4 py-3 font-medium text-ink">
-                            {getSourceLabel(locale, source.source)}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-600">
-                            {source.importedCount}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-600">
-                            {source.sourceClickCount}
-                          </td>
-                          <td className="px-4 py-3 text-zinc-600">
-                            {source.convertedToTeamCount}
-                          </td>
+                <>
+                  <div className="mt-4 grid min-w-0 gap-3 md:hidden">
+                    {dashboard.publicEventSources.map((source) => (
+                      <div
+                        key={source.source}
+                        className="min-w-0 rounded-2xl bg-paper/70 p-3 ring-1 ring-black/10"
+                      >
+                        <p className="truncate font-medium text-ink">
+                          {getSourceLabel(locale, source.source)}
+                        </p>
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                          <SmallStat
+                            label={t.imported}
+                            value={source.importedCount}
+                          />
+                          <SmallStat
+                            label={t.sourceClicks}
+                            value={source.sourceClickCount}
+                          />
+                          <SmallStat
+                            label={t.createdTeams}
+                            value={source.convertedToTeamCount}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 hidden rounded-2xl ring-1 ring-black/10 md:block">
+                    <table className="min-w-full divide-y divide-black/10 text-left text-sm">
+                      <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                        <tr>
+                          <th className="px-4 py-3">{t.importSource}</th>
+                          <th className="px-4 py-3">{t.imported}</th>
+                          <th className="px-4 py-3">{t.sourceClicks}</th>
+                          <th className="px-4 py-3">{t.createdTeams}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-black/5 bg-white">
+                        {dashboard.publicEventSources.map((source) => (
+                          <tr key={source.source}>
+                            <td className="px-4 py-3 font-medium text-ink">
+                              {getSourceLabel(locale, source.source)}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-600">
+                              {source.importedCount}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-600">
+                              {source.sourceClickCount}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-600">
+                              {source.convertedToTeamCount}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <p className="mt-4 rounded-2xl border border-dashed border-zinc-200 bg-paper/70 p-4 text-sm text-zinc-500">
                   {t.noSources}
@@ -1294,10 +1587,10 @@ export default async function AdminAnalyticsPage({
       ) : null}
 
       {activeSection === "community" ? (
-        <section className="rounded-[1.25rem] border border-black/10 bg-white/82 p-4 shadow-sm sm:p-5">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div>
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <section className="min-w-0 rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <div className="min-w-0">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div>
                   <div className="flex items-center gap-2">
                     <ShieldQuestion className="h-5 w-5 text-clay" />
@@ -1310,14 +1603,14 @@ export default async function AdminAnalyticsPage({
                   </p>
                 </div>
                 <Link
-                  className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+                  className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
                   href={withLocale(locale, "/admin/reports")}
                 >
-                  {t.seeReports}
+                  <span className="truncate">{t.seeReports}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
                 <SmallStat
                   label={t.newReports}
                   value={dashboard.operations.reports.newCount}

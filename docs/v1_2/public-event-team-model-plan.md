@@ -8,7 +8,7 @@
 - API / 爬虫导入的公共活动
 - 基于公共活动发起的组队活动
 
-这会造成一个核心问题：公共活动本身不应该有 `0/100`、报名人数、报名审核、组队留言等字段。公共活动只是一个外部活动信息源，用户真正参与的是围绕这个公共活动发起的“组队”。
+这会造成一个核心问题：公共活动本身不应该有 `0/100`、报名人数、报名审核、组队留言等字段。公共活动只是一个外部活动源，用户真正参与的是围绕这个公共活动发起的“组队”。
 
 因此后续需要把概念拆开：
 
@@ -26,7 +26,7 @@ ActivityParticipant
 
 推荐方向：
 
-- 新增 `PublicEvent` 作为公共活动信息源。
+- 新增 `PublicEvent` 作为公共活动源。
 - 继续复用现有 `Activity` 作为“可报名的组队活动”，不要第一版大规模重命名成 `Team`。
 - 用户自发活动仍然保留在 `Activity`，它本质上也是一个可报名的队伍。
 - API / 爬虫导入只写 `PublicEvent`，不再直接生成可报名活动。
@@ -49,7 +49,7 @@ ActivityParticipant
 代码语言建议：
 
 ```text
-PublicEvent：公共活动信息源
+PublicEvent：公共活动源
 Activity：可报名的组队活动
 ActivityParticipant：组队报名记录
 ```
@@ -57,7 +57,7 @@ ActivityParticipant：组队报名记录
 最终建议：
 
 - 这是当前平台最合适的方向。
-- 第一版不要重做全部活动系统，而是做“公共活动信息源 + 组队关联”的增量改造。
+- 第一版不要重做全部活动系统，而是做“公共活动源 + 组队关联”的增量改造。
 - 这次改造的核心价值不是多一个表，而是让用户路径从“看一个公共活动”自然变成“围绕它找人一起去”。
 - 后续产品验证要重点看公共活动是否真的能带来组队创建和报名，而不是只看公共活动浏览量。
 
@@ -65,7 +65,7 @@ ActivityParticipant：组队报名记录
 
 ### 公共活动
 
-公共活动是平台从 API、开放数据、爬虫或管理员录入得到的活动信息。
+公共活动是平台从 API、开放数据、爬虫或管理员录入得到的活动。
 
 公共活动只回答：
 
@@ -118,8 +118,8 @@ ActivityParticipant：组队报名记录
 
 迁移目标：
 
-- 把旧导入的活动信息复制成 `PublicEvent`，方便后续统一用公共活动信息创建组队。
-- 原旧 `Activity` 不删除，也不默认隐藏；前端会兼容识别为活动信息，不再按“报名车队”展示人数和报名按钮。
+- 把旧导入的活动复制成 `PublicEvent`，方便后续统一用公共活动创建组队。
+- 原旧 `Activity` 不删除，也不默认隐藏；前端会兼容识别为活动，不再按“报名车队”展示人数和报名按钮。
 - 已经有人报名或评论的旧 `Activity` 不自动迁移，避免误伤真实组队。
 - 只有手动执行脚本才会作用数据库，代码合并和 Vercel 部署不会自动执行迁移。
 
@@ -147,7 +147,7 @@ npm run db:migrate-legacy-public-events -- --write
 npm run db:migrate-legacy-public-events -- --write --hide-legacy-activities
 ```
 
-如果 dry-run 里提示很多 `sourceUrlOnlyRequiresFlag`，说明这些旧活动只有 `source/sourceUrl`，没有 `externalSource/importedAt/sourcePayload` 等强导入标记。确认它们确实是旧导入活动信息后，再执行：
+如果 dry-run 里提示很多 `sourceUrlOnlyRequiresFlag`，说明这些旧活动只有 `source/sourceUrl`，没有 `externalSource/importedAt/sourcePayload` 等强导入标记。确认它们确实是旧导入活动后，再执行：
 
 ```bash
 npm run db:migrate-legacy-public-events -- --write --include-source-url-only
@@ -176,7 +176,7 @@ enum PublicEventStatus {
 
 ### 新增 `PublicEvent`
 
-建议新增独立模型保存公共活动信息：
+建议新增独立模型保存公共活动：
 
 ```prisma
 model PublicEvent {
@@ -378,7 +378,7 @@ model Activity {
 
 推荐页面主次：
 
-1. 公共活动信息，帮助用户判断这个活动是否值得去。
+1. 公共活动，帮助用户判断这个活动是否值得去。
 2. 已有组队列表，优先让用户加入已经存在的队伍。
 3. 如果没有合适队伍，再创建自己的组队。
 
@@ -580,7 +580,7 @@ visibility
 
 - 用户最想第一时间看到“我能加入什么”。
 - 公共活动是供给来源，但不一定代表已经有人一起去。
-- 如果默认全是公共活动，用户会误以为平台只是活动信息聚合，而不是组局工具。
+- 如果默认全是公共活动，用户会误以为平台只是活动聚合，而不是组局工具。
 
 ### 搜索和筛选
 
@@ -715,7 +715,7 @@ Phase 1 里“创建活动 / 申请加入活动”应落到 `Activity`。
 ### Step 4：基于公共活动创建组队
 
 - 公共活动详情页增加“发起组队”
-- 新增组队创建表单预填公共活动信息
+- 新增组队创建表单预填公共活动
 - 创建成功后进入现有活动详情页
 
 ### Step 5：组队详情增强

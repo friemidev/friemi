@@ -59,49 +59,6 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
   };
 }
 
-function getClerkPrivateNames(user: ClerkCurrentUser) {
-  const email =
-    user.primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null;
-  const fullName = user.fullName;
-  const firstLastName = [user.firstName, user.lastName]
-    .filter(Boolean)
-    .join(" ");
-
-  return [email, fullName, firstLastName]
-    .map((value) => value?.trim().toLowerCase())
-    .filter((value): value is string => Boolean(value));
-}
-
-async function clearPrivateNicknameIfNeeded<
-  TProfile extends { id: string; nickname: string },
->(profile: TProfile, user: ClerkCurrentUser) {
-  const nickname = profile.nickname.trim();
-
-  if (
-    nickname &&
-    !user.username &&
-    getClerkPrivateNames(user).includes(nickname.toLowerCase())
-  ) {
-    await prisma.userProfile.update({
-      where: {
-        id: profile.id,
-      },
-      data: {
-        nickname: "",
-      },
-    });
-
-    return {
-      ...profile,
-      nickname: "",
-    };
-  }
-
-  return profile;
-}
-
 function upsertLocalUserProfile(clerkUserId: string) {
   return prisma.userProfile.upsert({
     where: {
@@ -121,18 +78,30 @@ function upsertLocalUserProfile(clerkUserId: string) {
   }).then(ensureUserProfileFriendCode);
 }
 
-function upsertClerkUserProfile(user: ClerkCurrentUser) {
+async function upsertClerkUserProfile(user: ClerkCurrentUser) {
   const profileFields = getProfileFieldsFromClerkUser(user);
 
-  return prisma.userProfile.upsert({
-    where: {
-      clerkUserId: user.id,
-    },
-    create: {
-      clerkUserId: user.id,
-      ...profileFields,
-    },
-    update: {
+  // Try to find an existing profile first. On create we will run the
+  // private-name-based nickname clearing logic; on update we keep the
+  // existing nickname untouched.
+  const existing = await prisma.userProfile.findUnique({
+    where: { clerkUserId: user.id },
+  });
+
+  if (!existing) {
+    const created = await prisma.userProfile.create({
+      data: {
+        clerkUserId: user.id,
+        ...profileFields,
+      },
+    });
+
+    return ensureUserProfileFriendCode(created);
+  }
+
+  const updated = await prisma.userProfile.update({
+    where: { id: existing.id },
+    data: {
       email: profileFields.email,
       firstName: profileFields.firstName,
       lastName: profileFields.lastName,
@@ -142,9 +111,9 @@ function upsertClerkUserProfile(user: ClerkCurrentUser) {
       clerkDeletedAt: profileFields.clerkDeletedAt,
       syncedAt: profileFields.syncedAt,
     },
-  })
-    .then((profile) => clearPrivateNicknameIfNeeded(profile, user))
-    .then(ensureUserProfileFriendCode);
+  });
+
+  return ensureUserProfileFriendCode(updated);
 }
 
 export async function ensureCurrentUserProfile(locale = "zh-CN") {
@@ -172,6 +141,62 @@ export async function getOptionalCurrentUserProfile() {
 
   if (!userId) {
     return null;
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    return null;
+  }
+
+  return upsertClerkUserProfile(user);
+}
+
+export async function ensureCurrentUserProfileSnapshot(locale = "zh-CN") {
+  const clerkUserId = await requireUser(locale);
+
+  if (!hasClerkKeys()) {
+    return upsertLocalUserProfile(clerkUserId);
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId,
+    },
+  });
+
+  if (existingProfile) {
+    return ensureUserProfileFriendCode(existingProfile);
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    redirect(`/${locale}/sign-in`);
+  }
+
+  return upsertClerkUserProfile(user);
+}
+
+export async function getOptionalCurrentUserProfileSnapshot() {
+  if (!hasClerkKeys()) {
+    return upsertLocalUserProfile("local-dev-user");
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+  });
+
+  if (existingProfile) {
+    return ensureUserProfileFriendCode(existingProfile);
   }
 
   const user = await currentUser();

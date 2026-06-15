@@ -6,6 +6,8 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { getMerchantProfile } from "@/features/merchants/queries/getMerchantProfile";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getCopy } from "@/lib/copy";
 
 type MerchantPageProps = {
@@ -36,6 +38,8 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
 
   return (
     <PageContainer className="space-y-7 pb-10">
+      <DetailSourceRestore sourceKey="merchant" />
+      <DetailSourceReturnLink locale={locale} />
       <section className="grid gap-5 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:p-6 lg:grid-cols-[1fr_320px] lg:items-end">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-paper text-2xl font-semibold text-ink ring-1 ring-black/10">
@@ -148,6 +152,7 @@ export default async function MerchantPage({ params }: MerchantPageProps) {
                 key={activity.id}
                 activity={activity}
                 locale={locale}
+                detailSourceKey="merchant"
               />
             ))}
           </div>

@@ -23,6 +23,7 @@ import { withLocale } from "@/lib/routes";
 import type { PublicEventCardViewModel } from "../types";
 import { getPublicEventCopy } from "../copy";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 
 type PublicEventCardProps = {
@@ -31,6 +32,7 @@ type PublicEventCardProps = {
   locale: string;
   redirectPath?: string;
   showFavoriteButton?: boolean;
+  sourceSurface?: AnalyticsSourceSurface;
 };
 
 function getEventDateLabel(event: PublicEventCardViewModel, locale: string) {
@@ -55,7 +57,18 @@ function getEventDateLabel(event: PublicEventCardViewModel, locale: string) {
 }
 
 function getEventPriceLabel(event: PublicEventCardViewModel, locale: string) {
-  return event.priceText || getPriceTypeLabel(event.priceType, locale);
+  const priceTypeLabel = getPriceTypeLabel(event.priceType, locale);
+  const priceText = event.priceText?.trim() ?? "";
+
+  if (priceText.length === 0) {
+    return priceTypeLabel;
+  }
+
+  if (event.priceType === "FREE" && priceText === "0") {
+    return priceTypeLabel;
+  }
+
+  return priceText;
 }
 
 export function PublicEventCard({
@@ -64,6 +77,7 @@ export function PublicEventCard({
   locale,
   redirectPath = "/activities",
   showFavoriteButton = false,
+  sourceSurface = "activity_list",
 }: PublicEventCardProps) {
   const t = getPublicEventCopy(locale);
   const eventHref = withLocale(locale, `/public-events/${event.id}`);
@@ -75,12 +89,14 @@ export function PublicEventCard({
       {showFavoriteButton ? (
         <div className="absolute right-3 top-3 z-20">
           <PublicEventFavoriteButton
+            favoriteCount={event.favoriteCount}
             publicEventId={event.id}
             className="h-9 w-9"
             isAuthenticated={isAuthenticated}
             isFavorited={Boolean(event.isFavorited)}
             locale={locale}
             redirectPath={redirectPath}
+            sourceSurface={sourceSurface}
           />
         </div>
       ) : null}
@@ -91,13 +107,14 @@ export function PublicEventCard({
         <div className="relative flex h-40 items-end justify-between gap-2 overflow-hidden bg-[#d9e9ee] p-3 sm:h-44 sm:p-4">
           <ActivityCoverImage
             src={event.coverImageUrl}
-            overlayClassName="bg-gradient-to-t from-black/42 via-black/10 to-black/8"
+            overlayClassName="bg-gradient-to-t from-black/48 via-black/12 to-black/5"
           />
-          <div className="relative flex min-w-0 flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold leading-none text-ink shadow-sm">
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/8 to-transparent" />
+          <div className="relative mt-auto flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="rounded-md bg-[rgba(22,18,14,0.76)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#fffaf2] shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10">
               {getCategoryLabel(event.category, locale)}
             </span>
-            <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium leading-none text-zinc-700 shadow-sm">
+            <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
               {t.detailSource}
             </span>
           </div>

@@ -6,6 +6,7 @@ import { nonEmptyString } from "@/lib/validations";
 export const MAX_ACTIVITY_DESCRIPTION_LENGTH = 3000;
 
 const createActivityTypes = ["LOCAL", "TRIP"] as const;
+const activityVisibilityValues = ["PUBLIC", "PRIVATE"] as const;
 const activityCategoryValues = Object.keys(activityCategories) as [
   keyof typeof activityCategories,
   ...(keyof typeof activityCategories)[],
@@ -49,6 +50,7 @@ const optionalCoordinate = (min: number, max: number, message: string) =>
       typeof value === "string" && value.trim() === "" ? undefined : value,
     z.coerce.number().min(min, message).max(max, message).optional(),
   );
+const activityPriceText = z.string().trim().max(120, "费用说明最多 120 个字");
 
 export const createActivitySchema = z
   .object({
@@ -67,6 +69,7 @@ export const createActivitySchema = z
     coverImageUrl: optionalImageUrl,
     type: z.enum(createActivityTypes),
     category: z.enum(activityCategoryValues),
+    visibility: z.enum(activityVisibilityValues).default("PUBLIC"),
     otherCategoryText: optionalShortText,
     city: nonEmptyString.default("Paris"),
     destination: optionalText,
@@ -84,7 +87,7 @@ export const createActivitySchema = z
     minParticipants: optionalNumber,
     requiresApproval: z.coerce.boolean().default(false),
     priceType: z.enum(priceTypeValues),
-    priceText: nonEmptyString.max(120, "费用说明最多 120 个字"),
+    priceText: activityPriceText,
     publicEventId: z
       .string()
       .trim()
@@ -150,6 +153,21 @@ export const createActivitySchema = z
         path: ["longitude"],
       });
     }
-  });
+
+    if (value.priceType !== "FREE" && value.priceText.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "请填写费用说明",
+        path: ["priceText"],
+      });
+    }
+  })
+  .transform((value) => ({
+    ...value,
+    priceText:
+      value.priceType === "FREE" && value.priceText.length === 0
+        ? "0"
+        : value.priceText,
+  }));
 
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;

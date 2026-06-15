@@ -1,5 +1,7 @@
 import type { NotificationType, Prisma } from "@prisma/client";
 
+type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
+
 type CreateNotificationInput = {
   actorId?: string | null;
   activityId?: string | null;
@@ -18,7 +20,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
 }
 
 export async function createNotification(
-  tx: Prisma.TransactionClient,
+  tx: NotificationWriter,
   input: CreateNotificationInput,
 ) {
   const identity = getNotificationIdentity(input);
@@ -46,7 +48,7 @@ export async function createNotification(
 }
 
 export async function createNotifications(
-  tx: Prisma.TransactionClient,
+  tx: NotificationWriter,
   inputs: CreateNotificationInput[],
 ) {
   if (inputs.length === 0) {

@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
-import { ActivityModeTabs } from "@/features/activities/components/ActivityModeTabs";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   getActivityList,
   getActivityFilterOptions,
@@ -20,14 +18,17 @@ import {
   hasActiveActivityFilters,
   isCanonicalActivityFilterSearchParams,
   normalizeActivityFilters,
+  normalizeActivityFilterValues,
   type ActivityFilterSearchParams,
 } from "@/features/activities/utils/activityFilters";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
-import { cn } from "@/lib/utils";
 
 type ActivitiesPageProps = {
   params: Promise<{
@@ -37,6 +38,8 @@ type ActivitiesPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+const mobileActivityPageSize = 14;
 
 function ActivityPagination({
   filters,
@@ -51,64 +54,26 @@ function ActivityPagination({
     return null;
   }
 
-  const t = getCopy(locale);
   const activitiesHref = withLocale(locale, "/activities");
-  const previousHref = getActivityFilterHref(activitiesHref, {
-    ...filters,
-    page: Math.max(list.page - 1, 1),
-  });
-  const nextHref = getActivityFilterHref(activitiesHref, {
-    ...filters,
-    page: Math.min(list.page + 1, list.totalPages),
-  });
-  const previousDisabled = list.page <= 1;
-  const nextDisabled = list.page >= list.totalPages;
-  const linkClassName =
-    "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 aria-disabled:pointer-events-none aria-disabled:opacity-45";
-  const disabledClassName =
-    "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-3 text-sm font-medium text-zinc-400 ring-1 ring-zinc-200";
 
   return (
-    <nav
-      aria-label="Activity pagination"
-      className="flex flex-col gap-3 rounded-lg border border-black/10 bg-white/70 p-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <p className="text-center text-sm font-medium text-zinc-600 sm:text-left">
-        {t.activityPagination.pageSummary(list.page, list.totalPages)}
-      </p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-        {previousDisabled ? (
-          <span className={cn(disabledClassName, "justify-self-stretch")}>
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            {t.activityPagination.previous}
-          </span>
-        ) : (
-          <Link
-            className={cn(linkClassName, "justify-self-stretch")}
-            href={previousHref}
-            prefetch={false}
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            {t.activityPagination.previous}
-          </Link>
-        )}
-        {nextDisabled ? (
-          <span className={cn(disabledClassName, "justify-self-stretch")}>
-            {t.activityPagination.next}
-            <ChevronRight className="h-4 w-4 shrink-0" />
-          </span>
-        ) : (
-          <Link
-            className={cn(linkClassName, "justify-self-stretch")}
-            href={nextHref}
-            prefetch={false}
-          >
-            {t.activityPagination.next}
-            <ChevronRight className="h-4 w-4 shrink-0" />
-          </Link>
-        )}
-      </div>
-    </nav>
+    <PaginationControl
+      basePath={activitiesHref}
+      currentPage={list.page}
+      locale={locale}
+      mode="link"
+      query={{
+        category: filters.category,
+        city: filters.city,
+        dateRange: filters.dateRange,
+        q: filters.keyword,
+        relation: filters.relation !== "ALL" ? filters.relation : undefined,
+        sort: filters.sort !== "recommended" ? filters.sort : undefined,
+        time: filters.timeState,
+        type: filters.type,
+      }}
+      totalPages={list.totalPages}
+    />
   );
 }
 
@@ -118,28 +83,66 @@ export default async function ActivitiesPage({
 }: ActivitiesPageProps) {
   const { locale } = await params;
   const rawSearchParams = (await searchParams) ?? {};
-  const filters = normalizeActivityFilters(rawSearchParams);
+  const parsedFilters = normalizeActivityFilters(rawSearchParams);
+  const explicitSort =
+    typeof rawSearchParams.sort === "string" ? rawSearchParams.sort : undefined;
+  const filters = normalizeActivityFilterValues({
+    ...parsedFilters,
+    page: String(parsedFilters.page),
+    relation: "ALL",
+    sort: explicitSort,
+    type: undefined,
+  });
+  const perf = createPerformanceTracker({
+    locale,
+    metadata: {
+      page: filters.page,
+      sort: filters.sort,
+    },
+    route: "/activities",
+  });
 
-  if (!isCanonicalActivityFilterSearchParams(rawSearchParams)) {
+  if (
+    !isCanonicalActivityFilterSearchParams(rawSearchParams) ||
+    parsedFilters.relation !== "ALL" ||
+    Boolean(parsedFilters.type) ||
+    parsedFilters.sort !== filters.sort
+  ) {
     redirect(getActivityFilterHref(withLocale(locale, "/activities"), filters));
   }
 
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const hasFilters = hasActiveActivityFilters(filters);
-  const viewerProfile = await getOptionalCurrentUserProfile();
-  const [activitiesResult, filterOptions] = await Promise.all([
-    getActivityList(filters, { viewerProfileId: viewerProfile?.id })
-      .then((list) => ({ list, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load activities", error);
-        return { list: null, error };
-      }),
-    getActivityFilterOptions().catch((error: unknown) => {
-      console.error("Failed to load activity filter options", error);
-      return { cities: [] };
-    }),
-  ]);
+  const viewerProfile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfileSnapshot(),
+  );
+  const requestHeaders = await headers();
+  const referrer = requestHeaders.get("referer");
+  const userAgent = requestHeaders.get("user-agent");
+  const isMobileRequest = isMobileUserAgent(userAgent);
+  const [activitiesResult, filterOptions] = await perf.measure(
+    "activity.data",
+    () =>
+      Promise.all([
+        getActivityList(filters, {
+          pageSize: isMobileRequest ? mobileActivityPageSize : undefined,
+          publicInfoOnly: true,
+          viewerProfileId: viewerProfile?.id,
+        })
+          .then((list) => ({ list, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load activities", error);
+            return { list: null, error };
+          }),
+        getActivityFilterOptions({ publicInfoOnly: true }).catch(
+          (error: unknown) => {
+            console.error("Failed to load activity filter options", error);
+            return { cities: [] };
+          },
+        ),
+      ]),
+  );
 
   if (activitiesResult.list && activitiesResult.list.page !== filters.page) {
     redirect(
@@ -151,108 +154,100 @@ export default async function ActivitiesPage({
   }
 
   if (activitiesResult.list) {
-    const requestHeaders = await headers();
-    const referrer = requestHeaders.get("referer");
-    const userAgent = requestHeaders.get("user-agent");
     const activeFilterNames = getActiveActivityFilterNames(filters);
     const filterCount = getActiveActivityFilterCount(filters);
-    const publicEventCount = activitiesResult.list.activities.filter(
-      (activity) => activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
-    ).length;
+    const publicEventCount = activitiesResult.list.activities.length;
     const commonOptions = {
       referrer,
       userAgent,
       userProfileId: viewerProfile?.id,
     };
 
-    await Promise.all([
-      trackAnalyticsEvent(
+    queueAnalyticsEvent(
+      {
+        locale: analyticsLocale,
+        name: "activity_list_viewed",
+        route: `/${locale}/activities`,
+        sourceSurface: "activity_list",
+        properties: {
+          filter_count: filterCount,
+          has_keyword: Boolean(filters.keyword),
+          page: activitiesResult.list.page,
+          page_size: activitiesResult.list.pageSize,
+          public_event_count: publicEventCount,
+          result_count: activitiesResult.list.activities.length,
+          sort: filters.sort,
+          team_count: 0,
+          total_count: activitiesResult.list.totalCount,
+        },
+      },
+      commonOptions,
+    );
+
+    if (filters.keyword) {
+      queueAnalyticsEvent(
         {
           locale: analyticsLocale,
-          name: "activity_list_viewed",
+          name: "search_submitted",
           route: `/${locale}/activities`,
           sourceSurface: "activity_list",
           properties: {
             filter_count: filterCount,
-            has_keyword: Boolean(filters.keyword),
-            page: activitiesResult.list.page,
-            page_size: activitiesResult.list.pageSize,
-            public_event_count: publicEventCount,
-            result_count: activitiesResult.list.activities.length,
-            sort: filters.sort,
-            team_count:
-              activitiesResult.list.activities.length - publicEventCount,
-            total_count: activitiesResult.list.totalCount,
+            keyword_length: filters.keyword.length,
+            result_count: activitiesResult.list.totalCount,
+            scope: "public_activity_info",
           },
         },
         commonOptions,
-      ),
-      filters.keyword
-        ? trackAnalyticsEvent(
-            {
-              locale: analyticsLocale,
-              name: "search_submitted",
-              route: `/${locale}/activities`,
-              sourceSurface: "activity_list",
-              properties: {
-                filter_count: filterCount,
-                keyword_length: filters.keyword.length,
-                result_count: activitiesResult.list.totalCount,
-                scope: "activities",
-              },
-            },
-            commonOptions,
-          )
-        : Promise.resolve({ ok: true as const }),
-      filterCount > 0
-        ? trackAnalyticsEvent(
-            {
-              locale: analyticsLocale,
-              name: "filter_applied",
-              route: `/${locale}/activities`,
-              sourceSurface: "activity_list",
-              properties: {
-                filter_count: filterCount,
-                filter_names: activeFilterNames,
-                result_count: activitiesResult.list.totalCount,
-                scope: "activities",
-              },
-            },
-            commonOptions,
-          )
-        : Promise.resolve({ ok: true as const }),
-    ]);
+      );
+    }
+
+    if (filterCount > 0) {
+      queueAnalyticsEvent(
+        {
+          locale: analyticsLocale,
+          name: "filter_applied",
+          route: `/${locale}/activities`,
+          sourceSurface: "activity_list",
+          properties: {
+            filter_count: filterCount,
+            filter_names: activeFilterNames,
+            result_count: activitiesResult.list.totalCount,
+            scope: "public_activity_info",
+          },
+        },
+        commonOptions,
+      );
+    }
   }
+
+  perf.finish({
+    hasFilters,
+    resultCount: activitiesResult.list?.activities.length ?? 0,
+    totalCount: activitiesResult.list?.totalCount ?? 0,
+  }, {
+    route: `/${locale}/activities`,
+    routeKey: "activity_list",
+    sourceSurface: "activity_list",
+    userProfileId: viewerProfile?.id,
+  });
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
-      <div className="space-y-4">
-        <ActivityModeTabs current="activities" locale={locale} />
-        <div className="overflow-hidden rounded-[2rem] border border-[#ded2bc] bg-[radial-gradient(circle_at_top_right,_rgba(130,152,173,0.12),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(212,183,126,0.18),_transparent_32%),linear-gradient(135deg,rgba(255,250,244,0.98),rgba(244,236,221,0.95))] px-5 py-7 text-center shadow-[0_12px_28px_rgba(99,78,48,0.06)] sm:px-8 sm:py-9">
-          <div className="mx-auto max-w-3xl">
-            <h1 className="text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
-              {t.activities.title}
-            </h1>
-            <p className="mt-3 text-base leading-7 text-zinc-600 sm:text-lg">
-              {t.activities.description}
-            </p>
-          </div>
-          <div className="mt-5 hidden flex-wrap justify-center gap-2 sm:flex">
-            <Badge>{t.globalSearch.publicEventsTitle}</Badge>
-            <Badge>{t.globalSearch.activitiesTitle}</Badge>
-            <Badge>{t.activityLabels.timeStates.ONGOING}</Badge>
-            <Badge>{t.activityLabels.timeStates.UPCOMING}</Badge>
-            <Badge>{t.activityLabels.timeStates.ENDED}</Badge>
-          </div>
-        </div>
-      </div>
-
+      <DetailSourceRestore sourceKey="activity_list" />
       <ActivityFilters
         cities={filterOptions.cities}
         filters={filters}
         locale={locale}
+        publicInfoOnly
         resultCount={activitiesResult.list?.totalCount ?? 0}
       />
+
+      <div className="flex flex-col items-center gap-2 px-1 text-center sm:gap-3">
+        <p className="max-w-[42rem] text-base font-medium leading-7 text-ink [text-wrap:balance] sm:text-[1.05rem] sm:leading-8">
+          {t.activities.description}
+        </p>
+      </div>
 
       {activitiesResult.error ? (
         <EmptyState
@@ -262,6 +257,8 @@ export default async function ActivitiesPage({
       ) : !activitiesResult.list ||
         activitiesResult.list.activities.length === 0 ? (
         <EmptyState
+          actionHref={hasFilters ? withLocale(locale, "/activities") : undefined}
+          actionLabel={hasFilters ? t.activityFilters.reset : undefined}
           title={
             hasFilters
               ? t.activities.emptyFilteredTitle
@@ -274,16 +271,36 @@ export default async function ActivitiesPage({
           }
         />
       ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <section className="space-y-3 border-t border-sand pt-4 sm:space-y-4">
+          <div className="flex items-end justify-between gap-3 px-1">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
+                {t.activities.title}
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500 sm:text-sm">
+                {t.activityFilters.resultCount(
+                  activitiesResult.list.totalCount,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
             {activitiesResult.list.activities.map((activity) => (
               <ActivityCard
-                key={activity.id}
+                key={
+                  isPublicEventCard(activity) && activity.publicEventId
+                    ? `event-${activity.publicEventId}`
+                    : activity.id
+                }
                 activity={activity}
                 isAuthenticated={Boolean(viewerProfile)}
                 locale={locale}
+                mobileDense
                 showFavoriteButton
+                showPrimaryAction={false}
                 sourceSurface="activity_list"
+                detailSourceKey="activity_list"
               />
             ))}
           </div>
@@ -292,7 +309,7 @@ export default async function ActivitiesPage({
             list={activitiesResult.list}
             locale={locale}
           />
-        </>
+        </section>
       )}
     </PageContainer>
   );

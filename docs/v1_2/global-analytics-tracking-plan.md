@@ -53,7 +53,7 @@ v1.2 阶段只保留三类会被使用的数据：
 用于回答：
 
 - 用户是否真的会发现活动。
-- 公共活动信息是否能转化成组队。
+- 公共活动是否能转化成组队。
 - 组队详情是否能转化成报名。
 - 评论、私聊、好友、通知是否促进活动前沟通。
 - 分享、复制、宣传图是否带来传播。
@@ -155,7 +155,7 @@ weekly_active_intent_users
 | 指标 | 计算方式 | 说明 |
 | --- | --- | --- |
 | 活动发现点击率 | `activity_card_clicked / activity_list_viewed` | 活动卡片是否吸引人 |
-| 活动信息转组队率 | `team_created / public_event_detail_viewed` | 公共活动信息是否能促成组局 |
+| 活动转组队率 | `team_created / public_event_detail_viewed` | 公共活动是否能促成组局 |
 | 组队报名转化率 | `join_submitted / activity_detail_viewed` | 组队详情页是否有效 |
 | 活动前沟通率 | `(comment_created + organizer_contact_clicked + conversation_opened) / activity_detail_viewed` | 用户是否需要沟通确认 |
 | 好友申请通过率 | `friend_request_accepted / friend_request_sent` | 好友系统是否形成真实关系 |
@@ -195,7 +195,7 @@ weekly_active_intent_users
 | --- | --- | --- |
 | `activity_list_viewed` | 活动发现页打开 | 判断活动发现页是否被使用 |
 | `activity_card_clicked` | 点击活动或组队卡片 | 判断活动卡片吸引力 |
-| `public_event_detail_viewed` | 活动信息详情页打开 | 判断活动信息是否被查看 |
+| `public_event_detail_viewed` | 活动详情页打开 | 判断活动是否被查看 |
 | `activity_detail_viewed` | 组队详情页打开 | 给发起人统计浏览，也用于报名转化 |
 | `team_create_started` | 点击发起组队 | 判断组队入口是否有效 |
 | `team_created` | 组队创建成功 | 判断公共活动是否促成组局 |
@@ -269,7 +269,7 @@ permission_denied
 | `report_submitted` | 举报提交成功 | 判断社区风险来源 |
 | `admin_report_status_updated` | 管理员更新举报状态 | 判断处理效率 |
 | `public_event_source_clicked` | 用户点击来源链接 | 判断公共活动来源价值 |
-| `public_event_converted_to_team` | 活动信息被转化为组队 | 判断公共活动来源是否促成组局 |
+| `public_event_converted_to_team` | 活动被转化为组队 | 判断公共活动来源是否促成组局 |
 
 ### 第二版候选事件
 
@@ -545,7 +545,7 @@ activity_list_viewed
 
 用于判断用户是否真的被活动吸引。
 
-### 2. 活动信息转组队漏斗
+### 2. 活动转组队漏斗
 
 ```text
 public_event_detail_viewed
@@ -553,7 +553,7 @@ public_event_detail_viewed
 -> team_created
 ```
 
-用于判断公共活动信息是否能促成用户发起组队。
+用于判断公共活动是否能促成用户发起组队。
 
 ### 3. 组队报名漏斗
 
@@ -592,7 +592,7 @@ report_submitted
 
 1. 每周真实组队意图用户数
 2. 活动发现点击率
-3. 活动信息转组队率
+3. 活动转组队率
 4. 组队报名转化率
 5. 活动前沟通率
 6. 好友申请通过率

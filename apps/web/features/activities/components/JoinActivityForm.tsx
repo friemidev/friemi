@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getCopy } from "@/lib/copy";
@@ -23,6 +25,8 @@ type ViewerParticipationStatus =
 
 type JoinActivityFormProps = {
   activityId: string;
+  activityTitle: string;
+  compactUnauthenticated?: boolean;
   locale: string;
   requiresApproval: boolean;
   isFull: boolean;
@@ -45,9 +49,42 @@ function SubmitButton({
   const t = getCopy(locale).join;
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? t.submitting : requiresApproval ? t.submitApproval : t.submit}
+    <Button
+      type="submit"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-[#d88d72] text-white hover:bg-[#c87b61]"
+      disabled={pending}
+      aria-busy={pending}
+    >
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">
+        {pending
+          ? t.submitting
+          : requiresApproval
+            ? t.submitApproval
+            : t.submit}
+      </span>
     </Button>
+  );
+}
+
+function PendingSubmitNotice({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const t = getCopy(locale).join;
+
+  if (!pending) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+      aria-live="polite"
+    >
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <span>{t.submitting}</span>
+    </div>
   );
 }
 
@@ -62,6 +99,44 @@ function DisabledAction({
     <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
       <p className="font-medium text-ink">{title}</p>
       <p className="mt-1 leading-6 text-zinc-500">{description}</p>
+    </div>
+  );
+}
+
+function SignInPrompt({
+  compact,
+  locale,
+}: {
+  compact: boolean;
+  locale: string;
+}) {
+  const t = getCopy(locale).join;
+
+  if (compact) {
+    return (
+      <div className="grid gap-2.5">
+        <Link
+          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-coral px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-dark"
+          href={withLocale(locale, "/sign-in")}
+        >
+          {t.signInTitle}
+        </Link>
+        <p className="px-1 text-xs leading-5 text-zinc-500">
+          {t.signInDescription}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      <DisabledAction title={t.signInTitle} description={t.signInDescription} />
+      <Link
+        className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] px-4 text-sm font-medium text-white transition hover:bg-[#c87b61]"
+        href={withLocale(locale, "/sign-in")}
+      >
+        {t.signInTitle}
+      </Link>
     </div>
   );
 }
@@ -85,24 +160,55 @@ function getParticipationCopy(
   };
 }
 
+function ParticipationStatusCard({
+  description,
+  isPending,
+  title,
+}: {
+  description: string;
+  isPending: boolean;
+  title: string;
+}) {
+  return (
+    <div
+      className={
+        isPending
+          ? "rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm"
+          : "rounded-xl border border-[#d9cfbd] bg-white/90 px-3 py-3 text-sm"
+      }
+    >
+      <p
+        className={
+          isPending ? "font-medium text-amber-900" : "font-medium text-ink"
+        }
+      >
+        {title}
+      </p>
+      <p
+        className={
+          isPending
+            ? "mt-1 leading-6 text-amber-800"
+            : "mt-1 leading-6 text-zinc-500"
+        }
+      >
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function RejoinNotice({
   locale,
   status,
 }: {
   locale: string;
-  status: "REJECTED" | "CANCELLED";
+  status: "REJECTED";
 }) {
   const t = getCopy(locale).join;
-  const copy =
-    status === "REJECTED"
-      ? {
-          title: t.rejectedTitle,
-          description: t.rejectedDescription,
-        }
-      : {
-          title: t.cancelledTitle,
-          description: t.cancelledDescription,
-        };
+  const copy = {
+    title: t.rejectedTitle,
+    description: t.rejectedDescription,
+  };
 
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
@@ -114,6 +220,8 @@ function RejoinNotice({
 
 export function JoinActivityForm({
   activityId,
+  activityTitle,
+  compactUnauthenticated = false,
   locale,
   requiresApproval,
   isFull,
@@ -123,7 +231,26 @@ export function JoinActivityForm({
   viewerParticipationStatus,
 }: JoinActivityFormProps) {
   const [state, formAction] = useActionState(joinActivityAction, initialState);
+  const [effectiveParticipationStatus, setEffectiveParticipationStatus] =
+    useState<ViewerParticipationStatus>(viewerParticipationStatus);
+  const [, startTransition] = useTransition();
+  const router = useRouter();
   const t = getCopy(locale).join;
+
+  useEffect(() => {
+    setEffectiveParticipationStatus(viewerParticipationStatus);
+  }, [viewerParticipationStatus]);
+
+  useEffect(() => {
+    if (!state.success || !state.participantStatus) {
+      return;
+    }
+
+    setEffectiveParticipationStatus(state.participantStatus);
+    startTransition(() => {
+      router.refresh();
+    });
+  }, [router, startTransition, state.participantStatus, state.success]);
 
   if (isClosed) {
     return (
@@ -132,16 +259,25 @@ export function JoinActivityForm({
   }
 
   if (
-    viewerParticipationStatus &&
-    viewerParticipationStatus !== "REJECTED" &&
-    viewerParticipationStatus !== "CANCELLED"
+    effectiveParticipationStatus &&
+    effectiveParticipationStatus !== "REJECTED" &&
+    effectiveParticipationStatus !== "CANCELLED"
   ) {
-    const copy = getParticipationCopy(viewerParticipationStatus, locale);
+    const copy = getParticipationCopy(effectiveParticipationStatus, locale);
 
     return (
-      <div className="grid gap-3">
-        <DisabledAction title={copy.title} description={copy.description} />
-        <CancelParticipationForm activityId={activityId} locale={locale} />
+      <div className="grid gap-2.5">
+        <ParticipationStatusCard
+          description={copy.description}
+          isPending={effectiveParticipationStatus === "PENDING"}
+          title={copy.title}
+        />
+        <CancelParticipationForm
+          activityId={activityId}
+          activityTitle={activityTitle}
+          locale={locale}
+          onCancelled={() => setEffectiveParticipationStatus(null)}
+        />
       </div>
     );
   }
@@ -153,20 +289,7 @@ export function JoinActivityForm({
   }
 
   if (!isAuthenticated) {
-    return (
-      <div className="grid gap-3">
-        <DisabledAction
-          title={t.signInTitle}
-          description={t.signInDescription}
-        />
-        <Link
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
-          href={withLocale(locale, "/sign-in")}
-        >
-          {t.signInTitle}
-        </Link>
-      </div>
-    );
+    return <SignInPrompt compact={compactUnauthenticated} locale={locale} />;
   }
 
   if (isOrganizer) {
@@ -198,9 +321,8 @@ export function JoinActivityForm({
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 
-      {viewerParticipationStatus === "REJECTED" ||
-      viewerParticipationStatus === "CANCELLED" ? (
-        <RejoinNotice locale={locale} status={viewerParticipationStatus} />
+      {effectiveParticipationStatus === "REJECTED" ? (
+        <RejoinNotice locale={locale} status={effectiveParticipationStatus} />
       ) : null}
 
       {state.formError ? (
@@ -228,6 +350,7 @@ export function JoinActivityForm({
         ) : null}
       </label>
 
+      <PendingSubmitNotice locale={locale} />
       <SubmitButton locale={locale} requiresApproval={requiresApproval} />
     </form>
   );

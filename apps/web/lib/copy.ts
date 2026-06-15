@@ -35,12 +35,12 @@ const copy = {
       activities: "活动",
       lobby: "组队大厅",
       lobbyShort: "大厅",
-      newActivity: "我来组局",
+      newActivity: "我要组局",
       newActivityShort: "组局",
       messages: "消息",
       messagesShort: "消息",
       profile: "个人空间",
-      profileShort: "我的",
+      profileShort: "主页",
       signIn: "登录",
     },
     accountMenu: {
@@ -68,13 +68,14 @@ const copy = {
       viewAll: "查看全部",
       loadFailed: "加载失败",
       retryDatabase: "暂时无法加载，请稍后再试。",
+      retry: "重新加载",
       people: "人",
       switchLanguage: (nextLanguage: string) => `切换到 ${nextLanguage}`,
     },
     globalSearch: {
       eyebrow: "全站搜索",
       title: "搜索 Next Fun",
-      description: "快速查找活动信息、车队、好友和商家。",
+      description: "快速查找活动、组局、好友和商家。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、好友号、昵称或商家",
       mobileOpen: "打开全站搜索",
@@ -84,20 +85,57 @@ const copy = {
       noResultsTitle: "没有找到结果",
       noResultsDescription: (query: string) =>
         `没有找到与「${query}」匹配的结果。`,
+      browseRecentActivities: "看看近期活动",
       loadFailedTitle: "搜索加载失败",
       loadFailedDescription: "暂时无法搜索，请稍后再试。",
       resultSummary: (count: number, query: string) =>
         `找到 ${count} 个与「${query}」相关的结果。`,
+      relatedOnlySummary: (query: string) =>
+        `没有完全匹配「${query}」的结果，先展示可能相关的活动与组局。`,
       viewMoreActivities: (_shown: number, total: number) =>
         `查看全部 ${total} 个活动`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `查看全部 ${total} 个活动与组局`,
+      loadingMoreMainResults: "正在加载更多",
+      loadingRelatedMainResults: "正在补充相关结果",
+      retryLoadMoreMainResults: "重新加载",
+      scrollForMoreMainResults: (shown: number, total: number) =>
+        `已显示 ${shown}/${total}，继续下滑加载更多`,
+      scrollForMoreRelatedMainResults: (shown: number, total: number) =>
+        `已显示 ${shown}/${total} 个扩展结果，继续下滑加载更多`,
+      allMainResultsLoaded: (count: number) => `已显示全部 ${count} 个结果`,
+      allRelatedMainResultsLoaded: (count: number) =>
+        `已显示 ${count} 个扩展结果`,
       activitiesTitle: "正在组局",
-      publicEventsTitle: "活动信息",
+      mainResultsTitle: "活动与组局",
+      relatedMainResultsTitle: "相关扩展",
+      relatedMainResultsDescription:
+        "下面是命中部分关键词的活动与组局，适合继续逛逛。",
+      publicEventsTitle: "活动",
       merchantsTitle: "商家",
       usersTitle: "好友",
-      noActivityResults: "没有匹配的车队。",
-      noPublicEventResults: "没有匹配的活动信息。",
+      noActivityResults: "没有匹配的组局。",
+      noMainResults: "没有匹配的活动或组局。",
+      noPublicEventResults: "没有匹配的活动。",
       noMerchantResults: "没有匹配的商家。",
       noUserResults: "没有匹配的用户。",
+      usersPreviewHint: (shown: number, total: number) =>
+        `先显示前 ${shown} 位好友结果，共 ${total} 位。`,
+      expandUserResults: (shown: number, total: number) =>
+        `查看更多好友 ${shown}/${total}`,
+      collapseUserResults: "收起好友",
+      userResultsLimited: (shown: number, total: number) =>
+        `已加载 ${shown} 位好友结果，共 ${total} 位。可以换更具体的昵称或好友号继续缩小范围。`,
+      endedResultsToggleLabel: "已结束",
+      showEndedResults: "显示已结束",
+      hideEndedResults: "隐藏已结束",
+      endedResultsHiddenHint: "默认只看仍可参与的内容。",
+      endedResultsHiddenWithCount: (count: number) =>
+        `已隐藏 ${count} 个已结束结果。`,
+      endedResultsShownHint: "当前包含已结束内容。",
+      onlyEndedResultsTitle: "当前只找到已结束内容",
+      onlyEndedResultsDescription: (count: number) =>
+        `默认隐藏了 ${count} 个已结束的活动或组局。你可以打开历史结果继续查看。`,
       friendCodeLabel: "好友号",
       friendCodeMissing: "暂无好友号",
       addFriend: "加好友",
@@ -116,7 +154,7 @@ const copy = {
       signUpMissingDescription: "注册服务正在准备中，请稍后再试。",
     },
     home: {
-      eyebrow: "Paris first · 中文活动搭子",
+      eyebrow: "真实活动 · 真实连接",
       title: "Next Fun",
       tagline: "下一场，Fun 开场",
       description: "在这里发现活动，和朋友、新搭子一起组队出发!",
@@ -126,18 +164,18 @@ const copy = {
       emptyPreviewTitle: "暂无活动",
       emptyPreviewDescription: "有新活动后会显示在这里。",
       recentTitle: "最近活动",
-      recentDescription: "按开始时间展示最近的活动信息和正在组局的车队。",
+      recentDescription: "按开始时间展示最近的活动和正在组局的内容。",
       emptyRecentDescription: "有新的活动后会显示在这里。",
     },
     activities: {
       title: "发现活动",
       description:
-        "先看看近期真实活动；想一起去，再进入详情查看车队或发起组局。",
+        "最近想去哪儿？在这里发现活动，和朋友、新搭子一起组队出发。",
       scopeTitle: "当前展示范围",
       scopeDescription:
-        "默认优先展示进行中和即将开始的活动，已结束活动会排在后面。",
+        "默认优先展示进行中和即将开始的活动，已结束的会排在后面。",
       emptyTitle: "暂无活动",
-      emptyDescription: "当前没有可展示的公开活动，创建新活动后会显示在这里。",
+      emptyDescription: "当前没有可展示的公开活动，请稍后再来看看。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
     },
@@ -149,6 +187,9 @@ const copy = {
       emptyDescription:
         "公园？逛展？还是看电影？先组个局，去逛逛活动，再加几个好友吧。",
       emptySectionTitle: "从这里开始吧",
+      openTitle: "开放局",
+      openDescription: "所有登录用户都能看到的公开组局，适合找新搭子。",
+      openEmptyDescription: "暂时没有开放局。可以先从活动详情页发起一个。",
       createdTitle: "我发起的",
       createdDescription: "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
       createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
@@ -167,29 +208,43 @@ const copy = {
     },
     activityFilters: {
       title: "搜索和筛选",
+      publicInfoTitle: "筛选活动",
       description:
-        "按关键词、主题、城市、关系、活动形式和进度快速缩小活动范围。",
+        "按关键词、主题、城市、日期范围、关系、活动形式和进度快速缩小活动范围。",
+      publicInfoDescription:
+        "按关键词、主题、城市、日期范围和进度快速缩小活动范围。",
       mobileSummary: "搜索 / 筛选",
       keywordLabel: "关键词",
-      keywordPlaceholder: "搜索标题或描述，例如：电影 Paris",
+      keywordPlaceholder: "搜索标题或描述，例如：电影展",
       categoryLabel: "主题",
       cityLabel: "城市",
+      dateRangeLabel: "日期范围",
       relationLabel: "关系",
       typeLabel: "活动形式",
       timeStateLabel: "活动进度",
-      sortLabel: "日期排序",
+      sortLabel: "排序方式",
       allCategories: "全部主题",
       allCities: "全部城市",
+      allDateRanges: "全部日期",
       allRelations: "全部关系",
       relationFriendHosted: "好友发起",
       relationFriendJoined: "好友参加",
       relationMine: "我发起的",
       allTypes: "全部形式",
       allTimeStates: "全部进度",
-      sortRecommended: "推荐排序",
-      sortSoonest: "从近到远",
-      sortLatest: "从远到近",
+      sortRecommended: "近期优先",
+      sortSoonest: "最早开始",
+      sortLatest: "最晚开始",
       sortRecentlyAdded: "最近添加",
+      dateRangeOptions: {
+        TODAY: "当天",
+        TOMORROW: "明天",
+        NEXT_3_DAYS: "最近三天",
+        THIS_WEEK: "本周",
+        NEXT_WEEK: "下周",
+        THIS_MONTH: "当月",
+        NEXT_MONTH: "下个月",
+      },
       apply: "搜索",
       reset: "重置",
       activeKeyword: (keyword: string) => `关键词：${keyword}`,
@@ -197,8 +252,14 @@ const copy = {
       resultCount: (count: number) => `${count} 个结果`,
     },
     activityPagination: {
+      ariaLabel: "分页",
       previous: "上一页",
       next: "下一页",
+      jumpLabel: "跳到",
+      jumpInputLabel: "输入页码",
+      jumpAction: "前往",
+      totalPages: (totalPages: number) => `共 ${totalPages} 页`,
+      invalidPage: (totalPages: number) => `请输入 1 到 ${totalPages} 之间的页码`,
       pageSummary: (page: number, totalPages: number) =>
         `第 ${page} / ${totalPages} 页`,
     },
@@ -211,6 +272,9 @@ const copy = {
       contactOrganizer: "联系发起人",
       contactOrganizerHint: "活动前有问题，可以直接确认。",
       type: "活动类型",
+      visibility: "可见范围",
+      visibilityPublic: "开放局",
+      visibilityPrivate: "私人局",
       destination: "目的地",
       participants: "已报名",
       minParticipants: "最少成团",
@@ -218,7 +282,7 @@ const copy = {
       price: "费用",
       approvalRequired: "报名后需发起人确认",
       approvalAuto: "报名后自动确认",
-      editActivity: "编辑活动",
+      editActivity: "编辑组局",
       locationMapTitle: "活动地点",
       openMap: "打开地图",
     },
@@ -350,6 +414,11 @@ const copy = {
           title: "报名成功",
           body: (activityTitle: string) => `你已成功报名「${activityTitle}」。`,
         },
+        PARTICIPATION_CANCELLED: {
+          title: "有人取消报名",
+          body: (activityTitle: string, actorName = "有人") =>
+            `${actorName}取消了「${activityTitle}」的报名。`,
+        },
         PARTICIPATION_APPROVED: {
           title: "报名已通过",
           body: (activityTitle: string, actorName = "发起人") =>
@@ -366,7 +435,7 @@ const copy = {
             `${actorName}已取消「${activityTitle}」。`,
         },
         ACTIVITY_UPDATED: {
-          title: "活动信息已更新",
+          title: "活动已更新",
           body: (activityTitle: string, actorName = "发起人") =>
             `${actorName}更新了「${activityTitle}」的时间或地点。`,
         },
@@ -401,6 +470,7 @@ const copy = {
       cancelConfirmTitle: "确认取消组局？",
       cancelConfirmDescription:
         "取消后，这场组局会停止报名。已报名的用户仍能看到状态变化。",
+      cancelContextLabel: "即将取消",
       cancelConfirmBack: "再想想",
       cancelConfirmSubmit: "确认取消",
       cancelledHint: "组局已取消，用户无法继续报名。",
@@ -411,6 +481,7 @@ const copy = {
       endedError: "活动已结束，不能再取消。",
       conflictError: "活动状态已更新，请稍后再试。",
       failedError: "取消活动失败，请稍后重试。",
+      cancelStateKept: "取消未生效，组局状态已保留。",
     },
     approval: {
       title: "报名审核",
@@ -431,12 +502,12 @@ const copy = {
       failedError: "审核报名失败，请稍后重试。",
     },
     newActivity: {
-      title: "我来组局",
+      title: "发起组局",
       description: "填写组局信息，约好时间地点，发布后就可以邀请大家加入。",
     },
     editActivity: {
       title: "编辑活动",
-      description: "修改活动信息，保存后回到详情页。",
+      description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人可以编辑这个活动。",
       lockedTitle: "活动不可编辑",
@@ -456,13 +527,13 @@ const copy = {
       saveNickname: "保存昵称",
       savingNickname: "保存中...",
       nicknameError: "昵称不能为空，最多 24 个字。",
-      createdCount: "发起活动",
+      createdCount: "发起组局",
       participationCount: "参加活动",
       errorTitle: "个人空间加载失败",
       errorDescription: "部分内容暂时无法加载，请稍后再试。",
       createdTitle: "发起的活动",
       createdDescription: "",
-      createdEmptyTitle: "暂无发起活动",
+      createdEmptyTitle: "暂无发起组局",
       createdEmptyDescription: "有活动后会显示在这里。",
       participationTitle: "参加的活动",
       participationDescription: "",
@@ -472,7 +543,7 @@ const copy = {
       favoriteEmptyTitle: "暂无收藏活动",
       favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
-        `当前显示最近 ${limit} 个发起活动，另有 ${count} 个更早的活动暂未展示。`,
+        `当前显示最近 ${limit} 个发起组局，另有 ${count} 个更早的内容暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
       hiddenFavorite: (limit: number, count: number) =>
@@ -516,6 +587,12 @@ const copy = {
       cancelPending: "取消中...",
       cancel: "取消报名",
       cancelConfirm: "确定要取消报名吗？取消后你的名额会释放给其他人。",
+      cancelContextLabel: "即将取消报名",
+      cancelStateKept: "取消未生效，你的报名状态已保留。",
+      refreshError: "请稍后再试。",
+      missingError: "你还没有报名这个活动。",
+      statusError: "当前报名状态不能取消。",
+      failedError: "取消报名失败，请稍后重试。",
     },
     form: {
       basicInfo: "组局信息",
@@ -608,10 +685,15 @@ const copy = {
         "按巴黎时间保存。若填写结束时间且晚于现在，开始时间可早于当前时间。",
       endAt: "结束时间",
       endAtHint: "可选；填写时必须晚于开始时间。",
+      visibilityTitle: "谁可以看到这个局",
+      visibilityPublic: "开放局",
+      visibilityPublicHint: "会出现在组队大厅，登录用户都可以看到并申请加入。",
+      visibilityPrivate: "私人局",
+      visibilityPrivateHint: "只对你的好友可见，适合先和熟人约局。",
       peoplePrice: "人数和费用",
-      capacityLimitToggle: "限制车队人数",
+      capacityLimitToggle: "限制组局人数",
       capacityLimitHint: "默认不限制人数；需要控制名额时再开启。",
-      capacity: "车队人数上限",
+      capacity: "组局人数上限",
       capacityPlaceholder: "例如：8",
       minParticipants: "最少成局人数",
       minParticipantsPlaceholder: "例如：4",
@@ -655,7 +737,7 @@ const copy = {
         ENDED: "已结束",
       },
       types: {
-        PUBLIC_EVENT: "活动信息",
+        PUBLIC_EVENT: "活动",
         USER_HOSTED: "用户发起",
         LOCAL: "本地局",
         TRIP: "旅游搭子",
@@ -722,6 +804,7 @@ const copy = {
       viewAll: "View all",
       loadFailed: "Load failed",
       retryDatabase: "Unable to load right now. Try again later.",
+      retry: "Try again",
       people: "people",
       switchLanguage: (nextLanguage: string) => `Switch to ${nextLanguage}`,
     },
@@ -738,21 +821,59 @@ const copy = {
         "Try an activity name, place, friend code, nickname, or merchant name.",
       noResultsTitle: "No results found",
       noResultsDescription: (query: string) => `No results matched "${query}".`,
+      browseRecentActivities: "Browse recent activities",
       loadFailedTitle: "Search failed to load",
       loadFailedDescription:
         "Search is unavailable right now. Try again later.",
       resultSummary: (count: number, query: string) =>
         `${count} result${count === 1 ? "" : "s"} found for "${query}".`,
+      relatedOnlySummary: (query: string) =>
+        `No exact results for "${query}". Showing related activities and crews instead.`,
       viewMoreActivities: (_shown: number, total: number) =>
         `View all ${total} activities`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `View all ${total} activities and crews`,
+      loadingMoreMainResults: "Loading more",
+      loadingRelatedMainResults: "Loading related results",
+      retryLoadMoreMainResults: "Try loading again",
+      scrollForMoreMainResults: (shown: number, total: number) =>
+        `${shown}/${total} shown. Scroll for more.`,
+      scrollForMoreRelatedMainResults: (shown: number, total: number) =>
+        `${shown}/${total} related results shown. Scroll for more.`,
+      allMainResultsLoaded: (count: number) =>
+        `All ${count} results are shown.`,
+      allRelatedMainResultsLoaded: (count: number) =>
+        `${count} related result${count === 1 ? "" : "s"} shown.`,
       activitiesTitle: "Crews forming",
+      mainResultsTitle: "Activities and crews",
+      relatedMainResultsTitle: "Related results",
+      relatedMainResultsDescription:
+        "These match part of your search and may still be worth checking.",
       publicEventsTitle: "Activity info",
       merchantsTitle: "Merchants",
       usersTitle: "Friends",
       noActivityResults: "No matching crews.",
+      noMainResults: "No matching activities or crews.",
       noPublicEventResults: "No matching activity info.",
       noMerchantResults: "No matching merchants.",
       noUserResults: "No matching users.",
+      usersPreviewHint: (shown: number, total: number) =>
+        `Showing the first ${shown} friend results out of ${total}.`,
+      expandUserResults: (shown: number, total: number) =>
+        `Show more friends ${shown}/${total}`,
+      collapseUserResults: "Show fewer friends",
+      userResultsLimited: (shown: number, total: number) =>
+        `${shown} friend results loaded out of ${total}. Try a more specific nickname or friend code to narrow it down.`,
+      endedResultsToggleLabel: "Ended",
+      showEndedResults: "Show ended",
+      hideEndedResults: "Hide ended",
+      endedResultsHiddenHint: "Only available items are shown by default.",
+      endedResultsHiddenWithCount: (count: number) =>
+        `${count} ended result${count === 1 ? "" : "s"} hidden.`,
+      endedResultsShownHint: "Ended items are currently included.",
+      onlyEndedResultsTitle: "Only ended items were found",
+      onlyEndedResultsDescription: (count: number) =>
+        `${count} ended activit${count === 1 ? "y or crew was" : "ies or crews were"} hidden by default. Show history to keep browsing.`,
       friendCodeLabel: "Friend code",
       friendCodeMissing: "No friend code yet",
       addFriend: "Add friend",
@@ -772,11 +893,11 @@ const copy = {
       signUpMissingDescription: "Sign-up is being prepared. Try again later.",
     },
     home: {
-      eyebrow: "Paris first · Chinese-speaking activity crews",
+      eyebrow: "Real activities · real connections",
       title: "Next Fun",
       tagline: "What's next? Fun begins.",
       description:
-        "Discover activities here and head out with your friends and new buddies as a team!",
+        "Discover activities here, then head out with friends or new people who want to join.",
       browseActivities: "Browse activities",
       homeActivityFailedTitle: "Activities failed to load",
       homeActivityFailedDescription:
@@ -792,76 +913,95 @@ const copy = {
     activities: {
       title: "Discover activities",
       description:
-        "Browse real upcoming activities first, then open details to join or start a crew.",
+        "Looking for something to do next? Discover activities here, then make a plan with friends or new people.",
       scopeTitle: "Current scope",
       scopeDescription:
-        "Ongoing and upcoming activities come first, while ended activities stay lower in the list.",
-      emptyTitle: "No activities",
+        "Ongoing and upcoming activity info comes first, while ended activities stay lower in the list.",
+      emptyTitle: "No activity info",
       emptyDescription:
-        "There are no public activities to show right now. New activities will appear here.",
-      emptyFilteredTitle: "No matching activities",
+        "There is no public activity info to show right now. Check back later.",
+      emptyFilteredTitle: "No matching activity info",
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
     },
     activityLobby: {
       eyebrow: "Your plans, your people, your next outing",
       title: "Lobby",
-      description: "Start with the activities that matter most to you.",
+      description: "Keep up with the plans that matter most to you.",
       emptyTitle: "Your lobby is still empty",
       emptyDescription:
-        "Start a plan, discover activities, or add a few friends.",
+        "Start a plan, browse activity info, or add a few friends.",
       emptySectionTitle: "Begin here",
+      openTitle: "Open crews",
+      openDescription:
+        "Public crews visible to signed-in users. A good place to meet new people.",
+      openEmptyDescription:
+        "No open crews yet. Start one from an activity detail page.",
       createdTitle: "Created by me",
       createdDescription:
-        "When you want to start a plan, begin here. The activities you create will show up in this section.",
+        "When you want to start a plan, begin here. The plans you create will show up in this section.",
       createdEmptyDescription:
         "You have not started a plan yet. Create one and bring people along.",
       joinedTitle: "Joined by me",
       joinedDescription:
-        "Once you join or sign up for something, you can keep track of it here.",
+        "Once you join a crew or send a request, you can keep track of it here.",
       joinedEmptyDescription:
-        "Nothing joined yet. Explore activities and jump into one that feels right.",
+        "Nothing joined yet. Browse a few crews and jump into one that feels right.",
       favoriteTitle: "My favorites",
       favoriteDescription:
-        "Save activities you are interested in so they are easy to come back to later.",
+        "Save crews you are interested in so they are easy to come back to later.",
       favoriteEmptyDescription:
-        "Save a few activities you like and they will be waiting for you here.",
+        "Save a few crews you like and they will be waiting for you here.",
       friendHostedTitle: "Hosted by friends",
       friendHostedDescription:
-        "Add a few friends and the activities they host will start to appear here.",
+        "Add a few friends and the crews they host will start to appear here.",
       friendHostedEmptyDescription:
         "Add a few friends first, then you can quickly see the plans they start here.",
       friendJoinedTitle: "Joined by friends",
       friendJoinedDescription:
-        "Activities your friends have joined will appear here so it is easier to join them.",
+        "Crews your friends have joined will appear here so it is easier to join them.",
       friendJoinedEmptyDescription:
-        "Your friends have not joined anything yet. Discover something fun and invite them along.",
+        "Your friends have not joined any crews yet. Discover something fun and invite them along.",
     },
     activityFilters: {
       title: "Search and filters",
+      publicInfoTitle: "Filter activity info",
       description:
-        "Narrow activities by keyword, topic, city, relationship, format, and timing.",
+        "Narrow activities by keyword, topic, city, date range, relationship, format, and timing.",
+      publicInfoDescription:
+        "Narrow activity info by keyword, topic, city, date range, and timing.",
       mobileSummary: "Search / Filter",
       keywordLabel: "Keyword",
-      keywordPlaceholder: "Search title or description, e.g. film Paris",
+      keywordPlaceholder: "Search title or description, e.g. film night",
       categoryLabel: "Topic",
       cityLabel: "City",
+      dateRangeLabel: "Date range",
       relationLabel: "Relationship",
       typeLabel: "Format",
       timeStateLabel: "Timing",
-      sortLabel: "Date order",
+      sortLabel: "Sort by",
       allCategories: "All topics",
       allCities: "All cities",
+      allDateRanges: "All dates",
       allRelations: "All relationships",
       relationFriendHosted: "Friend hosted",
       relationFriendJoined: "Friend joined",
-      relationMine: "My activities",
+      relationMine: "My plans",
       allTypes: "All formats",
       allTimeStates: "All timing",
-      sortRecommended: "Recommended",
-      sortSoonest: "Soonest first",
-      sortLatest: "Latest first",
+      sortRecommended: "Coming up soon",
+      sortSoonest: "Earliest start",
+      sortLatest: "Latest start",
       sortRecentlyAdded: "Recently added",
+      dateRangeOptions: {
+        TODAY: "Today",
+        TOMORROW: "Tomorrow",
+        NEXT_3_DAYS: "Next 3 days",
+        THIS_WEEK: "This week",
+        NEXT_WEEK: "Next week",
+        THIS_MONTH: "This month",
+        NEXT_MONTH: "Next month",
+      },
       apply: "Search",
       reset: "Reset",
       activeKeyword: (keyword: string) => `Keyword: ${keyword}`,
@@ -870,8 +1010,16 @@ const copy = {
         `${count} result${count === 1 ? "" : "s"}`,
     },
     activityPagination: {
+      ariaLabel: "Pagination",
       previous: "Previous",
       next: "Next",
+      jumpLabel: "Go to",
+      jumpInputLabel: "Enter page number",
+      jumpAction: "Go",
+      totalPages: (totalPages: number) =>
+        `${totalPages} page${totalPages === 1 ? "" : "s"}`,
+      invalidPage: (totalPages: number) =>
+        `Enter a page from 1 to ${totalPages}`,
       pageSummary: (page: number, totalPages: number) =>
         `Page ${page} / ${totalPages}`,
     },
@@ -884,6 +1032,9 @@ const copy = {
       contactOrganizer: "Message organizer",
       contactOrganizerHint: "Ask before joining or heading out.",
       type: "Type",
+      visibility: "Visibility",
+      visibilityPublic: "Open crew",
+      visibilityPrivate: "Private crew",
       destination: "Destination",
       participants: "Joined",
       minParticipants: "Minimum group",
@@ -891,7 +1042,7 @@ const copy = {
       price: "Cost",
       approvalRequired: "Organizer approval required",
       approvalAuto: "Auto-confirmed after joining",
-      editActivity: "Edit activity",
+      editActivity: "Edit plan",
       locationMapTitle: "Activity location",
       openMap: "Open map",
     },
@@ -1030,6 +1181,11 @@ const copy = {
           body: (activityTitle: string) =>
             `You have joined "${activityTitle}".`,
         },
+        PARTICIPATION_CANCELLED: {
+          title: "Someone left",
+          body: (activityTitle: string, actorName = "Someone") =>
+            `${actorName} cancelled their join for "${activityTitle}".`,
+        },
         PARTICIPATION_APPROVED: {
           title: "Join request approved",
           body: (activityTitle: string, actorName = "The organizer") =>
@@ -1083,6 +1239,7 @@ const copy = {
       cancelConfirmTitle: "Cancel this crew?",
       cancelConfirmDescription:
         "This crew will stop taking new join requests. People who already joined can still see the status change.",
+      cancelContextLabel: "Crew to cancel",
       cancelConfirmBack: "Keep it",
       cancelConfirmSubmit: "Cancel crew",
       cancelledHint: "This crew is cancelled. Users can no longer join.",
@@ -1093,6 +1250,7 @@ const copy = {
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status changed. Try again later.",
       failedError: "Failed to cancel the activity. Try again later.",
+      cancelStateKept: "Cancellation did not go through. The crew is unchanged.",
     },
     approval: {
       title: "Participation review",
@@ -1120,14 +1278,14 @@ const copy = {
         "Set the meetup details, publish your plan, and invite others to join.",
     },
     editActivity: {
-      title: "Edit activity",
+      title: "Edit plan",
       description:
-        "Only the organizer can update this activity. You will return to the detail page after saving.",
+        "Only the organizer can update this plan. You will return to the detail page after saving.",
       forbiddenTitle: "No edit access",
-      forbiddenDescription: "Only the organizer can edit this activity.",
-      lockedTitle: "Activity cannot be edited",
+      forbiddenDescription: "Only the organizer can edit this plan.",
+      lockedTitle: "Plan cannot be edited",
       lockedDescription:
-        "Ended or cancelled activities can no longer be edited.",
+        "Ended or cancelled plans can no longer be edited.",
     },
     profile: {
       title: "Profile",
@@ -1209,6 +1367,13 @@ const copy = {
       cancelPending: "Cancelling...",
       cancel: "Cancel join",
       cancelConfirm: "Cancel your participation? Your seat will be released.",
+      cancelContextLabel: "Participation to cancel",
+      cancelStateKept:
+        "Cancellation did not go through. Your participation is unchanged.",
+      refreshError: "Try again later.",
+      missingError: "You have not joined this activity yet.",
+      statusError: "This participation status cannot be cancelled.",
+      failedError: "Failed to cancel your participation. Try again later.",
     },
     form: {
       basicInfo: "Plan details",
@@ -1310,6 +1475,13 @@ const copy = {
         "Saved in Paris time. If the end time is in the future, the start time may be in the past.",
       endAt: "End time",
       endAtHint: "Optional. Must be after the start time when filled.",
+      visibilityTitle: "Who can see this crew",
+      visibilityPublic: "Open crew",
+      visibilityPublicHint:
+        "Shown in the team lobby. Signed-in users can see it and request to join.",
+      visibilityPrivate: "Private crew",
+      visibilityPrivateHint:
+        "Only your friends can see it. Best for plans with people you know.",
       peoplePrice: "People and cost",
       capacityLimitToggle: "Limit crew size",
       capacityLimitHint:
@@ -1428,6 +1600,7 @@ const copy = {
       loadFailed: "Échec du chargement",
       retryDatabase:
         "Chargement impossible pour le moment. Réessayez plus tard.",
+      retry: "Réessayer",
       people: "pers.",
       switchLanguage: (nextLanguage: string) => `Passer en ${nextLanguage}`,
     },
@@ -1446,21 +1619,60 @@ const copy = {
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
         `Aucun résultat ne correspond à « ${query} ».`,
+      browseRecentActivities: "Voir les activités récentes",
       loadFailedTitle: "Échec de la recherche",
       loadFailedDescription:
         "La recherche est indisponible pour le moment. Réessayez plus tard.",
       resultSummary: (count: number, query: string) =>
         `${count} résultat${count > 1 ? "s" : ""} pour « ${query} ».`,
+      relatedOnlySummary: (query: string) =>
+        `Aucun résultat exact pour « ${query} ». Voici des activités et groupes proches.`,
       viewMoreActivities: (_shown: number, total: number) =>
         `Voir les ${total} activités`,
+      viewMoreMainResults: (_shown: number, total: number) =>
+        `Voir les ${total} activités et groupes`,
+      loadingMoreMainResults: "Chargement",
+      loadingRelatedMainResults: "Chargement des résultats proches",
+      retryLoadMoreMainResults: "Réessayer",
+      scrollForMoreMainResults: (shown: number, total: number) =>
+        `${shown}/${total} affichés. Faites défiler pour charger plus.`,
+      scrollForMoreRelatedMainResults: (shown: number, total: number) =>
+        `${shown}/${total} résultats proches affichés. Faites défiler pour charger plus.`,
+      allMainResultsLoaded: (count: number) =>
+        `${count} résultat${count > 1 ? "s" : ""} affiché${count > 1 ? "s" : ""}.`,
+      allRelatedMainResultsLoaded: (count: number) =>
+        `${count} résultat${count > 1 ? "s" : ""} proche${count > 1 ? "s" : ""} affiché${count > 1 ? "s" : ""}.`,
       activitiesTitle: "Groupes en cours",
+      mainResultsTitle: "Activités et groupes",
+      relatedMainResultsTitle: "Résultats proches",
+      relatedMainResultsDescription:
+        "Ces résultats correspondent à une partie de votre recherche.",
       publicEventsTitle: "Activités",
       merchantsTitle: "Partenaires",
       usersTitle: "Amis",
       noActivityResults: "Aucun groupe correspondant.",
+      noMainResults: "Aucune activité ou groupe correspondant.",
       noPublicEventResults: "Aucune activité correspondante.",
       noMerchantResults: "Aucun partenaire correspondant.",
       noUserResults: "Aucun utilisateur correspondant.",
+      usersPreviewHint: (shown: number, total: number) =>
+        `Affichage des ${shown} premiers résultats amis sur ${total}.`,
+      expandUserResults: (shown: number, total: number) =>
+        `Voir plus d'amis ${shown}/${total}`,
+      collapseUserResults: "Réduire les amis",
+      userResultsLimited: (shown: number, total: number) =>
+        `${shown} résultats amis chargés sur ${total}. Essayez un pseudo ou un code ami plus précis.`,
+      endedResultsToggleLabel: "Terminées",
+      showEndedResults: "Afficher les terminées",
+      hideEndedResults: "Masquer les terminées",
+      endedResultsHiddenHint:
+        "Par défaut, seuls les contenus encore disponibles sont affichés.",
+      endedResultsHiddenWithCount: (count: number) =>
+        `${count} résultat${count > 1 ? "s" : ""} terminé${count > 1 ? "s" : ""} masqué${count > 1 ? "s" : ""}.`,
+      endedResultsShownHint: "Les contenus terminés sont inclus.",
+      onlyEndedResultsTitle: "Seuls des contenus terminés ont été trouvés",
+      onlyEndedResultsDescription: (count: number) =>
+        `${count} activité${count > 1 ? "s" : ""} ou groupe${count > 1 ? "s" : ""} terminé${count > 1 ? "s ont" : " a"} été masqué${count > 1 ? "s" : ""} par défaut. Affichez l'historique pour continuer.`,
       friendCodeLabel: "Code ami",
       friendCodeMissing: "Aucun code ami",
       addFriend: "Ajouter",
@@ -1482,11 +1694,11 @@ const copy = {
         "L'inscription est en préparation. Réessayez plus tard.",
     },
     home: {
-      eyebrow: "Paris d'abord · activités sinophones",
+      eyebrow: "De vraies activites · de vraies connexions",
       title: "Next Fun",
       tagline: "La prochaine sortie commence ici.",
       description:
-        "Découvrez des activités ici et partez en équipe avec vos amis et de nouveaux compagnons.",
+        "Découvrez des activités ici, puis partez avec vos amis ou de nouvelles personnes motivées.",
       browseActivities: "Voir les activités",
       homeActivityFailedTitle: "Échec du chargement",
       homeActivityFailedDescription:
@@ -1502,76 +1714,95 @@ const copy = {
     activities: {
       title: "Découvrir les sorties",
       description:
-        "Parcourez les sorties à venir, puis ouvrez le détail pour rejoindre ou lancer une équipe.",
+        "Envie de sortir bientôt ? Découvrez des activités ici, puis organisez un plan avec vos amis ou de nouvelles rencontres.",
       scopeTitle: "Périmètre affiché",
       scopeDescription:
         "Les sorties en cours ou à venir apparaissent d'abord, les sorties terminées restent plus bas.",
-      emptyTitle: "Aucune activité",
+      emptyTitle: "Aucune sortie",
       emptyDescription:
-        "Aucune activité publique à afficher pour le moment. Les nouvelles activités apparaîtront ici.",
-      emptyFilteredTitle: "Aucune activité trouvée",
+        "Aucune sortie publique à afficher pour le moment. Revenez un peu plus tard.",
+      emptyFilteredTitle: "Aucune sortie trouvée",
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
     },
     activityLobby: {
       eyebrow: "Vos plans, vos amis, votre prochaine sortie",
       title: "Hall d'équipe",
-      description: "Commencez par les activités qui vous concernent le plus.",
+      description: "Retrouvez ici les plans qui comptent le plus pour vous.",
       emptyTitle: "Votre hall d'équipe est encore vide",
       emptyDescription:
-        "Lancez un plan, découvrez des activités ou ajoutez quelques amis.",
+        "Lancez un plan, parcourez les infos activité ou ajoutez quelques amis.",
       emptySectionTitle: "Commencez par ici",
+      openTitle: "Groupes ouverts",
+      openDescription:
+        "Des groupes publics visibles par les utilisateurs connectés, parfaits pour rencontrer de nouvelles personnes.",
+      openEmptyDescription:
+        "Aucun groupe ouvert pour le moment. Lancez-en un depuis une page d'activité.",
       createdTitle: "Créées par moi",
       createdDescription:
-        "Quand vous voulez lancer un plan, commencez ici. Les activités que vous créez apparaîtront dans cette section.",
+        "Quand vous voulez lancer un plan, commencez ici. Les plans que vous créez apparaîtront dans cette section.",
       createdEmptyDescription:
         "Vous n'avez encore rien lancé. Créez un plan et invitez du monde à vous rejoindre.",
       joinedTitle: "Rejointes par moi",
       joinedDescription:
-        "Dès que vous rejoignez une activité ou envoyez une demande, vous pourrez la suivre ici.",
+        "Dès que vous rejoignez un groupe ou envoyez une demande, vous pourrez le suivre ici.",
       joinedEmptyDescription:
-        "Vous n'avez encore rejoint aucune activité. Allez en découvrir une qui vous tente.",
+        "Vous n'avez encore rejoint aucun plan. Allez en découvrir un qui vous tente.",
       favoriteTitle: "Mes favoris",
       favoriteDescription:
-        "Enregistrez les activités qui vous intéressent pour les retrouver facilement plus tard.",
+        "Enregistrez les groupes qui vous intéressent pour les retrouver facilement plus tard.",
       favoriteEmptyDescription:
-        "Mettez quelques activités en favoris et elles vous attendront ici.",
+        "Mettez quelques plans en favoris et ils vous attendront ici.",
       friendHostedTitle: "Organisées par des amis",
       friendHostedDescription:
-        "Ajoutez quelques amis et les activités qu'ils lancent apparaîtront ici.",
+        "Ajoutez quelques amis et les groupes qu'ils lancent apparaîtront ici.",
       friendHostedEmptyDescription:
         "Ajoutez quelques amis et leurs plans apparaîtront ici dès qu'ils lancent quelque chose.",
       friendJoinedTitle: "Rejointes par des amis",
       friendJoinedDescription:
-        "Les activités que vos amis ont rejointes apparaîtront ici pour faciliter les sorties ensemble.",
+        "Les groupes que vos amis ont rejoints apparaîtront ici pour faciliter les sorties ensemble.",
       friendJoinedEmptyDescription:
-        "Vos amis n'ont encore rien rejoint. Trouvez une activité sympa et proposez-leur d'y aller ensemble.",
+        "Vos amis n'ont encore rejoint aucun plan. Trouvez quelque chose de sympa et proposez-leur d'y aller ensemble.",
     },
     activityFilters: {
       title: "Recherche et filtres",
+      publicInfoTitle: "Filtrer les sorties",
       description:
-        "Affinez les activités par mot-clé, thème, ville, relation, format et avancement.",
+        "Affinez les activités par mot-clé, thème, ville, période, relation, format et avancement.",
+      publicInfoDescription:
+        "Affinez les sorties par mot-clé, thème, ville, période et avancement.",
       mobileSummary: "Recherche / Filtre",
       keywordLabel: "Mot-clé",
-      keywordPlaceholder: "Titre ou description, ex. film Paris",
+      keywordPlaceholder: "Titre ou description, ex. cine-club",
       categoryLabel: "Thème",
       cityLabel: "Ville",
+      dateRangeLabel: "Période",
       relationLabel: "Relation",
       typeLabel: "Format",
       timeStateLabel: "Avancement",
-      sortLabel: "Tri par date",
+      sortLabel: "Trier par",
       allCategories: "Tous les thèmes",
       allCities: "Toutes les villes",
+      allDateRanges: "Toutes les dates",
       allRelations: "Toutes les relations",
       relationFriendHosted: "Organisé par des amis",
       relationFriendJoined: "Rejoint par des amis",
-      relationMine: "Mes activités",
+      relationMine: "Mes plans",
       allTypes: "Tous les formats",
       allTimeStates: "Tous les états",
-      sortRecommended: "Recommandé",
-      sortSoonest: "Plus proche",
-      sortLatest: "Plus lointain",
+      sortRecommended: "Bientôt",
+      sortSoonest: "Début le plus tôt",
+      sortLatest: "Début le plus tard",
       sortRecentlyAdded: "Ajout récent",
+      dateRangeOptions: {
+        TODAY: "Aujourd'hui",
+        TOMORROW: "Demain",
+        NEXT_3_DAYS: "3 prochains jours",
+        THIS_WEEK: "Cette semaine",
+        NEXT_WEEK: "Semaine prochaine",
+        THIS_MONTH: "Ce mois-ci",
+        NEXT_MONTH: "Le mois prochain",
+      },
       apply: "Rechercher",
       reset: "Réinitialiser",
       activeKeyword: (keyword: string) => `Mot-clé : ${keyword}`,
@@ -1580,8 +1811,16 @@ const copy = {
         `${count} résultat${count > 1 ? "s" : ""}`,
     },
     activityPagination: {
+      ariaLabel: "Pagination",
       previous: "Précédent",
       next: "Suivant",
+      jumpLabel: "Aller à",
+      jumpInputLabel: "Saisir un numéro de page",
+      jumpAction: "Aller",
+      totalPages: (totalPages: number) =>
+        `${totalPages} page${totalPages > 1 ? "s" : ""}`,
+      invalidPage: (totalPages: number) =>
+        `Saisissez une page entre 1 et ${totalPages}`,
       pageSummary: (page: number, totalPages: number) =>
         `Page ${page} / ${totalPages}`,
     },
@@ -1595,6 +1834,9 @@ const copy = {
       contactOrganizer: "Contacter l'organisateur",
       contactOrganizerHint: "Posez vos questions avant de rejoindre.",
       type: "Type",
+      visibility: "Visibilité",
+      visibilityPublic: "Groupe ouvert",
+      visibilityPrivate: "Groupe privé",
       destination: "Destination",
       participants: "Inscrits",
       minParticipants: "Minimum",
@@ -1602,7 +1844,7 @@ const copy = {
       price: "Coût",
       approvalRequired: "Validation par l'organisateur requise",
       approvalAuto: "Confirmation automatique après inscription",
-      editActivity: "Modifier",
+      editActivity: "Modifier le plan",
       locationMapTitle: "Lieu de l'activité",
       openMap: "Ouvrir la carte",
     },
@@ -1746,6 +1988,11 @@ const copy = {
           body: (activityTitle: string) =>
             `Vous êtes inscrit à « ${activityTitle} ».`,
         },
+        PARTICIPATION_CANCELLED: {
+          title: "Une personne s'est retirée",
+          body: (activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a annulé son inscription à « ${activityTitle} ».`,
+        },
         PARTICIPATION_APPROVED: {
           title: "Demande acceptée",
           body: (activityTitle: string, actorName = "L'organisateur") =>
@@ -1799,6 +2046,7 @@ const copy = {
       cancelConfirmTitle: "Annuler cette équipe ?",
       cancelConfirmDescription:
         "Cette équipe n'acceptera plus de demandes. Les personnes déjà inscrites verront le changement de statut.",
+      cancelContextLabel: "Équipe à annuler",
       cancelConfirmBack: "Retour",
       cancelConfirmSubmit: "Confirmer",
       cancelledHint:
@@ -1810,6 +2058,8 @@ const copy = {
       endedError: "Cette activité est terminée et ne peut plus être annulée.",
       conflictError: "Le statut de l'activité a changé. Réessayez plus tard.",
       failedError: "Échec de l'annulation. Réessayez plus tard.",
+      cancelStateKept:
+        "L'annulation n'a pas été appliquée. L'équipe reste inchangée.",
     },
     approval: {
       title: "Validation des inscriptions",
@@ -1834,19 +2084,19 @@ const copy = {
       failedError: "Échec de la validation. Réessayez plus tard.",
     },
     newActivity: {
-      title: "Lancer une sortie",
+      title: "Lancer un plan",
       description:
-        "Précisez le rendez-vous, publiez la sortie, puis invitez d'autres personnes à rejoindre.",
+        "Précisez le rendez-vous, publiez le plan, puis invitez d'autres personnes à rejoindre.",
     },
     editActivity: {
-      title: "Modifier l'activité",
+      title: "Modifier le plan",
       description:
-        "Seul l'organisateur peut modifier cette activité. Après enregistrement, vous reviendrez au détail.",
+        "Seul l'organisateur peut modifier ce plan. Après enregistrement, vous reviendrez au détail.",
       forbiddenTitle: "Accès refusé",
-      forbiddenDescription: "Seul l'organisateur peut modifier cette activité.",
-      lockedTitle: "Activité non modifiable",
+      forbiddenDescription: "Seul l'organisateur peut modifier ce plan.",
+      lockedTitle: "Plan non modifiable",
       lockedDescription:
-        "Les activités terminées ou annulées ne peuvent plus être modifiées.",
+        "Les plans terminés ou annulés ne peuvent plus être modifiés.",
     },
     profile: {
       title: "Profil",
@@ -1934,6 +2184,13 @@ const copy = {
       cancelPending: "Annulation...",
       cancel: "Annuler l'inscription",
       cancelConfirm: "Annuler votre participation ? Votre place sera libérée.",
+      cancelContextLabel: "Inscription à annuler",
+      cancelStateKept:
+        "L'annulation n'a pas été appliquée. Votre inscription reste inchangée.",
+      refreshError: "Réessayez plus tard.",
+      missingError: "Vous n'avez pas encore rejoint cette activité.",
+      statusError: "Ce statut d'inscription ne peut pas être annulé.",
+      failedError: "Échec de l'annulation de l'inscription. Réessayez plus tard.",
     },
     form: {
       basicInfo: "Détails de la sortie",
@@ -2042,6 +2299,13 @@ const copy = {
         "Heure de Paris. Si la fin est dans le futur, le début peut être dans le passé.",
       endAt: "Fin",
       endAtHint: "Facultatif. Si renseignée, doit être après le début.",
+      visibilityTitle: "Qui peut voir ce groupe",
+      visibilityPublic: "Groupe ouvert",
+      visibilityPublicHint:
+        "Visible dans le hall d'équipe. Les utilisateurs connectés peuvent le voir et demander à rejoindre.",
+      visibilityPrivate: "Groupe privé",
+      visibilityPrivateHint:
+        "Visible uniquement par vos amis. Pratique pour organiser avec des proches.",
       peoplePrice: "Places et coût",
       capacityLimitToggle: "Limiter le nombre de places",
       capacityLimitHint:

@@ -6,8 +6,6 @@ import {
   CheckCircle2,
   ClipboardList,
   ExternalLink,
-  Handshake,
-  Info,
   MapPin,
   MessageCircle,
   Pencil,
@@ -26,7 +24,7 @@ import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { ActivityAnalyticsSummaryPanel } from "@/features/analytics/components/ActivityAnalyticsSummaryPanel";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { getActivityAnalyticsSummary } from "@/features/analytics/queries/getActivityAnalyticsSummary";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
   getAnalyticsEntityForActivityDetail,
   inferAnalyticsSourceSurfaceFromReferrer,
@@ -61,11 +59,16 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 
 type ActivityDetailPageProps = {
@@ -81,13 +84,29 @@ export default async function ActivityDetailPage({
   params,
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/activities/[activityId]",
+  });
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
   const followLabels = getFollowCopy(locale);
-  const [activity, viewerProfile] = await Promise.all([
-    getActivityById(activityId),
-    getOptionalCurrentUserProfile(),
+  const viewerProfile = await perf.measure("activity.viewerProfile", () =>
+    getOptionalCurrentUserProfileSnapshot(),
+  );
+  const viewerFriendIds = viewerProfile?.id
+    ? await perf.measure("activity.viewerFriends", () =>
+        getViewerFriendIds(viewerProfile.id),
+      )
+    : [];
+  const [activity, activityIsFavorited] = await Promise.all([
+    perf.measure("activity.primary", () =>
+      getActivityById(activityId, viewerProfile?.id ?? null, viewerFriendIds),
+    ),
+    perf.measure("activity.favoriteState", () =>
+      getViewerActivityFavorite(activityId, viewerProfile?.id),
+    ),
   ]);
 
   if (!activity) {
@@ -102,7 +121,7 @@ export default async function ActivityDetailPage({
     "activity_list",
   );
 
-  await trackAnalyticsEvent(
+  queueAnalyticsEvent(
     {
       locale: analyticsLocale,
       name: activity.isActivityInfo
@@ -138,19 +157,45 @@ export default async function ActivityDetailPage({
     const unavailableReason = isCancelled
       ? publicEventCopy.eventCancelled
       : publicEventCopy.eventEnded;
-    const unavailableDescription = isEndedByTime
-      ? publicEventCopy.teamSectionEndedDescription
-      : publicEventCopy.teamSectionUnavailableDescription;
+    perf.finish(
+      {
+        itemKind: "public_event",
+        hasViewer: Boolean(viewerProfile),
+      },
+      {
+        referrer,
+        route: `/${locale}/activities/${activity.id}`,
+        routeKey: "public_event_detail",
+        sourceSurface: "public_event_detail",
+        userAgent: requestHeaders.get("user-agent"),
+        userProfileId: viewerProfile?.id,
+      },
+    );
 
     return (
       <PageContainer className="space-y-6">
-        <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] bg-moss p-4 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:p-5 md:min-h-72">
+        <DetailSourceRestore sourceKey="activity_detail" />
+        <DetailSourceReturnLink
+          className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
+          locale={locale}
+        />
+        <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
           <ActivityCoverImage
             src={activity.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
           />
-          <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+          <div className="absolute right-3 top-3 z-30 flex items-start gap-2 sm:right-5 sm:top-5">
+            <ActivityFavoriteButton
+              activityId={activity.id}
+              favoriteCount={activity.favoriteCount}
+              isAuthenticated={Boolean(viewerProfile)}
+              isFavorited={activityIsFavorited}
+              locale={locale}
+              redirectPath={`/activities/${activity.id}`}
+              sourceSurface="public_event_detail"
+            />
             <ReportDialog
+              className="bg-white/90 text-zinc-800 shadow-sm ring-1 ring-black/10 hover:bg-white hover:text-ink"
               isAuthenticated={Boolean(viewerProfile)}
               locale={locale}
               redirectPath={`/activities/${activity.id}`}
@@ -160,7 +205,7 @@ export default async function ActivityDetailPage({
             />
           </div>
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/62 to-transparent" />
-          <div className="relative max-w-3xl space-y-3 rounded-[1.15rem] bg-black/26 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:p-4">
+          <div className="relative max-w-3xl space-y-2 rounded-[1.15rem] bg-black/24 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:space-y-3 sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
                 {activityCategoryLabel}
@@ -169,79 +214,11 @@ export default async function ActivityDetailPage({
                 {publicEventCopy.detailSource}
               </span>
             </div>
-            <h1 className="text-3xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
+            <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
               {activity.title}
             </h1>
           </div>
         </div>
-
-        <section className="grid gap-4 rounded-[1.25rem] border border-[#d8ccb4] bg-white/85 p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
-          <div className="flex min-w-0 gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#fff8ec] text-[#8a6a40] ring-1 ring-[#dccba8]">
-              {canCreateTeam ? (
-                <Handshake className="h-5 w-5" />
-              ) : (
-                <Info className="h-5 w-5" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold text-ink sm:text-lg">
-                {canCreateTeam
-                  ? publicEventCopy.actionTitle
-                  : unavailableReason}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-zinc-600">
-                {canCreateTeam
-                  ? publicEventCopy.actionDescription
-                  : unavailableDescription}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            {activity.officialUrl ? (
-              <AnalyticsExternalLink
-                className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                event={{
-                  name: "public_event_source_clicked",
-                  entityId: detailAnalyticsEntity.entityId,
-                  entityType: detailAnalyticsEntity.entityType,
-                  sourceSurface: "public_event_detail",
-                  properties: {
-                    source_kind: "official_page",
-                  },
-                }}
-                href={activity.officialUrl}
-              >
-                {publicEventCopy.officialPage}
-                <ExternalLink className="h-4 w-4" />
-              </AnalyticsExternalLink>
-            ) : null}
-            {canCreateTeam ? (
-              <AnalyticsLink
-                href={withLocale(
-                  locale,
-                  `/activities/${activity.id}/teams/new`,
-                )}
-                event={{
-                  name: "team_create_started",
-                  entityId: detailAnalyticsEntity.entityId,
-                  entityType: detailAnalyticsEntity.entityType,
-                  sourceSurface: "public_event_detail",
-                  properties: {
-                    category: activity.category,
-                    city: activity.city,
-                    item_kind: detailAnalyticsEntity.itemKind,
-                  },
-                }}
-              >
-                <Button className="h-10 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61] sm:w-auto">
-                  {publicEventCopy.teamUp}
-                </Button>
-              </AnalyticsLink>
-            ) : null}
-          </div>
-        </section>
 
         <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <article className="min-w-0 space-y-6 lg:order-1">
@@ -393,19 +370,23 @@ export default async function ActivityDetailPage({
     );
   }
 
-  const [
-    viewerParticipation,
-    isFollowingOrganizer,
-    isFavorited,
-    comments,
-    friendSignal,
-  ] = await Promise.all([
-    getActivityViewerParticipation(activity.id, viewerProfile?.id),
-    getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-    getViewerActivityFavorite(activity.id, viewerProfile?.id),
-    getActivityComments(activity.id),
-    getActivityFriendSignal(activity.id, viewerProfile?.id),
-  ]);
+  const [viewerParticipation, isFollowingOrganizer, comments, friendSignal] =
+    await perf.measure("activity.viewerData", () =>
+      Promise.all([
+        getActivityViewerParticipation(activity.id, viewerProfile?.id),
+        getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+        getActivityComments(
+          activity.id,
+          viewerProfile?.id ?? null,
+          viewerFriendIds,
+        ),
+        getActivityFriendSignal(
+          activity.id,
+          viewerProfile?.id,
+          viewerFriendIds,
+        ),
+      ]),
+    );
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -427,30 +408,65 @@ export default async function ActivityDetailPage({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
-  const pendingParticipants =
-    isOrganizer && activity.requiresApproval && viewerProfile
-      ? await getPendingParticipants(activity.id, viewerProfile.id)
-      : [];
-  const analyticsSummary = isOrganizer
-    ? await getActivityAnalyticsSummary(activity.id)
-    : null;
+  const activityVisibilityLabel =
+    activity.visibility === "PRIVATE"
+      ? t.activityDetail.visibilityPrivate
+      : t.activityDetail.visibilityPublic;
+  const [pendingParticipants, analyticsSummary] = await perf.measure(
+    "activity.organizerData",
+    () =>
+      Promise.all([
+        isOrganizer && activity.requiresApproval && viewerProfile
+          ? getPendingParticipants(activity.id, viewerProfile.id)
+          : Promise.resolve([]),
+        isOrganizer
+          ? getActivityAnalyticsSummary(activity.id)
+          : Promise.resolve(null),
+      ]),
+  );
+  perf.finish(
+    {
+      commentCount: comments.length,
+      hasViewer: Boolean(viewerProfile),
+      isOrganizer,
+      itemKind: "team",
+    },
+    {
+      referrer,
+      route: `/${locale}/activities/${activity.id}`,
+      routeKey: "activity_detail",
+      sourceSurface: "activity_detail",
+      userAgent: requestHeaders.get("user-agent"),
+      userProfileId: viewerProfile?.id,
+    },
+  );
 
   return (
     <PageContainer className="space-y-6">
-      <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] bg-moss p-4 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:p-5 md:min-h-72">
+      <DetailSourceRestore sourceKey="activity_detail" />
+      <DetailSourceReturnLink
+        className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
+        locale={locale}
+      />
+      <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
         <ActivityCoverImage
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
         />
-        <div className="absolute right-4 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
-          <ActivityFavoriteButton
-            activityId={activity.id}
-            isAuthenticated={Boolean(viewerProfile)}
-            isFavorited={isFavorited}
-            locale={locale}
-            redirectPath={`/activities/${activity.id}`}
-          />
+        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
+          {!isOrganizer ? (
+            <ActivityFavoriteButton
+              activityId={activity.id}
+              favoriteCount={activity.favoriteCount}
+              isAuthenticated={Boolean(viewerProfile)}
+              isFavorited={activityIsFavorited}
+              locale={locale}
+              redirectPath={`/activities/${activity.id}`}
+              sourceSurface="activity_detail"
+            />
+          ) : null}
           <ReportDialog
+            className="bg-white/90 text-zinc-800 shadow-sm ring-1 ring-black/10 hover:bg-white hover:text-ink"
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
             redirectPath={`/activities/${activity.id}`}
@@ -460,14 +476,14 @@ export default async function ActivityDetailPage({
           />
         </div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/62 to-transparent" />
-        <div className="relative max-w-3xl space-y-3 rounded-[1.15rem] bg-black/26 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:p-4">
+        <div className="relative max-w-3xl space-y-2 rounded-[1.15rem] bg-black/24 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:space-y-3 sm:p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
               {activityCategoryLabel}
             </span>
             <ActivityStatusBadge status={displayStatus} locale={locale} />
           </div>
-          <h1 className="text-3xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
+          <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
             {activity.title}
           </h1>
         </div>
@@ -586,16 +602,22 @@ export default async function ActivityDetailPage({
                     {activity.merchant.city}
                   </p>
                 </div>
-                <Link
+                <ContextualDetailLink
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
                   href={withLocale(
                     locale,
                     `/merchants/${activity.merchant.slug}`,
                   )}
+                  detailSource={{
+                    sourceKey: "activity_detail",
+                    targetKey: `merchant:${activity.merchant.slug}`,
+                    targetKind: "merchant",
+                  }}
+                  data-detail-source-target={`merchant:${activity.merchant.slug}`}
                 >
                   {t.merchant.viewProfile}
                   <ExternalLink className="h-4 w-4" />
-                </Link>
+                </ContextualDetailLink>
               </div>
             </div>
           ) : null}
@@ -611,7 +633,7 @@ export default async function ActivityDetailPage({
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-ink">
                 {getActivityOrganizerInitial(activity)}
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">
                   {activity.organizer.nickname}
                 </p>
@@ -630,8 +652,10 @@ export default async function ActivityDetailPage({
               </div>
             </div>
             {!isOrganizer ? (
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <FollowButton
+                  buttonClassName="h-10 rounded-full border border-[#d9c6ad] bg-[#fff8ed] px-5 text-[#6f5434] shadow-none hover:bg-white"
+                  fullWidth={false}
                   isAuthenticated={Boolean(viewerProfile)}
                   isFollowing={isFollowingOrganizer}
                   locale={locale}
@@ -649,19 +673,52 @@ export default async function ActivityDetailPage({
             locale={locale}
             viewerProfileId={viewerProfile?.id ?? null}
           />
+
+          <div className="lg:hidden">
+            <ActivityShareTools
+              activityTitle={activity.title}
+              analyticsEntityId={detailAnalyticsEntity.entityId}
+              analyticsEntityType={detailAnalyticsEntity.entityType}
+              analyticsSourceSurface="activity_detail"
+              categoryLabel={activityCategoryLabel}
+              coverImageUrl={activity.coverImageUrl}
+              dateLabel={activityDateLabel}
+              description={activity.description}
+              locationLabel={activityLocationLabel}
+              locale={locale}
+              priceLabel={activityPriceLabel}
+            />
+          </div>
         </article>
 
-        <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-lg border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:order-2">
-          <div className="space-y-4 text-sm text-zinc-700">
-            <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
-              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
-                <ClipboardList className="h-4 w-4 shrink-0" />
-                {t.activityDetail.type}
-              </span>
-              <span className="min-w-0 break-words text-right font-medium text-ink">
-                {getTypeLabel(activity.type, locale)}
-              </span>
-            </p>
+        <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
+          <div className="order-1 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-4 shadow-sm">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6a40]">
+                    {t.activityDetail.participants}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-600">
+                    {activityParticipantLabel}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-[#dccba8]">
+                  {getActivitySeatLabel(activity, locale)}
+                </span>
+              </div>
+              {activity.capacity > 0 ? (
+                <div className="h-2 overflow-hidden rounded-full bg-[#eadfcf]">
+                  <div
+                    className="h-full rounded-full bg-[#d88d72]"
+                    style={{ width: `${participantPercent}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="order-2 mt-4 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4 lg:order-2">
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
@@ -702,54 +759,6 @@ export default async function ActivityDetailPage({
                 value={activityLocationLabel}
               />
             </p>
-            {activity.destination ? (
-              <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
-                <span className="min-w-0 text-zinc-500">
-                  {t.activityDetail.destination}
-                </span>
-                <span className="min-w-0 break-words text-right font-medium text-ink">
-                  {activity.destination}
-                </span>
-              </p>
-            ) : null}
-            <p className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
-                <UsersRound className="h-4 w-4 shrink-0" />
-                {t.activityDetail.participants}
-              </span>
-              <span className="shrink-0 text-right font-medium text-ink">
-                {activityParticipantLabel}
-              </span>
-            </p>
-            {activity.minParticipants ? (
-              <p className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <span className="min-w-0 text-zinc-500">
-                  {t.activityDetail.minParticipants}
-                </span>
-                <span className="shrink-0 text-right font-medium text-ink">
-                  {activity.minParticipants} {t.common.people}
-                </span>
-              </p>
-            ) : null}
-            <div className="space-y-2">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <span className="min-w-0 text-zinc-500">
-                  {t.activityDetail.seatStatus}
-                </span>
-                <span className="shrink-0 font-medium text-ink">
-                  {getActivitySeatLabel(activity, locale)}
-                </span>
-              </div>
-              {activity.capacity > 0 ? (
-                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className="h-full rounded-full bg-moss"
-                    style={{ width: `${participantPercent}%` }}
-                  />
-                </div>
-              ) : null}
-            </div>
-            <ActivityFriendSignalPanel locale={locale} signal={friendSignal} />
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <WalletCards className="h-4 w-4 shrink-0" />
@@ -783,16 +792,17 @@ export default async function ActivityDetailPage({
               </span>
             </p>
           </div>
-          <div className="mt-6">
+
+          <div className="order-3 mt-3 grid gap-3 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-3 shadow-sm sm:p-4">
             {isOrganizer ? (
-              <div className="mb-3 grid gap-2 rounded-md border border-zinc-200 bg-white/70 p-3">
+              <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
                 <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                   <ShieldAlert className="h-4 w-4 text-moss" />
                   {t.activityOwner.title}
                 </p>
                 {canEditActivity ? (
                   <Link
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
                     href={withLocale(locale, `/activities/${activity.id}/edit`)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -806,6 +816,7 @@ export default async function ActivityDetailPage({
                 ) : null}
                 <CancelActivityForm
                   activityId={activity.id}
+                  activityTitle={activity.title}
                   disabled={isCancelled || isEndedByTime}
                   locale={locale}
                 />
@@ -819,31 +830,83 @@ export default async function ActivityDetailPage({
                   </p>
                 ) : null}
               </div>
+            ) : (
+              <>
+                <JoinActivityForm
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  compactUnauthenticated
+                  locale={locale}
+                  requiresApproval={activity.requiresApproval}
+                  isFull={isFull}
+                  isClosed={isClosed}
+                  isOrganizer={isOrganizer}
+                  isAuthenticated={Boolean(viewerProfile)}
+                  viewerParticipationStatus={
+                    viewerParticipation?.status ?? null
+                  }
+                />
+                {canContactOrganizer ? (
+                  <ContactOrganizerForm
+                    activityId={activity.id}
+                    locale={locale}
+                    organizerNickname={activity.organizer.nickname}
+                    organizerProfileId={activity.organizer.id}
+                  />
+                ) : null}
+              </>
+            )}
+          </div>
+
+          <div className="order-4 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
+            <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                {t.activityDetail.type}
+              </span>
+              <span className="min-w-0 break-words text-right font-medium text-ink">
+                {getTypeLabel(activity.type, locale)}
+              </span>
+            </p>
+            <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-500">
+                <UsersRound className="h-4 w-4 shrink-0" />
+                {t.activityDetail.visibility}
+              </span>
+              <span className="min-w-0 break-words text-right font-medium text-ink">
+                {activityVisibilityLabel}
+              </span>
+            </p>
+            {activity.destination ? (
+              <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
+                <span className="min-w-0 text-zinc-500">
+                  {t.activityDetail.destination}
+                </span>
+                <span className="min-w-0 break-words text-right font-medium text-ink">
+                  {activity.destination}
+                </span>
+              </p>
             ) : null}
+            {activity.minParticipants ? (
+              <p className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <span className="min-w-0 text-zinc-500">
+                  {t.activityDetail.minParticipants}
+                </span>
+                <span className="shrink-0 text-right font-medium text-ink">
+                  {activity.minParticipants} {t.common.people}
+                </span>
+              </p>
+            ) : null}
+            <ActivityFriendSignalPanel locale={locale} signal={friendSignal} />
+          </div>
+
+          <div className="order-5 mt-6 hidden lg:block">
             <ActivityAnalyticsSummaryPanel
               locale={locale}
               summary={analyticsSummary}
             />
-            <JoinActivityForm
-              activityId={activity.id}
-              locale={locale}
-              requiresApproval={activity.requiresApproval}
-              isFull={isFull}
-              isClosed={isClosed}
-              isOrganizer={isOrganizer}
-              isAuthenticated={Boolean(viewerProfile)}
-              viewerParticipationStatus={viewerParticipation?.status ?? null}
-            />
-            {canContactOrganizer ? (
-              <ContactOrganizerForm
-                activityId={activity.id}
-                locale={locale}
-                organizerNickname={activity.organizer.nickname}
-                organizerProfileId={activity.organizer.id}
-              />
-            ) : null}
           </div>
-          <div className="mt-4">
+          <div className="order-6 mt-4 hidden lg:block">
             <ActivityShareTools
               activityTitle={activity.title}
               analyticsEntityId={detailAnalyticsEntity.entityId}
@@ -880,7 +943,7 @@ function ContactOrganizerForm({
   return (
     <form
       action={openActivityOrganizerConversationAction}
-      className="mt-3 grid gap-2"
+      className="grid gap-2"
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="activityId" value={activityId} />
@@ -892,13 +955,13 @@ function ContactOrganizerForm({
       <Button
         type="submit"
         variant="secondary"
-        className="h-11 w-full gap-2 rounded-full border border-[#d9c6ad] bg-[#fff8ed] text-[#6f5434] shadow-none hover:bg-white"
+        className="h-10 w-full gap-2 rounded-full border border-[#d9c6ad] bg-[#fff8ed] text-[#6f5434] shadow-none hover:bg-white sm:h-11"
         aria-label={`${t.activityDetail.contactOrganizer}: ${organizerNickname}`}
       >
         <MessageCircle className="h-4 w-4 shrink-0 text-[#9c6f4e]" />
         {t.activityDetail.contactOrganizer}
       </Button>
-      <p className="px-1 text-xs leading-5 text-zinc-500">
+      <p className="hidden px-1 text-xs leading-5 text-zinc-500 sm:block">
         {t.activityDetail.contactOrganizerHint}
       </p>
     </form>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode, SelectHTMLAttributes } from "react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import {
   Button,
   Card,
@@ -20,6 +21,7 @@ import {
   getPriceTypeLabel,
   getTypeLabel,
 } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import {
   createActivityAction,
   type CreateActivityState,
@@ -41,6 +43,7 @@ type NewActivityFormProps = {
 
 const initialState: CreateActivityState = {};
 const priceTypeOptions = ["FREE", "AA", "FIXED", "RANGE"] as const;
+const visibilityOptions = ["PUBLIC", "PRIVATE"] as const;
 const categoryOptions = (
   Object.keys(activityCategories) as ActivityCategory[]
 ).sort((left, right) => {
@@ -99,17 +102,17 @@ function getPublicEventTeamFormCopy(locale: string) {
   }
 
   return {
-    cardTitle: "车队信息",
+    cardTitle: "组局信息",
     activityContent: "这次怎么约",
-    title: "车队标题",
+    title: "组局标题",
     titlePlaceholder: "例如：下班后一起去看展",
     description: "给想加入的人看的说明",
     descriptionPlaceholder: "说明集合方式、同行氛围和需要提前知道的信息。",
     itinerary: "集合备注",
     itineraryPlaceholder: "例如：入口处集合，结束后附近喝咖啡。",
     timeLocation: "集合时间和地点",
-    peoplePrice: "车队人数和费用",
-    capacity: "车队人数上限",
+    peoplePrice: "组局人数和费用",
+    capacity: "组局人数上限",
     minParticipants: "最少同行人数",
     priceText: "费用说明",
   };
@@ -171,19 +174,50 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="w-full sm:w-auto"
+      className="w-full gap-2 sm:w-auto"
       disabled={pending || disabled}
+      aria-busy={pending || disabled}
     >
-      {disabled && !pending
-        ? t.coverUploading
-        : pending
-          ? mode === "edit"
-            ? t.saving
-            : t.creating
-          : mode === "edit"
-            ? t.save
-            : t.create}
+      {pending || disabled ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : null}
+      <span className="truncate">
+        {disabled && !pending
+          ? t.coverUploading
+          : pending
+            ? mode === "edit"
+              ? t.saving
+              : t.creating
+            : mode === "edit"
+              ? t.save
+              : t.create}
+      </span>
     </Button>
+  );
+}
+
+function PendingFormNotice({
+  locale,
+  mode,
+}: {
+  locale: string;
+  mode: "create" | "edit";
+}) {
+  const { pending } = useFormStatus();
+  const t = getCopy(locale).form;
+
+  if (!pending) {
+    return null;
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md border border-moss/20 bg-moss/10 px-3 py-2 text-xs font-medium text-moss"
+      aria-live="polite"
+    >
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      <span>{mode === "edit" ? t.saving : t.creating}</span>
+    </div>
   );
 }
 
@@ -201,16 +235,19 @@ function FormActions({
   const t = getCopy(locale).form;
 
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      {mode === "edit" && cancelHref ? (
-        <Link
-          className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
-          href={cancelHref}
-        >
-          {t.cancelEdit}
-        </Link>
-      ) : null}
-      <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
+    <div className="grid gap-3">
+      <PendingFormNotice locale={locale} mode={mode} />
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        {mode === "edit" && cancelHref ? (
+          <Link
+            className="inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50 sm:w-auto"
+            href={cancelHref}
+          >
+            {t.cancelEdit}
+          </Link>
+        ) : null}
+        <SubmitButton disabled={isCoverUploading} locale={locale} mode={mode} />
+      </div>
     </div>
   );
 }
@@ -232,6 +269,9 @@ export function NewActivityForm({
   const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
   const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [visibility, setVisibility] = useState(
+    values?.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+  );
   const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const t = getCopy(locale);
@@ -324,6 +364,49 @@ export function NewActivityForm({
               />
             </>
           ) : null}
+
+          <FormSection title={t.form.visibilityTitle}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {visibilityOptions.map((option) => {
+                const active = visibility === option;
+                const isPrivate = option === "PRIVATE";
+
+                return (
+                  <label
+                    key={option}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition",
+                      active
+                        ? "border-[#d09a77] bg-[#fff3ea] shadow-sm"
+                        : "border-zinc-200 bg-white hover:border-[#d9c0ad]",
+                    )}
+                  >
+                    <input
+                      className="mt-1"
+                      name="visibility"
+                      type="radio"
+                      value={option}
+                      checked={active}
+                      onChange={() => setVisibility(option)}
+                    />
+                    <span>
+                      <span className="block font-semibold text-ink">
+                        {isPrivate
+                          ? t.form.visibilityPrivate
+                          : t.form.visibilityPublic}
+                      </span>
+                      <span className="mt-1 block leading-6 text-zinc-500">
+                        {isPrivate
+                          ? t.form.visibilityPrivateHint
+                          : t.form.visibilityPublicHint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <FieldError errors={state.fieldErrors?.visibility} />
+          </FormSection>
 
           <FormSection
             title={
@@ -602,8 +685,9 @@ export function NewActivityForm({
                 <Select
                   name="priceType"
                   aria-invalid={Boolean(state.fieldErrors?.priceType)}
-                  defaultValue={values?.priceType}
+                  onChange={(event) => setPriceType(event.target.value)}
                   required
+                  value={priceType}
                 >
                   {priceTypeOptions.map((value) => (
                     <option key={value} value={value}>
@@ -621,7 +705,7 @@ export function NewActivityForm({
                   aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
                   placeholder={t.form.priceTextPlaceholder}
-                  required
+                  required={priceType !== "FREE"}
                 />
                 <FieldError errors={state.fieldErrors?.priceText} />
               </label>

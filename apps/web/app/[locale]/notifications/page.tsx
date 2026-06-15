@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Flag,
   MessageCircle,
+  UserMinus,
   UserPlus,
   XCircle,
   type LucideIcon,
@@ -24,8 +25,10 @@ import {
   getNotificationCenter,
   type NotificationViewModel,
 } from "@/features/notifications/queries/getNotifications";
+import { NotificationCountHydrator } from "@/features/notifications/components/NotificationCountHydrator";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createPerformanceTracker } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 type NotificationsPageProps = {
@@ -55,6 +58,7 @@ function getNotificationText(
 
   if (
     notification.type === "PARTICIPATION_PENDING" ||
+    notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
     notification.type === "ACTIVITY_COMMENTED" ||
     notification.type === "COMMENT_REPLY"
@@ -157,6 +161,18 @@ function getNotificationVisual(
     };
   }
 
+  if (type === "PARTICIPATION_CANCELLED") {
+    return {
+      icon: UserMinus,
+      iconClassName: isUnread
+        ? "bg-[#f0e5d6] text-[#8a5c3d]"
+        : "bg-[#f5efe6] text-[#8a6a40]",
+      cardClassName: isUnread
+        ? "border-[#e1cdb8] bg-white"
+        : "border-black/10 bg-white/65",
+    };
+  }
+
   if (type === "FRIEND_REQUEST") {
     return {
       icon: UserPlus,
@@ -224,14 +240,31 @@ export default async function NotificationsPage({
   params,
 }: NotificationsPageProps) {
   const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale);
-  const { notifications, unreadCount } = await getNotificationCenter(
-    profile.id,
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/notifications",
+  });
+  const profile = await perf.measure("viewer.profile", () =>
+    ensureCurrentUserProfile(locale),
+  );
+  const { notifications, unreadCount } = await perf.measure(
+    "notifications.center",
+    () => getNotificationCenter(profile.id),
   );
   const t = getCopy(locale).notifications;
+  perf.finish({
+    notificationCount: notifications.length,
+    unreadCount,
+  }, {
+    route: `/${locale}/notifications`,
+    routeKey: "notifications",
+    sourceSurface: "notification",
+    userProfileId: profile.id,
+  });
 
   return (
     <PageContainer className="space-y-6">
+      <NotificationCountHydrator unreadCount={unreadCount} />
       <section className="flex flex-col gap-4 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold text-moss">

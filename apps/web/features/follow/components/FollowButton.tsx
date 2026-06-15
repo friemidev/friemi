@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import {
   toggleFollowUserAction,
   type ToggleFollowState,
@@ -17,14 +18,20 @@ type FollowButtonProps = {
   redirectPath: string;
   isAuthenticated: boolean;
   isFollowing: boolean;
+  buttonClassName?: string;
+  fullWidth?: boolean;
 };
 
 const initialState: ToggleFollowState = {};
 
 function SubmitButton({
+  buttonClassName,
+  fullWidth,
   locale,
   isFollowing,
 }: {
+  buttonClassName?: string;
+  fullWidth: boolean;
   locale: string;
   isFollowing: boolean;
 }) {
@@ -41,7 +48,7 @@ function SubmitButton({
 
   return (
     <Button
-      className="w-full"
+      className={cn(fullWidth ? "w-full" : "w-auto", buttonClassName)}
       type="submit"
       variant={isFollowing ? "secondary" : "primary"}
       disabled={pending}
@@ -52,6 +59,8 @@ function SubmitButton({
 }
 
 export function FollowButton({
+  buttonClassName,
+  fullWidth = true,
   locale,
   targetUserProfileId,
   redirectPath,
@@ -67,7 +76,10 @@ export function FollowButton({
   if (!isAuthenticated) {
     return (
       <Link href={withLocale(locale, "/sign-in")}>
-        <Button className="w-full" variant="secondary">
+        <Button
+          className={cn(fullWidth ? "w-full" : "w-auto", buttonClassName)}
+          variant="secondary"
+        >
           {t.signInToFollow}
         </Button>
       </Link>
@@ -88,7 +100,12 @@ export function FollowButton({
           {state.formError}
         </p>
       ) : null}
-      <SubmitButton isFollowing={isFollowing} locale={locale} />
+      <SubmitButton
+        buttonClassName={buttonClassName}
+        fullWidth={fullWidth}
+        isFollowing={isFollowing}
+        locale={locale}
+      />
     </form>
   );
 }

@@ -29,6 +29,8 @@ export const analyticsEventNames = [
   "admin_report_status_updated",
   "public_event_source_clicked",
   "public_event_converted_to_team",
+  "operation_latency_recorded",
+  "page_load_timed",
 ] as const;
 
 export type AnalyticsEventName = (typeof analyticsEventNames)[number];
@@ -186,6 +188,17 @@ const requiredByEvent: Partial<
   public_event_converted_to_team: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
     properties: ["public_event_id", "activity_id"],
+  },
+  operation_latency_recorded: {
+    properties: ["duration_ms", "operation_key", "status"],
+  },
+  page_load_timed: {
+    properties: [
+      "duration_ms",
+      "route_key",
+      "slowest_step_label",
+      "slowest_step_ms",
+    ],
   },
   search_submitted: {
     properties: ["keyword_length", "scope", "result_count"],

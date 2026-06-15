@@ -13,6 +13,8 @@ import {
   formatActivityDateOnly,
 } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -239,10 +241,11 @@ function ActivitySignalRow({
   const label = t.activitySignal(
     formatActivityDateOnly(activity.startAt, locale),
     activity.title,
+    activity.timeState,
   );
 
   return (
-    <Link
+    <ContextualDetailLink
       aria-label={t.openActivity(activity.title)}
       className={cn(
         "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-md px-2 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
@@ -251,6 +254,12 @@ function ActivitySignalRow({
           : "bg-moss/5 text-zinc-600 hover:bg-moss/10 hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
+      detailSource={{
+        sourceKey: "messages",
+        targetKey: `activity:${activity.id}`,
+        targetKind: "activity",
+      }}
+      data-detail-source-target={`activity:${activity.id}`}
       title={label}
     >
       <CalendarDays
@@ -260,7 +269,7 @@ function ActivitySignalRow({
         )}
       />
       <span className="truncate">{label}</span>
-    </Link>
+    </ContextualDetailLink>
   );
 }
 
@@ -298,6 +307,7 @@ export function MessageThread({
 
   return (
     <section className="-mx-4 flex min-h-[calc(100dvh-8.25rem)] flex-col overflow-hidden bg-white/82 sm:mx-0 sm:rounded-lg sm:border sm:border-black/10 sm:shadow-sm lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+      <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
       <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-black/10 bg-white/80 p-4">
         <div className="flex h-9 w-9 items-center justify-start">
@@ -322,13 +332,18 @@ export function MessageThread({
             <MoreVertical className="h-5 w-5" />
           </summary>
           <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl">
-            <Link
+            <ContextualDetailLink
               className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:bg-zinc-50"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}
+              detailSource={{
+                sourceKey: "messages",
+                targetKey: `profile:${conversation.peer.id}`,
+                targetKind: "profile",
+              }}
             >
               <UserRound className="h-4 w-4 shrink-0" />
               <span className="truncate">{t.viewProfile}</span>
-            </Link>
+            </ContextualDetailLink>
           </div>
         </details>
       </div>
@@ -442,14 +457,19 @@ function MessageBubbleAvatar({
   user: DirectMessageUserViewModel;
 }) {
   return (
-    <Link
+    <ContextualDetailLink
       aria-label={user.nickname}
       className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
       href={withLocale(locale, `/profile/${user.id}`)}
+      detailSource={{
+        sourceKey: "messages",
+        targetKey: `profile:${user.id}`,
+        targetKind: "profile",
+      }}
       title={user.nickname}
     >
       <MessageAvatar avatarUrl={user.avatarUrl} name={user.nickname} size="sm" />
-    </Link>
+    </ContextualDetailLink>
   );
 }
 

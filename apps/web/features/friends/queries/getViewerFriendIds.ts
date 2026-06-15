@@ -1,6 +1,7 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
-export async function getViewerFriendIds(viewerProfileId: string) {
+export const getViewerFriendIds = cache(async (viewerProfileId: string) => {
   const friendships = await prisma.friendship.findMany({
     where: {
       OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
@@ -20,4 +21,4 @@ export async function getViewerFriendIds(viewerProfileId: string) {
       ),
     ),
   );
-}
+});

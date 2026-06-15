@@ -1,10 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma, type ReportReason, type ReportStatus } from "@prisma/client";
+import {
+  Prisma,
+  type ParticipantStatus,
+  type ReportReason,
+  type ReportStatus,
+} from "@prisma/client";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -35,6 +42,11 @@ const reportStatuses = [
   "RESOLVED",
   "DISMISSED",
 ] as const;
+const reportVisibleParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+  "PENDING",
+];
 
 const createReportSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
@@ -68,6 +80,48 @@ export type ReviewReportState = {
 };
 
 const emptyCreateReportState: CreateReportState = {};
+
+async function getReportableActivityAccessWhere(
+  reporterId: string,
+): Promise<Prisma.ActivityWhereInput> {
+  const friendIds = await getViewerFriendIds(reporterId);
+
+  return {
+    organizer: {
+      status: "ACTIVE",
+    },
+    OR: [
+      {
+        visibility: {
+          in: publicActivityVisibility,
+        },
+      },
+      {
+        organizerId: reporterId,
+      },
+      {
+        participants: {
+          some: {
+            userProfileId: reporterId,
+            status: {
+              in: reportVisibleParticipationStatuses,
+            },
+          },
+        },
+      },
+      ...(friendIds.length > 0
+        ? [
+            {
+              AND: [
+                { visibility: "PRIVATE" as const },
+                { organizerId: { in: friendIds } },
+              ],
+            },
+          ]
+        : []),
+    ],
+  };
+}
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -133,12 +187,7 @@ async function canReportTarget({
     const activity = await prisma.activity.findFirst({
       where: {
         id: targetId,
-        visibility: {
-          in: ["PUBLIC", "LINK_ONLY"],
-        },
-        organizer: {
-          status: "ACTIVE",
-        },
+        ...(await getReportableActivityAccessWhere(reporterId)),
       },
       select: {
         id: true,
@@ -161,12 +210,7 @@ async function canReportTarget({
         status: "ACTIVE",
       },
       activity: {
-        visibility: {
-          in: ["PUBLIC", "LINK_ONLY"],
-        },
-        organizer: {
-          status: "ACTIVE",
-        },
+        ...(await getReportableActivityAccessWhere(reporterId)),
       },
     },
     select: {

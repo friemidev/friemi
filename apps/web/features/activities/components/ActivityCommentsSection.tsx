@@ -44,13 +44,13 @@ export function ActivityCommentsSection({
         {isAuthenticated ? (
           <ActivityCommentForm activityId={activityId} locale={locale} />
         ) : (
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+          <div className="rounded-xl border border-[#e5d7bf] bg-white/70 p-3 text-sm">
             <p className="font-medium text-ink">{t.signInTitle}</p>
-            <p className="mt-1 leading-6 text-zinc-500">
+            <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
               {t.signInDescription}
             </p>
             <Link
-              className="mt-3 inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+              className="mt-3 inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#d9c6ad] bg-[#fff8ed] px-4 text-sm font-medium text-[#6f5434] transition hover:bg-white"
               href={withLocale(locale, "/sign-in")}
             >
               {t.signInTitle}

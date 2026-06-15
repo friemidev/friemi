@@ -4,11 +4,12 @@ export function getPublicEventCopy(locale: string) {
       navLabel: "Découverte",
       listTitle: "Découverte d'activités",
       listDescription:
-        "Choisissez une activité, puis rejoignez un groupe existant ou créez le vôtre.",
-      listScope: "Une activité est une information. L'inscription se fait dans les groupes.",
-      publicEventGuideTitle: "Activité",
+        "Consultez l'info activité, puis rejoignez un groupe existant ou créez le vôtre.",
+      listScope:
+        "Ici, vous consultez l'info activité. L'inscription se fait dans les groupes.",
+      publicEventGuideTitle: "Info activité",
       publicEventGuideDescription:
-        "Une information importée ou officielle pour vérifier l'heure, le lieu et le lien source.",
+        "Une fiche importée ou officielle pour vérifier l'heure, le lieu et le lien source.",
       teamGuideTitle: "Groupe",
       teamGuideDescription:
         "Une sortie créée par un utilisateur autour de cette activité. C'est ici que l'on s'inscrit.",
@@ -17,7 +18,7 @@ export function getPublicEventCopy(locale: string) {
       loadFailedTitle: "Échec du chargement",
       loadFailedDescription:
         "Vérifiez la base de données ou réessayez plus tard.",
-      detailSource: "Activité",
+      detailSource: "Info activité",
       eventInfoTitle: "À propos de l'événement",
       officialPage: "Page officielle",
       viewEvent: "Voir l'événement",
@@ -80,11 +81,12 @@ export function getPublicEventCopy(locale: string) {
       navLabel: "Discover",
       listTitle: "Activity discovery",
       listDescription:
-        "Pick an activity, then join an existing crew or start your own.",
-      listScope: "An activity is an information card. Sign-ups happen in crews.",
-      publicEventGuideTitle: "Activity",
+        "Browse the activity details, then join an existing crew or start your own.",
+      listScope:
+        "This page shows activity info. Sign-ups happen in crews.",
+      publicEventGuideTitle: "Activity info",
       publicEventGuideDescription:
-        "Imported or official information for time, place, and source link.",
+        "Imported or official details so you can confirm the time, place, and source link.",
       teamGuideTitle: "Crew",
       teamGuideDescription:
         "A user-created plan around that activity. This is where sign-ups happen.",
@@ -93,7 +95,7 @@ export function getPublicEventCopy(locale: string) {
       loadFailedTitle: "Failed to load",
       loadFailedDescription:
         "Check the database connection or try again later.",
-      detailSource: "Activity",
+      detailSource: "Activity info",
       eventInfoTitle: "About this event",
       officialPage: "Official page",
       viewEvent: "View event",
@@ -151,48 +153,48 @@ export function getPublicEventCopy(locale: string) {
   return {
     navLabel: "活动发现",
     listTitle: "活动发现",
-    listDescription: "先选择活动，再加入已有车队或发起自己的组局。",
-    listScope: "活动只是信息位，报名和沟通发生在车队里。",
-    publicEventGuideTitle: "活动信息",
+    listDescription: "先查看活动，再加入已有组局或发起自己的组局。",
+    listScope: "这里展示的是活动，报名和沟通发生在组局里。",
+    publicEventGuideTitle: "活动",
     publicEventGuideDescription:
       "来自官方、开放数据或爬虫的信息，用来确认时间、地点和来源链接。",
-    teamGuideTitle: "车队",
+    teamGuideTitle: "组局",
     teamGuideDescription:
-      "用户围绕某个活动发起的同行计划，报名、审核和聊天都发生在车队里。",
+      "用户围绕某个活动发起的同行计划，报名、审核和聊天都发生在组局里。",
     emptyTitle: "暂无活动",
     emptyDescription: "导入的活动会显示在这里。",
     loadFailedTitle: "加载失败",
     loadFailedDescription: "请检查数据库连接，或稍后重试。",
-    detailSource: "活动信息",
+    detailSource: "活动",
     eventInfoTitle: "活动介绍",
     officialPage: "官方页面",
     viewEvent: "查看活动",
-    viewTeams: "查看车队",
-    jumpToTeams: "看已有车队",
+    viewTeams: "查看组局",
+    jumpToTeams: "看已有组局",
     teamUp: "发起组局",
     actionTitle: "想和别人一起去？",
     actionDescription:
-      "先看看已有车队；没有合适的队伍，再发起自己的组局。",
+      "先看看已有组局；没有合适的队伍，再发起自己的组局。",
     existingTeams: "正在组局",
     teamSectionDescription:
-      "优先加入已有车队，提高成行概率；没有合适的队伍时，再发起自己的组局。",
+      "优先加入已有组局，提高成行概率；没有合适的队伍时，再发起自己的组局。",
     teamSectionEndedDescription:
-      "这个活动已经结束，仍可查看当时围绕它创建的车队。",
+      "这个活动已经结束，仍可查看当时围绕它创建的组局。",
     teamSectionUnavailableDescription:
-      "这个活动已不可用，已有车队仅作为历史记录展示。",
-    noTeamsTitle: "暂无车队",
+      "这个活动已不可用，已有组局仅作为历史记录展示。",
+    noTeamsTitle: "暂无组局",
     noTeamsDescription: "发起一个组局，找到想一起去的人。",
-    noTeamsEndedDescription: "这个活动已经结束，暂时没有历史车队。",
-    noTeamsUnavailableDescription: "这个活动已不可用，暂时没有历史车队。",
+    noTeamsEndedDescription: "这个活动已经结束，暂时没有历史组局。",
+    noTeamsUnavailableDescription: "这个活动已不可用，暂时没有历史组局。",
     noTeamsCta: "发起第一个组局",
-    publicEventRuleTitle: "活动信息",
+    publicEventRuleTitle: "活动",
     publicEventRuleDescription:
-      "这里展示的是活动本身。想和平台用户一起去，请加入下方车队，或发起自己的组局。",
+      "这里展示的是活动本身。想和平台用户一起去，请加入下方组局，或发起自己的组局。",
     teamCount: (count: number) =>
-      count === 0 ? "暂无车队" : `${count} 个车队`,
+      count === 0 ? "暂无组局" : `${count} 个组局`,
     createTeamTitle: "发起组局",
     createTeamDescription:
-      "活动信息已预填，你只需要补充集合方式、人数和同行说明。",
+      "活动已预填，你只需要补充集合方式、人数和同行说明。",
     teamTitle: (title: string) => `一起去：${title}`,
     backToEvent: "返回活动",
     backToPublicEvents: "返回活动发现",
@@ -202,13 +204,13 @@ export function getPublicEventCopy(locale: string) {
     cancelledBadge: "已取消",
     officialPriceFallback: "以官方页面为准",
     linkedEventTitle: "关联活动",
-    linkedEventDescription: "这个车队是基于该活动发起的。",
+    linkedEventDescription: "这个组局是基于该活动发起的。",
     linkedEventCta: "查看活动",
     eventUnavailableError:
       "活动不存在或已不可用，请返回活动详情页重新发起组局。",
     eventEndedError: "这个活动已经结束，不能继续发起组局。",
     eventCancelledError: "这个活动已被取消，不能继续发起组局。",
     duplicateTeamError:
-      "你已经为这个活动发起过车队，可以直接编辑已有车队。",
+      "你已经为这个活动发起过组局，可以直接编辑已有组局。",
   };
 }

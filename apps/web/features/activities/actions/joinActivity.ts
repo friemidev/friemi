@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type {
   ActivityStatus,
   ActivityVisibility,
@@ -11,10 +9,14 @@ import type {
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import {
+  createLatencyTimer,
+  recordOperationLatency,
+} from "@/features/analytics/latency";
+import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
-import { withLocale } from "@/lib/routes";
-import { trackAnalyticsEvent } from "@/features/analytics/server";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
@@ -24,7 +26,10 @@ const existingParticipantStatuses: ParticipantStatus[] = [
   "PENDING",
 ];
 const joinableActivityStatuses: ActivityStatus[] = ["RECRUITING", "CONFIRMED"];
-const joinableActivityVisibility: ActivityVisibility[] = ["PUBLIC"];
+const joinableActivityVisibility: ActivityVisibility[] = [
+  "PUBLIC",
+  "PRIVATE",
+];
 const activeOrganizerStatuses: UserProfileStatus[] = ["ACTIVE"];
 
 const joinActivitySchema = z.object({
@@ -34,8 +39,17 @@ const joinActivitySchema = z.object({
 });
 
 export type JoinActivityState = {
+  activityId?: string;
   formError?: string;
   fieldErrors?: Record<string, string[]>;
+  participantStatus?:
+    | "JOINED"
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED"
+    | "CANCELLED"
+    | null;
+  success?: boolean;
   values?: {
     message: string;
   };
@@ -79,7 +93,7 @@ async function trackJoinFormFailure({
   profileId?: string | null;
   reasonCode: JoinFailureReasonCode;
 }) {
-  await trackAnalyticsEvent(
+  queueAnalyticsEvent(
     {
       locale: normalizeAnalyticsLocale(locale),
       name: "form_submit_failed",
@@ -92,9 +106,7 @@ async function trackJoinFormFailure({
         reason_code: reasonCode,
       },
     },
-    {
-      userProfileId: profileId,
-    },
+    { userProfileId: profileId },
   );
 }
 
@@ -123,14 +135,54 @@ export async function joinActivityAction(
   _previousState: JoinActivityState,
   formData: FormData,
 ): Promise<JoinActivityState> {
+  const getDurationMs = createLatencyTimer();
   const rawInput = {
     activityId: getString(formData, "activityId"),
     locale: getString(formData, "locale") || "zh-CN",
     message: getString(formData, "message"),
   };
+  const recordLatency = ({
+    properties,
+    status,
+    statusReason,
+    userProfileId,
+  }: {
+    properties?: Record<string, string | number | boolean | null | undefined>;
+    status: "failed" | "success";
+    statusReason?: string | null;
+    userProfileId?: string | null;
+  }) => {
+    recordOperationLatency({
+      durationMs: getDurationMs(),
+      entityId: rawInput.activityId || undefined,
+      entityType: rawInput.activityId ? "team" : undefined,
+      locale: rawInput.locale,
+      operationKey: "join_activity",
+      route: rawInput.activityId
+        ? `/${rawInput.locale}/activities/${rawInput.activityId}`
+        : `/${rawInput.locale}/activities`,
+      sourceSurface: "activity_detail",
+      status,
+      statusReason,
+      userProfileId,
+      properties,
+    });
+  };
   const result = joinActivitySchema.safeParse(rawInput);
+  const perf = createActionPerformanceTracker({
+    action: "join_activity",
+    metadata: {
+      locale: rawInput.locale,
+      targetId: rawInput.activityId || undefined,
+    },
+  });
 
   if (!result.success) {
+    recordLatency({
+      status: "failed",
+      statusReason: "required_field_missing",
+    });
+
     await trackJoinFormFailure({
       activityId: rawInput.activityId,
       locale: rawInput.locale,
@@ -146,12 +198,32 @@ export async function joinActivityAction(
     };
   }
 
-  const profile = await ensureCurrentUserProfile(result.data.locale);
+  let profile: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
+  try {
+    profile = await perf.measure("viewer_profile", () =>
+      ensureCurrentUserProfileSnapshot(result.data.locale),
+    );
+  } catch (error) {
+    console.error("Failed to resolve viewer profile for join", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "submit_failed",
+    });
+
+    return {
+      formError: "报名暂时不可用，请稍后重试。",
+      values: {
+        message: rawInput.message,
+      },
+    };
+  }
   const message = result.data.message?.trim() || null;
+  let successfulParticipantStatus: ParticipantStatus | null = null;
 
   try {
-    const joinResult = await prisma.$transaction(
-      async (tx) => {
+    const joinResult = await perf.measure("transaction", () =>
+      prisma.$transaction(
+        async (tx) => {
         const activity = await tx.activity.findUnique({
           where: {
             id: result.data.activityId,
@@ -199,6 +271,36 @@ export async function joinActivityAction(
             "活动不存在或已不可见。",
             "activity_unavailable",
           );
+        }
+
+        if (
+          activity.visibility === "PRIVATE" &&
+          activity.organizerId !== profile.id
+        ) {
+          const friendship = await tx.friendship.findFirst({
+            where: {
+              OR: [
+                {
+                  userAId: profile.id,
+                  userBId: activity.organizerId,
+                },
+                {
+                  userAId: activity.organizerId,
+                  userBId: profile.id,
+                },
+              ],
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          if (!friendship) {
+            return getJoinFailure(
+              "这是私人局，仅发起人的好友可以报名。",
+              "activity_unavailable",
+            );
+          }
         }
 
         if (activity.organizerId === profile.id) {
@@ -278,37 +380,27 @@ export async function joinActivityAction(
           });
         }
 
-        await createNotification(tx, {
-          activityId: activity.id,
-          recipientId: profile.id,
-          type:
-            nextStatus === "PENDING"
-              ? "PARTICIPATION_PENDING"
-              : "PARTICIPATION_CONFIRMED",
-        });
-
-        if (nextStatus === "PENDING") {
-          await createNotification(tx, {
-            actorId: profile.id,
-            activityId: activity.id,
-            recipientId: activity.organizerId,
-            type: "PARTICIPATION_PENDING",
-          });
-        }
-
         return {
           ok: true as const,
           activityId: activity.id,
+          organizerId: activity.organizerId,
           participantStatus: nextStatus,
           requiresApproval: activity.requiresApproval,
         };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        },
+      ),
     );
 
     if (!joinResult.ok) {
+      recordLatency({
+        status: "failed",
+        statusReason: joinResult.reasonCode,
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -324,8 +416,31 @@ export async function joinActivityAction(
       };
     }
 
-    await trackAnalyticsEvent(
-    {
+    void createNotification(prisma, {
+      activityId: joinResult.activityId,
+      recipientId: profile.id,
+      type:
+        joinResult.participantStatus === "PENDING"
+          ? "PARTICIPATION_PENDING"
+          : "PARTICIPATION_CONFIRMED",
+    }).catch((error) => {
+      console.error("Failed to create participant notification", error);
+    });
+
+    if (joinResult.participantStatus === "PENDING") {
+      void createNotification(prisma, {
+        actorId: profile.id,
+        activityId: joinResult.activityId,
+        recipientId: joinResult.organizerId,
+        type: "PARTICIPATION_PENDING",
+      }).catch((error) => {
+        console.error("Failed to create organizer notification", error);
+      });
+    }
+
+    const analyticsStartedAt = performance.now();
+    queueAnalyticsEvent(
+      {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: "join_submitted",
         route: `/${result.data.locale}/activities/${joinResult.activityId}`,
@@ -341,8 +456,24 @@ export async function joinActivityAction(
         userProfileId: profile.id,
       },
     );
+    perf.mark("analytics", performance.now() - analyticsStartedAt);
+    recordLatency({
+      properties: {
+        participant_status: joinResult.participantStatus,
+        requires_approval: joinResult.requiresApproval,
+      },
+      status: "success",
+      userProfileId: profile.id,
+    });
+    successfulParticipantStatus = joinResult.participantStatus;
   } catch (error) {
     if (isPrismaUniqueError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "already_joined",
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -359,6 +490,12 @@ export async function joinActivityAction(
     }
 
     if (isPrismaTransactionConflictError(error)) {
+      recordLatency({
+        status: "failed",
+        statusReason: "concurrency_conflict",
+        userProfileId: profile.id,
+      });
+
       await trackJoinFormFailure({
         activityId: result.data.activityId,
         locale: result.data.locale,
@@ -375,6 +512,12 @@ export async function joinActivityAction(
     }
 
     console.error("Failed to join activity", error);
+    recordLatency({
+      status: "failed",
+      statusReason: "submit_failed",
+      userProfileId: profile.id,
+    });
+
     await trackJoinFormFailure({
       activityId: result.data.activityId,
       locale: result.data.locale,
@@ -390,12 +533,16 @@ export async function joinActivityAction(
     };
   }
 
-  const activityPath = withLocale(
-    result.data.locale,
-    `/activities/${result.data.activityId}`,
-  );
-  revalidatePath(activityPath);
-  revalidatePath(withLocale(result.data.locale, "/notifications"));
-  revalidatePath(withLocale(result.data.locale, "/"), "layout");
-  redirect(activityPath);
+  perf.finish({
+    result: "success",
+    userProfileId: profile.id,
+  });
+  return {
+    activityId: result.data.activityId,
+    participantStatus: successfulParticipantStatus,
+    success: true,
+    values: {
+      message: "",
+    },
+  };
 }
