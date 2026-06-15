@@ -20,6 +20,7 @@ type ActivityLobbyViewProps = {
   allActivities: ActivityCardViewModel[];
   openActivities: ActivityCardViewModel[];
   createdActivities: ActivityCardViewModel[];
+  deferredFilters?: LobbyFilterId[];
   joinedActivities: ActivityCardViewModel[];
   favoriteActivities: ActivityCardViewModel[];
   friendHostedActivities: ActivityCardViewModel[];
@@ -48,6 +49,11 @@ type StatusFilterOption = {
   id: LobbyStatusFilterId;
   count: number;
   label: string;
+};
+
+type LobbySectionResponse = {
+  activities?: ActivityCardViewModel[];
+  ok: boolean;
 };
 
 const LOBBY_PAGE_SIZE = 10;
@@ -462,6 +468,70 @@ function LobbyPagination({
   );
 }
 
+function LobbySectionLoading({ locale }: { locale: string }) {
+  const label =
+    locale === "fr"
+      ? "Chargement..."
+      : locale === "en"
+        ? "Loading..."
+        : "正在加载...";
+
+  return (
+    <div className="rounded-[1.25rem] border border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
+      <div className="flex items-center gap-3">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d7bea0] border-t-[#a66d4c]" />
+        <p className="text-sm font-semibold text-[#665747]">{label}</p>
+      </div>
+      <div className="mt-4 grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => (
+          <div
+            key={item}
+            className="h-48 animate-pulse rounded-lg border border-black/10 bg-white/72"
+            style={{ animationDelay: `${item * 60}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LobbySectionError({
+  locale,
+  onRetry,
+}: {
+  locale: string;
+  onRetry: () => void;
+}) {
+  const copy =
+    locale === "fr"
+      ? {
+          title: "Chargement impossible.",
+          retry: "Reessayer",
+        }
+      : locale === "en"
+        ? {
+            title: "Could not load this section.",
+            retry: "Retry",
+          }
+        : {
+            title: "这个分区加载失败。",
+            retry: "重试",
+          };
+
+  return (
+    <div className="rounded-[1.25rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
+      <p className="text-base font-semibold text-[#433a30]">{copy.title}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-3 inline-flex h-9 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+      >
+        {copy.retry}
+      </button>
+    </div>
+  );
+}
+
 export function ActivityLobbyPreviewView({
   activities,
   locale,
@@ -582,6 +652,7 @@ export function ActivityLobbyView({
   allActivities,
   openActivities,
   createdActivities,
+  deferredFilters = [],
   joinedActivities,
   favoriteActivities,
   friendHostedActivities,
@@ -593,6 +664,17 @@ export function ActivityLobbyView({
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
   const [page, setPage] = useState(1);
+  const [lazySections, setLazySections] = useState<
+    Partial<Record<LobbyFilterId, ActivityCardViewModel[]>>
+  >({});
+  const [loadingFilter, setLoadingFilter] = useState<LobbyFilterId | null>(null);
+  const [failedFilters, setFailedFilters] = useState<
+    Partial<Record<LobbyFilterId, boolean>>
+  >({});
+  const deferredFilterSet = useMemo(
+    () => new Set<LobbyFilterId>(deferredFilters),
+    [deferredFilters],
+  );
   useEffect(() => {
     const context = readDetailSourceContext();
 
@@ -628,36 +710,51 @@ export function ActivityLobbyView({
     () => new Set(createdActivities.map((activity) => getLobbyActivityKey(activity))),
     [createdActivities],
   );
+  const favoriteSectionActivities =
+    lazySections.favorites ?? favoriteActivities;
+  const friendHostedSectionActivities =
+    lazySections.friendHosted ?? friendHostedActivities;
+  const friendJoinedSectionActivities =
+    lazySections.friendJoined ?? friendJoinedActivities;
   const categoryGroups = useMemo(
     () => [
       {
         id: "all" as const,
         activities: allActivities,
+        isDeferred: false,
         label: getAllLabel(locale),
       },
       {
         id: "created" as const,
         activities: createdActivities,
+        isDeferred: false,
         label: getFilterLabel(locale, "created", t.createdTitle),
       },
       {
         id: "joined" as const,
         activities: joinedActivities,
+        isDeferred: false,
         label: getFilterLabel(locale, "joined", t.joinedTitle),
       },
       {
         id: "favorites" as const,
-        activities: favoriteActivities,
+        activities: favoriteSectionActivities,
+        isDeferred:
+          deferredFilterSet.has("favorites") && !lazySections.favorites,
         label: getFilterLabel(locale, "favorites", t.favoriteTitle),
       },
       {
         id: "friendHosted" as const,
-        activities: friendHostedActivities,
+        activities: friendHostedSectionActivities,
+        isDeferred:
+          deferredFilterSet.has("friendHosted") && !lazySections.friendHosted,
         label: getFilterLabel(locale, "friendHosted", t.friendHostedTitle),
       },
       {
         id: "friendJoined" as const,
-        activities: friendJoinedActivities,
+        activities: friendJoinedSectionActivities,
+        isDeferred:
+          deferredFilterSet.has("friendJoined") && !lazySections.friendJoined,
         label: getFilterLabel(locale, "friendJoined", t.friendJoinedTitle),
       },
       {
@@ -666,17 +763,23 @@ export function ActivityLobbyView({
           openActivities.length > 0
             ? openActivities
             : allActivities.filter((activity) => activity.visibility === "PUBLIC"),
+        isDeferred: false,
         label: getFilterLabel(locale, "open", t.openTitle),
       },
     ],
     [
       allActivities,
       createdActivities,
+      deferredFilterSet,
       favoriteActivities,
-      friendHostedActivities,
-      friendJoinedActivities,
+      favoriteSectionActivities,
+      friendHostedSectionActivities,
+      friendJoinedSectionActivities,
       joinedActivities,
       locale,
+      lazySections.favorites,
+      lazySections.friendHosted,
+      lazySections.friendJoined,
       openActivities,
       t.createdTitle,
       t.favoriteTitle,
@@ -716,10 +819,15 @@ export function ActivityLobbyView({
   );
   const filterOptions: FilterOption[] = categoryGroups.map((group) => ({
     id: group.id,
-    count: group.activities.length,
+    count: group.isDeferred ? null : group.activities.length,
     label: group.label,
   }));
   const hasActivities = allActivities.length > 0;
+  const activeCategoryDeferred =
+    categoryGroups.find((group) => group.id === activeFilter)?.isDeferred ?? false;
+  const activeFilterFailed = Boolean(failedFilters[activeFilter]);
+  const activeFilterLoading =
+    !activeFilterFailed && (loadingFilter === activeFilter || activeCategoryDeferred);
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
   const emptyLobbyActions = getEmptyLobbyActions(locale);
   const normalizedEmptyLobbyActions =
@@ -742,6 +850,72 @@ export function ActivityLobbyView({
   useEffect(() => {
     setPage(1);
   }, [activeFilter, activeStatusFilter]);
+
+  useEffect(() => {
+    if (
+      !deferredFilterSet.has(activeFilter) ||
+      lazySections[activeFilter] ||
+      loadingFilter === activeFilter
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const params = new URLSearchParams({
+      section: activeFilter,
+    });
+
+    setLoadingFilter(activeFilter);
+    setFailedFilters((current) => ({
+      ...current,
+      [activeFilter]: false,
+    }));
+
+    fetch(`/api/lobby/section?${params.toString()}`, {
+      headers: {
+        Accept: "application/json",
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Lobby section request failed: ${response.status}`);
+        }
+
+        return (await response.json()) as LobbySectionResponse;
+      })
+      .then((payload) => {
+        if (cancelled || !payload.ok) {
+          return;
+        }
+
+        setLazySections((current) => ({
+          ...current,
+          [activeFilter]: payload.activities ?? [],
+        }));
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Failed to load lobby section", error);
+        setFailedFilters((current) => ({
+          ...current,
+          [activeFilter]: true,
+        }));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingFilter((current) =>
+            current === activeFilter ? null : current,
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFilter, deferredFilterSet, lazySections, loadingFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -801,7 +975,7 @@ export function ActivityLobbyView({
                           : "bg-[#f3ecdf] text-[#8a7a65]",
                       )}
                     >
-                      {option.count ?? 0}
+                      {option.count === null ? "..." : option.count}
                     </span>
                   </button>
                 );
@@ -844,7 +1018,25 @@ export function ActivityLobbyView({
         </div>
       </section>
 
-      {!hasActivities ? (
+      {activeFilterLoading ? (
+        <LobbySectionLoading locale={locale} />
+      ) : activeFilterFailed ? (
+        <LobbySectionError
+          locale={locale}
+          onRetry={() => {
+            setLazySections((current) => {
+              const next = { ...current };
+              delete next[activeFilter];
+
+              return next;
+            });
+            setFailedFilters((current) => ({
+              ...current,
+              [activeFilter]: false,
+            }));
+          }}
+        />
+      ) : !hasActivities ? (
         <section className="rounded-[1.75rem] border border-[#dfceb0] bg-[linear-gradient(145deg,rgba(255,252,247,0.98),rgba(246,237,222,0.94))] p-5 shadow-[0_12px_30px_rgba(94,80,52,0.06)] sm:p-6">
           <div className="max-w-2xl">
             <h2 className="text-2xl font-semibold text-ink sm:text-3xl">

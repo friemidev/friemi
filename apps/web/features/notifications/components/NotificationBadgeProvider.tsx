@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 
 const NOTIFICATION_BADGE_POLL_INTERVAL_MS =
   process.env.NODE_ENV === "development" ? 60000 : 15000;
+const NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS = 1500;
 
 type NotificationBadgeContextValue = {
   refreshUnreadNotificationCount: () => Promise<void>;
@@ -47,6 +48,7 @@ export function NotificationBadgeProvider({
 }) {
   const pathname = usePathname();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const hasScheduledInitialRefreshRef = useRef(false);
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     () => normalizeUnreadCount(initialUnreadNotificationCount),
   );
@@ -96,8 +98,21 @@ export function NotificationBadgeProvider({
   }, [initialUnreadNotificationCount]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      hasScheduledInitialRefreshRef.current = false;
+      return;
+    }
+
     if (isNotificationsPath(pathname)) return;
+
+    if (!hasScheduledInitialRefreshRef.current) {
+      hasScheduledInitialRefreshRef.current = true;
+      const timeoutId = window.setTimeout(() => {
+        void refreshUnreadNotificationCount();
+      }, NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS);
+
+      return () => window.clearTimeout(timeoutId);
+    }
 
     void refreshUnreadNotificationCount();
   }, [enabled, pathname, refreshUnreadNotificationCount]);

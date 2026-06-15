@@ -9,8 +9,7 @@ import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgre
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRequiredDialog";
-import { isCurrentUserAdmin } from "@/lib/admin-auth";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { createPerformanceTracker } from "@/lib/performance";
 
@@ -35,15 +34,14 @@ export default async function LocaleLayout({
     locale,
     route: "/[locale]/layout",
   });
-  const messages = await perf.measure("i18n.messages", getMessages);
-  const [showAdminNav, viewerProfile] = await perf.measure(
-    "viewer.identity",
-    () =>
-      Promise.all([isCurrentUserAdmin(), getOptionalCurrentUserProfileSnapshot()]),
-  );
+  const [messages, viewerState] = await Promise.all([
+    perf.measure("i18n.messages", getMessages),
+    perf.measure("viewer.identity", getOptionalLayoutViewerState),
+  ]);
+  const viewerProfile = viewerState.profile;
   perf.finish({
     hasViewer: Boolean(viewerProfile),
-    showAdminNav,
+    showAdminNav: viewerState.showAdminNav,
   });
   const content = (
     <NextIntlClientProvider messages={messages}>
@@ -56,7 +54,7 @@ export default async function LocaleLayout({
           <AppHeader
             locale={locale}
             showNotificationNav={Boolean(viewerProfile)}
-            showAdminNav={showAdminNav}
+            showAdminNav={viewerState.showAdminNav}
             viewerFriendCode={viewerProfile?.friendCode ?? null}
             viewerNickname={viewerProfile?.nickname ?? null}
             incomingFriendRequests={[]}

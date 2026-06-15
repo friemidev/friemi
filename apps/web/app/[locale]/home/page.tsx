@@ -4,7 +4,10 @@ import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { getActivities } from "@/features/activities/queries/getActivities";
+import {
+  attachActivityCardViewerStates,
+  getActivities,
+} from "@/features/activities/queries/getActivities";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
@@ -49,20 +52,36 @@ export default async function HomePage({ params }: HomePageProps) {
   });
   const t = getCopy(locale);
   const homeActions = getHomeActionLabels(locale);
-  const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfileSnapshot(),
-  );
-  const activitiesResult = await perf.measure("home.activities", () =>
-    getActivities({
-      limit: 4,
-      viewerProfileId: viewerProfile?.id,
-    })
-      .then((activities) => ({ activities, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load home activities", error);
-        return { activities: [], error };
-      }),
-  );
+  const [viewerProfile, baseActivitiesResult] = await Promise.all([
+    perf.measure("viewer.profile", () => getOptionalCurrentUserProfileSnapshot()),
+    perf.measure("home.activities", () =>
+      getActivities({
+        limit: 4,
+      })
+        .then((activities) => ({ activities, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load home activities", error);
+          return { activities: [], error };
+        }),
+    ),
+  ]);
+  const activitiesResult =
+    viewerProfile && baseActivitiesResult.activities.length > 0
+      ? await perf.measure("home.viewerState", () =>
+          attachActivityCardViewerStates(
+            baseActivitiesResult.activities,
+            viewerProfile.id,
+          )
+            .then((activities) => ({
+              activities,
+              error: baseActivitiesResult.error,
+            }))
+            .catch((error: unknown) => {
+              console.error("Failed to load home activity viewer state", error);
+              return baseActivitiesResult;
+            }),
+        )
+      : baseActivitiesResult;
 
   perf.finish({
     activityCount: activitiesResult.activities.length,

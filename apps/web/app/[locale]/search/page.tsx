@@ -276,33 +276,36 @@ export default async function SearchPage({
         }),
       )
     : null;
-  const searchResult = query
-    ? await perf.measure("search.results", () =>
-        getGlobalSearchResults(query, viewerProfile?.id, {
-          includeEnded,
-        })
-          .then((result) => ({ result, error: null }))
-          .catch((error: unknown) => {
-            console.error("Failed to load global search results", error);
-            return { result: null, error };
-          }),
-      )
-    : { result: null, error: null };
-  const mainActivityResult = query
-    ? await perf.measure("search.mainActivityResults", () =>
-        getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
-          includeEnded,
-        })
-          .then((result) => ({ result, error: null }))
-          .catch((error: unknown) => {
-            console.error(
-              "Failed to load global search activity results",
-              error,
-            );
-            return { result: null, error };
-          }),
-      )
-    : { result: null, error: null };
+  const [searchResult, mainActivityResult] = query
+    ? await Promise.all([
+        perf.measure("search.results", () =>
+          getGlobalSearchResults(query, viewerProfile?.id, {
+            includeEnded,
+          })
+            .then((result) => ({ result, error: null }))
+            .catch((error: unknown) => {
+              console.error("Failed to load global search results", error);
+              return { result: null, error };
+            }),
+        ),
+        perf.measure("search.mainActivityResults", () =>
+          getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
+            includeEnded,
+          })
+            .then((result) => ({ result, error: null }))
+            .catch((error: unknown) => {
+              console.error(
+                "Failed to load global search activity results",
+                error,
+              );
+              return { result: null, error };
+            }),
+        ),
+      ])
+    : [
+        { result: null, error: null },
+        { result: null, error: null },
+      ];
   const shouldLoadInitialRelatedResults =
     query &&
     mainActivityResult.result &&

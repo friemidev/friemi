@@ -1149,6 +1149,19 @@ async function attachJoinableActivityStates(
   });
 }
 
+export async function attachActivityCardViewerStates(
+  activities: ActivityCardViewModel[],
+  viewerProfileId: string | null | undefined,
+) {
+  return attachJoinableActivityStates(
+    activities.map((activity) => ({
+      card: activity,
+      createdAt: new Date(activity.startAt),
+    })),
+    viewerProfileId,
+  );
+}
+
 function compareRankedActivitiesByStartAt(
   left: RankedActivityCard,
   right: RankedActivityCard,
@@ -1206,38 +1219,41 @@ export async function getActivities(
           },
           { id: "asc" },
         ];
-  const activities = await prisma.activity.findMany({
-    where: {
-      AND: [baseWhere, filterWhere, relationWhere],
-    },
-    orderBy,
-    take: limit,
-    select: activityCardSelect,
-  });
-  const publicEvents = shouldIncludePublicEvents(options.filters)
-    ? await prisma.publicEvent.findMany({
-        where: {
-          AND: [
-            getVisiblePublicEventWhere({
-              includePast: options.includePast,
-              now,
-            }),
-            getPublicEventFilterWhere(options.filters),
-          ],
-        },
-        orderBy:
-          options.filters?.sort === "recentlyAdded"
-            ? [{ createdAt: "desc" }, { id: "asc" }]
-            : [
-                {
-                  startAt: options.filters?.sort === "latest" ? "desc" : "asc",
-                },
-                { id: "asc" },
-              ],
-        take: limit,
-        select: publicEventCardSelect,
-      })
-    : [];
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        AND: [baseWhere, filterWhere, relationWhere],
+      },
+      orderBy,
+      take: limit,
+      select: activityCardSelect,
+    }),
+    shouldIncludePublicEvents(options.filters)
+      ? prisma.publicEvent.findMany({
+          where: {
+            AND: [
+              getVisiblePublicEventWhere({
+                includePast: options.includePast,
+                now,
+              }),
+              getPublicEventFilterWhere(options.filters),
+            ],
+          },
+          orderBy:
+            options.filters?.sort === "recentlyAdded"
+              ? [{ createdAt: "desc" }, { id: "asc" }]
+              : [
+                  {
+                    startAt:
+                      options.filters?.sort === "latest" ? "desc" : "asc",
+                  },
+                  { id: "asc" },
+                ],
+          take: limit,
+          select: publicEventCardSelect,
+        })
+      : Promise.resolve([]),
+  ]);
   const rankedActivities = [
     ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
       getActivityRankedCardViewModel,

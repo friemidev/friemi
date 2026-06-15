@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { isAdminByFields, readRoleFromMetadata } from "./admin-access";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
@@ -206,4 +207,95 @@ export async function getOptionalCurrentUserProfileSnapshot() {
   }
 
   return upsertClerkUserProfile(user);
+}
+
+type LayoutViewerProfile = {
+  friendCode: string | null;
+  id: string;
+  nickname: string;
+};
+
+type LayoutViewerState = {
+  profile: LayoutViewerProfile | null;
+  showAdminNav: boolean;
+};
+
+function getLayoutViewerProfile(profile: LayoutViewerProfile) {
+  return {
+    friendCode: profile.friendCode,
+    id: profile.id,
+    nickname: profile.nickname,
+  };
+}
+
+function isAdminUser(user: ClerkCurrentUser) {
+  return isAdminByFields({
+    userId: user.id,
+    email: user.primaryEmailAddress?.emailAddress,
+    publicRole: readRoleFromMetadata(user.publicMetadata),
+    privateRole: readRoleFromMetadata(user.privateMetadata),
+  });
+}
+
+export async function getOptionalLayoutViewerState(): Promise<LayoutViewerState> {
+  if (!hasClerkKeys()) {
+    const profile = await upsertLocalUserProfile("local-dev-user");
+
+    return {
+      profile: getLayoutViewerProfile(profile),
+      showAdminNav: false,
+    };
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return {
+      profile: null,
+      showAdminNav: false,
+    };
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+    select: {
+      friendCode: true,
+      id: true,
+      nickname: true,
+      role: true,
+      status: true,
+    },
+  });
+
+  if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+    return {
+      profile: getLayoutViewerProfile(profile),
+      showAdminNav: true,
+    };
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    return {
+      profile: profile ? getLayoutViewerProfile(profile) : null,
+      showAdminNav: false,
+    };
+  }
+
+  if (!profile) {
+    const createdProfile = await upsertClerkUserProfile(user);
+
+    return {
+      profile: getLayoutViewerProfile(createdProfile),
+      showAdminNav: isAdminUser(user),
+    };
+  }
+
+  return {
+    profile: getLayoutViewerProfile(profile),
+    showAdminNav: isAdminUser(user),
+  };
 }
