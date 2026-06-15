@@ -4,9 +4,38 @@ import { prisma } from "@/lib/prisma";
 
 const parisOpenDataDataset = "que-faire-a-paris-";
 export const parisOpenDataSource = "paris-opendata:que-faire-a-paris";
-const defaultImportLimit = 20;
-const maxImportLimit = 50;
+const defaultImportLimit = 50;
+const maxImportLimit = 200;
 const requestTimeoutMs = 10_000;
+const dayMs = 24 * 60 * 60 * 1000;
+
+type ImportPoolConfig = {
+  key: string;
+  label: string;
+  weight: number;
+  where?: string;
+};
+
+type ImportPool = ImportPoolConfig & {
+  limit: number;
+};
+
+type ImportTimeWindowConfig = {
+  key: string;
+  label: string;
+  startOffsetDays: number;
+  endOffsetDays: number;
+  weight: number;
+};
+
+type ImportTimeWindow = ImportTimeWindowConfig & {
+  endAt: Date;
+  limit: number;
+  poolKey: string;
+  poolLabel: string;
+  poolWhere?: string;
+  startAt: Date;
+};
 
 type ParisOpenDataResponse = {
   results?: ParisOpenDataRecord[];
@@ -22,7 +51,10 @@ type ParisOpenDataRecord = {
   date_start?: string | null;
   date_end?: string | null;
   date_description?: string | null;
+  cover_alt?: string | null;
+  cover_credit?: string | null;
   cover_url?: string | null;
+  contact_organisation_name?: string | null;
   address_name?: string | null;
   address_street?: string | null;
   address_city?: string | null;
@@ -38,14 +70,36 @@ type ParisOpenDataRecord = {
   tags?: string[] | string | null;
   price_type?: string | null;
   price_detail?: string | null;
+  programs?: string | null;
   access_type?: string | null;
   audience?: string | null;
+  group?: string | null;
+  locale?: string | null;
+  qfap_tags?: string[] | string | null;
+  univers?: string[] | string | null;
+  universe_tags?: string[] | string | null;
 };
 
 export type PublicActivityImportSummary = {
   source: typeof parisOpenDataSource;
   limit: number;
   fetched: number;
+  timeWindows: Array<{
+    endAt: string;
+    fetched: number;
+    key: string;
+    label: string;
+    limit: number;
+    poolKey: string;
+    poolLabel: string;
+    startAt: string;
+  }>;
+  pools: Array<{
+    fetched: number;
+    key: string;
+    label: string;
+    limit: number;
+  }>;
   created: number;
   updated: number;
   skipped: number;
@@ -94,6 +148,210 @@ function normalizeImportLimit(limit: number | undefined) {
   }
 
   return Math.min(Math.max(Math.floor(limit), 1), maxImportLimit);
+}
+
+function escapeSearchValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+const chineseRelatedKeywords = [
+  "chinois",
+  "chinoise",
+  "mandarin",
+  "taïwan",
+  "taiwan",
+  "hong kong",
+  "franco-chinois",
+  "hanfu",
+  "mahjong",
+  "calligraphie chinoise",
+  "nouvel an chinois",
+  "quartier asiatique",
+  "institut confucius",
+];
+
+const chineseRelatedSearchFields = [
+  "qfap_tags",
+  "title",
+  "lead_text",
+  "description",
+  "audience",
+  "contact_organisation_name",
+];
+
+function buildChineseRelatedWhereClause() {
+  return chineseRelatedKeywords
+    .flatMap((keyword) => {
+      const escapedKeyword = escapeSearchValue(keyword);
+
+      return chineseRelatedSearchFields.map(
+        (field) => `search(${field}, "${escapedKeyword}")`,
+      );
+    })
+    .join(" OR ");
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function getSearchableRecordText(record: ParisOpenDataRecord) {
+  return [
+    record.qfap_tags,
+    record.title,
+    record.lead_text,
+    stripHtml(record.description),
+    record.audience,
+    record.contact_organisation_name,
+    record.cover_alt,
+    record.cover_credit,
+    record.programs,
+    record.group,
+    record.univers,
+    record.universe_tags,
+  ]
+    .flatMap((value) => {
+      if (Array.isArray(value)) {
+        return value.map(String);
+      }
+
+      return typeof value === "string" ? [value] : [];
+    })
+    .join(" ");
+}
+
+function isChineseRelatedRecord(record: ParisOpenDataRecord) {
+  const searchableText = normalizeSearchText(getSearchableRecordText(record));
+
+  return chineseRelatedKeywords.some((keyword) =>
+    searchableText.includes(normalizeSearchText(keyword)),
+  );
+}
+
+const importPoolConfigs: ImportPoolConfig[] = [
+  {
+    key: "general",
+    label: "普通活动",
+    weight: 0.8,
+  },
+  {
+    key: "chinese-related",
+    label: "中文/华人相关",
+    weight: 0.2,
+    where: buildChineseRelatedWhereClause(),
+  },
+];
+
+const importTimeWindowConfigs: ImportTimeWindowConfig[] = [
+  {
+    key: "0-2d",
+    label: "0-2 天",
+    startOffsetDays: 0,
+    endOffsetDays: 3,
+    weight: 0.2,
+  },
+  {
+    key: "3-14d",
+    label: "3-14 天",
+    startOffsetDays: 3,
+    endOffsetDays: 15,
+    weight: 0.6,
+  },
+  {
+    key: "15-45d",
+    label: "15-45 天",
+    startOffsetDays: 15,
+    endOffsetDays: 46,
+    weight: 0.2,
+  },
+];
+
+function allocateWeightedLimits<T extends { key: string; weight: number }>(
+  configs: T[],
+  limit: number,
+  preferredKey?: string,
+) {
+  const rawAllocations = configs.map((config, index) => {
+    const rawLimit = limit * config.weight;
+
+    return {
+      floor: Math.floor(rawLimit),
+      fraction: rawLimit - Math.floor(rawLimit),
+      index,
+      priority: config.key === preferredKey ? 0 : index + 1,
+    };
+  });
+  const limits = rawAllocations.map((allocation) => allocation.floor);
+  let remaining = limit - limits.reduce((sum, value) => sum + value, 0);
+
+  for (const allocation of [...rawAllocations].sort(
+    (a, b) => b.fraction - a.fraction || a.priority - b.priority,
+  )) {
+    if (remaining <= 0) {
+      break;
+    }
+
+    limits[allocation.index] += 1;
+    remaining -= 1;
+  }
+
+  return limits;
+}
+
+function buildImportPools(limit: number) {
+  const poolLimits = allocateWeightedLimits(
+    importPoolConfigs,
+    limit,
+    "general",
+  );
+
+  return importPoolConfigs
+    .map((config, index): ImportPool => {
+      return {
+        ...config,
+        limit: poolLimits[index] ?? 0,
+      };
+    })
+    .filter((pool) => pool.limit > 0);
+}
+
+function buildImportTimeWindows(limit: number, now = new Date()) {
+  const pools = buildImportPools(limit);
+  const windows: ImportTimeWindow[] = [];
+
+  for (const pool of pools) {
+    const windowLimits = allocateWeightedLimits(
+      importTimeWindowConfigs,
+      pool.limit,
+      "3-14d",
+    );
+
+    for (const [index, config] of importTimeWindowConfigs.entries()) {
+      const windowLimit = windowLimits[index] ?? 0;
+
+      if (windowLimit <= 0) {
+        continue;
+      }
+
+      const startAt = new Date(now.getTime() + config.startOffsetDays * dayMs);
+      const endAt = new Date(now.getTime() + config.endOffsetDays * dayMs);
+
+      windows.push({
+        ...config,
+        endAt,
+        limit: windowLimit,
+        poolKey: pool.key,
+        poolLabel: pool.label,
+        poolWhere: pool.where,
+        startAt,
+      });
+    }
+  }
+
+  return windows;
 }
 
 function stripHtml(value: string | null | undefined) {
@@ -290,13 +548,22 @@ function getExternalId(record: ParisOpenDataRecord) {
   );
 }
 
-function buildParisOpenDataUrl(limit: number) {
+function buildParisOpenDataUrl(window: ImportTimeWindow) {
   const url = new URL(
     `https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/${parisOpenDataDataset}/records`,
   );
-  url.searchParams.set("where", "date_start > NOW()");
+  const whereParts = [
+    `date_start >= '${window.startAt.toISOString()}'`,
+    `date_start < '${window.endAt.toISOString()}'`,
+  ];
+
+  if (window.poolWhere) {
+    whereParts.push(`(${window.poolWhere})`);
+  }
+
+  url.searchParams.set("where", whereParts.join(" AND "));
   url.searchParams.set("order_by", "date_start asc");
-  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("limit", String(window.limit));
 
   return url;
 }
@@ -381,12 +648,12 @@ function getSemanticDedupeCondition(
   };
 }
 
-async function fetchParisOpenDataEvents(limit: number) {
+async function fetchParisOpenDataEvents(window: ImportTimeWindow) {
   const signal = AbortSignal.timeout(requestTimeoutMs);
   let response: Response;
 
   try {
-    response = await fetch(buildParisOpenDataUrl(limit), {
+    response = await fetch(buildParisOpenDataUrl(window), {
       headers: {
         Accept: "application/json",
         "User-Agent": "NextFunClub/1.0 public-activity-import",
@@ -428,6 +695,72 @@ async function fetchParisOpenDataEvents(limit: number) {
   return Array.isArray(payload.results) ? payload.results : [];
 }
 
+function getRecordDedupeKey(record: ParisOpenDataRecord) {
+  return (
+    normalizeText(record.id) ||
+    normalizeText(record.event_id) ||
+    normalizeText(record.url)
+  );
+}
+
+async function fetchDistributedParisOpenDataEvents(limit: number) {
+  const windows = buildImportTimeWindows(limit);
+  const records: ParisOpenDataRecord[] = [];
+  const seenRecordKeys = new Set<string>();
+  const poolSummaries = buildImportPools(limit).map((pool) => ({
+    fetched: 0,
+    key: pool.key,
+    label: pool.label,
+    limit: pool.limit,
+  }));
+  const timeWindows: PublicActivityImportSummary["timeWindows"] = [];
+
+  for (const window of windows) {
+    const windowRecords = await fetchParisOpenDataEvents(window);
+    const filteredWindowRecords = window.poolWhere
+      ? windowRecords.filter(isChineseRelatedRecord)
+      : windowRecords;
+    const poolSummary = poolSummaries.find(
+      (summary) => summary.key === window.poolKey,
+    );
+
+    if (poolSummary) {
+      poolSummary.fetched += filteredWindowRecords.length;
+    }
+
+    timeWindows.push({
+      endAt: window.endAt.toISOString(),
+      fetched: filteredWindowRecords.length,
+      key: window.key,
+      label: window.label,
+      limit: window.limit,
+      poolKey: window.poolKey,
+      poolLabel: window.poolLabel,
+      startAt: window.startAt.toISOString(),
+    });
+
+    for (const record of filteredWindowRecords) {
+      const dedupeKey = getRecordDedupeKey(record);
+
+      if (dedupeKey && seenRecordKeys.has(dedupeKey)) {
+        continue;
+      }
+
+      if (dedupeKey) {
+        seenRecordKeys.add(dedupeKey);
+      }
+
+      records.push(record);
+    }
+  }
+
+  return {
+    pools: poolSummaries,
+    records,
+    timeWindows,
+  };
+}
+
 export async function importParisOpenDataActivities(
   options: {
     dryRun?: boolean;
@@ -437,11 +770,14 @@ export async function importParisOpenDataActivities(
   const limit = normalizeImportLimit(options.limit);
   const dryRun = Boolean(options.dryRun);
   const startedAt = new Date();
-  const records = await fetchParisOpenDataEvents(limit);
+  const { pools, records, timeWindows } =
+    await fetchDistributedParisOpenDataEvents(limit);
   const summary: PublicActivityImportSummary = {
     source: parisOpenDataSource,
     limit,
     fetched: records.length,
+    timeWindows,
+    pools,
     created: 0,
     updated: 0,
     skipped: 0,

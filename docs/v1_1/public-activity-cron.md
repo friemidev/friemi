@@ -6,7 +6,18 @@
 
 - Source: `paris-opendata:que-faire-a-paris`
 - API: `https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/que-faire-a-paris-/records`
-- 当前只拉取 `date_start > NOW()` 的未来活动
+- 当前只拉取未来活动，但不再单纯按“离现在最近”取前 N 条。导入会按时间窗口分布拉取：
+  - `0-2 天`：20%
+  - `3-14 天`：60%
+  - `15-45 天`：20%
+
+这样列表不会全部挤在几个小时内的临时活动上，更多覆盖用户可提前安排的未来几天到两周活动。
+
+- 自动默认导入 `50` 条，会分成两个内容池：
+  - `普通活动`：80%，默认 40 条
+  - `中文/华人相关`：20%，默认 10 条
+
+`Que Faire à Paris` 当前公开数据的 `locale` 只有 `fr`，不能直接筛“中文语种活动”。中文/华人相关池会用官方 API 的 `search(...)` 在 `qfap_tags`、标题、简介、描述、受众和组织名中匹配中文/华人相关关键词，例如 `chinois`、`chinoise`、`mandarin`、`franco-chinois`、`calligraphie chinoise`、`nouvel an chinois`、`institut confucius` 等。拉回后还会在本地做一次严格关键词校验，避免 API 近似搜索带入弱相关活动。它表示“中文/华人相关活动”，不是官方语种字段。
 
 ## 查重策略
 
@@ -55,9 +66,9 @@ limit=20
 dryRun=true
 ```
 
-最大限制为 `50`。
+最大限制为 `200`。例如 `limit=200` 时，导入器会先按 `160 / 40` 分配到 `普通活动 / 中文华人相关` 两个内容池，再在每个池内按 `20% / 60% / 20%` 分配到 `0-2 天 / 3-14 天 / 15-45 天` 三个时间窗口。
 
-`dryRun=true` 只拉取和解析公共活动，并返回将会创建/更新/跳过的数量，不写入数据库。建议在 Vercel Preview 首次验证时使用。
+`dryRun=true` 只拉取和解析公共活动，并返回将会创建/更新/跳过的数量，不写入数据库。返回的 `summary.pools` 会展示每个内容池的请求数量和实际抓取数量，`summary.timeWindows` 会展示每个内容池下各时间窗口的请求数量和实际抓取数量，建议在 Vercel Preview 首次验证时使用。
 
 ## 本地调用
 
