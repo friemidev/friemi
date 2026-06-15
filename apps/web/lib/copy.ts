@@ -75,13 +75,13 @@ const copy = {
     globalSearch: {
       eyebrow: "全站搜索",
       title: "搜索 Next Fun",
-      description: "快速查找活动、组局、好友和商家。",
+      description: "快速查找活动、组局或用户。",
       inputLabel: "搜索关键词",
-      placeholder: "搜索活动、好友号、昵称或商家",
+      placeholder: "搜索活动、组局或用户",
       mobileOpen: "打开全站搜索",
       submit: "搜索",
       emptyTitle: "输入关键词开始搜索",
-      emptyDescription: "试试活动名称、地点、好友号、昵称或商家名。",
+      emptyDescription: "试试活动名称、地点、组局或用户。",
       noResultsTitle: "没有找到结果",
       noResultsDescription: (query: string) =>
         `没有找到与「${query}」匹配的结果。`,

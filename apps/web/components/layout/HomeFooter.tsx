@@ -14,7 +14,7 @@ const footerCopy = {
     contactEmail: "nextfunclub99@gmail.com",
     versionLabel: "版本号",
     updatesLabel: "更新公告",
-    copyright: "© 2026 Next Fun Club",
+    copyright: "© 2026 Next Fun",
   },
   en: {
     description: "Find activities, bring friends, and meet people nearby.",
@@ -22,7 +22,7 @@ const footerCopy = {
     contactEmail: "nextfunclub99@gmail.com",
     versionLabel: "Version",
     updatesLabel: "Release notes",
-    copyright: "© 2026 Next Fun Club",
+    copyright: "© 2026 Next Fun",
   },
   fr: {
     description:
@@ -31,7 +31,7 @@ const footerCopy = {
     contactEmail: "nextfunclub99@gmail.com",
     versionLabel: "Version",
     updatesLabel: "Notes de version",
-    copyright: "© 2026 Next Fun Club",
+    copyright: "© 2026 Next Fun",
   },
 } as const;
 
@@ -50,14 +50,14 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ring-1 ring-white/20">
               <Image
                 src="/logo.png"
-                alt="Next Fun Club"
+                alt="Next Fun"
                 width={44}
                 height={44}
                 className="h-full w-full object-cover"
               />
             </span>
             <span className="whitespace-nowrap text-base font-semibold tracking-normal">
-              Next Fun Club
+              Next Fun
             </span>
           </Link>
           <p className="max-w-sm text-sm leading-6 text-white/75">
