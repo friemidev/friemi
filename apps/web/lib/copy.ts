@@ -34,7 +34,7 @@ const copy = {
       home: "首页",
       activities: "活动",
       lobby: "组队大厅",
-      lobbyShort: "大厅",
+      lobbyShort: "组队",
       newActivity: "我要组局",
       newActivityShort: "组局",
       messages: "消息",

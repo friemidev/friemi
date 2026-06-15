@@ -196,16 +196,16 @@ feature/organizer-self-participation-toggle
 建议分支：
 
 ```text
-feature/public-event-copy-button
+feature/public-event-copy-address-enrichment
 ```
 
 小功能：
 
-- [ ] `/public-events/[publicEventId]` 活动页面增加复制按钮
-- [ ] 复制按钮能力和 `/activities/[activityId]` 页面保持一致
-- [ ] 复制内容包含活动标题、时间、地点和页面链接
-- [ ] 复制成功和失败都需要有明确反馈
-- [ ] 移动端按钮不挤压详情页主要操作区
+- [x] `/public-events/[publicEventId]` 活动页面增加复制按钮
+- [x] 复制按钮能力和 `/activities/[activityId]` 页面保持一致
+- [x] 复制内容包含活动标题、时间、地点、费用和页面链接
+- [x] 复制成功和失败都需要有明确反馈
+- [x] 移动端按钮不挤压详情页主要操作区
 
 验收标准：
 
@@ -218,17 +218,23 @@ feature/public-event-copy-button
 建议分支：
 
 ```text
-feature/public-event-address-enrichment
+feature/public-event-copy-address-enrichment
 ```
 
 小功能：
 
-- [ ] 排查线上部分活动地址只显示 `Paris` 但地图已有定位的原因
-- [ ] 确认数据源中是否存在具体地址、经纬度、场馆名或地图 place 信息
-- [ ] 如果有经纬度但地址过于笼统，评估是否可以用地图信息回填更具体地址
-- [ ] 明确哪些地址可以自动替换，哪些需要保留原始来源避免误导
-- [ ] 对回填结果保留来源标记，避免把推断地址当作官方地址
-- [ ] 对无法确定具体地址的活动展示合理兜底文案
+- [x] 排查线上部分活动地址只显示 `Paris` 但地图已有定位的原因
+- [x] 确认数据源中是否存在具体地址、经纬度、场馆名或地图 place 信息
+- [x] 如果有经纬度但地址过于笼统，评估是否可以用地图信息回填更具体地址
+- [x] 明确哪些地址可以自动替换，哪些需要保留原始来源避免误导
+- [x] 对回填结果保留来源标记，避免把推断地址当作官方地址
+- [x] 对无法确定具体地址的活动展示合理兜底文案
+
+实现说明：
+
+- Paris Open Data 导入中，如果 `address_name` 和 `address_street` 都缺失，会回退为 `Paris`。
+- 本版本不做不可靠的反向地理编码替换；当地址只有 `Paris` 但有经纬度时，列表和详情展示“地图定位可用，具体地址以官方页面为准”。
+- 复制地点时会保留来源地址、坐标和地图链接，避免把推断位置展示成官方地址。
 
 验收标准：
 
