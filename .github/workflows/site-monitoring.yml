@@ -1,0 +1,61 @@
+name: Site Monitoring
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site URL to monitor, for example https://preview.example.com"
+        required: false
+        type: string
+      max_load_ms:
+        description: "Maximum DOMContentLoaded time before failing"
+        required: false
+        default: "10000"
+        type: string
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  playwright-monitoring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_MONITOR_BASE_URL: ${{ github.event.inputs.base_url || vars.PLAYWRIGHT_MONITOR_BASE_URL }}
+      PLAYWRIGHT_MONITOR_MAX_LOAD_MS: ${{ github.event.inputs.max_load_ms || vars.PLAYWRIGHT_MONITOR_MAX_LOAD_MS || '10000' }}
+      PLAYWRIGHT_AUTH_STORAGE_STATE: ${{ vars.PLAYWRIGHT_AUTH_STORAGE_STATE }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate monitoring target
+        run: |
+          if [ -z "$PLAYWRIGHT_MONITOR_BASE_URL" ]; then
+            echo "::error::Set repository variable PLAYWRIGHT_MONITOR_BASE_URL or pass base_url manually."
+            exit 1
+          fi
+
+      - name: Run site monitoring
+        run: npm run monitor:site --workspace=apps/web
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-monitoring-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 14

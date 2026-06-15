@@ -16,6 +16,8 @@ build
 
 # Test / coverage
 coverage
+playwright-report
+test-results
 *.tsbuildinfo
 
 # Environment files

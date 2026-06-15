@@ -17,6 +17,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "monitor:site": "npm run monitor:site --workspace=apps/web",
     "format": "prettier --write .",
     "db:generate": "npm run db:generate --workspace=apps/web",
     "db:push": "npm run db:push --workspace=apps/web",
