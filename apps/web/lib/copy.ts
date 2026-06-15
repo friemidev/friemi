@@ -1733,11 +1733,11 @@ const copy = {
       emptyDescription:
         "Lancez un plan, parcourez les infos activité ou ajoutez quelques amis.",
       emptySectionTitle: "Commencez par ici",
-      openTitle: "Groupes ouverts",
+      openTitle: "Groupes publics",
       openDescription:
         "Des groupes publics visibles par les utilisateurs connectés, parfaits pour rencontrer de nouvelles personnes.",
       openEmptyDescription:
-        "Aucun groupe ouvert pour le moment. Lancez-en un depuis une page d'activité.",
+        "Aucun groupe public pour le moment. Lancez-en un depuis une page d'activité.",
       createdTitle: "Créées par moi",
       createdDescription:
         "Quand vous voulez lancer un plan, commencez ici. Les plans que vous créez apparaîtront dans cette section.",
@@ -1835,7 +1835,7 @@ const copy = {
       contactOrganizerHint: "Posez vos questions avant de rejoindre.",
       type: "Type",
       visibility: "Visibilité",
-      visibilityPublic: "Groupe ouvert",
+      visibilityPublic: "Groupe public",
       visibilityPrivate: "Groupe privé",
       destination: "Destination",
       participants: "Inscrits",
@@ -2300,7 +2300,7 @@ const copy = {
       endAt: "Fin",
       endAtHint: "Facultatif. Si renseignée, doit être après le début.",
       visibilityTitle: "Qui peut voir ce groupe",
-      visibilityPublic: "Groupe ouvert",
+      visibilityPublic: "Groupe public",
       visibilityPublicHint:
         "Visible dans le hall d'équipe. Les utilisateurs connectés peuvent le voir et demander à rejoindre.",
       visibilityPrivate: "Groupe privé",
@@ -2342,11 +2342,11 @@ const copy = {
         OTHER: "Autre",
       },
       statuses: {
-        OPEN: "Ouvert",
+        OPEN: "Rejoignable",
         FULL: "Complet",
         DRAFT: "Brouillon",
-        RECRUITING: "Ouvert",
-        CONFIRMED: "Ouvert",
+        RECRUITING: "Rejoignable",
+        CONFIRMED: "Confirme",
         ENDED: "Terminé",
         CANCELLED: "Annulé",
       },
