@@ -72,6 +72,8 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   minParticipants: number | null;
   requiresApproval: boolean;
   priceType: PriceType;
+  shareEnabled?: boolean;
+  shareToken?: string | null;
   organizer: ActivityOrganizerViewModel;
   publicEvent: {
     id: string;

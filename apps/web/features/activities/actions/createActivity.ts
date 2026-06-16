@@ -25,6 +25,7 @@ import { getPublicEventCopy } from "@/features/public-events/copy";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
+import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -372,6 +373,11 @@ export async function createActivityAction(
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
         visibility: result.data.visibility,
+        shareEnabled: result.data.visibility === "PRIVATE",
+        shareToken:
+          result.data.visibility === "PRIVATE"
+            ? generateActivityShareToken()
+            : null,
         organizerId: profile.id,
         participants: {
           create: {

@@ -71,11 +71,18 @@ import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import {
+  ensurePrivateActivityShareToken,
+  getPrivateActivitySharePath,
+} from "@/features/activities/utils/activityShareAccess";
 
 type ActivityDetailPageProps = {
   params: Promise<{
     locale: string;
     activityId: string;
+  }>;
+  searchParams: Promise<{
+    access?: string;
   }>;
 };
 
@@ -83,8 +90,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ActivityDetailPage({
   params,
+  searchParams,
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
+  const { access: accessToken } = await searchParams;
   const perf = createPerformanceTracker({
     locale,
     route: "/activities/[activityId]",
@@ -103,7 +112,12 @@ export default async function ActivityDetailPage({
     : [];
   const [activity, activityIsFavorited] = await Promise.all([
     perf.measure("activity.primary", () =>
-      getActivityById(activityId, viewerProfile?.id ?? null, viewerFriendIds),
+      getActivityById(
+        activityId,
+        viewerProfile?.id ?? null,
+        viewerFriendIds,
+        accessToken ?? null,
+      ),
     ),
     perf.measure("activity.favoriteState", () =>
       getViewerActivityFavorite(activityId, viewerProfile?.id),
@@ -113,6 +127,22 @@ export default async function ActivityDetailPage({
   if (!activity) {
     notFound();
   }
+
+  const isPrivateActivity = activity.visibility === "PRIVATE";
+  const shareToken =
+    isPrivateActivity && viewerProfile?.id === activity.organizer.id
+      ? await ensurePrivateActivityShareToken(activity.id)
+      : activity.shareEnabled && activity.shareToken
+        ? activity.shareToken
+        : null;
+  const privateSharePath =
+    isPrivateActivity && (accessToken || shareToken)
+      ? getPrivateActivitySharePath({
+          activityId: activity.id,
+          locale,
+          shareToken: accessToken || shareToken || "",
+        })
+      : null;
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
@@ -694,6 +724,7 @@ export default async function ActivityDetailPage({
               locationLabel={activityLocationLabel}
               locale={locale}
               priceLabel={activityPriceLabel}
+              sharePath={privateSharePath}
             />
           </div>
         </article>
@@ -850,6 +881,7 @@ export default async function ActivityDetailPage({
                 <JoinActivityForm
                   activityId={activity.id}
                   activityTitle={activity.title}
+                  accessToken={accessToken ?? null}
                   compactUnauthenticated
                   locale={locale}
                   requiresApproval={activity.requiresApproval}
@@ -934,6 +966,7 @@ export default async function ActivityDetailPage({
               locationLabel={activityLocationLabel}
               locale={locale}
               priceLabel={activityPriceLabel}
+              sharePath={privateSharePath}
             />
           </div>
         </aside>

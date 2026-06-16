@@ -18,6 +18,7 @@ import {
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -63,6 +64,7 @@ export async function updateActivityAction(
       city: true,
       id: true,
       endAt: true,
+      shareToken: true,
       startAt: true,
       status: true,
       participants: {
@@ -221,6 +223,11 @@ export async function updateActivityAction(
           requiresApproval: result.data.requiresApproval,
           priceType: result.data.priceType,
           priceText: result.data.priceText,
+          shareEnabled: result.data.visibility === "PRIVATE",
+          shareToken:
+            result.data.visibility === "PRIVATE"
+              ? editableActivity.shareToken ?? generateActivityShareToken()
+              : null,
         },
       });
 
