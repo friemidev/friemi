@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { locales } from "@chill-club/shared";
 import {
@@ -15,6 +14,7 @@ import {
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
 type MobileNavProps = {
   locale: string;
@@ -23,7 +23,6 @@ type MobileNavProps = {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
-  const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
@@ -49,12 +48,6 @@ export function MobileNav({ locale }: MobileNavProps) {
       t.nav.profileShort,
     ],
   );
-
-  useEffect(() => {
-    items.forEach((item) => {
-      router.prefetch(withLocale(currentLocale, item.href));
-    });
-  }, [currentLocale, items, router]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -88,12 +81,11 @@ export function MobileNav({ locale }: MobileNavProps) {
           const active = isItemActive(item.href);
 
           return (
-            <Link
+            <IntentPrefetchLink
               key={item.href}
               href={withLocale(currentLocale, item.href)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
-              prefetch
               title={item.label}
               onClick={() => {
                 if (!active) {
@@ -139,7 +131,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 )}
               </span>
               <span className="max-w-full whitespace-nowrap">{item.label}</span>
-            </Link>
+            </IntentPrefetchLink>
           );
         })}
       </div>

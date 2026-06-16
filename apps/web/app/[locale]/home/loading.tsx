@@ -47,7 +47,7 @@ export default function HomeLoading() {
           <ShimmerBlock className="hidden h-9 w-20 rounded-full sm:block" delay={200} />
         </div>
         <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => (
+          {Array.from({ length: 8 }, (_, item) => item).map((item) => (
             <HomeCardSkeleton key={item} index={item} />
           ))}
         </div>

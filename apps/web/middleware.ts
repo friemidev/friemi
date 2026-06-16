@@ -29,6 +29,7 @@ const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
+const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
@@ -101,6 +102,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isSearchApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   return intlMiddleware(request);
 });
 
@@ -116,5 +121,6 @@ export const config = {
     "/api/notifications/:path*",
     "/api/lobby/:path*",
     "/api/analytics/:path*",
+    "/api/search/:path*",
   ],
 };

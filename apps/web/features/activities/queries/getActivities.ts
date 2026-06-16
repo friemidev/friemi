@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -187,6 +188,51 @@ const publicEventCardSelect = {
       },
     },
   },
+} satisfies Prisma.PublicEventSelect;
+
+const homeActivityPreviewSelect = {
+  id: true,
+  title: true,
+  description: true,
+  type: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  coverImageUrl: true,
+  priceText: true,
+  status: true,
+  visibility: true,
+  publicEventId: true,
+  source: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+  importedAt: true,
+  createdAt: true,
+} satisfies Prisma.ActivitySelect;
+
+const homePublicEventPreviewSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  coverImageUrl: true,
+  priceText: true,
+  status: true,
+  sourceUrl: true,
+  externalUrl: true,
+  createdAt: true,
 } satisfies Prisma.PublicEventSelect;
 
 type GetActivitiesOptions = {
@@ -449,6 +495,14 @@ type ActivityQueryResult = Prisma.ActivityGetPayload<{
 
 type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventCardSelect;
+}>;
+
+type HomeActivityPreviewQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof homeActivityPreviewSelect;
+}>;
+
+type HomePublicEventPreviewQueryResult = Prisma.PublicEventGetPayload<{
+  select: typeof homePublicEventPreviewSelect;
 }>;
 
 type RankedActivityCard = {
@@ -754,10 +808,32 @@ function getActivityInfoDedupeKeys(item: {
   return keys;
 }
 
-function filterDuplicateLegacyActivityInfoRows(
-  activities: ActivityQueryResult[],
-  publicEvents: PublicEventQueryResult[],
-) {
+function filterDuplicateLegacyActivityInfoRows<
+  TActivity extends {
+    id?: string | null;
+    publicEventId?: string | null;
+    source?: string | null;
+    sourceUrl?: string | null;
+    externalSource?: string | null;
+    externalId?: string | null;
+    externalUrl?: string | null;
+    importedAt?: Date | string | null;
+    title: string;
+    city: string;
+    address: string;
+    startAt: Date | string;
+  },
+  TPublicEvent extends {
+    sourceUrl?: string | null;
+    externalSource?: string | null;
+    externalId?: string | null;
+    externalUrl?: string | null;
+    title: string;
+    city: string;
+    address: string;
+    startAt: Date | string;
+  },
+>(activities: TActivity[], publicEvents: TPublicEvent[]) {
   if (activities.length === 0 || publicEvents.length === 0) {
     return activities;
   }
@@ -1007,6 +1083,76 @@ function getPublicEventActivityCardViewModel(
       coverImageUrl: publicEvent.coverImageUrl,
       favoriteCount: publicEvent._count.favorites,
       participantCount: publicEvent._count.teams,
+      priceText: publicEvent.priceText ?? "",
+      status: "RECRUITING",
+      visibility: "PUBLIC",
+      coverTone: getActivityCoverTone(publicEvent.id),
+      isActivityInfo: true,
+      officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,
+      merchant: null,
+      friendSignal: null,
+      isFavorited: false,
+    },
+    createdAt: publicEvent.createdAt,
+  };
+}
+
+function getHomeActivityPreviewCardViewModel(
+  activity: HomeActivityPreviewQueryResult,
+): RankedActivityCard {
+  return {
+    card: {
+      id: activity.id,
+      publicEventId: activity.publicEventId,
+      title: activity.title,
+      description: activity.description,
+      type: "PUBLIC_EVENT",
+      category: activity.category,
+      city: activity.city,
+      address: activity.address,
+      latitude: activity.latitude,
+      longitude: activity.longitude,
+      startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+      endAt: toIsoString(activity.endAt),
+      capacity: 0,
+      coverImageUrl: activity.coverImageUrl,
+      favoriteCount: 0,
+      participantCount: 0,
+      priceText: activity.priceText,
+      status: activity.status,
+      visibility: activity.visibility,
+      coverTone: getActivityCoverTone(activity.id),
+      isActivityInfo: true,
+      officialUrl: activity.externalUrl ?? activity.sourceUrl,
+      merchant: null,
+      friendSignal: null,
+      isFavorited: false,
+    },
+    createdAt: activity.createdAt,
+  };
+}
+
+function getHomePublicEventPreviewCardViewModel(
+  publicEvent: HomePublicEventPreviewQueryResult,
+): RankedActivityCard {
+  return {
+    card: {
+      id: publicEvent.id,
+      publicEventId: publicEvent.id,
+      title: publicEvent.title,
+      description: publicEvent.description,
+      type: "PUBLIC_EVENT",
+      category: publicEvent.category,
+      city: publicEvent.city,
+      address: publicEvent.address,
+      latitude: publicEvent.latitude,
+      longitude: publicEvent.longitude,
+      startAt: toIsoString(publicEvent.startAt) ?? new Date().toISOString(),
+      endAt: toIsoString(publicEvent.endAt),
+      capacity: 0,
+      coverImageUrl: publicEvent.coverImageUrl,
+      favoriteCount: 0,
+      participantCount: 0,
       priceText: publicEvent.priceText ?? "",
       status: "RECRUITING",
       visibility: "PUBLIC",
@@ -1274,6 +1420,54 @@ export async function getActivities(
     rankedActivities,
     options.viewerProfileId,
   );
+}
+
+export async function getUpcomingHomeActivities({
+  limit = 8,
+}: {
+  limit?: number;
+} = {}): Promise<ActivityCardViewModel[]> {
+  const now = new Date();
+  const safeLimit = normalizeLimit(limit) ?? 8;
+  const upcomingActivityWhere: Prisma.ActivityWhereInput = {
+    AND: [
+      getVisibleActivityWhere({ now }),
+      getActivityTimeStateWhere("UPCOMING", now),
+      getLegacyPublicActivityInfoWhere(),
+    ],
+  };
+  const upcomingPublicEventWhere: Prisma.PublicEventWhereInput = {
+    AND: [
+      getVisiblePublicEventWhere({ now }),
+      getPublicEventTimeStateWhere("UPCOMING", now),
+    ],
+  };
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where: upcomingActivityWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: safeLimit,
+      select: homeActivityPreviewSelect,
+    }),
+    prisma.publicEvent.findMany({
+      where: upcomingPublicEventWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: safeLimit,
+      select: homePublicEventPreviewSelect,
+    }),
+  ]);
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getHomeActivityPreviewCardViewModel,
+    ),
+    ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
+  ]
+    .sort((left, right) =>
+      compareRankedActivities({ sort: "recommended" }, left, right),
+    )
+    .slice(0, safeLimit);
+
+  return rankedActivities.map((activity) => activity.card);
 }
 
 function getActivityTotalPages(totalCount: number, pageSize: number) {
@@ -1677,62 +1871,88 @@ async function getPublicInfoOnlyActivityList(
   now: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
+  const perf = createActionPerformanceTracker({
+    action: "activities.publicInfoList",
+    metadata: {
+      hasFilters: hasExplicitActivityListFilters(filters),
+      page: filters.page,
+      pageSize,
+      sort: filters.sort,
+    },
+  });
   const publicInfoFilters = getPublicInfoOnlyFilters(filters);
   const activityWhere = getPublicInfoActivityListWhere(publicInfoFilters, now);
   const publicEventWhere = getPublicInfoPublicEventListWhere(
     publicInfoFilters,
     now,
   );
-  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
-    prisma.activity.count({ where: activityWhere }),
-    prisma.publicEvent.count({ where: publicEventWhere }),
-  ]);
-  const totalCount = activityTotalCount + publicEventTotalCount;
-  const totalPages = getActivityTotalPages(totalCount, pageSize);
-  const page = getActivityPage(filters.page, totalPages);
   const useRecommendedSort =
     publicInfoFilters.sort === "recommended" &&
     !hasExplicitActivityListFilters(publicInfoFilters);
-  const readLimit = useRecommendedSort ? undefined : page * pageSize;
+  const requestedPage = Math.max(filters.page, 1);
+  const readLimit = useRecommendedSort
+    ? undefined
+    : requestedPage * pageSize + 1;
   const [activities, publicEvents] = await Promise.all([
-    prisma.activity.findMany({
-      where: activityWhere,
-      orderBy: getActivityListOrderBy(
-        publicInfoFilters,
-        publicInfoFilters.timeState,
-      ),
-      ...(readLimit ? { take: readLimit } : {}),
-      select: activityCardSelect,
-    }),
-    prisma.publicEvent.findMany({
-          where: publicEventWhere,
-          orderBy: getPublicEventListOrderBy(
-            publicInfoFilters,
-            publicInfoFilters.timeState,
-          ),
-      ...(readLimit ? { take: readLimit } : {}),
-      select: publicEventCardSelect,
-    }),
+    perf.measure("activity.list", () =>
+      prisma.activity.findMany({
+        where: activityWhere,
+        orderBy: getActivityListOrderBy(
+          publicInfoFilters,
+          publicInfoFilters.timeState,
+        ),
+        ...(readLimit ? { take: readLimit } : {}),
+        select: activityCardSelect,
+      }),
+    ),
+    perf.measure("publicEvent.list", () =>
+      prisma.publicEvent.findMany({
+        where: publicEventWhere,
+        orderBy: getPublicEventListOrderBy(
+          publicInfoFilters,
+          publicInfoFilters.timeState,
+        ),
+        ...(readLimit ? { take: readLimit } : {}),
+        select: publicEventCardSelect,
+      }),
+    ),
   ]);
   const dailySeed = useRecommendedSort ? getDailyRankingSeed(now) : null;
-  const rankedActivities = [
-    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getActivityRankedCardViewModel,
-    ),
-    ...publicEvents.map(getPublicEventActivityCardViewModel),
-  ]
-    .sort((left, right) =>
-      dailySeed
-        ? compareRecommendedRankedActivities(now, dailySeed, left, right)
-        : compareRankedActivities(publicInfoFilters, left, right),
-    )
-    .slice((page - 1) * pageSize, page * pageSize);
+  const allRankedActivities = await perf.measure("rank.slice", async () => {
+    const ranked = [
+      ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+        getActivityRankedCardViewModel,
+      ),
+      ...publicEvents.map(getPublicEventActivityCardViewModel),
+    ]
+      .sort((left, right) =>
+        dailySeed
+          ? compareRecommendedRankedActivities(now, dailySeed, left, right)
+          : compareRankedActivities(publicInfoFilters, left, right),
+      );
+
+    return ranked;
+  });
+  const totalCount = allRankedActivities.length;
+  const totalPages = getActivityTotalPages(totalCount, pageSize);
+  const page = getActivityPage(requestedPage, totalPages);
+  const rankedActivities = allRankedActivities.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+  const rankedActivitiesWithViewerState = await perf.measure("viewerState", () =>
+    attachJoinableActivityStates(rankedActivities, viewerProfileId),
+  );
+  perf.finish({
+    activityCandidateCount: activities.length,
+    publicEventCandidateCount: publicEvents.length,
+    resultCount: rankedActivities.length,
+    totalCount,
+    usedFirstPageCandidates: false,
+  });
 
   return {
-    activities: await attachJoinableActivityStates(
-      rankedActivities,
-      viewerProfileId,
-    ),
+    activities: rankedActivitiesWithViewerState,
     page,
     pageSize,
     totalCount,

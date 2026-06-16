@@ -30,6 +30,7 @@ const activityResultLimit = 6;
 export const globalSearchMainResultPageSize = 10;
 const merchantResultLimit = 5;
 const userResultLimit = 12;
+const searchResultProbeSize = 1;
 
 export type GlobalSearchMainActivityResultMode = "strict" | "related";
 
@@ -178,32 +179,6 @@ function getSearchPublicEventBaseWhere(
     : getUpcomingPublicEventWhere(now);
 }
 
-function getEndedPublicEventWhere(now: Date): Prisma.PublicEventWhereInput {
-  return {
-    status: "SCHEDULED",
-    visibility: "PUBLIC",
-    OR: [
-      {
-        endAt: {
-          lte: now,
-        },
-      },
-      {
-        AND: [
-          {
-            endAt: null,
-          },
-          {
-            startAt: {
-              lte: now,
-            },
-          },
-        ],
-      },
-    ],
-  };
-}
-
 function mapPublicEventToSearchActivityCard(
   event: PublicEventCardViewModel,
 ): ActivityCardViewModel {
@@ -305,6 +280,16 @@ function sortRelatedSearchActivityCards(
   );
 }
 
+function splitProbeResults<T>(items: T[], limit: number) {
+  const hasMore = items.length > limit;
+
+  return {
+    hasMore,
+    items: hasMore ? items.slice(0, limit) : items,
+    totalCount: hasMore ? limit + searchResultProbeSize : items.length,
+  };
+}
+
 export async function getGlobalSearchResults(
   rawQuery: string,
   currentUserProfileId?: string | null,
@@ -341,18 +326,6 @@ export async function getGlobalSearchResults(
 
   const now = new Date();
   const activeActivityWhere = getVisibleActivityWhere({ now });
-  const endedActivityWhere = getActivityTimeStateWhere("ENDED", now);
-  const activitySearchWhere = getActivitySearchWhere(terms, "strict");
-  const hiddenEndedActivityWhere = {
-    AND: [
-      getVisibleActivityWhere({ includeEnded: true, includePast: true, now }),
-      activitySearchWhere,
-      endedActivityWhere,
-    ],
-  };
-  const hiddenEndedPublicEventWhere = {
-    AND: [getEndedPublicEventWhere(now), getPublicEventSearchWhere(terms, "strict")],
-  };
   const merchantSearchWhere = {
     isActive: true,
     AND: terms.map((term) => ({
@@ -388,24 +361,12 @@ export async function getGlobalSearchResults(
           ],
         })),
       };
-  const [
-    userCount,
-    users,
-    merchantCount,
-    merchants,
-    hiddenEndedActivityCount,
-    hiddenEndedPublicEventCount,
-  ] = await Promise.all([
-    perf.measure("user.count", () =>
-      prisma.userProfile.count({
-        where: userSearchWhere,
-      }),
-    ),
+  const [usersWithProbe, merchantsWithProbe] = await Promise.all([
     perf.measure("user.list", () =>
       prisma.userProfile.findMany({
         where: userSearchWhere,
         orderBy: [{ nickname: "asc" }, { id: "asc" }],
-        take: userResultLimit,
+        take: userResultLimit + searchResultProbeSize,
         select: {
           id: true,
           nickname: true,
@@ -414,16 +375,11 @@ export async function getGlobalSearchResults(
         },
       }),
     ),
-    perf.measure("merchant.count", () =>
-      prisma.merchant.count({
-        where: merchantSearchWhere,
-      }),
-    ),
     perf.measure("merchant.list", () =>
       prisma.merchant.findMany({
         where: merchantSearchWhere,
         orderBy: [{ name: "asc" }, { id: "asc" }],
-        take: merchantResultLimit,
+        take: merchantResultLimit + searchResultProbeSize,
         select: {
           id: true,
           slug: true,
@@ -442,21 +398,17 @@ export async function getGlobalSearchResults(
         },
       }),
     ),
-    includeEnded
-      ? Promise.resolve(0)
-      : perf.measure("hiddenEnded.activity.count", () =>
-          prisma.activity.count({
-            where: hiddenEndedActivityWhere,
-          }),
-        ),
-    includeEnded
-      ? Promise.resolve(0)
-      : perf.measure("hiddenEnded.publicEvent.count", () =>
-          prisma.publicEvent.count({
-            where: hiddenEndedPublicEventWhere,
-          }),
-        ),
   ]);
+  const {
+    items: users,
+    totalCount: userCount,
+    hasMore: hasMoreUsers,
+  } = splitProbeResults(usersWithProbe, userResultLimit);
+  const {
+    items: merchants,
+    totalCount: merchantCount,
+    hasMore: hasMoreMerchants,
+  } = splitProbeResults(merchantsWithProbe, merchantResultLimit);
   const userRelationshipStatuses = await perf.measure(
     "user.relationships",
     () =>
@@ -466,6 +418,8 @@ export async function getGlobalSearchResults(
       ),
   );
   perf.finish({
+    hasMoreMerchants,
+    hasMoreUsers,
     merchantCount,
     userCount,
   });
@@ -496,8 +450,8 @@ export async function getGlobalSearchResults(
       activityCount: merchant._count.activities,
     })),
     merchantCount,
-    hiddenEndedActivityCount,
-    hiddenEndedPublicEventCount,
+    hiddenEndedActivityCount: 0,
+    hiddenEndedPublicEventCount: 0,
   };
 }
 
@@ -554,9 +508,6 @@ export async function getGlobalSearchMainActivityResults(
     : activeActivityWhere;
   const endedActivityWhere = getActivityTimeStateWhere("ENDED", now);
   const activitySearchWhere = getActivitySearchWhere(terms, mode);
-  const activityWhere = {
-    AND: [searchableActivityWhere, activitySearchWhere],
-  };
   const activeActivityResultWhere = {
     AND: [activeActivityWhere, activitySearchWhere],
   };
@@ -569,29 +520,14 @@ export async function getGlobalSearchMainActivityResults(
       getPublicEventSearchWhere(terms, mode),
     ],
   };
-  const fetchLimit = offset + limit;
-  const [
-    activityCount,
-    activities,
-    publicEventCount,
-    publicEvents,
-  ] = await Promise.all([
-    perf.measure("activity.count", () =>
-      prisma.activity.count({
-        where: activityWhere,
-      }),
-    ),
+  const fetchLimit = offset + limit + searchResultProbeSize;
+  const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       getSearchActivityResults(
         activeActivityResultWhere,
         includeEnded ? endedActivityResultWhere : null,
         fetchLimit,
       ),
-    ),
-    perf.measure("publicEvent.count", () =>
-      prisma.publicEvent.count({
-        where: publicEventSearchWhere,
-      }),
     ),
     perf.measure("publicEvent.list", () =>
       prisma.publicEvent.findMany({
@@ -634,23 +570,32 @@ export async function getGlobalSearchMainActivityResults(
     );
   });
   const items = mixedResults.slice(offset, offset + limit);
-  const totalCount = activityCount + publicEventCount;
+  const hasMore = mixedResults.length > offset + limit;
+  const totalCount = hasMore
+    ? offset + limit + searchResultProbeSize
+    : mixedResults.length;
+  const countedResults = mixedResults.slice(0, totalCount);
+  const countedPublicEventCount = countedResults.filter(
+    (activity) => activity.type === "PUBLIC_EVENT",
+  ).length;
+  const countedActivityCount = countedResults.length - countedPublicEventCount;
   const nextOffset = offset + items.length;
 
   perf.finish({
-    activityCount,
+    activityCount: countedActivityCount,
+    hasMore,
     itemCount: items.length,
-    publicEventCount,
+    publicEventCount: countedPublicEventCount,
     totalCount,
   });
 
   return {
-    activityCount,
+    activityCount: countedActivityCount,
     items,
     mode,
-    publicEventCount,
+    publicEventCount: countedPublicEventCount,
     totalCount,
-    hasMore: items.length > 0 && nextOffset < totalCount,
+    hasMore: items.length > 0 && hasMore,
     nextOffset,
   };
 }

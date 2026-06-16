@@ -163,9 +163,9 @@ const copy = {
       homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",
       emptyPreviewTitle: "暂无活动",
       emptyPreviewDescription: "有新活动后会显示在这里。",
-      recentTitle: "最近活动",
-      recentDescription: "按开始时间展示最近的活动和正在组局的内容。",
-      emptyRecentDescription: "有新的活动后会显示在这里。",
+      recentTitle: "即将开始",
+      recentDescription: "只展示尚未开始的活动和组局，按最近开始时间排序。",
+      emptyRecentDescription: "有新的未开始活动后会显示在这里。",
     },
     activities: {
       title: "发现活动",
@@ -923,10 +923,10 @@ const copy = {
       emptyPreviewTitle: "No activities yet",
       emptyPreviewDescription:
         "Joinable activities will appear here once they are added.",
-      recentTitle: "Recent activities",
+      recentTitle: "Starting soon",
       recentDescription:
-        "Recent activity info and crews sorted by nearest start time.",
-      emptyRecentDescription: "New activities will appear here.",
+        "Upcoming activities and crews only, sorted by nearest start time.",
+      emptyRecentDescription: "Upcoming activities will appear here.",
     },
     activities: {
       title: "Discover activities",
@@ -1742,11 +1742,11 @@ const copy = {
         "Les activités sont indisponibles pour le moment. Réessayez plus tard.",
       emptyPreviewTitle: "Aucune activité",
       emptyPreviewDescription: "Les activités en recrutement apparaîtront ici.",
-      recentTitle: "Activités récentes",
+      recentTitle: "À venir",
       recentDescription:
-        "Activités publiques à venir, triées par date de début proche.",
+        "Activités et groupes non commencés, triés par date de début proche.",
       emptyRecentDescription:
-        "Les nouvelles activités publiques apparaîtront ici.",
+        "Les prochaines activités publiques apparaîtront ici.",
     },
     activities: {
       title: "Découvrir les sorties",

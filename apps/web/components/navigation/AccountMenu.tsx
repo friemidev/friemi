@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -26,6 +25,7 @@ import { useNotificationBadge } from "@/features/notifications/components/Notifi
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
 const AddFriendDialog = dynamic(
   () =>
@@ -390,7 +390,7 @@ function MenuLink({
   onClick: () => void;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       role="menuitem"
       href={href}
       onClick={onClick}
@@ -423,7 +423,7 @@ function MenuLink({
           </span>
         ) : null}
       </span>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 

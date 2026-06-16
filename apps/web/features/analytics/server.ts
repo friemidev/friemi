@@ -17,10 +17,21 @@ type TrackAnalyticsEventOptions = {
   userAgent?: string | null;
 };
 
+let analyticsWriteQueue = Promise.resolve();
+
 function toNullableString(value: string | null | undefined) {
   const normalized = value?.trim();
 
   return normalized ? normalized : null;
+}
+
+function isConnectionPoolTimeout(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2024"
+  );
 }
 
 export async function trackAnalyticsEvent(
@@ -76,6 +87,12 @@ export async function trackAnalyticsEvent(
 
     return { ok: true as const };
   } catch (error) {
+    if (isConnectionPoolTimeout(error)) {
+      console.warn("Skipped analytics event because the database pool is busy");
+
+      return { ok: false as const };
+    }
+
     console.error("Failed to track analytics event", error);
 
     return { ok: false as const };
@@ -86,5 +103,8 @@ export function queueAnalyticsEvent(
   input: AnalyticsEventInput,
   options: TrackAnalyticsEventOptions = {},
 ) {
-  void trackAnalyticsEvent(input, options);
+  analyticsWriteQueue = analyticsWriteQueue
+    .catch(() => undefined)
+    .then(() => trackAnalyticsEvent(input, options))
+    .then(() => undefined);
 }
