@@ -190,6 +190,51 @@ const publicEventCardSelect = {
   },
 } satisfies Prisma.PublicEventSelect;
 
+const homeActivityPreviewSelect = {
+  id: true,
+  title: true,
+  description: true,
+  type: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  coverImageUrl: true,
+  priceText: true,
+  status: true,
+  visibility: true,
+  publicEventId: true,
+  source: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+  importedAt: true,
+  createdAt: true,
+} satisfies Prisma.ActivitySelect;
+
+const homePublicEventPreviewSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  coverImageUrl: true,
+  priceText: true,
+  status: true,
+  sourceUrl: true,
+  externalUrl: true,
+  createdAt: true,
+} satisfies Prisma.PublicEventSelect;
+
 type GetActivitiesOptions = {
   filters?: ActivityFilters;
   includePast?: boolean;
@@ -450,6 +495,14 @@ type ActivityQueryResult = Prisma.ActivityGetPayload<{
 
 type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventCardSelect;
+}>;
+
+type HomeActivityPreviewQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof homeActivityPreviewSelect;
+}>;
+
+type HomePublicEventPreviewQueryResult = Prisma.PublicEventGetPayload<{
+  select: typeof homePublicEventPreviewSelect;
 }>;
 
 type RankedActivityCard = {
@@ -755,10 +808,32 @@ function getActivityInfoDedupeKeys(item: {
   return keys;
 }
 
-function filterDuplicateLegacyActivityInfoRows(
-  activities: ActivityQueryResult[],
-  publicEvents: PublicEventQueryResult[],
-) {
+function filterDuplicateLegacyActivityInfoRows<
+  TActivity extends {
+    id?: string | null;
+    publicEventId?: string | null;
+    source?: string | null;
+    sourceUrl?: string | null;
+    externalSource?: string | null;
+    externalId?: string | null;
+    externalUrl?: string | null;
+    importedAt?: Date | string | null;
+    title: string;
+    city: string;
+    address: string;
+    startAt: Date | string;
+  },
+  TPublicEvent extends {
+    sourceUrl?: string | null;
+    externalSource?: string | null;
+    externalId?: string | null;
+    externalUrl?: string | null;
+    title: string;
+    city: string;
+    address: string;
+    startAt: Date | string;
+  },
+>(activities: TActivity[], publicEvents: TPublicEvent[]) {
   if (activities.length === 0 || publicEvents.length === 0) {
     return activities;
   }
@@ -1008,6 +1083,76 @@ function getPublicEventActivityCardViewModel(
       coverImageUrl: publicEvent.coverImageUrl,
       favoriteCount: publicEvent._count.favorites,
       participantCount: publicEvent._count.teams,
+      priceText: publicEvent.priceText ?? "",
+      status: "RECRUITING",
+      visibility: "PUBLIC",
+      coverTone: getActivityCoverTone(publicEvent.id),
+      isActivityInfo: true,
+      officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,
+      merchant: null,
+      friendSignal: null,
+      isFavorited: false,
+    },
+    createdAt: publicEvent.createdAt,
+  };
+}
+
+function getHomeActivityPreviewCardViewModel(
+  activity: HomeActivityPreviewQueryResult,
+): RankedActivityCard {
+  return {
+    card: {
+      id: activity.id,
+      publicEventId: activity.publicEventId,
+      title: activity.title,
+      description: activity.description,
+      type: "PUBLIC_EVENT",
+      category: activity.category,
+      city: activity.city,
+      address: activity.address,
+      latitude: activity.latitude,
+      longitude: activity.longitude,
+      startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+      endAt: toIsoString(activity.endAt),
+      capacity: 0,
+      coverImageUrl: activity.coverImageUrl,
+      favoriteCount: 0,
+      participantCount: 0,
+      priceText: activity.priceText,
+      status: activity.status,
+      visibility: activity.visibility,
+      coverTone: getActivityCoverTone(activity.id),
+      isActivityInfo: true,
+      officialUrl: activity.externalUrl ?? activity.sourceUrl,
+      merchant: null,
+      friendSignal: null,
+      isFavorited: false,
+    },
+    createdAt: activity.createdAt,
+  };
+}
+
+function getHomePublicEventPreviewCardViewModel(
+  publicEvent: HomePublicEventPreviewQueryResult,
+): RankedActivityCard {
+  return {
+    card: {
+      id: publicEvent.id,
+      publicEventId: publicEvent.id,
+      title: publicEvent.title,
+      description: publicEvent.description,
+      type: "PUBLIC_EVENT",
+      category: publicEvent.category,
+      city: publicEvent.city,
+      address: publicEvent.address,
+      latitude: publicEvent.latitude,
+      longitude: publicEvent.longitude,
+      startAt: toIsoString(publicEvent.startAt) ?? new Date().toISOString(),
+      endAt: toIsoString(publicEvent.endAt),
+      capacity: 0,
+      coverImageUrl: publicEvent.coverImageUrl,
+      favoriteCount: 0,
+      participantCount: 0,
       priceText: publicEvent.priceText ?? "",
       status: "RECRUITING",
       visibility: "PUBLIC",
@@ -1288,6 +1433,7 @@ export async function getUpcomingHomeActivities({
     AND: [
       getVisibleActivityWhere({ now }),
       getActivityTimeStateWhere("UPCOMING", now),
+      getLegacyPublicActivityInfoWhere(),
     ],
   };
   const upcomingPublicEventWhere: Prisma.PublicEventWhereInput = {
@@ -1301,27 +1447,27 @@ export async function getUpcomingHomeActivities({
       where: upcomingActivityWhere,
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: safeLimit,
-      select: activityCardSelect,
+      select: homeActivityPreviewSelect,
     }),
     prisma.publicEvent.findMany({
       where: upcomingPublicEventWhere,
       orderBy: [{ startAt: "asc" }, { id: "asc" }],
       take: safeLimit,
-      select: publicEventCardSelect,
+      select: homePublicEventPreviewSelect,
     }),
   ]);
   const rankedActivities = [
     ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getActivityRankedCardViewModel,
+      getHomeActivityPreviewCardViewModel,
     ),
-    ...publicEvents.map(getPublicEventActivityCardViewModel),
+    ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
   ]
     .sort((left, right) =>
       compareRankedActivities({ sort: "recommended" }, left, right),
     )
     .slice(0, safeLimit);
 
-  return attachJoinableActivityStates(rankedActivities, null);
+  return rankedActivities.map((activity) => activity.card);
 }
 
 function getActivityTotalPages(totalCount: number, pageSize: number) {
