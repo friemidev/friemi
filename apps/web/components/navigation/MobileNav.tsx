@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { locales } from "@chill-club/shared";
@@ -15,6 +14,7 @@ import {
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
 type MobileNavProps = {
   locale: string;
@@ -81,12 +81,11 @@ export function MobileNav({ locale }: MobileNavProps) {
           const active = isItemActive(item.href);
 
           return (
-            <Link
+            <IntentPrefetchLink
               key={item.href}
               href={withLocale(currentLocale, item.href)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
-              prefetch={false}
               title={item.label}
               onClick={() => {
                 if (!active) {
@@ -132,7 +131,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 )}
               </span>
               <span className="max-w-full whitespace-nowrap">{item.label}</span>
-            </Link>
+            </IntentPrefetchLink>
           );
         })}
       </div>

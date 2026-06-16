@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { locales } from "@chill-club/shared";
@@ -14,6 +13,7 @@ import {
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
 type DesktopNavProps = {
   locale: string;
@@ -89,7 +89,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
         const active = isItemActive(item.href);
 
         return (
-          <Link
+          <IntentPrefetchLink
             key={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
@@ -103,7 +103,6 @@ export function DesktopNav({ locale }: DesktopNavProps) {
                   : "text-zinc-700 hover:bg-[#fff7ed] hover:text-ink",
             )}
             href={withLocale(currentLocale, item.href)}
-            prefetch={false}
           >
             <span
               className={cn(
@@ -122,7 +121,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
               strokeWidth={active ? 2.4 : 2}
             />
             {item.label}
-          </Link>
+          </IntentPrefetchLink>
         );
       })}
     </nav>

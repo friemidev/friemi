@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
+import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRequiredDialog";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
@@ -61,6 +62,10 @@ export default async function LocaleLayout({
             unreadNotificationCount={0}
           />
           <MobileScrollProgress />
+          <IdleRoutePrefetcher
+            enabled={Boolean(viewerProfile)}
+            locale={locale}
+          />
           {viewerProfile && viewerProfile.nickname.trim().length === 0 ? (
             <NicknameRequiredDialog locale={locale} />
           ) : null}
