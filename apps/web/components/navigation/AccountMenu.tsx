@@ -393,6 +393,7 @@ function MenuLink({
     <Link
       role="menuitem"
       href={href}
+      prefetch={false}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(

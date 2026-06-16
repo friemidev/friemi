@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { locales } from "@chill-club/shared";
 import {
@@ -23,7 +23,6 @@ type MobileNavProps = {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
-  const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
@@ -49,12 +48,6 @@ export function MobileNav({ locale }: MobileNavProps) {
       t.nav.profileShort,
     ],
   );
-
-  useEffect(() => {
-    items.forEach((item) => {
-      router.prefetch(withLocale(currentLocale, item.href));
-    });
-  }, [currentLocale, items, router]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -93,7 +86,7 @@ export function MobileNav({ locale }: MobileNavProps) {
               href={withLocale(currentLocale, item.href)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
-              prefetch
+              prefetch={false}
               title={item.label}
               onClick={() => {
                 if (!active) {

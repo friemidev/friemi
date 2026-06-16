@@ -39,6 +39,7 @@ export function NotificationHeaderLink({
           "bg-white text-ink ring-[#d8c9b3] before:absolute before:bottom-1 before:h-0.5 before:w-4 before:rounded-full before:bg-[#d88d72]",
       )}
       href={notificationsHref}
+      prefetch={false}
       title={label}
     >
       <Bell

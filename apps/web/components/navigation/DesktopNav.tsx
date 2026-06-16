@@ -103,7 +103,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
                   : "text-zinc-700 hover:bg-[#fff7ed] hover:text-ink",
             )}
             href={withLocale(currentLocale, item.href)}
-            prefetch
+            prefetch={false}
           >
             <span
               className={cn(
