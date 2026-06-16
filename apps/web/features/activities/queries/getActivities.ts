@@ -5,6 +5,7 @@ import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivi
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
+import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { Prisma } from "@prisma/client";
 import type {
   ActivityStatus,
@@ -95,6 +96,7 @@ export const activityCardSelect = {
   priceText: true,
   status: true,
   visibility: true,
+  organizerId: true,
   publicEventId: true,
   source: true,
   sourceUrl: true,
@@ -955,6 +957,7 @@ export function getActivityCardViewModel(
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     publicEventId: activity.publicEventId,
+    organizerId: activity.organizerId,
     participantPreview: isActivityInfo
       ? []
       : (activity.participants ?? []).map((participant) => ({
@@ -1125,7 +1128,7 @@ async function attachJoinableActivityStates(
     ]),
   );
 
-  return rankedActivities.map((rankedActivity) => {
+  const activitiesWithViewerState = rankedActivities.map((rankedActivity) => {
     if (
       rankedActivity.card.type === "PUBLIC_EVENT" &&
       rankedActivity.card.publicEventId
@@ -1147,6 +1150,8 @@ async function attachJoinableActivityStates(
 
     return teamActivityById.get(rankedActivity.card.id) ?? rankedActivity.card;
   });
+
+  return applyOrganizerParticipationDefaults(activitiesWithViewerState);
 }
 
 export async function attachActivityCardViewerStates(

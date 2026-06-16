@@ -22,6 +22,10 @@ const visibleDetailParticipationStatuses: ParticipantStatus[] = [
   "APPROVED",
   "PENDING",
 ];
+const countedDetailParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+];
 
 const activityDetailSelect = {
   ...activityCardSelect,
@@ -52,6 +56,7 @@ const activityDetailSelect = {
       status: true,
     },
   },
+  organizerId: true,
 } satisfies Prisma.ActivitySelect;
 
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
@@ -99,6 +104,7 @@ function getActivityDetailViewModel(
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     publicEventId: activity.publicEventId,
+    organizerId: activity.organizerId,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,
@@ -187,5 +193,39 @@ export async function getActivityById(
     select: activityDetailSelect,
   });
 
-  return activity ? getActivityDetailViewModel(activity) : null;
+  if (!activity) {
+    return null;
+  }
+
+  const organizerParticipation = await prisma.activityParticipant.findUnique({
+    where: {
+      activityId_userProfileId: {
+        activityId: activity.id,
+        userProfileId: activity.organizerId,
+      },
+    },
+    select: {
+      status: true,
+    },
+  });
+  const activityViewModel = getActivityDetailViewModel(activity);
+
+  if (
+    !activityViewModel.isActivityInfo &&
+    !organizerParticipation
+  ) {
+    return {
+      ...activityViewModel,
+      participantCount: activityViewModel.participantCount + 1,
+    };
+  }
+
+  if (
+    organizerParticipation &&
+    countedDetailParticipationStatuses.includes(organizerParticipation.status)
+  ) {
+    return activityViewModel;
+  }
+
+  return activityViewModel;
 }

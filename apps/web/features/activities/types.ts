@@ -36,6 +36,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   isActivityInfo?: boolean;
   officialUrl?: string | null;
   publicEventId?: string | null;
+  organizerId?: string | null;
   participantPreview?: ActivityParticipantPreviewViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;

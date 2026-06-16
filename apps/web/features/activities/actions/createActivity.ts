@@ -373,6 +373,12 @@ export async function createActivityAction(
         status: "RECRUITING",
         visibility: result.data.visibility,
         organizerId: profile.id,
+        participants: {
+          create: {
+            userProfileId: profile.id,
+            status: "APPROVED",
+          },
+        },
       },
       select: {
         id: true,

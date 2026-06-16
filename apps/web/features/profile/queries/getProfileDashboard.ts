@@ -10,6 +10,7 @@ import {
   getActivityCardViewModel,
   getLegacyPublicActivityInfoWhere,
 } from "@/features/activities/queries/getActivities";
+import { applyOrganizerParticipationDefaults } from "@/features/activities/queries/applyOrganizerParticipationDefaults";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
   getFriendshipPair,
@@ -42,10 +43,6 @@ const profileParticipationSelect = {
   },
 } satisfies Prisma.ActivityParticipantSelect;
 
-type ProfileParticipationQueryResult = Prisma.ActivityParticipantGetPayload<{
-  select: typeof profileParticipationSelect;
-}>;
-
 const profileFavoriteSelect = {
   id: true,
   createdAt: true,
@@ -53,10 +50,6 @@ const profileFavoriteSelect = {
     select: activityCardSelect,
   },
 } satisfies Prisma.ActivityFavoriteSelect;
-
-type ProfileFavoriteQueryResult = Prisma.ActivityFavoriteGetPayload<{
-  select: typeof profileFavoriteSelect;
-}>;
 
 const profilePublicEventFavoriteSelect = {
   id: true,
@@ -144,28 +137,6 @@ function mapPublicProfile(profile: {
     friendCode: profile.friendCode,
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
-  };
-}
-
-function mapParticipation(
-  participation: ProfileParticipationQueryResult,
-): ProfileParticipationViewModel {
-  return {
-    id: participation.id,
-    status: participation.status,
-    joinedAt: participation.joinedAt.toISOString(),
-    cancelledAt: participation.cancelledAt?.toISOString() ?? null,
-    activity: getActivityCardViewModel(participation.activity),
-  };
-}
-
-function mapFavorite(
-  favorite: ProfileFavoriteQueryResult,
-): ProfileFavoriteActivityViewModel {
-  return {
-    id: favorite.id,
-    createdAt: favorite.createdAt.toISOString(),
-    activity: getActivityCardViewModel(favorite.activity),
   };
 }
 
@@ -517,8 +488,26 @@ export async function getProfileDashboard(
     }),
   ]);
 
+  const createdActivityCards = await applyOrganizerParticipationDefaults(
+    createdActivities.map(getActivityCardViewModel),
+  );
+  const participationActivityCards = await applyOrganizerParticipationDefaults(
+    participations.map((participation) =>
+      getActivityCardViewModel(participation.activity),
+    ),
+  );
+  const favoriteActivityCards = await applyOrganizerParticipationDefaults(
+    favoriteActivities.map((favorite) =>
+      getActivityCardViewModel(favorite.activity),
+    ),
+  );
+
   const mergedFavorites = [
-    ...favoriteActivities.map(mapFavorite),
+    ...favoriteActivityCards.map((activity, index) => ({
+      id: favoriteActivities[index].id,
+      createdAt: favoriteActivities[index].createdAt.toISOString(),
+      activity,
+    })),
     ...(favoritePublicEvents as ProfilePublicEventFavoriteQueryResult[]).map(
       mapPublicEventFavorite,
     ),
@@ -537,8 +526,14 @@ export async function getProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
-    createdActivities: createdActivities.map(getActivityCardViewModel),
-    participations: participations.map(mapParticipation),
+    createdActivities: createdActivityCards,
+    participations: participations.map((participation, index) => ({
+      id: participation.id,
+      status: participation.status,
+      joinedAt: participation.joinedAt.toISOString(),
+      cancelledAt: participation.cancelledAt?.toISOString() ?? null,
+      activity: participationActivityCards[index],
+    })),
     favoriteActivities: mergedFavorites,
     friends: friendships.map((friendship) =>
       mapFriendUser(friendship, profileId),
@@ -659,6 +654,10 @@ export async function getPublicProfileDashboard(
     }),
   ]);
 
+  const createdActivityCards = await applyOrganizerParticipationDefaults(
+    createdActivities.map(getActivityCardViewModel),
+  );
+
   return {
     createdActivityCount,
     participationCount: 0,
@@ -666,7 +665,7 @@ export async function getPublicProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
-    createdActivities: createdActivities.map(getActivityCardViewModel),
+    createdActivities: createdActivityCards,
     participations: [],
     favoriteActivities: [],
     friends: friendships.map((friendship) =>
