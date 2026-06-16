@@ -157,6 +157,14 @@ apps/web/test-results
 PLAYWRIGHT_MONITOR_FAIL_ON_ANY_CONSOLE_ERROR=1
 ```
 
+默认也不会因为 Next.js 的 RSC prefetch fallback 失败：
+
+```text
+Failed to fetch RSC payload ... Falling back to browser navigation
+```
+
+这类信息常见于未登录用户访问公开页面时，页面里的 `/profile`、`/activities/new` 等受保护链接被后台预取。只要当前页面没有白屏、没有 `Application error`，它不代表用户当前访问失败。
+
 ## 并发策略
 
 监管默认最多 2 个 worker，并关闭 fully parallel。这样更接近真实用户巡检，也能减少 Next.js dev server 在页面快速跳转、浏览器关闭时出现的请求取消日志。

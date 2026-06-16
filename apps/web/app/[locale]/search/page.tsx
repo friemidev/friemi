@@ -326,21 +326,20 @@ export default async function SearchPage({
           }),
       )
     : { result: null, error: null };
-  const totalCount = searchResult.result
-    ? searchResult.result.activityCount +
-      searchResult.result.userCount +
-      searchResult.result.merchantCount +
-      searchResult.result.publicEventCount
-    : 0;
   const relatedActivityCount = relatedActivityResult.result?.totalCount ?? 0;
+  const mainActivityCount = mainActivityResult.result?.activityCount ?? 0;
+  const mainPublicEventCount = mainActivityResult.result?.publicEventCount ?? 0;
   const hiddenEndedMainCount = searchResult.result
     ? searchResult.result.hiddenEndedActivityCount +
       searchResult.result.hiddenEndedPublicEventCount
     : 0;
+  const mixedActivityResultCount = mainActivityCount + mainPublicEventCount;
+  const totalCount = searchResult.result
+    ? searchResult.result.userCount +
+      searchResult.result.merchantCount +
+      mixedActivityResultCount
+    : mixedActivityResultCount;
   const hasResults = totalCount > 0 || relatedActivityCount > 0;
-  const mixedActivityResultCount = searchResult.result
-    ? searchResult.result.activityCount + searchResult.result.publicEventCount
-    : 0;
 
   if (query && searchResult.result) {
     const requestHeaders = await headers();
@@ -352,10 +351,10 @@ export default async function SearchPage({
         route: `/${locale}/search`,
         sourceSurface: "global_search",
         properties: {
-          activity_count: searchResult.result.activityCount,
+          activity_count: mainActivityCount,
           keyword_length: query.length,
           merchant_count: searchResult.result.merchantCount,
-          public_event_count: searchResult.result.publicEventCount,
+          public_event_count: mainPublicEventCount,
           result_count: totalCount,
           scope: "global",
           has_hidden_ended_results: hiddenEndedMainCount > 0,

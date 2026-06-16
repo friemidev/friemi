@@ -11,6 +11,8 @@ type HealthyPageOptions = {
 
 const criticalBrowserIssuePattern =
   /(Application error|client-side exception|ChunkLoadError|Hydration failed|ReferenceError|TypeError|Unhandled Runtime Error)/i;
+const nextRscPrefetchFallbackPattern =
+  /Failed to fetch RSC payload .* Falling back to browser navigation/i;
 
 const configuredMaxLoadMs = Number.parseInt(
   process.env.PLAYWRIGHT_MONITOR_MAX_LOAD_MS ?? "",
@@ -23,6 +25,10 @@ const defaultMaxLoadMs = Number.isFinite(configuredMaxLoadMs)
     : 30_000;
 
 function shouldFailOnConsoleMessage(text: string) {
+  if (nextRscPrefetchFallbackPattern.test(text)) {
+    return false;
+  }
+
   return (
     process.env.PLAYWRIGHT_MONITOR_FAIL_ON_ANY_CONSOLE_ERROR === "1" ||
     criticalBrowserIssuePattern.test(text)

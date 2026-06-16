@@ -265,6 +265,28 @@ client-side exception
 PLAYWRIGHT_MONITOR_FAIL_ON_ANY_CONSOLE_ERROR=1 PLAYWRIGHT_MONITOR_BASE_URL=http://localhost:3001 npm run monitor:site --workspace=apps/web
 ```
 
+### 8.5 Failed to fetch RSC payload
+
+Preview 上可能看到类似 console error：
+
+```text
+Failed to fetch RSC payload for /zh-CN/profile. Falling back to browser navigation. TypeError: Failed to fetch
+```
+
+这通常是 Next.js 在后台 prefetch 受保护页面时失败，然后回退为普通浏览器导航。对于未登录用户访问公开页面，这不等于当前页面崩溃。
+
+当前监管默认忽略这一类特定信息，但仍会继续拦截：
+
+- `Application error`
+- `client-side exception`
+- `pageerror`
+- `ReferenceError`
+- `TypeError`
+- `Hydration failed`
+- `ChunkLoadError`
+
+如果希望连这种 prefetch fallback 也失败，可以后续增加更严格的单独模式。
+
 ## 9. GitHub Actions 定时监管
 
 工作流文件：
