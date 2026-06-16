@@ -16,7 +16,6 @@ import { SearchActivityResultsFeed } from "@/features/search/components/SearchAc
 import { SearchHighlightedText } from "@/features/search/components/SearchHighlightedText";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
-  globalSearchMainResultPageSize,
   getGlobalSearchMainActivityResults,
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
@@ -309,7 +308,7 @@ export default async function SearchPage({
   const shouldLoadInitialRelatedResults =
     query &&
     mainActivityResult.result &&
-    mainActivityResult.result.totalCount <= globalSearchMainResultPageSize;
+    !mainActivityResult.result.hasMore;
   const relatedActivityResult = shouldLoadInitialRelatedResults
     ? await perf.measure("search.relatedActivityResults", () =>
         getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
@@ -329,11 +328,13 @@ export default async function SearchPage({
   const relatedActivityCount = relatedActivityResult.result?.totalCount ?? 0;
   const mainActivityCount = mainActivityResult.result?.activityCount ?? 0;
   const mainPublicEventCount = mainActivityResult.result?.publicEventCount ?? 0;
+  const mixedActivityResultCount =
+    mainActivityResult.result?.totalCount ??
+    mainActivityCount + mainPublicEventCount;
   const hiddenEndedMainCount = searchResult.result
     ? searchResult.result.hiddenEndedActivityCount +
       searchResult.result.hiddenEndedPublicEventCount
     : 0;
-  const mixedActivityResultCount = mainActivityCount + mainPublicEventCount;
   const totalCount = searchResult.result
     ? searchResult.result.userCount +
       searchResult.result.merchantCount +
