@@ -35,6 +35,7 @@ import { ActivityCommentsSection } from "@/features/activities/components/Activi
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
+import { OrganizerParticipationToggleForm } from "@/features/activities/components/OrganizerParticipationToggleForm";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
@@ -398,6 +399,12 @@ export default async function ActivityDetailPage({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const organizerIsParticipating =
+    !isOrganizer ||
+    !viewerParticipation ||
+    viewerParticipation.status === "JOINED" ||
+    viewerParticipation.status === "APPROVED" ||
+    viewerParticipation.status === "PENDING";
   const canContactOrganizer = !isOrganizer;
   const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
@@ -795,41 +802,49 @@ export default async function ActivityDetailPage({
 
           <div className="order-3 mt-3 grid gap-3 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-3 shadow-sm sm:p-4">
             {isOrganizer ? (
-              <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <ShieldAlert className="h-4 w-4 text-moss" />
-                  {t.activityOwner.title}
-                </p>
-                {canEditActivity ? (
-                  <Link
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                    href={withLocale(locale, `/activities/${activity.id}/edit`)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    {t.activityDetail.editActivity}
-                  </Link>
-                ) : null}
-                {!isCancelled && !isEndedByTime ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.cancelDescription}
-                  </p>
-                ) : null}
-                <CancelActivityForm
+              <>
+                <OrganizerParticipationToggleForm
                   activityId={activity.id}
-                  activityTitle={activity.title}
-                  disabled={isCancelled || isEndedByTime}
+                  isClosed={isClosed}
+                  isParticipatingByDefault={organizerIsParticipating}
                   locale={locale}
                 />
-                {isCancelled ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.cancelledHint}
+                <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <ShieldAlert className="h-4 w-4 text-moss" />
+                    {t.activityOwner.title}
                   </p>
-                ) : isEndedByTime ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.endedHint}
-                  </p>
-                ) : null}
-              </div>
+                  {canEditActivity ? (
+                    <Link
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                      href={withLocale(locale, `/activities/${activity.id}/edit`)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      {t.activityDetail.editActivity}
+                    </Link>
+                  ) : null}
+                  {!isCancelled && !isEndedByTime ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.cancelDescription}
+                    </p>
+                  ) : null}
+                  <CancelActivityForm
+                    activityId={activity.id}
+                    activityTitle={activity.title}
+                    disabled={isCancelled || isEndedByTime}
+                    locale={locale}
+                  />
+                  {isCancelled ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.cancelledHint}
+                    </p>
+                  ) : isEndedByTime ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.endedHint}
+                    </p>
+                  ) : null}
+                </div>
+              </>
             ) : (
               <>
                 <JoinActivityForm

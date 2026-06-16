@@ -17,6 +17,7 @@ import {
   getLegacyPublicActivityInfoWhere,
   getVisibleActivityWhere,
 } from "./getActivities";
+import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import type { Prisma } from "@prisma/client";
 
 const activityLobbySectionLimit = 6;
@@ -186,7 +187,7 @@ async function decorateLobbyActivities(
     ]),
   );
 
-  return activities.map((activity) => {
+  const activitiesWithViewerState = activities.map((activity) => {
     if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
       const publicEventId = activity.publicEventId ?? activity.id;
 
@@ -198,6 +199,8 @@ async function decorateLobbyActivities(
 
     return teamActivityById.get(activity.id) ?? activity;
   });
+
+  return applyOrganizerParticipationDefaults(activitiesWithViewerState);
 }
 
 function mapPublicEventToActivityCard(
