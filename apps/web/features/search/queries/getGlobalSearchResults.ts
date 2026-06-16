@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { attachActivityFavoriteStates, attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import {
   activityCardSelect,
@@ -26,8 +27,7 @@ import {
 import type { Prisma } from "@prisma/client";
 
 const activityResultLimit = 6;
-const publicEventResultLimit = 6;
-export const globalSearchMainResultPageSize = 18;
+export const globalSearchMainResultPageSize = 10;
 const merchantResultLimit = 5;
 const userResultLimit = 12;
 
@@ -73,8 +73,10 @@ export type GlobalSearchResults = {
 };
 
 export type GlobalSearchMainActivityResults = {
+  activityCount: number;
   items: ActivityCardViewModel[];
   mode: GlobalSearchMainActivityResultMode;
+  publicEventCount: number;
   totalCount: number;
   hasMore: boolean;
   nextOffset: number;
@@ -313,6 +315,13 @@ export async function getGlobalSearchResults(
   const query = normalizeGlobalSearchQuery(rawQuery);
   const terms = getGlobalSearchTerms(query);
   const includeEnded = options.includeEnded ?? false;
+  const perf = createActionPerformanceTracker({
+    action: "search.summary",
+    metadata: {
+      includeEnded,
+      termCount: terms.length,
+    },
+  });
 
   if (terms.length === 0) {
     return {
@@ -332,30 +341,8 @@ export async function getGlobalSearchResults(
 
   const now = new Date();
   const activeActivityWhere = getVisibleActivityWhere({ now });
-  const searchableActivityWhere = includeEnded
-    ? getVisibleActivityWhere({
-        includeEnded: true,
-        includePast: true,
-        now,
-      })
-    : activeActivityWhere;
   const endedActivityWhere = getActivityTimeStateWhere("ENDED", now);
   const activitySearchWhere = getActivitySearchWhere(terms, "strict");
-  const activityWhere = {
-    AND: [searchableActivityWhere, activitySearchWhere],
-  };
-  const activeActivityResultWhere = {
-    AND: [activeActivityWhere, activitySearchWhere],
-  };
-  const endedActivityResultWhere = {
-    AND: [searchableActivityWhere, activitySearchWhere, endedActivityWhere],
-  };
-  const publicEventSearchWhere = {
-    AND: [
-      getSearchPublicEventBaseWhere(includeEnded, now),
-      getPublicEventSearchWhere(terms, "strict"),
-    ],
-  };
   const hiddenEndedActivityWhere = {
     AND: [
       getVisibleActivityWhere({ includeEnded: true, includePast: true, now }),
@@ -404,95 +391,84 @@ export async function getGlobalSearchResults(
   const [
     userCount,
     users,
-    activityCount,
-    activities,
-    publicEventCount,
-    publicEvents,
     merchantCount,
     merchants,
     hiddenEndedActivityCount,
     hiddenEndedPublicEventCount,
   ] = await Promise.all([
-    prisma.userProfile.count({
-      where: userSearchWhere,
-    }),
-    prisma.userProfile.findMany({
-      where: userSearchWhere,
-      orderBy: [{ nickname: "asc" }, { id: "asc" }],
-      take: userResultLimit,
-      select: {
-        id: true,
-        nickname: true,
-        friendCode: true,
-        avatarUrl: true,
-      },
-    }),
-    prisma.activity.count({
-      where: activityWhere,
-    }),
-    getSearchActivityResults(
-      activeActivityResultWhere,
-      includeEnded ? endedActivityResultWhere : null,
+    perf.measure("user.count", () =>
+      prisma.userProfile.count({
+        where: userSearchWhere,
+      }),
     ),
-    prisma.publicEvent.count({
-      where: publicEventSearchWhere,
-    }),
-    prisma.publicEvent.findMany({
-      where: publicEventSearchWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: publicEventResultLimit,
-      select: publicEventSelect,
-    }),
-    prisma.merchant.count({
-      where: merchantSearchWhere,
-    }),
-    prisma.merchant.findMany({
-      where: merchantSearchWhere,
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-      take: merchantResultLimit,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        logoUrl: true,
-        city: true,
-        address: true,
-        _count: {
-          select: {
-            activities: {
-              where: activeActivityWhere,
+    perf.measure("user.list", () =>
+      prisma.userProfile.findMany({
+        where: userSearchWhere,
+        orderBy: [{ nickname: "asc" }, { id: "asc" }],
+        take: userResultLimit,
+        select: {
+          id: true,
+          nickname: true,
+          friendCode: true,
+          avatarUrl: true,
+        },
+      }),
+    ),
+    perf.measure("merchant.count", () =>
+      prisma.merchant.count({
+        where: merchantSearchWhere,
+      }),
+    ),
+    perf.measure("merchant.list", () =>
+      prisma.merchant.findMany({
+        where: merchantSearchWhere,
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        take: merchantResultLimit,
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          logoUrl: true,
+          city: true,
+          address: true,
+          _count: {
+            select: {
+              activities: {
+                where: activeActivityWhere,
+              },
             },
           },
         },
-      },
-    }),
+      }),
+    ),
     includeEnded
       ? Promise.resolve(0)
-      : prisma.activity.count({
-          where: hiddenEndedActivityWhere,
-        }),
+      : perf.measure("hiddenEnded.activity.count", () =>
+          prisma.activity.count({
+            where: hiddenEndedActivityWhere,
+          }),
+        ),
     includeEnded
       ? Promise.resolve(0)
-      : prisma.publicEvent.count({
-          where: hiddenEndedPublicEventWhere,
-        }),
+      : perf.measure("hiddenEnded.publicEvent.count", () =>
+          prisma.publicEvent.count({
+            where: hiddenEndedPublicEventWhere,
+          }),
+        ),
   ]);
-  const userRelationshipStatuses = await getSearchUserRelationshipStatuses(
-    currentUserProfileId,
-    users.map((user) => user.id),
+  const userRelationshipStatuses = await perf.measure(
+    "user.relationships",
+    () =>
+      getSearchUserRelationshipStatuses(
+        currentUserProfileId,
+        users.map((user) => user.id),
+      ),
   );
-  const [activityResultsWithFavoriteState, publicEventResultsWithFavoriteState] =
-    await Promise.all([
-      attachActivityFavoriteStates(
-        activities.map(getActivityCardViewModel),
-        currentUserProfileId,
-      ),
-      attachPublicEventFavoriteStates(
-        publicEvents.map(getPublicEventCardViewModel),
-        currentUserProfileId,
-      ),
-    ]);
+  perf.finish({
+    merchantCount,
+    userCount,
+  });
 
   return {
     query,
@@ -505,10 +481,10 @@ export async function getGlobalSearchResults(
         userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
     })),
     userCount,
-    activities: activityResultsWithFavoriteState,
-    activityCount,
-    publicEvents: publicEventResultsWithFavoriteState,
-    publicEventCount,
+    activities: [],
+    activityCount: 0,
+    publicEvents: [],
+    publicEventCount: 0,
     merchants: merchants.map((merchant) => ({
       id: merchant.id,
       slug: merchant.slug,
@@ -544,11 +520,23 @@ export async function getGlobalSearchMainActivityResults(
     36,
   );
   const offset = Math.max(options.offset ?? 0, 0);
+  const perf = createActionPerformanceTracker({
+    action: "search.mainActivityResults",
+    metadata: {
+      includeEnded,
+      limit,
+      mode,
+      offset,
+      termCount: terms.length,
+    },
+  });
 
   if (terms.length === 0) {
     return {
+      activityCount: 0,
       items: [],
       mode,
+      publicEventCount: 0,
       totalCount: 0,
       hasMore: false,
       nextOffset: offset,
@@ -588,57 +576,79 @@ export async function getGlobalSearchMainActivityResults(
     publicEventCount,
     publicEvents,
   ] = await Promise.all([
-    prisma.activity.count({
-      where: activityWhere,
-    }),
-    getSearchActivityResults(
-      activeActivityResultWhere,
-      includeEnded ? endedActivityResultWhere : null,
-      fetchLimit,
+    perf.measure("activity.count", () =>
+      prisma.activity.count({
+        where: activityWhere,
+      }),
     ),
-    prisma.publicEvent.count({
-      where: publicEventSearchWhere,
-    }),
-    prisma.publicEvent.findMany({
-      where: publicEventSearchWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: fetchLimit,
-      select: publicEventSelect,
-    }),
+    perf.measure("activity.list", () =>
+      getSearchActivityResults(
+        activeActivityResultWhere,
+        includeEnded ? endedActivityResultWhere : null,
+        fetchLimit,
+      ),
+    ),
+    perf.measure("publicEvent.count", () =>
+      prisma.publicEvent.count({
+        where: publicEventSearchWhere,
+      }),
+    ),
+    perf.measure("publicEvent.list", () =>
+      prisma.publicEvent.findMany({
+        where: publicEventSearchWhere,
+        orderBy: [{ startAt: "asc" }, { id: "asc" }],
+        take: fetchLimit,
+        select: publicEventSelect,
+      }),
+    ),
   ]);
   const [activityResultsWithFavoriteState, publicEventResultsWithFavoriteState] =
-    await Promise.all([
-      attachActivityFavoriteStates(
-        activities.map(getActivityCardViewModel),
-        currentUserProfileId,
-      ),
-      attachPublicEventFavoriteStates(
-        publicEvents.map(getPublicEventCardViewModel),
-        currentUserProfileId,
-      ),
-    ]);
-  const publicEventIdsAlreadyShownByActivity = new Set(
-    activityResultsWithFavoriteState
-      .map((activity) => activity.publicEventId)
-      .filter(Boolean),
-  );
-  const mixedResults = [
-    ...activityResultsWithFavoriteState,
-    ...publicEventResultsWithFavoriteState
-      .filter((event) => !publicEventIdsAlreadyShownByActivity.has(event.id))
-      .map(mapPublicEventToSearchActivityCard),
-  ].sort(
-    mode === "related"
-      ? sortRelatedSearchActivityCards.bind(null, terms)
-      : sortSearchActivityCards,
-  );
+    await perf.measure("favoriteState", () =>
+      Promise.all([
+        attachActivityFavoriteStates(
+          activities.map(getActivityCardViewModel),
+          currentUserProfileId,
+        ),
+        attachPublicEventFavoriteStates(
+          publicEvents.map(getPublicEventCardViewModel),
+          currentUserProfileId,
+        ),
+      ]),
+    );
+  const mixedResults = await perf.measure("merge.sort", async () => {
+    const publicEventIdsAlreadyShownByActivity = new Set(
+      activityResultsWithFavoriteState
+        .map((activity) => activity.publicEventId)
+        .filter(Boolean),
+    );
+
+    return [
+      ...activityResultsWithFavoriteState,
+      ...publicEventResultsWithFavoriteState
+        .filter((event) => !publicEventIdsAlreadyShownByActivity.has(event.id))
+        .map(mapPublicEventToSearchActivityCard),
+    ].sort(
+      mode === "related"
+        ? sortRelatedSearchActivityCards.bind(null, terms)
+        : sortSearchActivityCards,
+    );
+  });
   const items = mixedResults.slice(offset, offset + limit);
   const totalCount = activityCount + publicEventCount;
   const nextOffset = offset + items.length;
 
+  perf.finish({
+    activityCount,
+    itemCount: items.length,
+    publicEventCount,
+    totalCount,
+  });
+
   return {
+    activityCount,
     items,
     mode,
+    publicEventCount,
     totalCount,
     hasMore: items.length > 0 && nextOffset < totalCount,
     nextOffset,
