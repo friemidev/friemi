@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -38,6 +39,8 @@ const coverTones: ActivityCardViewModel["coverTone"][] = [
   "sky",
 ];
 const defaultActivityPageSize = 15;
+const publicInfoRecommendedCandidateMultiplier = 6;
+const publicInfoRecommendedMinCandidateLimit = 80;
 const dailyRankingTimeZone = "Europe/Paris";
 const parisTimeZone = "Europe/Paris";
 const dayInMs = 24 * 60 * 60 * 1000;
@@ -1677,6 +1680,15 @@ async function getPublicInfoOnlyActivityList(
   now: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
+  const perf = createActionPerformanceTracker({
+    action: "activities.publicInfoList",
+    metadata: {
+      hasFilters: hasExplicitActivityListFilters(filters),
+      page: filters.page,
+      pageSize,
+      sort: filters.sort,
+    },
+  });
   const publicInfoFilters = getPublicInfoOnlyFilters(filters);
   const activityWhere = getPublicInfoActivityListWhere(publicInfoFilters, now);
   const publicEventWhere = getPublicInfoPublicEventListWhere(
@@ -1684,8 +1696,12 @@ async function getPublicInfoOnlyActivityList(
     now,
   );
   const [activityTotalCount, publicEventTotalCount] = await Promise.all([
-    prisma.activity.count({ where: activityWhere }),
-    prisma.publicEvent.count({ where: publicEventWhere }),
+    perf.measure("activity.count", () =>
+      prisma.activity.count({ where: activityWhere }),
+    ),
+    perf.measure("publicEvent.count", () =>
+      prisma.publicEvent.count({ where: publicEventWhere }),
+    ),
   ]);
   const totalCount = activityTotalCount + publicEventTotalCount;
   const totalPages = getActivityTotalPages(totalCount, pageSize);
@@ -1693,46 +1709,118 @@ async function getPublicInfoOnlyActivityList(
   const useRecommendedSort =
     publicInfoFilters.sort === "recommended" &&
     !hasExplicitActivityListFilters(publicInfoFilters);
-  const readLimit = useRecommendedSort ? undefined : page * pageSize;
+  const useFirstPageRecommendedCandidates = useRecommendedSort && page === 1;
+  const candidateLimit = Math.max(
+    pageSize * publicInfoRecommendedCandidateMultiplier,
+    publicInfoRecommendedMinCandidateLimit,
+  );
+  const readLimit = useFirstPageRecommendedCandidates
+    ? candidateLimit
+    : useRecommendedSort
+      ? undefined
+      : page * pageSize;
+  const firstPageActivityWhere = useFirstPageRecommendedCandidates
+    ? {
+        AND: [
+          getVisibleActivityWhere({
+            includeEnded: false,
+            includePast: false,
+            now,
+          }),
+          getLegacyPublicActivityInfoWhere(),
+        ],
+      }
+    : activityWhere;
+  const firstPagePublicEventWhere = useFirstPageRecommendedCandidates
+    ? getVisiblePublicEventWhere({
+        includeEnded: false,
+        includePast: false,
+        now,
+      })
+    : publicEventWhere;
   const [activities, publicEvents] = await Promise.all([
-    prisma.activity.findMany({
-      where: activityWhere,
-      orderBy: getActivityListOrderBy(
-        publicInfoFilters,
-        publicInfoFilters.timeState,
-      ),
-      ...(readLimit ? { take: readLimit } : {}),
-      select: activityCardSelect,
-    }),
-    prisma.publicEvent.findMany({
-          where: publicEventWhere,
-          orderBy: getPublicEventListOrderBy(
-            publicInfoFilters,
-            publicInfoFilters.timeState,
-          ),
-      ...(readLimit ? { take: readLimit } : {}),
-      select: publicEventCardSelect,
-    }),
+    perf.measure("activity.list", () =>
+      prisma.activity.findMany({
+        where: firstPageActivityWhere,
+        orderBy: getActivityListOrderBy(
+          publicInfoFilters,
+          publicInfoFilters.timeState,
+        ),
+        ...(readLimit ? { take: readLimit } : {}),
+        select: activityCardSelect,
+      }),
+    ),
+    perf.measure("publicEvent.list", () =>
+      prisma.publicEvent.findMany({
+        where: firstPagePublicEventWhere,
+        orderBy: getPublicEventListOrderBy(
+          publicInfoFilters,
+          publicInfoFilters.timeState,
+        ),
+        ...(readLimit ? { take: readLimit } : {}),
+        select: publicEventCardSelect,
+      }),
+    ),
   ]);
   const dailySeed = useRecommendedSort ? getDailyRankingSeed(now) : null;
-  const rankedActivities = [
-    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getActivityRankedCardViewModel,
-    ),
-    ...publicEvents.map(getPublicEventActivityCardViewModel),
-  ]
-    .sort((left, right) =>
-      dailySeed
-        ? compareRecommendedRankedActivities(now, dailySeed, left, right)
-        : compareRankedActivities(publicInfoFilters, left, right),
-    )
-    .slice((page - 1) * pageSize, page * pageSize);
+  let rankedActivities = await perf.measure("rank.slice", async () =>
+    [
+      ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+        getActivityRankedCardViewModel,
+      ),
+      ...publicEvents.map(getPublicEventActivityCardViewModel),
+    ]
+      .sort((left, right) =>
+        dailySeed
+          ? compareRecommendedRankedActivities(now, dailySeed, left, right)
+          : compareRankedActivities(publicInfoFilters, left, right),
+      )
+      .slice((page - 1) * pageSize, page * pageSize),
+  );
+  if (
+    useFirstPageRecommendedCandidates &&
+    rankedActivities.length < Math.min(pageSize, totalCount)
+  ) {
+    rankedActivities = await perf.measure("fallback.fullRank", async () => {
+      const [fallbackActivities, fallbackPublicEvents] = await Promise.all([
+        prisma.activity.findMany({
+          where: activityWhere,
+          select: activityCardSelect,
+        }),
+        prisma.publicEvent.findMany({
+          where: publicEventWhere,
+          select: publicEventCardSelect,
+        }),
+      ]);
+
+      return [
+        ...filterDuplicateLegacyActivityInfoRows(
+          fallbackActivities,
+          fallbackPublicEvents,
+        ).map(getActivityRankedCardViewModel),
+        ...fallbackPublicEvents.map(getPublicEventActivityCardViewModel),
+      ]
+        .sort((left, right) =>
+          dailySeed
+            ? compareRecommendedRankedActivities(now, dailySeed, left, right)
+            : compareRankedActivities(publicInfoFilters, left, right),
+        )
+        .slice((page - 1) * pageSize, page * pageSize);
+    });
+  }
+  const rankedActivitiesWithViewerState = await perf.measure("viewerState", () =>
+    attachJoinableActivityStates(rankedActivities, viewerProfileId),
+  );
+  perf.finish({
+    activityCandidateCount: activities.length,
+    publicEventCandidateCount: publicEvents.length,
+    resultCount: rankedActivities.length,
+    totalCount,
+    usedFirstPageCandidates: useFirstPageRecommendedCandidates,
+  });
 
   return {
-    activities: await attachJoinableActivityStates(
-      rankedActivities,
-      viewerProfileId,
-    ),
+    activities: rankedActivitiesWithViewerState,
     page,
     pageSize,
     totalCount,

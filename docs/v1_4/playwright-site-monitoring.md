@@ -187,3 +187,13 @@ PLAYWRIGHT_MONITOR_WORKERS=1
 - 为 Preview 和 Production 分别配置不同 workflow 或不同 base URL。
 - 增加真实登录态 storage state 的生成流程，用专门的监控账号覆盖通知、消息、报名等用户路径。
 - 对关键路径记录性能历史，后续接 Grafana 或 Better Stack 做趋势图。
+
+
+
+```
+PLAYWRIGHT_MONITOR_WORKERS=1 PLAYWRIGHT_MONITOR_MAX_LOAD_MS=15000 PLAYWRIGHT_MONITOR_BASE_URL=xxxxxxx npm run monitor:site --workspace=apps/web -- --trace=on
+```
+
+```
+npm run monitor:site:report --workspace=apps/web
+```
