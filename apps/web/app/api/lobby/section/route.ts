@@ -25,37 +25,49 @@ function parseLobbySection(value: string | null): ActivityLobbySectionId | null 
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const section = parseLobbySection(url.searchParams.get("section"));
+  try {
+    const url = new URL(request.url);
+    const section = parseLobbySection(url.searchParams.get("section"));
 
-  if (!section) {
+    if (!section) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid lobby section.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
+
+    if (!viewerProfile) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Authentication required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const activities = await getActivityLobbySection(viewerProfile.id, section);
+
+    return NextResponse.json({
+      ok: true,
+      activities,
+      section,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to load lobby section", error);
+
     return NextResponse.json(
       {
         ok: false,
-        error: "Invalid lobby section.",
+        error: "Failed to load lobby section.",
       },
-      { status: 400 },
+      { status: 500 },
     );
   }
-
-  const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
-
-  if (!viewerProfile) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Authentication required.",
-      },
-      { status: 401 },
-    );
-  }
-
-  const activities = await getActivityLobbySection(viewerProfile.id, section);
-
-  return NextResponse.json({
-    ok: true,
-    activities,
-    section,
-    updatedAt: new Date().toISOString(),
-  });
 }

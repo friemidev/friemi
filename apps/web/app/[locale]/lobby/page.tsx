@@ -4,7 +4,7 @@ import {
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
 import {
-  getActivityLobbyInitial,
+  getActivityLobby,
   getActivityLobbyPreview,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
@@ -56,8 +56,8 @@ export default async function ActivityLobbyPage({
     );
   }
 
-  const lobby = await perf.measure("lobby.initialData", () =>
-    getActivityLobbyInitial(profile.id).catch((error: unknown) => {
+  const lobby = await perf.measure("lobby.fullData", () =>
+    getActivityLobby(profile.id).catch((error: unknown) => {
       console.error("Failed to load activity lobby", error);
 
       return {
@@ -93,7 +93,6 @@ export default async function ActivityLobbyPage({
         friendHostedActivities={lobby.friendHostedActivities}
         friendJoinedActivities={lobby.friendJoinedActivities}
         locale={locale}
-        deferredFilters={["favorites", "friendHosted", "friendJoined"]}
       />
     </PageContainer>
   );

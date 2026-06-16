@@ -884,8 +884,12 @@ export function ActivityLobbyView({
         return (await response.json()) as LobbySectionResponse;
       })
       .then((payload) => {
-        if (cancelled || !payload.ok) {
+        if (cancelled) {
           return;
+        }
+
+        if (!payload.ok) {
+          throw new Error("Lobby section payload was not ok.");
         }
 
         setLazySections((current) => ({
