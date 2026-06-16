@@ -7,6 +7,7 @@
 - Playwright 已能稳定覆盖公开页、移动端关键页和健康接口。
 - `/search?q=paris` 的慢点已确认在 Vercel Function 服务端执行；首轮优化后 Preview 明显改善，第二轮日志确认主要瓶颈是精确 `count` 查询。
 - `/activities` 的慢点同样主要在 SSR 数据查询，不是 JS/CSS/图片资源；候选池策略已撤回，移除公开活动列表首屏精确 count 后 Preview 复测明显改善。
+- `/home` 桌面首页已改为首页专用未开始活动预览，避免只展示 4 个和不必要的用户态卡片装饰。
 - analytics 写入曾因数据库连接池 `connection limit: 1` 报 `P2024`；已改为串行后台队列并对连接池忙做降级处理。
 
 ## 优化记录表
@@ -21,12 +22,14 @@
 | 活动页首屏性能 | `903dcb8` `feature/playwright-performance-up-v1.1 step1` | 优化 `/zh-CN/activities` 移动端首屏 | Playwright report：mobile activities 约 5.7s；Trace Network 显示最终 `GET /zh-CN/activities` 约 4.4s；JS/CSS/图片多为几十 ms，说明慢点在 SSR 数据查询 | 尝试 `publicInfoOnly + recommended + 无筛选 + 第 1 页` 候选池排序，并增加 `activities.publicInfoList` 分段日志 | Preview 复测反而变慢：desktop activities 6.5s，mobile activities 9.3s；判断候选池/fallback 在真实数据下增加了额外查询或排序成本 | Playwright Preview report | 候选池策略撤回，保留分段日志继续观测 |
 | 活动页 count 去阻塞 | 待提交 `feature/playwright-performance-up-v1.1` | 优化 `/zh-CN/activities` 首屏 SSR | Vercel Logs：`activities.publicInfoList total=6484ms`，其中 `activity.count:2205ms`、`publicEvent.count:2557ms`、`publicEvent.list:3560ms`、`activity.list:3919ms` | 公开活动列表不再等待精确 `activity.count/publicEvent.count`；直接基于取回候选结果推导 `totalCount/totalPages`；保留 recommended 全量排序，避免再次引入候选池回归 | Preview 复测通过：desktop activities 3.3s，mobile activities 2.7s；较回归版本 desktop 6.5s、mobile 9.3s 明显恢复 | `npm run typecheck --workspace=apps/web`、`npm run test --workspace=apps/web`、Preview Playwright report 2026-06-16 11:13:38 | Preview 验证通过 |
 | 非核心日志降级 | 待提交 `feature/playwright-performance-up-v1.1` | 避免 analytics 和 API 鉴权噪声影响性能判断 | Vercel Logs 出现 `Failed to track analytics event P2024`，数据库连接池 `connection limit: 1`；`/api/search/activity-results` 出现 Clerk middleware 未覆盖错误 | analytics 写入改为串行后台队列，连接池忙时降级为 warn；middleware 加入 `/api/search/:path*`，让搜索分页 API 可安全读取游客/用户状态 | Preview Playwright 全量公开/移动监管通过：8 passed、0 failed、14 skipped；仍需在 Vercel Logs 里确认 P2024 和 Clerk middleware error 是否消失 | Preview Playwright report 2026-06-16 11:13:38 | Playwright 通过，日志待复核 |
+| 首页未开始活动预览 | 待提交 `feature/playwright-performance-up-v1.1` | 优化桌面 `/fr/home` 首页速度和活动数量 | 桌面首页体感慢；活动预览只展示 4 个；用户期望展示更多未开始活动；该页面主要面向网页端 | 新增首页专用 `getUpcomingHomeActivities` 查询，只展示 `startAt > now` 的未开始活动/组局；展示数量从 4 提高到 8；移除首页卡片首屏收藏/参与状态装饰，隐藏收藏按钮；loading skeleton 同步到 8 个；中英法文案改为“即将开始/未开始” | 本地验证通过：typecheck、单元测试、完整 Playwright；本地完整监管 desktop home 4.4s，8 passed / 14 skipped。Preview 待部署复测 | `npm run typecheck --workspace=apps/web`、`npm run test --workspace=apps/web`、`PLAYWRIGHT_MONITOR_WORKERS=1 npm run monitor:site --workspace=apps/web` | 本地完成，待 Preview 复测 |
 
 ## 最新 Playwright 复测记录
 
 | 时间 | 环境 | 总耗时 | 结果 | health | desktop home | desktop activities | desktop lobby | desktop search | mobile lobby | mobile activities | mobile search |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-06-16 11:13:38 | Preview | 24.8s | 8 passed / 0 failed / 14 skipped | 762ms | 2.7s | 3.3s | 2.7s | 3.3s | 2.9s | 2.7s | 3.3s |
+| 2026-06-16 本地 | Local dev | 34.9s | 8 passed / 0 failed / 14 skipped | 2.1s | 4.4s | 4.4s | 4.1s | 4.4s | 2.6s | 2.4s | 2.3s |
 
 ## 页面级前后对比
 
@@ -37,7 +40,7 @@
 | `/zh-CN/activities` desktop | 约 4.0s 到 4.5s；候选池版本 6.5s | Preview 3.3s | count 去阻塞有效，候选池回归已恢复 | 继续确认 Vercel `activities.publicInfoList` 不再有 `activity.count/publicEvent.count` |
 | `/zh-CN/activities` mobile | 约 5.7s 到 6.6s；候选池版本 9.3s | Preview 2.7s | 移动端活动页明显改善 | 如果后续仍波动，再优化 `publicEvent.list/activity.list` 的 select 或索引 |
 | `/zh-CN/lobby` mobile | 约 6.1s，部分 report 中约 3.6s 到 4.3s | Preview 2.9s | 已进入较流畅区间 | 继续观察 `lobby.preview` |
-| `/zh-CN/home` desktop | 约 2.6s 到 2.7s | Preview 2.7s | 当前可接受 | 继续观察 |
+| `/zh-CN/home` desktop | Preview 约 2.6s 到 2.7s；用户反馈 `/fr/home` 桌面体感仍慢且只展示 4 个 | 本地改为 8 个未开始活动；local dev desktop home 4.4s，Preview 待测 | 数据展示已调整；性能需以 Preview 复测为准 | 部署后看 `/fr/home` Playwright 和 Vercel `[perf] route=/home` 的 `home.activities` |
 | `/api/health` | 约 12ms 到 762ms，受冷启动/区域影响 | Preview 762ms | 健康接口可用 | 仅做基础存活检查 |
 
 ## 提交与性能提升映射
@@ -50,6 +53,7 @@
 | 待提交 | 搜索页首屏去掉精确 count 阻塞，改用 `limit + 1` probe 判断更多结果 | `getGlobalSearchResults.ts`、`search/page.tsx` | Preview report：desktop search 3.3s，mobile search 3.3s |
 | `903dcb8` | 活动页候选池优化尝试；增加活动列表查询分段日志 | `getActivities.ts` | Preview 变慢，候选池策略撤回；保留 `[perf-action] action=activities.publicInfoList` 作为下一轮诊断依据 |
 | 待提交 | 活动页公开列表首屏去掉精确 count；analytics 串行写入；搜索 API middleware 覆盖 | `getActivities.ts`、`analytics/server.ts`、`middleware.ts` | Preview report：desktop activities 3.3s，mobile activities 2.7s；公开/移动监管 8 passed / 0 failed |
+| 待提交 | 首页桌面预览只展示未开始活动，数量从 4 提高到 8，并移除首页卡片用户态装饰 | `home/page.tsx`、`home/loading.tsx`、`getActivities.ts`、`copy.ts` | Local dev report：desktop home 4.4s；完整监管 8 passed / 0 failed / 14 skipped；Preview 待测 |
 
 ## 后续验证命令
 

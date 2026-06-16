@@ -1277,6 +1277,53 @@ export async function getActivities(
   );
 }
 
+export async function getUpcomingHomeActivities({
+  limit = 8,
+}: {
+  limit?: number;
+} = {}): Promise<ActivityCardViewModel[]> {
+  const now = new Date();
+  const safeLimit = normalizeLimit(limit) ?? 8;
+  const upcomingActivityWhere: Prisma.ActivityWhereInput = {
+    AND: [
+      getVisibleActivityWhere({ now }),
+      getActivityTimeStateWhere("UPCOMING", now),
+    ],
+  };
+  const upcomingPublicEventWhere: Prisma.PublicEventWhereInput = {
+    AND: [
+      getVisiblePublicEventWhere({ now }),
+      getPublicEventTimeStateWhere("UPCOMING", now),
+    ],
+  };
+  const [activities, publicEvents] = await Promise.all([
+    prisma.activity.findMany({
+      where: upcomingActivityWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: safeLimit,
+      select: activityCardSelect,
+    }),
+    prisma.publicEvent.findMany({
+      where: upcomingPublicEventWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: safeLimit,
+      select: publicEventCardSelect,
+    }),
+  ]);
+  const rankedActivities = [
+    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+      getActivityRankedCardViewModel,
+    ),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ]
+    .sort((left, right) =>
+      compareRankedActivities({ sort: "recommended" }, left, right),
+    )
+    .slice(0, safeLimit);
+
+  return attachJoinableActivityStates(rankedActivities, null);
+}
+
 function getActivityTotalPages(totalCount: number, pageSize: number) {
   return Math.max(1, Math.ceil(totalCount / pageSize));
 }

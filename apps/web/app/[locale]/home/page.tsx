@@ -4,10 +4,7 @@ import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import {
-  attachActivityCardViewerStates,
-  getActivities,
-} from "@/features/activities/queries/getActivities";
+import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
@@ -44,6 +41,8 @@ function getHomeActionLabels(locale: string) {
 
 export const dynamic = "force-dynamic";
 
+const homeActivityPreviewLimit = 8;
+
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
   const perf = createPerformanceTracker({
@@ -55,8 +54,8 @@ export default async function HomePage({ params }: HomePageProps) {
   const [viewerProfile, baseActivitiesResult] = await Promise.all([
     perf.measure("viewer.profile", () => getOptionalCurrentUserProfileSnapshot()),
     perf.measure("home.activities", () =>
-      getActivities({
-        limit: 4,
+      getUpcomingHomeActivities({
+        limit: homeActivityPreviewLimit,
       })
         .then((activities) => ({ activities, error: null }))
         .catch((error: unknown) => {
@@ -65,27 +64,12 @@ export default async function HomePage({ params }: HomePageProps) {
         }),
     ),
   ]);
-  const activitiesResult =
-    viewerProfile && baseActivitiesResult.activities.length > 0
-      ? await perf.measure("home.viewerState", () =>
-          attachActivityCardViewerStates(
-            baseActivitiesResult.activities,
-            viewerProfile.id,
-          )
-            .then((activities) => ({
-              activities,
-              error: baseActivitiesResult.error,
-            }))
-            .catch((error: unknown) => {
-              console.error("Failed to load home activity viewer state", error);
-              return baseActivitiesResult;
-            }),
-        )
-      : baseActivitiesResult;
+  const activitiesResult = baseActivitiesResult;
 
   perf.finish({
     activityCount: activitiesResult.activities.length,
     hasViewer: Boolean(viewerProfile),
+    previewLimit: homeActivityPreviewLimit,
   });
 
   return (
@@ -181,7 +165,7 @@ export default async function HomePage({ params }: HomePageProps) {
                   isAuthenticated={Boolean(viewerProfile)}
                   locale={locale}
                   mobileDense
-                  showFavoriteButton
+                  showFavoriteButton={false}
                   showPrimaryAction={!isPublicEventCard(activity)}
                   sourceSurface="home_recent"
                   detailSourceKey="home"
