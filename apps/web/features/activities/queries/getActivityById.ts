@@ -8,6 +8,10 @@ import {
   isLegacyActivityInfoSource,
   publicActivityVisibility,
 } from "./getActivities";
+import {
+  buildPrivateActivityFriendAccessWhere,
+  buildPrivateActivityShareAccessWhere,
+} from "../utils/activityShareAccess";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -57,6 +61,8 @@ const activityDetailSelect = {
     },
   },
   organizerId: true,
+  shareEnabled: true,
+  shareToken: true,
 } satisfies Prisma.ActivitySelect;
 
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
@@ -105,6 +111,8 @@ function getActivityDetailViewModel(
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     publicEventId: activity.publicEventId,
     organizerId: activity.organizerId,
+    shareEnabled: activity.shareEnabled,
+    shareToken: activity.shareToken,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,
@@ -136,6 +144,7 @@ export async function getActivityById(
   activityId: string,
   viewerProfileId?: string | null,
   viewerFriendIds?: string[],
+  accessToken?: string | null,
 ): Promise<ActivityDetailViewModel | null> {
   const friendIds = viewerProfileId
     ? (viewerFriendIds ?? (await getViewerFriendIds(viewerProfileId)))
@@ -161,22 +170,19 @@ export async function getActivityById(
               },
             },
           },
-          ...(friendIds.length > 0
-            ? [
-                {
-                  AND: [
-                    { visibility: "PRIVATE" as const },
-                    { organizerId: { in: friendIds } },
-                  ],
-                },
-              ]
-            : []),
+          ...buildPrivateActivityFriendAccessWhere(friendIds),
+          ...buildPrivateActivityShareAccessWhere(accessToken),
         ],
       }
     : {
-        visibility: {
-          in: publicActivityVisibility,
-        },
+        OR: [
+          {
+            visibility: {
+              in: publicActivityVisibility,
+            },
+          },
+          ...buildPrivateActivityShareAccessWhere(accessToken),
+        ],
       };
 
   const activity = await prisma.activity.findFirst({

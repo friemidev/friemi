@@ -26,6 +26,7 @@ type ViewerParticipationStatus =
 type JoinActivityFormProps = {
   activityId: string;
   activityTitle: string;
+  accessToken?: string | null;
   compactUnauthenticated?: boolean;
   locale: string;
   requiresApproval: boolean;
@@ -221,6 +222,7 @@ function RejoinNotice({
 export function JoinActivityForm({
   activityId,
   activityTitle,
+  accessToken = null,
   compactUnauthenticated = false,
   locale,
   requiresApproval,
@@ -320,6 +322,9 @@ export function JoinActivityForm({
     >
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
+      {accessToken ? (
+        <input name="accessToken" type="hidden" value={accessToken} />
+      ) : null}
 
       {effectiveParticipationStatus === "REJECTED" ? (
         <RejoinNotice locale={locale} status={effectiveParticipationStatus} />

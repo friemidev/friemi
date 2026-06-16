@@ -196,6 +196,8 @@ model Activity {
   importedAt       DateTime?
   status           ActivityStatus        @default(RECRUITING)
   visibility       ActivityVisibility    @default(PUBLIC)
+  shareEnabled     Boolean               @default(false)
+  shareToken       String?               @unique
   organizerId      String
   organizer        UserProfile           @relation("ActivityOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
   publicEventId    String?

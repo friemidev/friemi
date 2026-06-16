@@ -25,6 +25,7 @@ type ActivityShareToolsProps = {
   locationLabel: string;
   locale: string;
   priceLabel: string;
+  sharePath?: string | null;
 };
 
 type DrawLineOptions = {
@@ -237,6 +238,7 @@ export function ActivityShareTools({
   locationLabel,
   locale,
   priceLabel,
+  sharePath = null,
 }: ActivityShareToolsProps) {
   const t = getCopy(locale).activityShare;
   const [activityUrl, setActivityUrl] = useState("");
@@ -261,8 +263,12 @@ export function ActivityShareTools({
   );
 
   useEffect(() => {
-    setActivityUrl(window.location.href);
-  }, []);
+    const resolvedUrl = sharePath
+      ? new URL(sharePath, window.location.origin).toString()
+      : window.location.href;
+
+    setActivityUrl(resolvedUrl);
+  }, [sharePath]);
 
   async function handleDownloadPoster() {
     if (!activityUrl) {

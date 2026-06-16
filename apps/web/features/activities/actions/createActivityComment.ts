@@ -16,6 +16,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import { publicActivityVisibility } from "../queries/getActivities";
 
 const commentableActivityStatuses: ActivityStatus[] = [
@@ -114,16 +115,7 @@ async function getCommentableActivityWhere(
           },
         },
       },
-      ...(friendIds.length > 0
-        ? [
-            {
-              AND: [
-                { visibility: "PRIVATE" as const },
-                { organizerId: { in: friendIds } },
-              ],
-            },
-          ]
-        : []),
+      ...buildPrivateActivityFriendAccessWhere(friendIds),
     ],
   };
 }

@@ -18,6 +18,7 @@ import {
   getVisibleActivityWhere,
 } from "./getActivities";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
+import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import type { Prisma } from "@prisma/client";
 
 const activityLobbySectionLimit = 6;
@@ -404,16 +405,7 @@ async function getLobbyQueryContext(
               },
             },
           },
-          ...(friendIds.length > 0
-            ? [
-                {
-                  AND: [
-                    { visibility: "PRIVATE" as const },
-                    { organizerId: { in: friendIds } },
-                  ],
-                },
-              ]
-            : []),
+          ...buildPrivateActivityFriendAccessWhere(friendIds),
         ],
       },
     ],
