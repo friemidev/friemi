@@ -47,5 +47,6 @@ test("uses map pin fallback for generic address with coordinates", () => {
   assert.equal(location.displayLabel, "地图定位可用，具体地址以官方页面为准");
   assert.match(location.copyValue, /来源地址: Paris/);
   assert.match(location.copyValue, /48\.8566, 2\.3522/);
-  assert.match(location.copyValue, /openstreetmap\.org/);
+  assert.match(location.copyValue, /google\.com\/maps\/search/);
+  assert.match(location.copyValue, /query=48\.8566%2C2\.3522/);
 });

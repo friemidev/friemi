@@ -112,6 +112,9 @@ export default async function PublicEventDetailPage({
   const eventDateLabel = getEventDateLabel(publicEvent, locale);
   const eventPriceLabel = getEventPriceLabel(publicEvent, locale);
   const eventLocation = getPublicEventLocationDisplay(publicEvent, locale);
+  const canShowMapLink =
+    (publicEvent.latitude !== null && publicEvent.longitude !== null) ||
+    !eventLocation.isGenericAddress;
   const weatherInput = getActivityWeatherWidgetInput(publicEvent);
   const eventSummaryCopyValue = [
     publicEvent.title,
@@ -273,25 +276,14 @@ export default async function PublicEventDetailPage({
             </section>
           ) : null}
 
-          {publicEvent.latitude !== null && publicEvent.longitude !== null ? (
+          {canShowMapLink ? (
             <ActivityMapPreview
-              address={eventLocation.mapAddress}
+              address={publicEvent.address}
+              city={publicEvent.city}
               latitude={publicEvent.latitude}
               longitude={publicEvent.longitude}
-              openLabel={
-                locale === "fr"
-                  ? "Ouvrir la carte"
-                  : locale === "en"
-                    ? "Open map"
-                    : "打开地图"
-              }
-              title={
-                locale === "fr"
-                  ? "Lieu"
-                  : locale === "en"
-                    ? "Location"
-                    : "活动地点"
-              }
+              openLabel={appCopy.activityDetail.openGoogleMaps}
+              title={appCopy.activityDetail.locationMapTitle}
             />
           ) : null}
         </article>

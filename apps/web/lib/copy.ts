@@ -285,6 +285,7 @@ const copy = {
       editActivity: "编辑组局",
       locationMapTitle: "活动地点",
       openMap: "打开地图",
+      openGoogleMaps: "打开 Google Maps",
     },
     activityFriendSignal: {
       title: "好友也在",
@@ -741,7 +742,7 @@ const copy = {
       placeChangedClear: "地址已变更，请重新匹配地图位置。",
       placeClear: "清除",
       mapPreviewTitle: "地图预览",
-      openMap: "打开地图",
+      openMap: "打开 Google Maps",
       startAt: "开始时间",
       startAtHint:
         "按巴黎时间保存。若填写结束时间且晚于现在，开始时间可早于当前时间。",
@@ -1113,6 +1114,7 @@ const copy = {
       editActivity: "Edit plan",
       locationMapTitle: "Activity location",
       openMap: "Open map",
+      openGoogleMaps: "Open in Google Maps",
     },
     activityFriendSignal: {
       title: "Friends joining",
@@ -1601,7 +1603,7 @@ const copy = {
       placeChangedClear: "The address changed. Match the map point again.",
       placeClear: "Clear",
       mapPreviewTitle: "Map preview",
-      openMap: "Open map",
+      openMap: "Open in Google Maps",
       startAt: "Start time",
       startAtHint:
         "Saved in Paris time. If the end time is in the future, the start time may be in the past.",
@@ -1985,6 +1987,7 @@ const copy = {
       editActivity: "Modifier le plan",
       locationMapTitle: "Lieu de l'activité",
       openMap: "Ouvrir la carte",
+      openGoogleMaps: "Ouvrir dans Google Maps",
     },
     activityFriendSignal: {
       title: "Amis inscrits",
@@ -2497,7 +2500,7 @@ const copy = {
         "L'adresse a changé. Associez à nouveau la position sur la carte.",
       placeClear: "Effacer",
       mapPreviewTitle: "Aperçu carte",
-      openMap: "Ouvrir la carte",
+      openMap: "Ouvrir dans Google Maps",
       startAt: "Début",
       startAtHint:
         "Heure de Paris. Si la fin est dans le futur, le début peut être dans le passé.",

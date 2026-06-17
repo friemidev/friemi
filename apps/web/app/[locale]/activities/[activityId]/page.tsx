@@ -325,12 +325,16 @@ export default async function ActivityDetailPage({
               />
             </div>
 
-            {activity.latitude !== null && activity.longitude !== null ? (
+            {activity.latitude !== null ||
+            activity.longitude !== null ||
+            activityLocationLabel.trim() ? (
               <ActivityMapPreview
                 address={activityLocationLabel}
+                city={activity.city}
                 latitude={activity.latitude}
                 longitude={activity.longitude}
-                openLabel={t.activityDetail.openMap}
+                openLabel={t.activityDetail.openGoogleMaps}
+                queryAddress={activity.address}
                 title={t.activityDetail.locationMapTitle}
               />
             ) : null}
@@ -722,12 +726,16 @@ export default async function ActivityDetailPage({
             )}
           </div>
 
-          {activity.latitude !== null && activity.longitude !== null ? (
+          {activity.latitude !== null ||
+          activity.longitude !== null ||
+          activityLocationLabel.trim() ? (
             <ActivityMapPreview
               address={activityLocationLabel}
+              city={activity.city}
               latitude={activity.latitude}
               longitude={activity.longitude}
-              openLabel={t.activityDetail.openMap}
+              openLabel={t.activityDetail.openGoogleMaps}
+              queryAddress={activity.address}
               title={t.activityDetail.locationMapTitle}
             />
           ) : null}

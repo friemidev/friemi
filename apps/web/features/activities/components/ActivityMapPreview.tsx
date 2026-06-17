@@ -1,10 +1,13 @@
 import { ExternalLink, MapPin } from "lucide-react";
+import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 
 type ActivityMapPreviewProps = {
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   title: string;
   address: string;
+  city?: string | null;
+  queryAddress?: string | null;
   openLabel: string;
   className?: string;
 };
@@ -26,15 +29,41 @@ export function ActivityMapPreview({
   longitude,
   title,
   address,
+  city,
+  queryAddress,
   openLabel,
   className,
 }: ActivityMapPreviewProps) {
-  const embedUrl = new URL("https://www.openstreetmap.org/export/embed.html");
-  embedUrl.searchParams.set("bbox", getMapBounds(latitude, longitude));
-  embedUrl.searchParams.set("layer", "mapnik");
-  embedUrl.searchParams.set("marker", `${latitude},${longitude}`);
+  const hasCoordinates =
+    typeof latitude === "number" &&
+    Number.isFinite(latitude) &&
+    typeof longitude === "number" &&
+    Number.isFinite(longitude);
+  const googleMapsUrl = getGoogleMapsSearchUrl({
+    address,
+    city,
+    latitude,
+    longitude,
+    queryAddress,
+  });
 
-  const externalUrl = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
+  if (!googleMapsUrl) {
+    return null;
+  }
+
+  const embedUrl = hasCoordinates
+    ? new URL("https://www.openstreetmap.org/export/embed.html")
+    : null;
+
+  if (
+    embedUrl &&
+    typeof latitude === "number" &&
+    typeof longitude === "number"
+  ) {
+    embedUrl.searchParams.set("bbox", getMapBounds(latitude, longitude));
+    embedUrl.searchParams.set("layer", "mapnik");
+    embedUrl.searchParams.set("marker", `${latitude},${longitude}`);
+  }
 
   return (
     <div
@@ -54,7 +83,7 @@ export function ActivityMapPreview({
         </div>
         <a
           className="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white px-2.5 text-xs font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-          href={externalUrl}
+          href={googleMapsUrl}
           target="_blank"
           rel="noreferrer"
         >
@@ -62,24 +91,33 @@ export function ActivityMapPreview({
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
-      <iframe
-        className="block aspect-[16/9] w-full border-0 sm:aspect-[21/9]"
-        src={embedUrl.toString()}
-        title={title}
-        loading="lazy"
-        referrerPolicy="no-referrer"
-      />
-      <p className="border-t border-black/5 px-4 py-2 text-[11px] text-zinc-400">
-        Map data:{" "}
-        <a
-          className="underline-offset-2 hover:underline"
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noreferrer"
-        >
-          OpenStreetMap contributors
-        </a>
-      </p>
+      {embedUrl ? (
+        <>
+          <iframe
+            className="block aspect-[16/9] w-full border-0 sm:aspect-[21/9]"
+            src={embedUrl.toString()}
+            title={title}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+          <p className="border-t border-black/5 px-4 py-2 text-[11px] text-zinc-400">
+            Map data:{" "}
+            <a
+              className="underline-offset-2 hover:underline"
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noreferrer"
+            >
+              OpenStreetMap contributors
+            </a>
+          </p>
+        </>
+      ) : (
+        <div className="border-t border-black/5 bg-[#fbf7ef] px-4 py-6 text-center text-sm leading-6 text-zinc-600">
+          <MapPin className="mx-auto mb-2 h-5 w-5 text-moss" />
+          <p>{address}</p>
+        </div>
+      )}
     </div>
   );
 }

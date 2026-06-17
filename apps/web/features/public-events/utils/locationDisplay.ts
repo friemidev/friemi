@@ -1,3 +1,5 @@
+import { getGoogleMapsSearchUrl } from "../../maps/googleMaps";
+
 type PublicEventLocationInput = {
   address: string;
   city: string;
@@ -54,7 +56,12 @@ export function getPublicEventMapUrl({
   latitude: number;
   longitude: number;
 }) {
-  return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
+  return (
+    getGoogleMapsSearchUrl({
+      latitude,
+      longitude,
+    }) ?? ""
+  );
 }
 
 function getFallbackLabels(locale: string) {

@@ -407,18 +407,18 @@ feature/google-maps-deep-link
 
 小功能：
 
-- [ ] 活动 / 公共活动详情页地图模块提供 Google Maps 外链入口
-- [ ] 有经纬度时优先使用 `latitude,longitude` 构造 Google Maps query
-- [ ] 没有经纬度但有地址时使用活动地址和城市构造 Google Maps query
-- [ ] 外链新窗口打开，并带 `target="_blank"` / `rel="noreferrer"`
-- [ ] 复制活动信息时可以继续保留地图链接或坐标信息
+- [x] 活动 / 公共活动详情页地图模块提供 Google Maps 外链入口
+- [x] 有具体地址时优先使用地址和城市构造 Google Maps query，避免 Google 只显示经纬度
+- [x] 地址过于笼统或没有地址时，使用 `latitude,longitude` 构造 Google Maps query
+- [x] 外链新窗口打开，并带 `target="_blank"` / `rel="noreferrer"`
+- [x] 复制活动信息时可以继续保留地图链接或坐标信息
 
 验收标准：
 
-- 点击 Google Maps 能打开对应地点或搜索结果
-- 地址只有 `Paris` 且有坐标时，Google Maps 使用坐标而不是泛地址
-- 没有地图数据时不展示无效按钮
-- 移动端按钮不挤压报名、抢票、组队等主要操作
+- [x] 点击 Google Maps 能打开对应地点或搜索结果
+- [x] 地址只有 `Paris` 且有坐标时，Google Maps 使用坐标而不是泛地址；有具体地址时优先展示地址搜索
+- [x] 没有地图数据时不展示无效按钮
+- [x] 移动端按钮不挤压报名、抢票、组队等主要操作
 
 ### 13. 近七日活动天气组件
 
