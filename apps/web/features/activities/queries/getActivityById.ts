@@ -73,6 +73,21 @@ const activityDetailSelect = {
       },
     },
   },
+  guestParticipants: {
+    where: {
+      linkedParticipantId: null,
+      status: {
+        in: countedDetailParticipationStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  },
   publicEvent: {
     select: {
       id: true,
@@ -106,6 +121,25 @@ function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
 ): ActivityDetailViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const participantCount = isActivityInfo
+    ? 0
+    : activity._count.participants + activity._count.guestParticipants;
+  const participantPreview = isActivityInfo
+    ? []
+    : [
+        ...(activity.participants ?? []).map((participant) => ({
+          id: participant.userProfile.id,
+          nickname: participant.userProfile.nickname,
+          avatarUrl: participant.userProfile.avatarUrl,
+          kind: "user" as const,
+        })),
+        ...(activity.guestParticipants ?? []).map((participant) => ({
+          id: `guest:${participant.id}`,
+          nickname: participant.displayName,
+          avatarUrl: null,
+          kind: "guest" as const,
+        })),
+      ];
 
   return {
     id: activity.id,
@@ -127,7 +161,7 @@ function getActivityDetailViewModel(
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
-    participantCount: isActivityInfo ? 0 : activity._count.participants,
+    participantCount,
     priceText: activity.priceText,
     status: activity.status,
     visibility: activity.visibility,
@@ -140,13 +174,7 @@ function getActivityDetailViewModel(
     organizerId: activity.organizerId,
     shareEnabled: activity.shareEnabled,
     shareToken: activity.shareToken,
-    participantPreview: isActivityInfo
-      ? []
-      : (activity.participants ?? []).map((participant) => ({
-          id: participant.userProfile.id,
-          nickname: participant.userProfile.nickname,
-          avatarUrl: participant.userProfile.avatarUrl,
-        })),
+    participantPreview,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,

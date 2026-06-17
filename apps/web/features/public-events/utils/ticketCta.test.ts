@@ -8,6 +8,12 @@ test("getTicketCtaLabel localizes generic Open Data labels", () => {
   assert.equal(getTicketCtaLabel("fr", "Réservation"), "Réserver");
 });
 
+test("getTicketCtaLabel localizes generic detail labels", () => {
+  assert.equal(getTicketCtaLabel("zh-CN", "En savoir plus"), "了解详情");
+  assert.equal(getTicketCtaLabel("en", "En savoir plus"), "Learn more");
+  assert.equal(getTicketCtaLabel("fr", "En savoir plus"), "En savoir plus");
+});
+
 test("getTicketCtaLabel rejects URL-like labels", () => {
   const longUrl =
     "https://www.example.com/events/very-long-ticket-url-that-should-never-be-used-as-a-button-label";

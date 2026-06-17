@@ -139,11 +139,35 @@ export const activityCardSelect = {
       },
     },
   },
+  guestParticipants: {
+    where: {
+      linkedParticipantId: null,
+      status: {
+        in: participantStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      displayName: true,
+    },
+  },
   _count: {
     select: {
       favorites: true,
       participants: {
         where: {
+          status: {
+            in: participantStatuses,
+          },
+        },
+      },
+      guestParticipants: {
+        where: {
+          linkedParticipantId: null,
           status: {
             in: participantStatuses,
           },
@@ -1017,6 +1041,25 @@ export function getActivityCardViewModel(
   activity: ActivityQueryResult,
 ): ActivityCardViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const participantCount = isActivityInfo
+    ? 0
+    : activity._count.participants + activity._count.guestParticipants;
+  const participantPreview = isActivityInfo
+    ? []
+    : [
+        ...(activity.participants ?? []).map((participant) => ({
+          id: participant.userProfile.id,
+          nickname: participant.userProfile.nickname,
+          avatarUrl: participant.userProfile.avatarUrl,
+          kind: "user" as const,
+        })),
+        ...(activity.guestParticipants ?? []).map((participant) => ({
+          id: `guest:${participant.id}`,
+          nickname: participant.displayName,
+          avatarUrl: null,
+          kind: "guest" as const,
+        })),
+      ].slice(0, 5);
 
   return {
     id: activity.id,
@@ -1033,7 +1076,7 @@ export function getActivityCardViewModel(
     capacity: isActivityInfo ? 0 : activity.capacity,
     coverImageUrl: activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
-    participantCount: isActivityInfo ? 0 : activity._count.participants,
+    participantCount,
     priceText: activity.priceText,
     ticketUrl: activity.ticketUrl,
     ticketLabel: activity.ticketLabel,
@@ -1044,13 +1087,7 @@ export function getActivityCardViewModel(
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     publicEventId: activity.publicEventId,
     organizerId: activity.organizerId,
-    participantPreview: isActivityInfo
-      ? []
-      : (activity.participants ?? []).map((participant) => ({
-          id: participant.userProfile.id,
-          nickname: participant.userProfile.nickname,
-          avatarUrl: participant.userProfile.avatarUrl,
-        })),
+    participantPreview,
     merchant: activity.merchant?.isActive
       ? {
           id: activity.merchant.id,

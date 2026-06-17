@@ -255,6 +255,14 @@ export async function joinActivityAction(
                     },
                   },
                 },
+                guestParticipants: {
+                  where: {
+                    linkedParticipantId: null,
+                    status: {
+                      in: activeParticipantStatuses,
+                    },
+                  },
+                },
               },
             },
           },
@@ -361,7 +369,8 @@ export async function joinActivityAction(
 
         if (
           activity.capacity > 0 &&
-          activity._count.participants >= activity.capacity
+          activity._count.participants + activity._count.guestParticipants >=
+            activity.capacity
         ) {
           return getJoinFailure("活动名额已满，不能继续报名。", "activity_full");
         }

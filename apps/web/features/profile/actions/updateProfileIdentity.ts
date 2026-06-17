@@ -7,6 +7,8 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { normalizeGuestWechatId } from "@/features/guest-participants/utils/contactIdentity";
 
 export type UpdateProfileIdentityState = {
   formError?: string;
@@ -15,6 +17,7 @@ export type UpdateProfileIdentityState = {
 const updateProfileIdentitySchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
+  wechatId: z.string().trim().max(80).optional(),
   returnTo: z.string().optional(),
 });
 
@@ -33,6 +36,7 @@ export async function updateProfileIdentityAction(
   const result = updateProfileIdentitySchema.safeParse({
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
+    wechatId: getString(formData, "wechatId"),
     returnTo: getString(formData, "returnTo"),
   });
 
@@ -42,17 +46,26 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { locale, nickname, returnTo } = result.data;
+  const { locale, nickname, returnTo, wechatId } = result.data;
   const profile = await ensureCurrentUserProfile(locale);
+  const trimmedWechatId = wechatId?.trim() || null;
 
-  await prisma.userProfile.update({
+  const updatedProfile = await prisma.userProfile.update({
     where: {
       id: profile.id,
     },
     data: {
       nickname,
+      wechatId: trimmedWechatId,
+      normalizedWechatId: normalizeGuestWechatId(trimmedWechatId),
     },
   });
+
+  await linkGuestParticipationsForProfile(prisma, updatedProfile).catch(
+    (error) => {
+      console.error("Failed to link guest participations after profile update", error);
+    },
+  );
 
   revalidatePath(withLocale(locale, "/profile"));
   revalidatePath(withLocale(locale, "/friends"));

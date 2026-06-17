@@ -86,6 +86,14 @@ export async function updateActivityAction(
               },
             },
           },
+          guestParticipants: {
+            where: {
+              linkedParticipantId: null,
+              status: {
+                in: countedParticipantStatuses,
+              },
+            },
+          },
         },
       },
     },
@@ -173,10 +181,13 @@ export async function updateActivityAction(
   const submittedMinParticipants = result.data.capacityLimitEnabled
     ? (result.data.minParticipants ?? null)
     : null;
+  const currentParticipantCount =
+    editableActivity._count.participants +
+    editableActivity._count.guestParticipants;
 
   if (
     submittedCapacity > 0 &&
-    submittedCapacity < editableActivity._count.participants
+    submittedCapacity < currentParticipantCount
   ) {
     return buildActivityErrorState(
       previousState,
@@ -184,7 +195,7 @@ export async function updateActivityAction(
       "人数上限不能低于当前已报名人数。",
       {
         capacity: [
-          `当前已有 ${editableActivity._count.participants} 人报名，请设置不低于该人数的上限。`,
+          `当前已有 ${currentParticipantCount} 人报名，请设置不低于该人数的上限。`,
         ],
       },
     );

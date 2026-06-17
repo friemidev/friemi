@@ -10,6 +10,18 @@ function getDefaultTicketCtaLabel(locale: string) {
   return "立即抢票";
 }
 
+function getDefaultDetailsCtaLabel(locale: string) {
+  if (locale === "fr") {
+    return "En savoir plus";
+  }
+
+  if (locale === "en") {
+    return "Learn more";
+  }
+
+  return "了解详情";
+}
+
 function normalizeLabelKey(value: string) {
   return value
     .normalize("NFD")
@@ -20,7 +32,7 @@ function normalizeLabelKey(value: string) {
     .trim();
 }
 
-const genericTicketLabels = new Set([
+const genericReservationLabels = new Set([
   "reservation",
   "reserver",
   "billetterie",
@@ -42,6 +54,20 @@ const genericTicketLabels = new Set([
   "立即抢票",
 ]);
 
+const genericDetailsLabels = new Set([
+  "en savoir plus",
+  "plus dinfos",
+  "plus dinfo",
+  "voir plus",
+  "learn more",
+  "more info",
+  "more information",
+  "details",
+  "detail",
+  "了解详情",
+  "查看更多",
+]);
+
 export function isUsableTicketLabel(label: string | null | undefined) {
   const normalizedLabel = label?.trim();
 
@@ -56,19 +82,33 @@ export function isUsableTicketLabel(label: string | null | undefined) {
   return true;
 }
 
-function isGenericTicketLabel(label: string) {
-  return genericTicketLabels.has(normalizeLabelKey(label));
+function getGenericTicketLabelKind(label: string) {
+  const key = normalizeLabelKey(label);
+
+  if (genericReservationLabels.has(key)) {
+    return "reservation";
+  }
+
+  if (genericDetailsLabels.has(key)) {
+    return "details";
+  }
+
+  return null;
 }
 
 export function getTicketCtaLabel(locale: string, label?: string | null) {
   const normalizedLabel = label?.trim();
 
-  if (
-    normalizedLabel &&
-    isUsableTicketLabel(normalizedLabel) &&
-    !isGenericTicketLabel(normalizedLabel)
-  ) {
-    return normalizedLabel;
+  if (normalizedLabel && isUsableTicketLabel(normalizedLabel)) {
+    const genericKind = getGenericTicketLabelKind(normalizedLabel);
+
+    if (genericKind === "details") {
+      return getDefaultDetailsCtaLabel(locale);
+    }
+
+    if (!genericKind) {
+      return normalizedLabel;
+    }
   }
 
   return getDefaultTicketCtaLabel(locale);

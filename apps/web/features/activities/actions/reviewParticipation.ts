@@ -63,6 +63,10 @@ function refreshActivityViews(locale: string, activityId: string) {
   return activityPath;
 }
 
+function getGuestParticipationId(value: string) {
+  return value.startsWith("guest:") ? value.slice("guest:".length) : null;
+}
+
 export async function reviewParticipationAction(
   _previousState: ReviewParticipationState,
   formData: FormData,
@@ -87,6 +91,110 @@ export async function reviewParticipationAction(
   try {
     const reviewResult = await prisma.$transaction(
       async (tx): Promise<ReviewParticipationResult> => {
+        const guestParticipationId = getGuestParticipationId(
+          result.data.participationId,
+        );
+
+        if (guestParticipationId) {
+          const participation = await tx.guestActivityParticipant.findUnique({
+            where: {
+              id: guestParticipationId,
+            },
+            select: {
+              id: true,
+              status: true,
+              activityId: true,
+              activity: {
+                select: {
+                  id: true,
+                  capacity: true,
+                  endAt: true,
+                  organizerId: true,
+                  startAt: true,
+                  status: true,
+                  _count: {
+                    select: {
+                      participants: {
+                        where: {
+                          status: "APPROVED",
+                        },
+                      },
+                      guestParticipants: {
+                        where: {
+                          linkedParticipantId: null,
+                          status: "APPROVED",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (
+            !participation ||
+            participation.activityId !== result.data.activityId
+          ) {
+            return {
+              ok: false,
+              error: copy.missingError,
+            };
+          }
+
+          if (participation.activity.organizerId !== profile.id) {
+            return {
+              ok: false,
+              error: copy.permissionError,
+            };
+          }
+
+          if (participation.status !== "PENDING") {
+            return {
+              ok: false,
+              error: copy.statusError,
+            };
+          }
+
+          if (
+            participation.activity.status === "CANCELLED" ||
+            participation.activity.status === "ENDED" ||
+            getActivityEndBoundary(participation.activity) <= new Date()
+          ) {
+            return {
+              ok: false,
+              error: copy.closedError,
+            };
+          }
+
+          if (
+            result.data.decision === "approve" &&
+            participation.activity.capacity > 0 &&
+            participation.activity._count.participants +
+              participation.activity._count.guestParticipants >=
+              participation.activity.capacity
+          ) {
+            return {
+              ok: false,
+              error: copy.fullError,
+            };
+          }
+
+          await tx.guestActivityParticipant.update({
+            where: {
+              id: participation.id,
+            },
+            data: {
+              status:
+                result.data.decision === "approve" ? "APPROVED" : "REJECTED",
+            },
+          });
+
+          return {
+            ok: true,
+          };
+        }
+
         const participation = await tx.activityParticipant.findUnique({
           where: {
             id: result.data.participationId,
@@ -108,6 +216,12 @@ export async function reviewParticipationAction(
                   select: {
                     participants: {
                       where: {
+                        status: "APPROVED",
+                      },
+                    },
+                    guestParticipants: {
+                      where: {
+                        linkedParticipantId: null,
                         status: "APPROVED",
                       },
                     },
@@ -156,7 +270,8 @@ export async function reviewParticipationAction(
         if (
           result.data.decision === "approve" &&
           participation.activity.capacity > 0 &&
-          participation.activity._count.participants >=
+          participation.activity._count.participants +
+            participation.activity._count.guestParticipants >=
             participation.activity.capacity
         ) {
           return {

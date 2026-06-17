@@ -23,6 +23,7 @@ export type ActivityParticipantPreviewViewModel = {
   id: string;
   nickname: string;
   avatarUrl: string | null;
+  kind?: "user" | "guest";
 };
 
 export type ActivityCardViewModel = ActivitySummary & {

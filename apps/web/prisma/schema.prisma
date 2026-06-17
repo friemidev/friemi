@@ -127,11 +127,14 @@ model UserProfile {
   id                     String                @id @default(cuid())
   clerkUserId            String                @unique
   email                  String?
+  emailVerifiedAt        DateTime?
   friendCode             String?               @unique @db.Char(6)
   nickname               String
   firstName              String?
   lastName               String?
   username               String?
+  wechatId               String?
+  normalizedWechatId     String?
   avatarUrl              String?
   bio                    String?
   interests              String[]              @default([])
@@ -144,6 +147,7 @@ model UserProfile {
   syncedAt               DateTime?
   activities             Activity[]            @relation("ActivityOrganizer")
   participations         ActivityParticipant[]
+  guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
   comments               Comment[]
   notifications          Notification[]        @relation("NotificationRecipient")
   sentNotifications      Notification[]        @relation("NotificationActor")
@@ -164,6 +168,7 @@ model UserProfile {
   publicEventFavorites   PublicEventFavorite[]
 
   @@index([nickname])
+  @@index([normalizedWechatId])
   @@index([role, status])
 }
 
@@ -207,6 +212,7 @@ model Activity {
   merchantId       String?
   merchant         Merchant?             @relation(fields: [merchantId], references: [id], onDelete: SetNull)
   participants     ActivityParticipant[]
+  guestParticipants GuestActivityParticipant[]
   comments         Comment[]
   notifications    Notification[]
   sourceLinks      ActivitySourceLink[]
@@ -316,11 +322,48 @@ model ActivityParticipant {
   cancelledAt   DateTime?
   activity      Activity          @relation(fields: [activityId], references: [id], onDelete: Cascade)
   userProfile   UserProfile       @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  guestParticipant GuestActivityParticipant? @relation("GuestLinkedParticipant")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+}
+
+model GuestActivityParticipant {
+  id                  String               @id @default(cuid())
+  activityId          String
+  activity            Activity             @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  displayName         String
+  phone               String?
+  normalizedPhone     String?
+  email               String?
+  normalizedEmail     String?
+  wechatId            String?
+  normalizedWechatId  String?
+  message             String?
+  status              ParticipantStatus    @default(APPROVED)
+  sourceLocale        String?
+  sourceUserAgent     String?
+  sourceFingerprint   String?
+  joinedAt            DateTime             @default(now())
+  cancelledAt         DateTime?
+  linkedAt            DateTime?
+  linkedUserProfileId String?
+  linkedUserProfile   UserProfile?         @relation("GuestLinkedUser", fields: [linkedUserProfileId], references: [id], onDelete: SetNull)
+  linkedParticipantId String?               @unique
+  linkedParticipant   ActivityParticipant?  @relation("GuestLinkedParticipant", fields: [linkedParticipantId], references: [id], onDelete: SetNull)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([activityId, normalizedEmail])
+  @@unique([activityId, normalizedPhone])
+  @@unique([activityId, normalizedWechatId])
+  @@index([activityId, status])
+  @@index([linkedUserProfileId])
+  @@index([normalizedEmail])
+  @@index([normalizedWechatId])
+  @@index([sourceFingerprint, createdAt])
 }
 
 model ActivityFavorite {

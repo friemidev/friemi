@@ -123,6 +123,7 @@ export function ProfileDashboardView({
                   friendCode={profile.friendCode}
                   locale={locale}
                   nickname={profile.nickname}
+                  wechatId={profile.wechatId}
                 />
               </div>
             ) : null}
