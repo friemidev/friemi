@@ -306,7 +306,13 @@ const copy = {
     },
     activityShare: {
       title: "分享活动",
+      activityTitle: "活动分享",
+      teamTitle: "组队分享",
       description: "复制关键信息，或下载带二维码的宣传图。",
+      activityDescription: "复制活动信息，下载带二维码的宣传图。",
+      teamDescription: "复制组队邀请，下载带二维码的宣传图。",
+      expand: "展开分享工具",
+      collapse: "收起分享工具",
       copyTitle: "复制标题",
       copyTime: "复制时间",
       copyLocation: "复制地点",
@@ -1094,7 +1100,13 @@ const copy = {
     },
     activityShare: {
       title: "Share activity",
+      activityTitle: "Activity sharing",
+      teamTitle: "Crew sharing",
       description: "Copy key details, or download a poster with a QR code.",
+      activityDescription: "Copy event details or download a QR poster.",
+      teamDescription: "Copy the crew invite or download a QR poster.",
+      expand: "Show sharing tools",
+      collapse: "Hide sharing tools",
       copyTitle: "Copy title",
       copyTime: "Copy time",
       copyLocation: "Copy location",
@@ -1925,8 +1937,16 @@ const copy = {
     },
     activityShare: {
       title: "Partager l'activité",
+      activityTitle: "Partage de l'activité",
+      teamTitle: "Partage du groupe",
       description:
         "Copiez les infos clés ou téléchargez une affiche avec QR code.",
+      activityDescription:
+        "Copiez les infos de l'activité ou téléchargez une affiche QR.",
+      teamDescription:
+        "Copiez l'invitation du groupe ou téléchargez une affiche QR.",
+      expand: "Afficher les outils de partage",
+      collapse: "Masquer les outils de partage",
       copyTitle: "Copier le titre",
       copyTime: "Copier l'heure",
       copyLocation: "Copier le lieu",

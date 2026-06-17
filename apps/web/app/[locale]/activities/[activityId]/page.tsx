@@ -315,6 +315,23 @@ export default async function ActivityDetailPage({
               </p>
             </div>
 
+            <div className="mb-5">
+              <ActivityShareTools
+                activityTitle={activity.title}
+                analyticsEntityId={detailAnalyticsEntity.entityId}
+                analyticsEntityType={detailAnalyticsEntity.entityType}
+                analyticsSourceSurface="public_event_detail"
+                categoryLabel={activityCategoryLabel}
+                coverImageUrl={activity.coverImageUrl}
+                dateLabel={activityDateLabel}
+                description={activity.description}
+                locationLabel={activityLocationLabel}
+                locale={locale}
+                priceLabel={activityPriceLabel}
+                shareKind="activity"
+              />
+            </div>
+
             <div className="space-y-4 text-sm text-zinc-700">
               <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
                 <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
@@ -774,23 +791,6 @@ export default async function ActivityDetailPage({
             locale={locale}
             viewerProfileId={viewerProfile?.id ?? null}
           />
-
-          <div className="lg:hidden">
-            <ActivityShareTools
-              activityTitle={activity.title}
-              analyticsEntityId={detailAnalyticsEntity.entityId}
-              analyticsEntityType={detailAnalyticsEntity.entityType}
-              analyticsSourceSurface="activity_detail"
-              categoryLabel={activityCategoryLabel}
-              coverImageUrl={activity.coverImageUrl}
-              dateLabel={activityDateLabel}
-              description={activity.description}
-              locationLabel={activityLocationLabel}
-              locale={locale}
-              priceLabel={activityPriceLabel}
-              sharePath={privateSharePath}
-            />
-          </div>
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
@@ -852,7 +852,25 @@ export default async function ActivityDetailPage({
             </div>
           </div>
 
-          <div className="order-2 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4 lg:order-2">
+          <div className="order-2 mt-3">
+            <ActivityShareTools
+              activityTitle={activity.title}
+              analyticsEntityId={detailAnalyticsEntity.entityId}
+              analyticsEntityType={detailAnalyticsEntity.entityType}
+              analyticsSourceSurface="activity_detail"
+              categoryLabel={activityCategoryLabel}
+              coverImageUrl={activity.coverImageUrl}
+              dateLabel={activityDateLabel}
+              description={activity.description}
+              locationLabel={activityLocationLabel}
+              locale={locale}
+              priceLabel={activityPriceLabel}
+              shareKind="team"
+              sharePath={privateSharePath}
+            />
+          </div>
+
+          <div className="order-3 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
@@ -1082,22 +1100,6 @@ export default async function ActivityDetailPage({
             <ActivityAnalyticsSummaryPanel
               locale={locale}
               summary={analyticsSummary}
-            />
-          </div>
-          <div className="order-6 mt-4 hidden lg:block">
-            <ActivityShareTools
-              activityTitle={activity.title}
-              analyticsEntityId={detailAnalyticsEntity.entityId}
-              analyticsEntityType={detailAnalyticsEntity.entityType}
-              analyticsSourceSurface="activity_detail"
-              categoryLabel={activityCategoryLabel}
-              coverImageUrl={activity.coverImageUrl}
-              dateLabel={activityDateLabel}
-              description={activity.description}
-              locationLabel={activityLocationLabel}
-              locale={locale}
-              priceLabel={activityPriceLabel}
-              sharePath={privateSharePath}
             />
           </div>
         </aside>
