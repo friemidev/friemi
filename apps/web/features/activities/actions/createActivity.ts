@@ -229,6 +229,8 @@ export async function createActivityAction(
           status: true,
           startAt: true,
           endAt: true,
+          ticketUrl: true,
+          ticketLabel: true,
         },
       })
     : null;
@@ -368,6 +370,8 @@ export async function createActivityAction(
         requiresApproval: result.data.requiresApproval,
         priceType: result.data.priceType,
         priceText: result.data.priceText,
+        ticketUrl: result.data.ticketUrl ?? publicEvent?.ticketUrl ?? null,
+        ticketLabel: result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
         source: importSourceHost,
         sourceUrl: importSourceUrl,
         publicEventId: publicEvent?.id ?? null,

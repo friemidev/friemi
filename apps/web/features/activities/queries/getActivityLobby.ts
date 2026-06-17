@@ -137,6 +137,8 @@ async function decorateLobbyActivities(
           priceText: activity.priceText,
           coverImageUrl: activity.coverImageUrl,
           officialUrl: activity.officialUrl ?? null,
+          ticketUrl: activity.ticketUrl ?? null,
+          ticketLabel: activity.ticketLabel ?? null,
           status: "SCHEDULED",
           favoriteCount: activity.favoriteCount,
           teamCount: activity.participantCount,
@@ -232,6 +234,8 @@ function mapPublicEventToActivityCard(
     coverTone: getActivityCoverTone(publicEvent.id),
     isActivityInfo: true,
     officialUrl: publicEvent.officialUrl,
+    ticketUrl: publicEvent.ticketUrl,
+    ticketLabel: publicEvent.ticketLabel,
     merchant: null,
     isFavorited: publicEvent.isFavorited,
   };

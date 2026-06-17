@@ -52,6 +52,8 @@ function getInitialValues(
     priceType: string;
     priceText: string | null;
     coverImageUrl: string | null;
+    ticketUrl: string | null;
+    ticketLabel: string | null;
   },
   locale: string,
 ): ActivityFormValues {
@@ -83,6 +85,8 @@ function getInitialValues(
     requiresApproval: false,
     priceType: publicEvent.priceType,
     priceText: publicEvent.priceText ?? t.officialPriceFallback,
+    ticketUrl: publicEvent.ticketUrl ?? "",
+    ticketLabel: publicEvent.ticketLabel ?? "",
     publicEventId: publicEvent.id,
     importSourceUrl: "",
   };

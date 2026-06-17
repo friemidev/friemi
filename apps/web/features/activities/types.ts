@@ -35,6 +35,8 @@ export type ActivityCardViewModel = ActivitySummary & {
   merchant: ActivityMerchantViewModel | null;
   isActivityInfo?: boolean;
   officialUrl?: string | null;
+  ticketUrl?: string | null;
+  ticketLabel?: string | null;
   publicEventId?: string | null;
   organizerId?: string | null;
   participantPreview?: ActivityParticipantPreviewViewModel[];
@@ -80,6 +82,8 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
     id: string;
     title: string;
     officialUrl: string | null;
+    ticketUrl: string | null;
+    ticketLabel: string | null;
     status: PublicEventStatus;
   } | null;
 };

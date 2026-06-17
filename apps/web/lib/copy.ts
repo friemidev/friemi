@@ -718,6 +718,12 @@ const copy = {
       priceType: "费用类型",
       priceText: "费用说明",
       priceTextPlaceholder: "免费 / AA 预计 10 欧 / 门票自理",
+      ticketUrl: "订票或预约链接",
+      ticketUrlPlaceholder: "https://example.com/tickets",
+      ticketLabel: "按钮文案",
+      ticketLabelPlaceholder: "立即抢票 / 立即预约",
+      ticketHint:
+        "可选；填写后详情页会展示主要跳转按钮。组局报名仍在站内完成。",
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
       creating: "发布中...",
@@ -1530,6 +1536,12 @@ const copy = {
       priceType: "Cost type",
       priceText: "Cost note",
       priceTextPlaceholder: "Free / Split around €10 / Tickets self-paid",
+      ticketUrl: "Ticket or booking link",
+      ticketUrlPlaceholder: "https://example.com/tickets",
+      ticketLabel: "Button label",
+      ticketLabelPlaceholder: "Get tickets / Book now",
+      ticketHint:
+        "Optional. When filled, the detail page shows a primary external button. Crew sign-ups still happen here.",
       requiresApproval: "Confirm join requests",
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
@@ -2374,6 +2386,12 @@ const copy = {
       priceText: "Note de coût",
       priceTextPlaceholder:
         "Gratuit / Partage env. 10 € / Billet à payer soi-même",
+      ticketUrl: "Lien billetterie ou réservation",
+      ticketUrlPlaceholder: "https://example.com/tickets",
+      ticketLabel: "Texte du bouton",
+      ticketLabelPlaceholder: "Réserver / Billetterie",
+      ticketHint:
+        "Facultatif. Si renseigné, la page détail affiche un bouton externe principal. Les inscriptions au groupe restent ici.",
       requiresApproval: "Confirmer les demandes",
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",

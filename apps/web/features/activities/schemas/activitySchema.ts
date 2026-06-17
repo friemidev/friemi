@@ -25,6 +25,11 @@ const optionalShortText = z
   .trim()
   .max(40, "最多 40 个字")
   .transform((value) => (value.length > 0 ? value : null));
+const optionalLinkLabel = z
+  .string()
+  .trim()
+  .max(40, "链接文案最多 40 个字")
+  .transform((value) => (value.length > 0 ? value : null));
 const optionalImageUrl = z
   .string()
   .trim()
@@ -34,6 +39,15 @@ const optionalImageUrl = z
     "图片地址无效",
   )
   .transform((value) => (value.length > 0 ? value : null));
+const optionalExternalUrl = z
+  .string()
+  .trim()
+  .max(1000, "链接地址过长")
+  .transform((value) => (value.length > 0 ? value : null))
+  .refine(
+    (value) => value === null || /^https?:\/\/.+/i.test(value),
+    "请输入有效的网址",
+  );
 const optionalNumber = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,
@@ -88,6 +102,8 @@ export const createActivitySchema = z
     requiresApproval: z.coerce.boolean().default(false),
     priceType: z.enum(priceTypeValues),
     priceText: activityPriceText,
+    ticketUrl: optionalExternalUrl.optional(),
+    ticketLabel: optionalLinkLabel.optional(),
     publicEventId: z
       .string()
       .trim()

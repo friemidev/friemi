@@ -57,6 +57,8 @@ export const publicEventSelect = {
   priceText: true,
   coverImageUrl: true,
   officialUrl: true,
+  ticketUrl: true,
+  ticketLabel: true,
   status: true,
   _count: {
     select: {
@@ -134,6 +136,8 @@ export function getPublicEventCardViewModel(
     priceText: publicEvent.priceText,
     coverImageUrl: publicEvent.coverImageUrl,
     officialUrl: publicEvent.officialUrl,
+    ticketUrl: publicEvent.ticketUrl,
+    ticketLabel: publicEvent.ticketLabel,
     status: publicEvent.status,
     favoriteCount: publicEvent._count.favorites,
     teamCount: publicEvent._count.teams,

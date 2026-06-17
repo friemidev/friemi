@@ -1,5 +1,6 @@
 import type { ActivityCategory, PriceType, Prisma } from "@prisma/client";
 import { MAX_ACTIVITY_DESCRIPTION_LENGTH } from "@/features/activities/schemas/activitySchema";
+import { isUsableTicketLabel } from "@/features/public-events/utils/ticketCta";
 import { prisma } from "@/lib/prisma";
 
 const parisOpenDataDataset = "que-faire-a-paris-";
@@ -54,6 +55,8 @@ type ParisOpenDataRecord = {
   cover_alt?: string | null;
   cover_credit?: string | null;
   cover_url?: string | null;
+  access_link?: string | null;
+  access_link_text?: string | null;
   contact_organisation_name?: string | null;
   address_name?: string | null;
   address_street?: string | null;
@@ -376,6 +379,10 @@ function normalizeText(value: string | number | null | undefined) {
 }
 
 function normalizeExternalImageUrl(value: string | null | undefined) {
+  return normalizeExternalUrl(value);
+}
+
+function normalizeExternalUrl(value: string | null | undefined) {
   const rawUrl = normalizeText(value);
 
   if (!rawUrl) {
@@ -388,6 +395,12 @@ function normalizeExternalImageUrl(value: string | null | undefined) {
   } catch {
     return null;
   }
+}
+
+function getTicketLabel(record: ParisOpenDataRecord) {
+  const accessLabel = normalizeText(record.access_link_text);
+
+  return isUsableTicketLabel(accessLabel) ? accessLabel : null;
 }
 
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -582,6 +595,7 @@ function toPublicEventData(
 
   const price = mapPrice(record);
   const coordinates = getCoordinates(record);
+  const ticketUrl = normalizeExternalUrl(record.access_link);
 
   return {
     title,
@@ -598,6 +612,8 @@ function toPublicEventData(
     priceText: price.priceText,
     coverImageUrl: normalizeExternalImageUrl(record.cover_url),
     officialUrl: normalizeText(record.url) || null,
+    ticketUrl,
+    ticketLabel: ticketUrl ? getTicketLabel(record) : null,
     source: parisOpenDataSource,
     sourceUrl: normalizeText(record.url) || null,
     externalSource: parisOpenDataSource,
@@ -862,6 +878,8 @@ export async function importParisOpenDataActivities(
             priceText: publicEventData.priceText,
             coverImageUrl: publicEventData.coverImageUrl,
             officialUrl: publicEventData.officialUrl,
+            ticketUrl: publicEventData.ticketUrl,
+            ticketLabel: publicEventData.ticketLabel,
             source: publicEventData.source,
             sourceUrl: publicEventData.sourceUrl,
             externalSource: publicEventData.externalSource,

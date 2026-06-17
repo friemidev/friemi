@@ -223,6 +223,8 @@ export async function updateActivityAction(
           requiresApproval: result.data.requiresApproval,
           priceType: result.data.priceType,
           priceText: result.data.priceText,
+          ticketUrl: result.data.ticketUrl ?? null,
+          ticketLabel: result.data.ticketLabel ?? null,
           shareEnabled: result.data.visibility === "PRIVATE",
           shareToken:
             result.data.visibility === "PRIVATE"

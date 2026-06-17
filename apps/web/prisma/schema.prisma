@@ -187,6 +187,8 @@ model Activity {
   priceType        PriceType             @default(FREE)
   priceText        String
   coverImageUrl    String?
+  ticketUrl        String?
+  ticketLabel      String?
   source           String?
   sourceUrl        String?               @unique
   externalSource   String?
@@ -220,6 +222,7 @@ model Activity {
   @@index([source])
   @@index([externalSource, externalId])
   @@index([externalUrl])
+  @@index([ticketUrl])
   @@index([importedAt])
 }
 
@@ -238,6 +241,8 @@ model PublicEvent {
   priceText      String?
   coverImageUrl  String?
   officialUrl    String?
+  ticketUrl      String?
+  ticketLabel    String?
   status         PublicEventStatus  @default(SCHEDULED)
   visibility     ActivityVisibility @default(PUBLIC)
   source         String?
@@ -258,6 +263,7 @@ model PublicEvent {
   @@index([visibility, startAt])
   @@index([externalSource, externalId])
   @@index([externalUrl])
+  @@index([ticketUrl])
   @@index([importedAt])
 }
 

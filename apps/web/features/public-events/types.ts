@@ -20,6 +20,8 @@ export type PublicEventCardViewModel = {
   priceText: string | null;
   coverImageUrl: string | null;
   officialUrl: string | null;
+  ticketUrl: string | null;
+  ticketLabel: string | null;
   status: PublicEventStatus;
   teamCount: number;
   favoriteCount: number;

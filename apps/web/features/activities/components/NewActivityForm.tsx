@@ -711,6 +711,39 @@ export function NewActivityForm({
               </label>
             </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                {t.form.ticketUrl}
+                <Input
+                  name="ticketUrl"
+                  aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
+                  defaultValue={values?.ticketUrl}
+                  inputMode="url"
+                  placeholder={t.form.ticketUrlPlaceholder}
+                  type="url"
+                />
+                <span className="text-xs font-normal text-zinc-500">
+                  {t.form.ticketHint}
+                </span>
+                <FieldError errors={state.fieldErrors?.ticketUrl} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                {t.form.ticketLabel}
+                <Input
+                  name="ticketLabel"
+                  aria-invalid={Boolean(state.fieldErrors?.ticketLabel)}
+                  defaultValue={values?.ticketLabel}
+                  maxLength={40}
+                  placeholder={t.form.ticketLabelPlaceholder}
+                />
+                <span className="text-xs font-normal text-zinc-500">
+                  {t.form.ticketLabelPlaceholder}
+                </span>
+                <FieldError errors={state.fieldErrors?.ticketLabel} />
+              </label>
+            </div>
+
             <label className="flex items-start gap-3 rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
               <input
                 className="mt-1"
