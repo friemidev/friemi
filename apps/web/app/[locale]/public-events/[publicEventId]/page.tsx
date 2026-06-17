@@ -18,6 +18,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/utils";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
+import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { getCategoryLabel } from "@/lib/copy";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -293,6 +294,23 @@ export default async function PublicEventDetailPage({
           >
             {t.copyEventInfo}
           </ActivityCopyButton>
+          <div className="mb-4">
+            <ActivityShareTools
+              activityTitle={publicEvent.title}
+              analyticsEntityId={publicEvent.id}
+              analyticsEntityType="public_event"
+              analyticsSourceSurface="public_event_detail"
+              categoryLabel={getCategoryLabel(publicEvent.category, locale)}
+              coverImageUrl={publicEvent.coverImageUrl}
+              dateLabel={eventDateLabel}
+              description={publicEvent.description}
+              locationLabel={eventLocation.displayLabel}
+              locale={locale}
+              priceLabel={eventPriceLabel}
+              shareKind="activity"
+              sharePath={publicEventPath}
+            />
+          </div>
           {isCancelled ? (
             <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm leading-6 text-red-700">
               <div className="flex items-center gap-2 font-semibold">
