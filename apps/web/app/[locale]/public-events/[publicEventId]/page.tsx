@@ -36,6 +36,7 @@ import { ActivityCoverImage } from "@/features/activities/components/ActivityCov
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
 import { getCopy } from "@/lib/copy";
 
 type PublicEventDetailPageProps = {
@@ -204,6 +205,33 @@ export default async function PublicEventDetailPage({
               locale={locale}
               sourceSurface="public_event_detail"
               text={publicEvent.description}
+            />
+            <ManualTranslationBundle
+              entityId={publicEvent.id}
+              entityType="public_event"
+              fields={[
+                {
+                  field: "title",
+                  label: appCopy.translation.fields.title,
+                  text: publicEvent.title,
+                },
+                {
+                  field: "description",
+                  label: appCopy.translation.fields.description,
+                  text: publicEvent.description,
+                },
+                {
+                  field: "address",
+                  label: appCopy.translation.fields.address,
+                  text: eventLocation.displayLabel,
+                },
+                {
+                  field: "priceText",
+                  label: appCopy.translation.fields.priceText,
+                  text: publicEvent.priceText,
+                },
+              ]}
+              locale={locale}
             />
           </div>
 
