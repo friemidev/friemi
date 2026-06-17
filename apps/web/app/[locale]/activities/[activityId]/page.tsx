@@ -69,6 +69,7 @@ import { openActivityOrganizerConversationAction } from "@/features/direct-messa
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -290,6 +291,34 @@ export default async function ActivityDetailPage({
                 locale={locale}
                 sourceSurface="public_event_detail"
                 text={activity.description}
+              />
+              <ManualTranslationBundle
+                accessToken={accessToken ?? null}
+                entityId={activity.id}
+                entityType="activity"
+                fields={[
+                  {
+                    field: "title",
+                    label: t.translation.fields.title,
+                    text: activity.title,
+                  },
+                  {
+                    field: "description",
+                    label: t.translation.fields.description,
+                    text: activity.description,
+                  },
+                  {
+                    field: "address",
+                    label: t.translation.fields.address,
+                    text: activityLocationLabel,
+                  },
+                  {
+                    field: "priceText",
+                    label: t.translation.fields.priceText,
+                    text: activity.priceText,
+                  },
+                ]}
+                locale={locale}
               />
             </div>
 
@@ -616,6 +645,39 @@ export default async function ActivityDetailPage({
               sourceSurface="activity_detail"
               text={activity.description}
             />
+            <ManualTranslationBundle
+              accessToken={accessToken ?? null}
+              entityId={activity.id}
+              entityType="activity"
+              fields={[
+                {
+                  field: "title",
+                  label: t.translation.fields.title,
+                  text: activity.title,
+                },
+                {
+                  field: "description",
+                  label: t.translation.fields.description,
+                  text: activity.description,
+                },
+                {
+                  field: "address",
+                  label: t.translation.fields.address,
+                  text: activityLocationLabel,
+                },
+                {
+                  field: "priceText",
+                  label: t.translation.fields.priceText,
+                  text: activity.priceText,
+                },
+                {
+                  field: "itinerary",
+                  label: t.translation.fields.itinerary,
+                  text: activity.itinerary,
+                },
+              ]}
+              locale={locale}
+            />
           </div>
 
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
@@ -789,6 +851,7 @@ export default async function ActivityDetailPage({
             comments={comments}
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
+            translationAccessToken={accessToken ?? null}
             viewerProfileId={viewerProfile?.id ?? null}
           />
         </article>

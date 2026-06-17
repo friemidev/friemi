@@ -11,6 +11,7 @@ type ActivityCommentsSectionProps = {
   comments: ActivityCommentViewModel[];
   isAuthenticated: boolean;
   locale: string;
+  translationAccessToken?: string | null;
   viewerProfileId: string | null;
 };
 
@@ -19,6 +20,7 @@ export function ActivityCommentsSection({
   comments,
   isAuthenticated,
   locale,
+  translationAccessToken,
   viewerProfileId,
 }: ActivityCommentsSectionProps) {
   const t = getCopy(locale).activityComments;
@@ -68,6 +70,7 @@ export function ActivityCommentsSection({
               comment={comment}
               isAuthenticated={isAuthenticated}
               locale={locale}
+              translationAccessToken={translationAccessToken}
               viewerProfileId={viewerProfileId}
             />
           ))

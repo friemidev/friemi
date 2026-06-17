@@ -16,6 +16,7 @@ import {
   updateActivityCommentAction,
 } from "../actions/createActivityComment";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { ManualTranslationText } from "@/features/translations/components/ManualTranslation";
 import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
@@ -26,6 +27,7 @@ type ActivityCommentThreadProps = {
   comment: ActivityCommentViewModel;
   isAuthenticated: boolean;
   locale: string;
+  translationAccessToken?: string | null;
   viewerProfileId: string | null;
 };
 
@@ -411,12 +413,14 @@ function ReplyItem({
   isAuthenticated,
   locale,
   reply,
+  translationAccessToken,
   viewerProfileId,
 }: {
   activityId: string;
   isAuthenticated: boolean;
   locale: string;
   reply: ActivityCommentReplyViewModel;
+  translationAccessToken?: string | null;
   viewerProfileId: string | null;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -457,9 +461,13 @@ function ReplyItem({
             onCancel={() => setIsEditing(false)}
           />
         ) : (
-          <p className="mt-2 whitespace-pre-line text-sm leading-7 text-zinc-700">
-            {reply.content}
-          </p>
+          <ManualTranslationText
+            accessToken={translationAccessToken}
+            className="mt-2 whitespace-pre-line text-sm leading-7 text-zinc-700"
+            entityId={reply.id}
+            locale={locale}
+            text={reply.content}
+          />
         )}
         {isDeleting ? (
           <DeleteCommentForm
@@ -498,6 +506,7 @@ export function ActivityCommentThread({
   comment,
   isAuthenticated,
   locale,
+  translationAccessToken,
   viewerProfileId,
 }: ActivityCommentThreadProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -556,9 +565,13 @@ export function ActivityCommentThread({
               onCancel={() => setIsEditing(false)}
             />
           ) : (
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-700">
-              {comment.content}
-            </p>
+            <ManualTranslationText
+              accessToken={translationAccessToken}
+              className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-700"
+              entityId={comment.id}
+              locale={locale}
+              text={comment.content}
+            />
           )}
 
           {isDeleting ? (
@@ -613,6 +626,7 @@ export function ActivityCommentThread({
                   isAuthenticated={isAuthenticated}
                   locale={locale}
                   reply={reply}
+                  translationAccessToken={translationAccessToken}
                   viewerProfileId={viewerProfileId}
                 />
               ))}

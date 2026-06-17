@@ -413,6 +413,25 @@ model Comment {
   @@index([parentId])
 }
 
+model ContentTranslation {
+  id                   String   @id @default(cuid())
+  entityType           String
+  entityId             String
+  field                String
+  locale               String
+  sourceHash           String
+  sourceText           String   @db.Text
+  translatedText       String   @db.Text
+  provider             String   @default("deepl")
+  detectedSourceLocale String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([entityType, entityId, field, locale, sourceHash])
+  @@index([entityType, entityId, locale])
+  @@index([locale, createdAt])
+}
+
 model Notification {
   id          String           @id @default(cuid())
   type        NotificationType
