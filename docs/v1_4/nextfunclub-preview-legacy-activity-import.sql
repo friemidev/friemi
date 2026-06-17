@@ -14,12 +14,18 @@ BEGIN
   END IF;
 END $$;
 
-CREATE TEMP TABLE legacy_import_organizers (
+-- Use regular staging tables instead of TEMP tables because some hosted SQL editors
+-- can run selected statements on different connections.
+DROP TABLE IF EXISTS legacy_import_guest_participants;
+DROP TABLE IF EXISTS legacy_import_activities;
+DROP TABLE IF EXISTS legacy_import_organizers;
+
+CREATE TABLE legacy_import_organizers (
   organizer_key text PRIMARY KEY,
   profile_id text NOT NULL,
   nickname text NOT NULL,
   clerk_user_id text NOT NULL
-) ON COMMIT DROP;
+);
 
 INSERT INTO legacy_import_organizers (organizer_key, profile_id, nickname, clerk_user_id) VALUES
   ('louise', 'legacy_org_louise', 'Louise', 'legacy-preview-organizer:louise'),
@@ -28,7 +34,7 @@ INSERT INTO legacy_import_organizers (organizer_key, profile_id, nickname, clerk
   ('hoting', 'legacy_org_hoting', 'Hoting', 'legacy-preview-organizer:hoting'),
   ('👀', 'legacy_org_eyes', '👀', 'legacy-preview-organizer:👀');
 
-CREATE TEMP TABLE legacy_import_activities (
+CREATE TABLE legacy_import_activities (
   activity_id text PRIMARY KEY,
   legacy_id text NOT NULL,
   external_id text NOT NULL,
@@ -50,7 +56,7 @@ CREATE TEMP TABLE legacy_import_activities (
   organizer_nickname text NOT NULL,
   external_url text,
   source_payload jsonb NOT NULL
-) ON COMMIT DROP;
+);
 
 INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title, description, activity_type, category, city, address, start_at, end_at, capacity, price_type, price_text, status, visibility, organizer_key, organizer_profile_id, organizer_nickname, external_url, source_payload) VALUES
   ('legacy_activity_001', '1', 'paris-juin-2026-001', '音乐节游船', '游船 DJ
@@ -255,7 +261,7 @@ Boulevard Jourdan, 75014 Paris', '2026-06-06 15:00:00', '2026-06-06 19:00:00', 2
 
 导入复核：原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。', 'LOCAL', 'SPORTS', 'Paris', '地铁 12号线 Notre Dame des Champs 站', '2026-06-18 17:00:00', NULL, 5, 'AA', '以原组局说明为准', 'CONFIRMED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', 'https://www.rando-paris.org/panamee', '{"importBatch":"paris-juin-2026","legacyId":19,"originalStatus":"Going","originalType":"👟 运动","originalVenue":"地铁 12号线 Notre Dame des Champs 站","originalMeetingAddress":null,"originalLinkPresent":true,"declaredParticipantCount":5,"importedParticipantCount":5,"needsReview":true,"reviewNotes":["原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。"]}'::jsonb);
 
-CREATE TEMP TABLE legacy_import_guest_participants (
+CREATE TABLE legacy_import_guest_participants (
   guest_id text PRIMARY KEY,
   activity_id text NOT NULL,
   display_name text NOT NULL,
@@ -264,7 +270,7 @@ CREATE TEMP TABLE legacy_import_guest_participants (
   message text,
   status text NOT NULL,
   joined_at timestamp NOT NULL
-) ON COMMIT DROP;
+);
 
 INSERT INTO legacy_import_guest_participants (guest_id, activity_id, display_name, wechat_id, normalized_wechat_id, message, status, joined_at) VALUES
   ('legacy_guest_001_001', 'legacy_activity_001', 'Louise', 'P555-555-555', 'p555-555-555', '历史真实组局导入', 'APPROVED', '2026-05-15 18:00:00'),
@@ -497,6 +503,10 @@ ON CONFLICT DO NOTHING;
 SELECT 'legacy activities' AS item, COUNT(*) AS count FROM "Activity" WHERE "source" = 'legacy-nextfun-xlsx' AND "externalSource" = 'nextfun-internal-xlsx'
 UNION ALL
 SELECT 'legacy guest participants' AS item, COUNT(*) AS count FROM "GuestActivityParticipant" WHERE "sourceUserAgent" = 'legacy-xlsx-import:paris-juin-2026';
+
+DROP TABLE IF EXISTS legacy_import_guest_participants;
+DROP TABLE IF EXISTS legacy_import_activities;
+DROP TABLE IF EXISTS legacy_import_organizers;
 
 COMMIT;
 
