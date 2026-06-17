@@ -68,6 +68,21 @@ export function ActivityFilters({
   const defaultSort = getDefaultActivitySort(filters);
   const hasCustomFilterState =
     hasActiveFilters || filters.sort !== defaultSort || filters.page > 1;
+  const resetHref =
+    filters.viewMode === "card"
+      ? activitiesHref
+      : getActivityFilterHref(activitiesHref, {
+          ...filters,
+          category: undefined,
+          city: undefined,
+          dateRange: undefined,
+          keyword: undefined,
+          page: 1,
+          relation: "ALL",
+          sort: getDefaultActivitySort({}),
+          timeState: undefined,
+          type: undefined,
+        });
 
   function buildFilterHref(nextFilters: Partial<ActivityFilters>) {
     const mergedFilters = {
@@ -191,6 +206,10 @@ export function ActivityFilters({
         method="get"
         onSubmit={handleSubmit}
       >
+        {filters.viewMode !== "card" ? (
+          <input name="view" type="hidden" value={filters.viewMode} />
+        ) : null}
+
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
           <label className="col-span-2 grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448] sm:col-span-1">
             {t.activityFilters.keywordLabel}
@@ -223,7 +242,7 @@ export function ActivityFilters({
                   ? "border-[#ddc9a9] bg-white/92 text-zinc-700 shadow-[0_5px_14px_rgba(92,66,32,0.04)] hover:border-[#cfb287] hover:bg-[#fdfaf4]"
                   : "border-transparent bg-transparent text-zinc-400",
               )}
-              href={activitiesHref}
+              href={resetHref}
             >
               <FilterX className="h-4 w-4 shrink-0" />
               {t.activityFilters.reset}

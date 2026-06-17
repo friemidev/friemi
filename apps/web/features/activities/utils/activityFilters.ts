@@ -23,6 +23,7 @@ export const activityRelationFilters = [
   "FRIEND_JOINED",
   "MINE",
 ] as const;
+export const activityListViewModes = ["card", "date"] as const;
 
 export type ActivityFilterType = (typeof activityFilterTypes)[number];
 export type ActivitySortOption = (typeof activitySortOptions)[number];
@@ -30,6 +31,7 @@ export type ActivityDateRange = (typeof activityDateRangeOptions)[number];
 export type ActivityTimeState = (typeof activityTimeStates)[number];
 export type ActivityRelationFilter =
   (typeof activityRelationFilters)[number];
+export type ActivityListViewMode = (typeof activityListViewModes)[number];
 
 export type ActivityFilters = {
   category?: ActivityCategory;
@@ -41,6 +43,7 @@ export type ActivityFilters = {
   sort: ActivitySortOption;
   timeState?: ActivityTimeState;
   type?: ActivityFilterType;
+  viewMode: ActivityListViewMode;
 };
 
 export type ActivityFilterSearchParams = Record<
@@ -58,6 +61,7 @@ const activityFilterQueryKeys = [
   "relation",
   "sort",
   "page",
+  "view",
 ];
 
 type ActivityFilterRawValues = {
@@ -70,6 +74,8 @@ type ActivityFilterRawValues = {
   sort?: unknown;
   timeState?: unknown;
   type?: unknown;
+  view?: unknown;
+  viewMode?: unknown;
 };
 
 export const activityCategoryOptions = (
@@ -142,6 +148,10 @@ function isActivityRelationFilter(
   value: string,
 ): value is ActivityRelationFilter {
   return activityRelationFilters.some((relation) => relation === value);
+}
+
+function isActivityListViewMode(value: string): value is ActivityListViewMode {
+  return activityListViewModes.some((viewMode) => viewMode === value);
 }
 
 function normalizePageParam(value: string | undefined) {
@@ -231,6 +241,7 @@ export function normalizeActivityFilters(
     sort: getSingleParam(searchParams, "sort"),
     timeState: getSingleParam(searchParams, "time"),
     type: getSingleParam(searchParams, "type"),
+    view: getSingleParam(searchParams, "view"),
   });
 }
 
@@ -246,6 +257,7 @@ export function normalizeActivityFilterValues(
   const type = getStringValue(values.type);
   const timeState = getStringValue(values.timeState);
   const sort = getStringValue(values.sort);
+  const view = getStringValue(values.view ?? values.viewMode);
   const filters = {
     category: category && isActivityCategory(category) ? category : undefined,
     city,
@@ -257,6 +269,7 @@ export function normalizeActivityFilterValues(
     timeState:
       timeState && isActivityTimeState(timeState) ? timeState : undefined,
     type: type && isActivityFilterType(type) ? type : undefined,
+    viewMode: view && isActivityListViewMode(view) ? view : "card",
   };
 
   return {
@@ -282,6 +295,7 @@ export function normalizeActivityFilterFormData(
     sort: formData.get("sort"),
     timeState: formData.get("time"),
     type: formData.get("type"),
+    view: formData.get("view"),
   });
 }
 
@@ -299,6 +313,7 @@ export function getActivityFilterQueryString(filters: ActivityFilters) {
     query.set("sort", filters.sort);
   }
   if (filters.page > 1) query.set("page", String(filters.page));
+  if (filters.viewMode !== "card") query.set("view", filters.viewMode);
 
   return query.toString();
 }

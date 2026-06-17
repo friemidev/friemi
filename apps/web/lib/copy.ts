@@ -178,6 +178,16 @@ const copy = {
       emptyDescription: "当前没有可展示的公开活动，请稍后再来看看。",
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
+      viewToggleLabel: "切换活动视图",
+      cardView: "卡片",
+      dateView: "按日期",
+      agendaLongRunningTitle: "长期活动",
+      agendaToday: "今天",
+      agendaTomorrow: "明天",
+      agendaActivityCount: (count: number) => `${count} 个活动`,
+      agendaJumpLabel: "日期导航",
+      agendaLimitedHint: (shown: number, total: number) =>
+        `按日期视图已显示前 ${shown} 个结果，共 ${total} 个。需要继续浏览时，可以切回卡片视图分页查看。`,
     },
     activityLobby: {
       eyebrow: "你的局，你的搭子，你的下一场",
@@ -992,6 +1002,17 @@ const copy = {
       emptyFilteredTitle: "No matching activity info",
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
+      viewToggleLabel: "Switch activity view",
+      cardView: "Cards",
+      dateView: "By date",
+      agendaLongRunningTitle: "Long-running activities",
+      agendaToday: "Today",
+      agendaTomorrow: "Tomorrow",
+      agendaActivityCount: (count: number) =>
+        `${count} activit${count === 1 ? "y" : "ies"}`,
+      agendaJumpLabel: "Date navigation",
+      agendaLimitedHint: (shown: number, total: number) =>
+        `The date view is showing the first ${shown} of ${total} results. Switch back to cards to browse every page.`,
     },
     activityLobby: {
       eyebrow: "Your plans, your people, your next outing",
@@ -1864,6 +1885,17 @@ const copy = {
       emptyFilteredTitle: "Aucune sortie trouvée",
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
+      viewToggleLabel: "Changer de vue",
+      cardView: "Cartes",
+      dateView: "Par date",
+      agendaLongRunningTitle: "Sorties longues",
+      agendaToday: "Aujourd'hui",
+      agendaTomorrow: "Demain",
+      agendaActivityCount: (count: number) =>
+        `${count} sortie${count > 1 ? "s" : ""}`,
+      agendaJumpLabel: "Navigation par date",
+      agendaLimitedHint: (shown: number, total: number) =>
+        `La vue par date affiche les ${shown} premiers résultats sur ${total}. Repassez en cartes pour parcourir toutes les pages.`,
     },
     activityLobby: {
       eyebrow: "Vos plans, vos amis, votre prochaine sortie",
