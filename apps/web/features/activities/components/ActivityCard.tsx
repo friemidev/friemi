@@ -519,8 +519,8 @@ export function ActivityCard({
       {showFavoriteButton && !isOwnActivity && isActivityInfo && activity.publicEventId ? (
         <div
           className={cn(
-            "absolute right-3 top-3 z-20",
-            mobileDenseClass("max-[639px]:right-2 max-[639px]:top-2"),
+            "absolute right-3 top-4 z-20 sm:top-5",
+            mobileDenseClass("max-[639px]:right-2.5 max-[639px]:top-3"),
           )}
         >
           <PublicEventFavoriteButton
@@ -542,8 +542,8 @@ export function ActivityCard({
       {showFavoriteButton && !isOwnActivity && (!isActivityInfo || !activity.publicEventId) ? (
         <div
           className={cn(
-            "absolute right-3 top-3 z-20",
-            mobileDenseClass("max-[639px]:right-2 max-[639px]:top-2"),
+            "absolute right-3 top-4 z-20 sm:top-5",
+            mobileDenseClass("max-[639px]:right-2.5 max-[639px]:top-3"),
           )}
         >
           <ActivityFavoriteButton

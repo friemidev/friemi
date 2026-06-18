@@ -18,15 +18,3 @@ export function normalizeGuestWechatId(value: string | null | undefined) {
 
   return normalized && normalized.length >= 3 ? normalized : null;
 }
-
-export function hasGuestContactIdentity({
-  normalizedEmail,
-  normalizedPhone,
-  normalizedWechatId,
-}: {
-  normalizedEmail?: string | null;
-  normalizedPhone?: string | null;
-  normalizedWechatId?: string | null;
-}) {
-  return Boolean(normalizedEmail || normalizedPhone || normalizedWechatId);
-}

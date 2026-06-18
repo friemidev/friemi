@@ -154,11 +154,11 @@ const copy = {
       signUpMissingDescription: "注册服务正在准备中，请稍后再试。",
     },
     home: {
-      eyebrow: "真实活动 · 真实连接",
+      eyebrow: "公共活动 · 真实组局",
       title: "Next Fun",
       tagline: "下一场，Fun 开场",
       description:
-        "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！NEXT FUN！",
+        "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",
