@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SlidersHorizontal, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -78,6 +79,21 @@ type EmptyLobbyAction = {
 type FilterGroupRowProps = {
   children: ReactNode;
   label: string;
+};
+
+type MobileLobbyFilterSheetProps = {
+  activeFilter: LobbyFilterId;
+  activeStatusFilter: LobbyStatusFilterId;
+  failedFilters: Partial<Record<LobbyFilterId, boolean>>;
+  filterCopy: ReturnType<typeof getLobbyFilterCopy>;
+  filterOptions: FilterOption[];
+  isOpen: boolean;
+  loadingFilter: LobbyFilterId | null;
+  locale: string;
+  onClose: () => void;
+  onFilterChange: (filter: LobbyFilterId) => void;
+  onStatusChange: (status: LobbyStatusFilterId) => void;
+  statusFilterOptions: StatusFilterOption[];
 };
 
 function getAllLabel(locale: string) {
@@ -298,6 +314,36 @@ function getLobbyFilterCopy(locale: string) {
   };
 }
 
+function getMobileLobbyFilterCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      apply: "Valider",
+      close: "Fermer",
+      openCategory: "Categorie",
+      openStatus: "Statut",
+      title: "Filtrer",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      apply: "Done",
+      close: "Close",
+      openCategory: "Category",
+      openStatus: "Status",
+      title: "Filters",
+    };
+  }
+
+  return {
+    apply: "完成",
+    close: "关闭",
+    openCategory: "分类",
+    openStatus: "状态",
+    title: "筛选",
+  };
+}
+
 function getStatusFilterLabel(locale: string, id: LobbyStatusFilterId) {
   if (locale === "fr") {
     switch (id) {
@@ -470,6 +516,173 @@ function FilterGroupRow({ children, label }: FilterGroupRowProps) {
       </p>
       <div className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {children}
+      </div>
+    </div>
+  );
+}
+
+function MobileLobbyFilterSheet({
+  activeFilter,
+  activeStatusFilter,
+  failedFilters,
+  filterCopy,
+  filterOptions,
+  isOpen,
+  loadingFilter,
+  locale,
+  onClose,
+  onFilterChange,
+  onStatusChange,
+  statusFilterOptions,
+}: MobileLobbyFilterSheetProps) {
+  const copy = getMobileLobbyFilterCopy(locale);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 sm:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lobby-mobile-filter-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/36 backdrop-blur-[2px]"
+        aria-label={copy.close}
+        onClick={onClose}
+      />
+      <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border border-[#decfb7] bg-[#fffaf2] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(70,55,32,0.18)]">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#d9c9ad]" />
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p
+              id="lobby-mobile-filter-title"
+              className="text-base font-semibold text-ink"
+            >
+              {copy.title}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#dfceb0] bg-white text-[#6b5b4a] shadow-sm"
+            aria-label={copy.close}
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a7455]">
+              {filterCopy.category}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {filterOptions.map((option) => {
+                const active = option.id === activeFilter;
+                const pending = option.count === null;
+                const optionLoading = pending && loadingFilter === option.id;
+                const optionFailed = pending && Boolean(failedFilters[option.id]);
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onFilterChange(option.id)}
+                    className={cn(
+                      "flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border px-3 text-left text-sm font-semibold transition",
+                      active
+                        ? "border-[#b8cda8] bg-[#e4efd9] text-[#526a39] shadow-[0_6px_16px_rgba(96,124,69,0.11)]"
+                        : "border-[#e2d6c2] bg-white/82 text-[#65584b]",
+                    )}
+                  >
+                    <span className="min-w-0 truncate">{option.label}</span>
+                    {!pending || optionLoading || optionFailed ? (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
+                          active
+                            ? "bg-white/78 text-[#526a39]"
+                            : "bg-[#f3ecdf] text-[#8a7a65]",
+                        )}
+                      >
+                        {optionFailed
+                          ? "!"
+                          : optionLoading
+                            ? "..."
+                            : option.count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a7455]">
+              {filterCopy.status}
+            </p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {statusFilterOptions.map((option) => {
+                const active = option.id === activeStatusFilter;
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onStatusChange(option.id)}
+                    className={cn(
+                      "flex h-11 min-w-0 flex-col items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
+                      active
+                        ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
+                        : "border-[#e2d6c2] bg-white/82 text-[#65584b]",
+                    )}
+                  >
+                    <span className="min-w-0 max-w-full truncate">
+                      {option.label}
+                    </span>
+                    <span className="text-[11px] opacity-75">{option.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-ink text-sm font-semibold text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
+          onClick={onClose}
+        >
+          {copy.apply}
+        </button>
       </div>
     </div>
   );
@@ -679,6 +892,7 @@ export function ActivityLobbyView({
   const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [lazySections, setLazySections] = useState<
     Partial<Record<LobbyFilterId, ActivityCardViewModel[]>>
@@ -897,9 +1111,33 @@ export function ActivityLobbyView({
         )
       : emptyLobbyActions;
   const filterCopy = getLobbyFilterCopy(locale);
+  const mobileFilterCopy = getMobileLobbyFilterCopy(locale);
   const activeCategoryLabel =
     filterOptions.find((option) => option.id === activeFilter)?.label ??
     getAllLabel(locale);
+  const activeStatusLabel = getStatusFilterLabel(locale, activeStatusFilter);
+  const mobileResultCountLabel = activeFilterFailed
+    ? "!"
+    : activeFilterLoading
+      ? "..."
+      : visibleActivities.length.toString();
+
+  const openMobileFilter = useCallback(() => {
+    setMobileFilterOpen(true);
+  }, []);
+
+  const closeMobileFilter = useCallback(() => {
+    setMobileFilterOpen(false);
+  }, []);
+
+  const handleCategoryFilterChange = useCallback((filter: LobbyFilterId) => {
+    setActiveFilter(filter);
+    setActiveStatusFilter("all");
+  }, []);
+
+  const handleStatusFilterChange = useCallback((status: LobbyStatusFilterId) => {
+    setActiveStatusFilter(status);
+  }, []);
 
   const loadDeferredSection = useCallback(
     async (
@@ -1066,10 +1304,24 @@ export function ActivityLobbyView({
         sourceSurface="activity_list"
         variant="lobby"
       />
+      <MobileLobbyFilterSheet
+        activeFilter={activeFilter}
+        activeStatusFilter={activeStatusFilter}
+        failedFilters={failedFilters}
+        filterCopy={filterCopy}
+        filterOptions={filterOptions}
+        isOpen={mobileFilterOpen}
+        loadingFilter={loadingFilter}
+        locale={locale}
+        onClose={closeMobileFilter}
+        onFilterChange={handleCategoryFilterChange}
+        onStatusChange={handleStatusFilterChange}
+        statusFilterOptions={statusFilterOptions}
+      />
       <section>
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          <div className="flex flex-col gap-1 px-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-            <h1 className="sr-only">{t.title}</h1>
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <h1 className="sr-only">{t.title}</h1>
+          <div className="hidden flex-col gap-1 px-1 sm:flex sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="text-[13px] font-semibold leading-5 text-ink sm:text-sm">
                 {filterCopy.title}
@@ -1085,7 +1337,30 @@ export function ActivityLobbyView({
             </p>
           </div>
 
-          <div className="grid gap-1.5 sm:gap-2">
+          <div className="sm:hidden">
+            <button
+              type="button"
+              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#dfceb0] bg-[linear-gradient(135deg,rgba(255,253,247,0.96),rgba(255,246,234,0.92))] px-3 text-left shadow-[0_8px_20px_rgba(91,69,38,0.08)] transition active:scale-[0.99]"
+              onClick={openMobileFilter}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1dfb6] text-[#7a552b] shadow-inner shadow-white/50 ring-1 ring-[#dfceb0]">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-semibold leading-3 text-[#9a7448]">
+                  {mobileFilterCopy.title}
+                </span>
+                <span className="mt-0.5 block truncate text-[13px] font-semibold leading-4 text-ink">
+                  {activeCategoryLabel} · {activeStatusLabel}
+                </span>
+              </span>
+              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[#e18a6d] px-2.5 py-1 text-xs font-bold text-white shadow-[0_4px_10px_rgba(211,120,91,0.28)]">
+                {mobileResultCountLabel}
+              </span>
+            </button>
+          </div>
+
+          <div className="hidden gap-1.5 sm:grid sm:gap-2">
             <FilterGroupRow label={filterCopy.category}>
               {filterOptions.map((option) => {
                 const active = option.id === activeFilter;
@@ -1098,10 +1373,7 @@ export function ActivityLobbyView({
                     key={option.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => {
-                      setActiveFilter(option.id);
-                      setActiveStatusFilter("all");
-                    }}
+                    onClick={() => handleCategoryFilterChange(option.id)}
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
@@ -1140,7 +1412,7 @@ export function ActivityLobbyView({
                     key={option.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setActiveStatusFilter(option.id)}
+                    onClick={() => handleStatusFilterChange(option.id)}
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
