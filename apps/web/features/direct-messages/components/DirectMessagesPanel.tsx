@@ -306,7 +306,7 @@ export function MessageThread({
     conversation.messages[conversation.messages.length - 1]?.id;
 
   return (
-    <section className="-mx-4 flex min-h-[calc(100dvh-8.25rem)] flex-col overflow-hidden bg-white/82 sm:mx-0 sm:rounded-lg sm:border sm:border-black/10 sm:shadow-sm lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+    <section className="-mx-4 flex h-full min-h-0 flex-col overflow-hidden bg-white/82 md:mx-0 md:min-h-[calc(100dvh-8.25rem)] md:rounded-lg md:border md:border-black/10 md:shadow-sm lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
       <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-black/10 bg-white/80 p-4">

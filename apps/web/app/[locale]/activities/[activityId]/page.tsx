@@ -301,7 +301,7 @@ export default async function ActivityDetailPage({
             src={activity.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
           />
-          <div className="absolute right-3 top-3 z-30 flex items-start gap-2 sm:right-5 sm:top-5">
+          <div className="absolute right-3 top-4 z-30 flex items-start gap-2 sm:right-5 sm:top-6">
             <ActivityFavoriteButton
               activityId={activity.id}
               favoriteCount={activity.favoriteCount}
@@ -669,7 +669,7 @@ export default async function ActivityDetailPage({
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
         />
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
+        <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
           {!isOrganizer ? (
             <ActivityFavoriteButton
               activityId={activity.id}

@@ -15,7 +15,6 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import {
-  hasGuestContactIdentity,
   normalizeGuestEmail,
   normalizeGuestPhone,
   normalizeGuestWechatId,
@@ -38,43 +37,23 @@ const guestJoinRateLimitWindowMs = 60 * 60 * 1000;
 const maxGuestJoinsPerActivityPerFingerprint = 4;
 const maxGuestJoinsGlobalPerFingerprint = 12;
 
-const guestJoinSchema = z
-  .object({
-    activityId: z.string().min(1, "活动不存在"),
-    locale: z.string().min(1).default("zh-CN"),
-    accessToken: z.string().trim().optional(),
-    displayName: z.string().trim().min(1, "请填写名字或昵称").max(24, "名字最多 24 个字"),
-    phone: z.string().trim().max(40, "电话过长").optional(),
-    email: z
-      .string()
-      .trim()
-      .max(120, "邮箱过长")
-      .optional()
-      .refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
-        message: "请输入有效邮箱",
-      }),
-    wechatId: z.string().trim().max(80, "微信号过长").optional(),
-    message: z.string().trim().max(300, "留言最多 300 个字").optional(),
-  })
-  .superRefine((value, context) => {
-    const normalizedEmail = normalizeGuestEmail(value.email);
-    const normalizedPhone = normalizeGuestPhone(value.phone);
-    const normalizedWechatId = normalizeGuestWechatId(value.wechatId);
-
-    if (
-      !hasGuestContactIdentity({
-        normalizedEmail,
-        normalizedPhone,
-        normalizedWechatId,
-      })
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "请至少填写电话、邮箱或微信号中的一种",
-        path: ["contact"],
-      });
-    }
-  });
+const guestJoinSchema = z.object({
+  activityId: z.string().min(1, "活动不存在"),
+  locale: z.string().min(1).default("zh-CN"),
+  accessToken: z.string().trim().optional(),
+  displayName: z.string().trim().min(1, "请填写名字或昵称").max(24, "名字最多 24 个字"),
+  phone: z.string().trim().max(40, "电话过长").optional(),
+  email: z
+    .string()
+    .trim()
+    .max(120, "邮箱过长")
+    .optional()
+    .refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
+      message: "请输入有效邮箱",
+    }),
+  wechatId: z.string().trim().max(80, "微信号过长").optional(),
+  message: z.string().trim().max(300, "留言最多 300 个字").optional(),
+});
 
 export type GuestJoinActivityState = {
   activityId?: string;
@@ -318,18 +297,21 @@ export async function joinActivityAsGuestAction(
           normalizedWechatId ? { normalizedWechatId } : null,
         ].filter(Boolean) as Prisma.GuestActivityParticipantWhereInput[];
 
-        const existingGuest = await tx.guestActivityParticipant.findFirst({
-          where: {
-            activityId: activity.id,
-            status: {
-              in: existingGuestStatuses,
-            },
-            OR: duplicateConditions,
-          },
-          select: {
-            id: true,
-          },
-        });
+        const existingGuest =
+          duplicateConditions.length > 0
+            ? await tx.guestActivityParticipant.findFirst({
+                where: {
+                  activityId: activity.id,
+                  status: {
+                    in: existingGuestStatuses,
+                  },
+                  OR: duplicateConditions,
+                },
+                select: {
+                  id: true,
+                },
+              })
+            : null;
 
         if (existingGuest) {
           return { ok: false as const, error: "你已经用该联系方式报名过。" };

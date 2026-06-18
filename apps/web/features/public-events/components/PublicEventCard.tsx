@@ -89,7 +89,7 @@ export function PublicEventCard({
   return (
     <Card className="group relative flex h-full flex-col overflow-hidden border-[#ded2bc] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cdb88f] hover:shadow-lg">
       {showFavoriteButton ? (
-        <div className="absolute right-3 top-3 z-20">
+        <div className="absolute right-3 top-4 z-20 sm:top-5">
           <PublicEventFavoriteButton
             favoriteCount={event.favoriteCount}
             publicEventId={event.id}

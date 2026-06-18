@@ -199,7 +199,7 @@ export default async function PublicEventDetailPage({
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"
         />
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
+        <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-7">
           <PublicEventFavoriteButton
             favoriteCount={publicEvent.favoriteCount}
             publicEventId={publicEvent.id}

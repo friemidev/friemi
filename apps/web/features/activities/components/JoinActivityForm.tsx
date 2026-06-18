@@ -49,7 +49,7 @@ function getGuestJoinCopy(locale: string) {
     return {
       title: "Inscription invite",
       description:
-        "Laissez un nom et un contact. Votre e-mail ou WeChat pourra rattacher cette inscription a votre compte plus tard.",
+        "Laissez seulement un nom pour vous inscrire. Telephone, e-mail et WeChat restent optionnels; e-mail ou WeChat aideront a retrouver cette inscription plus tard.",
       displayNameLabel: "Nom ou pseudo",
       displayNamePlaceholder: "Votre nom affiche",
       phoneLabel: "Telephone",
@@ -58,7 +58,8 @@ function getGuestJoinCopy(locale: string) {
       emailPlaceholder: "E-mail, optionnel",
       wechatLabel: "WeChat",
       wechatPlaceholder: "Identifiant WeChat, optionnel",
-      contactHint: "Renseignez au moins telephone, e-mail ou WeChat.",
+      contactHint:
+        "Les contacts sont optionnels. E-mail ou WeChat facilitent le rattachement a votre compte plus tard.",
       messageLabel: "Message",
       submit: "S'inscrire",
       submitting: "Envoi...",
@@ -75,7 +76,7 @@ function getGuestJoinCopy(locale: string) {
     return {
       title: "Guest signup",
       description:
-        "Leave a name and one contact method. Your email or WeChat can link this signup to your account later.",
+        "Leave just a name to join. Phone, email, and WeChat are optional; email or WeChat can link this signup to your account later.",
       displayNameLabel: "Name or nickname",
       displayNamePlaceholder: "Name shown to the organizer",
       phoneLabel: "Phone",
@@ -84,7 +85,8 @@ function getGuestJoinCopy(locale: string) {
       emailPlaceholder: "Email, optional",
       wechatLabel: "WeChat",
       wechatPlaceholder: "WeChat ID, optional",
-      contactHint: "Fill at least phone, email, or WeChat.",
+      contactHint:
+        "Contact fields are optional. Email or WeChat makes it easier to recover this signup later.",
       messageLabel: "Message",
       submit: "Join as guest",
       submitting: "Submitting...",
@@ -100,7 +102,7 @@ function getGuestJoinCopy(locale: string) {
   return {
     title: "游客报名",
     description:
-      "填写昵称和一种联系方式即可报名。之后用相同邮箱或微信注册/绑定账号，会自动找回这条报名记录。",
+      "只填写名字/昵称也可以报名。电话、邮箱、微信都可选；填写邮箱或微信后，之后注册/绑定账号时更容易找回这条报名记录。",
     displayNameLabel: "名字/昵称",
     displayNamePlaceholder: "活动中展示的名字",
     phoneLabel: "电话",
@@ -109,7 +111,7 @@ function getGuestJoinCopy(locale: string) {
     emailPlaceholder: "邮箱，可选",
     wechatLabel: "微信",
     wechatPlaceholder: "微信号，可选",
-    contactHint: "电话、邮箱、微信至少填写一项。",
+    contactHint: "联系方式可选；填写邮箱或微信后，更方便之后找回报名。",
     messageLabel: "报名留言",
     submit: "游客报名",
     submitting: "提交中...",

@@ -84,7 +84,7 @@ function getSwipeCopy(locale: string) {
   }
 
   return {
-    eyebrow: "滑动发现",
+    eyebrow: "发现活动",
     title: "滑一滑",
     previous: "上一张",
     next: "下一张",
