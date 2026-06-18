@@ -12,6 +12,8 @@ const defaultSiteName = "Next Fun";
 const defaultShareImagePath = "/logo.png";
 const defaultDescription =
   "Next Fun helps overseas Chinese-speaking users discover, create, and join local activities.";
+export const generalPageShareDescription =
+  "平台·搭子·活动·车队，找你所需，找你所想，也可以看看好友们参加的活动，生活与快乐就在下一站等你！NEXT FUN！";
 
 type HeaderGetter = {
   get(name: string): string | null;

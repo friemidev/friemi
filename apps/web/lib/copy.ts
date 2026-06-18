@@ -157,7 +157,8 @@ const copy = {
       eyebrow: "真实活动 · 真实连接",
       title: "Next Fun",
       tagline: "下一场，Fun 开场",
-      description: "在这里发现活动，和朋友、新搭子一起组队出发!",
+      description:
+        "平台·搭子·活动·车队，找你所需，找你所想，也可以看看好友们参加的活动，生活与快乐就在下一站等你！NEXT FUN！",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",

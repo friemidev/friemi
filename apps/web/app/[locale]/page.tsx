@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
-import { buildPageShareMetadata, getRequestBaseUrl } from "@/lib/share-metadata";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 
 type RootPageProps = {
   params: Promise<{
@@ -21,7 +25,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: `${t.home.tagline} · ${t.home.description}`,
+    description: generalPageShareDescription,
     path: withLocale(locale, "/home"),
     title: `${t.home.title} · ${t.home.tagline}`,
   });

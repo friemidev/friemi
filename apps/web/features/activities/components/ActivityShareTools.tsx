@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Download,
   Link as LinkIcon,
-  MoreHorizontal,
   QrCode,
   Share2,
   X,
@@ -555,11 +554,7 @@ export function ActivityShareTools({
             type="button"
             variant="secondary"
           >
-            {shareMode === "wechat" ? (
-              <MoreHorizontal className="h-4 w-4 shrink-0" />
-            ) : (
-              <Share2 className="h-4 w-4 shrink-0" />
-            )}
+            <Share2 className="h-4 w-4 shrink-0" />
             <span className="min-w-0 truncate">{t.systemShare}</span>
           </Button>
         ) : activityUrl ? (
@@ -695,11 +690,7 @@ export function ActivityShareTools({
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#a76243] ring-1 ring-[#dccba8]">
-                  {shareMode === "wechat" ? (
-                    <MoreHorizontal className="h-5 w-5" />
-                  ) : (
-                    <Share2 className="h-5 w-5" />
-                  )}
+                  <Share2 className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
                   <p className="text-base font-semibold text-ink">

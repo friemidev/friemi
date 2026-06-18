@@ -13,7 +13,11 @@ import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
-import { buildPageShareMetadata, getRequestBaseUrl } from "@/lib/share-metadata";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 
 type HomePageProps = {
   params: Promise<{
@@ -56,7 +60,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: `${t.home.tagline} · ${t.home.description}`,
+    description: generalPageShareDescription,
     path: withLocale(locale, "/home"),
     title: `${t.home.title} · ${t.home.tagline}`,
   });

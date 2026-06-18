@@ -34,7 +34,11 @@ import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
-import { buildPageShareMetadata, getRequestBaseUrl } from "@/lib/share-metadata";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
 
 type ActivitiesPageProps = {
@@ -59,7 +63,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: t.activities.description,
+    description: generalPageShareDescription,
     path: withLocale(locale, "/activities"),
     title: `${t.activities.title} · Next Fun`,
   });
