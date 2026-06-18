@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode, SelectHTMLAttributes } from "react";
-import { useActionState, useState } from "react";
+import type {
+  FormEvent,
+  ReactNode,
+  SelectHTMLAttributes,
+} from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle } from "lucide-react";
 import {
@@ -26,7 +30,10 @@ import {
   createActivityAction,
   type CreateActivityState,
 } from "../actions/createActivity";
-import type { ActivityFormValues } from "../actions/activityActionUtils";
+import {
+  parseParisDateTime,
+  type ActivityFormValues,
+} from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
 import { ActivityLinkImportPanel } from "@/features/activity-link-import/components/ActivityLinkImportPanel";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
@@ -59,6 +66,109 @@ const categoryOptions = (
 });
 const selectClassName =
   "h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
+const longDurationThresholdMs = 24 * 60 * 60 * 1000;
+
+type LongDurationConfirmation = {
+  durationLabel: string;
+  endLabel: string;
+  startLabel: string;
+};
+
+function getLongDurationConfirmCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      eyebrow: "Vérification avant publication",
+      title: "Ce groupe dure plus d'une journée",
+      description:
+        "La fin du groupe reste alignée sur la fin de l'activité. Confirmez que cette durée longue est bien volontaire avant de publier.",
+      start: "Début",
+      end: "Fin",
+      duration: "Durée",
+      cancel: "Revenir modifier",
+      confirm: "Confirmer et publier",
+      days: (value: string) => `${value} jour(s)`,
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      eyebrow: "Check before publishing",
+      title: "This crew lasts more than one day",
+      description:
+        "The crew end time is still aligned with the activity end time. Confirm this long duration is intentional before publishing.",
+      start: "Start",
+      end: "End",
+      duration: "Duration",
+      cancel: "Go back",
+      confirm: "Confirm and publish",
+      days: (value: string) => `${value} day(s)`,
+    };
+  }
+
+  return {
+    eyebrow: "发布前确认",
+    title: "这个组局持续超过一天",
+    description:
+      "默认结束时间仍与活动整体结束时间一致。如果你只是想约其中某一场，可以返回修改结束时间。",
+    start: "开始",
+    end: "结束",
+    duration: "持续时长",
+    cancel: "返回修改",
+    confirm: "再次确认发起",
+    days: (value: string) => `${value} 天`,
+  };
+}
+
+function formatLongDurationDays(durationMs: number, locale: string) {
+  const days = durationMs / longDurationThresholdMs;
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: Number.isInteger(days) ? 0 : 1,
+  }).format(days);
+}
+
+function formatLongDurationDate(date: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Paris",
+  }).format(date);
+}
+
+function getLongDurationConfirmation(
+  form: HTMLFormElement,
+  locale: string,
+): LongDurationConfirmation | null {
+  const formData = new FormData(form);
+  const startAtValue = formData.get("startAt");
+  const endAtValue = formData.get("endAt");
+
+  if (typeof startAtValue !== "string" || typeof endAtValue !== "string") {
+    return null;
+  }
+
+  const startAt = parseParisDateTime(startAtValue);
+  const endAt = endAtValue ? parseParisDateTime(endAtValue) : null;
+
+  if (!startAt || !endAt) {
+    return null;
+  }
+
+  const durationMs = endAt.getTime() - startAt.getTime();
+
+  if (durationMs <= longDurationThresholdMs) {
+    return null;
+  }
+
+  const durationValue = formatLongDurationDays(durationMs, locale);
+  const copy = getLongDurationConfirmCopy(locale);
+
+  return {
+    durationLabel: copy.days(durationValue),
+    endLabel: formatLongDurationDate(endAt, locale),
+    startLabel: formatLongDurationDate(startAt, locale),
+  };
+}
 
 function getPublicEventTeamFormCopy(locale: string) {
   if (locale === "fr") {
@@ -221,6 +331,104 @@ function PendingFormNotice({
   );
 }
 
+function LongDurationConfirmDialog({
+  confirmation,
+  locale,
+  onClose,
+  onConfirm,
+}: {
+  confirmation: LongDurationConfirmation;
+  locale: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { pending } = useFormStatus();
+  const copy = getLongDurationConfirmCopy(locale);
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center bg-[#1b160f]/45 px-4 py-6 backdrop-blur-sm"
+      role="presentation"
+    >
+      <div
+        aria-describedby="long-duration-confirm-description"
+        aria-labelledby="long-duration-confirm-title"
+        aria-modal="true"
+        className="w-full max-w-lg overflow-hidden rounded-[1.35rem] border border-[#e0c9a9] bg-[#fffaf2] shadow-[0_24px_80px_rgba(46,31,12,0.24)]"
+        role="alertdialog"
+      >
+        <div className="border-b border-[#ecdcc2] bg-[linear-gradient(135deg,#fff8ed,#fffdf8)] px-5 py-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6a35]">
+            {copy.eyebrow}
+          </p>
+          <h2
+            className="mt-2 text-xl font-semibold leading-tight text-ink"
+            id="long-duration-confirm-title"
+          >
+            {copy.title}
+          </h2>
+        </div>
+
+        <div className="grid gap-4 px-5 py-5 sm:px-6">
+          <p
+            className="text-sm leading-6 text-zinc-600"
+            id="long-duration-confirm-description"
+          >
+            {copy.description}
+          </p>
+
+          <div className="grid gap-2 rounded-2xl border border-[#ead8bb] bg-white/75 p-3 text-sm">
+            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+                {copy.start}
+              </span>
+              <span className="font-semibold text-ink">
+                {confirmation.startLabel}
+              </span>
+            </div>
+            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+                {copy.end}
+              </span>
+              <span className="font-semibold text-ink">
+                {confirmation.endLabel}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                {copy.duration}
+              </span>
+              <span className="text-base font-bold text-red-700">
+                {confirmation.durationLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-2 pt-1 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-11 rounded-full border-[#e0c9a9] bg-white"
+              disabled={pending}
+              onClick={onClose}
+            >
+              {copy.cancel}
+            </Button>
+            <Button
+              type="button"
+              className="h-11 rounded-full bg-[#101010] text-white hover:bg-[#242424]"
+              disabled={pending}
+              onClick={onConfirm}
+            >
+              {copy.confirm}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FormActions({
   cancelHref,
   isCoverUploading,
@@ -274,6 +482,10 @@ export function NewActivityForm({
   );
   const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const skipLongDurationConfirmRef = useRef(false);
+  const [longDurationConfirmation, setLongDurationConfirmation] =
+    useState<LongDurationConfirmation | null>(null);
   const t = getCopy(locale);
   const publicEventTeamFormCopy = values?.publicEventId
     ? getPublicEventTeamFormCopy(locale)
@@ -304,6 +516,37 @@ export function NewActivityForm({
     setPrefillVersion((currentVersion) => currentVersion + 1);
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (skipLongDurationConfirmRef.current) {
+      skipLongDurationConfirmRef.current = false;
+      return;
+    }
+
+    if (mode !== "create") {
+      return;
+    }
+
+    const confirmation = getLongDurationConfirmation(
+      event.currentTarget,
+      locale,
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
+    event.preventDefault();
+    setLongDurationConfirmation(confirmation);
+  }
+
+  function confirmLongDurationSubmit() {
+    skipLongDurationConfirmRef.current = true;
+    setLongDurationConfirmation(null);
+    window.requestAnimationFrame(() => {
+      formRef.current?.requestSubmit();
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -316,7 +559,9 @@ export function NewActivityForm({
           key={`${state.version ?? 0}-${prefillVersion}`}
           action={formAction}
           className="grid gap-6"
+          onSubmit={handleSubmit}
           noValidate
+          ref={formRef}
         >
           <input name="locale" type="hidden" value={locale} />
           {activityId ? (
@@ -768,6 +1013,15 @@ export function NewActivityForm({
             locale={locale}
             mode={mode}
           />
+
+          {longDurationConfirmation ? (
+            <LongDurationConfirmDialog
+              confirmation={longDurationConfirmation}
+              locale={locale}
+              onClose={() => setLongDurationConfirmation(null)}
+              onConfirm={confirmLongDurationSubmit}
+            />
+          ) : null}
         </form>
       </CardContent>
     </Card>
