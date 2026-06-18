@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { CalendarDays, LayoutGrid, type LucideIcon } from "lucide-react";
@@ -33,6 +34,7 @@ import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import { buildPageShareMetadata, getRequestBaseUrl } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
 
 type ActivitiesPageProps = {
@@ -46,6 +48,22 @@ export const dynamic = "force-dynamic";
 
 const mobileActivityPageSize = 14;
 const agendaActivityPageSize = 50;
+
+export async function generateMetadata({
+  params,
+}: ActivitiesPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getCopy(locale);
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+
+  return buildPageShareMetadata({
+    baseUrl,
+    description: t.activities.description,
+    path: withLocale(locale, "/activities"),
+    title: `${t.activities.title} · Next Fun`,
+  });
+}
 
 function ActivityListViewToggle({
   filters,

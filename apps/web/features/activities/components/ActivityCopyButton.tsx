@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import { Check, Copy } from "lucide-react";
+import type { FocusEvent, ReactNode } from "react";
+import { Check, Copy, X } from "lucide-react";
 import type { AnalyticsEventInput } from "@/features/analytics/events";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { cn } from "@/lib/utils";
@@ -17,24 +17,53 @@ type ActivityCopyButtonProps = {
   children?: ReactNode;
 };
 
-async function copyText(value: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
+async function tryClipboardCopy(value: string) {
+  if (!navigator.clipboard?.writeText) {
+    return false;
   }
 
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryTextareaCopy(value: string) {
   const textArea = document.createElement("textarea");
   textArea.value = value;
   textArea.setAttribute("readonly", "");
   textArea.style.position = "fixed";
-  textArea.style.left = "-9999px";
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.width = "1px";
+  textArea.style.height = "1px";
+  textArea.style.opacity = "0";
+  textArea.style.pointerEvents = "none";
   document.body.appendChild(textArea);
   textArea.focus();
   textArea.select();
-  const didCopy = document.execCommand("copy");
-  document.body.removeChild(textArea);
+  textArea.setSelectionRange(0, value.length);
 
-  if (!didCopy) {
+  let didCopy = false;
+
+  try {
+    didCopy = document.execCommand("copy");
+  } catch {
+    didCopy = false;
+  }
+
+  document.body.removeChild(textArea);
+  return didCopy;
+}
+
+async function copyText(value: string) {
+  if (await tryClipboardCopy(value)) {
+    return;
+  }
+
+  if (!tryTextareaCopy(value)) {
     throw new Error("Copy command failed");
   }
 }
@@ -49,6 +78,7 @@ export function ActivityCopyButton({
   children,
 }: ActivityCopyButtonProps) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const [manualCopyOpen, setManualCopyOpen] = useState(false);
 
   useEffect(() => {
     if (state === "idle") {
@@ -68,7 +98,12 @@ export function ActivityCopyButton({
       }
     } catch {
       setState("failed");
+      setManualCopyOpen(true);
     }
+  }
+
+  function handleManualTextareaFocus(event: FocusEvent<HTMLTextAreaElement>) {
+    event.currentTarget.select();
   }
 
   const title =
@@ -77,31 +112,73 @@ export function ActivityCopyButton({
       : state === "failed"
         ? failedLabel
         : label;
-  const visibleLabel =
-    state === "copied" || state === "failed" ? title : children;
+  const visibleLabel = state === "copied" ? title : children;
 
   return (
-    <button
-      aria-label={title}
-      className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-500 ring-1 ring-transparent transition hover:bg-zinc-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss",
-        state === "copied" && "bg-emerald-50 text-emerald-700",
-        state === "failed" && "bg-red-50 text-red-700",
-        className,
-      )}
-      onClick={handleCopy}
-      title={title}
-      type="button"
-    >
-      {state === "copied" ? (
-        <Check className="h-3.5 w-3.5" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-      {children ? <span>{visibleLabel}</span> : null}
-      <span aria-live="polite" className="sr-only">
-        {title}
-      </span>
-    </button>
+    <>
+      <button
+        aria-label={title}
+        className={cn(
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-500 ring-1 ring-transparent transition hover:bg-zinc-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss",
+          state === "copied" && "bg-emerald-50 text-emerald-700",
+          state === "failed" && "bg-red-50 text-red-700",
+          className,
+        )}
+        onClick={handleCopy}
+        title={title}
+        type="button"
+      >
+        {state === "copied" ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
+        {children ? <span>{visibleLabel}</span> : null}
+        <span aria-live="polite" className="sr-only">
+          {title}
+        </span>
+      </button>
+
+      {manualCopyOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end bg-black/36 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:items-center sm:justify-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={failedLabel}
+        >
+          <button
+            aria-label="Close"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setManualCopyOpen(false)}
+            type="button"
+          />
+          <div className="relative w-full max-w-md rounded-2xl border border-[#dccba8] bg-[#fffaf2] p-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">{label}</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-600">
+                  {failedLabel}
+                </p>
+              </div>
+              <button
+                aria-label="Close"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-500 ring-1 ring-[#dccba8] transition hover:text-ink"
+                onClick={() => setManualCopyOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <textarea
+              autoFocus
+              className="mt-3 max-h-44 min-h-24 w-full resize-none rounded-xl border border-[#dccba8] bg-white p-3 text-sm leading-6 text-zinc-800 outline-none focus:ring-2 focus:ring-[#d88d72]/35"
+              onFocus={handleManualTextareaFocus}
+              readOnly
+              value={value}
+            />
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildCanonicalUrl,
+  buildPageShareMetadata,
   getRequestBaseUrl,
   getShareDescription,
   getShareLocationLabel,
@@ -39,6 +40,23 @@ test("buildCanonicalUrl preserves private activity access token", () => {
     url,
     "https://nextfunclub.example/zh-CN/activities/activity_1?access=token+value",
   );
+});
+
+test("buildPageShareMetadata creates rich metadata for public entry pages", () => {
+  const metadata = buildPageShareMetadata({
+    baseUrl: "https://nextfunclub.example",
+    description: "Discover activities and crews with friends.",
+    path: "/en/home",
+    title: "Next Fun · What's next? Fun begins.",
+  });
+
+  assert.equal(metadata.title, "Next Fun · What's next? Fun begins.");
+  assert.equal(metadata.description, "Discover activities and crews with friends.");
+  assert.equal(metadata.openGraph?.url, "https://nextfunclub.example/en/home");
+  assert.equal(metadata.openGraph?.siteName, "Next Fun");
+  assert.deepEqual(metadata.twitter?.images, [
+    "https://nextfunclub.example/logo.png",
+  ]);
 });
 
 test("getShareDescription removes raw URLs and keeps useful event context", () => {

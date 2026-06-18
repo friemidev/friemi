@@ -28,6 +28,13 @@ type DetailShareMetadataInput = {
   title: string;
 };
 
+type PageShareMetadataInput = {
+  baseUrl: string;
+  description: string;
+  path: string;
+  title: string;
+};
+
 function getFirstHeaderValue(value: string | null | undefined) {
   return value?.split(",")[0]?.trim() || null;
 }
@@ -305,5 +312,18 @@ export function buildFallbackShareMetadata(
     canonicalUrl,
     description: defaultDescription,
     title: defaultSiteName,
+  });
+}
+
+export function buildPageShareMetadata({
+  baseUrl,
+  description,
+  path,
+  title,
+}: PageShareMetadataInput): Metadata {
+  return buildDetailShareMetadata({
+    canonicalUrl: buildCanonicalUrl(baseUrl, path),
+    description,
+    title,
   });
 }
