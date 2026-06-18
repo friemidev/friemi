@@ -163,34 +163,28 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     verifiedEmail,
   });
 
-  // Try to find an existing profile first. On create we will run the
-  // private-name-based nickname clearing logic; on update we keep the
-  // existing nickname untouched.
   const existing = await prisma.userProfile.findUnique({
     where: { clerkUserId: user.id },
+    select: {
+      email: true,
+      emailVerifiedAt: true,
+    },
   });
-
-  if (!existing) {
-    const created = await prisma.userProfile.create({
-      data: {
-        clerkUserId: user.id,
-        ...profileFields,
-        emailVerifiedAt,
-      },
-    });
-
-    return finalizeUserProfile(created, { verifiedEmail });
-  }
-
   const updatedEmailVerifiedAt = getStoredEmailVerifiedAt({
     email: profileFields.email,
-    previousEmail: existing.email,
-    previousEmailVerifiedAt: existing.emailVerifiedAt,
+    previousEmail: existing?.email,
+    previousEmailVerifiedAt: existing?.emailVerifiedAt,
     verifiedEmail,
   });
-  const updated = await prisma.userProfile.update({
-    where: { id: existing.id },
-    data: {
+
+  const profile = await prisma.userProfile.upsert({
+    where: { clerkUserId: user.id },
+    create: {
+      clerkUserId: user.id,
+      ...profileFields,
+      emailVerifiedAt,
+    },
+    update: {
       email: profileFields.email,
       emailVerifiedAt: updatedEmailVerifiedAt,
       firstName: profileFields.firstName,
@@ -203,7 +197,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     },
   });
 
-  return finalizeUserProfile(updated, { verifiedEmail });
+  return finalizeUserProfile(profile, { verifiedEmail });
 }
 
 export async function ensureCurrentUserProfile(locale = "zh-CN") {
