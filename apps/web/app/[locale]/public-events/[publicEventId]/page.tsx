@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
@@ -30,7 +31,10 @@ import {
   getEventDateLabel,
   getEventPriceLabel,
 } from "@/features/public-events/components/PublicEventCard";
-import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
+import {
+  getPublicEventById,
+  getPublicEventShareMetadataById,
+} from "@/features/public-events/queries/getPublicEvents";
 import { getPublicEventLocationDisplay } from "@/features/public-events/utils/locationDisplay";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
@@ -40,6 +44,14 @@ import { ManualTranslationBundle } from "@/features/translations/components/Manu
 import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getCopy } from "@/lib/copy";
+import {
+  buildCanonicalUrl,
+  buildDetailShareMetadata,
+  buildFallbackShareMetadata,
+  getRequestBaseUrl,
+  getShareDateLabel,
+  getSharePriceLabel,
+} from "@/lib/share-metadata";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -49,6 +61,41 @@ type PublicEventDetailPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: PublicEventDetailPageProps): Promise<Metadata> {
+  const { locale, publicEventId } = await params;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const publicEventPath = withLocale(
+    locale,
+    `/public-events/${publicEventId}`,
+  );
+  const publicEvent = await getPublicEventShareMetadataById(publicEventId);
+
+  if (!publicEvent) {
+    return buildFallbackShareMetadata(baseUrl, publicEventPath);
+  }
+
+  return buildDetailShareMetadata({
+    canonicalUrl: buildCanonicalUrl(baseUrl, publicEventPath),
+    coverImageUrl: publicEvent.coverImageUrl,
+    dateLabel: getShareDateLabel({
+      endAt: publicEvent.endAt,
+      locale,
+      startAt: publicEvent.startAt,
+    }),
+    description: publicEvent.description,
+    locationLabel: getPublicEventLocationDisplay(publicEvent, locale).copyValue,
+    priceLabel: getSharePriceLabel(
+      publicEvent.priceType,
+      publicEvent.priceText,
+      locale,
+    ),
+    title: publicEvent.title,
+  });
+}
 
 export default async function PublicEventDetailPage({
   params,

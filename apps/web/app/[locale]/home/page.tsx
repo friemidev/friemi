@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { ArrowRight, Compass, Sparkles, UsersRound } from "lucide-react";
 import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -11,6 +13,11 @@ import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 
 type HomePageProps = {
   params: Promise<{
@@ -42,6 +49,22 @@ function getHomeActionLabels(locale: string) {
 export const dynamic = "force-dynamic";
 
 const homeActivityPreviewLimit = 8;
+
+export async function generateMetadata({
+  params,
+}: HomePageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getCopy(locale);
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+
+  return buildPageShareMetadata({
+    baseUrl,
+    description: generalPageShareDescription,
+    path: withLocale(locale, "/home"),
+    title: `${t.home.title} · ${t.home.tagline}`,
+  });
+}
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;

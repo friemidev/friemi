@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
@@ -40,7 +41,10 @@ import { OrganizerParticipationToggleForm } from "@/features/activities/componen
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
-import { getActivityById } from "@/features/activities/queries/getActivityById";
+import {
+  getActivityById,
+  getActivityShareMetadataById,
+} from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
@@ -77,6 +81,15 @@ import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
+  buildCanonicalUrl,
+  buildDetailShareMetadata,
+  buildFallbackShareMetadata,
+  getRequestBaseUrl,
+  getShareDateLabel,
+  getShareLocationLabel,
+  getSharePriceLabel,
+} from "@/lib/share-metadata";
+import {
   ensurePrivateActivityShareToken,
   getPrivateActivitySharePath,
 } from "@/features/activities/utils/activityShareAccess";
@@ -111,6 +124,52 @@ function getParticipantInitial(nickname: string) {
 }
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ActivityDetailPageProps): Promise<Metadata> {
+  const { locale, activityId } = await params;
+  const { access: accessToken } = await searchParams;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const activityPath = withLocale(locale, `/activities/${activityId}`);
+  const activity = await getActivityShareMetadataById(
+    activityId,
+    accessToken ?? null,
+  );
+
+  if (!activity) {
+    return buildFallbackShareMetadata(baseUrl, activityPath);
+  }
+
+  const canonicalUrl = buildCanonicalUrl(
+    baseUrl,
+    activityPath,
+    activity.visibility === "PRIVATE" ? { access: accessToken } : undefined,
+  );
+
+  return buildDetailShareMetadata({
+    canonicalUrl,
+    coverImageUrl: activity.coverImageUrl,
+    dateLabel: getShareDateLabel({
+      endAt: activity.endAt,
+      locale,
+      startAt: activity.startAt,
+    }),
+    description: activity.description,
+    locationLabel: getShareLocationLabel({
+      address: activity.address,
+      city: activity.city,
+    }),
+    priceLabel: getSharePriceLabel(
+      activity.priceType,
+      activity.priceText,
+      locale,
+    ),
+    title: activity.title,
+  });
+}
 
 export default async function ActivityDetailPage({
   params,

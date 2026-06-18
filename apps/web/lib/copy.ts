@@ -157,7 +157,8 @@ const copy = {
       eyebrow: "真实活动 · 真实连接",
       title: "Next Fun",
       tagline: "下一场，Fun 开场",
-      description: "在这里发现活动，和朋友、新搭子一起组队出发!",
+      description:
+        "平台·搭子·活动·车队，找你所需，找你所想，也可以看看好友们参加的活动，生活与快乐就在下一站等你！NEXT FUN！",
       browseActivities: "浏览活动",
       homeActivityFailedTitle: "活动加载失败",
       homeActivityFailedDescription: "暂时无法加载活动，请稍后再试。",
@@ -329,6 +330,11 @@ const copy = {
       copyLocation: "复制地点",
       copyPrice: "复制费用",
       copyLink: "复制链接",
+      systemShare: "分享",
+      systemShareHint: "打开系统分享面板，把链接发给朋友或群。",
+      wechatShareHint: "微信内请点击右上角 ···，选择发送给朋友或分享到群。",
+      shareUnavailable: "当前环境无法直接打开分享面板，可以复制链接后发送。",
+      closeShareHelp: "关闭分享提示",
       copied: "已复制",
       copyFailed: "复制失败，请手动选择文本。",
       downloadPoster: "下载宣传图",
@@ -1170,6 +1176,13 @@ const copy = {
       copyLocation: "Copy location",
       copyPrice: "Copy cost",
       copyLink: "Copy link",
+      systemShare: "Share",
+      systemShareHint: "Open the system share sheet and send this link.",
+      wechatShareHint:
+        "In WeChat, tap the top-right ··· menu, then send to a friend or group.",
+      shareUnavailable:
+        "This browser cannot open the share sheet. Copy the link instead.",
+      closeShareHelp: "Close sharing help",
       copied: "Copied",
       copyFailed: "Copy failed. Select the text manually.",
       downloadPoster: "Download poster",
@@ -2057,6 +2070,14 @@ const copy = {
       copyLocation: "Copier le lieu",
       copyPrice: "Copier le coût",
       copyLink: "Copier le lien",
+      systemShare: "Partager",
+      systemShareHint:
+        "Ouvrez le panneau de partage système pour envoyer ce lien.",
+      wechatShareHint:
+        "Dans WeChat, touchez le menu ··· en haut à droite, puis envoyez à un ami ou à un groupe.",
+      shareUnavailable:
+        "Ce navigateur ne peut pas ouvrir le partage système. Copiez plutôt le lien.",
+      closeShareHelp: "Fermer l'aide au partage",
       copied: "Copié",
       copyFailed: "Échec de copie. Sélectionnez le texte manuellement.",
       downloadPoster: "Télécharger l'affiche",

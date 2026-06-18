@@ -105,9 +105,51 @@ const activityDetailSelect = {
   shareToken: true,
 } satisfies Prisma.ActivitySelect;
 
+const activityShareMetadataSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  priceType: true,
+  priceText: true,
+  coverImageUrl: true,
+  status: true,
+  visibility: true,
+  shareEnabled: true,
+  shareToken: true,
+} satisfies Prisma.ActivitySelect;
+
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
   select: typeof activityDetailSelect;
 }>;
+
+type ActivityShareMetadataQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof activityShareMetadataSelect;
+}>;
+
+export type ActivityShareMetadataViewModel = {
+  address: string;
+  category: ActivityShareMetadataQueryResult["category"];
+  city: string;
+  coverImageUrl: string | null;
+  description: string;
+  endAt: string | null;
+  id: string;
+  latitude: number | null;
+  longitude: number | null;
+  priceText: string | null;
+  priceType: ActivityShareMetadataQueryResult["priceType"];
+  startAt: string;
+  status: ActivityShareMetadataQueryResult["status"];
+  title: string;
+  visibility: ActivityShareMetadataQueryResult["visibility"];
+};
 
 function toIsoString(value: Date | string | null | undefined) {
   if (!value) {
@@ -307,4 +349,52 @@ export async function getActivityById(
   }
 
   return activityViewModel;
+}
+
+export async function getActivityShareMetadataById(
+  activityId: string,
+  accessToken?: string | null,
+): Promise<ActivityShareMetadataViewModel | null> {
+  const activity = await prisma.activity.findFirst({
+    where: {
+      id: activityId,
+      status: {
+        in: detailActivityStatuses,
+      },
+      OR: [
+        {
+          visibility: {
+            in: publicActivityVisibility,
+          },
+        },
+        ...buildPrivateActivityShareAccessWhere(accessToken),
+      ],
+      organizer: {
+        status: "ACTIVE",
+      },
+    },
+    select: activityShareMetadataSelect,
+  });
+
+  if (!activity) {
+    return null;
+  }
+
+  return {
+    id: activity.id,
+    title: activity.title,
+    description: activity.description,
+    category: activity.category,
+    city: activity.city,
+    address: activity.address,
+    latitude: activity.latitude,
+    longitude: activity.longitude,
+    startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+    endAt: toIsoString(activity.endAt),
+    priceType: activity.priceType,
+    priceText: activity.priceText,
+    coverImageUrl: activity.coverImageUrl,
+    status: activity.status,
+    visibility: activity.visibility,
+  };
 }

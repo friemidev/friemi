@@ -87,6 +87,8 @@ type PublicEventDetailQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventDetailSelect;
 }>;
 
+export type PublicEventShareMetadataViewModel = PublicEventCardViewModel;
+
 function toIsoString(value: Date | string | null | undefined) {
   if (!value) {
     return null;
@@ -267,4 +269,18 @@ export async function getPublicEventById(
     ...favoriteState,
     teams,
   };
+}
+
+export async function getPublicEventShareMetadataById(
+  publicEventId: string,
+): Promise<PublicEventShareMetadataViewModel | null> {
+  const publicEvent = await prisma.publicEvent.findFirst({
+    where: {
+      id: publicEventId,
+      visibility: "PUBLIC",
+    },
+    select: publicEventSelect,
+  });
+
+  return publicEvent ? getPublicEventCardViewModel(publicEvent) : null;
 }
