@@ -553,9 +553,8 @@ export function ActivitySwipeDiscovery({
                   zIndex: 30,
                 }
               : {
-                  transform: prefersReducedMotion
-                    ? `translate3d(0, ${stackIndex * 7}px, 0)`
-                    : `translate3d(0, ${stackIndex * 9}px, 0) scale(${1 - stackIndex * 0.04})`,
+                  opacity: 0,
+                  transform: "translate3d(0, 0, 0)",
                   zIndex: 30 - stackIndex,
                 };
 
@@ -583,10 +582,10 @@ export function ActivitySwipeDiscovery({
                     overlayClassName="bg-gradient-to-t from-black/58 via-black/12 to-transparent"
                   />
                   <div className="absolute left-2.5 top-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5">
-                    <span className="rounded-full bg-black/72 px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_4px_12px_rgba(0,0,0,0.22)] ring-1 ring-white/20 backdrop-blur-md">
+                    <span className="rounded-full bg-[#17120f] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
                       {categoryLabel}
                     </span>
-                    <span className="rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold text-[#4f4338] shadow-[0_4px_12px_rgba(0,0,0,0.16)] ring-1 ring-white/50 backdrop-blur-md">
+                    <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
                       {statusLabel}
                     </span>
                   </div>
