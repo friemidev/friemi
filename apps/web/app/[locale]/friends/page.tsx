@@ -23,9 +23,12 @@ export default async function FriendsPage({
   const { locale } = await params;
   const query = await searchParams;
   const commonCopy = getCopy(locale).common;
-  const profile = await ensureCurrentUserProfile(locale);
   const initialFriendCode =
     typeof query?.friendCode === "string" ? query.friendCode.trim() : "";
+  const redirectPath = initialFriendCode
+    ? `/friends?${new URLSearchParams({ friendCode: initialFriendCode }).toString()}`
+    : "/friends";
+  const profile = await ensureCurrentUserProfile(locale, redirectPath);
   const dashboardResult = await getFriendsDashboard(profile.id)
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {

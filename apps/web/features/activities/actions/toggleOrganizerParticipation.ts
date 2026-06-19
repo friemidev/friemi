@@ -64,7 +64,10 @@ export async function toggleOrganizerParticipationAction(
     };
   }
 
-  const profile = await ensureCurrentUserProfileSnapshot(result.data.locale);
+  const profile = await ensureCurrentUserProfileSnapshot(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
   const activity = await prisma.activity.findUnique({
     where: {
       id: result.data.activityId,

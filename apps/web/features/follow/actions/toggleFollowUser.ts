@@ -43,7 +43,7 @@ export async function toggleFollowUserAction(
 
   const { locale, targetUserProfileId, redirectPath } = result.data;
   const t = getFollowCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(locale, redirectPath);
 
   if (viewerProfile.id === targetUserProfileId) {
     return {

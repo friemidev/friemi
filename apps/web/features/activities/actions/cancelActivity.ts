@@ -89,7 +89,10 @@ export async function cancelActivityAction(
   }
 
   const actionCopy = getCopy(result.data.locale).activityOwner;
-  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
   let cancelledActivityId: string;
 
   try {

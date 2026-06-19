@@ -24,7 +24,10 @@ export default async function MessageThreadPage({
   params,
 }: MessageThreadPageProps) {
   const { locale, conversationId } = await params;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(
+    locale,
+    `/messages/${conversationId}`,
+  );
   const commonCopy = getCopy(locale).common;
   const [conversationResult, friendRosterResult, incomingRequests] =
     await Promise.all([

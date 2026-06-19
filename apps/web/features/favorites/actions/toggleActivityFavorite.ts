@@ -59,11 +59,13 @@ function getFavoriteSourceSurface(
   return result.success ? result.data : fallback;
 }
 
-async function getViewerProfileId(locale: string) {
-  const clerkUserId = await requireUser(locale);
+async function getViewerProfileId(locale: string, redirectPath: string) {
+  const clerkUserId = await requireUser(locale, redirectPath);
 
   if (!hasClerkKeys()) {
-    return ensureCurrentUserProfile(locale).then((profile) => profile.id);
+    return ensureCurrentUserProfile(locale, redirectPath).then(
+      (profile) => profile.id,
+    );
   }
 
   const existingProfile = await prisma.userProfile.findUnique({
@@ -79,7 +81,9 @@ async function getViewerProfileId(locale: string) {
     return existingProfile.id;
   }
 
-  return ensureCurrentUserProfile(locale).then((profile) => profile.id);
+  return ensureCurrentUserProfile(locale, redirectPath).then(
+    (profile) => profile.id,
+  );
 }
 
 export async function toggleActivityFavoriteAction(
@@ -152,7 +156,9 @@ export async function toggleActivityFavoriteAction(
 
   const { activityId, locale, redirectPath } = result.data;
   const [viewerProfileId, activity] = await Promise.all([
-    perf.measure("viewer_profile", () => getViewerProfileId(locale)),
+    perf.measure("viewer_profile", () =>
+      getViewerProfileId(locale, redirectPath),
+    ),
     perf.measure("activity_lookup", () =>
       prisma.activity.findFirst({
       where: {

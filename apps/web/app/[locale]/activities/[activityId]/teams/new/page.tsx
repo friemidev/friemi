@@ -16,7 +16,7 @@ export default async function NewActivityInfoTeamPage({
   params,
 }: NewActivityInfoTeamPageProps) {
   const { locale, activityId } = await params;
-  await requireUser(locale);
+  await requireUser(locale, `/activities/${activityId}/teams/new`);
 
   const publicEventId = await ensurePublicEventFromActivityInfo(activityId);
 

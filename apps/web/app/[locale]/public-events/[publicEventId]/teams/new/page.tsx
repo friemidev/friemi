@@ -96,7 +96,7 @@ export default async function NewPublicEventTeamPage({
   params,
 }: NewPublicEventTeamPageProps) {
   const { locale, publicEventId } = await params;
-  await requireUser(locale);
+  await requireUser(locale, `/public-events/${publicEventId}/teams/new`);
 
   const t = getPublicEventCopy(locale);
   const publicEvent = await getPublicEventById(publicEventId);

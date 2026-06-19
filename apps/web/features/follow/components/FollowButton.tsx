@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
-import { withLocale } from "@/lib/routes";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import {
   toggleFollowUserAction,
@@ -75,7 +75,7 @@ export function FollowButton({
 
   if (!isAuthenticated) {
     return (
-      <Link href={withLocale(locale, "/sign-in")}>
+      <Link href={getSignInHref(locale, redirectPath)}>
         <Button
           className={cn(fullWidth ? "w-full" : "w-auto", buttonClassName)}
           variant="secondary"

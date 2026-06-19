@@ -89,6 +89,10 @@ function getFriendActionRoute(locale: string, returnTo: FriendActionReturnTo) {
   return `/${locale}${returnTo === "messages" ? "/messages" : "/friends"}`;
 }
 
+function getFriendActionRedirectPath(returnTo: FriendActionReturnTo) {
+  return returnTo === "messages" ? "/messages" : "/friends";
+}
+
 function trackFriendRequestSent({
   hasMessage,
   locale,
@@ -430,7 +434,10 @@ export async function sendFriendRequestAction(
     result.data.searchTerm,
   );
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    getFriendActionRedirectPath(returnTo),
+  );
 
   const targetUsers = await findFriendRequestTargets(searchTerm);
   const targetUser = targetUsers[0];
@@ -521,13 +528,16 @@ export async function sendFriendRequestToProfileAction(
     };
   }
 
-  const { locale, message } = result.data;
+  const { locale, message, targetProfileId } = result.data;
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    `/profile/${targetProfileId}`,
+  );
 
   const targetUser = await prisma.userProfile.findFirst({
     where: {
-      id: result.data.targetProfileId,
+      id: targetProfileId,
       status: "ACTIVE",
     },
     select: {
@@ -539,7 +549,7 @@ export async function sendFriendRequestToProfileAction(
     recordFriendRequestLatency({
       durationMs: getDurationMs(),
       locale,
-      route: `/${locale}/profile/${result.data.targetProfileId}`,
+      route: `/${locale}/profile/${targetProfileId}`,
       sourceSurface: "profile",
       status: "failed",
       statusReason: "target_not_found",
@@ -588,7 +598,10 @@ export async function acceptFriendRequestAction(
 
   const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    getFriendActionRedirectPath(returnTo),
+  );
 
   try {
     const request = await prisma.friendRequest.findUnique({
@@ -685,7 +698,10 @@ export async function rejectFriendRequestAction(
 
   const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    getFriendActionRedirectPath(returnTo),
+  );
 
   try {
     const request = await prisma.friendRequest.findFirst({
@@ -768,7 +784,10 @@ export async function cancelFriendRequestAction(
 
   const { locale, requestId, returnTo } = result.data;
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    getFriendActionRedirectPath(returnTo),
+  );
 
   try {
     const updatedRequest = await prisma.friendRequest.updateMany({
@@ -820,7 +839,10 @@ export async function removeFriendshipAction(
 
   const { locale, friendshipId, redirectPath } = result.data;
   const t = getFriendsCopy(locale);
-  const viewerProfile = await ensureCurrentUserProfile(locale);
+  const viewerProfile = await ensureCurrentUserProfile(
+    locale,
+    redirectPath ?? "/friends",
+  );
 
   try {
     const deletedFriendship = await prisma.friendship.deleteMany({

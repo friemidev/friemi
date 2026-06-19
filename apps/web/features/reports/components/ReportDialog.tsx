@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { ReportReason, ReportTargetType } from "@prisma/client";
 import { Button, Textarea } from "@chill-club/ui";
-import { withLocale } from "@/lib/routes";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import {
   createReportAction,
@@ -87,10 +87,7 @@ export function ReportDialog({
   const descriptionId = useId();
   const t = getReportCopy(locale);
   const triggerLabel = isAuthenticated ? t.trigger : t.signInTrigger;
-  const signInHref = withLocale(
-    locale,
-    `/sign-in?redirect_url=${encodeURIComponent(withLocale(locale, redirectPath))}`,
-  );
+  const signInHref = getSignInHref(locale, redirectPath);
 
   useEffect(() => {
     if (state.ok) {

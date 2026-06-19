@@ -15,7 +15,7 @@ export default async function AdminMerchantsPage({
   params,
 }: AdminMerchantsPageProps) {
   const { locale } = await params;
-  await requireAdminPageAccess(locale);
+  await requireAdminPageAccess(locale, "/admin/merchants");
   const merchants = await getAdminMerchants();
 
   return (

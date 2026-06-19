@@ -48,7 +48,7 @@ function trackNotificationOpened({
 
 export async function markAllNotificationsReadAction(formData: FormData) {
   const locale = getString(formData, "locale") || "zh-CN";
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   await prisma.notification.updateMany({
     where: {
@@ -68,7 +68,7 @@ export async function markAllNotificationsReadAction(formData: FormData) {
 export async function markNotificationReadAction(formData: FormData) {
   const locale = getString(formData, "locale") || "zh-CN";
   const notificationId = getString(formData, "notificationId");
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   if (notificationId) {
     await prisma.notification.updateMany({
@@ -91,7 +91,7 @@ export async function markNotificationReadAction(formData: FormData) {
 export async function openNotificationActivityAction(formData: FormData) {
   const locale = getString(formData, "locale") || "zh-CN";
   const notificationId = getString(formData, "notificationId");
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, "/notifications");
   const notification = await prisma.notification.findFirst({
     where: {
       id: notificationId,

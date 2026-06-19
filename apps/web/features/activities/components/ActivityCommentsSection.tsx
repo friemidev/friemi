@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MessageCircleQuestion, UserRound } from "lucide-react";
 import { getCopy } from "@/lib/copy";
-import { withLocale } from "@/lib/routes";
+import { getSignInHref } from "@/lib/auth-redirect";
 import type { ActivityCommentViewModel } from "../types";
 import { ActivityCommentForm } from "./ActivityCommentForm";
 import { ActivityCommentThread } from "./ActivityCommentThread";
@@ -53,7 +53,7 @@ export function ActivityCommentsSection({
             </p>
             <Link
               className="mt-3 inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#d9c6ad] bg-[#fff8ed] px-4 text-sm font-medium text-[#6f5434] transition hover:bg-white"
-              href={withLocale(locale, "/sign-in")}
+              href={getSignInHref(locale, `/activities/${activityId}#comments`)}
             >
               {t.signInTitle}
             </Link>

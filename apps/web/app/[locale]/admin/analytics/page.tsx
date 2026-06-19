@@ -1250,7 +1250,7 @@ export default async function AdminAnalyticsPage({
 }: AdminAnalyticsPageProps) {
   const { locale } = await params;
   const search = await searchParams;
-  await requireAdminPageAccess(locale);
+  await requireAdminPageAccess(locale, "/admin/analytics");
   const t = getCopy(locale);
   const windowDays = getAdminAnalyticsWindowDays(search.window);
   const activeSection = getAdminAnalyticsSection(search.section);
