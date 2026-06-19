@@ -34,6 +34,7 @@ const createDirectConversationSchema = z.object({
 });
 
 const createActivityOrganizerConversationSchema = z.object({
+  accessToken: z.string().trim().optional(),
   locale: z.string().min(1).default("zh-CN"),
   activityId: z.string().min(1),
   organizerProfileId: z.string().min(1),
@@ -192,6 +193,7 @@ export async function openActivityOrganizerConversationAction(
   formData: FormData,
 ): Promise<void> {
   const rawInput = {
+    accessToken: getString(formData, "accessToken").trim() || undefined,
     locale: getString(formData, "locale") || "zh-CN",
     activityId: getString(formData, "activityId"),
     organizerProfileId: getString(formData, "organizerProfileId"),
@@ -207,6 +209,7 @@ export async function openActivityOrganizerConversationAction(
 
   try {
     const conversation = await getOrCreateActivityOrganizerConversation({
+      accessToken: result.data.accessToken,
       currentUserProfileId: profile.id,
       organizerProfileId: result.data.organizerProfileId,
       activityId: result.data.activityId,

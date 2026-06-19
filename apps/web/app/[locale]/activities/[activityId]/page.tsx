@@ -1198,6 +1198,7 @@ export default async function ActivityDetailPage({
                   />
                   {canContactOrganizer ? (
                     <ContactOrganizerForm
+                      accessToken={accessToken ?? null}
                       activityId={activity.id}
                       locale={locale}
                       organizerNickname={activity.organizer.nickname}
@@ -1264,11 +1265,13 @@ export default async function ActivityDetailPage({
 }
 
 function ContactOrganizerForm({
+  accessToken,
   activityId,
   locale,
   organizerNickname,
   organizerProfileId,
 }: {
+  accessToken?: string | null;
   activityId: string;
   locale: string;
   organizerNickname: string;
@@ -1288,6 +1291,7 @@ function ContactOrganizerForm({
         name="organizerProfileId"
         value={organizerProfileId}
       />
+      <input type="hidden" name="accessToken" value={accessToken ?? ""} />
       <Button
         type="submit"
         variant="secondary"

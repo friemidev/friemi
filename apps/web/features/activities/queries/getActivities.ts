@@ -1488,8 +1488,19 @@ export async function getUpcomingHomeActivities({
 }: {
   limit?: number;
 } = {}): Promise<ActivityCardViewModel[]> {
-  const now = new Date();
   const safeLimit = normalizeLimit(limit) ?? 8;
+
+  if (safeLimit === 8) {
+    return getCachedDefaultUpcomingHomeActivities();
+  }
+
+  return getUpcomingHomeActivitiesUncached(safeLimit);
+}
+
+async function getUpcomingHomeActivitiesUncached(
+  safeLimit: number,
+): Promise<ActivityCardViewModel[]> {
+  const now = new Date();
   const upcomingActivityWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({ now }),
@@ -1530,6 +1541,12 @@ export async function getUpcomingHomeActivities({
 
   return rankedActivities.map((activity) => activity.card);
 }
+
+const getCachedDefaultUpcomingHomeActivities = unstable_cache(
+  async () => getUpcomingHomeActivitiesUncached(8),
+  ["upcoming-home-activities-default"],
+  { revalidate: 60 },
+);
 
 function getActivityTotalPages(totalCount: number, pageSize: number) {
   return Math.max(1, Math.ceil(totalCount / pageSize));
