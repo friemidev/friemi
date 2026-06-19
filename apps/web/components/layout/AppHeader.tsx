@@ -17,6 +17,7 @@ type AppHeaderProps = {
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
+  viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
 };
@@ -27,6 +28,7 @@ export function AppHeader({
   showAdminNav = false,
   unreadNotificationCount = 0,
   viewerFriendCode = null,
+  viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
 }: AppHeaderProps) {
@@ -36,7 +38,7 @@ export function AppHeader({
         <Link
           href={withLocale(locale, "/home")}
           className="flex shrink-0 items-center gap-2"
-          prefetch
+          prefetch={false}
         >
           <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
             <Image
@@ -73,6 +75,7 @@ export function AppHeader({
             locale={locale}
             showAdminLink={showAdminNav}
             viewerFriendCode={viewerFriendCode}
+            viewerWechatId={viewerWechatId}
             viewerNickname={viewerNickname}
             incomingFriendRequests={incomingFriendRequests}
             unreadNotificationCount={unreadNotificationCount}

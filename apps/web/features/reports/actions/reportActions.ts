@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { buildPrivateActivityFriendAccessWhere } from "@/features/activities/utils/activityShareAccess";
 import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
@@ -109,16 +110,7 @@ async function getReportableActivityAccessWhere(
           },
         },
       },
-      ...(friendIds.length > 0
-        ? [
-            {
-              AND: [
-                { visibility: "PRIVATE" as const },
-                { organizerId: { in: friendIds } },
-              ],
-            },
-          ]
-        : []),
+      ...buildPrivateActivityFriendAccessWhere(friendIds),
     ],
   };
 }

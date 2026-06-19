@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell } from "lucide-react";
+import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export function NotificationHeaderLink({
     : t.title;
 
   return (
-    <Link
+    <IntentPrefetchLink
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -54,6 +54,6 @@ export function NotificationHeaderLink({
           {unreadBadgeText}
         </span>
       ) : null}
-    </Link>
+    </IntentPrefetchLink>
   );
 }

@@ -198,6 +198,8 @@ function toPublicEventData(
     priceType: activity.priceType,
     priceText: activity.priceText,
     coverImageUrl: activity.coverImageUrl,
+    ticketUrl: activity.ticketUrl,
+    ticketLabel: activity.ticketLabel,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
     status: getPublicEventStatus(activity),
     visibility: activity.visibility,

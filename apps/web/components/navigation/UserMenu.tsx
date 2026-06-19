@@ -12,6 +12,7 @@ type UserMenuProps = {
   showAdminLink?: boolean;
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
+  viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
 };
@@ -21,6 +22,7 @@ export function UserMenu({
   showAdminLink = false,
   unreadNotificationCount = 0,
   viewerFriendCode = null,
+  viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
 }: UserMenuProps) {
@@ -41,6 +43,7 @@ export function UserMenu({
           locale={locale}
           showAdminLink={showAdminLink}
           viewerFriendCode={viewerFriendCode}
+          viewerWechatId={viewerWechatId}
           viewerNickname={viewerNickname}
           incomingFriendRequests={incomingFriendRequests}
           unreadNotificationCount={unreadNotificationCount}

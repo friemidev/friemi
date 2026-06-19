@@ -1,16 +1,23 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { ArrowRight, Compass, Sparkles, UsersRound } from "lucide-react";
 import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
-import { getActivities } from "@/features/activities/queries/getActivities";
+import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
 import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 
 type HomePageProps = {
   params: Promise<{
@@ -41,6 +48,24 @@ function getHomeActionLabels(locale: string) {
 
 export const dynamic = "force-dynamic";
 
+const homeActivityPreviewLimit = 8;
+
+export async function generateMetadata({
+  params,
+}: HomePageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getCopy(locale);
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+
+  return buildPageShareMetadata({
+    baseUrl,
+    description: generalPageShareDescription,
+    path: withLocale(locale, "/home"),
+    title: `${t.home.title} · ${t.home.tagline}`,
+  });
+}
+
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
   const perf = createPerformanceTracker({
@@ -49,24 +74,25 @@ export default async function HomePage({ params }: HomePageProps) {
   });
   const t = getCopy(locale);
   const homeActions = getHomeActionLabels(locale);
-  const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfileSnapshot(),
-  );
-  const activitiesResult = await perf.measure("home.activities", () =>
-    getActivities({
-      limit: 4,
-      viewerProfileId: viewerProfile?.id,
-    })
-      .then((activities) => ({ activities, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load home activities", error);
-        return { activities: [], error };
-      }),
-  );
+  const [viewerProfile, baseActivitiesResult] = await Promise.all([
+    perf.measure("viewer.profile", () => getOptionalCurrentUserProfileSnapshot()),
+    perf.measure("home.activities", () =>
+      getUpcomingHomeActivities({
+        limit: homeActivityPreviewLimit,
+      })
+        .then((activities) => ({ activities, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load home activities", error);
+          return { activities: [], error };
+        }),
+    ),
+  ]);
+  const activitiesResult = baseActivitiesResult;
 
   perf.finish({
     activityCount: activitiesResult.activities.length,
     hasViewer: Boolean(viewerProfile),
+    previewLimit: homeActivityPreviewLimit,
   });
 
   return (
@@ -162,7 +188,7 @@ export default async function HomePage({ params }: HomePageProps) {
                   isAuthenticated={Boolean(viewerProfile)}
                   locale={locale}
                   mobileDense
-                  showFavoriteButton
+                  showFavoriteButton={false}
                   showPrimaryAction={!isPublicEventCard(activity)}
                   sourceSurface="home_recent"
                   detailSourceKey="home"

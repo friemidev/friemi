@@ -1,10 +1,39 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { isAdminByFields, readRoleFromMetadata } from "./admin-access";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
+import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
+
+async function finalizeUserProfile<
+  TProfile extends {
+    email?: string | null;
+    emailVerifiedAt?: Date | string | null;
+    friendCode: string | null;
+    id: string;
+    normalizedWechatId?: string | null;
+    wechatId?: string | null;
+  },
+>(
+  profile: TProfile,
+  options: {
+    verifiedEmail?: string | null;
+  } = {},
+) {
+  const ensuredProfile = await ensureUserProfileFriendCode(profile);
+
+  void linkGuestParticipationsForProfile(prisma, {
+    ...ensuredProfile,
+    verifiedEmail: options.verifiedEmail,
+  }).catch((error) => {
+    console.error("Failed to link guest participations for profile", error);
+  });
+
+  return ensuredProfile;
+}
 
 export async function getCurrentUser() {
   if (!hasClerkKeys()) {
@@ -59,6 +88,49 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
   };
 }
 
+function getVerifiedEmailFromClerkUser(user: ClerkCurrentUser) {
+  const primaryEmail = user.primaryEmailAddress;
+
+  if (primaryEmail?.verification?.status === "verified") {
+    return primaryEmail.emailAddress;
+  }
+
+  const verifiedEmail = user.emailAddresses.find(
+    (email) => email.verification?.status === "verified",
+  );
+
+  return verifiedEmail?.emailAddress ?? null;
+}
+
+function normalizeEmailForComparison(value: string | null | undefined) {
+  return value?.trim().toLowerCase() || null;
+}
+
+function getStoredEmailVerifiedAt({
+  email,
+  previousEmail,
+  previousEmailVerifiedAt,
+  verifiedEmail,
+}: {
+  email: string | null;
+  previousEmail?: string | null;
+  previousEmailVerifiedAt?: Date | null;
+  verifiedEmail: string | null;
+}) {
+  const normalizedEmail = normalizeEmailForComparison(email);
+
+  if (
+    !normalizedEmail ||
+    normalizedEmail !== normalizeEmailForComparison(verifiedEmail)
+  ) {
+    return null;
+  }
+
+  return normalizedEmail === normalizeEmailForComparison(previousEmail)
+    ? (previousEmailVerifiedAt ?? new Date())
+    : new Date();
+}
+
 function upsertLocalUserProfile(clerkUserId: string) {
   return prisma.userProfile.upsert({
     where: {
@@ -67,6 +139,7 @@ function upsertLocalUserProfile(clerkUserId: string) {
     create: {
       clerkUserId,
       email: "local-dev@example.com",
+      emailVerifiedAt: new Date(),
       nickname: "本地开发用户",
       status: "ACTIVE",
       syncedAt: new Date(),
@@ -75,34 +148,45 @@ function upsertLocalUserProfile(clerkUserId: string) {
       status: "ACTIVE",
       syncedAt: new Date(),
     },
-  }).then(ensureUserProfileFriendCode);
+  }).then((profile) =>
+    finalizeUserProfile(profile, {
+      verifiedEmail: profile.email,
+    }),
+  );
 }
 
 async function upsertClerkUserProfile(user: ClerkCurrentUser) {
   const profileFields = getProfileFieldsFromClerkUser(user);
-
-  // Try to find an existing profile first. On create we will run the
-  // private-name-based nickname clearing logic; on update we keep the
-  // existing nickname untouched.
-  const existing = await prisma.userProfile.findUnique({
-    where: { clerkUserId: user.id },
+  const verifiedEmail = getVerifiedEmailFromClerkUser(user);
+  const emailVerifiedAt = getStoredEmailVerifiedAt({
+    email: profileFields.email,
+    verifiedEmail,
   });
 
-  if (!existing) {
-    const created = await prisma.userProfile.create({
-      data: {
-        clerkUserId: user.id,
-        ...profileFields,
-      },
-    });
+  const existing = await prisma.userProfile.findUnique({
+    where: { clerkUserId: user.id },
+    select: {
+      email: true,
+      emailVerifiedAt: true,
+    },
+  });
+  const updatedEmailVerifiedAt = getStoredEmailVerifiedAt({
+    email: profileFields.email,
+    previousEmail: existing?.email,
+    previousEmailVerifiedAt: existing?.emailVerifiedAt,
+    verifiedEmail,
+  });
 
-    return ensureUserProfileFriendCode(created);
-  }
-
-  const updated = await prisma.userProfile.update({
-    where: { id: existing.id },
-    data: {
+  const profile = await prisma.userProfile.upsert({
+    where: { clerkUserId: user.id },
+    create: {
+      clerkUserId: user.id,
+      ...profileFields,
+      emailVerifiedAt,
+    },
+    update: {
       email: profileFields.email,
+      emailVerifiedAt: updatedEmailVerifiedAt,
       firstName: profileFields.firstName,
       lastName: profileFields.lastName,
       username: profileFields.username,
@@ -113,7 +197,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     },
   });
 
-  return ensureUserProfileFriendCode(updated);
+  return finalizeUserProfile(profile, { verifiedEmail });
 }
 
 export async function ensureCurrentUserProfile(locale = "zh-CN") {
@@ -166,7 +250,7 @@ export async function ensureCurrentUserProfileSnapshot(locale = "zh-CN") {
   });
 
   if (existingProfile) {
-    return ensureUserProfileFriendCode(existingProfile);
+    return finalizeUserProfile(existingProfile);
   }
 
   const user = await currentUser();
@@ -196,7 +280,7 @@ export async function getOptionalCurrentUserProfileSnapshot() {
   });
 
   if (existingProfile) {
-    return ensureUserProfileFriendCode(existingProfile);
+    return finalizeUserProfile(existingProfile);
   }
 
   const user = await currentUser();
@@ -206,4 +290,98 @@ export async function getOptionalCurrentUserProfileSnapshot() {
   }
 
   return upsertClerkUserProfile(user);
+}
+
+type LayoutViewerProfile = {
+  friendCode: string | null;
+  id: string;
+  nickname: string;
+  wechatId: string | null;
+};
+
+type LayoutViewerState = {
+  profile: LayoutViewerProfile | null;
+  showAdminNav: boolean;
+};
+
+function getLayoutViewerProfile(profile: LayoutViewerProfile) {
+  return {
+    friendCode: profile.friendCode,
+    id: profile.id,
+    nickname: profile.nickname,
+    wechatId: profile.wechatId,
+  };
+}
+
+function isAdminUser(user: ClerkCurrentUser) {
+  return isAdminByFields({
+    userId: user.id,
+    email: user.primaryEmailAddress?.emailAddress,
+    publicRole: readRoleFromMetadata(user.publicMetadata),
+    privateRole: readRoleFromMetadata(user.privateMetadata),
+  });
+}
+
+export async function getOptionalLayoutViewerState(): Promise<LayoutViewerState> {
+  if (!hasClerkKeys()) {
+    const profile = await upsertLocalUserProfile("local-dev-user");
+
+    return {
+      profile: getLayoutViewerProfile(profile),
+      showAdminNav: false,
+    };
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return {
+      profile: null,
+      showAdminNav: false,
+    };
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+    select: {
+      friendCode: true,
+      id: true,
+      nickname: true,
+      role: true,
+      status: true,
+      wechatId: true,
+    },
+  });
+
+  if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+    return {
+      profile: getLayoutViewerProfile(profile),
+      showAdminNav: true,
+    };
+  }
+
+  const user = await currentUser();
+
+  if (!user) {
+    return {
+      profile: profile ? getLayoutViewerProfile(profile) : null,
+      showAdminNav: false,
+    };
+  }
+
+  if (!profile) {
+    const createdProfile = await upsertClerkUserProfile(user);
+
+    return {
+      profile: getLayoutViewerProfile(createdProfile),
+      showAdminNav: isAdminUser(user),
+    };
+  }
+
+  return {
+    profile: getLayoutViewerProfile(profile),
+    showAdminNav: isAdminUser(user),
+  };
 }

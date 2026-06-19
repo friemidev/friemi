@@ -28,6 +28,8 @@ const editableActivitySelect = {
   requiresApproval: true,
   priceType: true,
   priceText: true,
+  ticketUrl: true,
+  ticketLabel: true,
   organizerId: true,
 } satisfies Prisma.ActivitySelect;
 
@@ -83,6 +85,8 @@ function getEditableActivityValues(
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
     priceText: activity.priceText,
+    ticketUrl: activity.ticketUrl ?? "",
+    ticketLabel: activity.ticketLabel ?? "",
   };
 }
 

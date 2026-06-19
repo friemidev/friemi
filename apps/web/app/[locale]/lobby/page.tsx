@@ -1,14 +1,24 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import {
   ActivityLobbyPreviewView,
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
 import {
-  getActivityLobby,
+  getActivityLobbyInitial,
   getActivityLobbyPreview,
+  getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
+import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  generalPageShareDescription,
+  getRequestBaseUrl,
+} from "@/lib/share-metadata";
 
 type ActivityLobbyPageProps = {
   params: Promise<{
@@ -17,6 +27,22 @@ type ActivityLobbyPageProps = {
 };
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: ActivityLobbyPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getCopy(locale);
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+
+  return buildPageShareMetadata({
+    baseUrl,
+    description: generalPageShareDescription,
+    path: withLocale(locale, "/lobby"),
+    title: `${t.activityLobby.title} · Next Fun`,
+  });
+}
 
 export default async function ActivityLobbyPage({
   params,
@@ -31,16 +57,22 @@ export default async function ActivityLobbyPage({
   );
 
   if (!profile) {
-    const previewActivities = await perf.measure("lobby.preview", () =>
-      getActivityLobbyPreview().catch((error: unknown) => {
-        console.error("Failed to load public activity lobby preview", error);
+    const [previewActivities, swipeActivities] = await perf.measure(
+      "lobby.preview",
+      () =>
+        Promise.all([
+          getActivityLobbyPreview(),
+          getLobbySwipePublicEventActivities(null),
+        ]).catch((error: unknown) => {
+          console.error("Failed to load public activity lobby preview", error);
 
-        return [];
-      }),
+          return [[], []];
+        }),
     );
     perf.finish({
       hasViewer: false,
       previewCount: previewActivities.length,
+      swipeCount: swipeActivities.length,
     }, {
       route: `/${locale}/lobby`,
       routeKey: "lobby",
@@ -51,13 +83,14 @@ export default async function ActivityLobbyPage({
         <ActivityLobbyPreviewView
           activities={previewActivities}
           locale={locale}
+          swipeActivities={swipeActivities}
         />
       </PageContainer>
     );
   }
 
-  const lobby = await perf.measure("lobby.data", () =>
-    getActivityLobby(profile.id).catch((error: unknown) => {
+  const lobby = await perf.measure("lobby.initialData", () =>
+    getActivityLobbyInitial(profile.id).catch((error: unknown) => {
       console.error("Failed to load activity lobby", error);
 
       return {
@@ -68,14 +101,18 @@ export default async function ActivityLobbyPage({
         favoriteActivities: [],
         friendHostedActivities: [],
         friendJoinedActivities: [],
+        starterActivities: [],
+        swipeActivities: [],
       };
     }),
   );
   perf.finish({
     createdCount: lobby.createdActivities.length,
+    deferredSections: true,
     favoriteCount: lobby.favoriteActivities.length,
     hasViewer: true,
     joinedCount: lobby.joinedActivities.length,
+    swipeCount: lobby.swipeActivities.length,
   }, {
     route: `/${locale}/lobby`,
     routeKey: "lobby",
@@ -88,10 +125,13 @@ export default async function ActivityLobbyPage({
         allActivities={lobby.allActivities}
         openActivities={lobby.openActivities}
         createdActivities={lobby.createdActivities}
+        deferredFilters={["favorites", "friendHosted", "friendJoined"]}
         joinedActivities={lobby.joinedActivities}
         favoriteActivities={lobby.favoriteActivities}
         friendHostedActivities={lobby.friendHostedActivities}
         friendJoinedActivities={lobby.friendJoinedActivities}
+        starterActivities={lobby.starterActivities}
+        swipeActivities={lobby.swipeActivities}
         locale={locale}
       />
     </PageContainer>

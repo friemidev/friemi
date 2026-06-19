@@ -25,6 +25,7 @@ import { getPublicEventCopy } from "../copy";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
+import { getPublicEventLocationDisplay } from "../utils/locationDisplay";
 
 type PublicEventCardProps = {
   event: PublicEventCardViewModel;
@@ -83,11 +84,12 @@ export function PublicEventCard({
   const eventHref = withLocale(locale, `/public-events/${event.id}`);
   const eventActionHref =
     event.teamCount > 0 ? `${eventHref}#public-event-teams` : eventHref;
+  const eventLocation = getPublicEventLocationDisplay(event, locale);
 
   return (
     <Card className="group relative flex h-full flex-col overflow-hidden border-[#ded2bc] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cdb88f] hover:shadow-lg">
       {showFavoriteButton ? (
-        <div className="absolute right-3 top-3 z-20">
+        <div className="absolute right-3 top-4 z-20 sm:top-5">
           <PublicEventFavoriteButton
             favoriteCount={event.favoriteCount}
             publicEventId={event.id}
@@ -137,7 +139,9 @@ export function PublicEventCard({
             </span>
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
-              <span className="min-w-0 line-clamp-1">{event.address}</span>
+              <span className="min-w-0 line-clamp-1">
+                {eventLocation.displayLabel}
+              </span>
             </span>
           </div>
           <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-black/5 pt-3 text-sm text-zinc-600">

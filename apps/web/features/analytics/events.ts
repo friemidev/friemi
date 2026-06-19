@@ -3,6 +3,7 @@ import { z } from "zod";
 export const analyticsEventNames = [
   "activity_list_viewed",
   "activity_card_clicked",
+  "activity_swipe_viewed",
   "public_event_detail_viewed",
   "activity_detail_viewed",
   "team_create_started",
@@ -28,6 +29,7 @@ export const analyticsEventNames = [
   "report_submitted",
   "admin_report_status_updated",
   "public_event_source_clicked",
+  "ticket_link_clicked",
   "public_event_converted_to_team",
   "operation_latency_recorded",
   "page_load_timed",
@@ -126,6 +128,9 @@ const requiredByEvent: Partial<
   activity_card_clicked: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
   },
+  activity_swipe_viewed: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
+  },
   public_event_detail_viewed: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
   },
@@ -183,6 +188,9 @@ const requiredByEvent: Partial<
     properties: ["report_id", "from_status", "to_status"],
   },
   public_event_source_clicked: {
+    topLevel: ["entityType", "entityId", "sourceSurface"],
+  },
+  ticket_link_clicked: {
     topLevel: ["entityType", "entityId", "sourceSurface"],
   },
   public_event_converted_to_team: {

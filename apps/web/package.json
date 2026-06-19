@@ -9,11 +9,15 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "node ../../scripts/run-node-tests.mjs features lib",
+    "monitor:site": "playwright test -c playwright.monitoring.config.ts",
+    "monitor:site:headed": "playwright test -c playwright.monitoring.config.ts --headed",
+    "monitor:site:report": "playwright show-report playwright-report",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:copy-public-content": "tsx prisma/copy-public-content.ts",
+    "db:backfill-ticket-links": "tsx prisma/backfill-open-data-ticket-links.ts",
     "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts"
   },
   "dependencies": {
@@ -37,6 +41,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/node": "^22.10.5",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.4",

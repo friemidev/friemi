@@ -18,6 +18,7 @@ import {
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -63,6 +64,7 @@ export async function updateActivityAction(
       city: true,
       id: true,
       endAt: true,
+      shareToken: true,
       startAt: true,
       status: true,
       participants: {
@@ -79,6 +81,14 @@ export async function updateActivityAction(
         select: {
           participants: {
             where: {
+              status: {
+                in: countedParticipantStatuses,
+              },
+            },
+          },
+          guestParticipants: {
+            where: {
+              linkedParticipantId: null,
               status: {
                 in: countedParticipantStatuses,
               },
@@ -171,10 +181,13 @@ export async function updateActivityAction(
   const submittedMinParticipants = result.data.capacityLimitEnabled
     ? (result.data.minParticipants ?? null)
     : null;
+  const currentParticipantCount =
+    editableActivity._count.participants +
+    editableActivity._count.guestParticipants;
 
   if (
     submittedCapacity > 0 &&
-    submittedCapacity < editableActivity._count.participants
+    submittedCapacity < currentParticipantCount
   ) {
     return buildActivityErrorState(
       previousState,
@@ -182,7 +195,7 @@ export async function updateActivityAction(
       "人数上限不能低于当前已报名人数。",
       {
         capacity: [
-          `当前已有 ${editableActivity._count.participants} 人报名，请设置不低于该人数的上限。`,
+          `当前已有 ${currentParticipantCount} 人报名，请设置不低于该人数的上限。`,
         ],
       },
     );
@@ -221,6 +234,13 @@ export async function updateActivityAction(
           requiresApproval: result.data.requiresApproval,
           priceType: result.data.priceType,
           priceText: result.data.priceText,
+          ticketUrl: result.data.ticketUrl ?? null,
+          ticketLabel: result.data.ticketLabel ?? null,
+          shareEnabled: result.data.visibility === "PRIVATE",
+          shareToken:
+            result.data.visibility === "PRIVATE"
+              ? editableActivity.shareToken ?? generateActivityShareToken()
+              : null,
         },
       });
 

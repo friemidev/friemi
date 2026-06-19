@@ -25,6 +25,7 @@ import { getPublicEventCopy } from "@/features/public-events/copy";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
+import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -228,6 +229,8 @@ export async function createActivityAction(
           status: true,
           startAt: true,
           endAt: true,
+          ticketUrl: true,
+          ticketLabel: true,
         },
       })
     : null;
@@ -367,12 +370,25 @@ export async function createActivityAction(
         requiresApproval: result.data.requiresApproval,
         priceType: result.data.priceType,
         priceText: result.data.priceText,
+        ticketUrl: result.data.ticketUrl ?? publicEvent?.ticketUrl ?? null,
+        ticketLabel: result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
         source: importSourceHost,
         sourceUrl: importSourceUrl,
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
         visibility: result.data.visibility,
+        shareEnabled: result.data.visibility === "PRIVATE",
+        shareToken:
+          result.data.visibility === "PRIVATE"
+            ? generateActivityShareToken()
+            : null,
         organizerId: profile.id,
+        participants: {
+          create: {
+            userProfileId: profile.id,
+            status: "APPROVED",
+          },
+        },
       },
       select: {
         id: true,

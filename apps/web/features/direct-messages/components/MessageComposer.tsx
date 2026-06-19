@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle, SendHorizontal, Smile } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
@@ -66,7 +72,7 @@ function SubmitButton({ locale }: { locale: string }) {
     <Button
       type="submit"
       disabled={pending}
-      className="h-11 shrink-0 gap-2 px-4"
+      className="h-11 min-w-11 shrink-0 rounded-full px-0 sm:min-w-[5.25rem] sm:px-4"
       aria-busy={pending}
     >
       {pending ? (
@@ -158,6 +164,17 @@ export function MessageComposer({
 
   const showCounter = bodyLength >= messageCounterThreshold;
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const textarea = textareaRef.current;
+
+    if (textarea && textarea.value.trim().length === 0) {
+      event.preventDefault();
+      textarea.value = "";
+      setBodyLength(0);
+      textarea.focus();
+    }
+  }
+
   return (
     <form
       ref={formRef}
@@ -165,6 +182,7 @@ export function MessageComposer({
       className="relative z-20 shrink-0 border-t border-black/10 bg-white/95 p-3 backdrop-blur md:rounded-b-lg"
       data-message-composer
       noValidate
+      onSubmit={handleSubmit}
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="conversationId" type="hidden" value={conversationId} />
@@ -173,7 +191,7 @@ export function MessageComposer({
           {state.formError}
         </div>
       ) : null}
-      <div className="flex min-w-0 items-end gap-2">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <div ref={emojiRootRef} className="relative shrink-0">
           <button
             type="button"
@@ -216,7 +234,7 @@ export function MessageComposer({
             maxLength={messageMaxLength}
             defaultValue={state.ok ? "" : state.values?.body}
             placeholder={t.messagePlaceholder}
-            className="max-h-32 min-h-11 resize-none bg-white py-2.5"
+            className="max-h-32 min-h-11 resize-none rounded-2xl bg-white py-2.5 leading-6"
             onChange={(event) => setBodyLength(event.currentTarget.value.length)}
           />
         </label>
@@ -230,11 +248,6 @@ export function MessageComposer({
           )}
         >
           {bodyLength}/{messageMaxLength}
-        </p>
-      ) : null}
-      {state.fieldErrors?.body?.[0] ? (
-        <p className="mt-1 text-xs font-medium text-red-600">
-          {state.fieldErrors.body[0]}
         </p>
       ) : null}
     </form>

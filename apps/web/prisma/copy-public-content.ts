@@ -266,6 +266,8 @@ function toActivityData(
     priceType: activity.priceType,
     priceText: activity.priceText,
     coverImageUrl: activity.coverImageUrl,
+    ticketUrl: activity.ticketUrl,
+    ticketLabel: activity.ticketLabel,
     source: activity.source,
     sourceUrl: activity.sourceUrl,
     externalSource: activity.externalSource,

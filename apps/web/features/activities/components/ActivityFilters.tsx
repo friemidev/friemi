@@ -48,7 +48,9 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-11 w-full rounded-xl border border-sand-strong bg-white/92 px-3 text-sm font-medium text-zinc-950 shadow-[0_5px_14px_rgba(92,66,32,0.04)] outline-none transition hover:border-[#cfb287] focus:border-[#c7936c] focus:ring-2 focus:ring-[#ecd2bb]/70 sm:h-10";
+  "h-11 w-full rounded-2xl border border-[#e2caa7] bg-white/90 px-3 text-sm font-normal text-zinc-900 shadow-[0_8px_18px_rgba(116,83,45,0.05)] outline-none transition hover:border-[#d3ad7e] hover:bg-white focus:border-[#c98768] focus:bg-white focus:ring-2 focus:ring-[#efcfbd]/70 sm:h-10";
+const fieldLabelClassName =
+  "grid gap-1.5 text-[12px] font-semibold text-[#8d673c]";
 
 export function ActivityFilters({
   cities,
@@ -68,6 +70,21 @@ export function ActivityFilters({
   const defaultSort = getDefaultActivitySort(filters);
   const hasCustomFilterState =
     hasActiveFilters || filters.sort !== defaultSort || filters.page > 1;
+  const resetHref =
+    filters.viewMode === "card"
+      ? activitiesHref
+      : getActivityFilterHref(activitiesHref, {
+          ...filters,
+          category: undefined,
+          city: undefined,
+          dateRange: undefined,
+          keyword: undefined,
+          page: 1,
+          relation: "ALL",
+          sort: getDefaultActivitySort({}),
+          timeState: undefined,
+          type: undefined,
+        });
 
   function buildFilterHref(nextFilters: Partial<ActivityFilters>) {
     const mergedFilters = {
@@ -191,11 +208,15 @@ export function ActivityFilters({
         method="get"
         onSubmit={handleSubmit}
       >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
-          <label className="col-span-2 grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448] sm:col-span-1">
+        {filters.viewMode !== "card" ? (
+          <input name="view" type="hidden" value={filters.viewMode} />
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <label className={cn(fieldLabelClassName, "col-span-2 sm:col-span-1")}>
             {t.activityFilters.keywordLabel}
             <Input
-              className="h-11 rounded-xl border-[#ddc9a9] bg-white/92 px-3 text-sm shadow-[0_5px_14px_rgba(92,66,32,0.04)] placeholder:text-zinc-400 focus-visible:border-[#c7936c] focus-visible:ring-[#ecd2bb]/70 sm:h-10"
+              className="h-11 rounded-2xl border-[#e2caa7] bg-white/90 px-3 text-sm font-normal shadow-[0_8px_18px_rgba(116,83,45,0.05)] placeholder:font-normal placeholder:text-zinc-400 focus-visible:border-[#c98768] focus-visible:bg-white focus-visible:ring-[#efcfbd]/70 sm:h-10"
               defaultValue={filters.keyword}
               enterKeyHint="search"
               name="q"
@@ -206,7 +227,7 @@ export function ActivityFilters({
 
           <div className="flex items-end">
             <Button
-              className="h-11 w-full gap-2 rounded-xl bg-coral px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(216,141,114,0.22)] hover:bg-coral-dark sm:h-10 sm:min-w-[104px] sm:w-auto"
+              className="h-11 w-full gap-2 rounded-2xl bg-[#d58267] px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(216,141,114,0.24)] hover:bg-[#c97458] sm:h-10 sm:w-auto sm:min-w-[104px]"
               type="submit"
             >
               <Search className="h-4 w-4 shrink-0" />
@@ -220,10 +241,10 @@ export function ActivityFilters({
               className={cn(
                 "inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition sm:h-10 sm:w-auto",
                 hasCustomFilterState
-                  ? "border-[#ddc9a9] bg-white/92 text-zinc-700 shadow-[0_5px_14px_rgba(92,66,32,0.04)] hover:border-[#cfb287] hover:bg-[#fdfaf4]"
+                  ? "border-[#e2caa7] bg-white/80 text-zinc-600 shadow-[0_8px_18px_rgba(116,83,45,0.05)] hover:border-[#d3ad7e] hover:bg-white hover:text-ink"
                   : "border-transparent bg-transparent text-zinc-400",
               )}
-              href={activitiesHref}
+              href={resetHref}
             >
               <FilterX className="h-4 w-4 shrink-0" />
               {t.activityFilters.reset}
@@ -233,13 +254,13 @@ export function ActivityFilters({
 
         <div
           className={cn(
-            "grid grid-cols-2 gap-2 sm:gap-3",
+            "grid grid-cols-2 gap-2.5 sm:gap-3",
             publicInfoOnly
               ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1fr)]"
               : "sm:grid-cols-2 xl:grid-cols-6",
           )}
         >
-          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className={fieldLabelClassName}>
             {t.activityFilters.categoryLabel}
             <select
               className={selectClassName}
@@ -262,7 +283,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className={fieldLabelClassName}>
             {t.activityFilters.cityLabel}
             <select
               className={selectClassName}
@@ -283,7 +304,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className={fieldLabelClassName}>
             {t.activityFilters.dateRangeLabel}
             <select
               className={selectClassName}
@@ -308,7 +329,7 @@ export function ActivityFilters({
 
           {!publicInfoOnly ? (
             <>
-              <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+              <label className={fieldLabelClassName}>
                 {t.activityFilters.relationLabel}
                 <select
                   className={selectClassName}
@@ -334,7 +355,7 @@ export function ActivityFilters({
                 </select>
               </label>
 
-              <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+              <label className={fieldLabelClassName}>
                 {t.activityFilters.typeLabel}
                 <select
                   className={selectClassName}
@@ -359,7 +380,7 @@ export function ActivityFilters({
             </>
           ) : null}
 
-          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className={fieldLabelClassName}>
             {t.activityFilters.timeStateLabel}
             <select
               className={selectClassName}
@@ -382,7 +403,7 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className="grid gap-1.5 text-[12px] font-semibold tracking-[0.08em] text-[#9a7448]">
+          <label className={fieldLabelClassName}>
             {t.activityFilters.sortLabel}
             <select
               className={selectClassName}
@@ -411,49 +432,56 @@ export function ActivityFilters({
 
   return (
     <section className="space-y-3">
-      <div className="hidden flex-wrap items-center justify-between gap-2 px-1 md:flex">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff8ec] text-[#9a7448] ring-1 ring-[#ead7b8]">
-            <SlidersHorizontal className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">
-              {publicInfoOnly
-                ? t.activityFilters.publicInfoTitle
-                : t.activityFilters.title}
-            </p>
-            <p className="text-xs leading-5 text-zinc-500">
-              {publicInfoOnly
-                ? t.activityFilters.publicInfoDescription
-                : t.activityFilters.description}
-            </p>
+      <div className="hidden overflow-hidden rounded-[1.5rem] border border-[#ead8bd] bg-white/60 shadow-[0_18px_42px_rgba(116,83,45,0.07)] backdrop-blur md:block">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
+              <SlidersHorizontal className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">
+                {publicInfoOnly
+                  ? t.activityFilters.publicInfoTitle
+                  : t.activityFilters.title}
+              </p>
+              <p className="text-xs leading-5 text-zinc-500">
+                {publicInfoOnly
+                  ? t.activityFilters.publicInfoDescription
+                  : t.activityFilters.description}
+              </p>
+            </div>
           </div>
+          <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#fffaf3] px-3.5 text-xs font-semibold text-[#9a6b3b] shadow-sm ring-1 ring-[#ead7b8]">
+            {t.activityFilters.resultCount(resultCount)}
+          </span>
         </div>
-        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-white/82 px-3 text-xs font-semibold text-[#9a7448] shadow-sm ring-1 ring-[#ead7b8]">
-          {t.activityFilters.resultCount(resultCount)}
-        </span>
+        <div className="border-t border-[#ead8bd]/80 bg-[#fffaf3]/60 p-4">
+          <FilterForm className="grid gap-3" />
+        </div>
       </div>
 
       <div className="md:hidden">
-        <details className="group overflow-hidden rounded-[1.35rem] bg-white/86 shadow-sm ring-1 ring-[#e6d5bb]">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+        <details className="group overflow-hidden rounded-[1.35rem] border border-[#ead8bd] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             <span className="inline-flex min-w-0 items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#9a7448]" />
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
+                <SlidersHorizontal className="h-4 w-4 shrink-0" />
+              </span>
               <span className="truncate">{t.activityFilters.mobileSummary}</span>
               {activeFilterChips.length > 0 ? (
-              <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-coral px-1.5 text-[11px] font-bold leading-none text-white">
+                <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-coral px-1.5 text-[11px] font-bold leading-none text-white">
                   {activeFilterChips.length}
                 </span>
               ) : null}
             </span>
             <span className="inline-flex shrink-0 items-center gap-2">
-              <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+              <span className="rounded-full bg-[#fffaf3] px-2.5 py-1 text-xs font-semibold text-[#9a6b3b] ring-1 ring-[#ead7b8]">
                 {t.activityFilters.resultCount(resultCount)}
               </span>
               <ChevronDown className="h-4 w-4 text-zinc-500 transition group-open:rotate-180" />
             </span>
           </summary>
-          <div className="border-t border-[#ead7b8] bg-[#fff9ef]/72 p-3">
+          <div className="border-t border-[#ead7b8] bg-[#fffaf3]/70 p-3">
             <FilterForm className="grid gap-3" />
           </div>
         </details>
@@ -480,10 +508,6 @@ export function ActivityFilters({
             ))}
           </div>
         ) : null}
-      </div>
-
-      <div className="hidden border-t border-sand pt-3 md:block">
-        <FilterForm className="grid gap-3" />
       </div>
 
       {activeFilterChips.length > 0 ? (

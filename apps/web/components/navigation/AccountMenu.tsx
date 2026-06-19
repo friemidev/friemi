@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
@@ -23,9 +23,11 @@ import {
 import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
+import { ProfileWechatBindingDialog } from "@/features/profile/components/ProfileWechatBindingDialog";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
 const AddFriendDialog = dynamic(
   () =>
@@ -40,6 +42,7 @@ type AccountMenuProps = {
   showAdminLink?: boolean;
   unreadNotificationCount?: number;
   viewerFriendCode?: string | null;
+  viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
 };
@@ -49,6 +52,7 @@ export function AccountMenu({
   showAdminLink = false,
   unreadNotificationCount = 0,
   viewerFriendCode = null,
+  viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
 }: AccountMenuProps) {
@@ -57,6 +61,8 @@ export function AccountMenu({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [wechatDialogOpen, setWechatDialogOpen] = useState(false);
+  const [wechatId, setWechatId] = useState(viewerWechatId);
   const [friendCodeCopied, setFriendCodeCopied] = useState(false);
   const [liveIncomingFriendRequests, setLiveIncomingFriendRequests] = useState(
     incomingFriendRequests,
@@ -81,10 +87,15 @@ export function AccountMenu({
   const reportOpsHref = withLocale(locale, "/admin/reports");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
+  const hasWechat = Boolean(wechatId?.trim());
 
   useEffect(() => {
     setLiveIncomingFriendRequests(incomingFriendRequests);
   }, [incomingFriendRequests]);
+
+  useEffect(() => {
+    setWechatId(viewerWechatId);
+  }, [viewerWechatId]);
 
   useEffect(() => {
     if (!open || !user) {
@@ -157,6 +168,11 @@ export function AccountMenu({
     setAddFriendOpen(true);
   }
 
+  function openWechatDialog() {
+    setOpen(false);
+    setWechatDialogOpen(true);
+  }
+
   async function copyFriendCode() {
     if (!viewerFriendCode) return;
 
@@ -207,39 +223,69 @@ export function AccountMenu({
               <p className="truncate text-sm font-semibold text-ink">
                 {displayName}
               </p>
-              {viewerFriendCode ? (
-                <div className="mt-2 flex min-w-0 items-center gap-2 rounded-xl bg-zinc-50 px-2.5 py-2 ring-1 ring-black/5">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium leading-none text-zinc-500">
-                      {profileCopy.friendCodeLabel}
-                    </p>
-                    <p className="mt-1 font-mono text-xs font-semibold tracking-[0.18em] text-ink">
-                      {viewerFriendCode}
-                    </p>
+              <div className="mt-2 flex min-w-0 items-stretch gap-2">
+                {viewerFriendCode ? (
+                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-zinc-50 px-2.5 py-2 ring-1 ring-black/5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium leading-none text-zinc-500">
+                        {profileCopy.friendCodeLabel}
+                      </p>
+                      <p className="mt-1 font-mono text-xs font-semibold tracking-[0.18em] text-ink">
+                        {viewerFriendCode}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-black/10 transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                      aria-label={
+                        friendCodeCopied
+                          ? profileCopy.friendCodeCopied
+                          : profileCopy.copyFriendCode
+                      }
+                      title={
+                        friendCodeCopied
+                          ? profileCopy.friendCodeCopied
+                          : profileCopy.copyFriendCode
+                      }
+                      onClick={copyFriendCode}
+                    >
+                      {friendCodeCopied ? (
+                        <Check className="h-3.5 w-3.5 text-moss" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-black/10 transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-                    aria-label={
-                      friendCodeCopied
-                        ? profileCopy.friendCodeCopied
-                        : profileCopy.copyFriendCode
-                    }
-                    title={
-                      friendCodeCopied
-                        ? profileCopy.friendCodeCopied
-                        : profileCopy.copyFriendCode
-                    }
-                    onClick={copyFriendCode}
-                  >
-                    {friendCodeCopied ? (
-                      <Check className="h-3.5 w-3.5 text-moss" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
+                ) : null}
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+                    hasWechat
+                      ? "bg-white ring-1 ring-[#bfe5c8] hover:bg-green-50/50"
+                      : "bg-zinc-50 ring-1 ring-black/5 hover:bg-paper",
+                  )}
+                  aria-label={
+                    hasWechat ? profileCopy.wechatBound : profileCopy.wechatUnbound
+                  }
+                  title={
+                    hasWechat ? profileCopy.wechatBound : profileCopy.wechatUnbound
+                  }
+                  onClick={openWechatDialog}
+                >
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    className={cn(
+                      "h-7 w-7 object-contain",
+                      !hasWechat && "grayscale opacity-35",
                     )}
-                  </button>
-                </div>
-              ) : null}
+                    height={28}
+                    src="/wechat/wechat-icon.png"
+                    width={28}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -256,6 +302,11 @@ export function AccountMenu({
               label={friendsCopy.addTitle}
               badgeCount={liveIncomingFriendRequests.length}
               onClick={openAddFriendDialog}
+            />
+            <WechatMenuButton
+              active={hasWechat}
+              label={hasWechat ? profileCopy.editWechat : profileCopy.bindWechat}
+              onClick={openWechatDialog}
             />
             <MenuLink
               href={messagesHref}
@@ -343,6 +394,14 @@ export function AccountMenu({
           returnTo="messages"
         />
       ) : null}
+      {wechatDialogOpen ? (
+        <ProfileWechatBindingDialog
+          initialWechatId={wechatId}
+          locale={locale}
+          onClose={() => setWechatDialogOpen(false)}
+          onSaved={setWechatId}
+        />
+      ) : null}
     </div>
   );
 }
@@ -390,7 +449,7 @@ function MenuLink({
   onClick: () => void;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       role="menuitem"
       href={href}
       onClick={onClick}
@@ -423,7 +482,7 @@ function MenuLink({
           </span>
         ) : null}
       </span>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -456,6 +515,44 @@ function MenuButton({
           ) : null}
         </span>
       </span>
+    </button>
+  );
+}
+
+function WechatMenuButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="relative flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
+    >
+      <span
+        className={cn(
+          "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+          active
+            ? "bg-white ring-1 ring-[#bfe5c8]"
+            : "bg-zinc-100 ring-1 ring-zinc-200",
+        )}
+        aria-hidden="true"
+      >
+        <Image
+          alt=""
+          className={cn("h-4 w-4 object-contain", !active && "grayscale opacity-35")}
+          height={16}
+          src="/wechat/wechat-icon.png"
+          width={16}
+        />
+      </span>
+      <span className="font-medium">{label}</span>
     </button>
   );
 }

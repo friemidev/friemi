@@ -1,4 +1,4 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
@@ -10,27 +10,48 @@ import {
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
+import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
+import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { inferAnalyticsSourceSurfaceFromReferrer } from "@/features/analytics/utils";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
+import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { getCategoryLabel } from "@/lib/copy";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import {
   getEventDateLabel,
   getEventPriceLabel,
 } from "@/features/public-events/components/PublicEventCard";
-import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
+import {
+  getPublicEventById,
+  getPublicEventShareMetadataById,
+} from "@/features/public-events/queries/getPublicEvents";
+import { getPublicEventLocationDisplay } from "@/features/public-events/utils/locationDisplay";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
+import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
+import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
+import { getCopy } from "@/lib/copy";
+import {
+  buildCanonicalUrl,
+  buildDetailShareMetadata,
+  buildFallbackShareMetadata,
+  getRequestBaseUrl,
+  getShareDateLabel,
+  getSharePriceLabel,
+} from "@/lib/share-metadata";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
@@ -41,6 +62,41 @@ type PublicEventDetailPageProps = {
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: PublicEventDetailPageProps): Promise<Metadata> {
+  const { locale, publicEventId } = await params;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const publicEventPath = withLocale(
+    locale,
+    `/public-events/${publicEventId}`,
+  );
+  const publicEvent = await getPublicEventShareMetadataById(publicEventId);
+
+  if (!publicEvent) {
+    return buildFallbackShareMetadata(baseUrl, publicEventPath);
+  }
+
+  return buildDetailShareMetadata({
+    canonicalUrl: buildCanonicalUrl(baseUrl, publicEventPath),
+    coverImageUrl: publicEvent.coverImageUrl,
+    dateLabel: getShareDateLabel({
+      endAt: publicEvent.endAt,
+      locale,
+      startAt: publicEvent.startAt,
+    }),
+    description: publicEvent.description,
+    locationLabel: getPublicEventLocationDisplay(publicEvent, locale).copyValue,
+    priceLabel: getSharePriceLabel(
+      publicEvent.priceType,
+      publicEvent.priceText,
+      locale,
+    ),
+    title: publicEvent.title,
+  });
+}
+
 export default async function PublicEventDetailPage({
   params,
 }: PublicEventDetailPageProps) {
@@ -50,6 +106,7 @@ export default async function PublicEventDetailPage({
     route: "/public-events/[publicEventId]",
   });
   const t = getPublicEventCopy(locale);
+  const appCopy = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const viewerProfile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
@@ -64,6 +121,15 @@ export default async function PublicEventDetailPage({
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
+  const host =
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (host?.startsWith("localhost") ? "http" : "https");
+  const publicEventPath = withLocale(locale, `/public-events/${publicEvent.id}`);
+  const publicEventUrl = host
+    ? `${protocol}://${host}${publicEventPath}`
+    : publicEventPath;
   const sourceSurface = inferAnalyticsSourceSurfaceFromReferrer(
     referrer,
     "activity_list",
@@ -92,10 +158,24 @@ export default async function PublicEventDetailPage({
 
   const eventDateLabel = getEventDateLabel(publicEvent, locale);
   const eventPriceLabel = getEventPriceLabel(publicEvent, locale);
+  const eventLocation = getPublicEventLocationDisplay(publicEvent, locale);
+  const canShowMapLink =
+    (publicEvent.latitude !== null && publicEvent.longitude !== null) ||
+    !eventLocation.isGenericAddress;
+  const weatherInput = getActivityWeatherWidgetInput(publicEvent);
+  const eventSummaryCopyValue = [
+    publicEvent.title,
+    eventDateLabel,
+    eventLocation.copyValue,
+    eventPriceLabel,
+    publicEventUrl,
+  ].join("\n");
   const eventEndBoundary = new Date(publicEvent.endAt ?? publicEvent.startAt);
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
   const canCreateTeam = !isCancelled && !isEnded;
+  const canOpenTicketLink = Boolean(publicEvent.ticketUrl) && canCreateTeam;
+  const ticketCtaLabel = getTicketCtaLabel(locale, publicEvent.ticketLabel);
   const unavailableReason = isCancelled ? t.eventCancelled : t.eventEnded;
   const teamSectionDescription = isCancelled
     ? t.teamSectionUnavailableDescription
@@ -119,7 +199,7 @@ export default async function PublicEventDetailPage({
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"
         />
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-6 sm:top-6">
+        <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-6 sm:top-7">
           <PublicEventFavoriteButton
             favoriteCount={publicEvent.favoriteCount}
             publicEventId={publicEvent.id}
@@ -168,9 +248,44 @@ export default async function PublicEventDetailPage({
             <h2 className="text-lg font-semibold text-ink">
               {t.eventInfoTitle}
             </h2>
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
-              {publicEvent.description}
-            </p>
+            <ActivityRichDescription
+              className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+              copyFailedLabel={appCopy.activityShare.copyFailed}
+              copyLabel={appCopy.activityShare.copyLink}
+              copySuccessLabel={appCopy.activityShare.copied}
+              entityId={publicEvent.id}
+              entityType="public_event"
+              locale={locale}
+              sourceSurface="public_event_detail"
+              text={publicEvent.description}
+            />
+            <ManualTranslationBundle
+              entityId={publicEvent.id}
+              entityType="public_event"
+              fields={[
+                {
+                  field: "title",
+                  label: appCopy.translation.fields.title,
+                  text: publicEvent.title,
+                },
+                {
+                  field: "description",
+                  label: appCopy.translation.fields.description,
+                  text: publicEvent.description,
+                },
+                {
+                  field: "address",
+                  label: appCopy.translation.fields.address,
+                  text: eventLocation.displayLabel,
+                },
+                {
+                  field: "priceText",
+                  label: appCopy.translation.fields.priceText,
+                  text: publicEvent.priceText,
+                },
+              ]}
+              locale={locale}
+            />
           </div>
 
           {publicEvent.teams.length > 0 ? (
@@ -208,25 +323,14 @@ export default async function PublicEventDetailPage({
             </section>
           ) : null}
 
-          {publicEvent.latitude !== null && publicEvent.longitude !== null ? (
+          {canShowMapLink ? (
             <ActivityMapPreview
               address={publicEvent.address}
+              city={publicEvent.city}
               latitude={publicEvent.latitude}
               longitude={publicEvent.longitude}
-              openLabel={
-                locale === "fr"
-                  ? "Ouvrir la carte"
-                  : locale === "en"
-                    ? "Open map"
-                    : "打开地图"
-              }
-              title={
-                locale === "fr"
-                  ? "Lieu"
-                  : locale === "en"
-                    ? "Location"
-                    : "活动地点"
-              }
+              openLabel={appCopy.activityDetail.openGoogleMaps}
+              title={appCopy.activityDetail.locationMapTitle}
             />
           ) : null}
         </article>
@@ -241,6 +345,52 @@ export default async function PublicEventDetailPage({
               {t.publicEventRuleDescription}
             </p>
           </div>
+          <ActivityCopyButton
+            analyticsEvent={{
+              name: "field_copied",
+              entityId: publicEvent.id,
+              entityType: "public_event",
+              sourceSurface: "public_event_detail",
+              properties: {
+                field_name: "event_summary",
+                location_is_generic: eventLocation.isGenericAddress,
+              },
+            }}
+            className="mb-4 h-10 w-full gap-2 rounded-full bg-white px-4 text-sm font-semibold text-ink ring-1 ring-[#dccba8] hover:bg-[#fff8ec]"
+            failedLabel={appCopy.activityShare.copyFailed}
+            label={t.copyEventInfo}
+            successLabel={t.copyEventInfoSuccess}
+            value={eventSummaryCopyValue}
+          >
+            {t.copyEventInfo}
+          </ActivityCopyButton>
+          <div className="mb-4">
+            <ActivityShareTools
+              activityTitle={publicEvent.title}
+              analyticsEntityId={publicEvent.id}
+              analyticsEntityType="public_event"
+              analyticsSourceSurface="public_event_detail"
+              categoryLabel={getCategoryLabel(publicEvent.category, locale)}
+              coverImageUrl={publicEvent.coverImageUrl}
+              dateLabel={eventDateLabel}
+              description={publicEvent.description}
+              locationLabel={eventLocation.displayLabel}
+              locale={locale}
+              priceLabel={eventPriceLabel}
+              shareKind="activity"
+              sharePath={publicEventPath}
+            />
+          </div>
+          {weatherInput ? (
+            <ActivityWeatherWidget
+              className="mb-4"
+              date={weatherInput.date}
+              latitude={weatherInput.latitude}
+              locale={locale}
+              locationQuery={weatherInput.locationQuery}
+              longitude={weatherInput.longitude}
+            />
+          ) : null}
           {isCancelled ? (
             <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm leading-6 text-red-700">
               <div className="flex items-center gap-2 font-semibold">
@@ -252,17 +402,65 @@ export default async function PublicEventDetailPage({
           ) : null}
 
           <div className="space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{eventDateLabel}</span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "time",
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyTime}
+                successLabel={appCopy.activityShare.copied}
+                value={eventDateLabel}
+              />
             </p>
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">{publicEvent.address}</span>
+              <span className="min-w-0 break-words">
+                {eventLocation.displayLabel}
+              </span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "location",
+                    location_is_generic: eventLocation.isGenericAddress,
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyLocation}
+                successLabel={appCopy.activityShare.copied}
+                value={eventLocation.copyValue}
+              />
             </p>
-            <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
+            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <Ticket className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{eventPriceLabel}</span>
+              <ActivityCopyButton
+                analyticsEvent={{
+                  name: "field_copied",
+                  entityId: publicEvent.id,
+                  entityType: "public_event",
+                  sourceSurface: "public_event_detail",
+                  properties: {
+                    field_name: "price",
+                  },
+                }}
+                failedLabel={appCopy.activityShare.copyFailed}
+                label={appCopy.activityShare.copyPrice}
+                successLabel={appCopy.activityShare.copied}
+                value={eventPriceLabel}
+              />
             </p>
             <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
               <UsersRound className="mt-0.5 h-4 w-4 shrink-0" />
@@ -271,6 +469,25 @@ export default async function PublicEventDetailPage({
               </span>
             </p>
           </div>
+          {canOpenTicketLink && publicEvent.ticketUrl ? (
+            <AnalyticsExternalLink
+              className="mt-5 inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+              event={{
+                name: "ticket_link_clicked",
+                entityId: publicEvent.id,
+                entityType: "public_event",
+                sourceSurface: "public_event_detail",
+                properties: {
+                  category: publicEvent.category,
+                  city: publicEvent.city,
+                },
+              }}
+              href={publicEvent.ticketUrl}
+            >
+              <span className="min-w-0 truncate">{ticketCtaLabel}</span>
+              <Ticket className="h-4 w-4" />
+            </AnalyticsExternalLink>
+          ) : null}
           {!canCreateTeam ? (
             <p className="mt-5 rounded-xl bg-white/80 px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#dccba8]">
               {unavailableReason}

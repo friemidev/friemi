@@ -57,6 +57,8 @@ export const publicEventSelect = {
   priceText: true,
   coverImageUrl: true,
   officialUrl: true,
+  ticketUrl: true,
+  ticketLabel: true,
   status: true,
   _count: {
     select: {
@@ -84,6 +86,8 @@ type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
 type PublicEventDetailQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventDetailSelect;
 }>;
+
+export type PublicEventShareMetadataViewModel = PublicEventCardViewModel;
 
 function toIsoString(value: Date | string | null | undefined) {
   if (!value) {
@@ -134,6 +138,8 @@ export function getPublicEventCardViewModel(
     priceText: publicEvent.priceText,
     coverImageUrl: publicEvent.coverImageUrl,
     officialUrl: publicEvent.officialUrl,
+    ticketUrl: publicEvent.ticketUrl,
+    ticketLabel: publicEvent.ticketLabel,
     status: publicEvent.status,
     favoriteCount: publicEvent._count.favorites,
     teamCount: publicEvent._count.teams,
@@ -263,4 +269,18 @@ export async function getPublicEventById(
     ...favoriteState,
     teams,
   };
+}
+
+export async function getPublicEventShareMetadataById(
+  publicEventId: string,
+): Promise<PublicEventShareMetadataViewModel | null> {
+  const publicEvent = await prisma.publicEvent.findFirst({
+    where: {
+      id: publicEventId,
+      visibility: "PUBLIC",
+    },
+    select: publicEventSelect,
+  });
+
+  return publicEvent ? getPublicEventCardViewModel(publicEvent) : null;
 }

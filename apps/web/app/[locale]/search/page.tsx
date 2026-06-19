@@ -16,7 +16,6 @@ import { SearchActivityResultsFeed } from "@/features/search/components/SearchAc
 import { SearchHighlightedText } from "@/features/search/components/SearchHighlightedText";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
-  globalSearchMainResultPageSize,
   getGlobalSearchMainActivityResults,
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
@@ -276,37 +275,40 @@ export default async function SearchPage({
         }),
       )
     : null;
-  const searchResult = query
-    ? await perf.measure("search.results", () =>
-        getGlobalSearchResults(query, viewerProfile?.id, {
-          includeEnded,
-        })
-          .then((result) => ({ result, error: null }))
-          .catch((error: unknown) => {
-            console.error("Failed to load global search results", error);
-            return { result: null, error };
-          }),
-      )
-    : { result: null, error: null };
-  const mainActivityResult = query
-    ? await perf.measure("search.mainActivityResults", () =>
-        getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
-          includeEnded,
-        })
-          .then((result) => ({ result, error: null }))
-          .catch((error: unknown) => {
-            console.error(
-              "Failed to load global search activity results",
-              error,
-            );
-            return { result: null, error };
-          }),
-      )
-    : { result: null, error: null };
+  const [searchResult, mainActivityResult] = query
+    ? await Promise.all([
+        perf.measure("search.results", () =>
+          getGlobalSearchResults(query, viewerProfile?.id, {
+            includeEnded,
+          })
+            .then((result) => ({ result, error: null }))
+            .catch((error: unknown) => {
+              console.error("Failed to load global search results", error);
+              return { result: null, error };
+            }),
+        ),
+        perf.measure("search.mainActivityResults", () =>
+          getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
+            includeEnded,
+          })
+            .then((result) => ({ result, error: null }))
+            .catch((error: unknown) => {
+              console.error(
+                "Failed to load global search activity results",
+                error,
+              );
+              return { result: null, error };
+            }),
+        ),
+      ])
+    : [
+        { result: null, error: null },
+        { result: null, error: null },
+      ];
   const shouldLoadInitialRelatedResults =
     query &&
     mainActivityResult.result &&
-    mainActivityResult.result.totalCount <= globalSearchMainResultPageSize;
+    !mainActivityResult.result.hasMore;
   const relatedActivityResult = shouldLoadInitialRelatedResults
     ? await perf.measure("search.relatedActivityResults", () =>
         getGlobalSearchMainActivityResults(query, viewerProfile?.id, {
@@ -323,21 +325,22 @@ export default async function SearchPage({
           }),
       )
     : { result: null, error: null };
-  const totalCount = searchResult.result
-    ? searchResult.result.activityCount +
-      searchResult.result.userCount +
-      searchResult.result.merchantCount +
-      searchResult.result.publicEventCount
-    : 0;
   const relatedActivityCount = relatedActivityResult.result?.totalCount ?? 0;
+  const mainActivityCount = mainActivityResult.result?.activityCount ?? 0;
+  const mainPublicEventCount = mainActivityResult.result?.publicEventCount ?? 0;
+  const mixedActivityResultCount =
+    mainActivityResult.result?.totalCount ??
+    mainActivityCount + mainPublicEventCount;
   const hiddenEndedMainCount = searchResult.result
     ? searchResult.result.hiddenEndedActivityCount +
       searchResult.result.hiddenEndedPublicEventCount
     : 0;
+  const totalCount = searchResult.result
+    ? searchResult.result.userCount +
+      searchResult.result.merchantCount +
+      mixedActivityResultCount
+    : mixedActivityResultCount;
   const hasResults = totalCount > 0 || relatedActivityCount > 0;
-  const mixedActivityResultCount = searchResult.result
-    ? searchResult.result.activityCount + searchResult.result.publicEventCount
-    : 0;
 
   if (query && searchResult.result) {
     const requestHeaders = await headers();
@@ -349,10 +352,10 @@ export default async function SearchPage({
         route: `/${locale}/search`,
         sourceSurface: "global_search",
         properties: {
-          activity_count: searchResult.result.activityCount,
+          activity_count: mainActivityCount,
           keyword_length: query.length,
           merchant_count: searchResult.result.merchantCount,
-          public_event_count: searchResult.result.publicEventCount,
+          public_event_count: mainPublicEventCount,
           result_count: totalCount,
           scope: "global",
           has_hidden_ended_results: hiddenEndedMainCount > 0,

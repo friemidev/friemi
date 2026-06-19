@@ -46,16 +46,16 @@ export default async function PublicProfilePage({
   params,
 }: PublicProfilePageProps) {
   const { locale, profileId } = await params;
-  const [profile, viewerProfile] = await Promise.all([
-    getPublicProfileById(profileId),
-    getOptionalCurrentUserProfile(),
-  ]);
+  const viewerProfile = await getOptionalCurrentUserProfile();
+  const isSelf = viewerProfile?.id === profileId;
+  const profile = await getPublicProfileById(profileId, {
+    includePrivateFields: isSelf,
+  });
 
   if (!profile) {
     notFound();
   }
 
-  const isSelf = viewerProfile?.id === profile.id;
   const dashboardPromise = isSelf
     ? getProfileDashboard(profile.id)
     : getPublicProfileDashboard(profile.id, viewerProfile?.id);

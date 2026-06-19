@@ -1,6 +1,7 @@
 import type { ParticipantStatus, Prisma } from "@prisma/client";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { prisma } from "@/lib/prisma";
+import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
@@ -126,16 +127,7 @@ export async function getActivityComments(
               },
             },
           },
-          ...(friendIds.length > 0
-            ? [
-                {
-                  AND: [
-                    { visibility: "PRIVATE" as const },
-                    { organizerId: { in: friendIds } },
-                  ],
-                },
-              ]
-            : []),
+          ...buildPrivateActivityFriendAccessWhere(friendIds),
         ],
       }
     : {

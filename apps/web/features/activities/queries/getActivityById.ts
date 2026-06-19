@@ -8,6 +8,10 @@ import {
   isLegacyActivityInfoSource,
   publicActivityVisibility,
 } from "./getActivities";
+import {
+  buildPrivateActivityFriendAccessWhere,
+  buildPrivateActivityShareAccessWhere,
+} from "../utils/activityShareAccess";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -22,6 +26,10 @@ const visibleDetailParticipationStatuses: ParticipantStatus[] = [
   "APPROVED",
   "PENDING",
 ];
+const countedDetailParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+];
 
 const activityDetailSelect = {
   ...activityCardSelect,
@@ -35,6 +43,7 @@ const activityDetailSelect = {
     select: {
       id: true,
       nickname: true,
+      avatarUrl: true,
       bio: true,
       _count: {
         select: {
@@ -44,19 +53,103 @@ const activityDetailSelect = {
       },
     },
   },
+  participants: {
+    where: {
+      status: {
+        in: countedDetailParticipationStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    select: {
+      id: true,
+      userProfile: {
+        select: {
+          id: true,
+          nickname: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  },
+  guestParticipants: {
+    where: {
+      linkedParticipantId: null,
+      status: {
+        in: countedDetailParticipationStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  },
   publicEvent: {
     select: {
       id: true,
       title: true,
       officialUrl: true,
+      ticketUrl: true,
+      ticketLabel: true,
       status: true,
     },
   },
+  organizerId: true,
+  ticketUrl: true,
+  ticketLabel: true,
+  shareEnabled: true,
+  shareToken: true,
+} satisfies Prisma.ActivitySelect;
+
+const activityShareMetadataSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  city: true,
+  address: true,
+  latitude: true,
+  longitude: true,
+  startAt: true,
+  endAt: true,
+  priceType: true,
+  priceText: true,
+  coverImageUrl: true,
+  status: true,
+  visibility: true,
+  shareEnabled: true,
+  shareToken: true,
 } satisfies Prisma.ActivitySelect;
 
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
   select: typeof activityDetailSelect;
 }>;
+
+type ActivityShareMetadataQueryResult = Prisma.ActivityGetPayload<{
+  select: typeof activityShareMetadataSelect;
+}>;
+
+export type ActivityShareMetadataViewModel = {
+  address: string;
+  category: ActivityShareMetadataQueryResult["category"];
+  city: string;
+  coverImageUrl: string | null;
+  description: string;
+  endAt: string | null;
+  id: string;
+  latitude: number | null;
+  longitude: number | null;
+  priceText: string | null;
+  priceType: ActivityShareMetadataQueryResult["priceType"];
+  startAt: string;
+  status: ActivityShareMetadataQueryResult["status"];
+  title: string;
+  visibility: ActivityShareMetadataQueryResult["visibility"];
+};
 
 function toIsoString(value: Date | string | null | undefined) {
   if (!value) {
@@ -70,6 +163,25 @@ function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
 ): ActivityDetailViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const participantCount = isActivityInfo
+    ? 0
+    : activity._count.participants + activity._count.guestParticipants;
+  const participantPreview = isActivityInfo
+    ? []
+    : [
+        ...(activity.participants ?? []).map((participant) => ({
+          id: participant.userProfile.id,
+          nickname: participant.userProfile.nickname,
+          avatarUrl: participant.userProfile.avatarUrl,
+          kind: "user" as const,
+        })),
+        ...(activity.guestParticipants ?? []).map((participant) => ({
+          id: `guest:${participant.id}`,
+          nickname: participant.displayName,
+          avatarUrl: null,
+          kind: "guest" as const,
+        })),
+      ];
 
   return {
     id: activity.id,
@@ -91,14 +203,20 @@ function getActivityDetailViewModel(
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
-    participantCount: isActivityInfo ? 0 : activity._count.participants,
+    participantCount,
     priceText: activity.priceText,
     status: activity.status,
     visibility: activity.visibility,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
+    ticketUrl: activity.ticketUrl,
+    ticketLabel: activity.ticketLabel,
     publicEventId: activity.publicEventId,
+    organizerId: activity.organizerId,
+    shareEnabled: activity.shareEnabled,
+    shareToken: activity.shareToken,
+    participantPreview,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,
@@ -111,6 +229,7 @@ function getActivityDetailViewModel(
     organizer: {
       id: activity.organizer.id,
       nickname: activity.organizer.nickname,
+      avatarUrl: activity.organizer.avatarUrl,
       bio: activity.organizer.bio,
       followerCount: activity.organizer._count.followers,
       followingCount: activity.organizer._count.following,
@@ -120,6 +239,8 @@ function getActivityDetailViewModel(
           id: activity.publicEvent.id,
           title: activity.publicEvent.title,
           officialUrl: activity.publicEvent.officialUrl,
+          ticketUrl: activity.publicEvent.ticketUrl,
+          ticketLabel: activity.publicEvent.ticketLabel,
           status: activity.publicEvent.status,
         }
       : null,
@@ -130,6 +251,7 @@ export async function getActivityById(
   activityId: string,
   viewerProfileId?: string | null,
   viewerFriendIds?: string[],
+  accessToken?: string | null,
 ): Promise<ActivityDetailViewModel | null> {
   const friendIds = viewerProfileId
     ? (viewerFriendIds ?? (await getViewerFriendIds(viewerProfileId)))
@@ -155,22 +277,19 @@ export async function getActivityById(
               },
             },
           },
-          ...(friendIds.length > 0
-            ? [
-                {
-                  AND: [
-                    { visibility: "PRIVATE" as const },
-                    { organizerId: { in: friendIds } },
-                  ],
-                },
-              ]
-            : []),
+          ...buildPrivateActivityFriendAccessWhere(friendIds),
+          ...buildPrivateActivityShareAccessWhere(accessToken),
         ],
       }
     : {
-        visibility: {
-          in: publicActivityVisibility,
-        },
+        OR: [
+          {
+            visibility: {
+              in: publicActivityVisibility,
+            },
+          },
+          ...buildPrivateActivityShareAccessWhere(accessToken),
+        ],
       };
 
   const activity = await prisma.activity.findFirst({
@@ -187,5 +306,95 @@ export async function getActivityById(
     select: activityDetailSelect,
   });
 
-  return activity ? getActivityDetailViewModel(activity) : null;
+  if (!activity) {
+    return null;
+  }
+
+  const organizerParticipation = await prisma.activityParticipant.findUnique({
+    where: {
+      activityId_userProfileId: {
+        activityId: activity.id,
+        userProfileId: activity.organizerId,
+      },
+    },
+    select: {
+      status: true,
+    },
+  });
+  const activityViewModel = getActivityDetailViewModel(activity);
+
+  if (
+    !activityViewModel.isActivityInfo &&
+    !organizerParticipation
+  ) {
+    return {
+      ...activityViewModel,
+      participantCount: activityViewModel.participantCount + 1,
+      participantPreview: [
+        {
+          id: activityViewModel.organizer.id,
+          nickname: activityViewModel.organizer.nickname,
+          avatarUrl: activityViewModel.organizer.avatarUrl,
+        },
+        ...(activityViewModel.participantPreview ?? []),
+      ],
+    };
+  }
+
+  if (
+    organizerParticipation &&
+    countedDetailParticipationStatuses.includes(organizerParticipation.status)
+  ) {
+    return activityViewModel;
+  }
+
+  return activityViewModel;
+}
+
+export async function getActivityShareMetadataById(
+  activityId: string,
+  accessToken?: string | null,
+): Promise<ActivityShareMetadataViewModel | null> {
+  const activity = await prisma.activity.findFirst({
+    where: {
+      id: activityId,
+      status: {
+        in: detailActivityStatuses,
+      },
+      OR: [
+        {
+          visibility: {
+            in: publicActivityVisibility,
+          },
+        },
+        ...buildPrivateActivityShareAccessWhere(accessToken),
+      ],
+      organizer: {
+        status: "ACTIVE",
+      },
+    },
+    select: activityShareMetadataSelect,
+  });
+
+  if (!activity) {
+    return null;
+  }
+
+  return {
+    id: activity.id,
+    title: activity.title,
+    description: activity.description,
+    category: activity.category,
+    city: activity.city,
+    address: activity.address,
+    latitude: activity.latitude,
+    longitude: activity.longitude,
+    startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
+    endAt: toIsoString(activity.endAt),
+    priceType: activity.priceType,
+    priceText: activity.priceText,
+    coverImageUrl: activity.coverImageUrl,
+    status: activity.status,
+    visibility: activity.visibility,
+  };
 }

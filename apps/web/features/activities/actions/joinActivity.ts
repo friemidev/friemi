@@ -35,6 +35,7 @@ const activeOrganizerStatuses: UserProfileStatus[] = ["ACTIVE"];
 const joinActivitySchema = z.object({
   activityId: z.string().min(1, "活动不存在"),
   locale: z.string().min(1).default("zh-CN"),
+  accessToken: z.string().trim().optional(),
   message: z.string().trim().max(300, "留言最多 300 个字").optional(),
 });
 
@@ -139,6 +140,7 @@ export async function joinActivityAction(
   const rawInput = {
     activityId: getString(formData, "activityId"),
     locale: getString(formData, "locale") || "zh-CN",
+    accessToken: getString(formData, "accessToken") || undefined,
     message: getString(formData, "message"),
   };
   const recordLatency = ({
@@ -237,6 +239,8 @@ export async function joinActivityAction(
             endAt: true,
             capacity: true,
             requiresApproval: true,
+            shareEnabled: true,
+            shareToken: true,
             organizer: {
               select: {
                 status: true,
@@ -246,6 +250,14 @@ export async function joinActivityAction(
               select: {
                 participants: {
                   where: {
+                    status: {
+                      in: activeParticipantStatuses,
+                    },
+                  },
+                },
+                guestParticipants: {
+                  where: {
+                    linkedParticipantId: null,
                     status: {
                       in: activeParticipantStatuses,
                     },
@@ -273,6 +285,9 @@ export async function joinActivityAction(
           );
         }
 
+        let hasFriendshipAccess = false;
+        let hasSharedLinkAccess = false;
+
         if (
           activity.visibility === "PRIVATE" &&
           activity.organizerId !== profile.id
@@ -295,7 +310,13 @@ export async function joinActivityAction(
             },
           });
 
-          if (!friendship) {
+          hasFriendshipAccess = Boolean(friendship);
+          hasSharedLinkAccess =
+            Boolean(result.data.accessToken) &&
+            activity.shareEnabled &&
+            activity.shareToken === result.data.accessToken;
+
+          if (!hasFriendshipAccess && !hasSharedLinkAccess) {
             return getJoinFailure(
               "这是私人局，仅发起人的好友可以报名。",
               "activity_unavailable",
@@ -348,14 +369,20 @@ export async function joinActivityAction(
 
         if (
           activity.capacity > 0 &&
-          activity._count.participants >= activity.capacity
+          activity._count.participants + activity._count.guestParticipants >=
+            activity.capacity
         ) {
           return getJoinFailure("活动名额已满，不能继续报名。", "activity_full");
         }
 
-        const nextStatus: ParticipantStatus = activity.requiresApproval
-          ? "PENDING"
-          : "APPROVED";
+        const nextStatus: ParticipantStatus =
+          activity.visibility === "PRIVATE" &&
+          !hasFriendshipAccess &&
+          hasSharedLinkAccess
+            ? "PENDING"
+            : activity.requiresApproval
+              ? "PENDING"
+              : "APPROVED";
 
         if (existingParticipation) {
           await tx.activityParticipant.update({

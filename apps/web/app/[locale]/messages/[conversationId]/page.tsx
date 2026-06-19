@@ -63,7 +63,7 @@ export default async function MessageThreadPage({
   }
 
   return (
-    <PageContainer className="py-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+    <PageContainer className="max-md:h-[calc(100dvh-10rem)] max-md:overflow-hidden max-md:py-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
       <MessageThread
         conversation={conversationResult.conversation}
         locale={locale}

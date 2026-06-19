@@ -27,7 +27,10 @@ const isActivityLinkPreviewRoute = createRouteMatcher([
 ]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
+const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
+const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
+const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
@@ -92,7 +95,19 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isLobbyApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   if (isAnalyticsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
+  if (isSearchApiRoute(request)) {
+    return NextResponse.next();
+  }
+
+  if (isTranslationsApiRoute(request)) {
     return NextResponse.next();
   }
 
@@ -109,6 +124,9 @@ export const config = {
     "/api/activity-link-preview",
     "/api/friends/:path*",
     "/api/notifications/:path*",
+    "/api/lobby/:path*",
     "/api/analytics/:path*",
+    "/api/search/:path*",
+    "/api/translations/:path*",
   ],
 };

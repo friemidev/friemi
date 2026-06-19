@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
@@ -35,10 +36,15 @@ import { ActivityCommentsSection } from "@/features/activities/components/Activi
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
+import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
+import { OrganizerParticipationToggleForm } from "@/features/activities/components/OrganizerParticipationToggleForm";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
-import { getActivityById } from "@/features/activities/queries/getActivityById";
+import {
+  getActivityById,
+  getActivityShareMetadataById,
+} from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
@@ -65,25 +71,112 @@ import { DetailSourceReturnLink } from "@/features/navigation/components/DetailS
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getPublicEventCopy } from "@/features/public-events/copy";
+import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
+import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
+import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
+import {
+  buildCanonicalUrl,
+  buildDetailShareMetadata,
+  buildFallbackShareMetadata,
+  getRequestBaseUrl,
+  getShareDateLabel,
+  getShareLocationLabel,
+  getSharePriceLabel,
+} from "@/lib/share-metadata";
+import {
+  ensurePrivateActivityShareToken,
+  getPrivateActivitySharePath,
+} from "@/features/activities/utils/activityShareAccess";
 
 type ActivityDetailPageProps = {
   params: Promise<{
     locale: string;
     activityId: string;
   }>;
+  searchParams: Promise<{
+    access?: string;
+  }>;
 };
+
+const participantAvatarTones = [
+  "bg-[#e98472] text-white",
+  "bg-[#72a7cf] text-white",
+  "bg-[#72b68a] text-white",
+  "bg-[#c795d8] text-white",
+  "bg-[#d8aa64] text-white",
+  "bg-[#7f88d8] text-white",
+];
+
+function getStableParticipantAvatarTone(value: string) {
+  const total = [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+  return participantAvatarTones[total % participantAvatarTones.length];
+}
+
+function getParticipantInitial(nickname: string) {
+  return nickname.trim().charAt(0).toUpperCase() || "N";
+}
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ActivityDetailPageProps): Promise<Metadata> {
+  const { locale, activityId } = await params;
+  const { access: accessToken } = await searchParams;
+  const requestHeaders = await headers();
+  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const activityPath = withLocale(locale, `/activities/${activityId}`);
+  const activity = await getActivityShareMetadataById(
+    activityId,
+    accessToken ?? null,
+  );
+
+  if (!activity) {
+    return buildFallbackShareMetadata(baseUrl, activityPath);
+  }
+
+  const canonicalUrl = buildCanonicalUrl(
+    baseUrl,
+    activityPath,
+    activity.visibility === "PRIVATE" ? { access: accessToken } : undefined,
+  );
+
+  return buildDetailShareMetadata({
+    canonicalUrl,
+    coverImageUrl: activity.coverImageUrl,
+    dateLabel: getShareDateLabel({
+      endAt: activity.endAt,
+      locale,
+      startAt: activity.startAt,
+    }),
+    description: activity.description,
+    locationLabel: getShareLocationLabel({
+      address: activity.address,
+      city: activity.city,
+    }),
+    priceLabel: getSharePriceLabel(
+      activity.priceType,
+      activity.priceText,
+      locale,
+    ),
+    title: activity.title,
+  });
+}
+
 export default async function ActivityDetailPage({
   params,
+  searchParams,
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
+  const { access: accessToken } = await searchParams;
   const perf = createPerformanceTracker({
     locale,
     route: "/activities/[activityId]",
@@ -102,7 +195,12 @@ export default async function ActivityDetailPage({
     : [];
   const [activity, activityIsFavorited] = await Promise.all([
     perf.measure("activity.primary", () =>
-      getActivityById(activityId, viewerProfile?.id ?? null, viewerFriendIds),
+      getActivityById(
+        activityId,
+        viewerProfile?.id ?? null,
+        viewerFriendIds,
+        accessToken ?? null,
+      ),
     ),
     perf.measure("activity.favoriteState", () =>
       getViewerActivityFavorite(activityId, viewerProfile?.id),
@@ -112,6 +210,23 @@ export default async function ActivityDetailPage({
   if (!activity) {
     notFound();
   }
+
+  const weatherInput = getActivityWeatherWidgetInput(activity);
+  const isPrivateActivity = activity.visibility === "PRIVATE";
+  const shareToken =
+    isPrivateActivity && viewerProfile?.id === activity.organizer.id
+      ? await ensurePrivateActivityShareToken(activity.id)
+      : activity.shareEnabled && activity.shareToken
+        ? activity.shareToken
+        : null;
+  const privateSharePath =
+    isPrivateActivity && (accessToken || shareToken)
+      ? getPrivateActivitySharePath({
+          activityId: activity.id,
+          locale,
+          shareToken: accessToken || shareToken || "",
+        })
+      : null;
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
@@ -154,6 +269,8 @@ export default async function ActivityDetailPage({
     const isCancelled = activity.status === "CANCELLED";
     const isEndedByTime = activityEndBoundary <= new Date();
     const canCreateTeam = !isCancelled && !isEndedByTime;
+    const canOpenTicketLink = Boolean(activity.ticketUrl) && canCreateTeam;
+    const ticketCtaLabel = getTicketCtaLabel(locale, activity.ticketLabel);
     const unavailableReason = isCancelled
       ? publicEventCopy.eventCancelled
       : publicEventCopy.eventEnded;
@@ -184,7 +301,7 @@ export default async function ActivityDetailPage({
             src={activity.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
           />
-          <div className="absolute right-3 top-3 z-30 flex items-start gap-2 sm:right-5 sm:top-5">
+          <div className="absolute right-3 top-4 z-30 flex items-start gap-2 sm:right-5 sm:top-6">
             <ActivityFavoriteButton
               activityId={activity.id}
               favoriteCount={activity.favoriteCount}
@@ -226,17 +343,57 @@ export default async function ActivityDetailPage({
               <h2 className="text-lg font-semibold text-ink">
                 {publicEventCopy.eventInfoTitle}
               </h2>
-              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
-                {activity.description}
-              </p>
+              <ActivityRichDescription
+                className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+                copyFailedLabel={t.activityShare.copyFailed}
+                copyLabel={t.activityShare.copyLink}
+                copySuccessLabel={t.activityShare.copied}
+                entityId={detailAnalyticsEntity.entityId}
+                entityType={detailAnalyticsEntity.entityType}
+                locale={locale}
+                sourceSurface="public_event_detail"
+                text={activity.description}
+              />
+              <ManualTranslationBundle
+                accessToken={accessToken ?? null}
+                entityId={activity.id}
+                entityType="activity"
+                fields={[
+                  {
+                    field: "title",
+                    label: t.translation.fields.title,
+                    text: activity.title,
+                  },
+                  {
+                    field: "description",
+                    label: t.translation.fields.description,
+                    text: activity.description,
+                  },
+                  {
+                    field: "address",
+                    label: t.translation.fields.address,
+                    text: activityLocationLabel,
+                  },
+                  {
+                    field: "priceText",
+                    label: t.translation.fields.priceText,
+                    text: activity.priceText,
+                  },
+                ]}
+                locale={locale}
+              />
             </div>
 
-            {activity.latitude !== null && activity.longitude !== null ? (
+            {activity.latitude !== null ||
+            activity.longitude !== null ||
+            activityLocationLabel.trim() ? (
               <ActivityMapPreview
                 address={activityLocationLabel}
+                city={activity.city}
                 latitude={activity.latitude}
                 longitude={activity.longitude}
-                openLabel={t.activityDetail.openMap}
+                openLabel={t.activityDetail.openGoogleMaps}
+                queryAddress={activity.address}
                 title={t.activityDetail.locationMapTitle}
               />
             ) : null}
@@ -252,6 +409,34 @@ export default async function ActivityDetailPage({
                 {publicEventCopy.publicEventRuleDescription}
               </p>
             </div>
+
+            <div className="mb-5">
+              <ActivityShareTools
+                activityTitle={activity.title}
+                analyticsEntityId={detailAnalyticsEntity.entityId}
+                analyticsEntityType={detailAnalyticsEntity.entityType}
+                analyticsSourceSurface="public_event_detail"
+                categoryLabel={activityCategoryLabel}
+                coverImageUrl={activity.coverImageUrl}
+                dateLabel={activityDateLabel}
+                description={activity.description}
+                locationLabel={activityLocationLabel}
+                locale={locale}
+                priceLabel={activityPriceLabel}
+                shareKind="activity"
+              />
+            </div>
+
+            {weatherInput ? (
+              <ActivityWeatherWidget
+                className="mb-5"
+                date={weatherInput.date}
+                latitude={weatherInput.latitude}
+                locale={locale}
+                locationQuery={weatherInput.locationQuery}
+                longitude={weatherInput.longitude}
+              />
+            ) : null}
 
             <div className="space-y-4 text-sm text-zinc-700">
               <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
@@ -318,6 +503,24 @@ export default async function ActivityDetailPage({
             </div>
 
             <div className="mt-6 grid gap-3">
+              {canOpenTicketLink && activity.ticketUrl ? (
+                <AnalyticsExternalLink
+                  className="inline-flex h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+                  event={{
+                    name: "ticket_link_clicked",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "public_event_detail",
+                    properties: {
+                      item_kind: detailAnalyticsEntity.itemKind,
+                    },
+                  }}
+                  href={activity.ticketUrl}
+                >
+                  <span className="min-w-0 truncate">{ticketCtaLabel}</span>
+                  <ExternalLink className="h-4 w-4" />
+                </AnalyticsExternalLink>
+              ) : null}
               {activity.officialUrl ? (
                 <AnalyticsExternalLink
                   className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
@@ -398,6 +601,12 @@ export default async function ActivityDetailPage({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const organizerIsParticipating =
+    !isOrganizer ||
+    !viewerParticipation ||
+    viewerParticipation.status === "JOINED" ||
+    viewerParticipation.status === "APPROVED" ||
+    viewerParticipation.status === "PENDING";
   const canContactOrganizer = !isOrganizer;
   const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
@@ -407,6 +616,13 @@ export default async function ActivityDetailPage({
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
+  const participantPreview = activity.participantPreview ?? [];
+  const ticketUrl = activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
+  const ticketLabel = getTicketCtaLabel(
+    locale,
+    activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
+  );
+  const canOpenTicketLink = Boolean(ticketUrl) && !isCancelled && !isEndedByTime;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
   const activityVisibilityLabel =
     activity.visibility === "PRIVATE"
@@ -453,7 +669,7 @@ export default async function ActivityDetailPage({
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
         />
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2 sm:right-5 sm:top-5">
+        <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
           {!isOrganizer ? (
             <ActivityFavoriteButton
               activityId={activity.id}
@@ -495,9 +711,50 @@ export default async function ActivityDetailPage({
             <h2 className="text-lg font-semibold text-ink">
               {t.activityDetail.descriptionTitle}
             </h2>
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-600">
-              {activity.description}
-            </p>
+            <ActivityRichDescription
+              className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+              copyFailedLabel={t.activityShare.copyFailed}
+              copyLabel={t.activityShare.copyLink}
+              copySuccessLabel={t.activityShare.copied}
+              entityId={detailAnalyticsEntity.entityId}
+              entityType={detailAnalyticsEntity.entityType}
+              locale={locale}
+              sourceSurface="activity_detail"
+              text={activity.description}
+            />
+            <ManualTranslationBundle
+              accessToken={accessToken ?? null}
+              entityId={activity.id}
+              entityType="activity"
+              fields={[
+                {
+                  field: "title",
+                  label: t.translation.fields.title,
+                  text: activity.title,
+                },
+                {
+                  field: "description",
+                  label: t.translation.fields.description,
+                  text: activity.description,
+                },
+                {
+                  field: "address",
+                  label: t.translation.fields.address,
+                  text: activityLocationLabel,
+                },
+                {
+                  field: "priceText",
+                  label: t.translation.fields.priceText,
+                  text: activity.priceText,
+                },
+                {
+                  field: "itinerary",
+                  label: t.translation.fields.itinerary,
+                  text: activity.itinerary,
+                },
+              ]}
+              locale={locale}
+            />
           </div>
 
           <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
@@ -528,12 +785,16 @@ export default async function ActivityDetailPage({
             )}
           </div>
 
-          {activity.latitude !== null && activity.longitude !== null ? (
+          {activity.latitude !== null ||
+          activity.longitude !== null ||
+          activityLocationLabel.trim() ? (
             <ActivityMapPreview
               address={activityLocationLabel}
+              city={activity.city}
               latitude={activity.latitude}
               longitude={activity.longitude}
-              openLabel={t.activityDetail.openMap}
+              openLabel={t.activityDetail.openGoogleMaps}
+              queryAddress={activity.address}
               title={t.activityDetail.locationMapTitle}
             />
           ) : null}
@@ -671,27 +932,12 @@ export default async function ActivityDetailPage({
             comments={comments}
             isAuthenticated={Boolean(viewerProfile)}
             locale={locale}
+            translationAccessToken={accessToken ?? null}
             viewerProfileId={viewerProfile?.id ?? null}
           />
-
-          <div className="lg:hidden">
-            <ActivityShareTools
-              activityTitle={activity.title}
-              analyticsEntityId={detailAnalyticsEntity.entityId}
-              analyticsEntityType={detailAnalyticsEntity.entityType}
-              analyticsSourceSurface="activity_detail"
-              categoryLabel={activityCategoryLabel}
-              coverImageUrl={activity.coverImageUrl}
-              dateLabel={activityDateLabel}
-              description={activity.description}
-              locationLabel={activityLocationLabel}
-              locale={locale}
-              priceLabel={activityPriceLabel}
-            />
-          </div>
         </article>
 
-        <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
+        <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
           <div className="order-1 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-4 shadow-sm">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -715,10 +961,71 @@ export default async function ActivityDetailPage({
                   />
                 </div>
               ) : null}
+              {participantPreview.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {participantPreview.map((participant) => (
+                    <button
+                      key={participant.id}
+                      type="button"
+                      className="group relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm outline-none ring-1 ring-[#ead9bd] transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#d88d72]"
+                      aria-label={participant.nickname}
+                      title={participant.nickname}
+                    >
+                      <span
+                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                      >
+                        {participant.avatarUrl ? (
+                          // User avatars are stored as remote profile URLs.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={participant.avatarUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          getParticipantInitial(participant.nickname)
+                        )}
+                      </span>
+                      <span className="pointer-events-none absolute -top-10 left-1/2 z-20 w-max max-w-[12rem] -translate-x-1/2 whitespace-normal rounded-full bg-ink px-2.5 py-1 text-center text-xs font-semibold leading-4 text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100 group-focus-visible:opacity-100">
+                        {participant.nickname}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="order-2 mt-4 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4 lg:order-2">
+          <div className="order-2 mt-3">
+            <ActivityShareTools
+              activityTitle={activity.title}
+              analyticsEntityId={detailAnalyticsEntity.entityId}
+              analyticsEntityType={detailAnalyticsEntity.entityType}
+              analyticsSourceSurface="activity_detail"
+              categoryLabel={activityCategoryLabel}
+              coverImageUrl={activity.coverImageUrl}
+              dateLabel={activityDateLabel}
+              description={activity.description}
+              locationLabel={activityLocationLabel}
+              locale={locale}
+              priceLabel={activityPriceLabel}
+              shareKind="team"
+              sharePath={privateSharePath}
+            />
+          </div>
+
+          {weatherInput ? (
+            <ActivityWeatherWidget
+              className="order-3 mt-3"
+              date={weatherInput.date}
+              latitude={weatherInput.latitude}
+              locale={locale}
+              locationQuery={weatherInput.locationQuery}
+              longitude={weatherInput.longitude}
+            />
+          ) : null}
+
+          <div className="order-4 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
@@ -791,71 +1098,115 @@ export default async function ActivityDetailPage({
                   : t.activityDetail.approvalAuto}
               </span>
             </p>
-          </div>
 
-          <div className="order-3 mt-3 grid gap-3 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-3 shadow-sm sm:p-4">
-            {isOrganizer ? (
-              <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <ShieldAlert className="h-4 w-4 text-moss" />
-                  {t.activityOwner.title}
-                </p>
-                {canEditActivity ? (
-                  <Link
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                    href={withLocale(locale, `/activities/${activity.id}/edit`)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    {t.activityDetail.editActivity}
-                  </Link>
-                ) : null}
-                {!isCancelled && !isEndedByTime ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.cancelDescription}
-                  </p>
-                ) : null}
-                <CancelActivityForm
-                  activityId={activity.id}
-                  activityTitle={activity.title}
-                  disabled={isCancelled || isEndedByTime}
-                  locale={locale}
-                />
-                {isCancelled ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.cancelledHint}
-                  </p>
-                ) : isEndedByTime ? (
-                  <p className="text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.endedHint}
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                <JoinActivityForm
-                  activityId={activity.id}
-                  activityTitle={activity.title}
-                  compactUnauthenticated
-                  locale={locale}
-                  requiresApproval={activity.requiresApproval}
-                  isFull={isFull}
-                  isClosed={isClosed}
-                  isOrganizer={isOrganizer}
-                  isAuthenticated={Boolean(viewerProfile)}
-                  viewerParticipationStatus={
-                    viewerParticipation?.status ?? null
-                  }
-                />
-                {canContactOrganizer ? (
-                  <ContactOrganizerForm
+            {canOpenTicketLink && ticketUrl ? (
+              <AnalyticsExternalLink
+                className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+                event={{
+                  name: "ticket_link_clicked",
+                  entityId: detailAnalyticsEntity.entityId,
+                  entityType: detailAnalyticsEntity.entityType,
+                  sourceSurface: "activity_detail",
+                  properties: {
+                    item_kind: detailAnalyticsEntity.itemKind,
+                  },
+                }}
+                href={ticketUrl}
+              >
+                <span className="min-w-0 truncate">{ticketLabel}</span>
+                <ExternalLink className="h-4 w-4" />
+              </AnalyticsExternalLink>
+            ) : null}
+
+            {activity.publicEvent ? (
+              <Link
+                className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+                href={withLocale(
+                  locale,
+                  `/public-events/${activity.publicEvent.id}`,
+                )}
+              >
+                {publicEventCopy.linkedEventCta}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            ) : null}
+
+            <div className="mt-3 border-t border-sand pt-3">
+              {isOrganizer ? (
+                <div className="grid gap-3">
+                  <OrganizerParticipationToggleForm
                     activityId={activity.id}
+                    isClosed={isClosed}
+                    isParticipatingByDefault={organizerIsParticipating}
                     locale={locale}
-                    organizerNickname={activity.organizer.nickname}
-                    organizerProfileId={activity.organizer.id}
                   />
-                ) : null}
-              </>
-            )}
+                  <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                      <ShieldAlert className="h-4 w-4 text-moss" />
+                      {t.activityOwner.title}
+                    </p>
+                    {canEditActivity ? (
+                      <Link
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
+                        href={withLocale(
+                          locale,
+                          `/activities/${activity.id}/edit`,
+                        )}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        {t.activityDetail.editActivity}
+                      </Link>
+                    ) : null}
+                    {!isCancelled && !isEndedByTime ? (
+                      <p className="text-xs leading-5 text-zinc-500">
+                        {t.activityOwner.cancelDescription}
+                      </p>
+                    ) : null}
+                    <CancelActivityForm
+                      activityId={activity.id}
+                      activityTitle={activity.title}
+                      disabled={isCancelled || isEndedByTime}
+                      locale={locale}
+                    />
+                    {isCancelled ? (
+                      <p className="text-xs leading-5 text-zinc-500">
+                        {t.activityOwner.cancelledHint}
+                      </p>
+                    ) : isEndedByTime ? (
+                      <p className="text-xs leading-5 text-zinc-500">
+                        {t.activityOwner.endedHint}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  <JoinActivityForm
+                    activityId={activity.id}
+                    activityTitle={activity.title}
+                    accessToken={accessToken ?? null}
+                    compactUnauthenticated
+                    locale={locale}
+                    requiresApproval={activity.requiresApproval}
+                    isFull={isFull}
+                    isClosed={isClosed}
+                    isOrganizer={isOrganizer}
+                    isAuthenticated={Boolean(viewerProfile)}
+                    viewerParticipationStatus={
+                      viewerParticipation?.status ?? null
+                    }
+                  />
+                  {canContactOrganizer ? (
+                    <ContactOrganizerForm
+                      activityId={activity.id}
+                      locale={locale}
+                      organizerNickname={activity.organizer.nickname}
+                      organizerProfileId={activity.organizer.id}
+                    />
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="order-4 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
@@ -904,21 +1255,6 @@ export default async function ActivityDetailPage({
             <ActivityAnalyticsSummaryPanel
               locale={locale}
               summary={analyticsSummary}
-            />
-          </div>
-          <div className="order-6 mt-4 hidden lg:block">
-            <ActivityShareTools
-              activityTitle={activity.title}
-              analyticsEntityId={detailAnalyticsEntity.entityId}
-              analyticsEntityType={detailAnalyticsEntity.entityType}
-              analyticsSourceSurface="activity_detail"
-              categoryLabel={activityCategoryLabel}
-              coverImageUrl={activity.coverImageUrl}
-              dateLabel={activityDateLabel}
-              description={activity.description}
-              locationLabel={activityLocationLabel}
-              locale={locale}
-              priceLabel={activityPriceLabel}
             />
           </div>
         </aside>

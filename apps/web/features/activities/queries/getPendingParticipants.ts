@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 export type PendingParticipantViewModel = {
   id: string;
+  isGuest?: boolean;
   message: string | null;
   joinedAt: string;
   user: {
@@ -42,34 +43,67 @@ export async function getPendingParticipants(
     return [];
   }
 
-  const participants = await prisma.activityParticipant.findMany({
-    where: {
-      activityId,
-      status: "PENDING",
-    },
-    orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
-    select: {
-      id: true,
-      message: true,
-      joinedAt: true,
-      userProfile: {
-        select: {
-          id: true,
-          nickname: true,
-          friendCode: true,
+  const [participants, guestParticipants] = await Promise.all([
+    prisma.activityParticipant.findMany({
+      where: {
+        activityId,
+        status: "PENDING",
+      },
+      orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        message: true,
+        joinedAt: true,
+        userProfile: {
+          select: {
+            id: true,
+            nickname: true,
+            friendCode: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.guestActivityParticipant.findMany({
+      where: {
+        activityId,
+        linkedParticipantId: null,
+        status: "PENDING",
+      },
+      orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        displayName: true,
+        message: true,
+        joinedAt: true,
+      },
+    }),
+  ]);
 
-  return participants.map((participant) => ({
-    id: participant.id,
-    message: participant.message,
-    joinedAt: participant.joinedAt.toISOString(),
-    user: {
-      id: participant.userProfile.id,
-      nickname: getPublicParticipantName(participant.userProfile),
-      friendCode: participant.userProfile.friendCode,
-    },
-  }));
+  return [
+    ...participants.map((participant) => ({
+      id: participant.id,
+      message: participant.message,
+      joinedAt: participant.joinedAt.toISOString(),
+      user: {
+        id: participant.userProfile.id,
+        nickname: getPublicParticipantName(participant.userProfile),
+        friendCode: participant.userProfile.friendCode,
+      },
+    })),
+    ...guestParticipants.map((participant) => ({
+      id: `guest:${participant.id}`,
+      isGuest: true,
+      message: participant.message,
+      joinedAt: participant.joinedAt.toISOString(),
+      user: {
+        id: `guest:${participant.id}`,
+        nickname: participant.displayName,
+        friendCode: null,
+      },
+    })),
+  ].sort(
+    (left, right) =>
+      new Date(left.joinedAt).getTime() - new Date(right.joinedAt).getTime() ||
+      left.id.localeCompare(right.id),
+  );
 }

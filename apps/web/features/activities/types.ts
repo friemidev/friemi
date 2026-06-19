@@ -23,6 +23,7 @@ export type ActivityParticipantPreviewViewModel = {
   id: string;
   nickname: string;
   avatarUrl: string | null;
+  kind?: "user" | "guest";
 };
 
 export type ActivityCardViewModel = ActivitySummary & {
@@ -35,7 +36,10 @@ export type ActivityCardViewModel = ActivitySummary & {
   merchant: ActivityMerchantViewModel | null;
   isActivityInfo?: boolean;
   officialUrl?: string | null;
+  ticketUrl?: string | null;
+  ticketLabel?: string | null;
   publicEventId?: string | null;
+  organizerId?: string | null;
   participantPreview?: ActivityParticipantPreviewViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
@@ -59,6 +63,7 @@ export type ActivityMerchantViewModel = {
 export type ActivityOrganizerViewModel = {
   id: string;
   nickname: string;
+  avatarUrl: string | null;
   bio: string | null;
   followerCount: number;
   followingCount: number;
@@ -71,11 +76,15 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   minParticipants: number | null;
   requiresApproval: boolean;
   priceType: PriceType;
+  shareEnabled?: boolean;
+  shareToken?: string | null;
   organizer: ActivityOrganizerViewModel;
   publicEvent: {
     id: string;
     title: string;
     officialUrl: string | null;
+    ticketUrl: string | null;
+    ticketLabel: string | null;
     status: PublicEventStatus;
   } | null;
 };

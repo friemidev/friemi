@@ -252,13 +252,19 @@ export async function sendDirectMessageAction(
     conversationId: getString(formData, "conversationId"),
     body: getString(formData, "body"),
   };
+
+  if (rawInput.body.trim().length === 0) {
+    return {
+      values: {
+        body: "",
+      },
+    };
+  }
+
   const result = sendDirectMessageSchema.safeParse(rawInput);
-  const t = getDirectMessagesCopy(rawInput.locale);
 
   if (!result.success) {
     return {
-      formError: t.invalidRequest,
-      fieldErrors: result.error.flatten().fieldErrors,
       values: {
         body: rawInput.body,
       },
@@ -320,13 +326,19 @@ export async function sendDirectMessageToFriendAction(
     friendProfileId: getString(formData, "friendProfileId"),
     body: getString(formData, "body"),
   };
+
+  if (rawInput.body.trim().length === 0) {
+    return {
+      values: {
+        body: "",
+      },
+    };
+  }
+
   const result = sendDirectMessageToFriendSchema.safeParse(rawInput);
-  const t = getDirectMessagesCopy(rawInput.locale);
 
   if (!result.success) {
     return {
-      formError: t.invalidRequest,
-      fieldErrors: result.error.flatten().fieldErrors,
       values: {
         body: rawInput.body,
       },

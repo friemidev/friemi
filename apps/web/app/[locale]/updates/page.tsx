@@ -23,7 +23,7 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
       <header className="max-w-3xl">
         <p className="text-sm font-medium text-moss">更新公告</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
-          Next Fun Club 更新记录
+          Next Fun 更新记录
         </h1>
         <p className="mt-3 text-base leading-7 text-zinc-600">
           查看最近上线的功能和体验变化。
