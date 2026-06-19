@@ -378,7 +378,7 @@ export default async function AdminReportsPage({
   const { locale } = await params;
   const { status } = await searchParams;
   const selectedStatus = parseStatusFilter(status);
-  await requireAdminPageAccess(locale);
+  await requireAdminPageAccess(locale, "/admin/reports");
   const t = getReportCopy(locale).admin;
   const isFiltered = selectedStatus !== "ALL";
   const [reports, summary, operations] = await Promise.all([

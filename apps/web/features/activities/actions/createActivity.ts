@@ -215,7 +215,12 @@ export async function createActivityAction(
   }
 
   let activityId: string;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(
+    locale,
+    result.data.publicEventId
+      ? `/public-events/${result.data.publicEventId}/teams/new`
+      : "/activities/new",
+  );
   const description = formatStoredDescription(result.data);
   const publicEventId = result.data.publicEventId ?? null;
   const publicEvent = publicEventId

@@ -124,7 +124,10 @@ export async function createDirectConversationAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const conversation = await getOrCreateDirectConversation({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
@@ -167,7 +170,10 @@ export async function openDirectConversationAction(
   let conversationId: string;
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const conversation = await getOrCreateDirectConversation({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
@@ -204,7 +210,10 @@ export async function openActivityOrganizerConversationAction(
     redirect(withLocale(rawInput.locale, "/activities"));
   }
 
-  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
   let conversationId: string;
 
   try {
@@ -275,7 +284,10 @@ export async function sendDirectMessageAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/messages/${result.data.conversationId}`,
+    );
     const { conversation, message } = await sendDirectMessage({
       currentUserProfileId: profile.id,
       conversationId: result.data.conversationId,
@@ -349,7 +361,10 @@ export async function sendDirectMessageToFriendAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const { conversation, message } = await sendDirectMessageToFriend({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,

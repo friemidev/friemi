@@ -2,6 +2,12 @@ import { SignIn } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
+import {
+  authRedirectParamName,
+  getAuthRedirectFallback,
+  getSignUpHref,
+  normalizeAuthRedirectTarget,
+} from "@/lib/auth-redirect";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
 
@@ -11,14 +17,26 @@ type SignInPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    [authRedirectParamName]?: string | string[];
+  }>;
 };
 
 function isWechatWebView(userAgent: string | null) {
   return /MicroMessenger/i.test(userAgent ?? "");
 }
 
-export default async function SignInPage({ params }: SignInPageProps) {
+export default async function SignInPage({
+  params,
+  searchParams,
+}: SignInPageProps) {
   const { locale } = await params;
+  const query = await searchParams;
+  const redirectTarget = normalizeAuthRedirectTarget(
+    locale,
+    query?.[authRedirectParamName],
+  );
+  const fallbackRedirectUrl = getAuthRedirectFallback(locale);
   const t = getCopy(locale);
   const requestHeaders = await headers();
 
@@ -48,9 +66,11 @@ export default async function SignInPage({ params }: SignInPageProps) {
   return (
     <PageContainer className="flex min-h-[70vh] items-center justify-center">
       <SignIn
+        fallbackRedirectUrl={fallbackRedirectUrl}
+        forceRedirectUrl={redirectTarget}
         path={`/${locale}/sign-in`}
         routing="path"
-        signUpUrl={`/${locale}/sign-up`}
+        signUpUrl={getSignUpHref(locale, redirectTarget)}
       />
     </PageContainer>
   );

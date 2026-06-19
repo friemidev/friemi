@@ -1,7 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createMiddleware from "next-intl/middleware";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { defaultLocale, locales } from "@chill-club/shared";
+import {
+  getRequestRedirectTarget,
+  getSignInHref,
+} from "./lib/auth-redirect";
 import { hasClerkKeys } from "./lib/clerk";
 import {
   getMobileRootLobbyRedirectPath,
@@ -16,8 +20,13 @@ const intlMiddleware = createMiddleware({
 
 const isProtectedRoute = createRouteMatcher([
   "/:locale/activities/new(.*)",
+  "/:locale/activities/:activityId/edit(.*)",
+  "/:locale/activities/:activityId/teams/new(.*)",
   "/:locale/friends(.*)",
+  "/:locale/messages(.*)",
+  "/:locale/notifications(.*)",
   "/:locale/profile(.*)",
+  "/:locale/public-events/:publicEventId/teams/new(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
@@ -31,6 +40,26 @@ const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
+
+function getLocaleFromPath(pathname: string) {
+  const locale = pathname.split("/").filter(Boolean)[0];
+
+  return locales.some((supportedLocale) => supportedLocale === locale)
+    ? locale
+    : defaultLocale;
+}
+
+function redirectToSignIn(request: NextRequest) {
+  const locale = getLocaleFromPath(request.nextUrl.pathname);
+  const redirectTarget = getRequestRedirectTarget({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+  });
+
+  return NextResponse.redirect(
+    new URL(getSignInHref(locale, redirectTarget), request.url),
+  );
+}
 
 export default clerkMiddleware(async (auth, request) => {
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
@@ -46,28 +75,25 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   if (hasClerkKeys() && isProtectedRoute(request)) {
-    await auth.protect();
+    const { userId } = await auth();
+
+    if (!userId) {
+      return redirectToSignIn(request);
+    }
   }
 
   if (
     hasClerkKeys() &&
     (isAdminPageRoute(request) || isAdminApiRoute(request))
   ) {
-    let authState = await auth();
+    const authState = await auth();
 
     if (!authState.userId) {
       if (isAdminApiRoute(request)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      await auth.protect();
-      authState = await auth();
-
-      if (!authState.userId) {
-        return NextResponse.redirect(
-          new URL(`/${defaultLocale}/sign-in`, request.url),
-        );
-      }
+      return redirectToSignIn(request);
     }
 
     if (isAdminApiRoute(request)) {

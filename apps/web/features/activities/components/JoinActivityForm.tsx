@@ -11,8 +11,8 @@ import {
   joinActivityAsGuestAction,
   type GuestJoinActivityState,
 } from "@/features/guest-participants/actions/joinAsGuest";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { getCopy } from "@/lib/copy";
-import { withLocale } from "@/lib/routes";
 import {
   joinActivityAction,
   type JoinActivityState,
@@ -357,7 +357,7 @@ function GuestJoinForm({
       <GuestSubmitButton locale={locale} />
       <Link
         className="text-center text-xs font-medium text-zinc-500 underline-offset-4 hover:text-ink hover:underline"
-        href={withLocale(locale, "/sign-in")}
+        href={getSignInHref(locale, `/activities/${activityId}`)}
       >
         {t.signIn}
       </Link>
@@ -466,7 +466,7 @@ function GuestJoinEntry({
       <div className="grid grid-cols-2 gap-2">
         <Link
           className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-[#d88d72] px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c87b61] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35"
-          href={withLocale(locale, "/sign-in")}
+          href={getSignInHref(locale, `/activities/${activityId}`)}
         >
           <span className="truncate">{t.loginJoin}</span>
         </Link>

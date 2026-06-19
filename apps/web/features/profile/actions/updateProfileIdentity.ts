@@ -57,7 +57,7 @@ export async function updateProfileIdentityAction(
   }
 
   const { locale, nickname, returnTo } = result.data;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, returnTo ?? "/profile");
 
   await prisma.userProfile.update({
     where: {
@@ -100,7 +100,7 @@ export async function updateProfileWechatAction(
   }
 
   const { locale, wechatId } = result.data;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, "/profile");
   const trimmedWechatId = wechatId?.trim() || null;
   const normalizedWechatId = normalizeGuestWechatId(trimmedWechatId);
 

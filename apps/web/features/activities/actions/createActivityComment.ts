@@ -152,7 +152,10 @@ export async function createActivityCommentAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/activities/${result.data.activityId}#comments`,
+    );
     const activity = await prisma.activity.findFirst({
       where: await getCommentableActivityWhere(
         result.data.activityId,
@@ -312,7 +315,10 @@ export async function updateActivityCommentAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/activities/${result.data.activityId}#comments`,
+    );
     const comment = await prisma.comment.findFirst({
       where: {
         id: result.data.commentId,
@@ -389,7 +395,10 @@ export async function deleteActivityCommentAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/activities/${result.data.activityId}#comments`,
+    );
     const comment = await prisma.comment.findFirst({
       where: {
         id: result.data.commentId,

@@ -14,7 +14,7 @@ export default async function NewActivityPage({
 }: NewActivityPageProps) {
   const { locale } = await params;
   const t = getCopy(locale);
-  await requireUser(locale);
+  await requireUser(locale, "/activities/new");
 
   return (
     <PageContainer className="max-w-3xl space-y-6">

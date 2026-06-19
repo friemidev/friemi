@@ -53,7 +53,10 @@ export async function updateActivityAction(
     );
   }
 
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(
+    locale,
+    `/activities/${activityId}/edit`,
+  );
   const editableActivity = await prisma.activity.findFirst({
     where: {
       id: activityId,

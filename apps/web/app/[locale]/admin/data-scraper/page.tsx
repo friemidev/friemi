@@ -15,7 +15,7 @@ export default async function AdminDataScraperPage({
   params,
 }: AdminDataScraperPageProps) {
   const { locale } = await params;
-  await requireAdminPageAccess(locale);
+  await requireAdminPageAccess(locale, "/admin/data-scraper");
   const state = await getAdminState();
 
   return (

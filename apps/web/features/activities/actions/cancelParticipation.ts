@@ -95,7 +95,10 @@ export async function cancelParticipationAction(
   >;
   try {
     profile = await perf.measure("viewer_profile", () =>
-      ensureCurrentUserProfileSnapshot(result.data.locale),
+      ensureCurrentUserProfileSnapshot(
+        result.data.locale,
+        `/activities/${result.data.activityId}`,
+      ),
     );
   } catch (error) {
     console.error("Failed to resolve viewer profile for cancellation", error);

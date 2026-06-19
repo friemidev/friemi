@@ -443,7 +443,7 @@ export default async function NotificationsPage({
     route: "/notifications",
   });
   const profile = await perf.measure("viewer.profile", () =>
-    ensureCurrentUserProfile(locale),
+    ensureCurrentUserProfile(locale, "/notifications"),
   );
   const { notifications, unreadCount } = await perf.measure(
     "notifications.center",

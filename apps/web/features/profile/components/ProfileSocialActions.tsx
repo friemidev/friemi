@@ -13,6 +13,7 @@ import {
 import { getFriendsCopy } from "@/features/friends/copy";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import type { ProfileViewerRelationshipViewModel } from "../queries/getProfileDashboard";
 
@@ -128,12 +129,7 @@ function FriendAction({
   const friendsCopy = getFriendsCopy(locale);
   const actionCopy = getProfileSocialActionCopy(locale);
   const redirectPath = `/profile/${profileId}`;
-  const signInHref = withLocale(
-    locale,
-    `/sign-in?redirect_url=${encodeURIComponent(
-      withLocale(locale, redirectPath),
-    )}`,
-  );
+  const signInHref = getSignInHref(locale, redirectPath);
   const [addState, addAction] = useActionState(
     sendFriendRequestToProfileAction,
     friendActionInitialState,
