@@ -29,6 +29,7 @@ type SearchActivityResultsFeedProps = {
   locale: string;
   query: string;
   totalCount: number;
+  viewerProfileId?: string | null;
 };
 
 type SearchActivityResultsResponse = {
@@ -99,6 +100,7 @@ export function SearchActivityResultsFeed({
   locale,
   query,
   totalCount,
+  viewerProfileId,
 }: SearchActivityResultsFeedProps) {
   const t = getCopy(locale).globalSearch;
   const [activities, setActivities] = useState(initialActivities);
@@ -396,6 +398,9 @@ export function SearchActivityResultsFeed({
               key={getSearchActivityKey(activity)}
               activity={activity}
               isAuthenticated={isAuthenticated}
+              isOwnActivity={
+                Boolean(viewerProfileId) && activity.organizerId === viewerProfileId
+              }
               locale={locale}
               showFavoriteButton
               showPrimaryAction={!isPublicEventCard(activity)}
@@ -428,6 +433,10 @@ export function SearchActivityResultsFeed({
                 key={getSearchActivityKey(activity)}
                 activity={activity}
                 isAuthenticated={isAuthenticated}
+                isOwnActivity={
+                  Boolean(viewerProfileId) &&
+                  activity.organizerId === viewerProfileId
+                }
                 locale={locale}
                 showFavoriteButton
                 showPrimaryAction={!isPublicEventCard(activity)}

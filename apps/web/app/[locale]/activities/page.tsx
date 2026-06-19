@@ -415,6 +415,10 @@ export default async function ActivitiesPage({
                   }
                   activity={activity}
                   isAuthenticated={Boolean(viewerProfile)}
+                  isOwnActivity={
+                    Boolean(viewerProfile) &&
+                    activity.organizerId === viewerProfile?.id
+                  }
                   locale={locale}
                   mobileDense
                   showFavoriteButton

@@ -28,6 +28,7 @@ export type ActivityParticipantPreviewViewModel = {
 
 export type ActivityCardViewModel = ActivitySummary & {
   coverImageUrl: string | null;
+  customCoverImageUrl?: string | null;
   coverTone: "moss" | "clay" | "sky";
   favoriteCount: number;
   latitude: number | null;
@@ -82,6 +83,7 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   publicEvent: {
     id: string;
     title: string;
+    coverImageUrl: string | null;
     officialUrl: string | null;
     ticketUrl: string | null;
     ticketLabel: string | null;
