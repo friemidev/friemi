@@ -1,5 +1,10 @@
 import type { ActivityStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import {
+  buildPrivateActivityFriendAccessWhere,
+  buildPrivateActivityShareAccessWhere,
+} from "@/features/activities/utils/activityShareAccess";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -110,7 +115,10 @@ async function findFriendship(db: DbClient, userId: string, otherUserId: string)
 
 async function findOrganizerMessageActivity(
   db: DbClient,
+  currentUserProfileId: string,
   organizerProfileId: string,
+  friendIds: string[],
+  accessToken?: string | null,
   activityId?: string,
 ) {
   return db.activity.findFirst({
@@ -123,10 +131,46 @@ async function findOrganizerMessageActivity(
       status: {
         in: organizerMessageActivityStatuses,
       },
-      visibility: "PUBLIC",
+      OR: [
+        {
+          visibility: "PUBLIC",
+        },
+        {
+          organizerId: currentUserProfileId,
+        },
+        {
+          participants: {
+            some: {
+              userProfileId: currentUserProfileId,
+              status: {
+                in: ["JOINED", "APPROVED", "PENDING"],
+              },
+            },
+          },
+        },
+        ...buildPrivateActivityFriendAccessWhere(friendIds),
+        ...buildPrivateActivityShareAccessWhere(accessToken),
+      ],
       organizer: {
         status: "ACTIVE",
       },
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+async function findExistingConversation(
+  db: DbClient,
+  userId: string,
+  otherUserId: string,
+) {
+  const pair = getConversationPair(userId, otherUserId);
+
+  return db.conversation.findUnique({
+    where: {
+      userAId_userBId: pair,
     },
     select: {
       id: true,
@@ -141,12 +185,13 @@ async function assertDirectMessageSendAccess(
 ) {
   assertDifferentUsers(userId, otherUserId);
 
-  const [friendship, organizerActivity] = await Promise.all([
+  const [friendship, organizerActivity, existingConversation] = await Promise.all([
     findFriendship(db, userId, otherUserId),
-    findOrganizerMessageActivity(db, otherUserId),
+    findOrganizerMessageActivity(db, userId, otherUserId, []),
+    findExistingConversation(db, userId, otherUserId),
   ]);
 
-  if (!friendship && !organizerActivity) {
+  if (!friendship && !organizerActivity && !existingConversation) {
     throw new DirectMessageDomainError("NOT_FRIENDS");
   }
 }
@@ -199,20 +244,26 @@ export async function getOrCreateDirectConversation({
 }
 
 export async function getOrCreateActivityOrganizerConversation({
+  accessToken,
   currentUserProfileId,
   organizerProfileId,
   activityId,
 }: {
+  accessToken?: string | null;
   currentUserProfileId: string;
   organizerProfileId: string;
   activityId: string;
 }): Promise<DirectConversationViewModel> {
   return prisma.$transaction(async (tx) => {
     assertDifferentUsers(currentUserProfileId, organizerProfileId);
+    const friendIds = await getViewerFriendIds(currentUserProfileId);
 
     const activity = await findOrganizerMessageActivity(
       tx,
+      currentUserProfileId,
       organizerProfileId,
+      friendIds,
+      accessToken,
       activityId,
     );
 
