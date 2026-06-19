@@ -10,20 +10,20 @@ export type AppLocale = "zh-CN" | "en" | "fr";
 export const localeMeta: Record<
   AppLocale,
   {
-    flag: string;
+    flag: "cn" | "gb" | "fr";
     label: string;
   }
 > = {
   "zh-CN": {
-    flag: "🇨🇳",
+    flag: "cn",
     label: "中文",
   },
   en: {
-    flag: "🇬🇧",
+    flag: "gb",
     label: "English",
   },
   fr: {
-    flag: "🇫🇷",
+    flag: "fr",
     label: "Français",
   },
 };
