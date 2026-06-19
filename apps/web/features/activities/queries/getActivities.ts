@@ -1968,9 +1968,43 @@ async function getPublicInfoOnlyActivityList(
     publicInfoFilters.sort === "recommended" &&
     !hasExplicitActivityListFilters(publicInfoFilters);
   const requestedPage = Math.max(filters.page, 1);
+  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
+    perf.measure("activity.count", () =>
+      prisma.activity.count({
+        where: activityWhere,
+      }),
+    ),
+    perf.measure("publicEvent.count", () =>
+      prisma.publicEvent.count({
+        where: publicEventWhere,
+      }),
+    ),
+  ]);
+  const totalCount = activityTotalCount + publicEventTotalCount;
+  const totalPages = getActivityTotalPages(totalCount, pageSize);
+  const page = getActivityPage(requestedPage, totalPages);
+
+  if (totalCount === 0) {
+    perf.finish({
+      activityCandidateCount: 0,
+      publicEventCandidateCount: 0,
+      resultCount: 0,
+      totalCount,
+      usedBoundedRecommendedCandidates: useRecommendedSort,
+    });
+
+    return {
+      activities: [],
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+    };
+  }
+
   const readLimit = useRecommendedSort
-    ? undefined
-    : requestedPage * pageSize + 1;
+    ? Math.max(page * pageSize * 3, pageSize * 4)
+    : page * pageSize + 1;
   const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
@@ -1979,7 +2013,7 @@ async function getPublicInfoOnlyActivityList(
           publicInfoFilters,
           publicInfoFilters.timeState,
         ),
-        ...(readLimit ? { take: readLimit } : {}),
+        take: readLimit,
         select: activityCardSelect,
       }),
     ),
@@ -1990,7 +2024,7 @@ async function getPublicInfoOnlyActivityList(
           publicInfoFilters,
           publicInfoFilters.timeState,
         ),
-        ...(readLimit ? { take: readLimit } : {}),
+        take: readLimit,
         select: publicEventCardSelect,
       }),
     ),
@@ -2011,9 +2045,6 @@ async function getPublicInfoOnlyActivityList(
 
     return ranked;
   });
-  const totalCount = allRankedActivities.length;
-  const totalPages = getActivityTotalPages(totalCount, pageSize);
-  const page = getActivityPage(requestedPage, totalPages);
   const rankedActivities = allRankedActivities.slice(
     (page - 1) * pageSize,
     page * pageSize,
@@ -2026,7 +2057,7 @@ async function getPublicInfoOnlyActivityList(
     publicEventCandidateCount: publicEvents.length,
     resultCount: rankedActivities.length,
     totalCount,
-    usedFirstPageCandidates: false,
+    usedBoundedRecommendedCandidates: useRecommendedSort,
   });
 
   return {
