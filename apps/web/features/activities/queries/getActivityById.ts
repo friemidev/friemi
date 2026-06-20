@@ -92,6 +92,7 @@ const activityDetailSelect = {
     select: {
       id: true,
       title: true,
+      coverImageUrl: true,
       officialUrl: true,
       ticketUrl: true,
       ticketLabel: true,
@@ -119,6 +120,11 @@ const activityShareMetadataSelect = {
   priceType: true,
   priceText: true,
   coverImageUrl: true,
+  publicEvent: {
+    select: {
+      coverImageUrl: true,
+    },
+  },
   status: true,
   visibility: true,
   shareEnabled: true,
@@ -198,7 +204,9 @@ function getActivityDetailViewModel(
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
-    coverImageUrl: activity.coverImageUrl,
+    coverImageUrl:
+      activity.coverImageUrl ?? activity.publicEvent?.coverImageUrl ?? null,
+    customCoverImageUrl: isActivityInfo ? null : activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
@@ -238,6 +246,7 @@ function getActivityDetailViewModel(
       ? {
           id: activity.publicEvent.id,
           title: activity.publicEvent.title,
+          coverImageUrl: activity.publicEvent.coverImageUrl,
           officialUrl: activity.publicEvent.officialUrl,
           ticketUrl: activity.publicEvent.ticketUrl,
           ticketLabel: activity.publicEvent.ticketLabel,
@@ -393,7 +402,8 @@ export async function getActivityShareMetadataById(
     endAt: toIsoString(activity.endAt),
     priceType: activity.priceType,
     priceText: activity.priceText,
-    coverImageUrl: activity.coverImageUrl,
+    coverImageUrl:
+      activity.coverImageUrl ?? activity.publicEvent?.coverImageUrl ?? null,
     status: activity.status,
     visibility: activity.visibility,
   };

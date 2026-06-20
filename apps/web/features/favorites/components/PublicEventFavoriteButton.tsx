@@ -7,7 +7,7 @@ import { useFormStatus } from "react-dom";
 import { Heart, LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import type { AnalyticsSourceSurface } from "@/features/analytics/events";
-import { withLocale } from "@/lib/routes";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import {
   togglePublicEventFavoriteAction,
@@ -170,7 +170,7 @@ export function PublicEventFavoriteButton({
   if (!isAuthenticated) {
     return (
       <span className="group relative inline-flex">
-        <Link href={withLocale(locale, "/sign-in")}>
+        <Link href={getSignInHref(locale, redirectPath)}>
           <Button
             aria-label={t.signInToFavorite}
             className={cn(

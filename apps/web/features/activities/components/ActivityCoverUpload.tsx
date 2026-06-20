@@ -9,6 +9,7 @@ import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverUploadProps = {
+  fallbackPreviewUrl?: string | null;
   initialUrl?: string | null;
   locale: string;
   name?: string;
@@ -28,6 +29,7 @@ type UploadErrorCode =
   | "UPLOAD_FAILED";
 
 export function ActivityCoverUpload({
+  fallbackPreviewUrl,
   initialUrl,
   locale,
   name = "coverImageUrl",
@@ -40,7 +42,9 @@ export function ActivityCoverUpload({
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const displayImageUrl = getActivityCoverDisplayUrl(imageUrl);
+  const displayImageUrl = getActivityCoverDisplayUrl(
+    imageUrl || fallbackPreviewUrl || "",
+  );
 
   useEffect(() => {
     setImageUrl(initialUrl ?? "");
@@ -176,9 +180,9 @@ export function ActivityCoverUpload({
           }}
           onDrop={handleDroppedFile}
         >
-          {imageUrl ? (
-            // Supabase Storage returns public image URLs. Native img keeps this
-            // uploader independent from Next remote image domain config.
+          {displayImageUrl ? (
+            // Uploaded and fallback covers can come from different public URLs.
+            // Native img keeps this uploader independent from remote image config.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displayImageUrl}

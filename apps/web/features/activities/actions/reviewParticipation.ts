@@ -86,7 +86,10 @@ export async function reviewParticipationAction(
     };
   }
 
-  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}#participation-approval`,
+  );
 
   try {
     const reviewResult = await prisma.$transaction(

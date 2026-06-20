@@ -519,6 +519,7 @@ export default async function SearchPage({
                   locale={locale}
                   query={query}
                   totalCount={mainActivityResult.result.totalCount}
+                  viewerProfileId={viewerProfile?.id ?? null}
                 />
               ) : mainActivityResult.error ? (
                 <p className="rounded-xl border border-dashed border-sand-strong bg-white/60 p-4 text-sm text-zinc-500">

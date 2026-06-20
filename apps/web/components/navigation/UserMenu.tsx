@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
-import { Button } from "@chill-club/ui";
-import { withLocale } from "@/lib/routes";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
 import { AccountMenu } from "@/components/navigation/AccountMenu";
+import { AuthRedirectSignInButton } from "@/components/navigation/AuthRedirectSignInButton";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 
 type UserMenuProps = {
@@ -29,11 +27,7 @@ export function UserMenu({
   const t = getCopy(locale);
 
   if (!hasClerkKeys()) {
-    return (
-      <Link href={withLocale(locale, "/sign-in")}>
-        <Button variant="secondary">{t.nav.signIn}</Button>
-      </Link>
-    );
+    return <AuthRedirectSignInButton label={t.nav.signIn} locale={locale} />;
   }
 
   return (
@@ -50,9 +44,7 @@ export function UserMenu({
         />
       </SignedIn>
       <SignedOut>
-        <Link href={withLocale(locale, "/sign-in")}>
-          <Button variant="secondary">{t.nav.signIn}</Button>
-        </Link>
+        <AuthRedirectSignInButton label={t.nav.signIn} locale={locale} />
       </SignedOut>
     </>
   );

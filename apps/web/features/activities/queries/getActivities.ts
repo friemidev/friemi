@@ -122,6 +122,11 @@ export const activityCardSelect = {
   visibility: true,
   organizerId: true,
   publicEventId: true,
+  publicEvent: {
+    select: {
+      coverImageUrl: true,
+    },
+  },
   source: true,
   sourceUrl: true,
   externalSource: true,
@@ -1080,7 +1085,9 @@ export function getActivityCardViewModel(
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
-    coverImageUrl: activity.coverImageUrl,
+    coverImageUrl:
+      activity.coverImageUrl ?? activity.publicEvent?.coverImageUrl ?? null,
+    customCoverImageUrl: isActivityInfo ? null : activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
     participantCount,
     priceText: activity.priceText,
@@ -1488,8 +1495,19 @@ export async function getUpcomingHomeActivities({
 }: {
   limit?: number;
 } = {}): Promise<ActivityCardViewModel[]> {
-  const now = new Date();
   const safeLimit = normalizeLimit(limit) ?? 8;
+
+  if (safeLimit === 8) {
+    return getCachedDefaultUpcomingHomeActivities();
+  }
+
+  return getUpcomingHomeActivitiesUncached(safeLimit);
+}
+
+async function getUpcomingHomeActivitiesUncached(
+  safeLimit: number,
+): Promise<ActivityCardViewModel[]> {
+  const now = new Date();
   const upcomingActivityWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({ now }),
@@ -1530,6 +1548,12 @@ export async function getUpcomingHomeActivities({
 
   return rankedActivities.map((activity) => activity.card);
 }
+
+const getCachedDefaultUpcomingHomeActivities = unstable_cache(
+  async () => getUpcomingHomeActivitiesUncached(8),
+  ["upcoming-home-activities-default"],
+  { revalidate: 60 },
+);
 
 function getActivityTotalPages(totalCount: number, pageSize: number) {
   return Math.max(1, Math.ceil(totalCount / pageSize));
@@ -1951,9 +1975,43 @@ async function getPublicInfoOnlyActivityList(
     publicInfoFilters.sort === "recommended" &&
     !hasExplicitActivityListFilters(publicInfoFilters);
   const requestedPage = Math.max(filters.page, 1);
+  const [activityTotalCount, publicEventTotalCount] = await Promise.all([
+    perf.measure("activity.count", () =>
+      prisma.activity.count({
+        where: activityWhere,
+      }),
+    ),
+    perf.measure("publicEvent.count", () =>
+      prisma.publicEvent.count({
+        where: publicEventWhere,
+      }),
+    ),
+  ]);
+  const totalCount = activityTotalCount + publicEventTotalCount;
+  const totalPages = getActivityTotalPages(totalCount, pageSize);
+  const page = getActivityPage(requestedPage, totalPages);
+
+  if (totalCount === 0) {
+    perf.finish({
+      activityCandidateCount: 0,
+      publicEventCandidateCount: 0,
+      resultCount: 0,
+      totalCount,
+      usedBoundedRecommendedCandidates: useRecommendedSort,
+    });
+
+    return {
+      activities: [],
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+    };
+  }
+
   const readLimit = useRecommendedSort
-    ? undefined
-    : requestedPage * pageSize + 1;
+    ? Math.max(page * pageSize * 3, pageSize * 4)
+    : page * pageSize + 1;
   const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
@@ -1962,7 +2020,7 @@ async function getPublicInfoOnlyActivityList(
           publicInfoFilters,
           publicInfoFilters.timeState,
         ),
-        ...(readLimit ? { take: readLimit } : {}),
+        take: readLimit,
         select: activityCardSelect,
       }),
     ),
@@ -1973,7 +2031,7 @@ async function getPublicInfoOnlyActivityList(
           publicInfoFilters,
           publicInfoFilters.timeState,
         ),
-        ...(readLimit ? { take: readLimit } : {}),
+        take: readLimit,
         select: publicEventCardSelect,
       }),
     ),
@@ -1994,9 +2052,6 @@ async function getPublicInfoOnlyActivityList(
 
     return ranked;
   });
-  const totalCount = allRankedActivities.length;
-  const totalPages = getActivityTotalPages(totalCount, pageSize);
-  const page = getActivityPage(requestedPage, totalPages);
   const rankedActivities = allRankedActivities.slice(
     (page - 1) * pageSize,
     page * pageSize,
@@ -2009,7 +2064,7 @@ async function getPublicInfoOnlyActivityList(
     publicEventCandidateCount: publicEvents.length,
     resultCount: rankedActivities.length,
     totalCount,
-    usedFirstPageCandidates: false,
+    usedBoundedRecommendedCandidates: useRecommendedSort,
   });
 
   return {

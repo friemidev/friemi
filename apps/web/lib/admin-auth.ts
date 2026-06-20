@@ -1,10 +1,11 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { hasClerkKeys } from "@/lib/clerk";
-import { withLocale } from "@/lib/routes";
 import { isAdminByFields, readRoleFromMetadata } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
+import { withLocale } from "@/lib/routes";
 
 function isAdminUser(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
   return isAdminByFields({
@@ -61,14 +62,14 @@ export async function isCurrentUserAdmin() {
   return isAdminWithFallback(userId);
 }
 
-export async function requireAdminPageAccess(locale: string) {
+export async function requireAdminPageAccess(locale: string, redirectPath?: string) {
   if (!hasClerkKeys()) {
     return;
   }
 
   const { userId } = await auth();
   if (!userId) {
-    redirect(withLocale(locale, "/sign-in"));
+    redirect(getSignInHref(locale, redirectPath));
   }
 
   if (!(await isAdminWithFallback(userId))) {

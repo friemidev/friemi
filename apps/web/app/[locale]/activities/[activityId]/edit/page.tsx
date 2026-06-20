@@ -21,7 +21,10 @@ export default async function EditActivityPage({
 }: EditActivityPageProps) {
   const { locale, activityId } = await params;
   const t = getCopy(locale);
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(
+    locale,
+    `/activities/${activityId}/edit`,
+  );
   const editableActivity = await getEditableActivityById(
     activityId,
     profile.id,

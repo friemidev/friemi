@@ -30,8 +30,10 @@ export default async function MessagesPage({
     route: "/messages",
   });
   const query = await searchParams;
+  const redirectPath =
+    query?.friendRequests === "1" ? "/messages?friendRequests=1" : "/messages";
   const profile = await perf.measure("viewer.profile", () =>
-    ensureCurrentUserProfile(locale),
+    ensureCurrentUserProfile(locale, redirectPath),
   );
   const commonCopy = getCopy(locale).common;
   const [friendRosterResult, incomingRequests] = await perf.measure(

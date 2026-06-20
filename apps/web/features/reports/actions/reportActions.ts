@@ -247,7 +247,7 @@ export async function createReportAction(
   const { locale, redirectPath } = result.data;
 
   try {
-    const reporter = await ensureCurrentUserProfile(locale);
+    const reporter = await ensureCurrentUserProfile(locale, redirectPath);
     const targetState = await canReportTarget({
       reporterId: reporter.id,
       targetId: result.data.targetId,
@@ -386,7 +386,7 @@ export async function reviewReportAction(
     const hasAuthProvider = hasClerkKeys();
     const [isAdmin, reviewer] = await Promise.all([
       hasAuthProvider ? isCurrentUserAdmin() : Promise.resolve(true),
-      ensureCurrentUserProfile(result.data.locale),
+      ensureCurrentUserProfile(result.data.locale, "/admin/reports"),
     ]);
 
     if (!isAdmin) {

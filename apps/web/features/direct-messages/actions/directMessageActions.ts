@@ -34,6 +34,7 @@ const createDirectConversationSchema = z.object({
 });
 
 const createActivityOrganizerConversationSchema = z.object({
+  accessToken: z.string().trim().optional(),
   locale: z.string().min(1).default("zh-CN"),
   activityId: z.string().min(1),
   organizerProfileId: z.string().min(1),
@@ -123,7 +124,10 @@ export async function createDirectConversationAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const conversation = await getOrCreateDirectConversation({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
@@ -166,7 +170,10 @@ export async function openDirectConversationAction(
   let conversationId: string;
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const conversation = await getOrCreateDirectConversation({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
@@ -192,6 +199,7 @@ export async function openActivityOrganizerConversationAction(
   formData: FormData,
 ): Promise<void> {
   const rawInput = {
+    accessToken: getString(formData, "accessToken").trim() || undefined,
     locale: getString(formData, "locale") || "zh-CN",
     activityId: getString(formData, "activityId"),
     organizerProfileId: getString(formData, "organizerProfileId"),
@@ -202,11 +210,15 @@ export async function openActivityOrganizerConversationAction(
     redirect(withLocale(rawInput.locale, "/activities"));
   }
 
-  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
   let conversationId: string;
 
   try {
     const conversation = await getOrCreateActivityOrganizerConversation({
+      accessToken: result.data.accessToken,
       currentUserProfileId: profile.id,
       organizerProfileId: result.data.organizerProfileId,
       activityId: result.data.activityId,
@@ -272,7 +284,10 @@ export async function sendDirectMessageAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      `/messages/${result.data.conversationId}`,
+    );
     const { conversation, message } = await sendDirectMessage({
       currentUserProfileId: profile.id,
       conversationId: result.data.conversationId,
@@ -346,7 +361,10 @@ export async function sendDirectMessageToFriendAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(result.data.locale);
+    const profile = await ensureCurrentUserProfile(
+      result.data.locale,
+      "/messages",
+    );
     const { conversation, message } = await sendDirectMessageToFriend({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,

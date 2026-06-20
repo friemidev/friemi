@@ -203,7 +203,10 @@ export async function joinActivityAction(
   let profile: Awaited<ReturnType<typeof ensureCurrentUserProfileSnapshot>>;
   try {
     profile = await perf.measure("viewer_profile", () =>
-      ensureCurrentUserProfileSnapshot(result.data.locale),
+      ensureCurrentUserProfileSnapshot(
+        result.data.locale,
+        `/activities/${result.data.activityId}`,
+      ),
     );
   } catch (error) {
     console.error("Failed to resolve viewer profile for join", error);

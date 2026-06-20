@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SlidersHorizontal, X } from "lucide-react";
+import { Compass, SlidersHorizontal, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -24,9 +24,14 @@ import { ActivityCard } from "./ActivityCard";
 import { ActivitySwipeDiscovery } from "./ActivitySwipeDiscovery";
 import { isPublicEventCard } from "../utils/activityCardKind";
 import { getActivityDisplayStatus } from "../utils/activityDisplay";
+import type {
+  ActivityLobbyFeedPage,
+  ActivityLobbyFeedStatus,
+} from "../queries/getActivityLobby";
 
 type ActivityLobbyViewProps = {
   allActivities: ActivityCardViewModel[];
+  allActivityFeed: ActivityLobbyFeedPage;
   openActivities: ActivityCardViewModel[];
   createdActivities: ActivityCardViewModel[];
   deferredFilters?: LobbyFilterId[];
@@ -54,7 +59,7 @@ type FilterOption = {
   label: string;
 };
 
-type LobbyStatusFilterId = "all" | "ongoing" | "ended";
+type LobbyStatusFilterId = ActivityLobbyFeedStatus;
 
 type StatusFilterOption = {
   id: LobbyStatusFilterId;
@@ -67,7 +72,44 @@ type LobbySectionResponse = {
   ok: boolean;
 };
 
+type LobbyFeedResponse = {
+  feed?: ActivityLobbyFeedPage;
+  ok: boolean;
+};
+
+type LobbySwipeResponse = {
+  activities?: ActivityCardViewModel[];
+  ok: boolean;
+};
+
+type WindowWithIdleCallback = Window &
+  typeof globalThis & {
+    cancelIdleCallback?: (handle: number) => void;
+    requestIdleCallback?: (
+      callback: () => void,
+      options?: { timeout?: number },
+    ) => number;
+  };
+
 const LOBBY_PAGE_SIZE = 10;
+
+function scheduleIdleTask(callback: () => void, timeout = 900) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const idleWindow = window as WindowWithIdleCallback;
+
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    const handle = idleWindow.requestIdleCallback(callback, { timeout });
+
+    return () => idleWindow.cancelIdleCallback?.(handle);
+  }
+
+  const handle = window.setTimeout(callback, timeout);
+
+  return () => window.clearTimeout(handle);
+}
 
 type EmptyLobbyAction = {
   description: string;
@@ -387,17 +429,37 @@ function getLobbyActivityKey(activity: ActivityCardViewModel) {
     : `activity:${activity.id}`;
 }
 
-function getLobbyTotalPages(totalItems: number) {
-  return Math.max(1, Math.ceil(totalItems / LOBBY_PAGE_SIZE));
+function getLobbyFeedCacheKey(status: LobbyStatusFilterId, page: number) {
+  return `${status}:${page}`;
+}
+
+function getLobbyFeedStatusCount(
+  feed: ActivityLobbyFeedPage,
+  status: LobbyStatusFilterId,
+) {
+  if (status === "ongoing") {
+    return feed.ongoingCount;
+  }
+
+  if (status === "ended") {
+    return feed.endedCount;
+  }
+
+  return feed.totalCount;
+}
+
+function getLobbyTotalPages(totalItems: number, pageSize = LOBBY_PAGE_SIZE) {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
 }
 
 function getPagedLobbyActivities(
   activities: ActivityCardViewModel[],
   page: number,
+  pageSize = LOBBY_PAGE_SIZE,
 ) {
-  const startIndex = (page - 1) * LOBBY_PAGE_SIZE;
+  const startIndex = (page - 1) * pageSize;
 
-  return activities.slice(startIndex, startIndex + LOBBY_PAGE_SIZE);
+  return activities.slice(startIndex, startIndex + pageSize);
 }
 
 function dedupeLobbyActivities(activities: ActivityCardViewModel[]) {
@@ -463,6 +525,19 @@ function getStatusFilterOptions(
         : id === "ended"
           ? endedCount
           : activities.length,
+    label: getStatusFilterLabel(locale, id),
+  }));
+}
+
+function getLobbyFeedStatusFilterOptions(
+  feed: ActivityLobbyFeedPage,
+  locale: string,
+): StatusFilterOption[] {
+  const ids: LobbyStatusFilterId[] = ["all", "ongoing", "ended"];
+
+  return ids.map((id) => ({
+    id,
+    count: getLobbyFeedStatusCount(feed, id),
     label: getStatusFilterLabel(locale, id),
   }));
 }
@@ -779,6 +854,179 @@ function LobbySectionError({
   );
 }
 
+function getLazyLobbySwipeCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      eyebrow: "Swipe",
+      title: "Swipez",
+      loading: "Preparation des activites...",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      eyebrow: "Swipe",
+      title: "Swipe",
+      loading: "Preparing activities...",
+    };
+  }
+
+  return {
+    eyebrow: "发现活动",
+    title: "滑一滑",
+    loading: "正在准备活动...",
+  };
+}
+
+function LobbySwipeLoadingShell({
+  className,
+  locale,
+}: {
+  className?: string;
+  locale: string;
+}) {
+  const copy = getLazyLobbySwipeCopy(locale);
+
+  return (
+    <section className={cn("overflow-visible px-0 py-1", className)}>
+      <div className="flex items-center gap-2 px-1">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff5e8] text-[#b36f48] shadow-sm ring-1 ring-[#ead7b8]">
+          <Compass className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold text-[#a26b42]">
+            {copy.eyebrow}
+          </p>
+          <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
+            {copy.title}
+          </h2>
+        </div>
+      </div>
+
+      <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(91,69,38,0.1)] ring-1 ring-[#dfceb0]/75">
+        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#e7edf0_0%,#f7f2ea_48%,#e7edf0_100%)]" />
+        <div className="space-y-3 p-3.5">
+          <div className="h-5 w-4/5 animate-pulse rounded-full bg-[#efe6d7]" />
+          <div className="h-5 w-2/3 animate-pulse rounded-full bg-[#efe6d7]" />
+          <div className="mt-4 grid gap-2">
+            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#f1eadf]" />
+            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#f1eadf]" />
+          </div>
+          <div className="pt-4">
+            <div className="h-10 w-full animate-pulse rounded-full bg-[#e7d8c4]" />
+          </div>
+        </div>
+        <p className="absolute inset-x-0 bottom-3 text-center text-xs font-semibold text-[#8a7455]">
+          {copy.loading}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function LazyLobbySwipeDiscovery({
+  className,
+  initialActivities,
+  isAuthenticated,
+  locale,
+}: {
+  className?: string;
+  initialActivities: ActivityCardViewModel[];
+  isAuthenticated: boolean;
+  locale: string;
+}) {
+  const [activities, setActivities] = useState(initialActivities);
+  const [requested, setRequested] = useState(initialActivities.length > 0);
+  const [loadSettled, setLoadSettled] = useState(initialActivities.length > 0);
+
+  useEffect(() => {
+    setActivities(initialActivities);
+
+    if (initialActivities.length > 0) {
+      setRequested(true);
+      setLoadSettled(true);
+    } else {
+      setLoadSettled(false);
+    }
+  }, [initialActivities]);
+
+  useEffect(() => {
+    if (requested || typeof window === "undefined") {
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    const cancelIdleTask = scheduleIdleTask(() => {
+      setRequested(true);
+      timeoutId = window.setTimeout(() => controller.abort(), 6000);
+
+      void fetch("/api/lobby/swipe", {
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Lobby swipe request failed: ${response.status}`);
+          }
+
+          return (await response.json()) as LobbySwipeResponse;
+        })
+        .then((payload) => {
+          if (!cancelled && payload.ok) {
+            setActivities(payload.activities ?? []);
+          }
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            console.error("Failed to load lobby swipe discovery", error);
+          }
+        })
+        .finally(() => {
+          if (timeoutId !== null) {
+            window.clearTimeout(timeoutId);
+          }
+
+          if (!cancelled) {
+            setLoadSettled(true);
+          }
+        });
+    }, 320);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      cancelIdleTask();
+    };
+  }, [requested]);
+
+  if (activities.length === 0 && !loadSettled) {
+    return <LobbySwipeLoadingShell className={className} locale={locale} />;
+  }
+
+  if (activities.length === 0) {
+    return null;
+  }
+
+  return (
+    <ActivitySwipeDiscovery
+      activities={activities}
+      className={className}
+      isAuthenticated={isAuthenticated}
+      locale={locale}
+      sourceSurface="activity_list"
+      variant="lobby"
+    />
+  );
+}
+
 export function ActivityLobbyPreviewView({
   activities,
   locale,
@@ -813,13 +1061,11 @@ export function ActivityLobbyPreviewView({
   return (
     <div className="space-y-6">
       <DetailSourceRestore sourceKey="lobby" />
-      <ActivitySwipeDiscovery
-        activities={swipeActivities}
+      <LazyLobbySwipeDiscovery
         className="sm:hidden"
         isAuthenticated={false}
+        initialActivities={swipeActivities}
         locale={locale}
-        sourceSurface="activity_list"
-        variant="lobby"
       />
 
       <section
@@ -877,6 +1123,7 @@ export function ActivityLobbyPreviewView({
 
 export function ActivityLobbyView({
   allActivities,
+  allActivityFeed,
   openActivities,
   createdActivities,
   deferredFilters = [],
@@ -903,6 +1150,18 @@ export function ActivityLobbyView({
   const [failedFilters, setFailedFilters] = useState<
     Partial<Record<LobbyFilterId, boolean>>
   >({});
+  const [feedCache, setFeedCache] = useState<Record<string, ActivityLobbyFeedPage>>(
+    () => ({
+      [getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page)]:
+        allActivityFeed,
+    }),
+  );
+  const feedCacheRef = useRef(feedCache);
+  const inFlightFeedRefs = useRef(new Set<string>());
+  const [loadingFeedKey, setLoadingFeedKey] = useState<string | null>(null);
+  const [failedFeedKeys, setFailedFeedKeys] = useState<Record<string, boolean>>(
+    {},
+  );
   const deferredFilterSet = useMemo(
     () => new Set<LobbyFilterId>(deferredFilters),
     [deferredFilters],
@@ -915,6 +1174,23 @@ export function ActivityLobbyView({
   useEffect(() => {
     lazySectionsRef.current = lazySections;
   }, [lazySections]);
+  useEffect(() => {
+    const key = getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page);
+
+    setFeedCache((current) => {
+      const next = {
+        ...current,
+        [key]: allActivityFeed,
+      };
+
+      feedCacheRef.current = next;
+
+      return next;
+    });
+  }, [allActivityFeed]);
+  useEffect(() => {
+    feedCacheRef.current = feedCache;
+  }, [feedCache]);
   useEffect(() => {
     const context = readDetailSourceContext();
 
@@ -950,6 +1226,8 @@ export function ActivityLobbyView({
     () => new Set(createdActivities.map((activity) => getLobbyActivityKey(activity))),
     [createdActivities],
   );
+  const allFeedSummary =
+    feedCache[getLobbyFeedCacheKey("all", 1)] ?? allActivityFeed;
   const favoriteSectionActivities =
     lazySections.favorites ?? favoriteActivities;
   const friendHostedSectionActivities =
@@ -961,24 +1239,28 @@ export function ActivityLobbyView({
       {
         id: "all" as const,
         activities: allActivities,
+        count: allFeedSummary.totalCount,
         isDeferred: false,
         label: getAllLabel(locale),
       },
       {
         id: "created" as const,
         activities: createdActivities,
+        count: createdActivities.length,
         isDeferred: false,
         label: getFilterLabel(locale, "created", t.createdTitle),
       },
       {
         id: "joined" as const,
         activities: joinedActivities,
+        count: joinedActivities.length,
         isDeferred: false,
         label: getFilterLabel(locale, "joined", t.joinedTitle),
       },
       {
         id: "favorites" as const,
         activities: favoriteSectionActivities,
+        count: favoriteSectionActivities.length,
         isDeferred:
           deferredFilterSet.has("favorites") && !lazySections.favorites,
         label: getFilterLabel(locale, "favorites", t.favoriteTitle),
@@ -986,6 +1268,7 @@ export function ActivityLobbyView({
       {
         id: "friendHosted" as const,
         activities: friendHostedSectionActivities,
+        count: friendHostedSectionActivities.length,
         isDeferred:
           deferredFilterSet.has("friendHosted") && !lazySections.friendHosted,
         label: getFilterLabel(locale, "friendHosted", t.friendHostedTitle),
@@ -993,6 +1276,7 @@ export function ActivityLobbyView({
       {
         id: "friendJoined" as const,
         activities: friendJoinedSectionActivities,
+        count: friendJoinedSectionActivities.length,
         isDeferred:
           deferredFilterSet.has("friendJoined") && !lazySections.friendJoined,
         label: getFilterLabel(locale, "friendJoined", t.friendJoinedTitle),
@@ -1003,12 +1287,18 @@ export function ActivityLobbyView({
           openActivities.length > 0
             ? openActivities
             : allActivities.filter((activity) => activity.visibility === "PUBLIC"),
+        count:
+          openActivities.length > 0
+            ? openActivities.length
+            : allActivities.filter((activity) => activity.visibility === "PUBLIC")
+                .length,
         isDeferred: false,
         label: getFilterLabel(locale, "open", t.openTitle),
       },
     ],
     [
       allActivities,
+      allFeedSummary.totalCount,
       createdActivities,
       deferredFilterSet,
       favoriteActivities,
@@ -1041,10 +1331,13 @@ export function ActivityLobbyView({
     return sortLobbyActivities(dedupedActivities);
   }, [activeFilter, categoryGroups]);
   const statusFilterOptions = useMemo(
-    () => getStatusFilterOptions(activeCategoryActivities, locale),
-    [activeCategoryActivities, locale],
+    () =>
+      activeFilter === "all"
+        ? getLobbyFeedStatusFilterOptions(allFeedSummary, locale)
+        : getStatusFilterOptions(activeCategoryActivities, locale),
+    [activeCategoryActivities, activeFilter, allFeedSummary, locale],
   );
-  const visibleActivities = useMemo(
+  const clientVisibleActivities = useMemo(
     () =>
       filterLobbyActivitiesByStatus(
         activeCategoryActivities,
@@ -1052,6 +1345,29 @@ export function ActivityLobbyView({
       ),
     [activeCategoryActivities, activeStatusFilter],
   );
+  const activeFeedPageSize = allFeedSummary.pageSize || LOBBY_PAGE_SIZE;
+  const activeFeedTotalItems =
+    activeFilter === "all"
+      ? getLobbyFeedStatusCount(allFeedSummary, activeStatusFilter)
+      : clientVisibleActivities.length;
+  const activeFeedTotalPages = getLobbyTotalPages(
+    activeFeedTotalItems,
+    activeFilter === "all" ? activeFeedPageSize : LOBBY_PAGE_SIZE,
+  );
+  const activeFeedKey = getLobbyFeedCacheKey(activeStatusFilter, page);
+  const activeFeed = activeFilter === "all" ? feedCache[activeFeedKey] : null;
+  const activeFeedFailed = Boolean(failedFeedKeys[activeFeedKey]);
+  const activeFeedNeedsLoad =
+    activeFilter === "all" &&
+    activeFeedTotalItems > 0 &&
+    !activeFeed &&
+    !activeFeedFailed;
+  const activeFeedLoading =
+    activeFilter === "all" &&
+    !activeFeedFailed &&
+    (loadingFeedKey === activeFeedKey || activeFeedNeedsLoad);
+  const visibleActivities =
+    activeFilter === "all" ? (activeFeed?.activities ?? []) : clientVisibleActivities;
   const visibleActivityKeys = useMemo(
     () =>
       new Set(
@@ -1066,17 +1382,20 @@ export function ActivityLobbyView({
         .slice(0, 4),
     [starterActivities, visibleActivityKeys],
   );
-  const totalPages = getLobbyTotalPages(visibleActivities.length);
+  const totalPages = activeFeedTotalPages;
   const visiblePageActivities = useMemo(
-    () => getPagedLobbyActivities(visibleActivities, page),
-    [page, visibleActivities],
+    () =>
+      activeFilter === "all"
+        ? visibleActivities
+        : getPagedLobbyActivities(visibleActivities, page),
+    [activeFilter, page, visibleActivities],
   );
   const filterOptions: FilterOption[] = categoryGroups.map((group) => ({
     id: group.id,
-    count: group.isDeferred ? null : group.activities.length,
+    count: group.isDeferred ? null : group.count,
     label: group.label,
   }));
-  const hasActivities = allActivities.length > 0;
+  const hasActivities = allFeedSummary.totalCount > 0;
   const hasPersonalLobbyData =
     createdActivities.length > 0 ||
     joinedActivities.length > 0 ||
@@ -1088,12 +1407,16 @@ export function ActivityLobbyView({
   const shouldShowStarterPanel =
     isDefaultLobbyView &&
     starterPanelActivities.length > 0 &&
-    (!hasPersonalLobbyData || allActivities.length < 3);
+    (!hasPersonalLobbyData || allFeedSummary.totalCount < 3);
   const activeCategoryDeferred =
     categoryGroups.find((group) => group.id === activeFilter)?.isDeferred ?? false;
-  const activeFilterFailed = Boolean(failedFilters[activeFilter]);
+  const activeFilterFailed =
+    activeFilter === "all"
+      ? activeFeedFailed
+      : Boolean(failedFilters[activeFilter]);
   const activeFilterLoading =
-    !activeFilterFailed && (loadingFilter === activeFilter || activeCategoryDeferred);
+    !activeFilterFailed &&
+    (activeFeedLoading || loadingFilter === activeFilter || activeCategoryDeferred);
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
   const emptyCategoryResetLabel = getEmptyCategoryResetLabel(locale);
   const moreActivitiesLabel = getMoreActivitiesLabel(locale);
@@ -1120,7 +1443,7 @@ export function ActivityLobbyView({
     ? "!"
     : activeFilterLoading
       ? "..."
-      : visibleActivities.length.toString();
+      : activeFeedTotalItems.toString();
 
   const openMobileFilter = useCallback(() => {
     setMobileFilterOpen(true);
@@ -1138,6 +1461,99 @@ export function ActivityLobbyView({
   const handleStatusFilterChange = useCallback((status: LobbyStatusFilterId) => {
     setActiveStatusFilter(status);
   }, []);
+
+  const loadLobbyFeedPage = useCallback(
+    async (
+      status: LobbyStatusFilterId,
+      targetPage: number,
+      options: {
+        visual?: boolean;
+      } = {},
+    ) => {
+      const normalizedPage = Math.max(1, Math.floor(targetPage));
+      const cacheKey = getLobbyFeedCacheKey(status, normalizedPage);
+
+      if (
+        feedCacheRef.current[cacheKey] ||
+        inFlightFeedRefs.current.has(cacheKey)
+      ) {
+        return;
+      }
+
+      inFlightFeedRefs.current.add(cacheKey);
+
+      if (options.visual) {
+        setLoadingFeedKey(cacheKey);
+      }
+
+      setFailedFeedKeys((current) => ({
+        ...current,
+        [cacheKey]: false,
+      }));
+
+      const controller = new AbortController();
+      const timeoutId =
+        typeof window === "undefined"
+          ? null
+          : window.setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const params = new URLSearchParams({
+          page: normalizedPage.toString(),
+          status,
+        });
+        const response = await fetch(`/api/lobby/feed?${params.toString()}`, {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Lobby feed request failed: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as LobbyFeedResponse;
+
+        const feed = payload.feed;
+
+        if (!payload.ok || !feed) {
+          throw new Error("Lobby feed payload was not ok.");
+        }
+
+        setFeedCache((current) => {
+          const responseKey = getLobbyFeedCacheKey(feed.status, feed.page);
+          const next = {
+            ...current,
+            [cacheKey]: feed,
+            [responseKey]: feed,
+          };
+
+          feedCacheRef.current = next;
+
+          return next;
+        });
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load lobby feed page", error);
+        }
+
+        setFailedFeedKeys((current) => ({
+          ...current,
+          [cacheKey]: true,
+        }));
+      } finally {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+
+        inFlightFeedRefs.current.delete(cacheKey);
+        setLoadingFeedKey((current) => (current === cacheKey ? null : current));
+      }
+    },
+    [],
+  );
 
   const loadDeferredSection = useCallback(
     async (
@@ -1247,6 +1663,65 @@ export function ActivityLobbyView({
   ]);
 
   useEffect(() => {
+    if (
+      activeFilter !== "all" ||
+      activeFeed ||
+      activeFeedFailed ||
+      activeFeedTotalItems === 0
+    ) {
+      return;
+    }
+
+    void loadLobbyFeedPage(activeStatusFilter, page, { visual: true });
+  }, [
+    activeFeed,
+    activeFeedFailed,
+    activeFeedTotalItems,
+    activeFilter,
+    activeStatusFilter,
+    loadLobbyFeedPage,
+    page,
+  ]);
+
+  useEffect(() => {
+    if (
+      activeFilter !== "all" ||
+      activeFeedLoading ||
+      activeFeedFailed ||
+      activeFeedTotalItems === 0 ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const pagesToPrefetch = [page + 1, page - 1].filter(
+      (candidate) =>
+        candidate >= 1 &&
+        candidate <= totalPages &&
+        !feedCacheRef.current[getLobbyFeedCacheKey(activeStatusFilter, candidate)],
+    );
+
+    if (pagesToPrefetch.length === 0) {
+      return;
+    }
+
+    return scheduleIdleTask(() => {
+      for (const targetPage of pagesToPrefetch) {
+        void loadLobbyFeedPage(activeStatusFilter, targetPage);
+      }
+    }, 900);
+  }, [
+    activeFeedFailed,
+    activeFeedLoading,
+    activeFeedTotalItems,
+    activeFilter,
+    activeStatusFilter,
+    loadLobbyFeedPage,
+    page,
+    totalPages,
+  ]);
+
+  useEffect(() => {
     if (deferredFilters.length === 0 || typeof window === "undefined") {
       return;
     }
@@ -1296,13 +1771,11 @@ export function ActivityLobbyView({
   return (
     <div className="space-y-3">
       <DetailSourceRestore sourceKey="lobby" />
-      <ActivitySwipeDiscovery
-        activities={swipeActivities}
+      <LazyLobbySwipeDiscovery
         className="sm:hidden"
         isAuthenticated
+        initialActivities={swipeActivities}
         locale={locale}
-        sourceSurface="activity_list"
-        variant="lobby"
       />
       <MobileLobbyFilterSheet
         activeFilter={activeFilter}
@@ -1333,7 +1806,7 @@ export function ActivityLobbyView({
             <p className="text-[11px] font-medium leading-4 text-zinc-500 sm:text-xs">
               {activeCategoryLabel} ·{" "}
               {getStatusFilterLabel(locale, activeStatusFilter)} ·{" "}
-              {visibleActivities.length}
+              {activeFeedTotalItems}
             </p>
           </div>
 
@@ -1445,6 +1918,18 @@ export function ActivityLobbyView({
         <LobbySectionError
           locale={locale}
           onRetry={() => {
+            if (activeFilter === "all") {
+              const retryKey = getLobbyFeedCacheKey(activeStatusFilter, page);
+
+              setFailedFeedKeys((current) => ({
+                ...current,
+                [retryKey]: false,
+              }));
+              void loadLobbyFeedPage(activeStatusFilter, page, { visual: true });
+
+              return;
+            }
+
             setLazySections((current) => {
               const next = { ...current };
               delete next[activeFilter];
@@ -1566,7 +2051,7 @@ export function ActivityLobbyView({
             </div>
           ) : null}
         </section>
-      ) : visibleActivities.length === 0 ? (
+      ) : activeFeedTotalItems === 0 ? (
         <div className="rounded-[1.25rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
           <p className="text-base font-semibold text-[#433a30]">
             {emptyCategoryCopy.title}
@@ -1652,7 +2137,7 @@ export function ActivityLobbyView({
                     {activeCategoryLabel}
                   </h2>
                   <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#8a7455] ring-1 ring-sand">
-                    {visibleActivities.length}
+                    {activeFeedTotalItems}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-zinc-500">
@@ -1691,7 +2176,7 @@ export function ActivityLobbyView({
               onPageChange={setPage}
               page={page}
               scrollTargetId="lobby-results"
-              totalItems={visibleActivities.length}
+              totalItems={activeFeedTotalItems}
             />
           </section>
         </>

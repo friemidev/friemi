@@ -6,6 +6,7 @@ import {
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
 import {
+  createEmptyActivityLobbyFeedPage,
   getActivityLobbyInitial,
   getActivityLobbyPreview,
   getLobbySwipePublicEventActivities,
@@ -62,7 +63,7 @@ export default async function ActivityLobbyPage({
       () =>
         Promise.all([
           getActivityLobbyPreview(),
-          getLobbySwipePublicEventActivities(null),
+          getLobbySwipePublicEventActivities(null, { limit: 8 }),
         ]).catch((error: unknown) => {
           console.error("Failed to load public activity lobby preview", error);
 
@@ -95,6 +96,7 @@ export default async function ActivityLobbyPage({
 
       return {
         allActivities: [],
+        allActivityFeed: createEmptyActivityLobbyFeedPage(),
         openActivities: [],
         createdActivities: [],
         joinedActivities: [],
@@ -123,6 +125,7 @@ export default async function ActivityLobbyPage({
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
       <ActivityLobbyView
         allActivities={lobby.allActivities}
+        allActivityFeed={lobby.allActivityFeed}
         openActivities={lobby.openActivities}
         createdActivities={lobby.createdActivities}
         deferredFilters={["favorites", "friendHosted", "friendJoined"]}

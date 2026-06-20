@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { isAdminByFields, readRoleFromMetadata } from "./admin-access";
+import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
@@ -54,7 +55,7 @@ export async function getCurrentUser() {
   };
 }
 
-export async function requireUser(locale = "zh-CN") {
+export async function requireUser(locale = "zh-CN", redirectPath?: string) {
   if (!hasClerkKeys()) {
     return "local-dev-user";
   }
@@ -62,7 +63,7 @@ export async function requireUser(locale = "zh-CN") {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect(`/${locale}/sign-in`);
+    redirect(getSignInHref(locale, redirectPath));
   }
 
   return userId;
@@ -200,8 +201,11 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
   return finalizeUserProfile(profile, { verifiedEmail });
 }
 
-export async function ensureCurrentUserProfile(locale = "zh-CN") {
-  const clerkUserId = await requireUser(locale);
+export async function ensureCurrentUserProfile(
+  locale = "zh-CN",
+  redirectPath?: string,
+) {
+  const clerkUserId = await requireUser(locale, redirectPath);
 
   if (!hasClerkKeys()) {
     return upsertLocalUserProfile(clerkUserId);
@@ -210,7 +214,7 @@ export async function ensureCurrentUserProfile(locale = "zh-CN") {
   const user = await currentUser();
 
   if (!user) {
-    redirect(`/${locale}/sign-in`);
+    redirect(getSignInHref(locale, redirectPath));
   }
 
   return upsertClerkUserProfile(user);
@@ -236,8 +240,11 @@ export async function getOptionalCurrentUserProfile() {
   return upsertClerkUserProfile(user);
 }
 
-export async function ensureCurrentUserProfileSnapshot(locale = "zh-CN") {
-  const clerkUserId = await requireUser(locale);
+export async function ensureCurrentUserProfileSnapshot(
+  locale = "zh-CN",
+  redirectPath?: string,
+) {
+  const clerkUserId = await requireUser(locale, redirectPath);
 
   if (!hasClerkKeys()) {
     return upsertLocalUserProfile(clerkUserId);
@@ -256,7 +263,7 @@ export async function ensureCurrentUserProfileSnapshot(locale = "zh-CN") {
   const user = await currentUser();
 
   if (!user) {
-    redirect(`/${locale}/sign-in`);
+    redirect(getSignInHref(locale, redirectPath));
   }
 
   return upsertClerkUserProfile(user);

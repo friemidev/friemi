@@ -40,7 +40,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale);
+  const profile = await ensureCurrentUserProfile(locale, "/profile");
   const dashboardResult = await getProfileDashboard(profile.id)
     .then((dashboard) => ({ dashboard, error: null }))
     .catch((error: unknown) => {
