@@ -122,6 +122,11 @@ export const activityCardSelect = {
   visibility: true,
   organizerId: true,
   publicEventId: true,
+  publicEvent: {
+    select: {
+      coverImageUrl: true,
+    },
+  },
   source: true,
   sourceUrl: true,
   externalSource: true,
@@ -1080,7 +1085,9 @@ export function getActivityCardViewModel(
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
-    coverImageUrl: activity.coverImageUrl,
+    coverImageUrl:
+      activity.coverImageUrl ?? activity.publicEvent?.coverImageUrl ?? null,
+    customCoverImageUrl: isActivityInfo ? null : activity.coverImageUrl,
     favoriteCount: activity._count.favorites,
     participantCount,
     priceText: activity.priceText,

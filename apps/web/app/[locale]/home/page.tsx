@@ -186,6 +186,10 @@ export default async function HomePage({ params }: HomePageProps) {
                   key={activity.id}
                   activity={activity}
                   isAuthenticated={Boolean(viewerProfile)}
+                  isOwnActivity={
+                    Boolean(viewerProfile) &&
+                    activity.organizerId === viewerProfile?.id
+                  }
                   locale={locale}
                   mobileDense
                   showFavoriteButton={false}

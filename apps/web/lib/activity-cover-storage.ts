@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
+import { StorageClient } from "@supabase/storage-js";
 import { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 
 export { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
@@ -104,7 +104,7 @@ function getSafePathSegment(value: string) {
 }
 
 async function ensurePublicBucket(
-  storage: ReturnType<typeof createClient>["storage"],
+  storage: StorageClient,
   bucket: string,
 ) {
   if (readyBuckets.has(bucket)) {
@@ -125,6 +125,11 @@ async function ensurePublicBucket(
       return true;
     }
 
+    console.error("Failed to update activity cover storage bucket", {
+      bucket,
+      message: updated.error.message,
+    });
+
     return false;
   }
 
@@ -139,7 +144,23 @@ async function ensurePublicBucket(
     return true;
   }
 
+  console.error("Failed to create activity cover storage bucket", {
+    bucket,
+    message: created.error?.message ?? bucketResult.error.message,
+  });
+
   return false;
+}
+
+function createActivityCoverStorageClient(config: {
+  bucket: string;
+  serviceRoleKey: string;
+  supabaseUrl: string;
+}) {
+  return new StorageClient(`${config.supabaseUrl.replace(/\/$/, "")}/storage/v1`, {
+    apikey: config.serviceRoleKey,
+    Authorization: `Bearer ${config.serviceRoleKey}`,
+  });
 }
 
 export async function uploadActivityCoverBuffer(
@@ -153,13 +174,8 @@ export async function uploadActivityCoverBuffer(
     return { error: "STORAGE_NOT_CONFIGURED" as const };
   }
 
-  const supabase = createClient(config.supabaseUrl, config.serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-  const bucketReady = await ensurePublicBucket(supabase.storage, config.bucket);
+  const storage = createActivityCoverStorageClient(config);
+  const bucketReady = await ensurePublicBucket(storage, config.bucket);
 
   if (!bucketReady) {
     return { error: "BUCKET_NOT_AVAILABLE" as const };
@@ -167,7 +183,7 @@ export async function uploadActivityCoverBuffer(
 
   const extension = allowedMimeTypes[detectedMimeType];
   const path = `${getSafePathSegment(userId)}/${randomUUID()}.${extension}`;
-  const uploaded = await supabase.storage
+  const uploaded = await storage
     .from(config.bucket)
     .upload(path, fileBuffer, {
       contentType: detectedMimeType,
@@ -176,10 +192,15 @@ export async function uploadActivityCoverBuffer(
     });
 
   if (uploaded.error) {
+    console.error("Failed to upload activity cover image", {
+      bucket: config.bucket,
+      message: uploaded.error.message,
+    });
+
     return { error: "UPLOAD_FAILED" as const };
   }
 
-  const publicUrl = supabase.storage.from(config.bucket).getPublicUrl(path);
+  const publicUrl = storage.from(config.bucket).getPublicUrl(path);
 
   return {
     path,

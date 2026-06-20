@@ -35,6 +35,7 @@ import { CancelActivityForm } from "@/features/activities/components/CancelActiv
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { OrganizerParticipationToggleForm } from "@/features/activities/components/OrganizerParticipationToggleForm";
@@ -601,6 +602,8 @@ export default async function ActivityDetailPage({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const canManageCrewCover =
+    isOrganizer && !activity.isActivityInfo && activity.type !== "PUBLIC_EVENT";
   const organizerIsParticipating =
     !isOrganizer ||
     !viewerParticipation ||
@@ -679,6 +682,15 @@ export default async function ActivityDetailPage({
               locale={locale}
               redirectPath={`/activities/${activity.id}`}
               sourceSurface="activity_detail"
+            />
+          ) : null}
+          {canManageCrewCover ? (
+            <ActivityCoverImageManager
+              activityId={activity.id}
+              fallbackCoverImageUrl={activity.coverImageUrl}
+              initialCoverImageUrl={activity.customCoverImageUrl ?? null}
+              locale={locale}
+              triggerTone="detail"
             />
           ) : null}
           <ReportDialog
