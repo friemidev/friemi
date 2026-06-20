@@ -28,7 +28,6 @@ import {
   getActivityDisplayStatus,
   getActivityTimeState,
 } from "../utils/activityDisplay";
-import { ActivityCoverImageManager } from "./ActivityCoverImageManager";
 import { ActivityCoverImage } from "./ActivityCoverImage";
 
 type ActivityCardProps = {
@@ -563,23 +562,6 @@ export function ActivityCard({
           />
         </div>
       ) : null}
-      {isOwnActivity && isTeamCard ? (
-        <div
-          className={cn(
-            "absolute right-3 top-4 z-30 sm:right-5 sm:top-5",
-            mobileDenseClass("max-[639px]:right-2.5 max-[639px]:top-3"),
-          )}
-        >
-          <ActivityCoverImageManager
-            activityId={activity.id}
-            compact
-            fallbackCoverImageUrl={activity.coverImageUrl}
-            initialCoverImageUrl={activity.customCoverImageUrl ?? null}
-            locale={locale}
-          />
-        </div>
-      ) : null}
-
       <AnalyticsLink
         className="flex flex-1 flex-col"
         href={cardHref}
@@ -639,11 +621,8 @@ export function ActivityCard({
             <span
               className={cn(
                 "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#f5c8b7] bg-[#fff7ed]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur sm:right-4 sm:top-4",
-                isTeamCard ? "right-12 sm:right-16" : null,
                 mobileDenseClass(
-                  isTeamCard
-                    ? "max-[639px]:right-11 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]"
-                    : "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
+                  "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
               )}
             >

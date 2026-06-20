@@ -152,11 +152,12 @@ export function ActivityCoverImageManager({
       <button
         type="button"
         className={cn(
-          "inline-flex h-8 items-center justify-center gap-1.5 rounded-full border text-[11px] font-bold shadow-[0_10px_24px_rgba(0,0,0,0.2)] backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
-          compact ? "w-8 px-0" : "px-2.5",
+          "inline-flex h-8 items-center justify-center gap-1.5 rounded-full border text-[11px] font-bold backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
           triggerTone === "detail"
-            ? "border-white/55 bg-white/92 text-[#7b513c] hover:bg-white"
-            : "border-[#f1c8b9] bg-[#fff7ed]/96 text-[#9a5139] hover:bg-white",
+            ? "border-[#f0b79f] bg-[#d88d72] px-3 text-white shadow-[0_12px_30px_rgba(34,22,14,0.34)] ring-2 ring-white/80 hover:bg-[#c8795f]"
+            : compact
+              ? "w-8 border-[#4a2e1e]/30 bg-[#fffaf2] px-0 text-[#2b1a10] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(0,0,0,0.36)] ring-2 ring-white/85 hover:bg-white min-[460px]:w-auto min-[460px]:px-2.5"
+              : "border-[#f1c8b9] bg-[#fff7ed]/96 px-2.5 text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.2)] hover:bg-white",
           className,
         )}
         aria-label={copy.trigger}
@@ -166,15 +167,27 @@ export function ActivityCoverImageManager({
           setOpen(true);
         }}
       >
-        <ImageUp className="h-3.5 w-3.5" aria-hidden />
-        <span className={compact ? "sr-only" : "max-[380px]:sr-only"}>
-          {compact || triggerTone === "detail" ? copy.trigger : copy.triggerShort}
+        <ImageUp
+          className={cn(
+            "h-3.5 w-3.5",
+            compact && triggerTone !== "detail" ? "text-[#c45f42]" : null,
+          )}
+          aria-hidden
+        />
+        <span
+          className={
+            compact
+              ? "sr-only min-[460px]:not-sr-only"
+              : "max-[380px]:sr-only"
+          }
+        >
+          {triggerTone === "detail" ? copy.trigger : copy.triggerShort}
         </span>
       </button>
 
       {open ? (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/42 px-3 py-4 backdrop-blur-[2px] sm:items-center sm:p-6"
+          className="fixed inset-x-0 top-0 bottom-[calc(5.15rem+env(safe-area-inset-bottom))] z-[80] flex items-end justify-center bg-black/42 px-3 pb-3 pt-4 backdrop-blur-[2px] md:inset-0 md:items-center md:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`cover-manager-title-${activityId}`}
@@ -185,8 +198,8 @@ export function ActivityCoverImageManager({
             aria-label={copy.close}
             onClick={() => setOpen(false)}
           />
-          <div className="relative w-full max-w-xl rounded-[1.35rem] border border-[#decfb7] bg-[#fffaf2] p-4 shadow-[0_24px_70px_rgba(35,26,17,0.25)] sm:p-5">
-            <div className="flex items-start justify-between gap-3">
+          <div className="relative flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-[1.35rem] border border-[#decfb7] bg-[#fffaf2] p-4 shadow-[0_24px_70px_rgba(35,26,17,0.25)] sm:p-5">
+            <div className="flex shrink-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p
                   id={`cover-manager-title-${activityId}`}
@@ -208,7 +221,11 @@ export function ActivityCoverImageManager({
               </button>
             </div>
 
-            <form action={formAction} className="mt-4 grid gap-4" noValidate>
+            <form
+              action={formAction}
+              className="mt-4 grid min-h-0 gap-4 overflow-y-auto pr-1"
+              noValidate
+            >
               <input name="activityId" type="hidden" value={activityId} />
               <input name="locale" type="hidden" value={locale} />
               <ActivityCoverUpload
@@ -225,7 +242,7 @@ export function ActivityCoverImageManager({
                 </p>
               ) : null}
 
-              <div className="flex flex-col gap-2 border-t border-[#e7d8c4] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#e7d8c4] bg-[#fffaf2]/96 pt-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
                   className="inline-flex h-10 items-center justify-center rounded-full border border-[#dfceb0] bg-white/90 px-4 text-sm font-semibold text-[#7b6b56] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
