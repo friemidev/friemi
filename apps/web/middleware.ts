@@ -49,6 +49,22 @@ function getLocaleFromPath(pathname: string) {
     : defaultLocale;
 }
 
+function getLocaleRootHomeRedirectPath(request: NextRequest) {
+  const segments = request.nextUrl.pathname.split("/").filter(Boolean);
+
+  if (segments.length !== 1) {
+    return null;
+  }
+
+  const [locale] = segments;
+
+  if (!locales.some((supportedLocale) => supportedLocale === locale)) {
+    return null;
+  }
+
+  return `/${locale}/home${request.nextUrl.search}`;
+}
+
 function redirectToSignIn(request: NextRequest) {
   const locale = getLocaleFromPath(request.nextUrl.pathname);
   const redirectTarget = getRequestRedirectTarget({
@@ -72,6 +88,12 @@ export default clerkMiddleware(async (auth, request) => {
 
   if (mobileRootLobbyPath) {
     return NextResponse.redirect(new URL(mobileRootLobbyPath, request.url));
+  }
+
+  const localeRootHomePath = getLocaleRootHomeRedirectPath(request);
+
+  if (localeRootHomePath) {
+    return NextResponse.redirect(new URL(localeRootHomePath, request.url));
   }
 
   if (hasClerkKeys() && isProtectedRoute(request)) {
