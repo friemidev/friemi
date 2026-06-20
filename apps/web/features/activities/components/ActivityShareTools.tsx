@@ -331,7 +331,6 @@ export function ActivityShareTools({
     if (shareMode === "native" && typeof navigator.share === "function") {
       try {
         await navigator.share({
-          text: description || shareDescription,
           title: activityTitle,
           url: activityUrl,
         });
