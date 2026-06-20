@@ -54,12 +54,12 @@ export function ProfileWechatBindingDialog({
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 py-4 backdrop-blur-sm sm:items-center sm:py-8"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur-sm sm:items-center sm:p-8"
       role="dialog"
     >
       <form
         action={formAction}
-        className="flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-2rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
+        className="flex max-h-[calc(100svh-env(safe-area-inset-bottom)-3rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
         noValidate
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#fffaf1] px-5 py-4">
