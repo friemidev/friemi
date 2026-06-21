@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { Check, Copy, Pencil, Save, X } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
@@ -23,6 +24,7 @@ export function ProfileIdentityForm({
   locale,
   nickname,
 }: ProfileIdentityFormProps) {
+  const router = useRouter();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     initialState,
@@ -43,6 +45,15 @@ export function ProfileIdentityForm({
   useEffect(() => {
     setNicknameValue(nickname);
   }, [nickname]);
+
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    setEditing(false);
+    router.refresh();
+  }, [router, state.success]);
 
   async function copyFriendCode() {
     try {
@@ -101,6 +112,7 @@ export function ProfileIdentityForm({
           noValidate
         >
           <input name="locale" type="hidden" value={locale} />
+          <input name="afterSave" type="hidden" value="refresh" />
           <label className="grid gap-1.5">
             <span className="text-xs font-medium text-zinc-500">
               {t.nicknameLabel}
