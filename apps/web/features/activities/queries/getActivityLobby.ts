@@ -91,6 +91,7 @@ export type ActivityLobbyFeedStatus = "all" | "ongoing" | "ended";
 
 export type ActivityLobbyFeedPage = {
   activities: ActivityCardViewModel[];
+  countsApproximate?: boolean;
   endedCount: number;
   ongoingCount: number;
   page: number;
@@ -508,6 +509,7 @@ export async function getActivityLobbyFeedPage(
     context?: ActivityLobbyQueryContext;
     decorate?: boolean;
     page?: number;
+    skipCounts?: boolean;
     status?: ActivityLobbyFeedStatus;
   } = {},
 ): Promise<ActivityLobbyFeedPage> {
@@ -519,12 +521,82 @@ export async function getActivityLobbyFeedPage(
     ));
   const decorate = options.decorate ?? true;
   const status = options.status ?? "all";
+  const requestedPage = options.page ?? 1;
   const ongoingWhere: Prisma.ActivityWhereInput = {
     AND: [context.accessibleActiveWhere, strictTeamCardWhere],
   };
   const endedWhere: Prisma.ActivityWhereInput = {
     AND: [context.accessibleWhere, strictTeamCardWhere, context.archivedWhere],
   };
+
+  if (
+    options.skipCounts &&
+    requestedPage === 1 &&
+    status === "all"
+  ) {
+    const ongoingRaw = await prisma.activity.findMany({
+      where: ongoingWhere,
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: activityLobbyFeedPageSize + 1,
+      select: activityCardSelect,
+    });
+    const ongoingHasMore = ongoingRaw.length > activityLobbyFeedPageSize;
+    const ongoingActivities = ongoingRaw.slice(0, activityLobbyFeedPageSize);
+    let endedActivities: LobbyActivityRecord[] = [];
+    let endedHasMore = false;
+
+    if (ongoingActivities.length < activityLobbyFeedPageSize) {
+      const endedTake =
+        activityLobbyFeedPageSize - ongoingActivities.length + 1;
+      const endedRaw = await prisma.activity.findMany({
+        where: endedWhere,
+        orderBy: [{ startAt: "desc" }, { id: "asc" }],
+        take: endedTake,
+        select: activityCardSelect,
+      });
+      endedHasMore =
+        endedRaw.length > activityLobbyFeedPageSize - ongoingActivities.length;
+      endedActivities = endedRaw.slice(
+        0,
+        activityLobbyFeedPageSize - ongoingActivities.length,
+      );
+    }
+
+    const activities = [...ongoingActivities, ...endedActivities];
+    const ongoingCount = ongoingHasMore
+      ? activityLobbyFeedPageSize + 1
+      : ongoingActivities.length;
+    const endedCount = endedHasMore
+      ? Math.max(endedActivities.length + 1, 1)
+      : endedActivities.length;
+    const totalCount = ongoingCount + endedCount;
+    const hasMorePages =
+      activities.length === activityLobbyFeedPageSize &&
+      (ongoingHasMore || endedHasMore);
+    const totalPages = hasMorePages
+      ? Math.max(2, getActivityLobbyTotalPages(totalCount, activityLobbyFeedPageSize))
+      : getActivityLobbyTotalPages(totalCount, activityLobbyFeedPageSize);
+    const activityCards = activities.map(getActivityCardViewModel);
+
+    return {
+      activities: decorate
+        ? await decorateLobbyActivities(
+            activityCards,
+            viewerProfileId,
+            context.friendIds,
+          )
+        : activityCards,
+      countsApproximate: true,
+      endedCount,
+      ongoingCount,
+      page: 1,
+      pageSize: activityLobbyFeedPageSize,
+      status,
+      totalCount,
+      totalPages,
+    };
+  }
+
   const [ongoingCount, endedCount] = await Promise.all([
     prisma.activity.count({ where: ongoingWhere }),
     prisma.activity.count({ where: endedWhere }),
@@ -813,6 +885,7 @@ export async function getActivityLobbyInitial(
           getActivityLobbyFeedPage(viewerProfileId, {
             context: feedContext,
             decorate: false,
+            skipCounts: true,
           }),
       ),
     ),
