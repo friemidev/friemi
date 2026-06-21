@@ -24,6 +24,7 @@ import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { ProfileWechatBindingDialog } from "@/features/profile/components/ProfileWechatBindingDialog";
+import { useViewerProfile } from "@/features/profile/components/ViewerProfileProvider";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -70,12 +71,16 @@ export function AccountMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const { unreadNotificationCount: liveUnreadNotificationCount } =
     useNotificationBadge(unreadNotificationCount);
+  const { nickname: liveNickname } = useViewerProfile();
   const t = getCopy(locale).accountMenu;
   const profileCopy = getCopy(locale).profile;
   const friendsCopy = getFriendsCopy(locale);
 
   const displayName =
-    viewerNickname?.trim() || user?.username || t.fallbackName;
+    liveNickname.trim() ||
+    viewerNickname?.trim() ||
+    user?.username ||
+    t.fallbackName;
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");

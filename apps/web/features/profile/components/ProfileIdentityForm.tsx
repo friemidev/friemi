@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
 import { Check, Copy, Pencil, Save, X } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
@@ -10,6 +9,7 @@ import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import { useViewerProfile } from "./ViewerProfileProvider";
 
 type ProfileIdentityFormProps = {
   friendCode: string;
@@ -24,7 +24,7 @@ export function ProfileIdentityForm({
   locale,
   nickname,
 }: ProfileIdentityFormProps) {
-  const router = useRouter();
+  const { setNickname } = useViewerProfile();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     initialState,
@@ -47,13 +47,14 @@ export function ProfileIdentityForm({
   }, [nickname]);
 
   useEffect(() => {
-    if (!state.success) {
+    if (!state.success || !state.nickname) {
       return;
     }
 
+    setNickname(state.nickname);
+    setNicknameValue(state.nickname);
     setEditing(false);
-    router.refresh();
-  }, [router, state.success]);
+  }, [setNickname, state.nickname, state.success]);
 
   async function copyFriendCode() {
     try {

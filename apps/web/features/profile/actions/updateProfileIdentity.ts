@@ -13,6 +13,7 @@ import { normalizeGuestWechatId } from "@/features/guest-participants/utils/cont
 
 export type UpdateProfileIdentityState = {
   formError?: string;
+  nickname?: string;
   success?: boolean;
 };
 
@@ -85,6 +86,17 @@ export async function updateProfileIdentityAction(
     }),
   );
 
+  if (afterSave === "refresh") {
+    perf.finish({
+      afterSave,
+    });
+
+    return {
+      nickname,
+      success: true,
+    };
+  }
+
   await perf.measure("revalidate", async () => {
     revalidateNicknamePaths(locale);
   });
@@ -92,12 +104,6 @@ export async function updateProfileIdentityAction(
   perf.finish({
     afterSave,
   });
-
-  if (afterSave === "refresh") {
-    return {
-      success: true,
-    };
-  }
 
   const safeReturnTo =
     returnTo?.startsWith(`/${locale}`) && !returnTo.startsWith(`//`)

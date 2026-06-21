@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
@@ -9,6 +8,7 @@ import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import { useViewerProfile } from "./ViewerProfileProvider";
 
 type NicknameRequiredDialogProps = {
   locale: string;
@@ -19,7 +19,7 @@ const initialState: UpdateProfileIdentityState = {};
 export function NicknameRequiredDialog({
   locale,
 }: NicknameRequiredDialogProps) {
-  const router = useRouter();
+  const { setNickname } = useViewerProfile();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     initialState,
@@ -27,12 +27,12 @@ export function NicknameRequiredDialog({
   const t = getCopy(locale).profile;
 
   useEffect(() => {
-    if (!state.success) {
+    if (!state.success || !state.nickname) {
       return;
     }
 
-    router.refresh();
-  }, [router, state.success]);
+    setNickname(state.nickname);
+  }, [setNickname, state.nickname, state.success]);
 
   return (
     <div

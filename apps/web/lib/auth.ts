@@ -241,6 +241,31 @@ export async function getOptionalCurrentUserProfile() {
   return upsertClerkUserProfile(user);
 }
 
+export async function getOptionalAuthenticatedProfileId() {
+  if (!hasClerkKeys()) {
+    const profile = await upsertLocalUserProfile("local-dev-user");
+
+    return profile.id;
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return profile?.id ?? null;
+}
+
 export async function getCurrentUserProfileForMutation(
   locale = "zh-CN",
   redirectPath?: string,

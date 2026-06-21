@@ -92,6 +92,10 @@ type WindowWithIdleCallback = Window &
   };
 
 const LOBBY_PAGE_SIZE = 10;
+const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
+const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
+const LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS = 2500;
+const LOBBY_DEFERRED_SECTION_STAGGER_MS = 700;
 
 function scheduleIdleTask(callback: () => void, timeout = 900) {
   if (typeof window === "undefined") {
@@ -1001,7 +1005,7 @@ function LazyLobbySwipeDiscovery({
             setLoadSettled(true);
           }
         });
-    }, 320);
+    }, LOBBY_SWIPE_IDLE_DELAY_MS);
 
     return () => {
       cancelled = true;
@@ -1730,7 +1734,7 @@ export function ActivityLobbyView({
       for (const targetPage of pagesToPrefetch) {
         void loadLobbyFeedPage(activeStatusFilter, targetPage);
       }
-    }, 900);
+    }, LOBBY_FEED_PREFETCH_IDLE_MS);
   }, [
     activeFeedFailed,
     activeFeedLoading,
@@ -1766,13 +1770,13 @@ export function ActivityLobbyView({
       if (!cancelled) {
         timerId = window.setTimeout(() => {
           void loadNext(index + 1);
-        }, 450);
+        }, LOBBY_DEFERRED_SECTION_STAGGER_MS);
       }
     };
 
     timerId = window.setTimeout(() => {
       void loadNext(0);
-    }, 1100);
+    }, LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS);
 
     return () => {
       cancelled = true;
