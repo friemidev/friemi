@@ -379,12 +379,20 @@ export async function joinActivityAction(
         const profileNormalizedEmail = normalizeGuestEmail(
           profile.emailVerifiedAt ? profile.email : null,
         );
-        const guestDuplicateConditions = [
-          profileNormalizedWechatId ? { normalizedWechatId: profileNormalizedWechatId } : null,
-          profileNormalizedEmail ? { normalizedEmail: profileNormalizedEmail } : null,
-        ].filter(
-          (c): c is Prisma.GuestActivityParticipantWhereInput => c !== null,
-        );
+        const guestDuplicateConditions: Prisma.GuestActivityParticipantWhereInput[] =
+          [];
+
+        if (profileNormalizedWechatId) {
+          guestDuplicateConditions.push({
+            normalizedWechatId: profileNormalizedWechatId,
+          });
+        }
+
+        if (profileNormalizedEmail) {
+          guestDuplicateConditions.push({
+            normalizedEmail: profileNormalizedEmail,
+          });
+        }
 
         if (guestDuplicateConditions.length > 0) {
           const existingGuestRecord = await tx.guestActivityParticipant.findFirst({

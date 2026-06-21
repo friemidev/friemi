@@ -9,7 +9,8 @@ import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgre
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
-import { NicknameRequiredDialog } from "@/features/profile/components/NicknameRequiredDialog";
+import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
+import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -46,34 +47,35 @@ export default async function LocaleLayout({
   });
   const content = (
     <NextIntlClientProvider messages={messages}>
-      <NotificationBadgeProvider
-        enabled={Boolean(viewerProfile)}
-        initialUnreadNotificationCount={0}
-      >
-        <div className="min-h-screen pb-24 md:pb-0">
-          <RouteProgress />
-          <AppHeader
-            locale={locale}
-            showNotificationNav={Boolean(viewerProfile)}
-            showAdminNav={viewerState.showAdminNav}
-            viewerFriendCode={viewerProfile?.friendCode ?? null}
-            viewerWechatId={viewerProfile?.wechatId ?? null}
-            viewerNickname={viewerProfile?.nickname ?? null}
-            incomingFriendRequests={[]}
-            unreadNotificationCount={0}
-          />
-          <MobileScrollProgress />
-          <IdleRoutePrefetcher
-            enabled={Boolean(viewerProfile)}
-            locale={locale}
-          />
-          {viewerProfile && viewerProfile.nickname.trim().length === 0 ? (
-            <NicknameRequiredDialog locale={locale} />
-          ) : null}
-          {children}
-          <MobileNav locale={locale} />
-        </div>
-      </NotificationBadgeProvider>
+      <ViewerProfileProvider initialNickname={viewerProfile?.nickname ?? null}>
+        <NotificationBadgeProvider
+          enabled={Boolean(viewerProfile)}
+          initialUnreadNotificationCount={0}
+        >
+          <div className="min-h-screen pb-24 md:pb-0">
+            <RouteProgress />
+            <AppHeader
+              locale={locale}
+              showNotificationNav={Boolean(viewerProfile)}
+              showAdminNav={viewerState.showAdminNav}
+              viewerFriendCode={viewerProfile?.friendCode ?? null}
+              viewerWechatId={viewerProfile?.wechatId ?? null}
+              viewerNickname={viewerProfile?.nickname ?? null}
+              incomingFriendRequests={[]}
+              unreadNotificationCount={0}
+            />
+            <MobileScrollProgress />
+            <IdleRoutePrefetcher
+              enabled={Boolean(viewerProfile)}
+              idleDelayMs={4000}
+              locale={locale}
+            />
+            {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
+            {children}
+            <MobileNav locale={locale} />
+          </div>
+        </NotificationBadgeProvider>
+      </ViewerProfileProvider>
     </NextIntlClientProvider>
   );
 

@@ -63,7 +63,7 @@ type LobbyStatusFilterId = ActivityLobbyFeedStatus;
 
 type StatusFilterOption = {
   id: LobbyStatusFilterId;
-  count: number;
+  count: number | null;
   label: string;
 };
 
@@ -92,6 +92,10 @@ type WindowWithIdleCallback = Window &
   };
 
 const LOBBY_PAGE_SIZE = 10;
+const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
+const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
+const LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS = 2500;
+const LOBBY_DEFERRED_SECTION_STAGGER_MS = 700;
 
 function scheduleIdleTask(callback: () => void, timeout = 900) {
   if (typeof window === "undefined") {
@@ -437,6 +441,10 @@ function getLobbyFeedStatusCount(
   feed: ActivityLobbyFeedPage,
   status: LobbyStatusFilterId,
 ) {
+  if (feed.countsApproximate) {
+    return null;
+  }
+
   if (status === "ongoing") {
     return feed.ongoingCount;
   }
@@ -743,7 +751,9 @@ function MobileLobbyFilterSheet({
                     <span className="min-w-0 max-w-full truncate">
                       {option.label}
                     </span>
-                    <span className="text-[11px] opacity-75">{option.count}</span>
+                    <span className="text-[11px] opacity-75">
+                      {option.count ?? "..."}
+                    </span>
                   </button>
                 );
               })}
@@ -995,7 +1005,7 @@ function LazyLobbySwipeDiscovery({
             setLoadSettled(true);
           }
         });
-    }, 320);
+    }, LOBBY_SWIPE_IDLE_DELAY_MS);
 
     return () => {
       cancelled = true;
@@ -1239,7 +1249,9 @@ export function ActivityLobbyView({
       {
         id: "all" as const,
         activities: allActivities,
-        count: allFeedSummary.totalCount,
+        count: allFeedSummary.countsApproximate
+          ? null
+          : allFeedSummary.totalCount,
         isDeferred: false,
         label: getAllLabel(locale),
       },
@@ -1346,14 +1358,23 @@ export function ActivityLobbyView({
     [activeCategoryActivities, activeStatusFilter],
   );
   const activeFeedPageSize = allFeedSummary.pageSize || LOBBY_PAGE_SIZE;
-  const activeFeedTotalItems =
+  const activeFeedStatusCount =
     activeFilter === "all"
       ? getLobbyFeedStatusCount(allFeedSummary, activeStatusFilter)
       : clientVisibleActivities.length;
-  const activeFeedTotalPages = getLobbyTotalPages(
-    activeFeedTotalItems,
-    activeFilter === "all" ? activeFeedPageSize : LOBBY_PAGE_SIZE,
-  );
+  const activeFeedTotalItems =
+    activeFeedStatusCount ??
+    (activeFilter === "all"
+      ? (feedCache[getLobbyFeedCacheKey(activeStatusFilter, page)]?.activities ??
+          allFeedSummary.activities).length
+      : clientVisibleActivities.length);
+  const activeFeedTotalPages =
+    activeFilter === "all" && allFeedSummary.countsApproximate
+      ? allFeedSummary.totalPages
+      : getLobbyTotalPages(
+          activeFeedTotalItems,
+          activeFilter === "all" ? activeFeedPageSize : LOBBY_PAGE_SIZE,
+        );
   const activeFeedKey = getLobbyFeedCacheKey(activeStatusFilter, page);
   const activeFeed = activeFilter === "all" ? feedCache[activeFeedKey] : null;
   const activeFeedFailed = Boolean(failedFeedKeys[activeFeedKey]);
@@ -1395,7 +1416,9 @@ export function ActivityLobbyView({
     count: group.isDeferred ? null : group.count,
     label: group.label,
   }));
-  const hasActivities = allFeedSummary.totalCount > 0;
+  const hasActivities = allFeedSummary.countsApproximate
+    ? allFeedSummary.activities.length > 0
+    : allFeedSummary.totalCount > 0;
   const hasPersonalLobbyData =
     createdActivities.length > 0 ||
     joinedActivities.length > 0 ||
@@ -1407,7 +1430,9 @@ export function ActivityLobbyView({
   const shouldShowStarterPanel =
     isDefaultLobbyView &&
     starterPanelActivities.length > 0 &&
-    (!hasPersonalLobbyData || allFeedSummary.totalCount < 3);
+    (!hasPersonalLobbyData ||
+      allFeedSummary.countsApproximate ||
+      allFeedSummary.totalCount < 3);
   const activeCategoryDeferred =
     categoryGroups.find((group) => group.id === activeFilter)?.isDeferred ?? false;
   const activeFilterFailed =
@@ -1709,7 +1734,7 @@ export function ActivityLobbyView({
       for (const targetPage of pagesToPrefetch) {
         void loadLobbyFeedPage(activeStatusFilter, targetPage);
       }
-    }, 900);
+    }, LOBBY_FEED_PREFETCH_IDLE_MS);
   }, [
     activeFeedFailed,
     activeFeedLoading,
@@ -1745,13 +1770,13 @@ export function ActivityLobbyView({
       if (!cancelled) {
         timerId = window.setTimeout(() => {
           void loadNext(index + 1);
-        }, 450);
+        }, LOBBY_DEFERRED_SECTION_STAGGER_MS);
       }
     };
 
     timerId = window.setTimeout(() => {
       void loadNext(0);
-    }, 1100);
+    }, LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS);
 
     return () => {
       cancelled = true;
@@ -1902,7 +1927,7 @@ export function ActivityLobbyView({
                           : "bg-[#f4ecde] text-[#8a7455]",
                       )}
                     >
-                      {option.count}
+                      {option.count ?? "..."}
                     </span>
                   </button>
                 );

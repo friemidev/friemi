@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { usePathname } from "next/navigation";
+import { useActionState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
@@ -9,6 +8,7 @@ import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import { useViewerProfile } from "./ViewerProfileProvider";
 
 type NicknameRequiredDialogProps = {
   locale: string;
@@ -19,12 +19,20 @@ const initialState: UpdateProfileIdentityState = {};
 export function NicknameRequiredDialog({
   locale,
 }: NicknameRequiredDialogProps) {
-  const pathname = usePathname();
+  const { setNickname } = useViewerProfile();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     initialState,
   );
   const t = getCopy(locale).profile;
+
+  useEffect(() => {
+    if (!state.success || !state.nickname) {
+      return;
+    }
+
+    setNickname(state.nickname);
+  }, [setNickname, state.nickname, state.success]);
 
   return (
     <div
@@ -47,7 +55,7 @@ export function NicknameRequiredDialog({
 
         <form action={formAction} className="mt-5 grid gap-3" noValidate>
           <input name="locale" type="hidden" value={locale} />
-          <input name="returnTo" type="hidden" value={pathname} />
+          <input name="afterSave" type="hidden" value="refresh" />
           <label className="grid gap-1.5">
             <span className="text-sm font-medium text-ink">
               {t.nicknameLabel}
