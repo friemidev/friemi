@@ -20,6 +20,12 @@ import type {
   ActivityRelationFilter,
   ActivityTimeState,
 } from "../utils/activityFilters";
+import {
+  areAllActivityTimeStatesSelected,
+  getDefaultActivityTimeStates,
+  hasPartialActivityTimeStatesFilter,
+  isEndedOnlyActivityTimeStatesFilter,
+} from "../utils/activityFilters";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -1421,8 +1427,38 @@ function compareRankedActivitiesByDuration(
   );
 }
 
+function getActivityTimeStatesWhere(
+  timeStates: ActivityTimeState[],
+  now = new Date(),
+): Prisma.ActivityWhereInput | null {
+  if (areAllActivityTimeStatesSelected(timeStates)) {
+    return null;
+  }
+
+  return {
+    OR: timeStates.map((timeState) =>
+      getActivityTimeStateWhere(timeState, now),
+    ),
+  };
+}
+
+function getPublicEventTimeStatesWhere(
+  timeStates: ActivityTimeState[],
+  now = new Date(),
+): Prisma.PublicEventWhereInput | null {
+  if (areAllActivityTimeStatesSelected(timeStates)) {
+    return null;
+  }
+
+  return {
+    OR: timeStates.map((timeState) =>
+      getPublicEventTimeStateWhere(timeState, now),
+    ),
+  };
+}
+
 function compareRankedActivities(
-  filters: Pick<ActivityFilters, "sort" | "timeState"> | undefined,
+  filters: Pick<ActivityFilters, "sort" | "timeStates"> | undefined,
   left: RankedActivityCard,
   right: RankedActivityCard,
 ) {
@@ -1434,7 +1470,10 @@ function compareRankedActivities(
     return compareRankedActivitiesByDuration(left, right, "desc");
   }
 
-  if (filters?.sort === "latest" || filters?.timeState === "ENDED") {
+  if (
+    filters?.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters?.timeStates ?? [])
+  ) {
     return compareRankedActivitiesByStartAt(left, right, "desc");
   }
 
@@ -1561,7 +1600,11 @@ async function getUpcomingHomeActivitiesUncached(
     ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
   ]
     .sort((left, right) =>
-      compareRankedActivities({ sort: "soonest" }, left, right),
+      compareRankedActivities(
+        { sort: "soonest", timeStates: getDefaultActivityTimeStates() },
+        left,
+        right,
+      ),
     )
     .slice(0, safeLimit);
 
@@ -1584,9 +1627,11 @@ function getActivityPage(page: number, totalPages: number) {
 
 function getActivityListOrderBy(
   filters: ActivityFilters,
-  timeState?: ActivityTimeState,
 ): Prisma.ActivityOrderByWithRelationInput[] {
-  if (filters.sort === "latest" || timeState === "ENDED") {
+  if (
+    filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+  ) {
     return [{ startAt: "desc" }, { id: "asc" }];
   }
 
@@ -1595,9 +1640,11 @@ function getActivityListOrderBy(
 
 function getPublicEventListOrderBy(
   filters: ActivityFilters,
-  timeState?: ActivityTimeState,
 ): Prisma.PublicEventOrderByWithRelationInput[] {
-  if (filters.sort === "latest" || timeState === "ENDED") {
+  if (
+    filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+  ) {
     return [{ startAt: "desc" }, { id: "asc" }];
   }
 
@@ -1612,7 +1659,7 @@ function hasExplicitActivityListFilters(filters: ActivityFilters) {
       filters.dateRange ||
       filters.relation !== "ALL" ||
       filters.type ||
-      filters.timeState,
+      hasPartialActivityTimeStatesFilter(filters.timeStates),
   );
 }
 
@@ -1666,8 +1713,8 @@ async function getActivityListWhere(
       ...(filters.dateRange
         ? [getActivityDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getActivityTimeStateWhere(filters.timeState, now)]
+      ...(getActivityTimeStatesWhere(filters.timeStates, now)
+        ? [getActivityTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1692,8 +1739,8 @@ function getPublicEventListWhere(
       ...(filters.dateRange
         ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1715,8 +1762,8 @@ function getPublicInfoActivityListWhere(
       ...(filters.dateRange
         ? [getActivityDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getActivityTimeStateWhere(filters.timeState, now)]
+      ...(getActivityTimeStatesWhere(filters.timeStates, now)
+        ? [getActivityTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1737,8 +1784,8 @@ function getPublicInfoPublicEventListWhere(
       ...(filters.dateRange
         ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1773,14 +1820,14 @@ async function getOrderedActivityList(
   const [activities, publicEvents] = await Promise.all([
     prisma.activity.findMany({
       where,
-      orderBy: getActivityListOrderBy(filters, filters.timeState),
+      orderBy: getActivityListOrderBy(filters),
       take: readLimit,
       select: activityCardSelect,
     }),
     publicEventWhere
       ? prisma.publicEvent.findMany({
           where: publicEventWhere,
-          orderBy: getPublicEventListOrderBy(filters, filters.timeState),
+          orderBy: getPublicEventListOrderBy(filters),
           take: readLimit,
           select: publicEventCardSelect,
         })
@@ -2024,7 +2071,6 @@ async function getPublicInfoOnlyActivityList(
         where: activityWhere,
         orderBy: getActivityListOrderBy(
           publicInfoFilters,
-          publicInfoFilters.timeState,
         ),
         take: readLimit,
         select: activityCardSelect,
@@ -2035,7 +2081,6 @@ async function getPublicInfoOnlyActivityList(
         where: publicEventWhere,
         orderBy: getPublicEventListOrderBy(
           publicInfoFilters,
-          publicInfoFilters.timeState,
         ),
         take: readLimit,
         select: publicEventCardSelect,

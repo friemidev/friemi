@@ -20,17 +20,17 @@ import {
   activityDateRangeOptions,
   activityFilterTypes,
   activityRelationFilters,
-  activityTimeStates,
   type ActivityDateRange,
   getActivityFilterHref,
   getDefaultActivitySort,
+  getDefaultActivityTimeStates,
   hasActiveActivityFilters,
+  hasPartialActivityTimeStatesFilter,
   normalizeActivityFilterFormData,
   normalizeActivityFilterValues,
   type ActivityFilters,
   type ActivityFilterType,
   type ActivityRelationFilter,
-  type ActivityTimeState,
 } from "../utils/activityFilters";
 
 type ActivityFiltersProps = {
@@ -79,7 +79,7 @@ export function ActivityFilters({
           page: 1,
           relation: "ALL",
           sort: getDefaultActivitySort({}),
-          timeState: undefined,
+          timeStates: getDefaultActivityTimeStates(),
           type: undefined,
         });
 
@@ -155,11 +155,15 @@ export function ActivityFilters({
           },
         ]
       : []),
-    ...(filters.timeState
+    ...(hasPartialActivityTimeStatesFilter(filters.timeStates)
       ? [
           {
-            href: buildFilterHref({ timeState: undefined }),
-            label: t.activityLabels.timeStates[filters.timeState],
+            href: buildFilterHref({
+              timeStates: getDefaultActivityTimeStates(),
+            }),
+            label: filters.timeStates
+              .map((timeState) => t.activityLabels.timeStates[timeState])
+              .join("、"),
           },
         ]
       : []),
@@ -177,7 +181,12 @@ export function ActivityFilters({
     router.push(
       getActivityFilterHref(
         activitiesHref,
-        normalizeActivityFilterFormData(formData),
+        normalizeActivityFilterValues({
+          ...normalizeActivityFilterFormData(formData),
+          sort: filters.sort,
+          timeStates: filters.timeStates,
+          view: filters.viewMode,
+        }),
       ),
     );
   }
@@ -238,8 +247,8 @@ export function ActivityFilters({
           className={cn(
             "grid grid-cols-2 gap-2.5 sm:gap-3",
             publicInfoOnly
-              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)]"
-              : "sm:grid-cols-2 xl:grid-cols-5",
+              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)]"
+              : "sm:grid-cols-2 xl:grid-cols-4",
           )}
         >
           <label className={fieldLabelClassName}>
@@ -361,29 +370,6 @@ export function ActivityFilters({
               </label>
             </>
           ) : null}
-
-          <label className={fieldLabelClassName}>
-            {t.activityFilters.timeStateLabel}
-            <select
-              className={selectClassName}
-              defaultValue={filters.timeState ?? ""}
-              name="time"
-              onChange={(event) =>
-                applyFilterChange({
-                  timeState: event.target.value
-                    ? (event.target.value as ActivityTimeState)
-                    : undefined,
-                })
-              }
-            >
-              <option value="">{t.activityFilters.allTimeStates}</option>
-              {activityTimeStates.map((timeState) => (
-                <option key={timeState} value={timeState}>
-                  {t.activityLabels.timeStates[timeState]}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
       </form>
     );

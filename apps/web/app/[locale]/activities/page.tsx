@@ -7,7 +7,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityAgendaList } from "@/features/activities/components/ActivityAgendaList";
-import { ActivityCardSortSelect } from "@/features/activities/components/ActivityCardSortSelect";
+import { ActivityResultsFilterBar } from "@/features/activities/components/ActivityResultsFilterBar";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -21,6 +21,7 @@ import {
   getActiveActivityFilterNames,
   getActivityFilterHref,
   getDefaultActivitySort,
+  formatActivityTimeStatesQueryValue,
   hasActiveActivityFilters,
   isCanonicalActivityFilterSearchParams,
   normalizeActivityFilters,
@@ -42,6 +43,13 @@ import {
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
+import {
+  activityResultsFilterBarHeightClass,
+  activityResultsFilterControlClass,
+  activityResultsFilterShellClass,
+  activityViewToggleBarHeightClass,
+  activityViewToggleInnerHeightClass,
+} from "@/features/activities/components/activityResultsFilterStyles";
 
 type ActivitiesPageProps = {
   params: Promise<{
@@ -100,7 +108,11 @@ function ActivityListViewToggle({
   return (
     <nav
       aria-label={t.activities.viewToggleLabel}
-      className="inline-grid grid-cols-2 rounded-full bg-white/86 p-1 text-sm font-semibold shadow-sm ring-1 ring-[#ead7b8]"
+      className={cn(
+        activityResultsFilterShellClass,
+        activityViewToggleBarHeightClass,
+        "inline-grid grid-cols-2 gap-0.5",
+      )}
     >
       {options.map((option) => {
         const Icon = option.icon;
@@ -110,7 +122,9 @@ function ActivityListViewToggle({
           <Link
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs transition sm:min-w-[5.5rem] sm:text-sm",
+              "inline-flex items-center justify-center gap-1.5 rounded-full px-3 transition sm:min-w-[5.5rem]",
+              activityViewToggleInnerHeightClass,
+              activityResultsFilterControlClass,
               isActive
                 ? "bg-ink text-white shadow-[0_8px_18px_rgba(20,20,20,0.14)]"
                 : "text-[#6f4d34] hover:bg-[#fff8ec]",
@@ -162,7 +176,7 @@ function ActivityPagination({
           filters.sort !== getDefaultActivitySort(filters)
             ? filters.sort
             : undefined,
-        time: filters.timeState,
+        time: formatActivityTimeStatesQueryValue(filters.timeStates),
         type: filters.type,
         view: filters.viewMode !== "card" ? filters.viewMode : undefined,
       }}
@@ -395,10 +409,13 @@ export default async function ActivitiesPage({
                 )}
               </p>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              <ActivityCardSortSelect filters={filters} locale={locale} />
-              <ActivityListViewToggle filters={filters} locale={locale} />
-            </div>
+            <ActivityResultsFilterBar
+              filters={filters}
+              locale={locale}
+              viewToggle={
+                <ActivityListViewToggle filters={filters} locale={locale} />
+              }
+            />
           </div>
 
           {filters.viewMode === "date" ? (
