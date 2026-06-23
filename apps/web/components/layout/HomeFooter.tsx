@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Sparkles } from "lucide-react";
+import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 
 type HomeFooterProps = {
@@ -11,27 +12,27 @@ const footerCopy = {
   "zh-CN": {
     description: "面向海外中文用户的活动发现与组局工具。",
     contactTitle: "联系我们",
-    contactEmail: "nextfunclub99@gmail.com",
+    contactEmail: "friemi.dev@gmail.com",
     versionLabel: "版本号",
     updatesLabel: "更新公告",
-    copyright: "© 2026 Next Fun",
+    copyright: `© 2026 ${brand.name}`,
   },
   en: {
     description: "Find activities, bring friends, and meet people nearby.",
     contactTitle: "Contact",
-    contactEmail: "nextfunclub99@gmail.com",
+    contactEmail: "friemi.dev@gmail.com",
     versionLabel: "Version",
     updatesLabel: "Release notes",
-    copyright: "© 2026 Next Fun",
+    copyright: `© 2026 ${brand.name}`,
   },
   fr: {
     description:
       "Trouvez des sorties, invitez des amis et rencontrez du monde.",
     contactTitle: "Contact",
-    contactEmail: "nextfunclub99@gmail.com",
+    contactEmail: "friemi.dev@gmail.com",
     versionLabel: "Version",
     updatesLabel: "Notes de version",
-    copyright: "© 2026 Next Fun",
+    copyright: `© 2026 ${brand.name}`,
   },
 } as const;
 
@@ -47,17 +48,24 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             href={withLocale(locale, "/home")}
             className="inline-flex items-center gap-3"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ring-1 ring-white/20">
+            <span className="flex h-12 w-40 shrink-0 items-center justify-start gap-3 overflow-hidden">
               <Image
-                src="/logo.png"
-                alt="Next Fun"
-                width={44}
-                height={44}
-                className="h-full w-full object-cover"
+                src={brand.logoIconPath}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 shrink-0 object-contain"
+              />
+              <Image
+                src={brand.titleImagePath}
+                alt={brand.name}
+                width={106}
+                height={36}
+                className="h-auto w-24 object-contain brightness-0 invert"
               />
             </span>
-            <span className="whitespace-nowrap text-base font-semibold tracking-normal">
-              Next Fun
+            <span className="sr-only">
+              {brand.name}
             </span>
           </Link>
           <p className="max-w-sm text-sm leading-6 text-white/75">

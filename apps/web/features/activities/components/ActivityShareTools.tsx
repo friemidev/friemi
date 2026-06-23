@@ -17,6 +17,7 @@ import type {
 } from "@/features/analytics/events";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ActivityCopyButton } from "./ActivityCopyButton";
@@ -66,7 +67,7 @@ function getUrlHost(value: string) {
   try {
     return new URL(value).host.replace(/^www\./, "");
   } catch {
-    return "Next Fun";
+    return brand.name;
   }
 }
 
@@ -246,22 +247,22 @@ async function drawBrandHeader(
   hasCoverBackground: boolean,
 ) {
   try {
-    const logo = await loadImage("/logo.png");
+    const [logo, title] = await Promise.all([
+      loadImage(brand.logoIconPath),
+      loadImage(brand.titleImagePath),
+    ]);
     context.fillStyle = "rgba(255, 255, 255, 0.92)";
     context.beginPath();
-    context.roundRect(72, 72, 76, 76, 38);
+    context.roundRect(72, 72, 246, 76, 26);
     context.fill();
-    context.drawImage(logo, 78, 78, 64, 64);
+    drawImageCover(context, logo, 92, 84, 52, 52);
+    drawImageCover(context, title, 154, 92, 132, 44);
   } catch {
     context.fillStyle = hasCoverBackground ? "#ffffff" : "#3f5f46";
     context.font = "800 30px sans-serif";
-    context.fillText("Next Fun", 72, 120);
+    context.fillText(brand.name, 72, 120);
     return;
   }
-
-  context.font = "700 28px sans-serif";
-  context.fillStyle = hasCoverBackground ? "#ffffff" : "#3f5f46";
-  context.fillText("Next Fun", 176, 120);
 }
 
 export function ActivityShareTools({

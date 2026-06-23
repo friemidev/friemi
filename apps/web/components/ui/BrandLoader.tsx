@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 const loadingLabels = {
   "zh-CN": "加载中",
@@ -43,10 +44,10 @@ export function BrandLoader({
       >
         <picture className="nextfun-brand-loader__media">
           <source
-            srcSet="/logo.png"
+            srcSet={brand.logoIconPath}
             media="(prefers-reduced-motion: reduce)"
           />
-          <img src="/nextfun_loading.gif" alt="" />
+          <img src={brand.loadingImagePath} alt="" />
         </picture>
       </span>
       {showLabel ? (

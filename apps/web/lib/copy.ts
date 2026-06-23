@@ -44,7 +44,7 @@ const copy = {
       signIn: "登录",
     },
     accountMenu: {
-      fallbackName: "Next Fun 用户",
+      fallbackName: "Friemi 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
       friends: "好友",
@@ -74,7 +74,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "全站搜索",
-      title: "搜索 Next Fun",
+      title: "搜索 Friemi",
       description: "快速查找活动、组局或用户。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、组局或用户",
@@ -155,7 +155,7 @@ const copy = {
     },
     home: {
       eyebrow: "公共活动 · 真实组局",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "下一场，Fun 开场",
       description:
         "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！",
@@ -882,7 +882,7 @@ const copy = {
       signIn: "Sign in",
     },
     accountMenu: {
-      fallbackName: "Next Fun user",
+      fallbackName: "Friemi user",
       openMenu: "Open account menu",
       profile: "Profile",
       friends: "Friends",
@@ -912,7 +912,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Site search",
-      title: "Search Next Fun",
+      title: "Search Friemi",
       description: "Find activity info, crews, friends, and merchants quickly.",
       inputLabel: "Search keyword",
       placeholder: "Search activities, friend codes, nicknames, or merchants",
@@ -996,7 +996,7 @@ const copy = {
     },
     home: {
       eyebrow: "Real activities · real connections",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "What's next? Fun begins.",
       description:
         "Discover activities here, then head out with friends or new people who want to join.",
@@ -1781,7 +1781,7 @@ const copy = {
       signIn: "Connexion",
     },
     accountMenu: {
-      fallbackName: "Utilisateur Next Fun",
+      fallbackName: "Utilisateur Friemi",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
       friends: "Amis",
@@ -1813,7 +1813,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Recherche globale",
-      title: "Rechercher dans Next Fun",
+      title: "Rechercher dans Friemi",
       description:
         "Trouvez vite une activité, un groupe, un ami ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
@@ -1902,7 +1902,7 @@ const copy = {
     },
     home: {
       eyebrow: "De vraies activites · de vraies connexions",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "La prochaine sortie commence ici.",
       description:
         "Découvrez des activités ici, puis partez avec vos amis ou de nouvelles personnes motivées.",

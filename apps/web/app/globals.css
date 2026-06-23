@@ -68,28 +68,32 @@ a {
 
 .nextfun-brand-loader {
   --loader-size: 8rem;
-  --logo-size: 5.75rem;
+  --logo-size: 6.25rem;
+  --logo-width: 6.25rem;
   position: relative;
   display: inline-flex;
   height: var(--loader-size);
-  width: var(--loader-size);
+  width: min(var(--logo-width), 78vw);
   align-items: center;
   justify-content: center;
 }
 
 .nextfun-brand-loader--sm {
-  --loader-size: 6.5rem;
-  --logo-size: 5rem;
+  --loader-size: 6rem;
+  --logo-size: 4.75rem;
+  --logo-width: 4.75rem;
 }
 
 .nextfun-brand-loader--md {
-  --loader-size: 9rem;
-  --logo-size: 7rem;
+  --loader-size: 8.75rem;
+  --logo-size: 7.25rem;
+  --logo-width: 7.25rem;
 }
 
 .nextfun-brand-loader--lg {
-  --loader-size: 13rem;
-  --logo-size: 10rem;
+  --loader-size: 12.5rem;
+  --logo-size: 10.5rem;
+  --logo-width: 10.5rem;
 }
 
 .nextfun-brand-loader__media {
@@ -102,8 +106,8 @@ a {
 
 .nextfun-brand-loader__media img {
   display: block;
-  height: var(--logo-size);
-  width: var(--logo-size);
+  max-height: var(--logo-size);
+  width: min(var(--logo-width), 78vw);
   object-fit: contain;
   filter: drop-shadow(0 10px 18px rgba(21, 21, 21, 0.08));
 }
