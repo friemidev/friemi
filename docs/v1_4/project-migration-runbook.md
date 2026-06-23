@@ -275,6 +275,8 @@ sed -n '1,260p' /tmp/target-schema-diff.sql
 
 适合新项目要继承当前 MVP 的活动、组局、用户、消息、游客报名、收藏、通知等数据。
 
+Supabase 项目不要直接全库恢复。全库 dump 里会包含 `auth`、`storage`、`realtime`、event trigger 等 Supabase 托管对象，普通 `postgres` 用户通常不是这些对象的 owner，直接 `pg_restore --clean` 会出现大量 `must be owner` 错误。本项目业务数据以 `public` schema 为主，数据库搬迁默认只恢复 `public` schema；Storage bucket 和文件按“阶段 4”单独处理。
+
 先导出源库：
 
 ```bash
@@ -291,7 +293,8 @@ pg_dump "$SOURCE_DIRECT_URL" \
 恢复到目标库：
 
 ```bash
-pg_restore "$TARGET_DIRECT_URL" \
+pg_restore --dbname="$TARGET_DIRECT_URL" \
+  --schema=public \
   --clean \
   --if-exists \
   --no-owner \
@@ -322,15 +325,231 @@ sed -n '1,260p' /tmp/target-schema-diff.sql
 - [ ] 游客报名数据还在
 - [ ] 通知和私信数据按约定保留或清理
 
+### 3.2.1 预览库和生产库双环境全量搬迁
+
+本项目需要同时搬迁两套数据库：
+
+- 旧预览数据库 -> 新预览数据库
+- 旧生产数据库 -> 新生产数据库
+
+原则：
+
+- [ ] 预览和生产分开执行，不共用 dump 文件名
+- [ ] 源库只做 `pg_dump`，不要对旧库执行 `pg_restore`、`migrate deploy` 或清理脚本
+- [ ] 先完成预览库搬迁和验收，再执行生产库搬迁
+- [ ] 生产搬迁前短暂冻结旧生产写入，避免导出后又产生新数据
+- [ ] 所有连接串只放在本地临时 env 文件，不提交 Git，不粘贴到聊天或 PR
+
+建议本地建立两个临时文件：
+
+```bash
+mkdir -p migration-backups
+touch migration-backups/preview-db.env
+touch migration-backups/production-db.env
+chmod 600 migration-backups/preview-db.env migration-backups/production-db.env
+```
+
+`migration-backups/preview-db.env`：
+
+```bash
+SOURCE_DIRECT_URL="旧预览数据库 direct 连接串"
+TARGET_DIRECT_URL="新预览数据库 direct 连接串"
+```
+
+如果新 Supabase 项目的 direct host 报 `Connection refused`、`Network is unreachable`，或当前网络不能访问 IPv6 direct endpoint，可以临时增加一个恢复专用连接串：
+
+```bash
+TARGET_RESTORE_URL="新预览数据库 Session pooler 连接串"
+```
+
+恢复时优先使用 `TARGET_RESTORE_URL`，没有时再使用 `TARGET_DIRECT_URL`。不要使用 Transaction pooler 做 schema restore，优先选择 Session pooler。
+
+注意：PostgreSQL URL 里的密码如果包含 `@`、`:`、`#`、`/`、`?`、`&` 等特殊字符，必须使用 URL encode，否则 `pg_dump` / `pg_restore` 可能把密码片段误识别成 host 或 port。
+
+常见替换：
+
+```text
+@ -> %40
+: -> %3A
+# -> %23
+/ -> %2F
+? -> %3F
+& -> %26
+```
+
+`migration-backups/production-db.env`：
+
+```bash
+SOURCE_DIRECT_URL="旧生产数据库 direct 连接串"
+TARGET_DIRECT_URL="新生产数据库 direct 连接串"
+# 如果 direct endpoint 不可达，可以增加：
+TARGET_RESTORE_URL="新生产数据库 Session pooler 连接串"
+```
+
+确认这些文件在 `.gitignore` 中被忽略：
+
+```bash
+git check-ignore migration-backups/preview-db.env migration-backups/production-db.env
+```
+
+如果没有被忽略，先补充 `.gitignore`：
+
+```gitignore
+migration-backups/*.env
+migration-backups/*.dump
+```
+
+#### 预览库搬迁
+
+导出旧预览库：
+
+```bash
+set -a
+source migration-backups/preview-db.env
+set +a
+
+pg_dump "$SOURCE_DIRECT_URL" \
+  --format=custom \
+  --schema=public \
+  --no-owner \
+  --no-acl \
+  --file="migration-backups/preview-source-$(date +%Y%m%d-%H%M%S).dump"
+```
+
+恢复到新预览库：
+
+```bash
+LATEST_PREVIEW_DUMP="$(ls -t migration-backups/preview-source-*.dump | head -1)"
+RESTORE_URL="${TARGET_RESTORE_URL:-$TARGET_DIRECT_URL}"
+
+pg_restore --dbname="$RESTORE_URL" \
+  --schema=public \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-acl \
+  "$LATEST_PREVIEW_DUMP"
+```
+
+检查新预览库和 Prisma schema 是否一致：
+
+```bash
+cd apps/web
+
+npx prisma migrate diff \
+  --from-url "${TARGET_RESTORE_URL:-$TARGET_DIRECT_URL}" \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > /tmp/preview-schema-diff.sql
+
+sed -n '1,260p' /tmp/preview-schema-diff.sql
+```
+
+预览库验收：
+
+- [ ] 新预览环境使用新预览库的 `DATABASE_URL` 和 `DIRECT_URL`
+- [ ] 新预览环境首页、活动页、组队大厅、搜索页可打开
+- [ ] 用户、活动、组局、报名、收藏、消息等核心数据数量接近旧预览库
+- [ ] 上传封面、收藏、报名等写入动作写入新预览库，不再写旧预览库
+- [ ] Cron dry-run 能读写新预览库配置，但不会影响生产库
+
+#### 生产库搬迁
+
+生产库搬迁前：
+
+- [ ] 确认新预览库已经验收通过
+- [ ] 记录旧生产当前部署版本和数据库连接信息归属
+- [ ] 暂停旧生产 cron、人工导入脚本和高风险后台写入
+- [ ] 选择访问低峰期执行
+
+导出旧生产库：
+
+```bash
+cd /home/ubuntu23/Bureau/nextfunclub
+
+set -a
+source migration-backups/production-db.env
+set +a
+
+pg_dump "$SOURCE_DIRECT_URL" \
+  --format=custom \
+  --schema=public \
+  --no-owner \
+  --no-acl \
+  --file="migration-backups/production-source-$(date +%Y%m%d-%H%M%S).dump"
+```
+
+恢复到新生产库：
+
+```bash
+LATEST_PRODUCTION_DUMP="$(ls -t migration-backups/production-source-*.dump | head -1)"
+RESTORE_URL="${TARGET_RESTORE_URL:-$TARGET_DIRECT_URL}"
+
+pg_restore --dbname="$RESTORE_URL" \
+  --schema=public \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-acl \
+  "$LATEST_PRODUCTION_DUMP"
+```
+
+检查新生产库和 Prisma schema 是否一致：
+
+```bash
+cd apps/web
+
+npx prisma migrate diff \
+  --from-url "${TARGET_RESTORE_URL:-$TARGET_DIRECT_URL}" \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > /tmp/production-schema-diff.sql
+
+sed -n '1,260p' /tmp/production-schema-diff.sql
+```
+
+生产库验收：
+
+- [ ] 新生产 Vercel 项目使用新生产库的 `DATABASE_URL` 和 `DIRECT_URL`
+- [ ] `NEXT_PUBLIC_APP_URL` 指向新生产域名
+- [ ] Clerk webhook、cron、Supabase Storage 配置都指向新项目
+- [ ] 首页、活动页、组队大厅、搜索页、个人空间、消息、后台可打开
+- [ ] 登录用户能看到自己的资料、发起、参与、收藏和消息
+- [ ] 旧生产库保留至少 7-14 天，不立即删除
+
+收尾清理：
+
+```bash
+unset SOURCE_DIRECT_URL
+unset TARGET_DIRECT_URL
+unset TARGET_RESTORE_URL
+unset DATABASE_URL
+unset DIRECT_URL
+```
+
 ### 3.3 Clerk 用户 ID 风险
 
 `UserProfile.clerkUserId` 绑定的是 Clerk 的用户 ID。
+
+当前搬迁策略：
+
+- [ ] 本轮先沿用旧 Clerk Production 应用，优先跑通新 GitHub / Supabase / Vercel / Storage 部署
+- [ ] 新 Vercel Preview / Production 先配置旧 Clerk 对应的 publishable key、secret key 和 webhook secret
+- [ ] 在旧 Clerk Dashboard 里补充新预览域名和新生产域名的 allowed origins / redirect URLs
+- [ ] 确认用户登录后仍能匹配旧数据库迁移过来的 `UserProfile.clerkUserId`
+- [ ] 新 Clerk 应用和用户 ID 映射单独开后续分支处理，不和本次数据库 / Storage 搬迁混做
+- [ ] 在新 Clerk 迁移完成前，不要删除旧 Clerk 应用、旧 OAuth 配置和旧 webhook
+
+这样做的目的：
+
+- 降低首轮搬迁风险，避免登录身份和业务数据归属同时变化
+- 保留老用户无感登录能力
+- 让新数据库里的好友、消息、活动发起、报名、收藏、通知继续按原用户 ID 工作
+- 后续如果必须彻底独立，再通过 Clerk 用户导出 / 导入和 ID 映射迁移
 
 如果新项目继续使用原 Clerk 应用：
 
 - [ ] 用户登录后能继续匹配原 `clerkUserId`
 - [ ] `ADMIN_CLERK_USER_IDS` 不需要批量重写，只需要确认管理员范围
-- [ ] 风险较低，但双方需要明确 Clerk 应用所有权
+- [ ] 风险较低，但双方需要明确 Clerk 应用所有权和短期访问权限
 
 如果新项目使用新的 Clerk 应用：
 
@@ -382,6 +601,141 @@ SUPABASE_STORAGE_BUCKET=activity-covers
 - 或写脚本读取源 bucket 对象后上传到目标 bucket
 - 如果对象 URL 域名变化，需要决定是否批量更新数据库里的 `coverImageUrl`
 
+### 4.1 预览和生产 bucket 对象迁移
+
+数据库搬迁只迁移了 `Activity.coverImageUrl` 和 `PublicEvent.coverImageUrl` 里的 URL 文本，不会迁移 Supabase Storage 里的真实图片对象。`activity-covers` 需要按环境单独复制：
+
+- 旧 Preview Supabase Storage -> 新 Preview Supabase Storage
+- 旧 Production Supabase Storage -> 新 Production Supabase Storage
+
+准备两个本地临时 env 文件，不提交 Git：
+
+```bash
+touch migration-backups/preview-storage.env
+touch migration-backups/production-storage.env
+chmod 600 migration-backups/preview-storage.env migration-backups/production-storage.env
+```
+
+`migration-backups/preview-storage.env`：
+
+```bash
+SOURCE_SUPABASE_URL="旧预览 Supabase Project URL"
+SOURCE_SUPABASE_SERVICE_ROLE_KEY="旧预览 service role key"
+TARGET_SUPABASE_URL="新预览 Supabase Project URL"
+TARGET_SUPABASE_SERVICE_ROLE_KEY="新预览 service role key"
+SUPABASE_STORAGE_BUCKET="activity-covers"
+```
+
+`migration-backups/production-storage.env`：
+
+```bash
+SOURCE_SUPABASE_URL="旧生产 Supabase Project URL"
+SOURCE_SUPABASE_SERVICE_ROLE_KEY="旧生产 service role key"
+TARGET_SUPABASE_URL="新生产 Supabase Project URL"
+TARGET_SUPABASE_SERVICE_ROLE_KEY="新生产 service role key"
+SUPABASE_STORAGE_BUCKET="activity-covers"
+```
+
+先 dry-run 预览环境：
+
+```bash
+set -a
+source migration-backups/preview-storage.env
+set +a
+
+DRY_RUN=1 node scripts/migrate-supabase-storage.mjs
+```
+
+确认对象数量合理后正式复制预览 bucket：
+
+```bash
+node scripts/migrate-supabase-storage.mjs
+```
+
+生产环境同理：
+
+```bash
+set -a
+source migration-backups/production-storage.env
+set +a
+
+DRY_RUN=1 node scripts/migrate-supabase-storage.mjs
+node scripts/migrate-supabase-storage.mjs
+```
+
+脚本会：
+
+- 创建或更新目标 bucket：`activity-covers`
+- 保持 bucket public
+- 保留对象 path，例如 `user_xxx/file.webp`
+- 使用 `upsert: true`，重复执行不会重复生成新文件
+
+### 4.2 重写数据库中的 Storage public URL
+
+如果新旧 Supabase Project URL 不同，复制完对象后，还需要把目标数据库里的旧 Storage public URL 改成新 URL。否则页面仍会访问旧 Supabase 项目的图片。
+
+先在目标环境中计算两个前缀：
+
+```bash
+OLD_STORAGE_PUBLIC_BASE="${SOURCE_SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/"
+NEW_STORAGE_PUBLIC_BASE="${TARGET_SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/"
+```
+
+对目标 Preview 数据库执行：
+
+```bash
+set -a
+source migration-backups/preview-db.env
+source migration-backups/preview-storage.env
+set +a
+
+RESTORE_URL="${TARGET_RESTORE_URL:-$TARGET_DIRECT_URL}"
+OLD_STORAGE_PUBLIC_BASE="${SOURCE_SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/"
+NEW_STORAGE_PUBLIC_BASE="${TARGET_SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/"
+
+psql "$RESTORE_URL" -v ON_ERROR_STOP=1 \
+  -v old="$OLD_STORAGE_PUBLIC_BASE" \
+  -v new="$NEW_STORAGE_PUBLIC_BASE" <<'SQL'
+UPDATE public."Activity"
+SET "coverImageUrl" = replace("coverImageUrl", :'old', :'new')
+WHERE "coverImageUrl" LIKE :'old' || '%';
+
+UPDATE public."PublicEvent"
+SET "coverImageUrl" = replace("coverImageUrl", :'old', :'new')
+WHERE "coverImageUrl" LIKE :'old' || '%';
+SQL
+```
+
+生产数据库同理，只是换成：
+
+```bash
+source migration-backups/production-db.env
+source migration-backups/production-storage.env
+```
+
+重写后抽样检查：
+
+```bash
+psql "$RESTORE_URL" -v ON_ERROR_STOP=1 -Atc '
+select "coverImageUrl"
+from public."Activity"
+where "coverImageUrl" like '\''%/storage/v1/object/public/activity-covers/%'\''
+limit 5;
+'
+```
+
+### 4.3 Storage 迁移验收
+
+验收：
+
+- [ ] `activity-covers` bucket 在新 Preview / 新 Production 都存在
+- [ ] bucket 是 public
+- [ ] 旧环境 bucket 对象数量和新环境对象数量一致或符合预期
+- [ ] `Activity.coverImageUrl` 中旧 Supabase URL 已替换为新 Supabase URL
+- [ ] `PublicEvent.coverImageUrl` 中旧 Supabase URL 已替换为新 Supabase URL
+- [ ] 打开一条使用自定义封面的组局详情页，图片能显示
+- [ ] 上传新封面能成功，返回的是新 Supabase 项目的 public URL
+
 验收：
 
 - [ ] 上传封面接口 `/api/uploads/activity-cover` 返回 200
@@ -389,6 +743,42 @@ SUPABASE_STORAGE_BUCKET=activity-covers
 - [ ] 旧活动封面不会因为域名或 bucket 变化失效
 
 ## 阶段 5：Clerk 迁移
+
+当前阶段不立即执行完整 Clerk 迁移。先用旧 Clerk 跑通新部署；下面内容作为后续独立迁移阶段使用。
+
+### 5.0 旧 Clerk 过渡配置
+
+适用场景：新数据库、Storage、Vercel 已经搬到新项目，但用户身份源暂时继续使用旧 Clerk。
+
+需要配置到新 Vercel Preview / Production 的变量：
+
+```text
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+CLERK_WEBHOOK_SIGNING_SECRET
+NEXT_PUBLIC_CLERK_SIGN_IN_URL
+NEXT_PUBLIC_CLERK_SIGN_UP_URL
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+ADMIN_CLERK_USER_IDS
+ADMIN_EMAILS
+```
+
+旧 Clerk Dashboard 需要补充：
+
+- [ ] 新 Vercel Preview 域名加入 allowed origins
+- [ ] 新生产域名加入 allowed origins
+- [ ] 新域名下的 sign-in / sign-up / after sign-in redirect URL 可用
+- [ ] Webhook endpoint 指向新生产域名：`https://新域名/api/webhooks/clerk`
+- [ ] Webhook events 保留：`user.created`、`user.updated`、`user.deleted`、`session.created`
+
+验收：
+
+- [ ] 新 Preview 登录后能打开个人空间，并显示原来的发起 / 参与 / 收藏 / 好友 / 消息
+- [ ] 新 Production 登录后能打开个人空间，并显示原来的发起 / 参与 / 收藏 / 好友 / 消息
+- [ ] 管理员账号仍能访问 `/zh-CN/admin/analytics`
+- [ ] Clerk webhook 调用新项目后不会生成重复或错误用户
+- [ ] 新项目数据库中 `UserProfile.clerkUserId` 不被批量改写
 
 ### 5.1 新建 Clerk 应用
 
@@ -722,6 +1112,34 @@ SUPABASE_STORAGE_BUCKET
 - [ ] `DATABASE_URL` 是否指向目标生产库
 - [ ] Vercel Logs 是否有 `/api/cron/import-public-activities`
 
+### Prisma prepared statement 报错
+
+典型日志：
+
+```text
+prepared statement "s18" does not exist
+bind message supplies ... parameters, but prepared statement ... requires ...
+```
+
+这通常不是业务查询写错，而是 Prisma 通过 Supabase pooler / PgBouncer 连接时 prepared statement 被连接池复用打乱。
+
+检查 Vercel Production / Preview 环境变量：
+
+- [ ] `DATABASE_URL` 和 `DIRECT_URL` 必须属于同一个 Supabase project
+- [ ] `DATABASE_URL` 如果使用 Supabase pooler，URL 需要带 `pgbouncer=true`
+- [ ] `DATABASE_URL` 建议带 `connection_limit=1`
+- [ ] `DIRECT_URL` 使用同一个 Supabase project 的 direct URL，不加 `pgbouncer=true`
+- [ ] 修改 Vercel env 后需要重新部署，旧 deployment 不会自动读取新变量
+
+推荐格式：
+
+```text
+DATABASE_URL="postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres"
+```
+
+如果生产仍然报 prepared statement 错误，可以临时把 `DATABASE_URL` 也切到同项目的 direct URL 验证问题是否来自 pooler；确认后再换回正确 pooler 配置。
+
 ### Clerk 本地出现 session redirect loop
 
 通常是 publishable key 和 secret key 混用了不同 Clerk 应用，或者浏览器残留旧 cookie。
@@ -731,4 +1149,3 @@ SUPABASE_STORAGE_BUCKET
 1. 确认 `.env.local` 里的 Clerk key 来自同一个应用
 2. 清理 `localhost` 站点数据和 cookie
 3. 重启 dev server
-
