@@ -22,7 +22,7 @@ ActivityParticipant
 
 ## 二次评估结论
 
-这次改动适合 Next Fun Club，但需要控制边界。
+这次改动适合 Friemi，但需要控制边界。
 
 推荐方向：
 

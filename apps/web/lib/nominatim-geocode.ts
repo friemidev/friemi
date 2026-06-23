@@ -34,7 +34,7 @@ async function searchNominatim(
     headers: {
       Accept: "application/json",
       "Accept-Language": acceptLanguage,
-      "User-Agent": "NextFunClub/1.0 scraper-geocode",
+      "User-Agent": "Friemi/1.0 scraper-geocode",
     },
     cache: "no-store",
     signal: AbortSignal.timeout(8_000),

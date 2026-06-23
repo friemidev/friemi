@@ -112,7 +112,7 @@ function getSwipeStorageKey({
   sourceSurface: AnalyticsSourceSurface;
   variant: NonNullable<ActivitySwipeDiscoveryProps["variant"]>;
 }) {
-  return `nextfun:activity-swipe:${locale}:${sourceSurface}:${variant}`;
+  return `friemi:activity-swipe:${locale}:${sourceSurface}:${variant}`;
 }
 
 function clampStoredIndex(value: unknown, deckLength: number) {

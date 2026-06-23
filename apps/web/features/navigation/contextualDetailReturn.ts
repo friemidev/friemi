@@ -36,7 +36,7 @@ export type DetailSourceContext = Omit<DetailSourceInput, "sourceHref"> & {
   version: 1;
 };
 
-const detailSourceStorageKey = "nextfunclub:detail-source-context";
+const detailSourceStorageKey = "friemi:detail-source-context";
 const detailSourceTtlMs = 30 * 60 * 1000;
 
 function canUseStorage() {

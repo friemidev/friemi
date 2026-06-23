@@ -4,7 +4,7 @@ import { withLocale } from "./routes";
 export const authRedirectParamName = "redirect_url";
 
 const authRedirectFallbackPath = "/home";
-const appOrigin = "https://nextfun.local";
+const appOrigin = "https://friemi.local";
 
 function getFirstParamValue(value?: string | string[] | null) {
   if (Array.isArray(value)) {

@@ -29,7 +29,7 @@ git pull
 
 ```bash
 git clone <repo-url>
-cd nextfunclub
+cd friemi
 ```
 
 ## Node 和 npm 版本

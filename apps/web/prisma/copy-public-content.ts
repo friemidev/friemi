@@ -7,7 +7,7 @@ const targetOrganizerClerkId =
   process.env.CONTENT_TARGET_ORGANIZER_CLERK_ID ??
   "system_content_migration_next_fun_club";
 const targetOrganizerNickname =
-  process.env.CONTENT_TARGET_ORGANIZER_NICKNAME ?? "Next Fun Club";
+  process.env.CONTENT_TARGET_ORGANIZER_NICKNAME ?? "Friemi";
 const shouldWrite = process.argv.includes("--write");
 const copyAllActivities = process.argv.includes("--include-non-public");
 

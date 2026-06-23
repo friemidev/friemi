@@ -69,19 +69,19 @@ git log --oneline -n 10
 如果新项目需要保留完整 Git 历史：
 
 ```bash
-git clone --mirror git@github.com:OLD_ORG/OLD_REPO.git nextfunclub-mirror.git
-cd nextfunclub-mirror.git
+git clone --mirror git@github.com:OLD_ORG/OLD_REPO.git friemi-mirror.git
+cd friemi-mirror.git
 git remote set-url --push origin git@github.com:NEW_ORG/NEW_REPO.git
 git push --mirror
 cd ..
-rm -rf nextfunclub-mirror.git
+rm -rf friemi-mirror.git
 ```
 
 然后重新克隆新仓库：
 
 ```bash
-git clone git@github.com:NEW_ORG/NEW_REPO.git nextfunclub-new
-cd nextfunclub-new
+git clone git@github.com:NEW_ORG/NEW_REPO.git friemi-new
+cd friemi-new
 git switch dev
 ```
 
@@ -287,7 +287,7 @@ pg_dump "$SOURCE_DIRECT_URL" \
   --format=custom \
   --no-owner \
   --no-acl \
-  --file=/tmp/nextfunclub-source.dump
+  --file=/tmp/friemi-source.dump
 ```
 
 恢复到目标库：
@@ -299,7 +299,7 @@ pg_restore --dbname="$TARGET_DIRECT_URL" \
   --if-exists \
   --no-owner \
   --no-acl \
-  /tmp/nextfunclub-source.dump
+  /tmp/friemi-source.dump
 ```
 
 恢复后检查 schema 是否和代码一致：
@@ -464,7 +464,7 @@ sed -n '1,260p' /tmp/preview-schema-diff.sql
 导出旧生产库：
 
 ```bash
-cd /home/ubuntu23/Bureau/nextfunclub
+cd /home/ubuntu23/Bureau/friemi
 
 set -a
 source migration-backups/production-db.env
@@ -1048,7 +1048,7 @@ npm run monitor:site --workspace=apps/web
 临时文件清理示例：
 
 ```bash
-rm -f /tmp/nextfunclub-source.dump
+rm -f /tmp/friemi-source.dump
 rm -f /tmp/target-schema-diff.sql
 unset SOURCE_DIRECT_URL
 unset TARGET_DIRECT_URL

@@ -8,7 +8,7 @@ async function main() {
     update: {},
     create: {
       clerkUserId: "seed_user_next_fun_club",
-      nickname: "Next Fun Club",
+      nickname: "Friemi",
       bio: "巴黎首批活动运营账号",
       interests: ["桌游", "展览", "City walk"],
     },

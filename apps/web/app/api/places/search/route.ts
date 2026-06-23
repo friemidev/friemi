@@ -55,7 +55,7 @@ async function searchNominatim(query: string, acceptLanguage: string, limit: num
     headers: {
       Accept: "application/json",
       "Accept-Language": acceptLanguage,
-      "User-Agent": "NextFunClub/1.0 location-search",
+      "User-Agent": "Friemi/1.0 location-search",
     },
     next: {
       revalidate: 86_400,

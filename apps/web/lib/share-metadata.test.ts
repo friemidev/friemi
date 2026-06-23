@@ -31,20 +31,20 @@ test("getRequestBaseUrl prefers forwarded preview host", () => {
 
 test("buildCanonicalUrl preserves private activity access token", () => {
   const url = buildCanonicalUrl(
-    "https://nextfunclub.example",
+    "https://friemi.example",
     "/zh-CN/activities/activity_1",
     { access: "token value" },
   );
 
   assert.equal(
     url,
-    "https://nextfunclub.example/zh-CN/activities/activity_1?access=token+value",
+    "https://friemi.example/zh-CN/activities/activity_1?access=token+value",
   );
 });
 
 test("buildPageShareMetadata creates rich metadata for public entry pages", () => {
   const metadata = buildPageShareMetadata({
-    baseUrl: "https://nextfunclub.example",
+    baseUrl: "https://friemi.example",
     description: "Discover activities and crews with friends.",
     path: "/en/home",
     title: "Friemi · What's next? Fun begins.",
@@ -52,10 +52,10 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
 
   assert.equal(metadata.title, "Friemi · What's next? Fun begins.");
   assert.equal(metadata.description, "Discover activities and crews with friends.");
-  assert.equal(metadata.openGraph?.url, "https://nextfunclub.example/en/home");
+  assert.equal(metadata.openGraph?.url, "https://friemi.example/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
-    "https://nextfunclub.example/logotitle.png",
+    "https://friemi.example/logotitle.png",
   ]);
 });
 
@@ -94,14 +94,14 @@ test("resolveShareImageUrl falls back when a remote image is not HTTPS", () => {
   assert.equal(
     resolveShareImageUrl(
       "http://images.example.com/event.jpg",
-      "https://nextfunclub.example",
+      "https://friemi.example",
     ),
-    "https://nextfunclub.example/logotitle.png",
+    "https://friemi.example/logotitle.png",
   );
   assert.equal(
     resolveShareImageUrl(
       "https://images.example.com/event.jpg",
-      "https://nextfunclub.example",
+      "https://friemi.example",
     ),
     "https://images.example.com/event.jpg",
   );
@@ -111,9 +111,9 @@ test("resolveShareImageUrl proxies known hotlink-protected HTTPS covers", () => 
   assert.equal(
     resolveShareImageUrl(
       "https://cdn.sortiraparis.com/images/80/66131/1121860-event.jpg",
-      "https://nextfunclub.example",
+      "https://friemi.example",
     ),
-    "https://nextfunclub.example/api/activity-cover-proxy?url=https%3A%2F%2Fcdn.sortiraparis.com%2Fimages%2F80%2F66131%2F1121860-event.jpg",
+    "https://friemi.example/api/activity-cover-proxy?url=https%3A%2F%2Fcdn.sortiraparis.com%2Fimages%2F80%2F66131%2F1121860-event.jpg",
   );
 });
 

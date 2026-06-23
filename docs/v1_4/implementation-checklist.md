@@ -605,7 +605,7 @@ feature/wechat-share-card-metadata
 
 微信卡片形成流程：
 
-1. 用户在 Next Fun 的活动详情页、公共活动详情页或组队详情页点击分享入口。
+1. 用户在 Friemi 的活动详情页、公共活动详情页或组队详情页点击分享入口。
 2. 用户复制链接、使用系统分享，或在微信内置浏览器中通过微信菜单分享给好友 / 群。
 3. 微信客户端或微信抓取服务访问这个公开 URL。
 4. 微信读取页面 `<head>` 中的 `title`、`description`、`og:title`、`og:description`、`og:image` 等信息。
@@ -641,7 +641,7 @@ metadata 字段设计：
 - `openGraph.title`：与页面标题一致，便于微信和其他平台识别。
 - `openGraph.description`：与摘要一致，保证复制链接后卡片不是空摘要。
 - `openGraph.url`：使用当前详情页公网 HTTPS 绝对 URL，不使用 localhost。
-- `openGraph.siteName`：使用 `Next Fun`。
+- `openGraph.siteName`：使用 `Friemi`。
 - `openGraph.images`：优先使用详情页封面图；没有封面时使用默认品牌分享图。
 - `twitter.card`：使用 `summary_large_image`，让其他平台也能展示大图卡片。
 - `alternates.canonical`：指向当前 locale 的正式详情页，减少重复 URL 引起的抓取不稳定。
@@ -678,7 +678,7 @@ metadata 字段设计：
 3. 用户点击“复制链接”或系统分享按钮。
 4. 用户打开微信聊天窗口，把链接发给好友或群。
 5. 微信生成包含标题、摘要和缩略图的链接卡片。
-6. 好友点击微信卡片，进入 Next Fun 对应详情页。
+6. 好友点击微信卡片，进入 Friemi 对应详情页。
 7. 好友未登录时也能先看基础信息；需要报名时可以选择登录报名或游客报名。
 8. 如果微信暂时只显示普通链接，用户仍然可以发送链接；卡片失败不应阻断分享流程。
 

@@ -1,4 +1,4 @@
-# Next Fun Club v1.2 更新公告草稿
+# Friemi v1.2 更新公告草稿
 
 状态：进行中，尚未发布到 `main`
 

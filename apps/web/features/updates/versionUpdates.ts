@@ -12,7 +12,7 @@ export type VersionUpdate = {
 export const versionUpdates: VersionUpdate[] = [
   {
     slug: "v1_4",
-    aliases: ["v1.4", "nextfun_version1.4"],
+    aliases: ["v1.4", "friemi_version1.4"],
     version: "v1.4",
     title: "游客报名、出行辅助与分享发现体验升级",
     releasedAt: "2026-06-18",
@@ -80,7 +80,7 @@ export const versionUpdates: VersionUpdate[] = [
   },
   {
     slug: "v1_3",
-    aliases: ["v1.3", "nextfun_version1.3"],
+    aliases: ["v1.3", "friemi_version1.3"],
     version: "v1.3",
     title: "移动端体验、搜索发现与组局流程全面打磨",
     releasedAt: "2026-06-14",
@@ -176,7 +176,7 @@ export const versionUpdates: VersionUpdate[] = [
       "全站基础视觉 token 收敛为 coral、sand、team-bg、event-bg 等语义色，活动、组局、已结束和主按钮语义更统一。",
       "基础 Button、Card、Input、Textarea 切到统一圆角、暖色边框、焦点态和轻量按压反馈。",
       "全站空状态和加载态更统一，移动端空状态不再使用过大的卡片和长说明。",
-      "全站 loading 动效切换为新的 Next Fun 动图，低动效偏好用户会回退到静态 logo。",
+      "全站 loading 动效切换为新的 Friemi 动图，低动效偏好用户会回退到静态 logo。",
       "站内 logo 统一替换为新版 `logo.png`，header、footer、favicon、微信引导和 loading fallback 使用同一套品牌资产。",
     ],
   },
@@ -250,7 +250,7 @@ export const versionUpdates: VersionUpdate[] = [
   },
   {
     slug: "v1_0",
-    aliases: ["nextfun_version1.0"],
+    aliases: ["friemi_version1.0"],
     version: "v1.0",
     title: "MVP 基础活动闭环",
     releasedAt: "2026-06-01",

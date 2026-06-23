@@ -1,4 +1,4 @@
-# Next Fun Club v1.1
+# Friemi v1.1
 
 发布时间：2026.06.02
 

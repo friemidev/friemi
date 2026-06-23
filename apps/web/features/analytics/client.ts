@@ -19,7 +19,7 @@ function getLocaleFromPath(pathname: string) {
 }
 
 function getAnonymousId() {
-  const key = "nextfun_analytics_anonymous_id";
+  const key = "friemi_analytics_anonymous_id";
 
   try {
     const existing = window.localStorage.getItem(key);
@@ -38,7 +38,7 @@ function getAnonymousId() {
 }
 
 function getSessionId() {
-  const key = "nextfun_analytics_session_id";
+  const key = "friemi_analytics_session_id";
 
   try {
     const existing = window.sessionStorage.getItem(key);

@@ -139,7 +139,7 @@ export function NotificationBadgeProvider({
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     window.addEventListener(
-      "nextfun:notifications-refresh",
+      "friemi:notifications-refresh",
       refreshWhenVisible,
     );
 
@@ -152,7 +152,7 @@ export function NotificationBadgeProvider({
       window.removeEventListener("focus", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.removeEventListener(
-        "nextfun:notifications-refresh",
+        "friemi:notifications-refresh",
         refreshWhenVisible,
       );
       window.clearInterval(intervalId);
