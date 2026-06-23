@@ -47,15 +47,15 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
     baseUrl: "https://nextfunclub.example",
     description: "Discover activities and crews with friends.",
     path: "/en/home",
-    title: "Next Fun · What's next? Fun begins.",
+    title: "Friemi · What's next? Fun begins.",
   });
 
-  assert.equal(metadata.title, "Next Fun · What's next? Fun begins.");
+  assert.equal(metadata.title, "Friemi · What's next? Fun begins.");
   assert.equal(metadata.description, "Discover activities and crews with friends.");
   assert.equal(metadata.openGraph?.url, "https://nextfunclub.example/en/home");
-  assert.equal(metadata.openGraph?.siteName, "Next Fun");
+  assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
-    "https://nextfunclub.example/logo.png",
+    "https://nextfunclub.example/logotitle.png",
   ]);
 });
 
@@ -96,7 +96,7 @@ test("resolveShareImageUrl falls back when a remote image is not HTTPS", () => {
       "http://images.example.com/event.jpg",
       "https://nextfunclub.example",
     ),
-    "https://nextfunclub.example/logo.png",
+    "https://nextfunclub.example/logotitle.png",
   );
   assert.equal(
     resolveShareImageUrl(

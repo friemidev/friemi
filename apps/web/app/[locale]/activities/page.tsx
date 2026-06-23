@@ -33,6 +33,7 @@ import { isPublicEventCard } from "@/features/activities/utils/activityCardKind"
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -75,7 +76,7 @@ export async function generateMetadata({
     baseUrl,
     description: generalPageShareDescription,
     path: withLocale(locale, "/activities"),
-    title: `${t.activities.title} · Next Fun`,
+    title: `${t.activities.title} · ${brand.name}`,
   });
 }
 

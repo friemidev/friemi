@@ -10,6 +10,7 @@ import {
   GlobalSearchIconLink,
 } from "@/features/search/components/GlobalSearchForm";
 import { NotificationHeaderLink } from "@/features/notifications/components/NotificationHeaderLink";
+import { brand } from "@/lib/brand";
 
 type AppHeaderProps = {
   locale: string;
@@ -40,18 +41,26 @@ export function AppHeader({
           className="flex shrink-0 items-center gap-2"
           prefetch={false}
         >
-          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-paper shadow-sm ring-1 ring-black/10">
+          <span className="flex h-11 w-[128px] items-center justify-start gap-2 overflow-hidden sm:w-[144px]">
             <Image
-              src="/logo.png"
-              alt="Next Fun"
-              width={40}
-              height={40}
-              className="h-full w-full object-cover"
+              src={brand.logoIconPath}
+              alt=""
+              width={44}
+              height={44}
+              className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
+              priority
+            />
+            <Image
+              src={brand.titleImagePath}
+              alt={brand.name}
+              width={96}
+              height={32}
+              className="h-auto w-[76px] object-contain sm:w-[88px]"
               priority
             />
           </span>
-          <span className="hidden whitespace-nowrap text-sm font-semibold tracking-normal xl:inline">
-            Next Fun
+          <span className="sr-only">
+            {brand.name}
           </span>
         </Link>
 

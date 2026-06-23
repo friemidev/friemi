@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import {
@@ -27,7 +28,7 @@ export async function generateMetadata({
     baseUrl,
     description: generalPageShareDescription,
     path: withLocale(locale, "/activities"),
-    title: `${t.activities.title} · Next Fun`,
+    title: `${t.activities.title} · ${brand.name}`,
   });
 }
 

@@ -44,11 +44,11 @@ feature/v2-project-migration-hardening
 
 小功能：
 
-- [ ] 确认 `dev` 默认推送到 `friemi/dev`，不再误推旧 `origin`
-- [ ] 确认 Vercel Preview / Production 绑定的是新项目
-- [ ] 确认 Vercel Preview / Production 的 `DATABASE_URL` 和 `DIRECT_URL` 分别指向新预览库和新生产库
-- [ ] 确认 Supabase Storage bucket `activity-covers` 在新预览和新生产都可读写
-- [ ] 确认当前阶段 Clerk 使用策略：继续沿用旧 Development Clerk，或切换到新 Development Clerk 后完成关键账号重绑
+- [x] 确认 `dev` 默认推送到 `friemi/dev`，不再误推旧 `origin`
+- [x] 确认 Vercel Preview / Production 绑定的是新项目
+- [x] 确认 Vercel Preview / Production 的 `DATABASE_URL` 和 `DIRECT_URL` 分别指向新预览库和新生产库
+- [x] 确认 Supabase Storage bucket `activity-covers` 在新预览和新生产都可读写
+- [x] 确认当前阶段 Clerk 使用策略：继续沿用旧 Development Clerk，或切换到新 Development Clerk 后完成关键账号重绑
 - [ ] 确认 cron 手动调用和 Vercel 定时触发都能写入新生产库
 - [ ] 清理旧项目引用、旧域名、旧 repo 名和旧部署说明
 - [ ] 更新项目迁移 runbook 中已完成项和剩余风险
@@ -75,22 +75,26 @@ feature/v2-brand-foundation
 
 小功能：
 
-- [ ] 替换 header 左侧 logo 和 title，使用 `public` 中的新 logo 资源
-- [ ] 替换移动端 header logo，保证 390px 宽度下不挤压搜索、语言、通知和头像按钮
-- [ ] 替换全站加载态中的 logo，不出现过小、模糊或旧品牌图
-- [ ] 更新 `metadata`、网页标题、Open Graph title、description 和站点名称
-- [ ] 更新 favicon / app icon / manifest icon，避免浏览器标签页仍显示旧品牌
-- [ ] 更新登录页、空状态、公告页、错误页中的旧品牌文案
-- [ ] 检查 `Next Fun`、`nextfunclub`、旧域名等展示文案，区分需要替换和历史兼容引用
-- [ ] 保留必要的旧品牌兼容字段，避免 URL、数据库 source 或历史内容被误删
+- [x] 替换 header 左侧 logo 和 title，使用 `public` 中的新 logo.png title.png 资源，并生成透明版 `friemi-logotitle.png`
+- [x] 替换移动端 header logo，保证 390px 宽度下不挤压搜索、语言、通知和头像按钮
+- [x] 替换全站加载态中的 logo，不出现过小、模糊或旧品牌图
+- [x] 更新 `metadata`、网页标题、Open Graph title、description 和站点名称
+- [x] 更新 favicon / app icon / manifest icon，避免浏览器标签页仍显示旧品牌
+- [x] 更新登录页、空状态、公告页、错误页中的旧品牌文案
+- [x] 检查 `Next Fun`、`nextfunclub`、旧域名等展示文案，区分需要替换和历史兼容引用
+- [x] 保留必要的旧品牌兼容字段，避免 URL、数据库 source 或历史内容被误删
+
+后续优化：
+
+- [ ] 单独补一张透明背景的 Friemi 方形 icon，用于 favicon / apple icon / 小尺寸 loading fallback
 
 验收标准：
 
-- 桌面端和移动端 header 都展示新 logo + title
-- 浏览器 tab、分享卡片、加载页和错误页不再混用旧品牌
-- 视觉尺寸清楚，不显得 logo 很小或糊
-- 搜索、导航、通知和头像区域不被新 title 挤压
-- `npm run typecheck` 通过
+- [x] 桌面端和移动端 header 都展示新 logo + title
+- [x] 浏览器 tab、分享卡片、加载页和错误页不再混用旧品牌
+- [x] 视觉尺寸清楚，不显得 logo 很小或糊
+- [x] 搜索、导航、通知和头像区域不被新 title 挤压
+- [x] `npm run typecheck` 通过
 
 ### 3. 全站设计语言重构
 
@@ -420,4 +424,3 @@ feature/v2-playwright-smoke-coverage
 - [ ] `npm run lint` 通过
 - [ ] `npm run typecheck` 通过
 - [ ] 关键路径至少手动验收一次
-

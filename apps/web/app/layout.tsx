@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Next Fun",
-  description:
-    "Next Fun helps overseas Chinese-speaking users discover, create, and join local activities.",
+  title: brand.name,
+  description: brand.description,
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: brand.logoIconPath,
+    apple: brand.logoIconPath,
+  },
+  openGraph: {
+    description: brand.description,
+    images: [brand.shareImagePath],
+    siteName: brand.name,
+    title: brand.name,
   },
 };
 

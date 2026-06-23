@@ -12,6 +12,7 @@ import {
   getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -41,7 +42,7 @@ export async function generateMetadata({
     baseUrl,
     description: generalPageShareDescription,
     path: withLocale(locale, "/lobby"),
-    title: `${t.activityLobby.title} · Next Fun`,
+    title: `${t.activityLobby.title} · ${brand.name}`,
   });
 }
 
