@@ -1,4 +1,11 @@
-import { CalendarDays, Clock3, Crown, MapPin, UsersRound } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  Copy,
+  Crown,
+  MapPin,
+  UsersRound,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Button,
@@ -7,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@chill-club/ui";
+import Link from "next/link";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import type {
   AnalyticsEventName,
@@ -270,8 +278,7 @@ function getCardActionConfig({
   isOwnActivity: boolean;
   viewerParticipationStatus: ActivityCardViewModel["viewerParticipationStatus"];
 }): { label: string; tone: ActivityCardActionTone } {
-  const isInactive =
-    displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const isInactive = displayStatus === "ENDED" || displayStatus === "CANCELLED";
   const participationActionLabel = getParticipationActionLabel(
     activityCopy,
     viewerParticipationStatus ?? null,
@@ -279,10 +286,7 @@ function getCardActionConfig({
 
   if (isOwnActivity) {
     return {
-      label:
-        isActivityInfo
-          ? cardCopy.viewActivity
-          : cardCopy.manageTeam,
+      label: isActivityInfo ? cardCopy.viewActivity : cardCopy.manageTeam,
       tone: "neutral",
     };
   }
@@ -290,8 +294,7 @@ function getCardActionConfig({
   if (participationActionLabel) {
     return {
       label: participationActionLabel,
-      tone:
-        viewerParticipationStatus === "PENDING" ? "pending" : "joined",
+      tone: viewerParticipationStatus === "PENDING" ? "pending" : "joined",
     };
   }
 
@@ -354,6 +357,10 @@ export function ActivityCard({
         displayStatus !== "CANCELLED"
       ? withLocale(locale, activityInfoTeamHref)
       : cardHref;
+  const copyActivityHref =
+    !isActivityInfo && actionContext === "lobby"
+      ? withLocale(locale, `/activities/new?copyActivityId=${activity.id}`)
+      : null;
   const cardActionCopy = getCardActionCopy(locale);
   const participationActionLabel = getParticipationActionLabel(
     t,
@@ -498,6 +505,18 @@ export function ActivityCard({
               ? "bg-[#dceef7] text-[#245e76] ring-1 ring-[#9fc6d8] shadow-[0_8px_18px_rgba(84,139,167,0.14)] hover:bg-[#cde6f2]"
               : "bg-coral text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] hover:bg-coral-dark";
 
+  function getCopyTeamButtonLabel(locale: string) {
+    if (locale === "fr") {
+      return "Relancer";
+    }
+
+    if (locale === "en") {
+      return "Run it again";
+    }
+
+    return "再来一局";
+  }
+
   return (
     <Card
       data-detail-source-target={detailSourceTargetKey}
@@ -516,7 +535,10 @@ export function ActivityCard({
           : null,
       )}
     >
-      {showFavoriteButton && !isOwnActivity && isActivityInfo && activity.publicEventId ? (
+      {showFavoriteButton &&
+      !isOwnActivity &&
+      isActivityInfo &&
+      activity.publicEventId ? (
         <div
           className={cn(
             "absolute right-3 top-4 z-20 sm:top-5",
@@ -528,7 +550,9 @@ export function ActivityCard({
             publicEventId={activity.publicEventId}
             className={cn(
               "size-9 min-h-9 min-w-9",
-              mobileDenseClass("max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8"),
+              mobileDenseClass(
+                "max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8",
+              ),
             )}
             isAuthenticated={isAuthenticated}
             isFavorited={Boolean(activity.isFavorited)}
@@ -539,7 +563,9 @@ export function ActivityCard({
           />
         </div>
       ) : null}
-      {showFavoriteButton && !isOwnActivity && (!isActivityInfo || !activity.publicEventId) ? (
+      {showFavoriteButton &&
+      !isOwnActivity &&
+      (!isActivityInfo || !activity.publicEventId) ? (
         <div
           className={cn(
             "absolute right-3 top-4 z-20 sm:top-5",
@@ -550,7 +576,9 @@ export function ActivityCard({
             activityId={activity.id}
             className={cn(
               "size-9 min-h-9 min-w-9",
-              mobileDenseClass("max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8"),
+              mobileDenseClass(
+                "max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8",
+              ),
             )}
             favoriteCount={activity.favoriteCount}
             isAuthenticated={isAuthenticated}
@@ -776,33 +804,54 @@ export function ActivityCard({
         </CardContent>
       </AnalyticsLink>
 
-      {showPrimaryAction ? (
+      {showPrimaryAction || copyActivityHref ? (
         <div
           className={cn(
             "px-4 pb-4 pt-0 sm:px-5 sm:pb-5",
             mobileDenseClass("max-[639px]:px-3 max-[639px]:pb-3"),
           )}
         >
-          <AnalyticsLink
-            href={actionHref}
-            detailSource={actionHref === cardHref ? detailSource : undefined}
-            event={{
-              name: actionEventName,
-              entityId: analyticsEntity.entityId,
-              entityType: analyticsEntity.entityType,
-              sourceSurface,
-              properties: baseAnalyticsProperties,
-            }}
-          >
-            <Button
-              className={cn(
-                "h-10 w-full rounded-full border-0",
-                actionToneClassName,
-              )}
-            >
-              {buttonLabel}
-            </Button>
-          </AnalyticsLink>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {showPrimaryAction ? (
+              <AnalyticsLink
+                href={actionHref}
+                detailSource={
+                  actionHref === cardHref ? detailSource : undefined
+                }
+                event={{
+                  name: actionEventName,
+                  entityId: analyticsEntity.entityId,
+                  entityType: analyticsEntity.entityType,
+                  sourceSurface,
+                  properties: baseAnalyticsProperties,
+                }}
+                className="min-w-0 flex-1"
+              >
+                <Button
+                  className={cn(
+                    "h-10 w-full rounded-full border-0 px-4 text-sm sm:h-11 sm:text-base",
+                    actionToneClassName,
+                  )}
+                >
+                  {buttonLabel}
+                </Button>
+              </AnalyticsLink>
+            ) : null}
+            {copyActivityHref ? (
+              <Link href={copyActivityHref} className="shrink-0">
+                <Button
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#d9c8ad] bg-white px-3 text-xs font-semibold text-[#5f4f3f] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/25 sm:h-11 sm:px-4 sm:text-sm"
+                  variant="secondary"
+                >
+                  <Copy
+                    className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+                    aria-hidden="true"
+                  />
+                  {getCopyTeamButtonLabel(locale)}
+                </Button>
+              </Link>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </Card>

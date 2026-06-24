@@ -12,6 +12,11 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "../utils/activityShareAccess";
+import {
+  formatParisDateTimeInput,
+  splitStoredDescription,
+  type ActivityFormValues,
+} from "../actions/activityActionUtils";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -162,7 +167,9 @@ function toIsoString(value: Date | string | null | undefined) {
     return null;
   }
 
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function getActivityDetailViewModel(
@@ -214,7 +221,7 @@ function getActivityDetailViewModel(
     participantCount,
     priceText: activity.priceText,
     status: activity.status,
-    visibility: activity.visibility,
+    visibility: activity.visibility ?? "PUBLIC",
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -332,10 +339,7 @@ export async function getActivityById(
   });
   const activityViewModel = getActivityDetailViewModel(activity);
 
-  if (
-    !activityViewModel.isActivityInfo &&
-    !organizerParticipation
-  ) {
+  if (!activityViewModel.isActivityInfo && !organizerParticipation) {
     return {
       ...activityViewModel,
       participantCount: activityViewModel.participantCount + 1,
@@ -358,6 +362,58 @@ export async function getActivityById(
   }
 
   return activityViewModel;
+}
+
+function getActivityCopyValues(
+  activity: ActivityDetailViewModel,
+): ActivityFormValues {
+  const descriptionParts = splitStoredDescription(
+    activity.category,
+    activity.description,
+  );
+
+  return {
+    title: activity.title,
+    description: descriptionParts.description,
+    itinerary: activity.itinerary ?? "",
+    coverImageUrl: activity.customCoverImageUrl ?? activity.coverImageUrl ?? "",
+    type: activity.type,
+    category: activity.category,
+    visibility: activity.visibility ?? "PUBLIC",
+    otherCategoryText: descriptionParts.otherCategoryText,
+    city: activity.city,
+    destination: activity.destination ?? "",
+    address: activity.address,
+    latitude: activity.latitude === null ? "" : String(activity.latitude),
+    longitude: activity.longitude === null ? "" : String(activity.longitude),
+    startAt: formatParisDateTimeInput(activity.startAt),
+    endAt: formatParisDateTimeInput(activity.endAt),
+    capacity: String(activity.capacity),
+    capacityLimitEnabled: activity.capacity > 0,
+    minParticipants: activity.minParticipants
+      ? String(activity.minParticipants)
+      : "",
+    requiresApproval: activity.requiresApproval,
+    priceType: activity.priceType,
+    priceText: activity.priceText ?? "",
+    ticketUrl: activity.ticketUrl ?? "",
+    ticketLabel: activity.ticketLabel ?? "",
+    publicEventId: activity.publicEventId ?? undefined,
+    importSourceUrl: "",
+  };
+}
+
+export async function getActivityCopyValuesById(
+  activityId: string,
+  viewerProfileId?: string | null,
+): Promise<ActivityFormValues | null> {
+  const activity = await getActivityById(activityId, viewerProfileId);
+
+  if (!activity) {
+    return null;
+  }
+
+  return getActivityCopyValues(activity);
 }
 
 export async function getActivityShareMetadataById(
