@@ -507,11 +507,11 @@ export function ActivityCard({
 
   function getCopyTeamButtonLabel(locale: string) {
     if (locale === "fr") {
-      return "Dupliquer";
+      return "Relancer";
     }
 
     if (locale === "en") {
-      return "Duplicate";
+      return "Run it again";
     }
 
     return "再来一局";
