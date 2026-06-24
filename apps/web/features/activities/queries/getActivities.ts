@@ -20,6 +20,12 @@ import type {
   ActivityRelationFilter,
   ActivityTimeState,
 } from "../utils/activityFilters";
+import {
+  areAllActivityTimeStatesSelected,
+  getDefaultActivityTimeStates,
+  hasPartialActivityTimeStatesFilter,
+  isEndedOnlyActivityTimeStatesFilter,
+} from "../utils/activityFilters";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -1396,19 +1402,78 @@ function compareRankedActivitiesByStartAt(
   return timeDiff || left.card.id.localeCompare(right.card.id);
 }
 
+function getActivityDurationMs(card: RankedActivityCard["card"]) {
+  const startAt = new Date(card.startAt).getTime();
+  const endAt = card.endAt ? new Date(card.endAt).getTime() : startAt;
+
+  return Math.max(endAt - startAt, 0);
+}
+
+function compareRankedActivitiesByDuration(
+  left: RankedActivityCard,
+  right: RankedActivityCard,
+  direction: "asc" | "desc",
+) {
+  const leftDuration = getActivityDurationMs(left.card);
+  const rightDuration = getActivityDurationMs(right.card);
+  const durationDiff =
+    direction === "asc"
+      ? leftDuration - rightDuration
+      : rightDuration - leftDuration;
+
+  return (
+    durationDiff ||
+    compareRankedActivitiesByStartAt(left, right, "asc")
+  );
+}
+
+function getActivityTimeStatesWhere(
+  timeStates: ActivityTimeState[],
+  now = new Date(),
+): Prisma.ActivityWhereInput | null {
+  if (areAllActivityTimeStatesSelected(timeStates)) {
+    return null;
+  }
+
+  return {
+    OR: timeStates.map((timeState) =>
+      getActivityTimeStateWhere(timeState, now),
+    ),
+  };
+}
+
+function getPublicEventTimeStatesWhere(
+  timeStates: ActivityTimeState[],
+  now = new Date(),
+): Prisma.PublicEventWhereInput | null {
+  if (areAllActivityTimeStatesSelected(timeStates)) {
+    return null;
+  }
+
+  return {
+    OR: timeStates.map((timeState) =>
+      getPublicEventTimeStateWhere(timeState, now),
+    ),
+  };
+}
+
 function compareRankedActivities(
-  filters: Pick<ActivityFilters, "sort" | "timeState"> | undefined,
+  filters: Pick<ActivityFilters, "sort" | "timeStates"> | undefined,
   left: RankedActivityCard,
   right: RankedActivityCard,
 ) {
-  if (filters?.sort === "recentlyAdded") {
-    return (
-      right.createdAt.getTime() - left.createdAt.getTime() ||
-      left.card.id.localeCompare(right.card.id)
-    );
+  if (filters?.sort === "shortDuration") {
+    return compareRankedActivitiesByDuration(left, right, "asc");
   }
 
-  if (filters?.sort === "latest" || filters?.timeState === "ENDED") {
+  if (filters?.sort === "longDuration") {
+    return compareRankedActivitiesByDuration(left, right, "desc");
+  }
+
+  if (
+    filters?.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters?.timeStates ?? [])
+  ) {
     return compareRankedActivitiesByStartAt(left, right, "desc");
   }
 
@@ -1429,15 +1494,12 @@ export async function getActivities(
     options.filters?.relation ?? "ALL",
     options.viewerProfileId,
   );
-  const orderBy: Prisma.ActivityOrderByWithRelationInput[] =
-    options.filters?.sort === "recentlyAdded"
-      ? [{ createdAt: "desc" }, { id: "asc" }]
-      : [
-          {
-            startAt: options.filters?.sort === "latest" ? "desc" : "asc",
-          },
-          { id: "asc" },
-        ];
+  const orderBy: Prisma.ActivityOrderByWithRelationInput[] = [
+    {
+      startAt: options.filters?.sort === "latest" ? "desc" : "asc",
+    },
+    { id: "asc" },
+  ];
   const [activities, publicEvents] = await Promise.all([
     prisma.activity.findMany({
       where: {
@@ -1458,16 +1520,12 @@ export async function getActivities(
               getPublicEventFilterWhere(options.filters),
             ],
           },
-          orderBy:
-            options.filters?.sort === "recentlyAdded"
-              ? [{ createdAt: "desc" }, { id: "asc" }]
-              : [
-                  {
-                    startAt:
-                      options.filters?.sort === "latest" ? "desc" : "asc",
-                  },
-                  { id: "asc" },
-                ],
+          orderBy: [
+            {
+              startAt: options.filters?.sort === "latest" ? "desc" : "asc",
+            },
+            { id: "asc" },
+          ],
           take: limit,
           select: publicEventCardSelect,
         })
@@ -1542,7 +1600,11 @@ async function getUpcomingHomeActivitiesUncached(
     ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
   ]
     .sort((left, right) =>
-      compareRankedActivities({ sort: "recommended" }, left, right),
+      compareRankedActivities(
+        { sort: "soonest", timeStates: getDefaultActivityTimeStates() },
+        left,
+        right,
+      ),
     )
     .slice(0, safeLimit);
 
@@ -1565,13 +1627,11 @@ function getActivityPage(page: number, totalPages: number) {
 
 function getActivityListOrderBy(
   filters: ActivityFilters,
-  timeState?: ActivityTimeState,
 ): Prisma.ActivityOrderByWithRelationInput[] {
-  if (filters.sort === "recentlyAdded") {
-    return [{ createdAt: "desc" }, { id: "asc" }];
-  }
-
-  if (filters.sort === "latest" || timeState === "ENDED") {
+  if (
+    filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+  ) {
     return [{ startAt: "desc" }, { id: "asc" }];
   }
 
@@ -1580,13 +1640,11 @@ function getActivityListOrderBy(
 
 function getPublicEventListOrderBy(
   filters: ActivityFilters,
-  timeState?: ActivityTimeState,
 ): Prisma.PublicEventOrderByWithRelationInput[] {
-  if (filters.sort === "recentlyAdded") {
-    return [{ createdAt: "desc" }, { id: "asc" }];
-  }
-
-  if (filters.sort === "latest" || timeState === "ENDED") {
+  if (
+    filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+  ) {
     return [{ startAt: "desc" }, { id: "asc" }];
   }
 
@@ -1601,7 +1659,7 @@ function hasExplicitActivityListFilters(filters: ActivityFilters) {
       filters.dateRange ||
       filters.relation !== "ALL" ||
       filters.type ||
-      filters.timeState,
+      hasPartialActivityTimeStatesFilter(filters.timeStates),
   );
 }
 
@@ -1655,8 +1713,8 @@ async function getActivityListWhere(
       ...(filters.dateRange
         ? [getActivityDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getActivityTimeStateWhere(filters.timeState, now)]
+      ...(getActivityTimeStatesWhere(filters.timeStates, now)
+        ? [getActivityTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1681,8 +1739,8 @@ function getPublicEventListWhere(
       ...(filters.dateRange
         ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1704,8 +1762,8 @@ function getPublicInfoActivityListWhere(
       ...(filters.dateRange
         ? [getActivityDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getActivityTimeStateWhere(filters.timeState, now)]
+      ...(getActivityTimeStatesWhere(filters.timeStates, now)
+        ? [getActivityTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1726,8 +1784,8 @@ function getPublicInfoPublicEventListWhere(
       ...(filters.dateRange
         ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
         : []),
-      ...(filters.timeState
-        ? [getPublicEventTimeStateWhere(filters.timeState, now)]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
         : []),
     ],
   };
@@ -1762,14 +1820,14 @@ async function getOrderedActivityList(
   const [activities, publicEvents] = await Promise.all([
     prisma.activity.findMany({
       where,
-      orderBy: getActivityListOrderBy(filters, filters.timeState),
+      orderBy: getActivityListOrderBy(filters),
       take: readLimit,
       select: activityCardSelect,
     }),
     publicEventWhere
       ? prisma.publicEvent.findMany({
           where: publicEventWhere,
-          orderBy: getPublicEventListOrderBy(filters, filters.timeState),
+          orderBy: getPublicEventListOrderBy(filters),
           take: readLimit,
           select: publicEventCardSelect,
         })
@@ -1971,9 +2029,6 @@ async function getPublicInfoOnlyActivityList(
     publicInfoFilters,
     now,
   );
-  const useRecommendedSort =
-    publicInfoFilters.sort === "recommended" &&
-    !hasExplicitActivityListFilters(publicInfoFilters);
   const requestedPage = Math.max(filters.page, 1);
   const [activityTotalCount, publicEventTotalCount] = await Promise.all([
     perf.measure("activity.count", () =>
@@ -1997,7 +2052,7 @@ async function getPublicInfoOnlyActivityList(
       publicEventCandidateCount: 0,
       resultCount: 0,
       totalCount,
-      usedBoundedRecommendedCandidates: useRecommendedSort,
+      usedBoundedRecommendedCandidates: false,
     });
 
     return {
@@ -2009,16 +2064,13 @@ async function getPublicInfoOnlyActivityList(
     };
   }
 
-  const readLimit = useRecommendedSort
-    ? Math.max(page * pageSize * 3, pageSize * 4)
-    : page * pageSize + 1;
+  const readLimit = page * pageSize + 1;
   const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
         where: activityWhere,
         orderBy: getActivityListOrderBy(
           publicInfoFilters,
-          publicInfoFilters.timeState,
         ),
         take: readLimit,
         select: activityCardSelect,
@@ -2029,26 +2081,21 @@ async function getPublicInfoOnlyActivityList(
         where: publicEventWhere,
         orderBy: getPublicEventListOrderBy(
           publicInfoFilters,
-          publicInfoFilters.timeState,
         ),
         take: readLimit,
         select: publicEventCardSelect,
       }),
     ),
   ]);
-  const dailySeed = useRecommendedSort ? getDailyRankingSeed(now) : null;
   const allRankedActivities = await perf.measure("rank.slice", async () => {
     const ranked = [
       ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
         getActivityRankedCardViewModel,
       ),
       ...publicEvents.map(getPublicEventActivityCardViewModel),
-    ]
-      .sort((left, right) =>
-        dailySeed
-          ? compareRecommendedRankedActivities(now, dailySeed, left, right)
-          : compareRankedActivities(publicInfoFilters, left, right),
-      );
+    ].sort((left, right) =>
+      compareRankedActivities(publicInfoFilters, left, right),
+    );
 
     return ranked;
   });
@@ -2064,7 +2111,7 @@ async function getPublicInfoOnlyActivityList(
     publicEventCandidateCount: publicEvents.length,
     resultCount: rankedActivities.length,
     totalCount,
-    usedBoundedRecommendedCandidates: useRecommendedSort,
+    usedBoundedRecommendedCandidates: false,
   });
 
   return {
@@ -2085,18 +2132,6 @@ export async function getActivityList(
 
   if (options.publicInfoOnly) {
     return getPublicInfoOnlyActivityList(
-      filters,
-      pageSize,
-      now,
-      options.viewerProfileId,
-    );
-  }
-
-  if (
-    filters.sort === "recommended" &&
-    !hasExplicitActivityListFilters(filters)
-  ) {
-    return getRecommendedActivityList(
       filters,
       pageSize,
       now,

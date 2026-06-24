@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverImageProps = {
@@ -32,7 +33,7 @@ export function ActivityCoverImage({
           {/* Brand fallback stays on the stable public logo path. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src={brand.logoIconPath}
             alt=""
             className="h-10 w-10 object-contain sm:h-12 sm:w-12"
             decoding="async"

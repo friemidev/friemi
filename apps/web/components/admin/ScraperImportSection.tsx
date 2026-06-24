@@ -215,7 +215,7 @@ export function ScraperImportSection({
 
       const json = await response.json();
       if (!response.ok) {
-        toast.error(json.error ?? "预览失败，请稍后重试");
+        toast.error(json.error ?? "爬取失败，请稍后重试");
         return;
       }
 
@@ -228,10 +228,10 @@ export function ScraperImportSection({
           .map((item) => item.id),
       );
       toast.success(
-        `预览完成：共 ${items.length} 条（新增 ${items.filter((i) => i.duplicateStatus === "new").length} 条）`,
+        `爬取完成：共 ${items.length} 条（新增 ${items.filter((i) => i.duplicateStatus === "new").length} 条）`,
       );
     } catch {
-      toast.error("预览失败，请检查网络或稍后重试");
+      toast.error("爬取失败，请检查网络或稍后重试");
     } finally {
       onBusyChange(null);
     }
@@ -425,8 +425,8 @@ export function ScraperImportSection({
             disabled={isBusy}
             className="w-full"
           >
-            <LoadingLabel loading={isPreviewing} loadingText="预览中…">
-              预览活动
+            <LoadingLabel loading={isPreviewing} loadingText="爬取中…">
+              爬取活动
             </LoadingLabel>
           </Button>
           <Button
@@ -440,7 +440,7 @@ export function ScraperImportSection({
               selectNone();
             }}
           >
-            清空预览
+            清空结果
           </Button>
           <Button
             type="button"
@@ -561,8 +561,8 @@ export function ScraperImportSection({
             {resolvedPreviewItems.length === 0 ? (
               <EmptyState
                 className="px-3 py-6"
-                title="还没有预览结果"
-                description="先点预览活动，确认新增和相似内容后再导入。"
+                title="还没有爬取结果"
+                description="先点爬取活动，确认新增和相似内容后再导入。"
               />
             ) : null}
             {resolvedPreviewItems.map((item) => {
@@ -674,10 +674,10 @@ export function ScraperImportSection({
                   <tr>
                     <td colSpan={9} className="px-3 py-12 text-center">
                       <p className="font-medium text-zinc-800">
-                        还没有预览结果
+                        还没有爬取结果
                       </p>
                       <p className="mt-2 text-sm text-zinc-500">
-                        点击“预览活动”后，系统会先展示新增和相似活动，再由你选择是否导入。
+                        点击“爬取活动”后，系统会先展示新增和相似活动，再由你选择是否导入。
                       </p>
                     </td>
                   </tr>

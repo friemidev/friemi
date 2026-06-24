@@ -61,10 +61,12 @@ export function RouteProgress() {
   const [progress, setProgress] = useState(0);
   const progressTimerRef = useRef<number | null>(null);
   const finishTimerRef = useRef<number | null>(null);
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
   const routeKey = `${pathname}?${searchParams.toString()}`;
 
   useEffect(() => {
-    if (!isActive) {
+    if (!isActiveRef.current) {
       return;
     }
 

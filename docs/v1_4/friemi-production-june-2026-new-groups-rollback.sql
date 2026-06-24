@@ -1,6 +1,6 @@
--- Next Fun manual June 2026 group import ROLLBACK for PRODUCTION database
+-- Friemi manual June 2026 group import ROLLBACK for PRODUCTION database
 -- Removes only rows created by:
--- docs/v1_4/nextfunclub-production-june-2026-new-groups-import.sql
+-- docs/v1_4/friemi-production-june-2026-new-groups-import.sql
 --
 -- Production checklist before running:
 -- 1. Confirm the SQL Editor is connected to the production Supabase project.

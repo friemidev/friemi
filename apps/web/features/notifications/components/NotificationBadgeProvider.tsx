@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 
 const NOTIFICATION_BADGE_POLL_INTERVAL_MS =
   process.env.NODE_ENV === "development" ? 60000 : 15000;
-const NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS = 1500;
+const NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS = 3500;
 
 type NotificationBadgeContextValue = {
   refreshUnreadNotificationCount: () => Promise<void>;
@@ -139,7 +139,7 @@ export function NotificationBadgeProvider({
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     window.addEventListener(
-      "nextfun:notifications-refresh",
+      "friemi:notifications-refresh",
       refreshWhenVisible,
     );
 
@@ -152,7 +152,7 @@ export function NotificationBadgeProvider({
       window.removeEventListener("focus", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.removeEventListener(
-        "nextfun:notifications-refresh",
+        "friemi:notifications-refresh",
         refreshWhenVisible,
       );
       window.clearInterval(intervalId);

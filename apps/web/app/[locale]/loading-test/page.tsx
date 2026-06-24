@@ -1,5 +1,6 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
+import { brand } from "@/lib/brand";
 
 type LoadingTestPageProps = {
   params: Promise<{
@@ -20,7 +21,7 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
             品牌加载动效测试
           </h1>
           <p className="text-base leading-7 text-zinc-600">
-            使用新的 Next Fun loading 动图。重点检查循环是否自然、图标是否清楚、背景是否干净。
+            使用新的 {brand.name} loading 动图。重点检查循环是否自然、图标是否清楚、背景是否干净。
           </p>
         </div>
 

@@ -527,8 +527,8 @@ export function ActivityCard({
             favoriteCount={activity.favoriteCount}
             publicEventId={activity.publicEventId}
             className={cn(
-              "h-9 w-9",
-              mobileDenseClass("max-[639px]:h-8 max-[639px]:w-8"),
+              "size-9 min-h-9 min-w-9",
+              mobileDenseClass("max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8"),
             )}
             isAuthenticated={isAuthenticated}
             isFavorited={Boolean(activity.isFavorited)}
@@ -549,8 +549,8 @@ export function ActivityCard({
           <ActivityFavoriteButton
             activityId={activity.id}
             className={cn(
-              "h-9 w-9",
-              mobileDenseClass("max-[639px]:h-8 max-[639px]:w-8"),
+              "size-9 min-h-9 min-w-9",
+              mobileDenseClass("max-[639px]:size-8 max-[639px]:min-h-8 max-[639px]:min-w-8"),
             )}
             favoriteCount={activity.favoriteCount}
             isAuthenticated={isAuthenticated}

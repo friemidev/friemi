@@ -16,9 +16,10 @@ import { isPublicEventCard } from "../utils/activityCardKind";
 import {
   formatActivityAgendaDateKey,
   getActivityAgendaDateRelation,
+  getActivityAgendaGroupSortOptions,
   getActivityAgendaGroups,
+  type ActivityAgendaCardSort,
   type ActivityAgendaGroup,
-  type ActivityAgendaSortDirection,
 } from "../utils/activityAgenda";
 import {
   getActivityDateLabel,
@@ -30,7 +31,7 @@ import {
 type ActivityAgendaListProps = {
   activities: ActivityCardViewModel[];
   locale: string;
-  sortDirection?: ActivityAgendaSortDirection;
+  sort?: ActivityAgendaCardSort;
   totalCount: number;
 };
 
@@ -183,13 +184,14 @@ function ActivityAgendaRow({
 export function ActivityAgendaList({
   activities,
   locale,
-  sortDirection,
+  sort = "soonest",
   totalCount,
 }: ActivityAgendaListProps) {
   const t = getCopy(locale);
-  const groups = getActivityAgendaGroups(activities, {
-    direction: sortDirection,
-  });
+  const groups = getActivityAgendaGroups(
+    activities,
+    getActivityAgendaGroupSortOptions(sort),
+  );
   const hasMoreResults = totalCount > activities.length;
 
   return (

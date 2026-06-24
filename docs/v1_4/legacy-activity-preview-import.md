@@ -18,7 +18,7 @@
 已生成完整 SQL Editor 文档：
 
 ```text
-/home/ubuntu23/Bureau/nextfunclub/docs/v1_4/nextfunclub-preview-legacy-activity-import.md
+/home/ubuntu23/Bureau/friemi/docs/v1_4/friemi-preview-legacy-activity-import.md
 ```
 
 该完整文档包含参与人的微信号，不要提交到 Git，也不要放进 PR 描述。
@@ -66,7 +66,7 @@
 3. 打开完整 SQL 文档：
 
 ```bash
-xdg-open "/home/ubuntu23/Bureau/nextfunclub/docs/v1_4/nextfunclub-preview-legacy-activity-import.md"
+xdg-open "/home/ubuntu23/Bureau/friemi/docs/v1_4/friemi-preview-legacy-activity-import.md"
 ```
 
 4. 复制文档末尾 SQL 到 Preview 数据库 SQL Editor 执行。

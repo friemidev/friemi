@@ -6,12 +6,12 @@ import {
   formatActivityTime,
 } from "@chill-club/shared";
 import { getActivityCoverDisplayUrl } from "./activity-cover-display";
+import { brand } from "./brand";
 import { getPriceTypeLabel } from "./copy";
 
-const defaultSiteName = "Next Fun";
-const defaultShareImagePath = "/logo.png";
-const defaultDescription =
-  "Next Fun helps overseas Chinese-speaking users discover, create, and join local activities.";
+const defaultSiteName = brand.name;
+const defaultShareImagePath = brand.shareImagePath;
+const defaultDescription = brand.description;
 export const generalPageShareDescription =
   "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！";
 
@@ -69,7 +69,7 @@ export function getRequestBaseUrl(headersList?: HeaderGetter | null) {
     }
   }
 
-  return "https://nextfunclub-web.vercel.app";
+  return "https://friemi.vercel.app";
 }
 
 export function resolveAbsoluteUrl(

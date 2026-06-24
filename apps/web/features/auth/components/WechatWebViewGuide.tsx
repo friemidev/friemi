@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
+import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type WechatWebViewGuideProps = {
@@ -111,11 +112,18 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
 
       <div className="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-xs flex-col py-8">
         <div className="space-y-6 pt-[7svh]">
-          <img
-            src="/logo.png"
-            alt="Next Fun"
-            className="h-20 w-20 rounded-full border border-black/10 bg-white object-cover shadow-sm"
-          />
+          <div className="flex items-center gap-3">
+            <img
+              src={brand.logoIconPath}
+              alt=""
+              className="h-16 w-16 rounded-full border border-black/10 bg-white object-contain shadow-sm"
+            />
+            <img
+              src={brand.titleImagePath}
+              alt={brand.name}
+              className="h-auto w-28 object-contain"
+            />
+          </div>
 
           <header className="space-y-3 pr-12">
             <p className="text-xs font-medium text-moss">{copy.eyebrow}</p>

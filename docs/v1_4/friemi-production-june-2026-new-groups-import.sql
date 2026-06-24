@@ -1,4 +1,4 @@
--- Next Fun manual real group import for PRODUCTION database
+-- Friemi manual real group import for PRODUCTION database
 -- Source: chat group notes and signup chains for June 19-22, 2026.
 -- Generated locally. Contains participant display names and known WeChat IDs; do not commit this file.
 --

@@ -45,3 +45,6 @@ apps/web/public/loading_frames/
 
 # Local Codex / frontend skill packages
 skills-folder/
+
+# Local migration backups
+migration-backups/

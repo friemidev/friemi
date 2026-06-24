@@ -17,7 +17,7 @@ export function ShimmerBlock({
   return (
     <div
       aria-hidden="true"
-      className={cn("nextfun-shimmer rounded-lg", className)}
+      className={cn("friemi-shimmer rounded-lg", className)}
       style={{ animationDelay: `${delay}ms`, ...style }}
     />
   );

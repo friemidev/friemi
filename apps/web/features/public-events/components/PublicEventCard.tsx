@@ -93,7 +93,7 @@ export function PublicEventCard({
           <PublicEventFavoriteButton
             favoriteCount={event.favoriteCount}
             publicEventId={event.id}
-            className="h-9 w-9"
+            className="size-9 min-h-9 min-w-9"
             isAuthenticated={isAuthenticated}
             isFavorited={Boolean(event.isFavorited)}
             locale={locale}

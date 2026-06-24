@@ -16,6 +16,56 @@ export type ActivityAgendaGroup<TActivity extends ActivityAgendaItem> =
 
 export type ActivityAgendaRelativeDate = "today" | "tomorrow";
 export type ActivityAgendaSortDirection = "asc" | "desc";
+export type ActivityAgendaCardSort =
+  | "soonest"
+  | "latest"
+  | "shortDuration"
+  | "longDuration";
+export type ActivityAgendaWithinGroupSort = "startAt" | "duration";
+
+export type ActivityAgendaGroupSortOptions = {
+  direction: ActivityAgendaSortDirection;
+  durationDirection: ActivityAgendaSortDirection;
+  withinGroup: ActivityAgendaWithinGroupSort;
+};
+
+export function getActivityAgendaGroupSortOptions(
+  sort: ActivityAgendaCardSort,
+): ActivityAgendaGroupSortOptions {
+  switch (sort) {
+    case "latest":
+      return {
+        direction: "desc",
+        durationDirection: "desc",
+        withinGroup: "startAt",
+      };
+    case "shortDuration":
+      return {
+        direction: "asc",
+        durationDirection: "asc",
+        withinGroup: "duration",
+      };
+    case "longDuration":
+      return {
+        direction: "asc",
+        durationDirection: "desc",
+        withinGroup: "duration",
+      };
+    default:
+      return {
+        direction: "asc",
+        durationDirection: "asc",
+        withinGroup: "startAt",
+      };
+  }
+}
+
+function getActivityDurationMs(activity: ActivityAgendaItem) {
+  const startAt = new Date(activity.startAt).getTime();
+  const endAt = activity.endAt ? new Date(activity.endAt).getTime() : startAt;
+
+  return Math.max(endAt - startAt, 0);
+}
 
 const activityTimeZone = "Europe/Paris";
 
@@ -81,11 +131,13 @@ export function isLongRunningAgendaActivity(activity: ActivityAgendaItem) {
 
 export function getActivityAgendaGroups<TActivity extends ActivityAgendaItem>(
   activities: TActivity[],
-  options: { direction?: ActivityAgendaSortDirection } = {},
+  options: ActivityAgendaGroupSortOptions = getActivityAgendaGroupSortOptions(
+    "soonest",
+  ),
 ): ActivityAgendaGroup<TActivity>[] {
   const longRunningActivities: TActivity[] = [];
   const dateGroups = new Map<string, TActivity[]>();
-  const direction = options.direction ?? "asc";
+  const { direction, durationDirection, withinGroup } = options;
 
   for (const activity of activities) {
     if (isLongRunningAgendaActivity(activity)) {
@@ -99,10 +151,22 @@ export function getActivityAgendaGroups<TActivity extends ActivityAgendaItem>(
     dateGroups.set(dateKey, currentGroup);
   }
 
-  const sortByStartAt = (left: TActivity, right: TActivity) =>
-    direction === "asc"
+  const sortWithinGroup = (left: TActivity, right: TActivity) => {
+    if (withinGroup === "duration") {
+      const durationDiff =
+        durationDirection === "asc"
+          ? getActivityDurationMs(left) - getActivityDurationMs(right)
+          : getActivityDurationMs(right) - getActivityDurationMs(left);
+
+      if (durationDiff !== 0) {
+        return durationDiff;
+      }
+    }
+
+    return direction === "asc"
       ? new Date(left.startAt).getTime() - new Date(right.startAt).getTime()
       : new Date(right.startAt).getTime() - new Date(left.startAt).getTime();
+  };
 
   const groupedActivities: ActivityAgendaGroup<TActivity>[] = Array.from(
     dateGroups.entries(),
@@ -113,14 +177,14 @@ export function getActivityAgendaGroups<TActivity extends ActivityAgendaItem>(
         : rightDateKey.localeCompare(leftDateKey),
     )
     .map(([dateKey, groupActivities]) => ({
-      activities: [...groupActivities].sort(sortByStartAt),
+      activities: [...groupActivities].sort(sortWithinGroup),
       dateKey,
       kind: "date" as const,
     }));
 
   if (longRunningActivities.length > 0) {
     groupedActivities.push({
-      activities: [...longRunningActivities].sort(sortByStartAt),
+      activities: [...longRunningActivities].sort(sortWithinGroup),
       kind: "longRunning",
     });
   }

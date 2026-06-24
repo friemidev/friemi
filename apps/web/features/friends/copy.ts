@@ -35,7 +35,7 @@ export function getFriendsCopy(locale: string) {
       cameraPermissionDenied:
         "La caméra est indisponible ou refusée. Utilisez le code ami.",
       invalidQrCode:
-        "Ce QR code ne correspond pas à un code ami Next Fun.",
+        "Ce QR code ne correspond pas à un code ami Friemi.",
       searchLabel: "Code ami ou pseudo",
       searchPlaceholder: "ex. 123456",
       searchHint: "Le code ami est le plus fiable.",
@@ -135,7 +135,7 @@ export function getFriendsCopy(locale: string) {
       cameraPermissionDenied:
         "Camera permission was denied or unavailable. Use the friend code.",
       invalidQrCode:
-        "This QR code is not a valid Next Fun friend code.",
+        "This QR code is not a valid Friemi friend code.",
       searchLabel: "Friend code or nickname",
       searchPlaceholder: "e.g. 123456",
       searchHint: "Friend code is the most accurate.",
@@ -229,7 +229,7 @@ export function getFriendsCopy(locale: string) {
     manualInput: "手动输入",
     cameraUnsupported: "当前浏览器不支持打开相机，请手动输入好友号。",
     cameraPermissionDenied: "相机权限被拒绝或不可用，请手动输入好友号。",
-    invalidQrCode: "这个二维码不是有效的 Next Fun 好友二维码。",
+    invalidQrCode: "这个二维码不是有效的 Friemi 好友二维码。",
     searchLabel: "好友号或昵称",
     searchPlaceholder: "例如：123456",
     searchHint: "好友号最准确。",

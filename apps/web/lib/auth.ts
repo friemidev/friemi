@@ -1,4 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { isAdminByFields, readRoleFromMetadata } from "./admin-access";
 import { getSignInHref } from "./auth-redirect";
@@ -240,6 +241,54 @@ export async function getOptionalCurrentUserProfile() {
   return upsertClerkUserProfile(user);
 }
 
+export async function getOptionalAuthenticatedProfileId() {
+  if (!hasClerkKeys()) {
+    const profile = await upsertLocalUserProfile("local-dev-user");
+
+    return profile.id;
+  }
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId: userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return profile?.id ?? null;
+}
+
+export async function getCurrentUserProfileForMutation(
+  locale = "zh-CN",
+  redirectPath?: string,
+) {
+  const clerkUserId = await requireUser(locale, redirectPath);
+
+  if (!hasClerkKeys()) {
+    return upsertLocalUserProfile(clerkUserId);
+  }
+
+  const existingProfile = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId,
+    },
+  });
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  return ensureCurrentUserProfileSnapshot(locale, redirectPath);
+}
+
 export async function ensureCurrentUserProfileSnapshot(
   locale = "zh-CN",
   redirectPath?: string,
@@ -329,7 +378,8 @@ function isAdminUser(user: ClerkCurrentUser) {
   });
 }
 
-export async function getOptionalLayoutViewerState(): Promise<LayoutViewerState> {
+export const getOptionalLayoutViewerState = cache(
+  async (): Promise<LayoutViewerState> => {
   if (!hasClerkKeys()) {
     const profile = await upsertLocalUserProfile("local-dev-user");
 
@@ -391,4 +441,5 @@ export async function getOptionalLayoutViewerState(): Promise<LayoutViewerState>
     profile: getLayoutViewerProfile(profile),
     showAdminNav: isAdminUser(user),
   };
-}
+  },
+);

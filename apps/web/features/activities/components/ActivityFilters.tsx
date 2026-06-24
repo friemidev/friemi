@@ -20,18 +20,17 @@ import {
   activityDateRangeOptions,
   activityFilterTypes,
   activityRelationFilters,
-  activityTimeStates,
   type ActivityDateRange,
   getActivityFilterHref,
   getDefaultActivitySort,
+  getDefaultActivityTimeStates,
   hasActiveActivityFilters,
+  hasPartialActivityTimeStatesFilter,
   normalizeActivityFilterFormData,
   normalizeActivityFilterValues,
   type ActivityFilters,
   type ActivityFilterType,
   type ActivityRelationFilter,
-  type ActivitySortOption,
-  type ActivityTimeState,
 } from "../utils/activityFilters";
 
 type ActivityFiltersProps = {
@@ -67,9 +66,7 @@ export function ActivityFilters({
     ? Array.from(new Set([selectedCity, ...cities]))
     : cities;
   const hasActiveFilters = hasActiveActivityFilters(filters);
-  const defaultSort = getDefaultActivitySort(filters);
-  const hasCustomFilterState =
-    hasActiveFilters || filters.sort !== defaultSort || filters.page > 1;
+  const hasCustomFilterState = hasActiveFilters || filters.page > 1;
   const resetHref =
     filters.viewMode === "card"
       ? activitiesHref
@@ -82,7 +79,7 @@ export function ActivityFilters({
           page: 1,
           relation: "ALL",
           sort: getDefaultActivitySort({}),
-          timeState: undefined,
+          timeStates: getDefaultActivityTimeStates(),
           type: undefined,
         });
 
@@ -158,26 +155,15 @@ export function ActivityFilters({
           },
         ]
       : []),
-    ...(filters.timeState
+    ...(hasPartialActivityTimeStatesFilter(filters.timeStates)
       ? [
           {
-            href: buildFilterHref({ timeState: undefined }),
-            label: t.activityLabels.timeStates[filters.timeState],
-          },
-        ]
-      : []),
-    ...(filters.sort !== defaultSort
-      ? [
-          {
-            href: buildFilterHref({ sort: undefined }),
-            label:
-              filters.sort === "latest"
-                ? t.activityFilters.sortLatest
-                : filters.sort === "recentlyAdded"
-                  ? t.activityFilters.sortRecentlyAdded
-                : filters.sort === "recommended"
-                  ? t.activityFilters.sortRecommended
-                  : t.activityFilters.sortSoonest,
+            href: buildFilterHref({
+              timeStates: getDefaultActivityTimeStates(),
+            }),
+            label: filters.timeStates
+              .map((timeState) => t.activityLabels.timeStates[timeState])
+              .join("、"),
           },
         ]
       : []),
@@ -195,7 +181,12 @@ export function ActivityFilters({
     router.push(
       getActivityFilterHref(
         activitiesHref,
-        normalizeActivityFilterFormData(formData),
+        normalizeActivityFilterValues({
+          ...normalizeActivityFilterFormData(formData),
+          sort: filters.sort,
+          timeStates: filters.timeStates,
+          view: filters.viewMode,
+        }),
       ),
     );
   }
@@ -256,8 +247,8 @@ export function ActivityFilters({
           className={cn(
             "grid grid-cols-2 gap-2.5 sm:gap-3",
             publicInfoOnly
-              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1fr)]"
-              : "sm:grid-cols-2 xl:grid-cols-6",
+              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)]"
+              : "sm:grid-cols-2 xl:grid-cols-4",
           )}
         >
           <label className={fieldLabelClassName}>
@@ -379,52 +370,6 @@ export function ActivityFilters({
               </label>
             </>
           ) : null}
-
-          <label className={fieldLabelClassName}>
-            {t.activityFilters.timeStateLabel}
-            <select
-              className={selectClassName}
-              defaultValue={filters.timeState ?? ""}
-              name="time"
-              onChange={(event) =>
-                applyFilterChange({
-                  timeState: event.target.value
-                    ? (event.target.value as ActivityTimeState)
-                    : undefined,
-                })
-              }
-            >
-              <option value="">{t.activityFilters.allTimeStates}</option>
-              {activityTimeStates.map((timeState) => (
-                <option key={timeState} value={timeState}>
-                  {t.activityLabels.timeStates[timeState]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className={fieldLabelClassName}>
-            {t.activityFilters.sortLabel}
-            <select
-              className={selectClassName}
-              defaultValue={filters.sort}
-              name="sort"
-              onChange={(event) =>
-                applyFilterChange({
-                  sort: event.target.value as ActivitySortOption,
-                })
-              }
-            >
-              <option value="recommended">
-                {t.activityFilters.sortRecommended}
-              </option>
-              <option value="soonest">{t.activityFilters.sortSoonest}</option>
-              <option value="latest">{t.activityFilters.sortLatest}</option>
-              <option value="recentlyAdded">
-                {t.activityFilters.sortRecentlyAdded}
-              </option>
-            </select>
-          </label>
         </div>
       </form>
     );

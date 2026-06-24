@@ -1,6 +1,6 @@
 # Playwright 网站测试使用教程
 
-本文说明如何在 Next Fun Club 项目里运行 Playwright 自动化网站测试与监管。
+本文说明如何在 Friemi 项目里运行 Playwright 自动化网站测试与监管。
 
 ## 1. 这套测试用来做什么
 

@@ -86,7 +86,7 @@ unset DIRECT_URL
 如果团队必须保存 Production 密钥，放在项目外的密码管理器或项目外目录，例如：
 
 ```text
-~/secrets/nextfunclub.production.env
+~/secrets/friemi.production.env
 ```
 
 不要提交任何真实 env 文件。
@@ -98,14 +98,14 @@ unset DIRECT_URL
 确认当前结构文件：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 npx prisma validate
 ```
 
 从当前 schema 生成初始 migration：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 mkdir -p prisma/migrations/20260601000000_init_current_schema
 
@@ -135,7 +135,7 @@ git commit -m "chore: baseline prisma migrations"
 先检查 schema 是否和当前 Prisma schema 一致：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 npx prisma migrate diff \
   --from-url "$DIRECT_URL" \
@@ -162,7 +162,7 @@ npx prisma generate
 如果 Production Supabase 是全新空库，可以直接应用 baseline：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 export DATABASE_URL="production-pooler-url"
 export DIRECT_URL="production-direct-url"
@@ -219,7 +219,7 @@ sed -n '1,260p' /tmp/production-drift.sql
 生成 migration：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 npx prisma migrate dev --name add_feature_name
 npx prisma generate
@@ -259,7 +259,7 @@ git pull origin dev
 临时设置 Production 数据库连接：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 export DATABASE_URL="production-pooler-url"
 export DIRECT_URL="production-direct-url"
@@ -293,7 +293,7 @@ unset DIRECT_URL
 然后重新部署 Production：
 
 ```bash
-cd ~/Bureau/nextfunclub
+cd ~/Bureau/friemi
 vercel --prod
 ```
 
@@ -342,7 +342,7 @@ apps/web/prisma/copy-public-content.ts
 先 dry-run：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 export CONTENT_SOURCE_DATABASE_URL="preview-direct-url"
 export CONTENT_TARGET_DATABASE_URL="production-direct-url"
@@ -356,7 +356,7 @@ unset CONTENT_TARGET_DATABASE_URL
 确认输出合理后正式写入：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 export CONTENT_SOURCE_DATABASE_URL="preview-direct-url"
 export CONTENT_TARGET_DATABASE_URL="production-direct-url"
@@ -385,14 +385,14 @@ unset CONTENT_TARGET_ORGANIZER_ID
 
 ```text
 clerkUserId: system_content_migration_next_fun_club
-nickname: Next Fun Club
+nickname: Friemi
 ```
 
 可自定义：
 
 ```bash
 export CONTENT_TARGET_ORGANIZER_CLERK_ID="system_content_next_fun_club"
-export CONTENT_TARGET_ORGANIZER_NICKNAME="Next Fun Club"
+export CONTENT_TARGET_ORGANIZER_NICKNAME="Friemi"
 ```
 
 如果确实要复制非公开活动，额外加：
@@ -425,7 +425,7 @@ apps/web/prisma/migrate-legacy-activity-info-to-public-events.ts
 Preview 先 dry-run：
 
 ```bash
-cd ~/Bureau/nextfunclub
+cd ~/Bureau/friemi
 
 npm run db:migrate-legacy-public-events
 ```
@@ -451,7 +451,7 @@ npm run db:migrate-legacy-public-events -- --write --include-source-url-only
 Production 执行前，必须临时切换到 Production 数据库连接：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 
 export DATABASE_URL="production-pooler-url"
 export DIRECT_URL="production-direct-url"
@@ -488,7 +488,7 @@ https://your-project.vercel.app
 如果有自定义域名，生产环境统一用：
 
 ```text
-https://nextfunclub.com
+https://friemi.com
 ```
 
 ### Vercel Environment Variables
@@ -565,14 +565,14 @@ npm install
 如果团队共享 Preview 数据库，并且 migration 已经由负责人执行过，同事只需要：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 npx prisma generate
 ```
 
 如果同事使用自己的 Preview 数据库，需要执行：
 
 ```bash
-cd ~/Bureau/nextfunclub/apps/web
+cd ~/Bureau/friemi/apps/web
 npx prisma migrate deploy
 npx prisma generate
 ```

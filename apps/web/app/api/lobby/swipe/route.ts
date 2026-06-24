@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
+    const viewerProfileId = await getOptionalAuthenticatedProfileId();
     const activities = await getLobbySwipePublicEventActivities(
-      viewerProfile?.id ?? null,
+      viewerProfileId,
     );
 
     return NextResponse.json({

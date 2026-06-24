@@ -44,7 +44,7 @@ const copy = {
       signIn: "登录",
     },
     accountMenu: {
-      fallbackName: "Next Fun 用户",
+      fallbackName: "Friemi 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
       friends: "好友",
@@ -74,7 +74,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "全站搜索",
-      title: "搜索 Next Fun",
+      title: "搜索 Friemi",
       description: "快速查找活动、组局或用户。",
       inputLabel: "搜索关键词",
       placeholder: "搜索活动、组局或用户",
@@ -155,7 +155,7 @@ const copy = {
     },
     home: {
       eyebrow: "公共活动 · 真实组局",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "下一场，Fun 开场",
       description:
         "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！",
@@ -233,6 +233,7 @@ const copy = {
       relationLabel: "关系",
       typeLabel: "活动形式",
       timeStateLabel: "活动进度",
+      timeStateMultiSelect: "多选",
       sortLabel: "排序方式",
       allCategories: "全部主题",
       allCities: "全部城市",
@@ -244,8 +245,10 @@ const copy = {
       allTypes: "全部形式",
       allTimeStates: "全部进度",
       sortRecommended: "近期优先",
-      sortSoonest: "最早开始",
-      sortLatest: "最晚开始",
+      sortSoonest: "从近到远",
+      sortLatest: "从远到近",
+      sortShortDuration: "短周期优先",
+      sortLongDuration: "长周期优先",
       sortRecentlyAdded: "最近添加",
       dateRangeOptions: {
         TODAY: "当天",
@@ -879,7 +882,7 @@ const copy = {
       signIn: "Sign in",
     },
     accountMenu: {
-      fallbackName: "Next Fun user",
+      fallbackName: "Friemi user",
       openMenu: "Open account menu",
       profile: "Profile",
       friends: "Friends",
@@ -909,7 +912,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Site search",
-      title: "Search Next Fun",
+      title: "Search Friemi",
       description: "Find activity info, crews, friends, and merchants quickly.",
       inputLabel: "Search keyword",
       placeholder: "Search activities, friend codes, nicknames, or merchants",
@@ -993,7 +996,7 @@ const copy = {
     },
     home: {
       eyebrow: "Real activities · real connections",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "What's next? Fun begins.",
       description:
         "Discover activities here, then head out with friends or new people who want to join.",
@@ -1089,6 +1092,7 @@ const copy = {
       relationLabel: "Relationship",
       typeLabel: "Format",
       timeStateLabel: "Timing",
+      timeStateMultiSelect: "Multi",
       sortLabel: "Sort by",
       allCategories: "All topics",
       allCities: "All cities",
@@ -1100,8 +1104,10 @@ const copy = {
       allTypes: "All formats",
       allTimeStates: "All timing",
       sortRecommended: "Coming up soon",
-      sortSoonest: "Earliest start",
-      sortLatest: "Latest start",
+      sortSoonest: "Soonest first",
+      sortLatest: "Latest first",
+      sortShortDuration: "Shorter duration first",
+      sortLongDuration: "Longer duration first",
       sortRecentlyAdded: "Recently added",
       dateRangeOptions: {
         TODAY: "Today",
@@ -1775,7 +1781,7 @@ const copy = {
       signIn: "Connexion",
     },
     accountMenu: {
-      fallbackName: "Utilisateur Next Fun",
+      fallbackName: "Utilisateur Friemi",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
       friends: "Amis",
@@ -1807,7 +1813,7 @@ const copy = {
     },
     globalSearch: {
       eyebrow: "Recherche globale",
-      title: "Rechercher dans Next Fun",
+      title: "Rechercher dans Friemi",
       description:
         "Trouvez vite une activité, un groupe, un ami ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
@@ -1896,7 +1902,7 @@ const copy = {
     },
     home: {
       eyebrow: "De vraies activites · de vraies connexions",
-      title: "Next Fun",
+      title: "Friemi",
       tagline: "La prochaine sortie commence ici.",
       description:
         "Découvrez des activités ici, puis partez avec vos amis ou de nouvelles personnes motivées.",
@@ -1992,6 +1998,7 @@ const copy = {
       relationLabel: "Relation",
       typeLabel: "Format",
       timeStateLabel: "Avancement",
+      timeStateMultiSelect: "Multi",
       sortLabel: "Trier par",
       allCategories: "Tous les thèmes",
       allCities: "Toutes les villes",
@@ -2003,8 +2010,10 @@ const copy = {
       allTypes: "Tous les formats",
       allTimeStates: "Tous les états",
       sortRecommended: "Bientôt",
-      sortSoonest: "Début le plus tôt",
-      sortLatest: "Début le plus tard",
+      sortSoonest: "Du plus proche au plus lointain",
+      sortLatest: "Du plus lointain au plus proche",
+      sortShortDuration: "Durée courte d'abord",
+      sortLongDuration: "Durée longue d'abord",
       sortRecentlyAdded: "Ajout récent",
       dateRangeOptions: {
         TODAY: "Aujourd'hui",

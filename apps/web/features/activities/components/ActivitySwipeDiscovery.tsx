@@ -112,7 +112,7 @@ function getSwipeStorageKey({
   sourceSurface: AnalyticsSourceSurface;
   variant: NonNullable<ActivitySwipeDiscoveryProps["variant"]>;
 }) {
-  return `nextfun:activity-swipe:${locale}:${sourceSurface}:${variant}`;
+  return `friemi:activity-swipe:${locale}:${sourceSurface}:${variant}`;
 }
 
 function clampStoredIndex(value: unknown, deckLength: number) {
@@ -657,7 +657,7 @@ export function ActivitySwipeDiscovery({
                         {copy.detail}
                       </Link>
                       <PublicEventFavoriteButton
-                        className="h-10 w-10 bg-white text-coral ring-[#dfceb0] hover:bg-[#fffaf4]"
+                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#dfceb0] hover:bg-[#fffaf4]"
                         favoriteCount={activity.favoriteCount}
                         isAuthenticated={isAuthenticated}
                         isFavorited={Boolean(activity.isFavorited)}

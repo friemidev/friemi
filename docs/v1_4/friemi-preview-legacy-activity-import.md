@@ -1,4 +1,60 @@
--- Next Fun legacy real group import for PREVIEW database
+# Friemi Preview 历史真实组局导入 SQL
+
+> 本文档包含参与人微信号，只用于本机 SQL Editor 操作，不要提交到 Git。
+
+## 数据来源
+
+- 主表：`/home/ubuntu23/Téléchargements/NEXT FUN ☕ 快乐制造局 项目管理 (3).xlsx`
+- 微信映射：`/home/ubuntu23/Téléchargements/昵称和微信号的对照关系.xlsx`
+- 导入批次：`paris-juin-2026`
+
+## 导入策略
+
+- 真实组局写入 `Activity`，不写 `PublicEvent`。
+- 参与人写入 `GuestActivityParticipant`，后续用户填写相同微信号后可自动关联正式账号。
+- 发起人必须对应 `UserProfile`；SQL 会优先匹配同昵称 active profile，没有则创建 preview 专用 organizer profile。
+- `Past` 导入为 `ENDED`，`Going` 导入为 `CONFIRMED`。
+- 日期按巴黎时间解释后转为 UTC timestamp 写入数据库。
+- 缺失集合时间的记录暂按巴黎时间 19:00 导入，并在活动描述中标记导入复核。
+- `Hoting` / `hoting` 合并为同一发起人。
+- `咔哒` / `咔嗒` 合并为同一参与人。
+- SQL 使用 deterministic id，可重复执行，不会重复创建同一批组局。
+
+## 本次统计
+
+- Activity：19 条
+- GuestActivityParticipant：83 条
+- Organizer profile：5 个候选
+- 没有微信映射的参与昵称：2 个
+- 需要复核的活动：5 条
+
+## 需要人工复核的活动
+
+- `4` 博物馆之夜：原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。；原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。
+- `11` 2026白夜艺术节：巴赫的回响：原表缺少活动地点，SQL 使用集合地点兜底。
+- `12` 户外音乐节：原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。
+- `17` 唱 跳 RAP 干饭：原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。
+- `19` 夜间城市徒步：戴高乐主题：原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。
+
+## 没有微信映射的参与昵称
+
+这些参与人仍会导入为游客参与人，但 `normalizedWechatId` 为空，后续无法靠微信号自动绑定，除非补充映射后重新生成 SQL。
+
+NickJY, 咔嗒
+
+## 执行步骤
+
+1. 确认 Preview 数据库已经执行 v1.4 guest signup migration，存在 `GuestActivityParticipant` 表。
+2. 打开 Preview 数据库 SQL Editor。
+3. 复制下方完整 SQL 并执行。
+4. 如果之前执行过旧版脚本，可以直接重新执行新版脚本；新版会先删除本批 `legacy-nextfun-xlsx` 旧导入，再把它们作为真实 `Activity` 组局重新写入。
+5. 查看末尾 summary 结果，确认数量符合预期。
+6. 如果要撤销，手动执行文末注释里的 rollback SQL。
+
+## SQL Editor 可运行代码
+
+```sql
+-- Friemi legacy real group import for PREVIEW database
 -- Source workbook: NEXT FUN ☕ 快乐制造局 项目管理 (3).xlsx
 -- Generated locally. Contains participant WeChat IDs; do not commit this file.
 
@@ -75,7 +131,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 活动地点：LA MADRAGUE
 
 原始链接：https://shotgun.live/fr/venues/rivers-king', 'LOCAL', 'EXHIBITION', 'Paris', '4 Quai Saint-Bernard, 75005 Paris, France', '2026-05-15 18:00:00', NULL, 5, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', 'https://shotgun.live/fr/venues/rivers-king', '{"importBatch":"paris-juin-2026","legacyId":1,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"LA MADRAGUE","originalMeetingAddress":"4 Quai Saint-Bernard, 75005 Paris, France","originalLinkPresent":true,"declaredParticipantCount":5,"importedParticipantCount":5,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_002', '2', 'paris-juin-2026-002', '桌游', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_002', '2', 'paris-juin-2026-002', '桌游', '历史真实组局，来自 Friemi 内部管理表。
 
 活动地点：Au Bonheur des Jeux', 'LOCAL', 'BOARD_GAME', 'Paris', '21 Boulevard de Charonne, 75011 Paris', '2026-05-16 13:00:00', NULL, 6, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'james', 'legacy_org_james', 'James', NULL, '{"importBatch":"paris-juin-2026","legacyId":2,"originalStatus":"Past","originalType":"🎲 桌游","originalVenue":"Au Bonheur des Jeux","originalMeetingAddress":"21 Boulevard de Charonne, 75011 Paris","originalLinkPresent":false,"declaredParticipantCount":6,"importedParticipantCount":6,"needsReview":false,"reviewNotes":[]}'::jsonb),
   ('legacy_activity_003', '3', 'paris-juin-2026-003', 'Apéro Picnic on the Seine+Supersonic', '活动是由 Franco-Americans in Paris（在巴黎的法美社群） 组织的一场塞纳河畔野餐聚会（Apéro Picnic）。
@@ -105,7 +161,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 这对于想在巴黎结识国际朋友、特别是对美法文化感兴趣的人来说，是一个非常浪漫且随性的聚会机会。
 
 原始链接：https://www.meetup.com/franco-american-meetup-in-paris/events/314381484/?_xtd=gqFyqTQ3NjY1NTg0NaFwo2FwaQ%253D%253D&from=ref', 'LOCAL', 'FOOD', 'Paris', '2, Quai de la Tournelle · Paris', '2026-05-21 17:30:00', NULL, 4, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', 'https://www.meetup.com/franco-american-meetup-in-paris/events/314381484/?_xtd=gqFyqTQ3NjY1NTg0NaFwo2FwaQ%253D%253D&from=ref', '{"importBatch":"paris-juin-2026","legacyId":3,"originalStatus":"Past","originalType":"🍷 聚餐","originalVenue":"2, Quai de la Tournelle · Paris","originalMeetingAddress":"2, Quai de la Tournelle · Paris","originalLinkPresent":true,"declaredParticipantCount":4,"importedParticipantCount":4,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_004', '4', 'paris-juin-2026-004', '博物馆之夜', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_004', '4', 'paris-juin-2026-004', '博物馆之夜', '历史真实组局，来自 Friemi 内部管理表。
 
 导入复核：原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。；原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。', 'LOCAL', 'EXHIBITION', 'Paris', '根据附表结果决定', '2026-05-23 17:00:00', NULL, 5, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', NULL, '{"importBatch":"paris-juin-2026","legacyId":4,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"根据附表结果决定","originalMeetingAddress":null,"originalLinkPresent":false,"declaredParticipantCount":5,"importedParticipantCount":5,"needsReview":true,"reviewNotes":["原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。","原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。"]}'::jsonb),
   ('legacy_activity_005', '5', 'paris-juin-2026-005', '密室逃脱 Rashomon Escape 的经典主题——《大劫案》（Le Braquage / The Heist）', '🕵️‍♂️ 剧情背景
@@ -162,7 +218,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 活动地点：海军府舞会
 
 原始链接：https://www.hotel-de-la-marine.paris/', 'LOCAL', 'EXHIBITION', 'Paris', 'Hôtel de la Marine', '2026-05-29 17:00:00', NULL, 6, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'james', 'legacy_org_james', 'James', 'https://www.hotel-de-la-marine.paris/', '{"importBatch":"paris-juin-2026","legacyId":6,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"海军府舞会","originalMeetingAddress":"Hôtel de la Marine","originalLinkPresent":true,"declaredParticipantCount":5,"importedParticipantCount":6,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_007', '7', 'paris-juin-2026-007', '大哥私房菜', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_007', '7', 'paris-juin-2026-007', '大哥私房菜', '历史真实组局，来自 Friemi 内部管理表。
 
 活动地点：大哥私房菜
 
@@ -605,3 +661,4 @@ COMMIT;
 -- DELETE FROM "Activity" WHERE "source" = 'legacy-nextfun-xlsx';
 -- DELETE FROM "UserProfile" u WHERE u."clerkUserId" LIKE 'legacy-preview-organizer:%' AND NOT EXISTS (SELECT 1 FROM "Activity" a WHERE a."organizerId" = u."id");
 -- COMMIT;
+```

@@ -54,15 +54,15 @@ export function ProfileWechatBindingDialog({
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 py-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur-sm sm:items-center sm:p-8"
       role="dialog"
     >
       <form
         action={formAction}
-        className="w-full max-w-md overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
+        className="flex max-h-[calc(100svh-env(safe-area-inset-bottom)-3rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
         noValidate
       >
-        <div className="flex items-start justify-between gap-4 border-b border-sand bg-[#fffaf1] px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#fffaf1] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <WechatMark active={isBound} />
@@ -84,14 +84,13 @@ export function ProfileWechatBindingDialog({
           </button>
         </div>
 
-        <div className="grid gap-4 px-5 py-5">
+        <div className="grid gap-4 overflow-y-auto px-5 py-5">
           <input name="locale" type="hidden" value={locale} />
           <label className="grid gap-2">
             <span className="text-sm font-medium text-ink">
               {t.wechatLabel}
             </span>
             <Input
-              autoFocus
               className="h-11 bg-white"
               maxLength={80}
               name="wechatId"
@@ -118,7 +117,7 @@ export function ProfileWechatBindingDialog({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-sand bg-[#fffaf1] px-5 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-sand bg-[#fffaf1] px-5 py-4">
           <Button
             className="h-10 rounded-full bg-white"
             onClick={onClose}

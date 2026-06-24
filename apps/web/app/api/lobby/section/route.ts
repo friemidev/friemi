@@ -3,7 +3,7 @@ import {
   getActivityLobbySection,
   type ActivityLobbySectionId,
 } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +39,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
+    const viewerProfileId = await getOptionalAuthenticatedProfileId();
 
-    if (!viewerProfile) {
+    if (!viewerProfileId) {
       return NextResponse.json(
         {
           ok: false,
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const activities = await getActivityLobbySection(viewerProfile.id, section);
+    const activities = await getActivityLobbySection(viewerProfileId, section);
 
     return NextResponse.json({
       ok: true,

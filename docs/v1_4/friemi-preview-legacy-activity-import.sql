@@ -1,12 +1,6 @@
--- Next Fun legacy real group import for PRODUCTION database
+-- Friemi legacy real group import for PREVIEW database
 -- Source workbook: NEXT FUN ☕ 快乐制造局 项目管理 (3).xlsx
 -- Generated locally. Contains participant WeChat IDs; do not commit this file.
--- Production checklist before running:
--- 1. Confirm the SQL Editor is connected to the production Supabase project.
--- 2. Create a production database backup/snapshot first.
--- 3. Confirm v1.4 migrations have been applied, especially GuestActivityParticipant.
--- 4. Run the full file at once. If Supabase warns about staging tables/RLS, choose "Run without RLS".
--- 5. This script is idempotent for the legacy batch: it deletes and recreates rows with the same legacy source markers.
 
 BEGIN;
 
@@ -34,7 +28,7 @@ DELETE FROM "Activity"
 WHERE "source" = 'legacy-nextfun-xlsx';
 
 DELETE FROM "UserProfile" u
-WHERE u."clerkUserId" LIKE 'legacy-production-organizer:%'
+WHERE u."clerkUserId" LIKE 'legacy-preview-organizer:%'
   AND NOT EXISTS (SELECT 1 FROM "Activity" a WHERE a."organizerId" = u."id");
 
 CREATE TABLE legacy_import_organizers (
@@ -45,11 +39,11 @@ CREATE TABLE legacy_import_organizers (
 );
 
 INSERT INTO legacy_import_organizers (organizer_key, profile_id, nickname, clerk_user_id) VALUES
-  ('louise', 'legacy_org_louise', 'Louise', 'legacy-production-organizer:louise'),
-  ('james', 'legacy_org_james', 'James', 'legacy-production-organizer:james'),
-  ('张杠杠', 'legacy_org_zhangganggang', '张杠杠', 'legacy-production-organizer:张杠杠'),
-  ('hoting', 'legacy_org_hoting', 'Hoting', 'legacy-production-organizer:hoting'),
-  ('👀', 'legacy_org_eyes', '👀', 'legacy-production-organizer:👀');
+  ('louise', 'legacy_org_louise', 'Louise', 'legacy-preview-organizer:louise'),
+  ('james', 'legacy_org_james', 'James', 'legacy-preview-organizer:james'),
+  ('张杠杠', 'legacy_org_zhangganggang', '张杠杠', 'legacy-preview-organizer:张杠杠'),
+  ('hoting', 'legacy_org_hoting', 'Hoting', 'legacy-preview-organizer:hoting'),
+  ('👀', 'legacy_org_eyes', '👀', 'legacy-preview-organizer:👀');
 
 CREATE TABLE legacy_import_activities (
   activity_id text PRIMARY KEY,
@@ -81,7 +75,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 活动地点：LA MADRAGUE
 
 原始链接：https://shotgun.live/fr/venues/rivers-king', 'LOCAL', 'EXHIBITION', 'Paris', '4 Quai Saint-Bernard, 75005 Paris, France', '2026-05-15 18:00:00', NULL, 5, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', 'https://shotgun.live/fr/venues/rivers-king', '{"importBatch":"paris-juin-2026","legacyId":1,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"LA MADRAGUE","originalMeetingAddress":"4 Quai Saint-Bernard, 75005 Paris, France","originalLinkPresent":true,"declaredParticipantCount":5,"importedParticipantCount":5,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_002', '2', 'paris-juin-2026-002', '桌游', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_002', '2', 'paris-juin-2026-002', '桌游', '历史真实组局，来自 Friemi 内部管理表。
 
 活动地点：Au Bonheur des Jeux', 'LOCAL', 'BOARD_GAME', 'Paris', '21 Boulevard de Charonne, 75011 Paris', '2026-05-16 13:00:00', NULL, 6, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'james', 'legacy_org_james', 'James', NULL, '{"importBatch":"paris-juin-2026","legacyId":2,"originalStatus":"Past","originalType":"🎲 桌游","originalVenue":"Au Bonheur des Jeux","originalMeetingAddress":"21 Boulevard de Charonne, 75011 Paris","originalLinkPresent":false,"declaredParticipantCount":6,"importedParticipantCount":6,"needsReview":false,"reviewNotes":[]}'::jsonb),
   ('legacy_activity_003', '3', 'paris-juin-2026-003', 'Apéro Picnic on the Seine+Supersonic', '活动是由 Franco-Americans in Paris（在巴黎的法美社群） 组织的一场塞纳河畔野餐聚会（Apéro Picnic）。
@@ -111,7 +105,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 这对于想在巴黎结识国际朋友、特别是对美法文化感兴趣的人来说，是一个非常浪漫且随性的聚会机会。
 
 原始链接：https://www.meetup.com/franco-american-meetup-in-paris/events/314381484/?_xtd=gqFyqTQ3NjY1NTg0NaFwo2FwaQ%253D%253D&from=ref', 'LOCAL', 'FOOD', 'Paris', '2, Quai de la Tournelle · Paris', '2026-05-21 17:30:00', NULL, 4, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', 'https://www.meetup.com/franco-american-meetup-in-paris/events/314381484/?_xtd=gqFyqTQ3NjY1NTg0NaFwo2FwaQ%253D%253D&from=ref', '{"importBatch":"paris-juin-2026","legacyId":3,"originalStatus":"Past","originalType":"🍷 聚餐","originalVenue":"2, Quai de la Tournelle · Paris","originalMeetingAddress":"2, Quai de la Tournelle · Paris","originalLinkPresent":true,"declaredParticipantCount":4,"importedParticipantCount":4,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_004', '4', 'paris-juin-2026-004', '博物馆之夜', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_004', '4', 'paris-juin-2026-004', '博物馆之夜', '历史真实组局，来自 Friemi 内部管理表。
 
 导入复核：原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。；原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。', 'LOCAL', 'EXHIBITION', 'Paris', '根据附表结果决定', '2026-05-23 17:00:00', NULL, 5, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'louise', 'legacy_org_louise', 'Louise', NULL, '{"importBatch":"paris-juin-2026","legacyId":4,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"根据附表结果决定","originalMeetingAddress":null,"originalLinkPresent":false,"declaredParticipantCount":5,"importedParticipantCount":5,"needsReview":true,"reviewNotes":["原表缺少集合时间，SQL 暂按巴黎时间 19:00 导入。","原表缺少集合地点，SQL 使用活动地点或 Paris 兜底。"]}'::jsonb),
   ('legacy_activity_005', '5', 'paris-juin-2026-005', '密室逃脱 Rashomon Escape 的经典主题——《大劫案》（Le Braquage / The Heist）', '🕵️‍♂️ 剧情背景
@@ -168,7 +162,7 @@ INSERT INTO legacy_import_activities (activity_id, legacy_id, external_id, title
 活动地点：海军府舞会
 
 原始链接：https://www.hotel-de-la-marine.paris/', 'LOCAL', 'EXHIBITION', 'Paris', 'Hôtel de la Marine', '2026-05-29 17:00:00', NULL, 6, 'AA', '以原组局说明为准', 'ENDED', 'PUBLIC', 'james', 'legacy_org_james', 'James', 'https://www.hotel-de-la-marine.paris/', '{"importBatch":"paris-juin-2026","legacyId":6,"originalStatus":"Past","originalType":"🎨 文化","originalVenue":"海军府舞会","originalMeetingAddress":"Hôtel de la Marine","originalLinkPresent":true,"declaredParticipantCount":5,"importedParticipantCount":6,"needsReview":false,"reviewNotes":[]}'::jsonb),
-  ('legacy_activity_007', '7', 'paris-juin-2026-007', '大哥私房菜', '历史真实组局，来自 Next Fun 内部管理表。
+  ('legacy_activity_007', '7', 'paris-juin-2026-007', '大哥私房菜', '历史真实组局，来自 Friemi 内部管理表。
 
 活动地点：大哥私房菜
 
@@ -374,7 +368,7 @@ INSERT INTO legacy_import_guest_participants (guest_id, activity_id, display_nam
   ('legacy_guest_019_004', 'legacy_activity_019', 'James', 'univasity', 'univasity', '历史真实组局导入', 'APPROVED', '2026-06-18 17:00:00'),
   ('legacy_guest_019_005', 'legacy_activity_019', '荼蘼', 'uneshrish', 'uneshrish', '历史真实组局导入', 'APPROVED', '2026-06-18 17:00:00');
 
--- 1) Create production organizer placeholder profiles only when no active profile with the same nickname exists.
+-- 1) Create preview organizer profiles only when no active profile with the same nickname exists.
 INSERT INTO "UserProfile" (
   "id", "clerkUserId", "nickname", "status", "role", "syncedAt", "createdAt", "updatedAt"
 )
@@ -443,7 +437,7 @@ SELECT
      FROM "UserProfile" u
      WHERE u."status" = 'ACTIVE'::"UserProfileStatus"
        AND LOWER(TRIM(u."nickname")) = LOWER(TRIM(a.organizer_nickname))
-     ORDER BY CASE WHEN u."clerkUserId" LIKE 'legacy-production-organizer:%' THEN 1 ELSE 0 END, u."createdAt" ASC
+     ORDER BY CASE WHEN u."clerkUserId" LIKE 'legacy-preview-organizer:%' THEN 1 ELSE 0 END, u."createdAt" ASC
      LIMIT 1),
     a.organizer_profile_id
   ),
@@ -609,5 +603,5 @@ COMMIT;
 -- BEGIN;
 -- DELETE FROM "GuestActivityParticipant" WHERE "sourceUserAgent" = 'legacy-xlsx-import:paris-juin-2026';
 -- DELETE FROM "Activity" WHERE "source" = 'legacy-nextfun-xlsx';
--- DELETE FROM "UserProfile" u WHERE u."clerkUserId" LIKE 'legacy-production-organizer:%' AND NOT EXISTS (SELECT 1 FROM "Activity" a WHERE a."organizerId" = u."id");
+-- DELETE FROM "UserProfile" u WHERE u."clerkUserId" LIKE 'legacy-preview-organizer:%' AND NOT EXISTS (SELECT 1 FROM "Activity" a WHERE a."organizerId" = u."id");
 -- COMMIT;

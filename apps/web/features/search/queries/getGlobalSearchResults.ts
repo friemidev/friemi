@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { brand } from "@/lib/brand";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { attachActivityFavoriteStates, attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import {
@@ -704,7 +705,7 @@ function getSearchUserDisplayName(user: {
     return nickname;
   }
 
-  return user.friendCode ? `NF ${user.friendCode}` : "Next Fun";
+  return user.friendCode ? `NF ${user.friendCode}` : brand.name;
 }
 
 async function getSearchActivityResults(

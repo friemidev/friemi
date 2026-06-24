@@ -9,7 +9,7 @@ import {
 test("normalizes guest contact identities for matching", () => {
   assert.equal(normalizeGuestEmail(" USER@Example.COM "), "user@example.com");
   assert.equal(normalizeGuestPhone(" +33 6 12 34 56 78 "), "+33612345678");
-  assert.equal(normalizeGuestWechatId("  Next Fun  "), "nextfun");
+  assert.equal(normalizeGuestWechatId("  Friemi  "), "friemi");
 });
 
 test("rejects weak guest contact identities", () => {

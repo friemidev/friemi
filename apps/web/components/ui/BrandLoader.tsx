@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { brand } from "@/lib/brand";
 
 const loadingLabels = {
   "zh-CN": "加载中",
@@ -14,9 +15,9 @@ type BrandLoaderProps = {
 };
 
 const loaderSizes = {
-  sm: "nextfun-brand-loader--sm",
-  md: "nextfun-brand-loader--md",
-  lg: "nextfun-brand-loader--lg",
+  sm: "friemi-brand-loader--sm",
+  md: "friemi-brand-loader--md",
+  lg: "friemi-brand-loader--lg",
 };
 
 export function BrandLoader({
@@ -38,21 +39,21 @@ export function BrandLoader({
       aria-label={screenReaderLabel}
     >
       <span
-        className={cn("nextfun-brand-loader", loaderSizes[size])}
+        className={cn("friemi-brand-loader", loaderSizes[size])}
         aria-hidden="true"
       >
-        <picture className="nextfun-brand-loader__media">
+        <picture className="friemi-brand-loader__media">
           <source
-            srcSet="/logo.png"
+            srcSet={brand.logoIconPath}
             media="(prefers-reduced-motion: reduce)"
           />
-          <img src="/nextfun_loading.gif" alt="" />
+          <img src={brand.loadingImagePath} alt="" />
         </picture>
       </span>
       {showLabel ? (
         <span className="inline-flex items-baseline text-base font-semibold text-ink">
           <span>{label}</span>
-          <span className="nextfun-loading-dots" aria-hidden="true">
+          <span className="friemi-loading-dots" aria-hidden="true">
             <span>.</span>
             <span>.</span>
             <span>.</span>

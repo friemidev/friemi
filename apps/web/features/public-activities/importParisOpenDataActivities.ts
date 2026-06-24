@@ -670,7 +670,7 @@ async function fetchParisOpenDataEvents(window: ImportTimeWindow) {
     response = await fetch(buildParisOpenDataUrl(window), {
       headers: {
         Accept: "application/json",
-        "User-Agent": "NextFunClub/1.0 public-activity-import",
+        "User-Agent": "Friemi/1.0 public-activity-import",
       },
       cache: "no-store",
       signal,

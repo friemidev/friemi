@@ -3,7 +3,7 @@ import {
   getActivityLobbyFeedPage,
   type ActivityLobbyFeedStatus,
 } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +38,9 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const status = parseLobbyFeedStatus(url.searchParams.get("status")) ?? "all";
     const page = parseLobbyFeedPage(url.searchParams.get("page"));
-    const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
+    const viewerProfileId = await getOptionalAuthenticatedProfileId();
 
-    if (!viewerProfile) {
+    if (!viewerProfileId) {
       return NextResponse.json(
         {
           ok: false,
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const feed = await getActivityLobbyFeedPage(viewerProfile.id, {
+    const feed = await getActivityLobbyFeedPage(viewerProfileId, {
       page,
       status,
     });

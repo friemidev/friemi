@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getCurrentUserProfileForMutation } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
@@ -12,6 +13,8 @@ import { normalizeGuestWechatId } from "@/features/guest-participants/utils/cont
 
 export type UpdateProfileIdentityState = {
   formError?: string;
+  nickname?: string;
+  success?: boolean;
 };
 
 export type UpdateProfileWechatState = {
@@ -22,6 +25,7 @@ export type UpdateProfileWechatState = {
 };
 
 const updateProfileIdentitySchema = z.object({
+  afterSave: z.enum(["refresh", "redirect"]).default("redirect"),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
   returnTo: z.string().optional(),
@@ -38,6 +42,11 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function revalidateNicknamePaths(locale: string) {
+  revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/"), "layout");
+}
+
 export async function updateProfileIdentityAction(
   _previousState: UpdateProfileIdentityState,
   formData: FormData,
@@ -45,6 +54,7 @@ export async function updateProfileIdentityAction(
   const fallbackLocale = getString(formData, "locale") || "zh-CN";
   const t = getCopy(fallbackLocale).profile;
   const result = updateProfileIdentitySchema.safeParse({
+    afterSave: getString(formData, "afterSave") || "redirect",
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
     returnTo: getString(formData, "returnTo"),
@@ -56,23 +66,44 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { locale, nickname, returnTo } = result.data;
-  const profile = await ensureCurrentUserProfile(locale, returnTo ?? "/profile");
+  const { afterSave, locale, nickname, returnTo } = result.data;
+  const perf = createActionPerformanceTracker({
+    action: "updateProfileIdentity",
+  });
+  const redirectPath = returnTo ?? "/profile";
+  const profile = await perf.measure("viewer.profile", () =>
+    getCurrentUserProfileForMutation(locale, redirectPath),
+  );
 
-  await prisma.userProfile.update({
-    where: {
-      id: profile.id,
-    },
-    data: {
+  await perf.measure("profile.update", () =>
+    prisma.userProfile.update({
+      where: {
+        id: profile.id,
+      },
+      data: {
+        nickname,
+      },
+    }),
+  );
+
+  if (afterSave === "refresh") {
+    perf.finish({
+      afterSave,
+    });
+
+    return {
       nickname,
-    },
+      success: true,
+    };
+  }
+
+  await perf.measure("revalidate", async () => {
+    revalidateNicknamePaths(locale);
   });
 
-  revalidatePath(withLocale(locale, "/profile"));
-  revalidatePath(withLocale(locale, "/friends"));
-  revalidatePath(withLocale(locale, "/messages"));
-  revalidatePath(withLocale(locale, "/activities"));
-  revalidatePath(withLocale(locale, "/"), "layout");
+  perf.finish({
+    afterSave,
+  });
 
   const safeReturnTo =
     returnTo?.startsWith(`/${locale}`) && !returnTo.startsWith(`//`)
@@ -100,7 +131,7 @@ export async function updateProfileWechatAction(
   }
 
   const { locale, wechatId } = result.data;
-  const profile = await ensureCurrentUserProfile(locale, "/profile");
+  const profile = await getCurrentUserProfileForMutation(locale, "/profile");
   const trimmedWechatId = wechatId?.trim() || null;
   const normalizedWechatId = normalizeGuestWechatId(trimmedWechatId);
 
@@ -128,11 +159,7 @@ export async function updateProfileWechatAction(
     return { linked: 0 };
   });
 
-  revalidatePath(withLocale(locale, "/profile"));
-  revalidatePath(withLocale(locale, "/friends"));
-  revalidatePath(withLocale(locale, "/messages"));
-  revalidatePath(withLocale(locale, "/activities"));
-  revalidatePath(withLocale(locale, "/"), "layout");
+  revalidateNicknamePaths(locale);
 
   return {
     linkedCount: linkResult.linked,

@@ -11,7 +11,8 @@ import {
   getActivityLobbyPreview,
   getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
-import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getOptionalLayoutViewerState } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -41,7 +42,7 @@ export async function generateMetadata({
     baseUrl,
     description: generalPageShareDescription,
     path: withLocale(locale, "/lobby"),
-    title: `${t.activityLobby.title} · Next Fun`,
+    title: `${t.activityLobby.title} · ${brand.name}`,
   });
 }
 
@@ -53,9 +54,10 @@ export default async function ActivityLobbyPage({
     locale,
     route: "/lobby",
   });
-  const profile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfileSnapshot(),
+  const viewerState = await perf.measure("viewer.profile", () =>
+    getOptionalLayoutViewerState(),
   );
+  const profile = viewerState.profile;
 
   if (!profile) {
     const [previewActivities, swipeActivities] = await perf.measure(

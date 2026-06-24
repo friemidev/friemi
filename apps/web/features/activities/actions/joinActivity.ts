@@ -18,8 +18,13 @@ import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import {
+  normalizeGuestEmail,
+  normalizeGuestWechatId,
+} from "@/features/guest-participants/utils/contactIdentity";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
+const existingGuestStatuses: ParticipantStatus[] = ["JOINED", "APPROVED", "PENDING"];
 const existingParticipantStatuses: ParticipantStatus[] = [
   "JOINED",
   "APPROVED",
@@ -368,6 +373,44 @@ export async function joinActivityAction(
           existingParticipantStatuses.includes(existingParticipation.status)
         ) {
           return getJoinFailure("你已经报名过这个活动。", "already_joined");
+        }
+
+        const profileNormalizedWechatId = normalizeGuestWechatId(profile.normalizedWechatId);
+        const profileNormalizedEmail = normalizeGuestEmail(
+          profile.emailVerifiedAt ? profile.email : null,
+        );
+        const guestDuplicateConditions: Prisma.GuestActivityParticipantWhereInput[] =
+          [];
+
+        if (profileNormalizedWechatId) {
+          guestDuplicateConditions.push({
+            normalizedWechatId: profileNormalizedWechatId,
+          });
+        }
+
+        if (profileNormalizedEmail) {
+          guestDuplicateConditions.push({
+            normalizedEmail: profileNormalizedEmail,
+          });
+        }
+
+        if (guestDuplicateConditions.length > 0) {
+          const existingGuestRecord = await tx.guestActivityParticipant.findFirst({
+            where: {
+              activityId: activity.id,
+              linkedParticipantId: null,
+              status: { in: existingGuestStatuses },
+              OR: guestDuplicateConditions,
+            },
+            select: { id: true },
+          });
+
+          if (existingGuestRecord) {
+            return getJoinFailure(
+              "你已以游客身份报名过，请在个人页面绑定邮箱或微信号来关联记录。",
+              "already_joined",
+            );
+          }
         }
 
         if (

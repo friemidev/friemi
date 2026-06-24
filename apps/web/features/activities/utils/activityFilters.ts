@@ -1,10 +1,16 @@
 import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 
 export const activityFilterTypes = ["LOCAL", "TRIP"] as const;
-export const activitySortOptions = [
-  "recommended",
+export const activityCardSortOptions = [
   "soonest",
   "latest",
+  "shortDuration",
+  "longDuration",
+] as const;
+
+export const activitySortOptions = [
+  ...activityCardSortOptions,
+  "recommended",
   "recentlyAdded",
 ] as const;
 export const activityDateRangeOptions = [
@@ -26,9 +32,15 @@ export const activityRelationFilters = [
 export const activityListViewModes = ["card", "date"] as const;
 
 export type ActivityFilterType = (typeof activityFilterTypes)[number];
+export type ActivityCardSortOption = (typeof activityCardSortOptions)[number];
 export type ActivitySortOption = (typeof activitySortOptions)[number];
 export type ActivityDateRange = (typeof activityDateRangeOptions)[number];
 export type ActivityTimeState = (typeof activityTimeStates)[number];
+export const activityTimeStateDisplayOrder: ActivityTimeState[] = [
+  "UPCOMING",
+  "ONGOING",
+  "ENDED",
+];
 export type ActivityRelationFilter =
   (typeof activityRelationFilters)[number];
 export type ActivityListViewMode = (typeof activityListViewModes)[number];
@@ -40,8 +52,8 @@ export type ActivityFilters = {
   keyword?: string;
   page: number;
   relation: ActivityRelationFilter;
-  sort: ActivitySortOption;
-  timeState?: ActivityTimeState;
+  sort: ActivityCardSortOption;
+  timeStates: ActivityTimeState[];
   type?: ActivityFilterType;
   viewMode: ActivityListViewMode;
 };
@@ -72,7 +84,7 @@ type ActivityFilterRawValues = {
   page?: unknown;
   relation?: unknown;
   sort?: unknown;
-  timeState?: unknown;
+  timeStates?: unknown;
   type?: unknown;
   view?: unknown;
   viewMode?: unknown;
@@ -164,23 +176,123 @@ function normalizePageParam(value: string | undefined) {
   return Math.min(page, 100);
 }
 
+export function getDefaultActivityTimeStates(): ActivityTimeState[] {
+  return [...activityTimeStateDisplayOrder];
+}
+
+export function areAllActivityTimeStatesSelected(
+  timeStates: ActivityTimeState[],
+) {
+  return activityTimeStateDisplayOrder.every((timeState) =>
+    timeStates.includes(timeState),
+  );
+}
+
+export function hasPartialActivityTimeStatesFilter(
+  timeStates: ActivityTimeState[],
+) {
+  return (
+    timeStates.length > 0 && !areAllActivityTimeStatesSelected(timeStates)
+  );
+}
+
+export function isEndedOnlyActivityTimeStatesFilter(
+  timeStates: ActivityTimeState[],
+) {
+  return timeStates.length === 1 && timeStates[0] === "ENDED";
+}
+
+export function formatActivityTimeStatesQueryValue(
+  timeStates: ActivityTimeState[],
+) {
+  return hasPartialActivityTimeStatesFilter(timeStates)
+    ? timeStates.join(",")
+    : undefined;
+}
+
+export function collapseActivityTimeStatesToSingle(
+  timeStates: ActivityTimeState[],
+): ActivityTimeState[] {
+  if (timeStates.includes("UPCOMING")) {
+    return ["UPCOMING"];
+  }
+
+  const firstSelected = activityTimeStateDisplayOrder.find((timeState) =>
+    timeStates.includes(timeState),
+  );
+
+  return firstSelected ? [firstSelected] : ["UPCOMING"];
+}
+
+export function selectSingleActivityTimeState(
+  timeState: ActivityTimeState,
+): ActivityTimeState[] {
+  return [timeState];
+}
+
+export function toggleActivityTimeStateSelection(
+  current: ActivityTimeState[],
+  toggled: ActivityTimeState,
+): ActivityTimeState[] {
+  const isSelected = current.includes(toggled);
+
+  if (isSelected && current.length === 1) {
+    return current;
+  }
+
+  const next = isSelected
+    ? current.filter((timeState) => timeState !== toggled)
+    : [...current, toggled];
+
+  return activityTimeStateDisplayOrder.filter((timeState) =>
+    next.includes(timeState),
+  );
+}
+
+function parseActivityTimeStates(value: unknown): ActivityTimeState[] {
+  const rawValues: string[] = [];
+
+  if (typeof value === "string") {
+    rawValues.push(...value.split(","));
+  } else if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === "string") {
+        rawValues.push(...item.split(","));
+      }
+    }
+  }
+
+  const uniqueStates = [...new Set(rawValues.map((item) => item.trim()))].filter(
+    isActivityTimeState,
+  );
+
+  if (uniqueStates.length === 0) {
+    return getDefaultActivityTimeStates();
+  }
+
+  return activityTimeStateDisplayOrder.filter((timeState) =>
+    uniqueStates.includes(timeState),
+  );
+}
+
 export function hasActiveActivityFilters(filters: {
   category?: unknown;
   city?: unknown;
   dateRange?: unknown;
   keyword?: unknown;
   relation?: unknown;
-  timeState?: unknown;
+  timeStates?: ActivityTimeState[];
   type?: unknown;
 }) {
   return Boolean(
-      filters.keyword ||
+    filters.keyword ||
       filters.category ||
       filters.city ||
       filters.dateRange ||
       (filters.relation && filters.relation !== "ALL") ||
       filters.type ||
-      filters.timeState,
+      (filters.timeStates &&
+        hasPartialActivityTimeStatesFilter(filters.timeStates)),
   );
 }
 
@@ -189,7 +301,7 @@ export function getActiveActivityFilterNames(filters: {
   city?: unknown;
   dateRange?: unknown;
   relation?: ActivityRelationFilter;
-  timeState?: unknown;
+  timeStates?: ActivityTimeState[];
   type?: unknown;
 }) {
   const filterNames: string[] = [];
@@ -198,7 +310,12 @@ export function getActiveActivityFilterNames(filters: {
   if (filters.city) filterNames.push("city");
   if (filters.dateRange) filterNames.push("date_range");
   if (filters.type) filterNames.push("type");
-  if (filters.timeState) filterNames.push("time_state");
+  if (
+    filters.timeStates &&
+    hasPartialActivityTimeStatesFilter(filters.timeStates)
+  ) {
+    filterNames.push("time_state");
+  }
   if (filters.relation && filters.relation !== "ALL") {
     filterNames.push("relation");
   }
@@ -211,21 +328,31 @@ export function getActiveActivityFilterCount(filters: {
   city?: unknown;
   dateRange?: unknown;
   relation?: ActivityRelationFilter;
-  timeState?: unknown;
+  timeStates?: ActivityTimeState[];
   type?: unknown;
 }) {
   return getActiveActivityFilterNames(filters).length;
 }
 
-export function getDefaultActivitySort(filters: {
+export function getDefaultActivitySort(_filters?: {
   category?: unknown;
   city?: unknown;
   dateRange?: unknown;
   keyword?: unknown;
-  timeState?: unknown;
+  timeStates?: ActivityTimeState[];
   type?: unknown;
-}): ActivitySortOption {
-  return hasActiveActivityFilters(filters) ? "soonest" : "recommended";
+}): ActivityCardSortOption {
+  return "soonest";
+}
+
+function normalizeLegacyActivitySort(
+  sort: ActivitySortOption,
+): ActivityCardSortOption {
+  if (sort === "recommended" || sort === "recentlyAdded") {
+    return "soonest";
+  }
+
+  return sort;
 }
 
 export function normalizeActivityFilters(
@@ -239,7 +366,7 @@ export function normalizeActivityFilters(
     page: getSingleParam(searchParams, "page"),
     relation: getSingleParam(searchParams, "relation"),
     sort: getSingleParam(searchParams, "sort"),
-    timeState: getSingleParam(searchParams, "time"),
+    timeStates: searchParams.time,
     type: getSingleParam(searchParams, "type"),
     view: getSingleParam(searchParams, "view"),
   });
@@ -255,9 +382,10 @@ export function normalizeActivityFilterValues(
   const page = getStringValue(values.page);
   const relation = getStringValue(values.relation);
   const type = getStringValue(values.type);
-  const timeState = getStringValue(values.timeState);
   const sort = getStringValue(values.sort);
   const view = getStringValue(values.view ?? values.viewMode);
+  const viewMode = view && isActivityListViewMode(view) ? view : "card";
+  const timeStates = parseActivityTimeStates(values.timeStates);
   const filters = {
     category: category && isActivityCategory(category) ? category : undefined,
     city,
@@ -266,19 +394,20 @@ export function normalizeActivityFilterValues(
     keyword,
     relation:
       relation && isActivityRelationFilter(relation) ? relation : "ALL",
-    timeState:
-      timeState && isActivityTimeState(timeState) ? timeState : undefined,
+    timeStates,
     type: type && isActivityFilterType(type) ? type : undefined,
-    viewMode: view && isActivityListViewMode(view) ? view : "card",
+    viewMode,
   };
+  const resolvedSort =
+    sort && isActivitySortOption(sort)
+      ? normalizeLegacyActivitySort(sort)
+      : getDefaultActivitySort(filters);
 
   return {
     ...filters,
     page: normalizePageParam(page),
-    sort:
-      sort && isActivitySortOption(sort)
-        ? sort
-        : getDefaultActivitySort(filters),
+    sort: resolvedSort,
+    viewMode,
   };
 }
 
@@ -293,7 +422,7 @@ export function normalizeActivityFilterFormData(
     page: formData.get("page"),
     relation: formData.get("relation"),
     sort: formData.get("sort"),
-    timeState: formData.get("time"),
+    timeStates: formData.getAll("time"),
     type: formData.get("type"),
     view: formData.get("view"),
   });
@@ -307,7 +436,8 @@ export function getActivityFilterQueryString(filters: ActivityFilters) {
   if (filters.city) query.set("city", filters.city);
   if (filters.dateRange) query.set("dateRange", filters.dateRange);
   if (filters.type) query.set("type", filters.type);
-  if (filters.timeState) query.set("time", filters.timeState);
+  const timeQuery = formatActivityTimeStatesQueryValue(filters.timeStates);
+  if (timeQuery) query.set("time", timeQuery);
   if (filters.relation !== "ALL") query.set("relation", filters.relation);
   if (filters.sort !== getDefaultActivitySort(filters)) {
     query.set("sort", filters.sort);

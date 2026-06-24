@@ -8,11 +8,11 @@ import { Heart, LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { getSignInHref } from "@/lib/auth-redirect";
-import { cn } from "@/lib/utils";
 import {
   toggleActivityFavoriteAction,
   type ToggleActivityFavoriteState,
 } from "../actions/toggleActivityFavorite";
+import { getFavoriteButtonClassName } from "./favoriteButtonStyles";
 import type { FavoriteButtonLabels } from "../types";
 
 type ActivityFavoriteButtonProps = {
@@ -78,12 +78,10 @@ function FavoriteSubmitButton({
     <span className="group relative inline-flex">
       <Button
         aria-label={label}
-        className={cn(
-          "h-10 w-10 rounded-full bg-white/95 p-0 text-zinc-950 shadow-sm ring-1 ring-black/10 hover:bg-white",
-          isFavorited ? "text-red-500" : null,
-          pending ? "ring-2 ring-[#e6b3a1]" : null,
-          className,
-        )}
+        className={getFavoriteButtonClassName(className, {
+          isFavorited,
+          pending,
+        })}
         type="submit"
         variant="secondary"
         disabled={pending}
@@ -173,10 +171,7 @@ export function ActivityFavoriteButton({
         <Link href={getSignInHref(locale, redirectPath)}>
           <Button
             aria-label={t.signInToFavorite}
-            className={cn(
-              "h-10 w-10 rounded-full bg-white/95 p-0 text-zinc-950 shadow-sm ring-1 ring-black/10 hover:bg-white",
-              className,
-            )}
+            className={getFavoriteButtonClassName(className)}
             type="button"
             variant="secondary"
           >

@@ -347,7 +347,7 @@ export function sanitizeAnalyticsRoute(route: string) {
   }
 
   try {
-    const url = new URL(trimmed, "https://nextfun.local");
+    const url = new URL(trimmed, "https://friemi.local");
 
     return url.pathname || "/";
   } catch {
