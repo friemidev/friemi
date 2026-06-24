@@ -804,6 +804,8 @@ const copy = {
         "可选；填写后详情页会展示主要跳转按钮。组局报名仍在站内完成。",
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
+      copyTimeReminder:
+        "此为复制组局草稿，时间、地点、费用等信息可能需要重新调整，请务必检查并修改为新的行程。",
       creating: "发布中...",
       create: "发布组局",
       saving: "保存中...",
@@ -1703,6 +1705,8 @@ const copy = {
       requiresApproval: "Confirm join requests",
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
+      copyTimeReminder:
+        "This draft is prefilled from an existing crew. Please review and update times, location, cost, and other details for your new plan.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -2637,6 +2641,8 @@ const copy = {
       requiresApproval: "Confirmer les demandes",
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
+      copyTimeReminder:
+        "Ce brouillon est prérempli à partir d'un groupe existant. Vérifiez et ajustez les horaires, le lieu, le coût et les autres détails pour votre nouveau plan.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",
