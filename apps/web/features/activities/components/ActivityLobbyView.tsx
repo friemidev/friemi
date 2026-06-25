@@ -1265,7 +1265,7 @@ export function ActivityLobbyPreviewView({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {visibleActivities.map((activity) => (
                 <ActivityCard
                   key={getLobbyActivityKey(activity)}
