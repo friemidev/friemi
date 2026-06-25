@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
+import { WechatEntryUrlCapture } from "@/components/wechat/WechatEntryUrlCapture";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
@@ -54,6 +55,7 @@ export default async function LocaleLayout({
         >
           <div className="min-h-screen pb-24 md:pb-0">
             <RouteProgress />
+            <WechatEntryUrlCapture />
             <AppHeader
               locale={locale}
               showNotificationNav={Boolean(viewerProfile)}

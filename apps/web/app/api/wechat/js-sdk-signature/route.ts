@@ -28,6 +28,15 @@ type CachedWechatCredential = {
   value: string;
 };
 
+class WechatJsSdkError extends Error {
+  constructor(
+    message: string,
+    readonly status = 502,
+  ) {
+    super(message);
+  }
+}
+
 let accessTokenCache: CachedWechatCredential | null = null;
 let jsapiTicketCache: CachedWechatCredential | null = null;
 
@@ -78,17 +87,20 @@ async function getWechatAccessToken(appId: string, appSecret: string) {
   const response = await fetch(url, { cache: "no-store" });
 
   if (!response.ok) {
-    throw new Error(`WECHAT_ACCESS_TOKEN_HTTP_${response.status}`);
+    throw new WechatJsSdkError(
+      `WECHAT_ACCESS_TOKEN_HTTP_${response.status}`,
+      502,
+    );
   }
 
   const payload = (await response.json()) as WechatAccessTokenPayload;
 
   if (payload.errcode && payload.errcode !== 0) {
-    throw new Error(`WECHAT_ACCESS_TOKEN_${payload.errcode}`);
+    throw new WechatJsSdkError(`WECHAT_ACCESS_TOKEN_${payload.errcode}`, 502);
   }
 
   if (!payload.access_token) {
-    throw new Error("WECHAT_ACCESS_TOKEN_MISSING");
+    throw new WechatJsSdkError("WECHAT_ACCESS_TOKEN_MISSING", 502);
   }
 
   accessTokenCache = {
@@ -112,17 +124,20 @@ async function getWechatJsapiTicket(appId: string, accessToken: string) {
   const response = await fetch(url, { cache: "no-store" });
 
   if (!response.ok) {
-    throw new Error(`WECHAT_JSAPI_TICKET_HTTP_${response.status}`);
+    throw new WechatJsSdkError(
+      `WECHAT_JSAPI_TICKET_HTTP_${response.status}`,
+      502,
+    );
   }
 
   const payload = (await response.json()) as WechatJsapiTicketPayload;
 
   if (payload.errcode && payload.errcode !== 0) {
-    throw new Error(`WECHAT_JSAPI_TICKET_${payload.errcode}`);
+    throw new WechatJsSdkError(`WECHAT_JSAPI_TICKET_${payload.errcode}`, 502);
   }
 
   if (!payload.ticket) {
-    throw new Error("WECHAT_JSAPI_TICKET_MISSING");
+    throw new WechatJsSdkError("WECHAT_JSAPI_TICKET_MISSING", 502);
   }
 
   jsapiTicketCache = {
@@ -185,10 +200,18 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Failed to create WeChat JS-SDK signature", error);
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "WECHAT_JS_SDK_SIGNATURE_FAILED";
 
     return NextResponse.json(
-      { error: "WECHAT_JS_SDK_SIGNATURE_FAILED", ok: false },
-      { status: 502 },
+      {
+        error: "WECHAT_JS_SDK_SIGNATURE_FAILED",
+        ok: false,
+        reason,
+      },
+      { status: error instanceof WechatJsSdkError ? error.status : 502 },
     );
   }
 }
