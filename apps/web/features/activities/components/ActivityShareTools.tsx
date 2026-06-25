@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   Download,
+  ImageIcon,
   Link as LinkIcon,
   QrCode,
   Share2,
@@ -318,6 +319,7 @@ export function ActivityShareTools({
     string | null
   >(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
+  const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "failed"
   >("idle");
@@ -498,11 +500,15 @@ export function ActivityShareTools({
 
       const posterDataUrl = canvas.toDataURL("image/png");
       setPosterPreviewUrl(posterDataUrl);
+      setPosterPreviewOpen(true);
 
-      const link = document.createElement("a");
-      link.download = posterFileName;
-      link.href = posterDataUrl;
-      link.click();
+      if (shareMode !== "wechat") {
+        const link = document.createElement("a");
+        link.download = posterFileName;
+        link.href = posterDataUrl;
+        link.click();
+      }
+
       trackClientAnalyticsEvent({
         name: "poster_downloaded",
         entityId: analyticsEntityId,
@@ -511,6 +517,8 @@ export function ActivityShareTools({
         properties: {
           has_cover_image: Boolean(coverImageUrl),
           has_qr_code: true,
+          share_mode:
+            shareMode === "wechat" ? "wechat_long_press" : "poster_download",
         },
       });
       setDownloadState("idle");
@@ -563,6 +571,12 @@ export function ActivityShareTools({
   const shareDescription =
     shareKind === "team" ? t.teamDescription : t.activityDescription;
   const usesSystemSharePrimary = shareMode !== "copy";
+  const posterButtonLabel =
+    downloadState === "downloading"
+      ? t.downloading
+      : shareMode === "wechat"
+        ? t.savePoster
+        : t.downloadPoster;
 
   return (
     <div className="rounded-[1.1rem] border border-[#dccba8] bg-[#fff8ec]/78 p-3 shadow-sm">
@@ -647,10 +661,12 @@ export function ActivityShareTools({
           type="button"
           variant="secondary"
         >
-          <Download className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">
-            {downloadState === "downloading" ? t.downloading : t.downloadPoster}
-          </span>
+          {shareMode === "wechat" ? (
+            <ImageIcon className="h-4 w-4 shrink-0" />
+          ) : (
+            <Download className="h-4 w-4 shrink-0" />
+          )}
+          <span className="min-w-0 truncate">{posterButtonLabel}</span>
         </Button>
       </div>
 
@@ -786,7 +802,51 @@ export function ActivityShareTools({
           </div>
         </div>
       ) : null}
-      {posterPreviewUrl ? (
+      {posterPreviewUrl && shareMode === "wechat" && posterPreviewOpen ? (
+        <div
+          aria-label={t.posterPreviewTitle}
+          aria-modal="true"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/72 px-4 py-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+          role="dialog"
+        >
+          <button
+            aria-label={t.closePosterPreview}
+            className="absolute inset-0 cursor-default"
+            onClick={() => setPosterPreviewOpen(false)}
+            type="button"
+          />
+          <div className="relative flex max-h-full w-full max-w-[390px] flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-full border border-white/15 bg-black/45 px-3 py-2 text-white shadow-lg backdrop-blur">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {t.longPressPoster}
+                </p>
+                <p className="truncate text-xs text-white/70">
+                  {t.posterSaveHint}
+                </p>
+              </div>
+              <button
+                aria-label={t.closePosterPreview}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/12 text-white ring-1 ring-white/20 transition hover:bg-white/20"
+                onClick={() => setPosterPreviewOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="relative min-h-0 overflow-hidden rounded-2xl bg-[#f5f1e8] shadow-2xl ring-1 ring-white/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={t.posterPreviewAlt}
+                className="max-h-[calc(100vh-9.5rem)] w-full select-auto object-contain"
+                draggable={false}
+                src={posterPreviewUrl}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {posterPreviewUrl && shareMode !== "wechat" ? (
         <div className="relative mt-3 overflow-hidden rounded-md bg-white ring-1 ring-zinc-200">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

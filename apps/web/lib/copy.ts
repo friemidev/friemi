@@ -347,6 +347,7 @@ const copy = {
       copied: "已复制",
       copyFailed: "复制失败，请手动选择文本。",
       downloadPoster: "下载宣传图",
+      savePoster: "生成海报",
       downloadQr: "下载二维码",
       downloading: "生成中...",
       qrDownloading: "生成中...",
@@ -358,6 +359,10 @@ const copy = {
       posterScanTitle: "扫码查看活动详情",
       posterScanDescription: "打开报名页，查看最新名额和活动说明。",
       posterPreviewAlt: "活动宣传图预览",
+      posterPreviewTitle: "分享海报",
+      longPressPoster: "长按保存",
+      posterSaveHint: "保存到相册后发朋友圈",
+      closePosterPreview: "关闭海报",
     },
     merchant: {
       cardLabel: (name: string) => `商家：${name}`,
@@ -1215,6 +1220,7 @@ const copy = {
       copied: "Copied",
       copyFailed: "Copy failed. Select the text manually.",
       downloadPoster: "Download poster",
+      savePoster: "Create poster",
       downloadQr: "Download QR code",
       downloading: "Generating...",
       qrDownloading: "Generating...",
@@ -1227,6 +1233,10 @@ const copy = {
       posterScanDescription:
         "Open the activity page for the latest seats and details.",
       posterPreviewAlt: "Activity poster preview",
+      posterPreviewTitle: "Share poster",
+      longPressPoster: "Press and hold to save",
+      posterSaveHint: "Save it, then post to Moments.",
+      closePosterPreview: "Close poster",
     },
     merchant: {
       cardLabel: (name: string) => `Merchant: ${name}`,
@@ -2129,6 +2139,7 @@ const copy = {
       copied: "Copié",
       copyFailed: "Échec de copie. Sélectionnez le texte manuellement.",
       downloadPoster: "Télécharger l'affiche",
+      savePoster: "Créer l'affiche",
       downloadQr: "Télécharger le QR code",
       downloading: "Génération...",
       qrDownloading: "Génération...",
@@ -2141,6 +2152,10 @@ const copy = {
       posterScanDescription:
         "Ouvrez la page de l'activité pour les places et infos à jour.",
       posterPreviewAlt: "Aperçu de l'affiche de l'activité",
+      posterPreviewTitle: "Affiche de partage",
+      longPressPoster: "Appuyez longuement pour enregistrer",
+      posterSaveHint: "Enregistrez-la, puis publiez-la dans Moments.",
+      closePosterPreview: "Fermer l'affiche",
     },
     merchant: {
       cardLabel: (name: string) => `Commerçant : ${name}`,
