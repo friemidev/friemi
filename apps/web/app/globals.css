@@ -78,6 +78,29 @@ a {
   }
 }
 
+@keyframes co-creator-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0.9rem);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes co-creator-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.18rem);
+  }
+}
+
 .friemi-brand-loader {
   --loader-size: 8rem;
   --logo-size: 6.25rem;
@@ -169,6 +192,43 @@ a {
   animation: friemi-shimmer 1.65s ease-in-out infinite;
 }
 
+.co-creator-reveal {
+  animation: co-creator-rise 620ms ease-out both;
+}
+
+.co-creator-page .co-creator-reveal:nth-of-type(2) {
+  animation-delay: 90ms;
+}
+
+.co-creator-page .co-creator-reveal:nth-of-type(3) {
+  animation-delay: 160ms;
+}
+
+.co-creator-page .co-creator-reveal:nth-of-type(4) {
+  animation-delay: 230ms;
+}
+
+.co-creator-page .co-creator-reveal:nth-of-type(5) {
+  animation-delay: 300ms;
+}
+
+.co-creator-flow-card {
+  animation: co-creator-drift 3.8s ease-in-out infinite;
+}
+
+.co-creator-benefit-row {
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.co-creator-benefit-row:hover {
+  background: #fffaf2;
+  box-shadow: inset 3px 0 0 #d88d72;
+  transform: translateX(0.12rem);
+}
+
 .activity-card-grid-shell {
   container-type: inline-size;
 }
@@ -210,9 +270,16 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .co-creator-benefit-row,
+  .co-creator-flow-card,
+  .co-creator-reveal,
   .friemi-loading-dots span,
   .friemi-shimmer::after {
     animation: none;
+  }
+
+  .co-creator-benefit-row:hover {
+    transform: none;
   }
 
   .friemi-shimmer::after {
