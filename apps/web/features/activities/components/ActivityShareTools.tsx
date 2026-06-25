@@ -21,6 +21,7 @@ import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { ActivityCopyButton } from "./ActivityCopyButton";
+import { WechatShareConfigurator } from "./WechatShareConfigurator";
 
 type ActivityShareToolsProps = {
   activityTitle: string;
@@ -73,6 +74,34 @@ function getUrlHost(value: string) {
 
 function isWechatWebView(userAgent: string) {
   return /MicroMessenger/i.test(userAgent);
+}
+
+function buildTeamWechatShareImageUrl({
+  activityId,
+  activityUrl,
+  locale,
+}: {
+  activityId: string;
+  activityUrl: string;
+  locale: string;
+}) {
+  try {
+    const shareUrl = new URL(activityUrl);
+    const imageUrl = new URL("/api/share/team-card", shareUrl.origin);
+    const accessToken = shareUrl.searchParams.get("access");
+
+    imageUrl.searchParams.set("activityId", activityId);
+    imageUrl.searchParams.set("locale", locale);
+    imageUrl.searchParams.set("variant", "wechat");
+
+    if (accessToken) {
+      imageUrl.searchParams.set("access", accessToken);
+    }
+
+    return imageUrl.toString();
+  } catch {
+    return null;
+  }
 }
 
 function drawWrappedText(
@@ -285,6 +314,9 @@ export function ActivityShareTools({
   const [expanded, setExpanded] = useState(false);
   const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
+  const [wechatShareImageUrl, setWechatShareImageUrl] = useState<
+    string | null
+  >(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "failed"
@@ -323,6 +355,21 @@ export function ActivityShareTools({
       setShareMode("native");
     }
   }, []);
+
+  useEffect(() => {
+    if (!activityUrl || shareKind !== "team") {
+      setWechatShareImageUrl(null);
+      return;
+    }
+
+    setWechatShareImageUrl(
+      buildTeamWechatShareImageUrl({
+        activityId: analyticsEntityId,
+        activityUrl,
+        locale,
+      }),
+    );
+  }, [activityUrl, analyticsEntityId, locale, shareKind]);
 
   async function handleSystemShare() {
     if (!activityUrl) {
@@ -519,6 +566,13 @@ export function ActivityShareTools({
 
   return (
     <div className="rounded-[1.1rem] border border-[#dccba8] bg-[#fff8ec]/78 p-3 shadow-sm">
+      <WechatShareConfigurator
+        description={description || shareDescription}
+        enabled={shareKind === "team"}
+        imageUrl={wechatShareImageUrl}
+        link={activityUrl}
+        title={activityTitle}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#8a6a40] ring-1 ring-[#dccba8]">
