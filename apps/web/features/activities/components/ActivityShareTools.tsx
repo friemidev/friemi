@@ -77,29 +77,46 @@ function isWechatWebView(userAgent: string) {
   return /MicroMessenger/i.test(userAgent);
 }
 
-function buildTeamWechatShareImageUrl({
-  activityId,
-  activityUrl,
-  locale,
-}: {
-  activityId: string;
-  activityUrl: string;
-  locale: string;
-}) {
+function resolveWechatShareImageUrl(
+  value: string | null | undefined,
+  baseUrl: string,
+) {
+  if (!value?.trim()) {
+    return null;
+  }
+
   try {
-    const shareUrl = new URL(activityUrl);
-    const imageUrl = new URL("/api/share/team-card", shareUrl.origin);
-    const accessToken = shareUrl.searchParams.get("access");
+    const imageUrl = new URL(value.trim(), baseUrl);
 
-    imageUrl.searchParams.set("activityId", activityId);
-    imageUrl.searchParams.set("locale", locale);
-    imageUrl.searchParams.set("variant", "wechat");
-
-    if (accessToken) {
-      imageUrl.searchParams.set("access", accessToken);
+    if (imageUrl.protocol !== "http:" && imageUrl.protocol !== "https:") {
+      return null;
     }
 
     return imageUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
+function buildTeamWechatShareImageUrl({
+  activityUrl,
+  coverImageUrl,
+}: {
+  activityUrl: string;
+  coverImageUrl?: string | null;
+}) {
+  try {
+    const shareUrl = new URL(activityUrl);
+    const coverShareUrl = coverImageUrl
+      ? resolveWechatShareImageUrl(
+          getActivityCoverDisplayUrl(coverImageUrl),
+          shareUrl.origin,
+        )
+      : null;
+
+    return (
+      coverShareUrl ?? new URL(brand.shareImagePath, shareUrl.origin).toString()
+    );
   } catch {
     return null;
   }
@@ -315,9 +332,9 @@ export function ActivityShareTools({
   const [expanded, setExpanded] = useState(false);
   const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
-  const [wechatShareImageUrl, setWechatShareImageUrl] = useState<
-    string | null
-  >(null);
+  const [wechatShareImageUrl, setWechatShareImageUrl] = useState<string | null>(
+    null,
+  );
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<
@@ -366,12 +383,11 @@ export function ActivityShareTools({
 
     setWechatShareImageUrl(
       buildTeamWechatShareImageUrl({
-        activityId: analyticsEntityId,
         activityUrl,
-        locale,
+        coverImageUrl,
       }),
     );
-  }, [activityUrl, analyticsEntityId, locale, shareKind]);
+  }, [activityUrl, coverImageUrl, shareKind]);
 
   async function handleSystemShare() {
     if (!activityUrl) {
