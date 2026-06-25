@@ -79,6 +79,7 @@ type LobbyFeedResponse = {
 
 type LobbySwipeResponse = {
   activities?: ActivityCardViewModel[];
+  hasMore?: boolean;
   ok: boolean;
 };
 
@@ -92,6 +93,7 @@ type WindowWithIdleCallback = Window &
   };
 
 const LOBBY_PAGE_SIZE = 10;
+const LOBBY_SWIPE_BATCH_SIZE = 8;
 const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
 const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
 const LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS = 2500;
@@ -113,6 +115,49 @@ function scheduleIdleTask(callback: () => void, timeout = 900) {
   const handle = window.setTimeout(callback, timeout);
 
   return () => window.clearTimeout(handle);
+}
+
+function getLobbySwipeActivityKey(activity: ActivityCardViewModel) {
+  if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
+    return `public:${activity.publicEventId}`;
+  }
+
+  return `activity:${activity.id}`;
+}
+
+function getLobbySwipePublicEventId(activity: ActivityCardViewModel) {
+  if (activity.type !== "PUBLIC_EVENT") {
+    return null;
+  }
+
+  return activity.publicEventId ?? activity.id;
+}
+
+function mergeUniqueLobbySwipeActivities(
+  currentActivities: ActivityCardViewModel[],
+  nextActivities: ActivityCardViewModel[],
+) {
+  const seen = new Set(currentActivities.map(getLobbySwipeActivityKey));
+  const merged = [...currentActivities];
+
+  nextActivities.forEach((activity) => {
+    const key = getLobbySwipeActivityKey(activity);
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    merged.push(activity);
+  });
+
+  return merged;
+}
+
+function prepareInitialLobbySwipeActivities(
+  activities: ActivityCardViewModel[],
+) {
+  return mergeUniqueLobbySwipeActivities([], activities);
 }
 
 type EmptyLobbyAction = {
@@ -946,77 +991,191 @@ function LazyLobbySwipeDiscovery({
   isAuthenticated: boolean;
   locale: string;
 }) {
-  const [activities, setActivities] = useState(initialActivities);
+  const [activities, setActivities] = useState(() =>
+    prepareInitialLobbySwipeActivities(initialActivities),
+  );
   const [requested, setRequested] = useState(initialActivities.length > 0);
   const [loadSettled, setLoadSettled] = useState(initialActivities.length > 0);
+  const [hasMore, setHasMore] = useState(
+    initialActivities.length >= LOBBY_SWIPE_BATCH_SIZE,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const activitiesRef = useRef(activities);
+  const hasMoreRef = useRef(hasMore);
+  const loadingMoreRef = useRef(false);
+  const requestControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    setActivities(initialActivities);
+    const nextActivities =
+      prepareInitialLobbySwipeActivities(initialActivities);
 
-    if (initialActivities.length > 0) {
+    requestControllerRef.current?.abort();
+    loadingMoreRef.current = false;
+    activitiesRef.current = nextActivities;
+    hasMoreRef.current = nextActivities.length >= LOBBY_SWIPE_BATCH_SIZE;
+    setActivities(nextActivities);
+    setHasMore(hasMoreRef.current);
+    setLoadingMore(false);
+    setLoadMoreFailed(false);
+
+    if (nextActivities.length > 0) {
       setRequested(true);
       setLoadSettled(true);
     } else {
+      setRequested(false);
       setLoadSettled(false);
     }
   }, [initialActivities]);
+
+  useEffect(() => {
+    activitiesRef.current = activities;
+  }, [activities]);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(
+    () => () => {
+      requestControllerRef.current?.abort();
+    },
+    [],
+  );
+
+  const loadSwipeActivities = useCallback(
+    async (mode: "initial" | "append") => {
+      if (loadingMoreRef.current) {
+        return false;
+      }
+
+      if (mode === "append" && !hasMoreRef.current) {
+        return false;
+      }
+
+      loadingMoreRef.current = true;
+      setLoadMoreFailed(false);
+      setLoadingMore(mode === "append");
+
+      const controller = new AbortController();
+      requestControllerRef.current = controller;
+      let didTimeout = false;
+      const timeoutId = window.setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, 8000);
+      const params = new URLSearchParams({
+        limit: String(LOBBY_SWIPE_BATCH_SIZE),
+      });
+
+      if (mode === "append") {
+        activitiesRef.current.forEach((activity) => {
+          const publicEventId = getLobbySwipePublicEventId(activity);
+
+          if (publicEventId) {
+            params.append("exclude", publicEventId);
+          }
+        });
+      }
+
+      try {
+        const response = await fetch(`/api/lobby/swipe?${params.toString()}`, {
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Lobby swipe request failed: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as LobbySwipeResponse;
+
+        if (!payload.ok) {
+          throw new Error("Lobby swipe request returned an error payload.");
+        }
+
+        if (controller.signal.aborted) {
+          return false;
+        }
+
+        const incomingActivities = payload.activities ?? [];
+
+        setActivities((currentActivities) => {
+          const nextActivities =
+            mode === "append"
+              ? mergeUniqueLobbySwipeActivities(
+                  currentActivities,
+                  incomingActivities,
+                )
+              : prepareInitialLobbySwipeActivities(incomingActivities);
+
+          activitiesRef.current = nextActivities;
+          return nextActivities;
+        });
+
+        const nextHasMore =
+          Boolean(payload.hasMore) && incomingActivities.length > 0;
+        hasMoreRef.current = nextHasMore;
+        setHasMore(nextHasMore);
+
+        return true;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          if (didTimeout && mode === "append") {
+            setLoadMoreFailed(true);
+          }
+
+          return false;
+        }
+
+        console.error("Failed to load lobby swipe discovery", error);
+
+        if (mode === "append") {
+          setLoadMoreFailed(true);
+        }
+
+        return false;
+      } finally {
+        window.clearTimeout(timeoutId);
+
+        if (requestControllerRef.current === controller) {
+          requestControllerRef.current = null;
+        }
+
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (requested || typeof window === "undefined") {
       return;
     }
 
-    const controller = new AbortController();
     let cancelled = false;
-    let timeoutId: number | null = null;
     const cancelIdleTask = scheduleIdleTask(() => {
       setRequested(true);
-      timeoutId = window.setTimeout(() => controller.abort(), 6000);
-
-      void fetch("/api/lobby/swipe", {
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-        },
-        signal: controller.signal,
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            throw new Error(`Lobby swipe request failed: ${response.status}`);
-          }
-
-          return (await response.json()) as LobbySwipeResponse;
-        })
-        .then((payload) => {
-          if (!cancelled && payload.ok) {
-            setActivities(payload.activities ?? []);
-          }
-        })
-        .catch((error) => {
-          if (!(error instanceof DOMException && error.name === "AbortError")) {
-            console.error("Failed to load lobby swipe discovery", error);
-          }
-        })
-        .finally(() => {
-          if (timeoutId !== null) {
-            window.clearTimeout(timeoutId);
-          }
-
-          if (!cancelled) {
-            setLoadSettled(true);
-          }
-        });
+      void loadSwipeActivities("initial").finally(() => {
+        if (!cancelled) {
+          setLoadSettled(true);
+        }
+      });
     }, LOBBY_SWIPE_IDLE_DELAY_MS);
 
     return () => {
       cancelled = true;
-      controller.abort();
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
       cancelIdleTask();
     };
-  }, [requested]);
+  }, [loadSwipeActivities, requested]);
+
+  const requestMoreSwipeActivities = useCallback(() => {
+    void loadSwipeActivities("append");
+  }, [loadSwipeActivities]);
 
   if (activities.length === 0 && !loadSettled) {
     return <LobbySwipeLoadingShell className={className} locale={locale} />;
@@ -1030,8 +1189,14 @@ function LazyLobbySwipeDiscovery({
     <ActivitySwipeDiscovery
       activities={activities}
       className={className}
+      hasMoreActivities={hasMore}
       isAuthenticated={isAuthenticated}
+      isLoadingMore={loadingMore}
       locale={locale}
+      loadMoreFailed={loadMoreFailed}
+      onRequestMore={requestMoreSwipeActivities}
+      onRetryLoadMore={requestMoreSwipeActivities}
+      shuffleDeck={false}
       sourceSurface="activity_list"
       variant="lobby"
     />

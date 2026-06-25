@@ -1,19 +1,47 @@
 import { NextResponse } from "next/server";
-import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
+import { getLobbySwipePublicEventActivityPage } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalAuthenticatedProfileId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const defaultLobbySwipeLimit = 8;
+const maxLobbySwipeExcludeIds = 160;
+
+function parseLobbySwipeLimit(value: string | null) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return defaultLobbySwipeLimit;
+  }
+
+  return Math.min(Math.max(Math.floor(parsed), 1), 24);
+}
+
+function parseExcludedPublicEventIds(searchParams: URLSearchParams) {
+  return Array.from(
+    new Set(
+      searchParams
+        .getAll("exclude")
+        .flatMap((value) => value.split(","))
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, maxLobbySwipeExcludeIds);
+}
+
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
     const viewerProfileId = await getOptionalAuthenticatedProfileId();
-    const activities = await getLobbySwipePublicEventActivities(
-      viewerProfileId,
-    );
+    const page = await getLobbySwipePublicEventActivityPage(viewerProfileId, {
+      excludePublicEventIds: parseExcludedPublicEventIds(searchParams),
+      limit: parseLobbySwipeLimit(searchParams.get("limit")),
+    });
 
     return NextResponse.json({
       ok: true,
-      activities,
+      activities: page.activities,
+      hasMore: page.hasMore,
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
