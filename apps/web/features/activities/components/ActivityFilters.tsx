@@ -471,7 +471,7 @@ export function ActivityFilters({
 
   return (
     <section className="space-y-2.5 sm:space-y-3">
-      <div className="hidden overflow-hidden rounded-[1.25rem] border border-[#ead8bd] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
+      <div className="relative z-20 hidden overflow-visible rounded-[1.25rem] border border-[#ead8bd] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
@@ -500,7 +500,7 @@ export function ActivityFilters({
       </div>
 
       <div className="md:hidden">
-        <details className="group rounded-[1.35rem] border border-[#ead8bd] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
+        <details className="group relative z-20 rounded-[1.35rem] border border-[#ead8bd] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             <span className="inline-flex min-w-0 items-center gap-2">
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">

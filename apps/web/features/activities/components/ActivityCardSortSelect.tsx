@@ -97,6 +97,7 @@ export function ActivityCardSortSelect({
       ref={menuRef}
       className={cn(
         "relative inline-flex min-w-0 items-center",
+        open ? "z-[70]" : "z-10",
         forceMobileLayout ? "gap-0" : "gap-1.5 sm:gap-2",
         className,
       )}
@@ -144,7 +145,7 @@ export function ActivityCardSortSelect({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-[calc(100%+0.4rem)] z-40 w-max min-w-full overflow-hidden rounded-[0.95rem] bg-white/96 p-1 text-xs font-semibold text-[#5f4935] shadow-[0_18px_42px_rgba(81,56,27,0.18)] ring-1 ring-[#ead7b8]/85 backdrop-blur",
+            "absolute left-0 top-[calc(100%+0.4rem)] z-[80] w-max min-w-full overflow-hidden rounded-[0.95rem] bg-white/96 p-1 text-xs font-semibold text-[#5f4935] shadow-[0_18px_42px_rgba(81,56,27,0.18)] ring-1 ring-[#ead7b8]/85 backdrop-blur",
             forceMobileLayout ? null : "sm:left-auto sm:right-0",
           )}
           role="listbox"

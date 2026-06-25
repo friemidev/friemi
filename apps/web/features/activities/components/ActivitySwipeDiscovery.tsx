@@ -665,7 +665,7 @@ export function ActivitySwipeDiscovery({
                     <span className="rounded-full bg-[#17120f] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
                       {categoryLabel}
                     </span>
-                    <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
+                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
                       {statusLabel}
                     </span>
                   </div>

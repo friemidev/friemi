@@ -237,7 +237,7 @@ function ActivityAgendaRow({
       <span className="flex h-full flex-col items-end justify-between gap-2 py-1">
         <span
           className={cn(
-            "inline-flex max-w-[5.5rem] items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none",
+            "inline-flex min-h-6 max-w-[5.5rem] items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-[1.15]",
             displayStatus === "ENDED" || displayStatus === "CANCELLED"
               ? "bg-zinc-100 text-zinc-500"
               : "bg-[#eef8fb] text-[#326b82] ring-1 ring-[#c4ddea]",
