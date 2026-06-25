@@ -35,6 +35,7 @@ type TeamShareMetadataInput = DetailShareMetadataInput & {
   locale: string;
   participantCount: number;
   shareImageUrl?: string | null;
+  wechatShareImageUrl?: string | null;
 };
 
 type TeamShareImageUrlInput = {
@@ -42,6 +43,7 @@ type TeamShareImageUrlInput = {
   activityId: string;
   baseUrl: string;
   locale: string;
+  variant?: "default" | "wechat";
 };
 
 type PageShareMetadataInput = {
@@ -238,10 +240,15 @@ export function buildTeamShareImageUrl({
   activityId,
   baseUrl,
   locale,
+  variant = "default",
 }: TeamShareImageUrlInput) {
   const url = new URL("/api/share/team-card", baseUrl);
   url.searchParams.set("activityId", activityId);
   url.searchParams.set("locale", locale);
+
+  if (variant !== "default") {
+    url.searchParams.set("variant", variant);
+  }
 
   if (accessToken) {
     url.searchParams.set("access", accessToken);
@@ -400,6 +407,7 @@ export function buildTeamShareMetadata({
   shareImageUrl,
   siteName = defaultSiteName,
   title,
+  wechatShareImageUrl,
 }: TeamShareMetadataInput): Metadata {
   const baseUrl = new URL(canonicalUrl).origin;
   const metadataTitle = truncateShareText(title, 72);
@@ -414,6 +422,34 @@ export function buildTeamShareMetadata({
   const imageUrl =
     resolveAbsoluteUrl(shareImageUrl, baseUrl) ??
     resolveShareImageUrl(coverImageUrl, baseUrl);
+  const wechatImageUrl = resolveAbsoluteUrl(wechatShareImageUrl, baseUrl);
+  const openGraphImages =
+    wechatImageUrl && wechatImageUrl !== imageUrl
+      ? [
+          {
+            alt: `${metadataTitle} participants`,
+            height: 420,
+            type: "image/png",
+            url: wechatImageUrl,
+            width: 420,
+          },
+          {
+            alt: metadataTitle,
+            height: 630,
+            type: "image/png",
+            url: imageUrl,
+            width: 1200,
+          },
+        ]
+      : [
+          {
+            alt: metadataTitle,
+            height: 630,
+            type: "image/png",
+            url: imageUrl,
+            width: 1200,
+          },
+        ];
 
   return {
     alternates: {
@@ -422,14 +458,7 @@ export function buildTeamShareMetadata({
     description: metadataDescription,
     openGraph: {
       description: metadataDescription,
-      images: [
-        {
-          alt: metadataTitle,
-          height: 630,
-          url: imageUrl,
-          width: 1200,
-        },
-      ],
+      images: openGraphImages,
       siteName,
       title: metadataTitle,
       type: "website",
