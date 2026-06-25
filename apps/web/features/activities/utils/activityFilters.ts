@@ -41,8 +41,8 @@ export const activityTimeStateDisplayOrder: ActivityTimeState[] = [
   "ONGOING",
   "ENDED",
 ];
-export type ActivityRelationFilter =
-  (typeof activityRelationFilters)[number];
+const defaultActivityTimeStates: ActivityTimeState[] = ["UPCOMING", "ONGOING"];
+export type ActivityRelationFilter = (typeof activityRelationFilters)[number];
 export type ActivityListViewMode = (typeof activityListViewModes)[number];
 
 export type ActivityFilters = {
@@ -177,7 +177,7 @@ function normalizePageParam(value: string | undefined) {
 }
 
 export function getDefaultActivityTimeStates(): ActivityTimeState[] {
-  return [...activityTimeStateDisplayOrder];
+  return [...defaultActivityTimeStates];
 }
 
 export function areAllActivityTimeStatesSelected(
@@ -188,11 +188,32 @@ export function areAllActivityTimeStatesSelected(
   );
 }
 
+function isSameActivityTimeStateSelection(
+  left: ActivityTimeState[],
+  right: ActivityTimeState[],
+) {
+  return (
+    left.length === right.length &&
+    activityTimeStateDisplayOrder.every(
+      (timeState) => left.includes(timeState) === right.includes(timeState),
+    )
+  );
+}
+
+export function isDefaultActivityTimeStatesSelection(
+  timeStates: ActivityTimeState[],
+) {
+  return isSameActivityTimeStateSelection(
+    timeStates,
+    defaultActivityTimeStates,
+  );
+}
+
 export function hasPartialActivityTimeStatesFilter(
   timeStates: ActivityTimeState[],
 ) {
   return (
-    timeStates.length > 0 && !areAllActivityTimeStatesSelected(timeStates)
+    timeStates.length > 0 && !isDefaultActivityTimeStatesSelection(timeStates)
   );
 }
 
@@ -208,26 +229,6 @@ export function formatActivityTimeStatesQueryValue(
   return hasPartialActivityTimeStatesFilter(timeStates)
     ? timeStates.join(",")
     : undefined;
-}
-
-export function collapseActivityTimeStatesToSingle(
-  timeStates: ActivityTimeState[],
-): ActivityTimeState[] {
-  if (timeStates.includes("UPCOMING")) {
-    return ["UPCOMING"];
-  }
-
-  const firstSelected = activityTimeStateDisplayOrder.find((timeState) =>
-    timeStates.includes(timeState),
-  );
-
-  return firstSelected ? [firstSelected] : ["UPCOMING"];
-}
-
-export function selectSingleActivityTimeState(
-  timeState: ActivityTimeState,
-): ActivityTimeState[] {
-  return [timeState];
 }
 
 export function toggleActivityTimeStateSelection(
@@ -262,9 +263,9 @@ function parseActivityTimeStates(value: unknown): ActivityTimeState[] {
     }
   }
 
-  const uniqueStates = [...new Set(rawValues.map((item) => item.trim()))].filter(
-    isActivityTimeState,
-  );
+  const uniqueStates = [
+    ...new Set(rawValues.map((item) => item.trim())),
+  ].filter(isActivityTimeState);
 
   if (uniqueStates.length === 0) {
     return getDefaultActivityTimeStates();
@@ -286,13 +287,13 @@ export function hasActiveActivityFilters(filters: {
 }) {
   return Boolean(
     filters.keyword ||
-      filters.category ||
-      filters.city ||
-      filters.dateRange ||
-      (filters.relation && filters.relation !== "ALL") ||
-      filters.type ||
-      (filters.timeStates &&
-        hasPartialActivityTimeStatesFilter(filters.timeStates)),
+    filters.category ||
+    filters.city ||
+    filters.dateRange ||
+    (filters.relation && filters.relation !== "ALL") ||
+    filters.type ||
+    (filters.timeStates &&
+      hasPartialActivityTimeStatesFilter(filters.timeStates)),
   );
 }
 
@@ -392,8 +393,7 @@ export function normalizeActivityFilterValues(
     dateRange:
       dateRange && isActivityDateRange(dateRange) ? dateRange : undefined,
     keyword,
-    relation:
-      relation && isActivityRelationFilter(relation) ? relation : "ALL",
+    relation: relation && isActivityRelationFilter(relation) ? relation : "ALL",
     timeStates,
     type: type && isActivityFilterType(type) ? type : undefined,
     viewMode,

@@ -5,7 +5,6 @@ import {
   activityTimeStateDisplayOrder,
   type ActivityFilters,
   type ActivityTimeState,
-  selectSingleActivityTimeState,
   toggleActivityTimeStateSelection,
 } from "@/features/activities/utils/activityFilters";
 import { getCopy } from "@/lib/copy";
@@ -21,66 +20,65 @@ import {
 
 export function ActivityTimeStateFilter({
   filters,
+  forceMobileLayout = false,
   locale,
-  multiSelect,
-  multiSelectToggle,
   onApply,
+  className,
 }: {
+  className?: string;
   filters: ActivityFilters;
+  forceMobileLayout?: boolean;
   locale: string;
-  multiSelect: boolean;
-  multiSelectToggle?: React.ReactNode;
   onApply: (timeStates: ActivityTimeState[]) => void;
 }) {
   const t = getCopy(locale);
 
   function handleTimeStateChange(timeState: ActivityTimeState) {
-    if (multiSelect) {
-      onApply(toggleActivityTimeStateSelection(filters.timeStates, timeState));
-      return;
-    }
-
-    onApply(selectSingleActivityTimeState(timeState));
+    onApply(toggleActivityTimeStateSelection(filters.timeStates, timeState));
   }
 
   return (
     <fieldset
       className={cn(
-        "inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2",
-        activityResultsFilterBarHeightClass,
+        "inline-flex min-w-0 max-w-full items-center gap-1.5 sm:gap-2",
+        forceMobileLayout ? "min-h-9" : "min-h-9 sm:min-h-0",
+        className,
       )}
     >
       <legend className="sr-only">{t.activityFilters.timeStateLabel}</legend>
       <Clock3
         aria-hidden
-        className="h-3.5 w-3.5 shrink-0 text-[#9a6b3b]"
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 text-[#9a6b3b]",
+          forceMobileLayout ? "hidden" : "hidden sm:block",
+        )}
       />
       <span
         className={cn(
-          "sr-only sm:inline-flex",
+          forceMobileLayout ? "sr-only" : "sr-only sm:inline-flex",
           activityResultsFilterLabelClass,
           activityResultsFilterBarHeightClass,
         )}
       >
         {t.activityFilters.timeStateLabel}
       </span>
-      {multiSelectToggle}
       <div
         className={cn(
           activityResultsFilterShellClass,
           activityResultsFilterBarHeightClass,
-          "max-w-full gap-0.5",
+          forceMobileLayout
+            ? "grid flex-1 grid-cols-3 gap-0.5"
+            : "grid flex-1 grid-cols-3 gap-0.5 sm:inline-flex sm:flex-none",
         )}
       >
         {activityTimeStateDisplayOrder.map((timeState) => {
           const isSelected = filters.timeStates.includes(timeState);
-          const isLocked =
-            multiSelect && isSelected && filters.timeStates.length === 1;
+          const isLocked = isSelected && filters.timeStates.length === 1;
 
           return (
             <label
               className={cn(
-                "cursor-pointer select-none transition",
+                "min-w-0 cursor-pointer select-none transition",
                 activityResultsFilterInnerHeightClass,
                 activityResultsFilterControlClass,
                 activityResultsFilterChipClass,
@@ -95,10 +93,7 @@ export function ActivityTimeStateFilter({
                 checked={isSelected}
                 className="sr-only"
                 disabled={isLocked}
-                name={
-                  multiSelect ? undefined : "activity-time-state-single"
-                }
-                type={multiSelect ? "checkbox" : "radio"}
+                type="checkbox"
                 onChange={() => {
                   handleTimeStateChange(timeState);
                 }}

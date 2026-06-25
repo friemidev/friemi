@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { Button, Input } from "@chill-club/ui";
+import { ActivityCardSortSelect } from "./ActivityCardSortSelect";
+import { ActivityTimeStateFilter } from "./ActivityTimeStateFilter";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -47,9 +49,12 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-11 w-full rounded-2xl border border-[#e2caa7] bg-white/90 px-3 text-sm font-normal text-zinc-900 shadow-[0_8px_18px_rgba(116,83,45,0.05)] outline-none transition hover:border-[#d3ad7e] hover:bg-white focus:border-[#c98768] focus:bg-white focus:ring-2 focus:ring-[#efcfbd]/70 sm:h-10";
+  "h-11 w-full rounded-2xl border border-[#e2caa7] bg-white/90 px-3 text-sm font-normal text-zinc-900 shadow-[0_8px_18px_rgba(116,83,45,0.05)] outline-none transition hover:border-[#d3ad7e] hover:bg-white focus:border-[#c98768] focus:bg-white focus:ring-2 focus:ring-[#efcfbd]/70";
+const desktopSelectClassName =
+  "sm:h-10 md:h-9 md:rounded-xl md:text-[13px] md:shadow-none";
 const fieldLabelClassName =
   "grid gap-1.5 text-[12px] font-semibold text-[#8d673c]";
+const desktopFieldLabelClassName = "md:gap-1 md:text-[11px] md:leading-none";
 
 export function ActivityFilters({
   cities,
@@ -191,7 +196,23 @@ export function ActivityFilters({
     );
   }
 
-  function FilterForm({ className }: { className: string }) {
+  function FilterForm({
+    className,
+    layout = "desktop",
+  }: {
+    className: string;
+    layout?: "desktop" | "mobile";
+  }) {
+    const isMobileLayout = layout === "mobile";
+    const labelClassName = cn(
+      fieldLabelClassName,
+      isMobileLayout ? null : desktopFieldLabelClassName,
+    );
+    const selectControlClassName = cn(
+      selectClassName,
+      isMobileLayout ? null : desktopSelectClassName,
+    );
+
     return (
       <form
         action={activitiesHref}
@@ -203,11 +224,29 @@ export function ActivityFilters({
           <input name="view" type="hidden" value={filters.viewMode} />
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
-          <label className={cn(fieldLabelClassName, "col-span-2 sm:col-span-1")}>
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-2.5",
+            isMobileLayout
+              ? null
+              : "sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end md:gap-2",
+          )}
+        >
+          <label
+            className={cn(
+              labelClassName,
+              "col-span-2",
+              isMobileLayout ? null : "sm:col-span-1",
+            )}
+          >
             {t.activityFilters.keywordLabel}
             <Input
-              className="h-11 rounded-2xl border-[#e2caa7] bg-white/90 px-3 text-sm font-normal shadow-[0_8px_18px_rgba(116,83,45,0.05)] placeholder:font-normal placeholder:text-zinc-400 focus-visible:border-[#c98768] focus-visible:bg-white focus-visible:ring-[#efcfbd]/70 sm:h-10"
+              className={cn(
+                "h-11 rounded-2xl border-[#e2caa7] bg-white/90 px-3 text-sm font-normal shadow-[0_8px_18px_rgba(116,83,45,0.05)] placeholder:font-normal placeholder:text-zinc-400 focus-visible:border-[#c98768] focus-visible:bg-white focus-visible:ring-[#efcfbd]/70",
+                isMobileLayout
+                  ? null
+                  : "sm:h-10 md:h-9 md:rounded-xl md:text-[13px] md:shadow-none",
+              )}
               defaultValue={filters.keyword}
               enterKeyHint="search"
               name="q"
@@ -216,45 +255,71 @@ export function ActivityFilters({
             />
           </label>
 
-          <div className="flex items-end">
+          <div
+            className={cn(
+              "flex items-end",
+              isMobileLayout && !hasCustomFilterState ? "col-span-2" : null,
+            )}
+          >
             <Button
-              className="h-11 w-full gap-2 rounded-2xl bg-[#d58267] px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(216,141,114,0.24)] hover:bg-[#c97458] sm:h-10 sm:w-auto sm:min-w-[104px]"
+              className={cn(
+                "h-11 w-full gap-2 rounded-2xl bg-[#d58267] px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(216,141,114,0.24)] hover:bg-[#c97458]",
+                isMobileLayout
+                  ? null
+                  : "sm:h-10 sm:w-auto sm:min-w-[104px] md:h-9 md:min-w-[92px] md:rounded-xl md:px-3 md:text-[13px] md:shadow-[0_8px_18px_rgba(216,141,114,0.2)]",
+              )}
               type="submit"
             >
-              <Search className="h-4 w-4 shrink-0" />
+              <Search
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  isMobileLayout ? null : "md:h-3.5 md:w-3.5",
+                )}
+              />
               {t.activityFilters.apply}
             </Button>
           </div>
 
-          <div className="flex items-end">
-            <Link
-              aria-disabled={!hasCustomFilterState}
-              className={cn(
-                "inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition sm:h-10 sm:w-auto",
-                hasCustomFilterState
-                  ? "border-[#e2caa7] bg-white/80 text-zinc-600 shadow-[0_8px_18px_rgba(116,83,45,0.05)] hover:border-[#d3ad7e] hover:bg-white hover:text-ink"
-                  : "border-transparent bg-transparent text-zinc-400",
-              )}
-              href={resetHref}
-            >
-              <FilterX className="h-4 w-4 shrink-0" />
-              {t.activityFilters.reset}
-            </Link>
-          </div>
+          {!isMobileLayout || hasCustomFilterState ? (
+            <div className="flex items-end">
+              <Link
+                aria-disabled={!hasCustomFilterState}
+                className={cn(
+                  "inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-medium transition",
+                  isMobileLayout
+                    ? "rounded-2xl px-0"
+                    : "sm:h-10 sm:w-auto md:h-9 md:px-3 md:text-[13px]",
+                  hasCustomFilterState
+                    ? "border-[#e2caa7] bg-white/80 text-zinc-600 shadow-[0_8px_18px_rgba(116,83,45,0.05)] hover:border-[#d3ad7e] hover:bg-white hover:text-ink"
+                    : "border-transparent bg-transparent text-zinc-400",
+                )}
+                href={resetHref}
+              >
+                <FilterX className="h-4 w-4 shrink-0" />
+                <span className={cn(isMobileLayout ? "sr-only" : null)}>
+                  {t.activityFilters.reset}
+                </span>
+              </Link>
+            </div>
+          ) : null}
         </div>
 
         <div
           className={cn(
-            "grid grid-cols-2 gap-2.5 sm:gap-3",
-            publicInfoOnly
-              ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)]"
-              : "sm:grid-cols-2 xl:grid-cols-4",
+            "grid grid-cols-2 gap-2.5",
+            isMobileLayout ? null : "sm:gap-3 md:items-end md:gap-2",
+            !isMobileLayout && publicInfoOnly
+              ? "md:grid-cols-3 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(9rem,1.05fr)_auto_auto]"
+              : null,
+            !isMobileLayout && !publicInfoOnly
+              ? "sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(8.5rem,1fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_auto_auto]"
+              : null,
           )}
         >
-          <label className={fieldLabelClassName}>
+          <label className={labelClassName}>
             {t.activityFilters.categoryLabel}
             <select
-              className={selectClassName}
+              className={selectControlClassName}
               defaultValue={filters.category ?? ""}
               name="category"
               onChange={(event) =>
@@ -274,10 +339,10 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className={fieldLabelClassName}>
+          <label className={labelClassName}>
             {t.activityFilters.cityLabel}
             <select
-              className={selectClassName}
+              className={selectControlClassName}
               defaultValue={selectedCity}
               name="city"
               onChange={(event) =>
@@ -295,10 +360,12 @@ export function ActivityFilters({
             </select>
           </label>
 
-          <label className={fieldLabelClassName}>
+          <label
+            className={cn(labelClassName, isMobileLayout ? "col-span-2" : null)}
+          >
             {t.activityFilters.dateRangeLabel}
             <select
-              className={selectClassName}
+              className={selectControlClassName}
               defaultValue={filters.dateRange ?? ""}
               name="dateRange"
               onChange={(event) =>
@@ -320,10 +387,10 @@ export function ActivityFilters({
 
           {!publicInfoOnly ? (
             <>
-              <label className={fieldLabelClassName}>
+              <label className={labelClassName}>
                 {t.activityFilters.relationLabel}
                 <select
-                  className={selectClassName}
+                  className={selectControlClassName}
                   defaultValue={filters.relation}
                   name="relation"
                   onChange={(event) =>
@@ -346,10 +413,10 @@ export function ActivityFilters({
                 </select>
               </label>
 
-              <label className={fieldLabelClassName}>
+              <label className={labelClassName}>
                 {t.activityFilters.typeLabel}
                 <select
-                  className={selectClassName}
+                  className={selectControlClassName}
                   defaultValue={filters.type ?? ""}
                   name="type"
                   onChange={(event) =>
@@ -370,17 +437,44 @@ export function ActivityFilters({
               </label>
             </>
           ) : null}
+
+          <ActivityTimeStateFilter
+            className={cn(
+              "col-span-2 w-full justify-between",
+              isMobileLayout
+                ? null
+                : "sm:w-auto sm:justify-start md:col-span-2 lg:col-span-1",
+              !isMobileLayout && !publicInfoOnly ? "xl:col-span-1" : null,
+            )}
+            filters={filters}
+            forceMobileLayout={isMobileLayout}
+            locale={locale}
+            onApply={(timeStates) => {
+              applyFilterChange({ timeStates });
+            }}
+          />
+          <ActivityCardSortSelect
+            className={cn(
+              "col-span-2 w-full",
+              isMobileLayout
+                ? null
+                : "sm:w-auto md:col-span-1 md:justify-self-end",
+            )}
+            filters={filters}
+            forceMobileLayout={isMobileLayout}
+            locale={locale}
+          />
         </div>
       </form>
     );
   }
 
   return (
-    <section className="space-y-3">
-      <div className="hidden overflow-hidden rounded-[1.5rem] border border-[#ead8bd] bg-white/60 shadow-[0_18px_42px_rgba(116,83,45,0.07)] backdrop-blur md:block">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
+    <section className="space-y-2.5 sm:space-y-3">
+      <div className="hidden overflow-hidden rounded-[1.25rem] border border-[#ead8bd] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
               <SlidersHorizontal className="h-4 w-4" />
             </span>
             <div className="min-w-0">
@@ -389,30 +483,32 @@ export function ActivityFilters({
                   ? t.activityFilters.publicInfoTitle
                   : t.activityFilters.title}
               </p>
-              <p className="text-xs leading-5 text-zinc-500">
+              <p className="text-[11px] leading-4 text-zinc-500">
                 {publicInfoOnly
                   ? t.activityFilters.publicInfoDescription
                   : t.activityFilters.description}
               </p>
             </div>
           </div>
-          <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#fffaf3] px-3.5 text-xs font-semibold text-[#9a6b3b] shadow-sm ring-1 ring-[#ead7b8]">
+          <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#fffaf3] px-3 text-xs font-semibold text-[#9a6b3b] shadow-sm ring-1 ring-[#ead7b8]">
             {t.activityFilters.resultCount(resultCount)}
           </span>
         </div>
-        <div className="border-t border-[#ead8bd]/80 bg-[#fffaf3]/60 p-4">
-          <FilterForm className="grid gap-3" />
+        <div className="border-t border-[#ead8bd]/75 bg-[#fffaf3]/60 px-4 py-3">
+          <FilterForm className="grid gap-2.5" />
         </div>
       </div>
 
       <div className="md:hidden">
-        <details className="group overflow-hidden rounded-[1.35rem] border border-[#ead8bd] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
+        <details className="group rounded-[1.35rem] border border-[#ead8bd] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             <span className="inline-flex min-w-0 items-center gap-2">
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff7ea] text-[#9a6b3b] ring-1 ring-[#ead7b8]">
                 <SlidersHorizontal className="h-4 w-4 shrink-0" />
               </span>
-              <span className="truncate">{t.activityFilters.mobileSummary}</span>
+              <span className="truncate">
+                {t.activityFilters.mobileSummary}
+              </span>
               {activeFilterChips.length > 0 ? (
                 <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-coral px-1.5 text-[11px] font-bold leading-none text-white">
                   {activeFilterChips.length}
@@ -427,7 +523,7 @@ export function ActivityFilters({
             </span>
           </summary>
           <div className="border-t border-[#ead7b8] bg-[#fffaf3]/70 p-3">
-            <FilterForm className="grid gap-3" />
+            <FilterForm className="grid gap-3" layout="mobile" />
           </div>
         </details>
 
@@ -442,10 +538,7 @@ export function ActivityFilters({
                 title={t.activityFilters.removeFilter(chip.label)}
               >
                 <span className="truncate">{chip.label}</span>
-                <X
-                  aria-hidden
-                  className="h-3.5 w-3.5 shrink-0 text-zinc-500"
-                />
+                <X aria-hidden className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
                 <span className="sr-only">
                   {t.activityFilters.removeFilter(chip.label)}
                 </span>
