@@ -123,10 +123,11 @@ test("buildTeamShareImageUrl supports WeChat thumbnail variant", () => {
   );
 });
 
-test("buildTeamShareMetadata puts WeChat participant thumbnail first for group pages", () => {
+test("buildTeamShareMetadata puts WeChat cover image first for group pages", () => {
   const metadata = buildTeamShareMetadata({
     canonicalUrl: "https://friemi.example/zh-CN/activities/activity_1",
     capacity: 8,
+    coverImageUrl: "https://images.example.com/team-cover.jpg",
     dateLabel: "6月20日 18:00",
     locale: "zh-CN",
     locationLabel: "Paris",
@@ -134,8 +135,7 @@ test("buildTeamShareMetadata puts WeChat participant thumbnail first for group p
     shareImageUrl:
       "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN",
     title: "周末野餐组局",
-    wechatShareImageUrl:
-      "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+    wechatShareImageUrl: "https://images.example.com/team-cover.jpg",
   });
   const images = metadata.openGraph?.images;
 
@@ -144,9 +144,9 @@ test("buildTeamShareMetadata puts WeChat participant thumbnail first for group p
 
   assert.equal(
     imageObjects[0]?.url,
-    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+    "https://images.example.com/team-cover.jpg",
   );
-  assert.equal(imageObjects[0]?.width, 420);
+  assert.equal(imageObjects[0]?.width, 1200);
   assert.equal(imageObjects[1]?.width, 1200);
 });
 

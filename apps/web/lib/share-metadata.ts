@@ -429,11 +429,10 @@ export function buildTeamShareMetadata({
     wechatImageUrl && wechatImageUrl !== imageUrl
       ? [
           {
-            alt: `${metadataTitle} participants`,
-            height: 420,
-            type: "image/png",
+            alt: metadataTitle,
+            height: 630,
             url: wechatImageUrl,
-            width: 420,
+            width: 1200,
           },
           {
             alt: metadataTitle,
