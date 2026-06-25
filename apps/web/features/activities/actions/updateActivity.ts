@@ -13,7 +13,7 @@ import {
   formatStoredDescription,
   getActivityFormValues,
   getString,
-  parseParisDateTime,
+  parseActivityLocalDateTime,
   type ActivityFormState,
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
@@ -135,9 +135,9 @@ export async function updateActivityAction(
     );
   }
 
-  const startAt = parseParisDateTime(result.data.startAt);
+  const startAt = parseActivityLocalDateTime(result.data.startAt);
   const endAt = result.data.endAt
-    ? parseParisDateTime(result.data.endAt)
+    ? parseActivityLocalDateTime(result.data.endAt)
     : null;
 
   if (!startAt) {
@@ -188,10 +188,7 @@ export async function updateActivityAction(
     editableActivity._count.participants +
     editableActivity._count.guestParticipants;
 
-  if (
-    submittedCapacity > 0 &&
-    submittedCapacity < currentParticipantCount
-  ) {
+  if (submittedCapacity > 0 && submittedCapacity < currentParticipantCount) {
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -242,7 +239,7 @@ export async function updateActivityAction(
           shareEnabled: result.data.visibility === "PRIVATE",
           shareToken:
             result.data.visibility === "PRIVATE"
-              ? editableActivity.shareToken ?? generateActivityShareToken()
+              ? (editableActivity.shareToken ?? generateActivityShareToken())
               : null,
         },
       });
