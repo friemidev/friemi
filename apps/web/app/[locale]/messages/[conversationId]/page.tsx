@@ -3,6 +3,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
+import { IncomingFriendRequestsPanel } from "@/features/friends/components/FriendsDashboard";
 import {
   getDirectConversationThread,
   getDirectMessageFriendRoster,
@@ -67,10 +68,19 @@ export default async function MessageThreadPage({
 
   return (
     <PageContainer className="max-md:h-[calc(100dvh-10rem)] max-md:overflow-hidden max-md:py-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
-      <MessageThread
-        conversation={conversationResult.conversation}
-        locale={locale}
-      />
+      <div className="grid min-h-0 gap-4">
+        <IncomingFriendRequestsPanel
+          className="lg:hidden"
+          incomingRequests={incomingRequests}
+          locale={locale}
+          redirectPath={`/messages/${conversationResult.conversation.id}`}
+          returnTo="messages"
+        />
+        <MessageThread
+          conversation={conversationResult.conversation}
+          locale={locale}
+        />
+      </div>
       <div className="hidden lg:block">
         {friendRosterResult.error ? (
           <EmptyState

@@ -35,6 +35,7 @@ type ProfileOverviewPanelProps = {
   joinedLabel: string;
   onActivitySectionChange?: (section: ProfileSectionKey) => void;
   redirectPath: string;
+  showFriendCount?: boolean;
   showJoinedCount?: boolean;
 };
 
@@ -160,14 +161,20 @@ export function ProfileOverviewPanel({
   joinedLabel,
   onActivitySectionChange,
   redirectPath,
+  showFriendCount = true,
   showJoinedCount = true,
 }: ProfileOverviewPanelProps) {
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const t = getProfileFollowCopy(locale);
-  const statsGridClass = showJoinedCount
-    ? "grid w-full grid-cols-5 gap-2"
-    : "grid w-full grid-cols-4 gap-2";
+  const statCount =
+    1 + (showJoinedCount ? 1 : 0) + 2 + (showFriendCount ? 1 : 0);
+  const statsGridClass =
+    statCount === 5
+      ? "grid w-full grid-cols-5 gap-2"
+      : statCount === 4
+        ? "grid w-full grid-cols-4 gap-2"
+        : "grid w-full grid-cols-3 gap-2";
 
   const activeList =
     activePanel === "friends"
@@ -256,12 +263,14 @@ export function ProfileOverviewPanel({
           onClick={() => openPanel("followers")}
           value={followersCount}
         />
-        <InteractiveStatCard
-          active={activePanel === "friends"}
-          label={t.friendCount}
-          onClick={() => openPanel("friends")}
-          value={friendCount}
-        />
+        {showFriendCount ? (
+          <InteractiveStatCard
+            active={activePanel === "friends"}
+            label={t.friendCount}
+            onClick={() => openPanel("friends")}
+            value={friendCount}
+          />
+        ) : null}
       </div>
 
       {activePanel ? (
