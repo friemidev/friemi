@@ -30,6 +30,20 @@ type DetailShareMetadataInput = {
   title: string;
 };
 
+type TeamShareMetadataInput = DetailShareMetadataInput & {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+  shareImageUrl?: string | null;
+};
+
+type TeamShareImageUrlInput = {
+  accessToken?: string | null;
+  activityId: string;
+  baseUrl: string;
+  locale: string;
+};
+
 type PageShareMetadataInput = {
   baseUrl: string;
   description: string;
@@ -166,6 +180,76 @@ export function getShareDescription({
   return truncateShareText(pieces.join(" · ") || defaultDescription, 160);
 }
 
+function getTeamParticipantShareLabel({
+  capacity,
+  locale,
+  participantCount,
+}: {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+}) {
+  const normalizedCount = Math.max(0, participantCount);
+
+  if (locale === "fr") {
+    return capacity && capacity > 0
+      ? `${normalizedCount}/${capacity} inscrits`
+      : `${normalizedCount} inscrits`;
+  }
+
+  if (locale === "en") {
+    return capacity && capacity > 0
+      ? `${normalizedCount}/${capacity} joined`
+      : `${normalizedCount} joined`;
+  }
+
+  return capacity && capacity > 0
+    ? `${normalizedCount}/${capacity} 人已加入`
+    : `${normalizedCount} 人已加入`;
+}
+
+export function getTeamShareDescription({
+  capacity,
+  dateLabel,
+  locationLabel,
+  locale,
+  participantCount,
+  priceLabel,
+}: Pick<
+  DetailShareMetadataInput,
+  "dateLabel" | "locationLabel" | "priceLabel"
+> & {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+}) {
+  const pieces = [
+    getTeamParticipantShareLabel({ capacity, locale, participantCount }),
+    dateLabel ? truncateShareText(dateLabel, 48) : null,
+    locationLabel ? truncateShareText(locationLabel, 52) : null,
+    priceLabel ? truncateShareText(priceLabel, 24) : null,
+  ].filter(Boolean);
+
+  return truncateShareText(pieces.join(" · "), 150);
+}
+
+export function buildTeamShareImageUrl({
+  accessToken,
+  activityId,
+  baseUrl,
+  locale,
+}: TeamShareImageUrlInput) {
+  const url = new URL("/api/share/team-card", baseUrl);
+  url.searchParams.set("activityId", activityId);
+  url.searchParams.set("locale", locale);
+
+  if (accessToken) {
+    url.searchParams.set("access", accessToken);
+  }
+
+  return url.toString();
+}
+
 export function getSharePriceLabel(
   priceType: PriceType,
   priceText: string | null | undefined,
@@ -287,6 +371,63 @@ export function buildDetailShareMetadata({
         {
           alt: metadataTitle,
           url: imageUrl,
+        },
+      ],
+      siteName,
+      title: metadataTitle,
+      type: "website",
+      url: canonicalUrl,
+    },
+    title: metadataTitle,
+    twitter: {
+      card: "summary_large_image",
+      description: metadataDescription,
+      images: [imageUrl],
+      title: metadataTitle,
+    },
+  };
+}
+
+export function buildTeamShareMetadata({
+  canonicalUrl,
+  capacity,
+  coverImageUrl,
+  dateLabel,
+  locale,
+  locationLabel,
+  participantCount,
+  priceLabel,
+  shareImageUrl,
+  siteName = defaultSiteName,
+  title,
+}: TeamShareMetadataInput): Metadata {
+  const baseUrl = new URL(canonicalUrl).origin;
+  const metadataTitle = truncateShareText(title, 72);
+  const metadataDescription = getTeamShareDescription({
+    capacity,
+    dateLabel,
+    locationLabel,
+    locale,
+    participantCount,
+    priceLabel,
+  });
+  const imageUrl =
+    resolveAbsoluteUrl(shareImageUrl, baseUrl) ??
+    resolveShareImageUrl(coverImageUrl, baseUrl);
+
+  return {
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    description: metadataDescription,
+    openGraph: {
+      description: metadataDescription,
+      images: [
+        {
+          alt: metadataTitle,
+          height: 630,
+          url: imageUrl,
+          width: 1200,
         },
       ],
       siteName,

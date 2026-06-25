@@ -85,6 +85,8 @@ import {
   buildCanonicalUrl,
   buildDetailShareMetadata,
   buildFallbackShareMetadata,
+  buildTeamShareImageUrl,
+  buildTeamShareMetadata,
   getRequestBaseUrl,
   getShareDateLabel,
   getShareLocationLabel,
@@ -149,25 +151,49 @@ export async function generateMetadata({
     activityPath,
     activity.visibility === "PRIVATE" ? { access: accessToken } : undefined,
   );
+  const dateLabel = getShareDateLabel({
+    endAt: activity.endAt,
+    locale,
+    startAt: activity.startAt,
+  });
+  const locationLabel = getShareLocationLabel({
+    address: activity.address,
+    city: activity.city,
+  });
+  const priceLabel = getSharePriceLabel(
+    activity.priceType,
+    activity.priceText,
+    locale,
+  );
+
+  if (!activity.publicEventId) {
+    return buildTeamShareMetadata({
+      canonicalUrl,
+      capacity: activity.capacity,
+      coverImageUrl: activity.coverImageUrl,
+      dateLabel,
+      locale,
+      locationLabel,
+      participantCount: activity.participantCount,
+      priceLabel,
+      shareImageUrl: buildTeamShareImageUrl({
+        accessToken:
+          activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
+        activityId,
+        baseUrl,
+        locale,
+      }),
+      title: activity.title,
+    });
+  }
 
   return buildDetailShareMetadata({
     canonicalUrl,
     coverImageUrl: activity.coverImageUrl,
-    dateLabel: getShareDateLabel({
-      endAt: activity.endAt,
-      locale,
-      startAt: activity.startAt,
-    }),
+    dateLabel,
     description: activity.description,
-    locationLabel: getShareLocationLabel({
-      address: activity.address,
-      city: activity.city,
-    }),
-    priceLabel: getSharePriceLabel(
-      activity.priceType,
-      activity.priceText,
-      locale,
-    ),
+    locationLabel,
+    priceLabel,
     title: activity.title,
   });
 }
@@ -620,12 +646,14 @@ export default async function ActivityDetailPage({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const participantPreview = activity.participantPreview ?? [];
-  const ticketUrl = activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
+  const ticketUrl =
+    activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
   const ticketLabel = getTicketCtaLabel(
     locale,
     activity.ticketLabel ?? activity.publicEvent?.ticketLabel,
   );
-  const canOpenTicketLink = Boolean(ticketUrl) && !isCancelled && !isEndedByTime;
+  const canOpenTicketLink =
+    Boolean(ticketUrl) && !isCancelled && !isEndedByTime;
   const activityPriceLabel = getActivityPriceLabel(activity, locale);
   const activityVisibilityLabel =
     activity.visibility === "PRIVATE"

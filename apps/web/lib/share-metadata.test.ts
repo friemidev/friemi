@@ -3,9 +3,11 @@ import test from "node:test";
 import {
   buildCanonicalUrl,
   buildPageShareMetadata,
+  buildTeamShareImageUrl,
   getRequestBaseUrl,
   getShareDescription,
   getShareLocationLabel,
+  getTeamShareDescription,
   resolveShareImageUrl,
   truncateShareText,
 } from "./share-metadata";
@@ -51,7 +53,10 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   });
 
   assert.equal(metadata.title, "Friemi · What's next? Fun begins.");
-  assert.equal(metadata.description, "Discover activities and crews with friends.");
+  assert.equal(
+    metadata.description,
+    "Discover activities and crews with friends.",
+  );
   assert.equal(metadata.openGraph?.url, "https://friemi.example/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
@@ -71,6 +76,36 @@ test("getShareDescription removes raw URLs and keeps useful event context", () =
   assert.equal(description.includes("https://"), false);
   assert.equal(description.includes("6月20日"), true);
   assert.equal(description.includes("Paris"), true);
+});
+
+test("getTeamShareDescription uses compact team status context", () => {
+  const description = getTeamShareDescription({
+    capacity: 8,
+    dateLabel: "6月20日 18:00-20:00",
+    locale: "zh-CN",
+    locationLabel: "Paris · 12 rue Exemple",
+    participantCount: 3,
+    priceLabel: "免费",
+  });
+
+  assert.equal(description.includes("3/8 人已加入"), true);
+  assert.equal(description.includes("6月20日"), true);
+  assert.equal(description.includes("Paris"), true);
+  assert.equal(description.includes("搭子"), false);
+});
+
+test("buildTeamShareImageUrl preserves private activity access token", () => {
+  const imageUrl = buildTeamShareImageUrl({
+    accessToken: "private token",
+    activityId: "activity_1",
+    baseUrl: "https://friemi.example",
+    locale: "zh-CN",
+  });
+
+  assert.equal(
+    imageUrl,
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&access=private+token",
+  );
 });
 
 test("getShareLocationLabel avoids duplicating city names", () => {
