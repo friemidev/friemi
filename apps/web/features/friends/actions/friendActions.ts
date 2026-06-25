@@ -49,6 +49,7 @@ const sendFriendRequestToProfileSchema = z.object({
 const requestActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   requestId: z.string().min(1),
+  redirectPath: z.string().trim().min(1).optional(),
   returnTo: z.enum(["friends", "messages"]).default("friends"),
 });
 
@@ -73,10 +74,9 @@ function refreshFriends(locale: string) {
 function redirectAfterFriendAction(
   locale: string,
   returnTo: FriendActionReturnTo = "friends",
+  redirectPath?: string,
 ): never {
-  redirect(
-    withLocale(locale, returnTo === "messages" ? "/messages" : "/friends"),
-  );
+  redirect(withLocale(locale, resolveFriendActionRedirectPath(returnTo, redirectPath)));
 }
 
 function getFriendAnalyticsSourceSurface(
@@ -91,6 +91,21 @@ function getFriendActionRoute(locale: string, returnTo: FriendActionReturnTo) {
 
 function getFriendActionRedirectPath(returnTo: FriendActionReturnTo) {
   return returnTo === "messages" ? "/messages" : "/friends";
+}
+
+function resolveFriendActionRedirectPath(
+  returnTo: FriendActionReturnTo,
+  redirectPath?: string,
+) {
+  if (
+    redirectPath &&
+    redirectPath.startsWith("/") &&
+    !redirectPath.startsWith("//")
+  ) {
+    return redirectPath;
+  }
+
+  return getFriendActionRedirectPath(returnTo);
 }
 
 function trackFriendRequestSent({
@@ -587,6 +602,7 @@ export async function acceptFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    redirectPath: getString(formData, "redirectPath") || undefined,
     returnTo: getString(formData, "returnTo") || "friends",
   });
 
@@ -596,11 +612,11 @@ export async function acceptFriendRequestAction(
     };
   }
 
-  const { locale, requestId, returnTo } = result.data;
+  const { locale, requestId, redirectPath, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(
     locale,
-    getFriendActionRedirectPath(returnTo),
+    resolveFriendActionRedirectPath(returnTo, redirectPath),
   );
 
   try {
@@ -675,7 +691,7 @@ export async function acceptFriendRequestAction(
   refreshFriends(locale);
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
-  redirectAfterFriendAction(locale, returnTo);
+  redirectAfterFriendAction(locale, returnTo, redirectPath);
 }
 
 export async function rejectFriendRequestAction(
@@ -687,6 +703,7 @@ export async function rejectFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    redirectPath: getString(formData, "redirectPath") || undefined,
     returnTo: getString(formData, "returnTo") || "friends",
   });
 
@@ -696,11 +713,11 @@ export async function rejectFriendRequestAction(
     };
   }
 
-  const { locale, requestId, returnTo } = result.data;
+  const { locale, requestId, redirectPath, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(
     locale,
-    getFriendActionRedirectPath(returnTo),
+    resolveFriendActionRedirectPath(returnTo, redirectPath),
   );
 
   try {
@@ -761,7 +778,7 @@ export async function rejectFriendRequestAction(
   refreshFriends(locale);
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
-  redirectAfterFriendAction(locale, returnTo);
+  redirectAfterFriendAction(locale, returnTo, redirectPath);
 }
 
 export async function cancelFriendRequestAction(
@@ -773,6 +790,7 @@ export async function cancelFriendRequestAction(
   const result = requestActionSchema.safeParse({
     locale: fallbackLocale,
     requestId: getString(formData, "requestId"),
+    redirectPath: getString(formData, "redirectPath") || undefined,
     returnTo: getString(formData, "returnTo") || "friends",
   });
 
@@ -782,11 +800,11 @@ export async function cancelFriendRequestAction(
     };
   }
 
-  const { locale, requestId, returnTo } = result.data;
+  const { locale, requestId, redirectPath, returnTo } = result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(
     locale,
-    getFriendActionRedirectPath(returnTo),
+    resolveFriendActionRedirectPath(returnTo, redirectPath),
   );
 
   try {

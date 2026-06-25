@@ -14,8 +14,10 @@ import {
 import type { NotificationType } from "@prisma/client";
 import { Button } from "@chill-club/ui";
 import { formatActivityDate } from "@chill-club/shared";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FriendRequestActionButtons } from "@/features/friends/components/FriendsDashboard";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
@@ -178,7 +180,7 @@ function getNotificationActionLabel(
   const t = getCopy(locale).notifications;
 
   if (notification.type === "FRIEND_REQUEST") {
-    return t.openMessages;
+    return t.openProfile;
   }
 
   if (notification.type === "REPORT_CREATED") {
@@ -306,9 +308,12 @@ function NotificationCard({
   const NotificationIcon = visual.icon;
   const category = getNotificationCategory(notification.type);
   const hasAction =
-    Boolean(notification.activity) ||
-    notification.type === "FRIEND_REQUEST" ||
-    notification.type === "REPORT_CREATED";
+    (notification.type === "FRIEND_REQUEST"
+      ? false
+      : Boolean(notification.activity) || notification.type === "REPORT_CREATED");
+  const canInlineResolveFriendRequest =
+    notification.type === "FRIEND_REQUEST" &&
+    Boolean(notification.friendRequestId);
 
   return (
     <article
@@ -369,12 +374,15 @@ function NotificationCard({
           {notification.actor || notification.activity ? (
             <dl className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-zinc-600 sm:text-xs">
               {notification.actor ? (
-                <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 ring-1 ring-black/10">
+                <Link
+                  className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 ring-1 ring-black/10 transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                  href={withLocale(locale, `/profile/${notification.actor.id}`)}
+                >
                   <dt className="shrink-0 text-zinc-400">{t.actorLabel}</dt>
                   <dd className="truncate font-medium text-ink">
                     {notification.actor.nickname}
                   </dd>
-                </div>
+                </Link>
               ) : null}
               {notification.activity ? (
                 <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 ring-1 ring-black/10">
@@ -388,6 +396,15 @@ function NotificationCard({
           ) : null}
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            {canInlineResolveFriendRequest && notification.friendRequestId ? (
+              <div className="w-full sm:max-w-xs">
+                <FriendRequestActionButtons
+                  locale={locale}
+                  redirectPath="/notifications"
+                  requestId={notification.friendRequestId}
+                />
+              </div>
+            ) : null}
             {hasAction ? (
               <form action={openNotificationActivityAction}>
                 <input name="locale" type="hidden" value={locale} />

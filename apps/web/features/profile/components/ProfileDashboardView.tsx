@@ -148,6 +148,7 @@ export function ProfileDashboardView({
               }
               onActivitySectionChange={setActiveProfileSection}
               redirectPath={isSelf ? "/profile" : `/profile/${profile.id}`}
+              showFriendCount={isSelf}
               showJoinedCount={showPrivateParticipation}
             />
             {isSelf ? (

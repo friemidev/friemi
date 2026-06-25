@@ -678,16 +678,8 @@ export function AddFriendDialog({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:max-h-[calc(100dvh-10rem)] sm:p-5">
-          <AddFriendForm
-            className="border-0 bg-transparent p-0 shadow-none"
-            currentUserFriendCode={currentUserFriendCode}
-            initialSearchTerm={initialSearchTerm}
-            locale={locale}
-            returnTo={returnTo}
-            showHeader={false}
-          />
           {incomingRequests.length > 0 ? (
-            <section className="mt-6 grid gap-3 border-t border-black/10 pt-5">
+            <section className="grid gap-3">
               <div className="flex min-w-0 items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-base font-semibold text-ink">
@@ -708,9 +700,20 @@ export function AddFriendDialog({
                   request={request}
                   returnTo={returnTo}
                 />
-              ))}
-            </section>
+                ))}
+              </section>
           ) : null}
+          <AddFriendForm
+            className={cn(
+              "border-0 bg-transparent p-0 shadow-none",
+              incomingRequests.length > 0 && "mt-6 border-t border-black/10 pt-5",
+            )}
+            currentUserFriendCode={currentUserFriendCode}
+            initialSearchTerm={initialSearchTerm}
+            locale={locale}
+            returnTo={returnTo}
+            showHeader={false}
+          />
         </div>
       </div>
     </div>
@@ -721,6 +724,60 @@ export function AddFriendDialog({
   }
 
   return createPortal(dialog, portalElement);
+}
+
+export function IncomingFriendRequestsPanel({
+  className,
+  incomingRequests,
+  locale,
+  redirectPath,
+  returnTo = "friends",
+}: {
+  className?: string;
+  incomingRequests: FriendRequestViewModel[];
+  locale: string;
+  redirectPath?: string;
+  returnTo?: "friends" | "messages";
+}) {
+  const t = getFriendsCopy(locale);
+
+  if (incomingRequests.length === 0) {
+    return null;
+  }
+
+  return (
+    <section
+      className={cn(
+        "grid gap-3 rounded-lg border border-black/10 bg-white/88 p-4 shadow-sm",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-semibold text-ink">
+            {t.incomingTitle}
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-zinc-500">
+            {t.incomingDescription}
+          </p>
+        </div>
+        <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-clay px-2 text-xs font-semibold text-white">
+          {incomingRequests.length}
+        </span>
+      </div>
+      <div className="grid gap-3">
+        {incomingRequests.map((request) => (
+          <IncomingRequestCard
+            key={request.id}
+            locale={locale}
+            redirectPath={redirectPath}
+            request={request}
+            returnTo={returnTo}
+          />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function RequestCountBadge({ count }: { count: number }) {
@@ -1300,12 +1357,14 @@ function FriendActivitySummary({
   );
 }
 
-function IncomingRequestCard({
+export function IncomingRequestCard({
   locale,
+  redirectPath,
   request,
   returnTo = "friends",
 }: {
   locale: string;
+  redirectPath?: string;
   request: FriendRequestViewModel;
   returnTo?: "friends" | "messages";
 }) {
@@ -1314,36 +1373,88 @@ function IncomingRequestCard({
   return (
     <article className="min-w-0 rounded-xl border border-black/10 bg-white/95 p-3 shadow-sm shadow-black/5">
       <div className="rounded-lg border border-black/10 bg-paper/45 p-3">
-        <UserSummary locale={locale} showBio={false} user={request.user} />
+        <UserSummary
+          locale={locale}
+          profileHref={withLocale(locale, `/profile/${request.user.id}`)}
+          showBio={false}
+          user={request.user}
+        />
         <RequestMeta
           label={t.messageLabel}
           locale={locale}
           request={request}
         />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 flex flex-wrap gap-3">
         <SmallActionForm
           action={acceptFriendRequestAction}
+          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#4f6a49]"
           icon={Check}
           locale={locale}
+          redirectPath={redirectPath}
           requestId={request.id}
           returnTo={returnTo}
-          variant="primary"
+          variant="secondary"
         >
           {t.accept}
         </SmallActionForm>
         <SmallActionForm
           action={rejectFriendRequestAction}
+          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#c65d4b] text-white ring-1 ring-[#c65d4b]/20 shadow-sm shadow-[#c65d4b]/20 hover:bg-[#b14f40]"
           icon={X}
           locale={locale}
+          redirectPath={redirectPath}
           requestId={request.id}
           returnTo={returnTo}
-          variant="secondary"
+          variant="primary"
         >
           {t.reject}
         </SmallActionForm>
       </div>
     </article>
+  );
+}
+
+export function FriendRequestActionButtons({
+  locale,
+  redirectPath,
+  requestId,
+  returnTo = "friends",
+}: {
+  locale: string;
+  redirectPath?: string;
+  requestId: string;
+  returnTo?: "friends" | "messages";
+}) {
+  const t = getFriendsCopy(locale);
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      <SmallActionForm
+        action={acceptFriendRequestAction}
+        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#4f6a49]"
+        icon={Check}
+        locale={locale}
+        redirectPath={redirectPath}
+        requestId={requestId}
+        returnTo={returnTo}
+        variant="secondary"
+      >
+        {t.accept}
+      </SmallActionForm>
+      <SmallActionForm
+        action={rejectFriendRequestAction}
+        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#c65d4b] text-white ring-1 ring-[#c65d4b]/20 shadow-sm shadow-[#c65d4b]/20 hover:bg-[#b14f40]"
+        icon={X}
+        locale={locale}
+        redirectPath={redirectPath}
+        requestId={requestId}
+        returnTo={returnTo}
+        variant="primary"
+      >
+        {t.reject}
+      </SmallActionForm>
+    </div>
   );
 }
 
@@ -1377,17 +1488,21 @@ function OutgoingRequestCard({
 
 function SmallActionForm({
   action,
+  buttonClassName,
   children,
   icon,
   locale,
+  redirectPath,
   requestId,
   returnTo = "friends",
   variant = "primary",
 }: {
   action: FriendAction;
+  buttonClassName?: string;
   children: ReactNode;
   icon: LucideIcon;
   locale: string;
+  redirectPath?: string;
   requestId: string;
   returnTo?: "friends" | "messages";
   variant?: "primary" | "secondary" | "success";
@@ -1399,9 +1514,15 @@ function SmallActionForm({
     <form action={formAction} className="grid gap-2">
       <input name="locale" type="hidden" value={locale} />
       <input name="requestId" type="hidden" value={requestId} />
+      <input name="redirectPath" type="hidden" value={redirectPath ?? ""} />
       <input name="returnTo" type="hidden" value={returnTo} />
       {state.formError ? <FormError message={state.formError} /> : null}
-      <SubmitButton icon={icon} pendingLabel={t.acting} variant={variant}>
+      <SubmitButton
+        className={cn("w-auto", buttonClassName)}
+        icon={icon}
+        pendingLabel={t.acting}
+        variant={variant}
+      >
         {children}
       </SubmitButton>
     </form>
@@ -1445,25 +1566,26 @@ function SubmitButton({
 function UserSummary({
   compactBio = false,
   locale,
+  profileHref,
   showBio = true,
   user,
 }: {
   compactBio?: boolean;
   locale: string;
+  profileHref?: string;
   showBio?: boolean;
   user: FriendUserViewModel;
 }) {
   const t = getFriendsCopy(locale);
-
-  return (
-    <div className="flex min-w-0 items-start gap-3">
+  const content = (
+    <>
       <UserAvatar user={user} />
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold text-ink">
+        <h3 className="truncate text-sm font-semibold text-ink transition hover:text-moss">
           {user.nickname}
         </h3>
         {user.friendCode ? (
-          <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+          <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500 transition hover:text-zinc-700">
             {t.friendCodeLabel} {user.friendCode}
           </p>
         ) : null}
@@ -1478,6 +1600,21 @@ function UserSummary({
           </p>
         ) : null}
       </div>
+    </>
+  );
+
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      {profileHref ? (
+        <Link
+          href={profileHref}
+          className="flex min-w-0 flex-1 items-start gap-3 rounded-xl transition hover:bg-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+        >
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
     </div>
   );
 }

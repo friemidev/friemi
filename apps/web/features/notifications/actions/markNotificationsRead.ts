@@ -23,7 +23,12 @@ function trackNotificationOpened({
 }: {
   locale: string;
   notificationId: string;
-  targetType: "activity" | "admin_reports" | "messages" | "notifications";
+  targetType:
+    | "activity"
+    | "admin_reports"
+    | "messages"
+    | "notifications"
+    | "profile";
   type: string;
   userProfileId: string;
 }) {
@@ -117,16 +122,23 @@ export async function openNotificationActivityAction(formData: FormData) {
     });
 
     revalidatePath(withLocale(locale, "/notifications"));
-    revalidatePath(withLocale(locale, "/messages"));
+    if (notification.actorId) {
+      revalidatePath(withLocale(locale, `/profile/${notification.actorId}`));
+    }
     revalidatePath(withLocale(locale, "/"), "layout");
     trackNotificationOpened({
       locale,
       notificationId,
-      targetType: "messages",
+      targetType: "profile",
       type: notification.type,
       userProfileId: profile.id,
     });
-    redirect(withLocale(locale, "/messages?friendRequests=1"));
+    redirect(
+      withLocale(
+        locale,
+        notification.actorId ? `/profile/${notification.actorId}` : "/notifications",
+      ),
+    );
   }
 
   if (notification?.type === "REPORT_CREATED") {
