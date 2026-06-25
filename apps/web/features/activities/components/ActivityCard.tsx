@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -811,7 +810,14 @@ export function ActivityCard({
             mobileDenseClass("max-[639px]:px-3 max-[639px]:pb-3"),
           )}
         >
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div
+            className={cn(
+              "grid items-center gap-2",
+              copyActivityHref
+                ? "grid-cols-1 sm:grid-cols-[minmax(4.75rem,0.84fr)_minmax(5.75rem,1fr)]"
+                : "grid-cols-1",
+            )}
+          >
             {showPrimaryAction ? (
               <AnalyticsLink
                 href={actionHref}
@@ -825,30 +831,35 @@ export function ActivityCard({
                   sourceSurface,
                   properties: baseAnalyticsProperties,
                 }}
-                className="min-w-0 flex-1"
+                className="group min-w-0 rounded-full focus-visible:outline-none"
               >
-                <Button
+                <span
                   className={cn(
-                    "h-10 w-full rounded-full border-0 px-4 text-sm sm:h-11 sm:text-base",
+                    "flex h-10 min-h-10 w-full min-w-0 items-center justify-center overflow-hidden rounded-full border-0 px-3 text-center text-[13px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-coral/45 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11",
+                    copyActivityHref
+                      ? "sm:px-2.5 sm:text-[13px]"
+                      : "sm:px-4 sm:text-base",
                     actionToneClassName,
                   )}
                 >
-                  {buttonLabel}
-                </Button>
+                  <span className="min-w-0 truncate">{buttonLabel}</span>
+                </span>
               </AnalyticsLink>
             ) : null}
             {copyActivityHref ? (
-              <Link href={copyActivityHref} className="shrink-0">
-                <Button
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#d9c8ad] bg-white px-3 text-xs font-semibold text-[#5f4f3f] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/25 sm:h-11 sm:px-4 sm:text-sm"
-                  variant="secondary"
-                >
+              <Link
+                href={copyActivityHref}
+                className="group min-w-0 rounded-full focus-visible:outline-none"
+              >
+                <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-[#d9c8ad] bg-white px-2.5 text-xs font-semibold leading-none text-[#5f4f3f] shadow-sm transition duration-150 ease-out hover:bg-white group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-[#d88d72]/25 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-3 sm:text-[13px]">
                   <Copy
                     className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
                     aria-hidden="true"
                   />
-                  {getCopyTeamButtonLabel(locale)}
-                </Button>
+                  <span className="min-w-0 truncate">
+                    {getCopyTeamButtonLabel(locale)}
+                  </span>
+                </span>
               </Link>
             ) : null}
           </div>

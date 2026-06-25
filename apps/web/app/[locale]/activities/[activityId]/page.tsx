@@ -183,6 +183,14 @@ export async function generateMetadata({
         baseUrl,
         locale,
       }),
+      wechatShareImageUrl: buildTeamShareImageUrl({
+        accessToken:
+          activity.visibility === "PRIVATE" ? (accessToken ?? null) : null,
+        activityId,
+        baseUrl,
+        locale,
+        variant: "wechat",
+      }),
       title: activity.title,
     });
   }
