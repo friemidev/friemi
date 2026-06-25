@@ -4,6 +4,9 @@ import {
   formatActivityDate,
   formatActivityDateOnly,
   formatActivityTime,
+  formatFloatingActivityDate,
+  formatFloatingActivityDateOnly,
+  formatFloatingActivityTime,
 } from "@chill-club/shared";
 import { getActivityCoverDisplayUrl } from "./activity-cover-display";
 import { brand } from "./brand";
@@ -281,31 +284,30 @@ export function getSharePriceLabel(
 
 export function getShareDateLabel({
   endAt,
+  floating = false,
   locale,
   startAt,
 }: {
   endAt?: string | null;
+  floating?: boolean;
   locale: string;
   startAt: string;
 }) {
+  const formatDate = floating ? formatFloatingActivityDate : formatActivityDate;
+  const formatDateOnly = floating
+    ? formatFloatingActivityDateOnly
+    : formatActivityDateOnly;
+  const formatTime = floating ? formatFloatingActivityTime : formatActivityTime;
+
   if (!endAt) {
-    return formatActivityDate(startAt, locale);
+    return formatDate(startAt, locale);
   }
 
-  if (
-    formatActivityDateOnly(startAt, locale) ===
-    formatActivityDateOnly(endAt, locale)
-  ) {
-    return `${formatActivityDate(startAt, locale)}-${formatActivityTime(
-      endAt,
-      locale,
-    )}`;
+  if (formatDateOnly(startAt, locale) === formatDateOnly(endAt, locale)) {
+    return `${formatDate(startAt, locale)}-${formatTime(endAt, locale)}`;
   }
 
-  return `${formatActivityDate(startAt, locale)} - ${formatActivityDate(
-    endAt,
-    locale,
-  )}`;
+  return `${formatDate(startAt, locale)} - ${formatDate(endAt, locale)}`;
 }
 
 export function getShareLocationLabel({

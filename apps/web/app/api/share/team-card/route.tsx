@@ -343,9 +343,7 @@ export async function GET(request: Request) {
   const locale = requestUrl.searchParams.get("locale") || "zh-CN";
   const accessToken = requestUrl.searchParams.get("access");
   const variant =
-    requestUrl.searchParams.get("variant") === "wechat"
-      ? "wechat"
-      : "default";
+    requestUrl.searchParams.get("variant") === "wechat" ? "wechat" : "default";
   const baseUrl = getRequestBaseUrl(request.headers);
   const activity = activityId
     ? await getActivityShareMetadataById(activityId, accessToken)
@@ -361,6 +359,7 @@ export async function GET(request: Request) {
 
   const dateLabel = getShareDateLabel({
     endAt: activity.endAt,
+    floating: true,
     locale,
     startAt: activity.startAt,
   });

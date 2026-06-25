@@ -1,5 +1,5 @@
-const parisTimeZone = "Europe/Paris";
 const otherCategoryPrefix = "其他主题：";
+const parisTimeZone = "Europe/Paris";
 
 export type ActivityFormValues = {
   title: string;
@@ -36,6 +36,10 @@ export type ActivityFormState = {
   version?: number;
 };
 
+function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
   const offsetName = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -58,11 +62,7 @@ function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
   return sign * (hours * 60 + minutes);
 }
 
-function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
-  return parts.find((part) => part.type === type)?.value ?? "";
-}
-
-export function parseParisDateTime(value: string) {
+export function parseActivityLocalDateTime(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
 
   if (!match) {
@@ -70,7 +70,7 @@ export function parseParisDateTime(value: string) {
   }
 
   const [, year, month, day, hour, minute] = match;
-  const utcGuess = new Date(
+  const date = new Date(
     Date.UTC(
       Number(year),
       Number(month) - 1,
@@ -79,10 +79,50 @@ export function parseParisDateTime(value: string) {
       Number(minute),
     ),
   );
-  const offsetMinutes = getTimeZoneOffsetMinutes(utcGuess, parisTimeZone);
-  const date = new Date(utcGuess.getTime() - offsetMinutes * 60_000);
 
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function parseParisDateTime(value: string) {
+  const date = parseActivityLocalDateTime(value);
+
+  if (!date) {
+    return null;
+  }
+
+  const offsetMinutes = getTimeZoneOffsetMinutes(date, parisTimeZone);
+
+  return new Date(date.getTime() - offsetMinutes * 60_000);
+}
+
+export function formatActivityLocalDateTimeInput(value: Date | string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = typeof value === "string" ? new Date(value) : value;
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  return `${getDatePart(parts, "year")}-${getDatePart(
+    parts,
+    "month",
+  )}-${getDatePart(parts, "day")}T${getDatePart(parts, "hour")}:${getDatePart(
+    parts,
+    "minute",
+  )}`;
 }
 
 export function formatParisDateTimeInput(value: Date | string | null) {

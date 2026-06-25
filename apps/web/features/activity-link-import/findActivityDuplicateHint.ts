@@ -1,4 +1,4 @@
-import { parseParisDateTime } from "@/features/activities/actions/activityActionUtils";
+import { parseActivityLocalDateTime } from "@/features/activities/actions/activityActionUtils";
 import {
   hashActivityFingerprint,
   normalizeActivitySourceUrl,
@@ -72,7 +72,7 @@ async function findByFingerprint(
   address: string,
   excludeActivityId?: string,
 ): Promise<ActivityDuplicateHint | null> {
-  const startAt = parseParisDateTime(startAtInput);
+  const startAt = parseActivityLocalDateTime(startAtInput);
 
   if (!startAt) {
     return null;

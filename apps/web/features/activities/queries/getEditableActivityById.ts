@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  formatParisDateTimeInput,
+  formatActivityLocalDateTimeInput,
   splitStoredDescription,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
@@ -75,8 +75,8 @@ function getEditableActivityValues(
     address: activity.address,
     latitude: activity.latitude === null ? "" : String(activity.latitude),
     longitude: activity.longitude === null ? "" : String(activity.longitude),
-    startAt: formatParisDateTimeInput(activity.startAt),
-    endAt: formatParisDateTimeInput(activity.endAt),
+    startAt: formatActivityLocalDateTimeInput(activity.startAt),
+    endAt: formatActivityLocalDateTimeInput(activity.endAt),
     capacity: String(activity.capacity),
     capacityLimitEnabled: activity.capacity > 0,
     minParticipants: activity.minParticipants

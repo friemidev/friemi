@@ -17,7 +17,7 @@ import {
   formatStoredDescription,
   getActivityFormValues,
   getString,
-  parseParisDateTime,
+  parseActivityLocalDateTime,
   type ActivityFormState,
 } from "./activityActionUtils";
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
@@ -97,7 +97,11 @@ export async function createActivityAction(
     recordOperationLatency({
       durationMs: getDurationMs(),
       entityId: activityId ?? rawInput.publicEventId ?? undefined,
-      entityType: activityId ? "team" : rawInput.publicEventId ? "public_event" : undefined,
+      entityType: activityId
+        ? "team"
+        : rawInput.publicEventId
+          ? "public_event"
+          : undefined,
       locale,
       operationKey: "create_team",
       route: rawInput.publicEventId
@@ -138,9 +142,9 @@ export async function createActivityAction(
     );
   }
 
-  const startAt = parseParisDateTime(result.data.startAt);
+  const startAt = parseActivityLocalDateTime(result.data.startAt);
   const endAt = result.data.endAt
-    ? parseParisDateTime(result.data.endAt)
+    ? parseActivityLocalDateTime(result.data.endAt)
     : null;
 
   if (!startAt) {
@@ -376,7 +380,8 @@ export async function createActivityAction(
         priceType: result.data.priceType,
         priceText: result.data.priceText,
         ticketUrl: result.data.ticketUrl ?? publicEvent?.ticketUrl ?? null,
-        ticketLabel: result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
+        ticketLabel:
+          result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
         source: importSourceHost,
         sourceUrl: importSourceUrl,
         publicEventId: publicEvent?.id ?? null,
@@ -432,7 +437,9 @@ export async function createActivityAction(
         : `/${locale}/activities/new`,
       entityId: activityId,
       entityType: "team",
-      sourceSurface: publicEvent?.id ? "public_event_detail" : "activity_detail",
+      sourceSurface: publicEvent?.id
+        ? "public_event_detail"
+        : "activity_detail",
       properties: {
         capacity: submittedCapacity,
         category: result.data.category,
