@@ -1,5 +1,11 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
+  ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   Layers3,
@@ -18,9 +24,13 @@ import {
   getActivityAgendaDateRelation,
   getActivityAgendaGroupSortOptions,
   getActivityAgendaGroups,
-  type ActivityAgendaCardSort,
+  type ActivityAgendaDateSummary,
   type ActivityAgendaGroup,
 } from "../utils/activityAgenda";
+import {
+  getActivityFilterHref,
+  type ActivityFilters,
+} from "../utils/activityFilters";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
@@ -30,10 +40,20 @@ import {
 
 type ActivityAgendaListProps = {
   activities: ActivityCardViewModel[];
+  dateSummaries?: ActivityAgendaDateSummary[];
+  filters: ActivityFilters;
   locale: string;
-  sort?: ActivityAgendaCardSort;
-  totalCount: number;
+  longRunningCount?: number;
 };
+
+type ActivityAgendaDateGroup = Extract<
+  ActivityAgendaGroup<ActivityCardViewModel>,
+  { kind: "date" }
+>;
+type ActivityAgendaLongRunningGroup = Extract<
+  ActivityAgendaGroup<ActivityCardViewModel>,
+  { kind: "longRunning" }
+>;
 
 function getActivityKey(activity: ActivityCardViewModel) {
   return isPublicEventCard(activity) && activity.publicEventId
@@ -47,7 +67,10 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   sky: "bg-sky",
 };
 
-function getAgendaActivityHref(activity: ActivityCardViewModel, locale: string) {
+function getAgendaActivityHref(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
   if (isPublicEventCard(activity) && activity.publicEventId) {
     return withLocale(locale, `/public-events/${activity.publicEventId}`);
   }
@@ -82,6 +105,53 @@ function getGroupId(group: ActivityAgendaGroup<ActivityCardViewModel>) {
   return group.kind === "date"
     ? `agenda-${group.dateKey}`
     : "agenda-long-running";
+}
+
+const agendaTimeZone = "Europe/Paris";
+
+function getAgendaMonthKey(dateKey: string) {
+  return dateKey.slice(0, 7);
+}
+
+function formatAgendaMonthKey(monthKey: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    timeZone: agendaTimeZone,
+    year: "numeric",
+  }).format(new Date(`${monthKey}-01T12:00:00.000Z`));
+}
+
+function getAgendaCalendarWeekdayLabels(locale: string) {
+  return Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, {
+      timeZone: agendaTimeZone,
+      weekday: "narrow",
+    }).format(new Date(Date.UTC(2026, 0, 4 + index, 12))),
+  );
+}
+
+function getAgendaCalendarCells(monthKey: string) {
+  const [yearValue, monthValue] = monthKey.split("-").map(Number);
+  const monthIndex = monthValue - 1;
+  const firstDate = new Date(Date.UTC(yearValue, monthIndex, 1, 12));
+  const firstWeekday = firstDate.getUTCDay();
+  const daysInMonth = new Date(
+    Date.UTC(yearValue, monthIndex + 1, 0, 12),
+  ).getUTCDate();
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const cellDate = new Date(
+      Date.UTC(yearValue, monthIndex, 1 - firstWeekday + index, 12),
+    );
+    const dateKey = cellDate.toISOString().slice(0, 10);
+
+    return {
+      dateKey,
+      day: cellDate.getUTCDate(),
+      isCurrentMonth: cellDate.getUTCMonth() === monthIndex,
+    };
+  });
 }
 
 function ActivityAgendaRow({
@@ -183,112 +253,464 @@ function ActivityAgendaRow({
 
 export function ActivityAgendaList({
   activities,
+  dateSummaries,
+  filters,
   locale,
-  sort = "soonest",
-  totalCount,
+  longRunningCount,
 }: ActivityAgendaListProps) {
+  const router = useRouter();
   const t = getCopy(locale);
-  const groups = getActivityAgendaGroups(
-    activities,
-    getActivityAgendaGroupSortOptions(sort),
+  const activitiesHref = withLocale(locale, "/activities");
+  const groups = useMemo(
+    () =>
+      getActivityAgendaGroups(
+        activities,
+        getActivityAgendaGroupSortOptions(filters.sort),
+      ),
+    [activities, filters.sort],
   );
-  const hasMoreResults = totalCount > activities.length;
+  const dateGroups = useMemo(
+    () =>
+      groups.filter(
+        (group): group is ActivityAgendaDateGroup => group.kind === "date",
+      ),
+    [groups],
+  );
+  const longRunningGroup = useMemo(
+    () =>
+      groups.find(
+        (group): group is ActivityAgendaLongRunningGroup =>
+          group.kind === "longRunning",
+      ) ?? null,
+    [groups],
+  );
+  const effectiveDateSummaries = useMemo(
+    () =>
+      dateSummaries ??
+      dateGroups.map((group) => ({
+        count: group.activities.length,
+        dateKey: group.dateKey,
+        page: filters.page,
+      })),
+    [dateGroups, dateSummaries, filters.page],
+  );
+  const currentPageDateGroupIds = useMemo(
+    () => new Set(dateGroups.map((group) => getGroupId(group))),
+    [dateGroups],
+  );
+  const dateSummaryByDateKey = useMemo(
+    () =>
+      new Map(
+        effectiveDateSummaries.map((summary) => [summary.dateKey, summary]),
+      ),
+    [effectiveDateSummaries],
+  );
+  const calendarMonthKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          effectiveDateSummaries.map((summary) =>
+            getAgendaMonthKey(summary.dateKey),
+          ),
+        ),
+      ),
+    [effectiveDateSummaries],
+  );
+  const firstMonthKey = calendarMonthKeys[0] ?? null;
+  const groupIds = useMemo(() => groups.map(getGroupId), [groups]);
+  const firstGroupId = groupIds[0] ?? null;
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(
+    firstGroupId,
+  );
+  const [activeMonthKey, setActiveMonthKey] = useState<string | null>(
+    firstMonthKey,
+  );
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isLongRunningOpen, setIsLongRunningOpen] = useState(false);
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const displayedLongRunningCount =
+    longRunningCount ?? longRunningGroup?.activities.length ?? 0;
+
+  useEffect(() => {
+    if (groupIds.length === 0) {
+      setActiveGroupId(null);
+      return;
+    }
+
+    setActiveGroupId((currentGroupId) =>
+      currentGroupId && groupIds.includes(currentGroupId)
+        ? currentGroupId
+        : groupIds[0],
+    );
+    setIsLongRunningOpen(false);
+  }, [groupIds]);
+
+  useEffect(() => {
+    if (calendarMonthKeys.length === 0) {
+      setActiveMonthKey(null);
+      return;
+    }
+
+    setActiveMonthKey((currentMonthKey) =>
+      currentMonthKey && calendarMonthKeys.includes(currentMonthKey)
+        ? currentMonthKey
+        : calendarMonthKeys[0],
+    );
+  }, [calendarMonthKeys]);
+
+  const activeMonthIndex = activeMonthKey
+    ? calendarMonthKeys.indexOf(activeMonthKey)
+    : -1;
+  const calendarCells = useMemo(
+    () => (activeMonthKey ? getAgendaCalendarCells(activeMonthKey) : []),
+    [activeMonthKey],
+  );
+  const calendarWeekdayLabels = useMemo(
+    () => getAgendaCalendarWeekdayLabels(locale),
+    [locale],
+  );
+
+  const scrollToGroup = (groupId: string) => {
+    window.requestAnimationFrame(() => {
+      sectionRefs.current[groupId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+
+  const handleCalendarSelect = (groupId: string) => {
+    setActiveGroupId(groupId);
+    setIsDatePickerOpen(false);
+    scrollToGroup(groupId);
+  };
+
+  const handleCalendarDateSelect = (dateKey: string) => {
+    const summary = dateSummaryByDateKey.get(dateKey);
+
+    if (!summary) {
+      return;
+    }
+
+    const groupId = `agenda-${dateKey}`;
+
+    if (currentPageDateGroupIds.has(groupId)) {
+      handleCalendarSelect(groupId);
+      return;
+    }
+
+    setIsDatePickerOpen(false);
+    router.push(
+      getActivityFilterHref(activitiesHref, {
+        ...filters,
+        page: summary.page,
+        viewMode: "date",
+      }),
+    );
+  };
+
+  const toggleLongRunningGroup = () => {
+    if (!longRunningGroup) {
+      return;
+    }
+
+    const groupId = getGroupId(longRunningGroup);
+    setActiveGroupId(groupId);
+    setIsLongRunningOpen((isOpen) => {
+      const nextIsOpen = !isOpen;
+
+      if (nextIsOpen) {
+        scrollToGroup(groupId);
+      }
+
+      return nextIsOpen;
+    });
+  };
 
   return (
-    <div className="space-y-5">
-      <nav
-        aria-label={t.activities.agendaJumpLabel}
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {groups.map((group) => {
-          const groupTitle = getGroupTitle(group, locale);
-          const isLongRunningGroup = group.kind === "longRunning";
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <button
+          aria-controls="activity-agenda-date-picker"
+          aria-expanded={isDatePickerOpen}
+          className={cn(
+            "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold shadow-sm transition sm:w-auto sm:px-3.5",
+            isDatePickerOpen
+              ? "bg-ink text-white"
+              : "bg-white/78 text-[#6f4d34] ring-1 ring-[#ead7b8] hover:bg-[#fff8ee]",
+          )}
+          onClick={() => setIsDatePickerOpen((isOpen) => !isOpen)}
+          type="button"
+        >
+          <CalendarDays className="h-4 w-4" />
+          <span>{t.activities.agendaChooseDate}</span>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition",
+              isDatePickerOpen && "rotate-180",
+            )}
+          />
+        </button>
 
-          return (
-            <a
-              className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold shadow-sm ring-1 transition",
-                isLongRunningGroup
-                  ? "bg-[#fff2e9] text-[#8e5639] ring-[#e7c2aa] hover:bg-[#ffe7d7]"
-                  : "bg-[#eef8fb] text-[#326b82] ring-[#c4ddea] hover:bg-[#e3f3fa]",
-              )}
-              href={`#${getGroupId(group)}`}
-              key={getGroupId(group)}
-            >
-              <span>{groupTitle}</span>
-              <span className="rounded-full bg-white/72 px-1.5 py-0.5 text-[11px]">
-                {group.activities.length}
-              </span>
-            </a>
-          );
-        })}
-      </nav>
-
-      {groups.map((group) => {
-        const groupTitle = getGroupTitle(group, locale);
-        const isLongRunningGroup = group.kind === "longRunning";
-
-        return (
-          <section
-            className="relative scroll-mt-24 space-y-3 border-l border-[#ead7b8] pl-4 sm:pl-6"
-            id={getGroupId(group)}
-            key={group.kind === "date" ? group.dateKey : "long-running"}
+        {longRunningGroup ? (
+          <button
+            aria-controls={getGroupId(longRunningGroup)}
+            aria-expanded={isLongRunningOpen}
+            className={cn(
+              "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold shadow-sm transition sm:w-auto sm:px-3.5",
+              isLongRunningOpen
+                ? "bg-[#fff0e5] text-[#7d472e] ring-1 ring-[#e7c2aa]"
+                : "bg-white/78 text-[#8b6246] ring-1 ring-[#ead7b8] hover:bg-[#fff8ee]",
+            )}
+            onClick={toggleLongRunningGroup}
+            type="button"
           >
-            <span
-              aria-hidden
-              className={cn(
-                "absolute -left-[9px] top-1 inline-flex h-4 w-4 rounded-full border-2 bg-white",
-                isLongRunningGroup
-                  ? "border-[#d08c69]"
-                  : "border-[#7da9bf]",
-              )}
-            />
+            <Layers3 className="h-4 w-4" />
+            <span className="truncate">
+              {t.activities.agendaLongRunningTitle}
+            </span>
+            <span className="rounded-full bg-white/72 px-1.5 py-0.5 text-[11px] leading-none">
+              {displayedLongRunningCount}
+            </span>
+          </button>
+        ) : null}
+      </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      isLongRunningGroup
-                        ? "bg-[#fff2e9] text-[#9b5f3f] ring-1 ring-[#e7c2aa]"
-                        : "bg-[#edf8fd] text-[#326b82] ring-1 ring-[#b8d6e3]",
-                    )}
+      {isDatePickerOpen ? (
+        <nav
+          aria-label={t.activities.agendaJumpLabel}
+          className="w-full max-w-[23rem] rounded-[1.05rem] border border-[#ead7b8]/72 bg-white/72 p-2.5 shadow-[0_14px_34px_rgba(92,66,32,0.08)] backdrop-blur sm:p-4"
+          id="activity-agenda-date-picker"
+        >
+          {activeMonthKey ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-3 sm:mb-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold capitalize text-ink">
+                    {formatAgendaMonthKey(activeMonthKey, locale)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    aria-label={t.activities.agendaPreviousMonth}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6f4d34] transition hover:bg-[#fff4e4] disabled:pointer-events-none disabled:text-zinc-300"
+                    disabled={activeMonthIndex <= 0}
+                    onClick={() => {
+                      const previousMonthKey =
+                        calendarMonthKeys[activeMonthIndex - 1];
+
+                      if (previousMonthKey) {
+                        setActiveMonthKey(previousMonthKey);
+                      }
+                    }}
+                    type="button"
                   >
-                    {isLongRunningGroup ? (
-                      <Layers3 className="h-4 w-4" />
-                    ) : (
-                      <CalendarDays className="h-4 w-4" />
-                    )}
-                  </span>
-                  <h3 className="text-lg font-semibold text-ink">
-                    {groupTitle}
-                  </h3>
-                  <span className="inline-flex h-6 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
-                    {t.activities.agendaActivityCount(group.activities.length)}
-                  </span>
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    aria-label={t.activities.agendaNextMonth}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6f4d34] transition hover:bg-[#fff4e4] disabled:pointer-events-none disabled:text-zinc-300"
+                    disabled={
+                      activeMonthIndex < 0 ||
+                      activeMonthIndex >= calendarMonthKeys.length - 1
+                    }
+                    onClick={() => {
+                      const nextMonthKey =
+                        calendarMonthKeys[activeMonthIndex + 1];
+
+                      if (nextMonthKey) {
+                        setActiveMonthKey(nextMonthKey);
+                      }
+                    }}
+                    type="button"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-2.5">
-              {group.activities.map((activity) => (
-                <ActivityAgendaRow
-                  activity={activity}
-                  key={getActivityKey(activity)}
-                  locale={locale}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+              <div className="grid grid-cols-7 gap-0.5 text-center sm:gap-1">
+                {calendarWeekdayLabels.map((label, index) => (
+                  <span
+                    className="pb-0.5 text-[11px] font-semibold text-[#8b6246]/72 sm:pb-1"
+                    key={`${label}-${index}`}
+                  >
+                    {label}
+                  </span>
+                ))}
+                {calendarCells.map((cell) => {
+                  const summary = dateSummaryByDateKey.get(cell.dateKey);
+                  const count = summary?.count ?? 0;
+                  const groupId = `agenda-${cell.dateKey}`;
+                  const isActive = activeGroupId === groupId;
+                  const isClickable = Boolean(summary);
 
-      {hasMoreResults ? (
-        <p className="rounded-[1rem] border border-[#ead7b8] bg-white/72 px-4 py-3 text-sm leading-6 text-zinc-600">
-          {t.activities.agendaLimitedHint(activities.length, totalCount)}
-        </p>
+                  return (
+                    <button
+                      aria-controls={isClickable ? groupId : undefined}
+                      aria-current={isActive ? "date" : undefined}
+                      className={cn(
+                        "relative flex h-9 min-w-0 flex-col items-center justify-center rounded-[0.7rem] text-sm font-semibold transition sm:h-11",
+                        isActive
+                          ? "bg-[#2f7590] text-white shadow-[0_8px_16px_rgba(47,117,144,0.22)]"
+                          : isClickable
+                            ? "bg-white text-ink shadow-[inset_0_0_0_1px_rgba(234,215,184,0.9)] hover:bg-[#fff8ee] hover:text-[#9a5838]"
+                            : cell.isCurrentMonth
+                              ? "text-zinc-400"
+                              : "text-zinc-300",
+                        !cell.isCurrentMonth && !isActive && "opacity-70",
+                        !isClickable && "cursor-default",
+                      )}
+                      disabled={!isClickable}
+                      key={cell.dateKey}
+                      onClick={() => handleCalendarDateSelect(cell.dateKey)}
+                      type="button"
+                    >
+                      <span className="leading-none">{cell.day}</span>
+                      {isClickable ? (
+                        <span
+                          className={cn(
+                            "mt-1 rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                            isActive
+                              ? "bg-white/22 text-white"
+                              : "bg-[#eaf7fb] text-[#326b82]",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </nav>
       ) : null}
+
+      <div className="relative space-y-5 pl-8 before:absolute before:left-1.5 before:bottom-1 before:top-3 before:w-px before:bg-[#e8d6bd] sm:pl-10 sm:before:left-2">
+        {dateGroups.map((group) => {
+          const groupId = getGroupId(group);
+          const groupTitle = getGroupTitle(group, locale);
+
+          return (
+            <section
+              aria-labelledby={`${groupId}-heading`}
+              className={cn(
+                "relative scroll-mt-24",
+                activeGroupId === groupId && "rounded-[1rem] bg-[#f4fbfd]/58",
+              )}
+              id={groupId}
+              key={group.dateKey}
+              ref={(element) => {
+                sectionRefs.current[groupId] = element;
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#75aec5] bg-[#fffaf4] sm:-left-[2.45rem]"
+              />
+              <div className="flex min-w-0 items-center gap-2 pb-2">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf7fb] text-[#326b82] ring-1 ring-[#b8d6e3]">
+                  <CalendarDays className="h-4 w-4" />
+                </span>
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3
+                    className="truncate text-base font-semibold text-ink sm:text-lg"
+                    id={`${groupId}-heading`}
+                  >
+                    {groupTitle}
+                  </h3>
+                  <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+                    {t.activities.agendaActivityCount(group.activities.length)}
+                  </span>
+                </span>
+              </div>
+
+              <div className="grid gap-2.5 pb-1 xl:grid-cols-2 2xl:grid-cols-3">
+                {group.activities.map((activity) => (
+                  <ActivityAgendaRow
+                    activity={activity}
+                    key={getActivityKey(activity)}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+
+        {longRunningGroup ? (
+          <section
+            aria-labelledby="agenda-long-running-heading"
+            className={cn(
+              "relative scroll-mt-24",
+              activeGroupId === getGroupId(longRunningGroup) &&
+                "rounded-[1rem] bg-[#fff2e9]/58",
+            )}
+            id={getGroupId(longRunningGroup)}
+            ref={(element) => {
+              sectionRefs.current[getGroupId(longRunningGroup)] = element;
+            }}
+          >
+            <button
+              aria-controls="agenda-long-running-events"
+              aria-expanded={isLongRunningOpen}
+              className="flex w-full min-w-0 items-center gap-2 pb-2 text-left transition"
+              onClick={toggleLongRunningGroup}
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#d79a72] bg-[#fffaf4] sm:-left-[2.45rem]"
+              />
+              <span
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff2e9] text-[#9b5f3f] ring-1 ring-[#e7c2aa]"
+                aria-hidden="true"
+              >
+                <Layers3 className="h-4 w-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                <span
+                  className="block truncate text-base font-semibold text-ink sm:text-lg"
+                  id="agenda-long-running-heading"
+                >
+                  {t.activities.agendaLongRunningTitle}
+                </span>
+                <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+                  {t.activities.agendaActivityCount(displayedLongRunningCount)}
+                </span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#8b6246] transition",
+                  isLongRunningOpen
+                    ? "rotate-180 bg-white/82"
+                    : "bg-transparent",
+                )}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </span>
+            </button>
+
+            {isLongRunningOpen ? (
+              <div
+                className="grid gap-2.5 pb-1 xl:grid-cols-2"
+                id="agenda-long-running-events"
+              >
+                {longRunningGroup.activities.map((activity) => (
+                  <ActivityAgendaRow
+                    activity={activity}
+                    key={getActivityKey(activity)}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

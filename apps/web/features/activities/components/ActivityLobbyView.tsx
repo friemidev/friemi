@@ -689,7 +689,8 @@ function MobileLobbyFilterSheet({
                 const active = option.id === activeFilter;
                 const pending = option.count === null;
                 const optionLoading = pending && loadingFilter === option.id;
-                const optionFailed = pending && Boolean(failedFilters[option.id]);
+                const optionFailed =
+                  pending && Boolean(failedFilters[option.id]);
 
                 return (
                   <button
@@ -814,7 +815,7 @@ function LobbySectionLoading({ locale }: { locale: string }) {
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d7bea0] border-t-[#a66d4c]" />
         <p className="text-sm font-semibold text-[#665747]">{label}</p>
       </div>
-      <div className="mt-4 grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-4 grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
           <div
             key={item}
@@ -1099,7 +1100,7 @@ export function ActivityLobbyPreviewView({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
               {visibleActivities.map((activity) => (
                 <ActivityCard
                   key={getLobbyActivityKey(activity)}
@@ -1156,16 +1157,18 @@ export function ActivityLobbyView({
   >({});
   const lazySectionsRef = useRef(lazySections);
   const inFlightSectionRefs = useRef(new Set<LobbyFilterId>());
-  const [loadingFilter, setLoadingFilter] = useState<LobbyFilterId | null>(null);
+  const [loadingFilter, setLoadingFilter] = useState<LobbyFilterId | null>(
+    null,
+  );
   const [failedFilters, setFailedFilters] = useState<
     Partial<Record<LobbyFilterId, boolean>>
   >({});
-  const [feedCache, setFeedCache] = useState<Record<string, ActivityLobbyFeedPage>>(
-    () => ({
-      [getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page)]:
-        allActivityFeed,
-    }),
-  );
+  const [feedCache, setFeedCache] = useState<
+    Record<string, ActivityLobbyFeedPage>
+  >(() => ({
+    [getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page)]:
+      allActivityFeed,
+  }));
   const feedCacheRef = useRef(feedCache);
   const inFlightFeedRefs = useRef(new Set<string>());
   const [loadingFeedKey, setLoadingFeedKey] = useState<string | null>(null);
@@ -1185,7 +1188,10 @@ export function ActivityLobbyView({
     lazySectionsRef.current = lazySections;
   }, [lazySections]);
   useEffect(() => {
-    const key = getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page);
+    const key = getLobbyFeedCacheKey(
+      allActivityFeed.status,
+      allActivityFeed.page,
+    );
 
     setFeedCache((current) => {
       const next = {
@@ -1233,7 +1239,10 @@ export function ActivityLobbyView({
     }
   }, []);
   const createdActivityKeys = useMemo(
-    () => new Set(createdActivities.map((activity) => getLobbyActivityKey(activity))),
+    () =>
+      new Set(
+        createdActivities.map((activity) => getLobbyActivityKey(activity)),
+      ),
     [createdActivities],
   );
   const allFeedSummary =
@@ -1298,12 +1307,15 @@ export function ActivityLobbyView({
         activities:
           openActivities.length > 0
             ? openActivities
-            : allActivities.filter((activity) => activity.visibility === "PUBLIC"),
+            : allActivities.filter(
+                (activity) => activity.visibility === "PUBLIC",
+              ),
         count:
           openActivities.length > 0
             ? openActivities.length
-            : allActivities.filter((activity) => activity.visibility === "PUBLIC")
-                .length,
+            : allActivities.filter(
+                (activity) => activity.visibility === "PUBLIC",
+              ).length,
         isDeferred: false,
         label: getFilterLabel(locale, "open", t.openTitle),
       },
@@ -1365,8 +1377,10 @@ export function ActivityLobbyView({
   const activeFeedTotalItems =
     activeFeedStatusCount ??
     (activeFilter === "all"
-      ? (feedCache[getLobbyFeedCacheKey(activeStatusFilter, page)]?.activities ??
-          allFeedSummary.activities).length
+      ? (
+          feedCache[getLobbyFeedCacheKey(activeStatusFilter, page)]
+            ?.activities ?? allFeedSummary.activities
+        ).length
       : clientVisibleActivities.length);
   const activeFeedTotalPages =
     activeFilter === "all" && allFeedSummary.countsApproximate
@@ -1388,7 +1402,9 @@ export function ActivityLobbyView({
     !activeFeedFailed &&
     (loadingFeedKey === activeFeedKey || activeFeedNeedsLoad);
   const visibleActivities =
-    activeFilter === "all" ? (activeFeed?.activities ?? []) : clientVisibleActivities;
+    activeFilter === "all"
+      ? (activeFeed?.activities ?? [])
+      : clientVisibleActivities;
   const visibleActivityKeys = useMemo(
     () =>
       new Set(
@@ -1399,7 +1415,9 @@ export function ActivityLobbyView({
   const starterPanelActivities = useMemo(
     () =>
       starterActivities
-        .filter((activity) => !visibleActivityKeys.has(getLobbyActivityKey(activity)))
+        .filter(
+          (activity) => !visibleActivityKeys.has(getLobbyActivityKey(activity)),
+        )
         .slice(0, 4),
     [starterActivities, visibleActivityKeys],
   );
@@ -1434,14 +1452,17 @@ export function ActivityLobbyView({
       allFeedSummary.countsApproximate ||
       allFeedSummary.totalCount < 3);
   const activeCategoryDeferred =
-    categoryGroups.find((group) => group.id === activeFilter)?.isDeferred ?? false;
+    categoryGroups.find((group) => group.id === activeFilter)?.isDeferred ??
+    false;
   const activeFilterFailed =
     activeFilter === "all"
       ? activeFeedFailed
       : Boolean(failedFilters[activeFilter]);
   const activeFilterLoading =
     !activeFilterFailed &&
-    (activeFeedLoading || loadingFilter === activeFilter || activeCategoryDeferred);
+    (activeFeedLoading ||
+      loadingFilter === activeFilter ||
+      activeCategoryDeferred);
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
   const emptyCategoryResetLabel = getEmptyCategoryResetLabel(locale);
   const moreActivitiesLabel = getMoreActivitiesLabel(locale);
@@ -1483,9 +1504,12 @@ export function ActivityLobbyView({
     setActiveStatusFilter("all");
   }, []);
 
-  const handleStatusFilterChange = useCallback((status: LobbyStatusFilterId) => {
-    setActiveStatusFilter(status);
-  }, []);
+  const handleStatusFilterChange = useCallback(
+    (status: LobbyStatusFilterId) => {
+      setActiveStatusFilter(status);
+    },
+    [],
+  );
 
   const loadLobbyFeedPage = useCallback(
     async (
@@ -1616,13 +1640,16 @@ export function ActivityLobbyView({
         const params = new URLSearchParams({
           section: filter,
         });
-        const response = await fetch(`/api/lobby/section?${params.toString()}`, {
-          credentials: "same-origin",
-          headers: {
-            Accept: "application/json",
+        const response = await fetch(
+          `/api/lobby/section?${params.toString()}`,
+          {
+            credentials: "same-origin",
+            headers: {
+              Accept: "application/json",
+            },
+            signal: controller.signal,
           },
-          signal: controller.signal,
-        });
+        );
 
         if (!response.ok) {
           throw new Error(`Lobby section request failed: ${response.status}`);
@@ -1723,7 +1750,9 @@ export function ActivityLobbyView({
       (candidate) =>
         candidate >= 1 &&
         candidate <= totalPages &&
-        !feedCacheRef.current[getLobbyFeedCacheKey(activeStatusFilter, candidate)],
+        !feedCacheRef.current[
+          getLobbyFeedCacheKey(activeStatusFilter, candidate)
+        ],
     );
 
     if (pagesToPrefetch.length === 0) {
@@ -1864,7 +1893,8 @@ export function ActivityLobbyView({
                 const active = option.id === activeFilter;
                 const pending = option.count === null;
                 const optionLoading = pending && loadingFilter === option.id;
-                const optionFailed = pending && Boolean(failedFilters[option.id]);
+                const optionFailed =
+                  pending && Boolean(failedFilters[option.id]);
 
                 return (
                   <button
@@ -1950,7 +1980,9 @@ export function ActivityLobbyView({
                 ...current,
                 [retryKey]: false,
               }));
-              void loadLobbyFeedPage(activeStatusFilter, page, { visual: true });
+              void loadLobbyFeedPage(activeStatusFilter, page, {
+                visual: true,
+              });
 
               return;
             }
@@ -2055,7 +2087,7 @@ export function ActivityLobbyView({
                   {moreActivitiesLabel}
                 </Link>
               </div>
-              <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+              <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
                 {starterActivities.slice(0, 4).map((activity) => (
                   <ActivityCard
                     key={`starter:${getLobbyActivityKey(activity)}`}
@@ -2120,7 +2152,7 @@ export function ActivityLobbyView({
                       ? "Votre reseau est encore leger. Ces sorties donnent tout de suite une raison de contacter quelqu'un."
                       : locale === "en"
                         ? "Your network is still light. These activities give you a concrete reason to start."
-                    : "好友和记录还少时，先用这些真实活动作为组队种子。"}
+                        : "好友和记录还少时，先用这些真实活动作为组队种子。"}
                   </p>
                 </div>
                 <Link
@@ -2130,7 +2162,7 @@ export function ActivityLobbyView({
                   {moreActivitiesLabel}
                 </Link>
               </div>
-              <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+              <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
                 {starterPanelActivities.map((activity) => (
                   <ActivityCard
                     key={`starter:${getLobbyActivityKey(activity)}`}
@@ -2171,7 +2203,7 @@ export function ActivityLobbyView({
               </div>
             </div>
 
-            <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {visiblePageActivities.map((activity) => (
                 <ActivityCard
                   key={getLobbyActivityKey(activity)}
