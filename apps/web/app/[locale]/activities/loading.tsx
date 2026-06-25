@@ -44,10 +44,12 @@ export default function ActivitiesLoading() {
           </div>
         </div>
       </section>
-      <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((item) => (
-          <LoadingCardSkeleton key={item} compact delay={item * 70} />
-        ))}
+      <div className="activity-card-grid-shell">
+        <div className="activity-card-grid">
+          {[0, 1, 2, 3, 4].map((item) => (
+            <LoadingCardSkeleton key={item} compact delay={item * 70} />
+          ))}
+        </div>
       </div>
     </LoadingPageShell>
   );

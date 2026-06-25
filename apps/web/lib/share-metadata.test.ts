@@ -3,9 +3,12 @@ import test from "node:test";
 import {
   buildCanonicalUrl,
   buildPageShareMetadata,
+  buildTeamShareImageUrl,
+  buildTeamShareMetadata,
   getRequestBaseUrl,
   getShareDescription,
   getShareLocationLabel,
+  getTeamShareDescription,
   resolveShareImageUrl,
   truncateShareText,
 } from "./share-metadata";
@@ -51,7 +54,10 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   });
 
   assert.equal(metadata.title, "Friemi · What's next? Fun begins.");
-  assert.equal(metadata.description, "Discover activities and crews with friends.");
+  assert.equal(
+    metadata.description,
+    "Discover activities and crews with friends.",
+  );
   assert.equal(metadata.openGraph?.url, "https://friemi.example/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
@@ -71,6 +77,77 @@ test("getShareDescription removes raw URLs and keeps useful event context", () =
   assert.equal(description.includes("https://"), false);
   assert.equal(description.includes("6月20日"), true);
   assert.equal(description.includes("Paris"), true);
+});
+
+test("getTeamShareDescription uses compact team status context", () => {
+  const description = getTeamShareDescription({
+    capacity: 8,
+    dateLabel: "6月20日 18:00-20:00",
+    locale: "zh-CN",
+    locationLabel: "Paris · 12 rue Exemple",
+    participantCount: 3,
+    priceLabel: "免费",
+  });
+
+  assert.equal(description.includes("3/8 人已加入"), true);
+  assert.equal(description.includes("6月20日"), true);
+  assert.equal(description.includes("Paris"), true);
+  assert.equal(description.includes("搭子"), false);
+});
+
+test("buildTeamShareImageUrl preserves private activity access token", () => {
+  const imageUrl = buildTeamShareImageUrl({
+    accessToken: "private token",
+    activityId: "activity_1",
+    baseUrl: "https://friemi.example",
+    locale: "zh-CN",
+  });
+
+  assert.equal(
+    imageUrl,
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&access=private+token",
+  );
+});
+
+test("buildTeamShareImageUrl supports WeChat thumbnail variant", () => {
+  const imageUrl = buildTeamShareImageUrl({
+    activityId: "activity_1",
+    baseUrl: "https://friemi.example",
+    locale: "zh-CN",
+    variant: "wechat",
+  });
+
+  assert.equal(
+    imageUrl,
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+  );
+});
+
+test("buildTeamShareMetadata puts WeChat participant thumbnail first for group pages", () => {
+  const metadata = buildTeamShareMetadata({
+    canonicalUrl: "https://friemi.example/zh-CN/activities/activity_1",
+    capacity: 8,
+    dateLabel: "6月20日 18:00",
+    locale: "zh-CN",
+    locationLabel: "Paris",
+    participantCount: 3,
+    shareImageUrl:
+      "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN",
+    title: "周末野餐组局",
+    wechatShareImageUrl:
+      "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+  });
+  const images = metadata.openGraph?.images;
+
+  assert.ok(Array.isArray(images));
+  const imageObjects = images as Array<{ url: string; width: number }>;
+
+  assert.equal(
+    imageObjects[0]?.url,
+    "https://friemi.example/api/share/team-card?activityId=activity_1&locale=zh-CN&variant=wechat",
+  );
+  assert.equal(imageObjects[0]?.width, 420);
+  assert.equal(imageObjects[1]?.width, 1200);
 });
 
 test("getShareLocationLabel avoids duplicating city names", () => {

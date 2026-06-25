@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import type { ActivityStatus, ParticipantStatus, Prisma } from "@prisma/client";
-import type { ActivityDetailViewModel } from "../types";
+import type {
+  ActivityDetailViewModel,
+  ActivityParticipantPreviewViewModel,
+} from "../types";
 import {
   activityCardSelect,
   getActivityCoverTone,
@@ -12,6 +15,11 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "../utils/activityShareAccess";
+import {
+  formatParisDateTimeInput,
+  splitStoredDescription,
+  type ActivityFormValues,
+} from "../actions/activityActionUtils";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -117,12 +125,77 @@ const activityShareMetadataSelect = {
   longitude: true,
   startAt: true,
   endAt: true,
+  capacity: true,
   priceType: true,
   priceText: true,
   coverImageUrl: true,
+  publicEventId: true,
   publicEvent: {
     select: {
       coverImageUrl: true,
+    },
+  },
+  organizer: {
+    select: {
+      id: true,
+      nickname: true,
+      avatarUrl: true,
+    },
+  },
+  participants: {
+    where: {
+      status: {
+        in: countedDetailParticipationStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      userProfile: {
+        select: {
+          id: true,
+          nickname: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  },
+  guestParticipants: {
+    where: {
+      linkedParticipantId: null,
+      status: {
+        in: countedDetailParticipationStatuses,
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      displayName: true,
+    },
+  },
+  _count: {
+    select: {
+      participants: {
+        where: {
+          status: {
+            in: countedDetailParticipationStatuses,
+          },
+        },
+      },
+      guestParticipants: {
+        where: {
+          linkedParticipantId: null,
+          status: {
+            in: countedDetailParticipationStatuses,
+          },
+        },
+      },
     },
   },
   status: true,
@@ -143,14 +216,23 @@ export type ActivityShareMetadataViewModel = {
   address: string;
   category: ActivityShareMetadataQueryResult["category"];
   city: string;
+  capacity: number;
   coverImageUrl: string | null;
   description: string;
   endAt: string | null;
   id: string;
   latitude: number | null;
   longitude: number | null;
+  organizer: {
+    avatarUrl: string | null;
+    id: string;
+    nickname: string;
+  };
+  participantCount: number;
+  participantPreview: ActivityParticipantPreviewViewModel[];
   priceText: string | null;
   priceType: ActivityShareMetadataQueryResult["priceType"];
+  publicEventId: string | null;
   startAt: string;
   status: ActivityShareMetadataQueryResult["status"];
   title: string;
@@ -162,7 +244,48 @@ function toIsoString(value: Date | string | null | undefined) {
     return null;
   }
 
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
+}
+
+function getShareMetadataParticipantPreview(
+  activity: ActivityShareMetadataQueryResult,
+) {
+  const preview: ActivityParticipantPreviewViewModel[] = [
+    {
+      id: activity.organizer.id,
+      nickname: activity.organizer.nickname,
+      avatarUrl: activity.organizer.avatarUrl,
+      kind: "user",
+    },
+  ];
+  const seen = new Set([activity.organizer.id]);
+
+  activity.participants.forEach((participant) => {
+    if (seen.has(participant.userProfile.id)) {
+      return;
+    }
+
+    seen.add(participant.userProfile.id);
+    preview.push({
+      id: participant.userProfile.id,
+      nickname: participant.userProfile.nickname,
+      avatarUrl: participant.userProfile.avatarUrl,
+      kind: "user",
+    });
+  });
+
+  activity.guestParticipants.forEach((participant) => {
+    preview.push({
+      id: `guest:${participant.id}`,
+      nickname: participant.displayName,
+      avatarUrl: null,
+      kind: "guest",
+    });
+  });
+
+  return preview;
 }
 
 function getActivityDetailViewModel(
@@ -214,7 +337,7 @@ function getActivityDetailViewModel(
     participantCount,
     priceText: activity.priceText,
     status: activity.status,
-    visibility: activity.visibility,
+    visibility: activity.visibility ?? "PUBLIC",
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -332,10 +455,7 @@ export async function getActivityById(
   });
   const activityViewModel = getActivityDetailViewModel(activity);
 
-  if (
-    !activityViewModel.isActivityInfo &&
-    !organizerParticipation
-  ) {
+  if (!activityViewModel.isActivityInfo && !organizerParticipation) {
     return {
       ...activityViewModel,
       participantCount: activityViewModel.participantCount + 1,
@@ -358,6 +478,58 @@ export async function getActivityById(
   }
 
   return activityViewModel;
+}
+
+function getActivityCopyValues(
+  activity: ActivityDetailViewModel,
+): ActivityFormValues {
+  const descriptionParts = splitStoredDescription(
+    activity.category,
+    activity.description,
+  );
+
+  return {
+    title: activity.title,
+    description: descriptionParts.description,
+    itinerary: activity.itinerary ?? "",
+    coverImageUrl: activity.customCoverImageUrl ?? activity.coverImageUrl ?? "",
+    type: activity.type,
+    category: activity.category,
+    visibility: activity.visibility ?? "PUBLIC",
+    otherCategoryText: descriptionParts.otherCategoryText,
+    city: activity.city,
+    destination: activity.destination ?? "",
+    address: activity.address,
+    latitude: activity.latitude === null ? "" : String(activity.latitude),
+    longitude: activity.longitude === null ? "" : String(activity.longitude),
+    startAt: formatParisDateTimeInput(activity.startAt),
+    endAt: formatParisDateTimeInput(activity.endAt),
+    capacity: String(activity.capacity),
+    capacityLimitEnabled: activity.capacity > 0,
+    minParticipants: activity.minParticipants
+      ? String(activity.minParticipants)
+      : "",
+    requiresApproval: activity.requiresApproval,
+    priceType: activity.priceType,
+    priceText: activity.priceText ?? "",
+    ticketUrl: activity.ticketUrl ?? "",
+    ticketLabel: activity.ticketLabel ?? "",
+    publicEventId: activity.publicEventId ?? undefined,
+    importSourceUrl: "",
+  };
+}
+
+export async function getActivityCopyValuesById(
+  activityId: string,
+  viewerProfileId?: string | null,
+): Promise<ActivityFormValues | null> {
+  const activity = await getActivityById(activityId, viewerProfileId);
+
+  if (!activity) {
+    return null;
+  }
+
+  return getActivityCopyValues(activity);
 }
 
 export async function getActivityShareMetadataById(
@@ -389,12 +561,33 @@ export async function getActivityShareMetadataById(
     return null;
   }
 
+  const organizerParticipation = await prisma.activityParticipant.findUnique({
+    where: {
+      activityId_userProfileId: {
+        activityId: activity.id,
+        userProfileId: activity.organizer.id,
+      },
+    },
+    select: {
+      status: true,
+    },
+  });
+  const organizerIsCounted = organizerParticipation
+    ? countedDetailParticipationStatuses.includes(organizerParticipation.status)
+    : false;
+  const countedParticipantCount =
+    activity._count.participants +
+    activity._count.guestParticipants +
+    (organizerIsCounted ? 0 : 1);
+  const participantPreview = getShareMetadataParticipantPreview(activity);
+
   return {
     id: activity.id,
     title: activity.title,
     description: activity.description,
     category: activity.category,
     city: activity.city,
+    capacity: activity.capacity,
     address: activity.address,
     latitude: activity.latitude,
     longitude: activity.longitude,
@@ -402,6 +595,17 @@ export async function getActivityShareMetadataById(
     endAt: toIsoString(activity.endAt),
     priceType: activity.priceType,
     priceText: activity.priceText,
+    publicEventId: activity.publicEventId,
+    organizer: {
+      id: activity.organizer.id,
+      nickname: activity.organizer.nickname,
+      avatarUrl: activity.organizer.avatarUrl,
+    },
+    participantCount: Math.max(
+      participantPreview.length,
+      countedParticipantCount,
+    ),
+    participantPreview,
     coverImageUrl:
       activity.coverImageUrl ?? activity.publicEvent?.coverImageUrl ?? null,
     status: activity.status,

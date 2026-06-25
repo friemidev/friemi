@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Sparkles } from "lucide-react";
+import { BadgeCheck, Mail, Sparkles } from "lucide-react";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 
@@ -13,6 +13,7 @@ const footerCopy = {
     description: "面向海外中文用户的活动发现与组局工具。",
     contactTitle: "联系我们",
     contactEmail: "friemi.dev@gmail.com",
+    coCreatorsLabel: "共创主理人",
     versionLabel: "版本号",
     updatesLabel: "更新公告",
     copyright: `© 2026 ${brand.name}`,
@@ -21,6 +22,7 @@ const footerCopy = {
     description: "Find activities, bring friends, and meet people nearby.",
     contactTitle: "Contact",
     contactEmail: "friemi.dev@gmail.com",
+    coCreatorsLabel: "Co-creator program",
     versionLabel: "Version",
     updatesLabel: "Release notes",
     copyright: `© 2026 ${brand.name}`,
@@ -30,6 +32,7 @@ const footerCopy = {
       "Trouvez des sorties, invitez des amis et rencontrez du monde.",
     contactTitle: "Contact",
     contactEmail: "friemi.dev@gmail.com",
+    coCreatorsLabel: "Programme co-createurs",
     versionLabel: "Version",
     updatesLabel: "Notes de version",
     copyright: `© 2026 ${brand.name}`,
@@ -77,13 +80,25 @@ export function HomeFooter({ locale }: HomeFooterProps) {
           <h2 className="text-sm font-semibold tracking-normal text-white">
             {t.contactTitle}
           </h2>
-          <a
-            className="inline-flex items-center gap-2 text-sm text-white/75 transition hover:text-white"
-            href={`mailto:${t.contactEmail}`}
-          >
-            <Mail className="h-4 w-4 text-clay" aria-hidden="true" />
-            <span className="break-all">{t.contactEmail}</span>
-          </a>
+          <div className="grid gap-2">
+            <a
+              className="flex min-w-0 items-center gap-2 text-sm text-white/75 transition hover:text-white"
+              href={`mailto:${t.contactEmail}`}
+            >
+              <Mail className="h-4 w-4 shrink-0 text-clay" aria-hidden="true" />
+              <span className="min-w-0 break-all">{t.contactEmail}</span>
+            </a>
+            <Link
+              className="flex min-w-0 items-center gap-2 text-sm text-white/75 transition hover:text-white"
+              href={withLocale(locale, "/co-creators")}
+            >
+              <BadgeCheck
+                className="h-4 w-4 shrink-0 text-clay"
+                aria-hidden="true"
+              />
+              <span className="min-w-0">{t.coCreatorsLabel}</span>
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-3 md:text-right">
@@ -94,9 +109,9 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             {t.versionLabel}{" "}
             <Link
               className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-              href={withLocale(locale, "/updates/v1_4")}
+              href={withLocale(locale, "/updates/v2_0")}
             >
-              v1.4
+              v2.0
             </Link>
           </p>
           <p className="inline-flex items-center gap-2 text-xs text-white/45 md:justify-end">

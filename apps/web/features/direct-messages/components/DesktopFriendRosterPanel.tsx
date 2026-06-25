@@ -14,6 +14,7 @@ import {
 } from "@chill-club/shared";
 import {
   AddFriendDialog,
+  IncomingFriendRequestsPanel,
   RequestCountBadge,
 } from "@/features/friends/components/FriendsDashboard";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,9 @@ export function DesktopFriendRosterPanel({
     initialAddFriendOpen && incomingRequests.length > 0,
   );
   const t = getDirectMessagesCopy(locale);
+  const redirectPath = selectedConversationId
+    ? `/messages/${selectedConversationId}`
+    : "/messages";
 
   return (
     <aside className="overflow-hidden rounded-lg border border-black/10 bg-white/82 shadow-sm lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
@@ -77,18 +81,25 @@ export function DesktopFriendRosterPanel({
         </button>
       </div>
 
-      {friends.length === 0 ? (
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-ink">
-            {t.emptyFriendListTitle}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            {t.emptyFriendListDescription}
-          </p>
-        </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {friends.map((friend) => (
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <IncomingFriendRequestsPanel
+          className="mb-3"
+          incomingRequests={incomingRequests}
+          locale={locale}
+          redirectPath={redirectPath}
+          returnTo="messages"
+        />
+        {friends.length === 0 ? (
+          <div className="p-2">
+            <h3 className="text-sm font-semibold text-ink">
+              {t.emptyFriendListTitle}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              {t.emptyFriendListDescription}
+            </p>
+          </div>
+        ) : (
+          friends.map((friend) => (
             <DesktopFriendRosterRow
               key={friend.friendshipId}
               currentUserProfileId={currentUserProfileId}
@@ -96,9 +107,9 @@ export function DesktopFriendRosterPanel({
               isActive={friend.conversationId === selectedConversationId}
               locale={locale}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {addFriendOpen ? (
         <AddFriendDialog

@@ -38,8 +38,14 @@ type ActivitySwipeDiscoveryProps = {
   activities: ActivityCardViewModel[];
   className?: string;
   favoriteRedirectPath?: string;
+  hasMoreActivities?: boolean;
   isAuthenticated?: boolean;
+  isLoadingMore?: boolean;
   locale: string;
+  loadMoreFailed?: boolean;
+  onRequestMore?: () => void;
+  onRetryLoadMore?: () => void;
+  shuffleDeck?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
   variant?: "lobby" | "home";
 };
@@ -53,6 +59,7 @@ type StoredSwipeProgress = {
 };
 
 const swipeThreshold = 76;
+const swipeLoadMoreRemainingThreshold = 2;
 const useSafeLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -67,6 +74,9 @@ function getSwipeCopy(locale: string) {
       keyboardHint: "Fleches gauche et droite disponibles.",
       swipeHint: "Glissez a gauche pour le suivant, a droite pour revenir.",
       favoriteHint: "Favori",
+      loadingMore: "Chargement...",
+      loadMoreFailed: "Reessayer",
+      end: "Fin",
     };
   }
 
@@ -80,6 +90,9 @@ function getSwipeCopy(locale: string) {
       keyboardHint: "Left and right arrow keys work too.",
       swipeHint: "Swipe left for next, right for previous.",
       favoriteHint: "Save",
+      loadingMore: "Loading...",
+      loadMoreFailed: "Retry",
+      end: "All caught up",
     };
   }
 
@@ -92,6 +105,9 @@ function getSwipeCopy(locale: string) {
     keyboardHint: "也可以用键盘左右键切换。",
     swipeHint: "左滑下一张，右滑上一张。",
     favoriteHint: "收藏",
+    loadingMore: "加载中...",
+    loadMoreFailed: "重试",
+    end: "已经到底",
   };
 }
 
@@ -155,7 +171,10 @@ function shuffleActivities(
 
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
   }
 
   return shuffled;
@@ -190,9 +209,10 @@ function readStoredSwipeProgress({
     return {
       deckSignature,
       index: clampStoredIndex(parsed.index, deckLength),
-      seed: typeof parsed.seed === "number" && Number.isFinite(parsed.seed)
-        ? parsed.seed
-        : createRandomSeed(),
+      seed:
+        typeof parsed.seed === "number" && Number.isFinite(parsed.seed)
+          ? parsed.seed
+          : createRandomSeed(),
     };
   } catch {
     return null;
@@ -248,7 +268,10 @@ function usePrefersReducedMotion() {
 }
 
 function getSwipeActivityHref(activity: ActivityCardViewModel, locale: string) {
-  return withLocale(locale, `/public-events/${activity.publicEventId ?? activity.id}`);
+  return withLocale(
+    locale,
+    `/public-events/${activity.publicEventId ?? activity.id}`,
+  );
 }
 
 function prepareSwipeActivities(activities: ActivityCardViewModel[]) {
@@ -312,14 +335,26 @@ export function ActivitySwipeDiscovery({
   activities,
   className,
   favoriteRedirectPath = "/lobby",
+  hasMoreActivities = false,
   isAuthenticated = false,
+  isLoadingMore = false,
   locale,
+  loadMoreFailed = false,
+  onRequestMore,
+  onRetryLoadMore,
+  shuffleDeck = true,
   sourceSurface = "activity_list",
   variant = "lobby",
 }: ActivitySwipeDiscoveryProps) {
   const copy = getSwipeCopy(locale);
-  const baseDeck = useMemo(() => prepareSwipeActivities(activities), [activities]);
-  const deckSignature = useMemo(() => getSwipeDeckSignature(baseDeck), [baseDeck]);
+  const baseDeck = useMemo(
+    () => prepareSwipeActivities(activities),
+    [activities],
+  );
+  const deckSignature = useMemo(
+    () => getSwipeDeckSignature(baseDeck),
+    [baseDeck],
+  );
   const storageKey = useMemo(
     () => getSwipeStorageKey({ locale, sourceSurface, variant }),
     [locale, sourceSurface, variant],
@@ -327,8 +362,8 @@ export function ActivitySwipeDiscovery({
   const prefersReducedMotion = usePrefersReducedMotion();
   const [shuffleSeed, setShuffleSeed] = useState<number | null>(null);
   const deck = useMemo(
-    () => shuffleActivities(baseDeck, shuffleSeed),
-    [baseDeck, shuffleSeed],
+    () => (shuffleDeck ? shuffleActivities(baseDeck, shuffleSeed) : baseDeck),
+    [baseDeck, shuffleDeck, shuffleSeed],
   );
   const [index, setIndex] = useState(0);
   const [dragX, setDragX] = useState(0);
@@ -336,10 +371,26 @@ export function ActivitySwipeDiscovery({
   const pointerStartX = useRef(0);
   const pendingDragX = useRef(0);
   const dragFrame = useRef<number | null>(null);
+  const deckSignatureRef = useRef<string | null>(null);
   const currentActivity = deck[index] ?? null;
-  const currentKey = currentActivity ? getSwipeActivityKey(currentActivity) : null;
+  const currentKey = currentActivity
+    ? getSwipeActivityKey(currentActivity)
+    : null;
 
   useSafeLayoutEffect(() => {
+    const previousDeckSignature = deckSignatureRef.current;
+    deckSignatureRef.current = deckSignature;
+
+    if (
+      previousDeckSignature &&
+      deckSignature.startsWith(`${previousDeckSignature}|`)
+    ) {
+      setIndex((current) => clampStoredIndex(current, deck.length));
+      setDragX(0);
+      setIsDragging(false);
+      return;
+    }
+
     const storedProgress = readStoredSwipeProgress({
       deckLength: deck.length,
       deckSignature,
@@ -372,6 +423,31 @@ export function ActivitySwipeDiscovery({
     },
     [],
   );
+
+  useEffect(() => {
+    if (
+      !onRequestMore ||
+      !hasMoreActivities ||
+      isLoadingMore ||
+      loadMoreFailed ||
+      deck.length === 0
+    ) {
+      return;
+    }
+
+    const remainingCards = deck.length - index - 1;
+
+    if (remainingCards <= swipeLoadMoreRemainingThreshold) {
+      onRequestMore();
+    }
+  }, [
+    deck.length,
+    hasMoreActivities,
+    index,
+    isLoadingMore,
+    loadMoreFailed,
+    onRequestMore,
+  ]);
 
   useEffect(() => {
     if (!currentActivity) {
@@ -472,6 +548,12 @@ export function ActivitySwipeDiscovery({
   const visibleCards = getVisibleCards(deck, index);
   const canGoPrevious = index > 0;
   const canGoNext = index < deck.length - 1;
+  const hasPaginatedDiscovery = Boolean(onRequestMore || onRetryLoadMore);
+  const showEndState =
+    hasPaginatedDiscovery &&
+    !hasMoreActivities &&
+    !isLoadingMore &&
+    index >= deck.length - 1;
 
   if (deck.length === 0) {
     return null;
@@ -522,9 +604,7 @@ export function ActivitySwipeDiscovery({
         style={{ contain: "layout paint" }}
       >
         <p className="sr-only" aria-live="polite">
-          {currentActivity
-            ? currentActivity.title
-            : copy.title}
+          {currentActivity ? currentActivity.title : copy.title}
         </p>
         {visibleCards
           .map((activity, stackIndex) => {
@@ -585,7 +665,7 @@ export function ActivitySwipeDiscovery({
                     <span className="rounded-full bg-[#17120f] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
                       {categoryLabel}
                     </span>
-                    <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
+                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
                       {statusLabel}
                     </span>
                   </div>
@@ -604,8 +684,7 @@ export function ActivitySwipeDiscovery({
                       <div
                         className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#d88d72]/28 text-white"
                         style={{
-                          opacity:
-                            dragX > 0 && canGoPrevious ? dragOpacity : 0,
+                          opacity: dragX > 0 && canGoPrevious ? dragOpacity : 0,
                         }}
                       >
                         <span className="rotate-[8deg] rounded-full border-2 border-white px-4 py-2 text-base font-bold">
@@ -679,9 +758,27 @@ export function ActivitySwipeDiscovery({
       </div>
 
       <div className="mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500">
-        <ArrowLeft className="h-3 w-3" />
-        <span>{copy.swipeHint}</span>
-        <ArrowRight className="h-3 w-3" />
+        {loadMoreFailed && onRetryLoadMore ? (
+          <button
+            className="inline-flex h-7 items-center justify-center rounded-full bg-[#fff7ec] px-3 font-semibold text-[#8e5639] ring-1 ring-[#ead7b8] transition hover:bg-white"
+            type="button"
+            onClick={onRetryLoadMore}
+          >
+            {copy.loadMoreFailed}
+          </button>
+        ) : (
+          <>
+            <ArrowLeft className="h-3 w-3" />
+            <span>
+              {isLoadingMore
+                ? copy.loadingMore
+                : showEndState
+                  ? copy.end
+                  : copy.swipeHint}
+            </span>
+            <ArrowRight className="h-3 w-3" />
+          </>
+        )}
       </div>
     </section>
   );

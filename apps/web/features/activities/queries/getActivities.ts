@@ -20,6 +20,7 @@ import type {
   ActivityRelationFilter,
   ActivityTimeState,
 } from "../utils/activityFilters";
+import type { ActivityAgendaDateSummary } from "../utils/activityAgenda";
 import {
   areAllActivityTimeStatesSelected,
   getDefaultActivityTimeStates,
@@ -250,6 +251,35 @@ const publicEventCardSelect = {
   },
 } satisfies Prisma.PublicEventSelect;
 
+const activityAgendaIndexSelect = {
+  id: true,
+  title: true,
+  city: true,
+  address: true,
+  startAt: true,
+  endAt: true,
+  publicEventId: true,
+  source: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+  importedAt: true,
+} satisfies Prisma.ActivitySelect;
+
+const publicEventAgendaIndexSelect = {
+  id: true,
+  title: true,
+  city: true,
+  address: true,
+  startAt: true,
+  endAt: true,
+  sourceUrl: true,
+  externalSource: true,
+  externalId: true,
+  externalUrl: true,
+} satisfies Prisma.PublicEventSelect;
+
 const homeActivityPreviewSelect = {
   id: true,
   title: true,
@@ -313,6 +343,10 @@ type GetActivityListOptions = {
 };
 
 export type ActivityListResult = {
+  agenda?: {
+    dateSummaries: ActivityAgendaDateSummary[];
+    longRunningCount: number;
+  };
   activities: ActivityCardViewModel[];
   page: number;
   pageSize: number;
@@ -561,6 +595,14 @@ type PublicEventQueryResult = Prisma.PublicEventGetPayload<{
   select: typeof publicEventCardSelect;
 }>;
 
+type ActivityAgendaIndexResult = Prisma.ActivityGetPayload<{
+  select: typeof activityAgendaIndexSelect;
+}>;
+
+type PublicEventAgendaIndexResult = Prisma.PublicEventGetPayload<{
+  select: typeof publicEventAgendaIndexSelect;
+}>;
+
 type HomeActivityPreviewQueryResult = Prisma.ActivityGetPayload<{
   select: typeof homeActivityPreviewSelect;
 }>;
@@ -572,6 +614,13 @@ type HomePublicEventPreviewQueryResult = Prisma.PublicEventGetPayload<{
 type RankedActivityCard = {
   card: ActivityCardViewModel;
   createdAt: Date;
+};
+
+type AgendaIndexItem = {
+  endAt: Date | null;
+  id: string;
+  kind: "activity" | "publicEvent";
+  startAt: Date;
 };
 
 export function getVisibleActivityWhere(
@@ -1165,6 +1214,43 @@ function getPublicEventActivityCardViewModel(
   };
 }
 
+function getActivityAgendaIndexItem(
+  activity: ActivityAgendaIndexResult,
+): AgendaIndexItem {
+  return {
+    endAt: activity.endAt,
+    id: activity.id,
+    kind: "activity",
+    startAt: activity.startAt,
+  };
+}
+
+function getPublicEventAgendaIndexItem(
+  publicEvent: PublicEventAgendaIndexResult,
+): AgendaIndexItem {
+  return {
+    endAt: publicEvent.endAt,
+    id: publicEvent.id,
+    kind: "publicEvent",
+    startAt: publicEvent.startAt,
+  };
+}
+
+function getAgendaIndexItemKey(item: AgendaIndexItem) {
+  return `${item.kind}:${item.id}`;
+}
+
+function getRankedActivityAgendaIndexKey(rankedActivity: RankedActivityCard) {
+  if (
+    rankedActivity.card.type === "PUBLIC_EVENT" &&
+    rankedActivity.card.publicEventId
+  ) {
+    return `publicEvent:${rankedActivity.card.publicEventId}`;
+  }
+
+  return `activity:${rankedActivity.card.id}`;
+}
+
 function getHomeActivityPreviewCardViewModel(
   activity: HomeActivityPreviewQueryResult,
 ): RankedActivityCard {
@@ -1264,45 +1350,42 @@ async function attachJoinableActivityStates(
     teamActivitiesWithState,
     teamActivitySignalMap,
     viewerParticipationByActivityId,
-  ] =
-    await Promise.all([
-      attachPublicEventFavoriteStates(
-        publicEventActivities.map((activity) => ({
-          id: activity.publicEventId ?? activity.id,
-          title: activity.title,
-          description: activity.description,
-          category: activity.category,
-          city: activity.city,
-          address: activity.address,
-          latitude: activity.latitude,
-          longitude: activity.longitude,
-          startAt: activity.startAt,
-          endAt: activity.endAt,
-          priceType: "FREE",
-          priceText: activity.priceText,
-          coverImageUrl: activity.coverImageUrl,
-          officialUrl: activity.officialUrl ?? null,
-          ticketUrl: activity.ticketUrl ?? null,
-          ticketLabel: activity.ticketLabel ?? null,
-          status: "SCHEDULED",
-          favoriteCount: activity.favoriteCount,
-          teamCount: activity.participantCount,
-          isFavorited: activity.isFavorited,
-        })),
-        viewerProfileId,
-      ),
-      attachActivityFavoriteStates(
-        legacyActivityInfoActivities,
-        viewerProfileId,
-      ),
-      attachActivityFavoriteStates(teamActivities, viewerProfileId),
-      getActivityFriendSignalMap(
-        teamActivities.map((activity) => activity.id),
-        viewerProfileId,
-        viewerFriendIds,
-      ),
-      viewerProfileId && teamActivities.length > 0
-        ? prisma.activityParticipant.findMany({
+  ] = await Promise.all([
+    attachPublicEventFavoriteStates(
+      publicEventActivities.map((activity) => ({
+        id: activity.publicEventId ?? activity.id,
+        title: activity.title,
+        description: activity.description,
+        category: activity.category,
+        city: activity.city,
+        address: activity.address,
+        latitude: activity.latitude,
+        longitude: activity.longitude,
+        startAt: activity.startAt,
+        endAt: activity.endAt,
+        priceType: "FREE",
+        priceText: activity.priceText,
+        coverImageUrl: activity.coverImageUrl,
+        officialUrl: activity.officialUrl ?? null,
+        ticketUrl: activity.ticketUrl ?? null,
+        ticketLabel: activity.ticketLabel ?? null,
+        status: "SCHEDULED",
+        favoriteCount: activity.favoriteCount,
+        teamCount: activity.participantCount,
+        isFavorited: activity.isFavorited,
+      })),
+      viewerProfileId,
+    ),
+    attachActivityFavoriteStates(legacyActivityInfoActivities, viewerProfileId),
+    attachActivityFavoriteStates(teamActivities, viewerProfileId),
+    getActivityFriendSignalMap(
+      teamActivities.map((activity) => activity.id),
+      viewerProfileId,
+      viewerFriendIds,
+    ),
+    viewerProfileId && teamActivities.length > 0
+      ? prisma.activityParticipant
+          .findMany({
             where: {
               userProfileId: viewerProfileId,
               activityId: {
@@ -1314,7 +1397,8 @@ async function attachJoinableActivityStates(
               status: true,
             },
             orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
-          }).then(
+          })
+          .then(
             (participations) =>
               new Map(
                 participations.map((participation) => [
@@ -1323,10 +1407,10 @@ async function attachJoinableActivityStates(
                 ]),
               ),
           )
-        : Promise.resolve(
-            new Map<string, ActivityCardViewModel["viewerParticipationStatus"]>(),
-          ),
-    ]);
+      : Promise.resolve(
+          new Map<string, ActivityCardViewModel["viewerParticipationStatus"]>(),
+        ),
+  ]);
   const teamActivityById = new Map(
     teamActivitiesWithState.map((activity) => [
       activity.id,
@@ -1421,10 +1505,7 @@ function compareRankedActivitiesByDuration(
       ? leftDuration - rightDuration
       : rightDuration - leftDuration;
 
-  return (
-    durationDiff ||
-    compareRankedActivitiesByStartAt(left, right, "asc")
-  );
+  return durationDiff || compareRankedActivitiesByStartAt(left, right, "asc");
 }
 
 function getActivityTimeStatesWhere(
@@ -1478,6 +1559,72 @@ function compareRankedActivities(
   }
 
   return compareRankedActivitiesByStartAt(left, right, "asc");
+}
+
+function getParisDateKey(value: Date | string) {
+  const { year, month, day } = getTimeZoneDateParts(
+    value instanceof Date ? value : new Date(value),
+    parisTimeZone,
+  );
+
+  return [
+    String(year).padStart(4, "0"),
+    String(month).padStart(2, "0"),
+    String(day).padStart(2, "0"),
+  ].join("-");
+}
+
+function isLongRunningAgendaIndexItem(item: AgendaIndexItem) {
+  return Boolean(
+    item.endAt && getParisDateKey(item.startAt) !== getParisDateKey(item.endAt),
+  );
+}
+
+function getAgendaIndexDurationMs(item: AgendaIndexItem) {
+  const endAt = item.endAt ?? item.startAt;
+
+  return Math.max(endAt.getTime() - item.startAt.getTime(), 0);
+}
+
+function compareAgendaIndexItems(
+  filters: Pick<ActivityFilters, "sort" | "timeStates">,
+  left: AgendaIndexItem,
+  right: AgendaIndexItem,
+) {
+  if (filters.sort === "shortDuration" || filters.sort === "longDuration") {
+    const durationDiff =
+      filters.sort === "shortDuration"
+        ? getAgendaIndexDurationMs(left) - getAgendaIndexDurationMs(right)
+        : getAgendaIndexDurationMs(right) - getAgendaIndexDurationMs(left);
+
+    if (durationDiff !== 0) {
+      return durationDiff;
+    }
+  }
+
+  const direction =
+    filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+      ? "desc"
+      : "asc";
+  const startDiff =
+    direction === "asc"
+      ? left.startAt.getTime() - right.startAt.getTime()
+      : right.startAt.getTime() - left.startAt.getTime();
+
+  return (
+    startDiff ||
+    getAgendaIndexItemKey(left).localeCompare(getAgendaIndexItemKey(right))
+  );
+}
+
+function getAgendaDateSortDirection(
+  filters: Pick<ActivityFilters, "sort" | "timeStates">,
+) {
+  return filters.sort === "latest" ||
+    isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+    ? "desc"
+    : "asc";
 }
 
 export async function getActivities(
@@ -1654,12 +1801,12 @@ function getPublicEventListOrderBy(
 function hasExplicitActivityListFilters(filters: ActivityFilters) {
   return Boolean(
     filters.keyword ||
-      filters.category ||
-      filters.city ||
-      filters.dateRange ||
-      filters.relation !== "ALL" ||
-      filters.type ||
-      hasPartialActivityTimeStatesFilter(filters.timeStates),
+    filters.category ||
+    filters.city ||
+    filters.dateRange ||
+    filters.relation !== "ALL" ||
+    filters.type ||
+    hasPartialActivityTimeStatesFilter(filters.timeStates),
   );
 }
 
@@ -1672,7 +1819,9 @@ function toIsoString(value: Date | string | null | undefined) {
     return null;
   }
 
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function getDailyRankingSeed(now: Date) {
@@ -1796,6 +1945,150 @@ function getPublicInfoOnlyFilters(filters: ActivityFilters): ActivityFilters {
     ...filters,
     relation: "ALL",
     type: undefined,
+  };
+}
+
+async function getAgendaActivityList(
+  filters: ActivityFilters,
+  dateGroupPageSize: number,
+  now: Date,
+  viewerProfileId: string | null | undefined,
+  publicInfoOnly: boolean,
+): Promise<ActivityListResult> {
+  const listFilters = publicInfoOnly
+    ? getPublicInfoOnlyFilters(filters)
+    : filters;
+  const activityWhere = publicInfoOnly
+    ? getPublicInfoActivityListWhere(listFilters, now)
+    : await getActivityListWhere(listFilters, now, viewerProfileId);
+  const publicEventWhere = publicInfoOnly
+    ? getPublicInfoPublicEventListWhere(listFilters, now)
+    : getPublicEventListWhere(listFilters, now);
+  const [activityIndexRows, publicEventIndexRows] = await Promise.all([
+    prisma.activity.findMany({
+      where: activityWhere,
+      orderBy: getActivityListOrderBy(listFilters),
+      select: activityAgendaIndexSelect,
+    }),
+    publicEventWhere
+      ? prisma.publicEvent.findMany({
+          where: publicEventWhere,
+          orderBy: getPublicEventListOrderBy(listFilters),
+          select: publicEventAgendaIndexSelect,
+        })
+      : [],
+  ]);
+  const agendaIndexItems = [
+    ...filterDuplicateLegacyActivityInfoRows(
+      activityIndexRows,
+      publicEventIndexRows,
+    ).map(getActivityAgendaIndexItem),
+    ...publicEventIndexRows.map(getPublicEventAgendaIndexItem),
+  ];
+  const singleDayGroups = new Map<string, AgendaIndexItem[]>();
+  const longRunningItems: AgendaIndexItem[] = [];
+
+  for (const item of agendaIndexItems) {
+    if (isLongRunningAgendaIndexItem(item)) {
+      longRunningItems.push(item);
+      continue;
+    }
+
+    const dateKey = getParisDateKey(item.startAt);
+    const currentItems = singleDayGroups.get(dateKey) ?? [];
+    currentItems.push(item);
+    singleDayGroups.set(dateKey, currentItems);
+  }
+
+  const dateSortDirection = getAgendaDateSortDirection(listFilters);
+  const dateSummaries: ActivityAgendaDateSummary[] = Array.from(
+    singleDayGroups.entries(),
+  )
+    .sort(([leftDateKey], [rightDateKey]) =>
+      dateSortDirection === "asc"
+        ? leftDateKey.localeCompare(rightDateKey)
+        : rightDateKey.localeCompare(leftDateKey),
+    )
+    .map(([dateKey, items], index) => ({
+      count: items.length,
+      dateKey,
+      page: Math.floor(index / dateGroupPageSize) + 1,
+    }));
+  const totalCount = agendaIndexItems.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(dateSummaries.length / dateGroupPageSize),
+  );
+  const page = getActivityPage(filters.page, totalPages);
+  const pageDateKeys = new Set(
+    dateSummaries
+      .slice((page - 1) * dateGroupPageSize, page * dateGroupPageSize)
+      .map((summary) => summary.dateKey),
+  );
+  const selectedAgendaItems = [
+    ...Array.from(singleDayGroups.entries()).flatMap(([dateKey, items]) =>
+      pageDateKeys.has(dateKey) ? items : [],
+    ),
+    ...longRunningItems,
+  ].sort((left, right) => compareAgendaIndexItems(listFilters, left, right));
+  const selectedActivityIds = selectedAgendaItems
+    .filter((item) => item.kind === "activity")
+    .map((item) => item.id);
+  const selectedPublicEventIds = selectedAgendaItems
+    .filter((item) => item.kind === "publicEvent")
+    .map((item) => item.id);
+  const selectedOrderByKey = new Map(
+    selectedAgendaItems.map((item, index) => [
+      getAgendaIndexItemKey(item),
+      index,
+    ]),
+  );
+  const [activities, publicEvents] = await Promise.all([
+    selectedActivityIds.length > 0
+      ? prisma.activity.findMany({
+          where: {
+            id: {
+              in: selectedActivityIds,
+            },
+          },
+          select: activityCardSelect,
+        })
+      : [],
+    selectedPublicEventIds.length > 0
+      ? prisma.publicEvent.findMany({
+          where: {
+            id: {
+              in: selectedPublicEventIds,
+            },
+          },
+          select: publicEventCardSelect,
+        })
+      : [],
+  ]);
+  const rankedActivities = [
+    ...activities.map(getActivityRankedCardViewModel),
+    ...publicEvents.map(getPublicEventActivityCardViewModel),
+  ].sort(
+    (left, right) =>
+      (selectedOrderByKey.get(getRankedActivityAgendaIndexKey(left)) ??
+        Number.MAX_SAFE_INTEGER) -
+      (selectedOrderByKey.get(getRankedActivityAgendaIndexKey(right)) ??
+        Number.MAX_SAFE_INTEGER),
+  );
+
+  return {
+    activities: await attachJoinableActivityStates(
+      rankedActivities,
+      viewerProfileId,
+    ),
+    agenda: {
+      dateSummaries,
+      longRunningCount: longRunningItems.length,
+    },
+    page,
+    pageSize: dateGroupPageSize,
+    totalCount,
+    totalPages,
   };
 }
 
@@ -2069,9 +2362,7 @@ async function getPublicInfoOnlyActivityList(
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
         where: activityWhere,
-        orderBy: getActivityListOrderBy(
-          publicInfoFilters,
-        ),
+        orderBy: getActivityListOrderBy(publicInfoFilters),
         take: readLimit,
         select: activityCardSelect,
       }),
@@ -2079,9 +2370,7 @@ async function getPublicInfoOnlyActivityList(
     perf.measure("publicEvent.list", () =>
       prisma.publicEvent.findMany({
         where: publicEventWhere,
-        orderBy: getPublicEventListOrderBy(
-          publicInfoFilters,
-        ),
+        orderBy: getPublicEventListOrderBy(publicInfoFilters),
         take: readLimit,
         select: publicEventCardSelect,
       }),
@@ -2103,8 +2392,9 @@ async function getPublicInfoOnlyActivityList(
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const rankedActivitiesWithViewerState = await perf.measure("viewerState", () =>
-    attachJoinableActivityStates(rankedActivities, viewerProfileId),
+  const rankedActivitiesWithViewerState = await perf.measure(
+    "viewerState",
+    () => attachJoinableActivityStates(rankedActivities, viewerProfileId),
   );
   perf.finish({
     activityCandidateCount: activities.length,
@@ -2129,6 +2419,16 @@ export async function getActivityList(
 ): Promise<ActivityListResult> {
   const now = new Date();
   const pageSize = normalizeLimit(options.pageSize) ?? defaultActivityPageSize;
+
+  if (filters.viewMode === "date") {
+    return getAgendaActivityList(
+      filters,
+      pageSize,
+      now,
+      options.viewerProfileId,
+      Boolean(options.publicInfoOnly),
+    );
+  }
 
   if (options.publicInfoOnly) {
     return getPublicInfoOnlyActivityList(
@@ -2207,53 +2507,53 @@ const getCachedActivityFilterOptions = unstable_cache(
 
 const getCachedPublicInfoActivityFilterOptions = unstable_cache(
   async () => {
-  const now = new Date();
-  const activityWhere = {
-    AND: [
-      getVisibleActivityWhere({
-        includeEnded: true,
-        includePast: true,
-        now,
+    const now = new Date();
+    const activityWhere = {
+      AND: [
+        getVisibleActivityWhere({
+          includeEnded: true,
+          includePast: true,
+          now,
+        }),
+        getLegacyPublicActivityInfoWhere(),
+      ],
+    };
+    const [activityCities, publicEventCities] = await Promise.all([
+      prisma.activity.findMany({
+        where: activityWhere,
+        select: {
+          city: true,
+        },
+        distinct: ["city"],
+        orderBy: {
+          city: "asc",
+        },
+        take: 50,
       }),
-      getLegacyPublicActivityInfoWhere(),
-    ],
-  };
-  const [activityCities, publicEventCities] = await Promise.all([
-    prisma.activity.findMany({
-      where: activityWhere,
-      select: {
-        city: true,
-      },
-      distinct: ["city"],
-      orderBy: {
-        city: "asc",
-      },
-      take: 50,
-    }),
-    prisma.publicEvent.findMany({
-      where: getVisiblePublicEventWhere({
-        includeEnded: true,
-        includePast: true,
-        now,
+      prisma.publicEvent.findMany({
+        where: getVisiblePublicEventWhere({
+          includeEnded: true,
+          includePast: true,
+          now,
+        }),
+        select: {
+          city: true,
+        },
+        distinct: ["city"],
+        orderBy: {
+          city: "asc",
+        },
+        take: 50,
       }),
-      select: {
-        city: true,
-      },
-      distinct: ["city"],
-      orderBy: {
-        city: "asc",
-      },
-      take: 50,
-    }),
-  ]);
+    ]);
 
-  return {
-    cities: [...activityCities, ...publicEventCities]
-      .map((item) => item.city.trim())
-      .filter(
-        (city, index, cityList) => city && cityList.indexOf(city) === index,
-      ),
-  };
+    return {
+      cities: [...activityCities, ...publicEventCities]
+        .map((item) => item.city.trim())
+        .filter(
+          (city, index, cityList) => city && cityList.indexOf(city) === index,
+        ),
+    };
   },
   ["activity-filter-options-public-info"],
   { revalidate: 300 },

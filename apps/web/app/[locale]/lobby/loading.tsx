@@ -12,7 +12,7 @@ export default function LobbyLoading() {
         <ShimmerBlock className="h-14 rounded-full border border-[#dccba8] bg-white/70" />
       </div>
       <LoadingToolbarSkeleton columns={4} />
-      <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {[0, 1, 2, 3, 4, 5].map((item) => (
           <LoadingCardSkeleton key={item} compact delay={item * 60} />
         ))}

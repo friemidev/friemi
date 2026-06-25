@@ -15,6 +15,7 @@ import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import {
   AddFriendDialog,
+  IncomingFriendRequestsPanel,
   RequestCountBadge,
 } from "@/features/friends/components/FriendsDashboard";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
@@ -47,6 +48,7 @@ export function MobileFriendChatRoster({
     initialAddFriendOpen && incomingRequests.length > 0,
   );
   const t = getDirectMessagesCopy(locale);
+  const redirectPath = "/messages";
 
   return (
     <section className="space-y-4 lg:hidden">
@@ -71,6 +73,13 @@ export function MobileFriendChatRoster({
           <RequestCountBadge count={incomingRequests.length} />
         </button>
       </div>
+
+      <IncomingFriendRequestsPanel
+        incomingRequests={incomingRequests}
+        locale={locale}
+        redirectPath={redirectPath}
+        returnTo="messages"
+      />
 
       {friends.length === 0 ? (
         <div className="py-10">

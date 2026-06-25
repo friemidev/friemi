@@ -30,6 +30,22 @@ type DetailShareMetadataInput = {
   title: string;
 };
 
+type TeamShareMetadataInput = DetailShareMetadataInput & {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+  shareImageUrl?: string | null;
+  wechatShareImageUrl?: string | null;
+};
+
+type TeamShareImageUrlInput = {
+  accessToken?: string | null;
+  activityId: string;
+  baseUrl: string;
+  locale: string;
+  variant?: "default" | "wechat";
+};
+
 type PageShareMetadataInput = {
   baseUrl: string;
   description: string;
@@ -166,6 +182,81 @@ export function getShareDescription({
   return truncateShareText(pieces.join(" · ") || defaultDescription, 160);
 }
 
+function getTeamParticipantShareLabel({
+  capacity,
+  locale,
+  participantCount,
+}: {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+}) {
+  const normalizedCount = Math.max(0, participantCount);
+
+  if (locale === "fr") {
+    return capacity && capacity > 0
+      ? `${normalizedCount}/${capacity} inscrits`
+      : `${normalizedCount} inscrits`;
+  }
+
+  if (locale === "en") {
+    return capacity && capacity > 0
+      ? `${normalizedCount}/${capacity} joined`
+      : `${normalizedCount} joined`;
+  }
+
+  return capacity && capacity > 0
+    ? `${normalizedCount}/${capacity} 人已加入`
+    : `${normalizedCount} 人已加入`;
+}
+
+export function getTeamShareDescription({
+  capacity,
+  dateLabel,
+  locationLabel,
+  locale,
+  participantCount,
+  priceLabel,
+}: Pick<
+  DetailShareMetadataInput,
+  "dateLabel" | "locationLabel" | "priceLabel"
+> & {
+  capacity?: number | null;
+  locale: string;
+  participantCount: number;
+}) {
+  const pieces = [
+    getTeamParticipantShareLabel({ capacity, locale, participantCount }),
+    dateLabel ? truncateShareText(dateLabel, 48) : null,
+    locationLabel ? truncateShareText(locationLabel, 52) : null,
+    priceLabel ? truncateShareText(priceLabel, 24) : null,
+  ].filter(Boolean);
+
+  return truncateShareText(pieces.join(" · "), 150);
+}
+
+export function buildTeamShareImageUrl({
+  accessToken,
+  activityId,
+  baseUrl,
+  locale,
+  variant = "default",
+}: TeamShareImageUrlInput) {
+  const url = new URL("/api/share/team-card", baseUrl);
+  url.searchParams.set("activityId", activityId);
+  url.searchParams.set("locale", locale);
+
+  if (variant !== "default") {
+    url.searchParams.set("variant", variant);
+  }
+
+  if (accessToken) {
+    url.searchParams.set("access", accessToken);
+  }
+
+  return url.toString();
+}
+
 export function getSharePriceLabel(
   priceType: PriceType,
   priceText: string | null | undefined,
@@ -289,6 +380,85 @@ export function buildDetailShareMetadata({
           url: imageUrl,
         },
       ],
+      siteName,
+      title: metadataTitle,
+      type: "website",
+      url: canonicalUrl,
+    },
+    title: metadataTitle,
+    twitter: {
+      card: "summary_large_image",
+      description: metadataDescription,
+      images: [imageUrl],
+      title: metadataTitle,
+    },
+  };
+}
+
+export function buildTeamShareMetadata({
+  canonicalUrl,
+  capacity,
+  coverImageUrl,
+  dateLabel,
+  locale,
+  locationLabel,
+  participantCount,
+  priceLabel,
+  shareImageUrl,
+  siteName = defaultSiteName,
+  title,
+  wechatShareImageUrl,
+}: TeamShareMetadataInput): Metadata {
+  const baseUrl = new URL(canonicalUrl).origin;
+  const metadataTitle = truncateShareText(title, 72);
+  const metadataDescription = getTeamShareDescription({
+    capacity,
+    dateLabel,
+    locationLabel,
+    locale,
+    participantCount,
+    priceLabel,
+  });
+  const imageUrl =
+    resolveAbsoluteUrl(shareImageUrl, baseUrl) ??
+    resolveShareImageUrl(coverImageUrl, baseUrl);
+  const wechatImageUrl = resolveAbsoluteUrl(wechatShareImageUrl, baseUrl);
+  const openGraphImages =
+    wechatImageUrl && wechatImageUrl !== imageUrl
+      ? [
+          {
+            alt: `${metadataTitle} participants`,
+            height: 420,
+            type: "image/png",
+            url: wechatImageUrl,
+            width: 420,
+          },
+          {
+            alt: metadataTitle,
+            height: 630,
+            type: "image/png",
+            url: imageUrl,
+            width: 1200,
+          },
+        ]
+      : [
+          {
+            alt: metadataTitle,
+            height: 630,
+            type: "image/png",
+            url: imageUrl,
+            width: 1200,
+          },
+        ];
+
+  return {
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    description: metadataDescription,
+    openGraph: {
+      description: metadataDescription,
+      images: openGraphImages,
       siteName,
       title: metadataTitle,
       type: "website",

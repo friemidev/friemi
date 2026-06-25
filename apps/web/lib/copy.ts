@@ -170,8 +170,7 @@ const copy = {
     },
     activities: {
       title: "发现活动",
-      description:
-        "最近想去哪儿？在这里发现活动，和朋友、新搭子一起组队出发。",
+      description: "最近想去哪儿？在这里发现活动，和朋友、新搭子一起组队出发。",
       scopeTitle: "当前展示范围",
       scopeDescription:
         "默认优先展示进行中和即将开始的活动，已结束的会排在后面。",
@@ -187,8 +186,9 @@ const copy = {
       agendaTomorrow: "明天",
       agendaActivityCount: (count: number) => `${count} 个活动`,
       agendaJumpLabel: "日期导航",
-      agendaLimitedHint: (shown: number, total: number) =>
-        `按日期视图已显示前 ${shown} 个结果，共 ${total} 个。需要继续浏览时，可以切回卡片视图分页查看。`,
+      agendaChooseDate: "选择日期",
+      agendaPreviousMonth: "上个月",
+      agendaNextMonth: "下个月",
     },
     activityLobby: {
       eyebrow: "你的局，你的搭子，你的下一场",
@@ -202,20 +202,25 @@ const copy = {
       openDescription: "所有登录用户都能看到的公开组局，适合找新搭子。",
       openEmptyDescription: "暂时没有开放局。可以先从活动详情页发起一个。",
       createdTitle: "我发起的",
-      createdDescription: "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
+      createdDescription:
+        "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
       createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
       joinedTitle: "我参加的",
       joinedDescription: "wow~ 这些都是你参加的活动",
-      joinedEmptyDescription: "还没加入任何活动？先去逛逛，看到心动的就报名吧。",
+      joinedEmptyDescription:
+        "还没加入任何活动？先去逛逛，看到心动的就报名吧。",
       favoriteTitle: "我的收藏",
       favoriteDescription: "这些有趣的活动正等你参与呢",
-      favoriteEmptyDescription: "还没收藏任何活动？先把让你心动的那些留在这里。",
+      favoriteEmptyDescription:
+        "还没收藏任何活动？先把让你心动的那些留在这里。",
       friendHostedTitle: "好友发起的",
       friendHostedDescription: "朋友们在等你加入哦～",
-      friendHostedEmptyDescription: "先去加几个好友吧。等他们一组局，你就能第一时间看到。",
+      friendHostedEmptyDescription:
+        "先去加几个好友吧。等他们一组局，你就能第一时间看到。",
       friendJoinedTitle: "好友参加的",
       friendJoinedDescription: "朋友最近去哪儿玩了？说不定下一场就能一起出发。",
-      friendJoinedEmptyDescription: "朋友最近还没参加什么活动。先去发现页看看，有没有想一起去的。",
+      friendJoinedEmptyDescription:
+        "朋友最近还没参加什么活动。先去发现页看看，有没有想一起去的。",
     },
     activityFilters: {
       title: "搜索和筛选",
@@ -273,7 +278,8 @@ const copy = {
       jumpInputLabel: "输入页码",
       jumpAction: "前往",
       totalPages: (totalPages: number) => `共 ${totalPages} 页`,
-      invalidPage: (totalPages: number) => `请输入 1 到 ${totalPages} 之间的页码`,
+      invalidPage: (totalPages: number) =>
+        `请输入 1 到 ${totalPages} 之间的页码`,
       pageSummary: (page: number, totalPages: number) =>
         `第 ${page} / ${totalPages} 页`,
     },
@@ -341,6 +347,7 @@ const copy = {
       copied: "已复制",
       copyFailed: "复制失败，请手动选择文本。",
       downloadPoster: "下载宣传图",
+      savePoster: "生成海报",
       downloadQr: "下载二维码",
       downloading: "生成中...",
       qrDownloading: "生成中...",
@@ -352,6 +359,10 @@ const copy = {
       posterScanTitle: "扫码查看活动详情",
       posterScanDescription: "打开报名页，查看最新名额和活动说明。",
       posterPreviewAlt: "活动宣传图预览",
+      posterPreviewTitle: "分享海报",
+      longPressPoster: "长按保存",
+      posterSaveHint: "保存到相册后发朋友圈",
+      closePosterPreview: "关闭海报",
     },
     merchant: {
       cardLabel: (name: string) => `商家：${name}`,
@@ -475,6 +486,7 @@ const copy = {
       emptyAction: "去发现活动",
       openActivity: "查看活动",
       openComments: "查看评论",
+      openProfile: "查看主页",
       openMessages: "去处理",
       openReview: "去审核",
       openReports: "查看举报",
@@ -763,8 +775,7 @@ const copy = {
       destinationHint: "旅行搭子需要填写目的地，方便用户判断是否感兴趣。",
       address: "集合地址",
       placePickerTitle: "地图定位",
-      placePickerHint:
-        "根据城市和地址匹配坐标；保存后详情页会显示地图位置。",
+      placePickerHint: "根据城市和地址匹配坐标；保存后详情页会显示地图位置。",
       placeSearch: "匹配地点",
       placeSearching: "匹配中...",
       placeSearchNeedAddress: "请先填写地址，再匹配地图位置。",
@@ -804,6 +815,8 @@ const copy = {
         "可选；填写后详情页会展示主要跳转按钮。组局报名仍在站内完成。",
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
+      copyTimeReminder:
+        "此为复制组局草稿，时间、地点、费用等信息可能需要重新调整，请务必检查并修改为新的行程。",
       creating: "发布中...",
       create: "发布组局",
       saving: "保存中...",
@@ -1034,8 +1047,9 @@ const copy = {
       agendaActivityCount: (count: number) =>
         `${count} activit${count === 1 ? "y" : "ies"}`,
       agendaJumpLabel: "Date navigation",
-      agendaLimitedHint: (shown: number, total: number) =>
-        `The date view is showing the first ${shown} of ${total} results. Switch back to cards to browse every page.`,
+      agendaChooseDate: "Choose date",
+      agendaPreviousMonth: "Previous month",
+      agendaNextMonth: "Next month",
     },
     activityLobby: {
       eyebrow: "Your plans, your people, your next outing",
@@ -1206,6 +1220,7 @@ const copy = {
       copied: "Copied",
       copyFailed: "Copy failed. Select the text manually.",
       downloadPoster: "Download poster",
+      savePoster: "Create poster",
       downloadQr: "Download QR code",
       downloading: "Generating...",
       qrDownloading: "Generating...",
@@ -1218,6 +1233,10 @@ const copy = {
       posterScanDescription:
         "Open the activity page for the latest seats and details.",
       posterPreviewAlt: "Activity poster preview",
+      posterPreviewTitle: "Share poster",
+      longPressPoster: "Press and hold to save",
+      posterSaveHint: "Save it, then post to Moments.",
+      closePosterPreview: "Close poster",
     },
     merchant: {
       cardLabel: (name: string) => `Merchant: ${name}`,
@@ -1346,6 +1365,7 @@ const copy = {
       emptyAction: "Browse activities",
       openActivity: "Open activity",
       openComments: "Open comments",
+      openProfile: "View profile",
       openMessages: "Review",
       openReview: "Review",
       openReports: "Open reports",
@@ -1418,8 +1438,7 @@ const copy = {
       cancelling: "Cancelling...",
       cancelDescription:
         "After cancellation, this crew stops taking new join requests and is hidden from joinable lists.",
-      cancelConfirm:
-        "Cancel this crew? Users will no longer be able to join.",
+      cancelConfirm: "Cancel this crew? Users will no longer be able to join.",
       cancelConfirmTitle: "Cancel this crew?",
       cancelConfirmDescription:
         "This crew will stop taking new join requests. People who already joined can still see the status change.",
@@ -1434,7 +1453,8 @@ const copy = {
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status changed. Try again later.",
       failedError: "Failed to cancel the activity. Try again later.",
-      cancelStateKept: "Cancellation did not go through. The crew is unchanged.",
+      cancelStateKept:
+        "Cancellation did not go through. The crew is unchanged.",
     },
     approval: {
       title: "Participation review",
@@ -1468,8 +1488,7 @@ const copy = {
       forbiddenTitle: "No edit access",
       forbiddenDescription: "Only the organizer can edit this plan.",
       lockedTitle: "Plan cannot be edited",
-      lockedDescription:
-        "Ended or cancelled plans can no longer be edited.",
+      lockedDescription: "Ended or cancelled plans can no longer be edited.",
     },
     profile: {
       title: "Profile",
@@ -1499,7 +1518,8 @@ const copy = {
       savingWechat: "Saving...",
       wechatSaved: "WeChat ID saved",
       wechatError: "Enter a valid WeChat ID, or leave it empty to disconnect.",
-      wechatLinkedCount: (count: number) => `${count} guest signup records linked`,
+      wechatLinkedCount: (count: number) =>
+        `${count} guest signup records linked`,
       close: "Close",
       cancel: "Cancel",
       createdCount: "Created",
@@ -1581,8 +1601,7 @@ const copy = {
       activityContent: "How this meetup works",
       coverImage: "Cover image",
       coverDefault: "Use the default cover",
-      coverImageHint:
-        "Uploaded images appear on plan cards and detail pages.",
+      coverImageHint: "Uploaded images appear on plan cards and detail pages.",
       coverFileHint: "JPG, PNG, or WebP. Max 4MB.",
       coverUpload: "Upload cover",
       coverDropHere: "Drop to upload",
@@ -1638,7 +1657,8 @@ const copy = {
       description: "Plan note",
       descriptionPlaceholder: "Share how to meet, who it suits, and key notes",
       itinerary: "Meetup arrangement",
-      itineraryPlaceholder: "18:30 Meet\n19:00 Enter or start together\n21:30 Free chat",
+      itineraryPlaceholder:
+        "18:30 Meet\n19:00 Enter or start together\n21:30 Free chat",
       type: "Plan format",
       typeHint:
         "Choose local meetup or trip buddy. This affects the list label.",
@@ -1647,8 +1667,7 @@ const copy = {
         "Choose a platform topic first; use Other only when needed.",
       otherCategory: "Other topic",
       otherCategoryPlaceholder: "Book club, language exchange, photo walk",
-      otherCategoryHint:
-        "Saved into the note so people understand the plan.",
+      otherCategoryHint: "Saved into the note so people understand the plan.",
       timeLocation: "Meetup time and place",
       city: "City",
       destination: "Destination",
@@ -1703,6 +1722,8 @@ const copy = {
       requiresApproval: "Confirm join requests",
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
+      copyTimeReminder:
+        "This draft is prefilled from an existing crew. Please review and update times, location, cost, and other details for your new plan.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -1940,8 +1961,9 @@ const copy = {
       agendaActivityCount: (count: number) =>
         `${count} sortie${count > 1 ? "s" : ""}`,
       agendaJumpLabel: "Navigation par date",
-      agendaLimitedHint: (shown: number, total: number) =>
-        `La vue par date affiche les ${shown} premiers résultats sur ${total}. Repassez en cartes pour parcourir toutes les pages.`,
+      agendaChooseDate: "Choisir une date",
+      agendaPreviousMonth: "Mois précédent",
+      agendaNextMonth: "Mois suivant",
     },
     activityLobby: {
       eyebrow: "Vos plans, vos amis, votre prochaine sortie",
@@ -2117,6 +2139,7 @@ const copy = {
       copied: "Copié",
       copyFailed: "Échec de copie. Sélectionnez le texte manuellement.",
       downloadPoster: "Télécharger l'affiche",
+      savePoster: "Créer l'affiche",
       downloadQr: "Télécharger le QR code",
       downloading: "Génération...",
       qrDownloading: "Génération...",
@@ -2129,6 +2152,10 @@ const copy = {
       posterScanDescription:
         "Ouvrez la page de l'activité pour les places et infos à jour.",
       posterPreviewAlt: "Aperçu de l'affiche de l'activité",
+      posterPreviewTitle: "Affiche de partage",
+      longPressPoster: "Appuyez longuement pour enregistrer",
+      posterSaveHint: "Enregistrez-la, puis publiez-la dans Moments.",
+      closePosterPreview: "Fermer l'affiche",
     },
     merchant: {
       cardLabel: (name: string) => `Commerçant : ${name}`,
@@ -2261,6 +2288,7 @@ const copy = {
       emptyAction: "Voir les activités",
       openActivity: "Voir l'activité",
       openComments: "Voir les commentaires",
+      openProfile: "Voir le profil",
       openMessages: "Traiter",
       openReview: "Valider",
       openReports: "Voir les signalements",
@@ -2417,7 +2445,8 @@ const copy = {
       saveWechat: "Enregistrer WeChat",
       savingWechat: "Enregistrement...",
       wechatSaved: "WeChat enregistré",
-      wechatError: "Saisissez un WeChat valide, ou laissez vide pour le délier.",
+      wechatError:
+        "Saisissez un WeChat valide, ou laissez vide pour le délier.",
       wechatLinkedCount: (count: number) =>
         `${count} inscription(s) invité reliée(s)`,
       close: "Fermer",
@@ -2438,8 +2467,7 @@ const copy = {
         "Les activités rejointes apparaîtront ici.",
       favoriteTitle: "Activités favorites",
       favoriteEmptyTitle: "Aucune activité favorite",
-      favoriteEmptyDescription:
-        "Les activités favorites apparaîtront ici.",
+      favoriteEmptyDescription: "Les activités favorites apparaîtront ici.",
       hiddenCreated: (limit: number, count: number) =>
         `Affichage des ${limit} dernières activités créées. ${count} activités plus anciennes ne sont pas encore affichées.`,
       hiddenParticipation: (limit: number, count: number) =>
@@ -2500,7 +2528,8 @@ const copy = {
       refreshError: "Réessayez plus tard.",
       missingError: "Vous n'avez pas encore rejoint cette activité.",
       statusError: "Ce statut d'inscription ne peut pas être annulé.",
-      failedError: "Échec de l'annulation de l'inscription. Réessayez plus tard.",
+      failedError:
+        "Échec de l'annulation de l'inscription. Réessayez plus tard.",
     },
     form: {
       basicInfo: "Détails de la sortie",
@@ -2637,6 +2666,8 @@ const copy = {
       requiresApproval: "Confirmer les demandes",
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
+      copyTimeReminder:
+        "Ce brouillon est prérempli à partir d'un groupe existant. Vérifiez et ajustez les horaires, le lieu, le coût et les autres détails pour votre nouveau plan.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",
