@@ -14,6 +14,12 @@ export type ActivityAgendaGroup<TActivity extends ActivityAgendaItem> =
       kind: "longRunning";
     };
 
+export type ActivityAgendaDateSummary = {
+  count: number;
+  dateKey: string;
+  page: number;
+};
+
 export type ActivityAgendaRelativeDate = "today" | "tomorrow";
 export type ActivityAgendaSortDirection = "asc" | "desc";
 export type ActivityAgendaCardSort =

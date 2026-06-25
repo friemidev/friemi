@@ -45,7 +45,6 @@ import {
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
 import {
-  activityResultsFilterBarHeightClass,
   activityResultsFilterControlClass,
   activityResultsFilterShellClass,
   activityViewToggleBarHeightClass,
@@ -62,7 +61,7 @@ type ActivitiesPageProps = {
 export const dynamic = "force-dynamic";
 
 const mobileActivityPageSize = 14;
-const agendaActivityPageSize = 50;
+const agendaDatePageSize = 7;
 
 export async function generateMetadata({
   params,
@@ -112,7 +111,7 @@ function ActivityListViewToggle({
       className={cn(
         activityResultsFilterShellClass,
         activityViewToggleBarHeightClass,
-        "inline-grid grid-cols-2 gap-0.5",
+        "inline-grid h-8 w-auto min-w-[8.25rem] shrink-0 grid-cols-2 gap-0.5 sm:h-9 sm:w-auto sm:min-w-0",
       )}
     >
       {options.map((option) => {
@@ -123,9 +122,9 @@ function ActivityListViewToggle({
           <Link
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-full px-3 transition sm:min-w-[5.5rem]",
               activityViewToggleInnerHeightClass,
               activityResultsFilterControlClass,
+              "inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[11px] transition sm:h-8 sm:min-w-[5.5rem] sm:gap-1.5 sm:px-3 sm:text-xs",
               isActive
                 ? "bg-ink text-white shadow-[0_8px_18px_rgba(20,20,20,0.14)]"
                 : "text-[#6f4d34] hover:bg-[#fff8ec]",
@@ -137,8 +136,8 @@ function ActivityListViewToggle({
             key={option.mode}
             prefetch={false}
           >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span>{option.label}</span>
+            <Icon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+            <span className="truncate">{option.label}</span>
           </Link>
         );
       })}
@@ -211,24 +210,13 @@ export default async function ActivitiesPage({
     },
     route: "/activities",
   });
-  const shouldResetDateViewPage = filters.viewMode === "date" && filters.page > 1;
-  const canonicalFilters = shouldResetDateViewPage
-    ? {
-        ...filters,
-        page: 1,
-      }
-    : filters;
-
   if (
     !isCanonicalActivityFilterSearchParams(rawSearchParams) ||
     parsedFilters.relation !== "ALL" ||
     Boolean(parsedFilters.type) ||
-    parsedFilters.sort !== filters.sort ||
-    shouldResetDateViewPage
+    parsedFilters.sort !== filters.sort
   ) {
-    redirect(
-      getActivityFilterHref(withLocale(locale, "/activities"), canonicalFilters),
-    );
+    redirect(getActivityFilterHref(withLocale(locale, "/activities"), filters));
   }
 
   const t = getCopy(locale);
@@ -248,7 +236,7 @@ export default async function ActivitiesPage({
         getActivityList(filters, {
           pageSize:
             filters.viewMode === "date"
-              ? agendaActivityPageSize
+              ? agendaDatePageSize
               : isMobileRequest
                 ? mobileActivityPageSize
                 : undefined,
@@ -348,16 +336,19 @@ export default async function ActivitiesPage({
     }
   }
 
-  perf.finish({
-    hasFilters,
-    resultCount: activitiesResult.list?.activities.length ?? 0,
-    totalCount: activitiesResult.list?.totalCount ?? 0,
-  }, {
-    route: `/${locale}/activities`,
-    routeKey: "activity_list",
-    sourceSurface: "activity_list",
-    userProfileId: viewerProfile?.id,
-  });
+  perf.finish(
+    {
+      hasFilters,
+      resultCount: activitiesResult.list?.activities.length ?? 0,
+      totalCount: activitiesResult.list?.totalCount ?? 0,
+    },
+    {
+      route: `/${locale}/activities`,
+      routeKey: "activity_list",
+      sourceSurface: "activity_list",
+      userProfileId: viewerProfile?.id,
+    },
+  );
 
   return (
     <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
@@ -384,7 +375,9 @@ export default async function ActivitiesPage({
       ) : !activitiesResult.list ||
         activitiesResult.list.activities.length === 0 ? (
         <EmptyState
-          actionHref={hasFilters ? withLocale(locale, "/activities") : undefined}
+          actionHref={
+            hasFilters ? withLocale(locale, "/activities") : undefined
+          }
           actionLabel={hasFilters ? t.activityFilters.reset : undefined}
           title={
             hasFilters
@@ -399,9 +392,9 @@ export default async function ActivitiesPage({
         />
       ) : (
         <section className="space-y-3 border-t border-sand pt-4 sm:space-y-4">
-          <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
+          <div className="flex items-end justify-between gap-2 px-1 sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold leading-tight text-ink sm:text-xl">
                 {t.activities.title}
               </h2>
               <p className="mt-0.5 text-xs text-zinc-500 sm:text-sm">
@@ -411,8 +404,6 @@ export default async function ActivitiesPage({
               </p>
             </div>
             <ActivityResultsFilterBar
-              filters={filters}
-              locale={locale}
               viewToggle={
                 <ActivityListViewToggle filters={filters} locale={locale} />
               }
@@ -422,42 +413,43 @@ export default async function ActivitiesPage({
           {filters.viewMode === "date" ? (
             <ActivityAgendaList
               activities={activitiesResult.list.activities}
+              dateSummaries={activitiesResult.list.agenda?.dateSummaries}
+              filters={filters}
               locale={locale}
-              sort={filters.sort}
-              totalCount={activitiesResult.list.totalCount}
+              longRunningCount={activitiesResult.list.agenda?.longRunningCount}
             />
           ) : (
-            <div className="grid gap-3 min-[380px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-              {activitiesResult.list.activities.map((activity) => (
-                <ActivityCard
-                  key={
-                    isPublicEventCard(activity) && activity.publicEventId
-                      ? `event-${activity.publicEventId}`
-                      : activity.id
-                  }
-                  activity={activity}
-                  isAuthenticated={Boolean(viewerProfile)}
-                  isOwnActivity={
-                    Boolean(viewerProfile) &&
-                    activity.organizerId === viewerProfile?.id
-                  }
-                  locale={locale}
-                  mobileDense
-                  showFavoriteButton
-                  showPrimaryAction={false}
-                  sourceSurface="activity_list"
-                  detailSourceKey="activity_list"
-                />
-              ))}
+            <div className="activity-card-grid-shell">
+              <div className="activity-card-grid">
+                {activitiesResult.list.activities.map((activity) => (
+                  <ActivityCard
+                    key={
+                      isPublicEventCard(activity) && activity.publicEventId
+                        ? `event-${activity.publicEventId}`
+                        : activity.id
+                    }
+                    activity={activity}
+                    isAuthenticated={Boolean(viewerProfile)}
+                    isOwnActivity={
+                      Boolean(viewerProfile) &&
+                      activity.organizerId === viewerProfile?.id
+                    }
+                    locale={locale}
+                    mobileDense
+                    showFavoriteButton
+                    showPrimaryAction={false}
+                    sourceSurface="activity_list"
+                    detailSourceKey="activity_list"
+                  />
+                ))}
+              </div>
             </div>
           )}
-          {filters.viewMode === "card" ? (
-            <ActivityPagination
-              filters={filters}
-              list={activitiesResult.list}
-              locale={locale}
-            />
-          ) : null}
+          <ActivityPagination
+            filters={filters}
+            list={activitiesResult.list}
+            locale={locale}
+          />
         </section>
       )}
     </PageContainer>
