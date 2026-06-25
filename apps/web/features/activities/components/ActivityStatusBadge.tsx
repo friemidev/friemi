@@ -23,7 +23,7 @@ export function ActivityStatusBadge({
   locale = "zh-CN",
 }: ActivityStatusBadgeProps) {
   return (
-    <Badge className={cn(colors[status])}>
+    <Badge className={cn("min-h-6 py-1.5 leading-[1.15]", colors[status])}>
       {getStatusLabel(status, locale)}
     </Badge>
   );
