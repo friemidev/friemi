@@ -1,6 +1,7 @@
 export type ActivityAgendaItem = {
   endAt?: string | null;
   startAt: string;
+  type?: string;
 };
 
 export type ActivityAgendaGroup<TActivity extends ActivityAgendaItem> =
@@ -73,14 +74,15 @@ function getActivityDurationMs(activity: ActivityAgendaItem) {
   return Math.max(endAt - startAt, 0);
 }
 
-const activityTimeZone = "Europe/Paris";
+const activityTimeZone = "UTC";
+const activityReferenceTimeZone = "Europe/Paris";
 
-function getDateKey(value: string | Date) {
+function getDateKey(value: string | Date, timeZone = activityTimeZone) {
   const date = typeof value === "string" ? new Date(value) : value;
   const parts = new Intl.DateTimeFormat("en", {
     day: "2-digit",
     month: "2-digit",
-    timeZone: activityTimeZone,
+    timeZone,
     year: "numeric",
   }).formatToParts(date);
   const year = parts.find((part) => part.type === "year")?.value ?? "0000";
@@ -88,6 +90,18 @@ function getDateKey(value: string | Date) {
   const day = parts.find((part) => part.type === "day")?.value ?? "01";
 
   return `${year}-${month}-${day}`;
+}
+
+function getAgendaItemDateKey(
+  activity: ActivityAgendaItem,
+  value: string | Date,
+) {
+  return getDateKey(
+    value,
+    activity.type === "PUBLIC_EVENT"
+      ? activityReferenceTimeZone
+      : activityTimeZone,
+  );
 }
 
 function shiftDateKey(dateKey: string, days: number) {
@@ -105,7 +119,7 @@ export function getActivityAgendaDateRelation(
   dateKey: string,
   now = new Date(),
 ): ActivityAgendaRelativeDate | null {
-  const todayKey = getDateKey(now);
+  const todayKey = getDateKey(now, activityReferenceTimeZone);
 
   if (dateKey === todayKey) {
     return "today";
@@ -132,7 +146,10 @@ export function isLongRunningAgendaActivity(activity: ActivityAgendaItem) {
     return false;
   }
 
-  return getDateKey(activity.startAt) !== getDateKey(activity.endAt);
+  return (
+    getAgendaItemDateKey(activity, activity.startAt) !==
+    getAgendaItemDateKey(activity, activity.endAt)
+  );
 }
 
 export function getActivityAgendaGroups<TActivity extends ActivityAgendaItem>(
@@ -151,7 +168,7 @@ export function getActivityAgendaGroups<TActivity extends ActivityAgendaItem>(
       continue;
     }
 
-    const dateKey = getDateKey(activity.startAt);
+    const dateKey = getAgendaItemDateKey(activity, activity.startAt);
     const currentGroup = dateGroups.get(dateKey) ?? [];
     currentGroup.push(activity);
     dateGroups.set(dateKey, currentGroup);

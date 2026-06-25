@@ -48,6 +48,7 @@ const coverTones: ActivityCardViewModel["coverTone"][] = [
 const defaultActivityPageSize = 15;
 const dailyRankingTimeZone = "Europe/Paris";
 const parisTimeZone = "Europe/Paris";
+const activityFloatingTimeZone = "UTC";
 const dayInMs = 24 * 60 * 60 * 1000;
 const freshOngoingWindowDays = 2;
 const endingSoonWindowDays = 1;
@@ -426,6 +427,17 @@ function createDateInTimeZone(
   return new Date(utcGuess.getTime() - offsetMinutes * 60_000);
 }
 
+function createActivityFloatingDate(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+) {
+  return new Date(Date.UTC(year, monthIndex, day, hour, minute, second, 0));
+}
+
 function getTimeZoneDateParts(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -439,6 +451,37 @@ function getTimeZoneDateParts(date: Date, timeZone: string) {
     month: Number(getDatePart(parts, "month")),
     year: Number(getDatePart(parts, "year")),
   };
+}
+
+function getTimeZoneDateTimeParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  return {
+    day: Number(getDatePart(parts, "day")),
+    hour: Number(getDatePart(parts, "hour")),
+    minute: Number(getDatePart(parts, "minute")),
+    month: Number(getDatePart(parts, "month")),
+    second: Number(getDatePart(parts, "second")),
+    year: Number(getDatePart(parts, "year")),
+  };
+}
+
+function getActivityFloatingNow(reference = new Date()) {
+  const { year, month, day, hour, minute, second } = getTimeZoneDateTimeParts(
+    reference,
+    parisTimeZone,
+  );
+
+  return createActivityFloatingDate(year, month - 1, day, hour, minute, second);
 }
 
 function getTimeZoneWeekdayIndex(date: Date, timeZone: string) {
@@ -626,7 +669,7 @@ type AgendaIndexItem = {
 export function getVisibleActivityWhere(
   options: VisibleActivityWhereOptions = {},
 ): Prisma.ActivityWhereInput {
-  const now = options.now ?? new Date();
+  const now = options.now ?? getActivityFloatingNow();
 
   return {
     ...(options.includePast
@@ -955,7 +998,7 @@ function filterDuplicateLegacyActivityInfoRows<
 
 export function getActivityTimeStateWhere(
   timeState: ActivityTimeState,
-  now = new Date(),
+  now = getActivityFloatingNow(),
 ): Prisma.ActivityWhereInput {
   if (timeState === "UPCOMING") {
     return {
@@ -1009,6 +1052,68 @@ export function getActivityTimeStateWhere(
 }
 
 function getActivityDateRangeBounds(
+  dateRange: ActivityDateRange,
+  now = getActivityFloatingNow(),
+) {
+  const { year, month, day } = getTimeZoneDateParts(
+    now,
+    activityFloatingTimeZone,
+  );
+  const todayStart = createActivityFloatingDate(year, month - 1, day);
+  const tomorrowStart = addDays(todayStart, 1);
+
+  switch (dateRange) {
+    case "TODAY":
+      return { end: tomorrowStart, start: todayStart };
+    case "TOMORROW":
+      return { end: addDays(todayStart, 2), start: tomorrowStart };
+    case "NEXT_3_DAYS":
+      return { end: addDays(todayStart, 3), start: todayStart };
+    case "THIS_WEEK": {
+      const weekday = getTimeZoneWeekdayIndex(now, activityFloatingTimeZone);
+      const daysFromWeekStart = weekday === 0 ? 6 : weekday - 1;
+      const weekStart = addDays(todayStart, -daysFromWeekStart);
+
+      return { end: addDays(weekStart, 7), start: weekStart };
+    }
+    case "NEXT_WEEK": {
+      const weekday = getTimeZoneWeekdayIndex(now, activityFloatingTimeZone);
+      const daysFromWeekStart = weekday === 0 ? 6 : weekday - 1;
+      const nextWeekStart = addDays(todayStart, 7 - daysFromWeekStart);
+
+      return { end: addDays(nextWeekStart, 7), start: nextWeekStart };
+    }
+    case "THIS_MONTH": {
+      const monthStart = createActivityFloatingDate(year, month - 1, 1);
+      const nextMonth = addMonthsInTimeZone(year, month - 1, 1);
+      const nextMonthStart = createActivityFloatingDate(
+        nextMonth.year,
+        nextMonth.monthIndex,
+        1,
+      );
+
+      return { end: nextMonthStart, start: monthStart };
+    }
+    case "NEXT_MONTH": {
+      const nextMonth = addMonthsInTimeZone(year, month - 1, 1);
+      const monthAfterNext = addMonthsInTimeZone(year, month - 1, 2);
+      const nextMonthStart = createActivityFloatingDate(
+        nextMonth.year,
+        nextMonth.monthIndex,
+        1,
+      );
+      const monthAfterNextStart = createActivityFloatingDate(
+        monthAfterNext.year,
+        monthAfterNext.monthIndex,
+        1,
+      );
+
+      return { end: monthAfterNextStart, start: nextMonthStart };
+    }
+  }
+}
+
+function getPublicEventDateRangeBounds(
   dateRange: ActivityDateRange,
   now = new Date(),
 ) {
@@ -1077,7 +1182,7 @@ function getActivityDateRangeBounds(
 
 function getActivityDateRangeWhere(
   dateRange: ActivityDateRange,
-  now = new Date(),
+  now = getActivityFloatingNow(),
 ): Prisma.ActivityWhereInput {
   const { end, start } = getActivityDateRangeBounds(dateRange, now);
 
@@ -1093,7 +1198,7 @@ function getPublicEventDateRangeWhere(
   dateRange: ActivityDateRange,
   now = new Date(),
 ): Prisma.PublicEventWhereInput {
-  const { end, start } = getActivityDateRangeBounds(dateRange, now);
+  const { end, start } = getPublicEventDateRangeBounds(dateRange, now);
 
   return {
     startAt: {
@@ -1510,7 +1615,7 @@ function compareRankedActivitiesByDuration(
 
 function getActivityTimeStatesWhere(
   timeStates: ActivityTimeState[],
-  now = new Date(),
+  now = getActivityFloatingNow(),
 ): Prisma.ActivityWhereInput | null {
   if (areAllActivityTimeStatesSelected(timeStates)) {
     return null;
@@ -1561,7 +1666,20 @@ function compareRankedActivities(
   return compareRankedActivitiesByStartAt(left, right, "asc");
 }
 
-function getParisDateKey(value: Date | string) {
+function getActivityFloatingDateKey(value: Date | string) {
+  const { year, month, day } = getTimeZoneDateParts(
+    value instanceof Date ? value : new Date(value),
+    activityFloatingTimeZone,
+  );
+
+  return [
+    String(year).padStart(4, "0"),
+    String(month).padStart(2, "0"),
+    String(day).padStart(2, "0"),
+  ].join("-");
+}
+
+function getPublicEventParisDateKey(value: Date | string) {
   const { year, month, day } = getTimeZoneDateParts(
     value instanceof Date ? value : new Date(value),
     parisTimeZone,
@@ -1574,9 +1692,17 @@ function getParisDateKey(value: Date | string) {
   ].join("-");
 }
 
+function getAgendaIndexDateKey(item: AgendaIndexItem, value: Date | string) {
+  return item.kind === "activity"
+    ? getActivityFloatingDateKey(value)
+    : getPublicEventParisDateKey(value);
+}
+
 function isLongRunningAgendaIndexItem(item: AgendaIndexItem) {
   return Boolean(
-    item.endAt && getParisDateKey(item.startAt) !== getParisDateKey(item.endAt),
+    item.endAt &&
+    getAgendaIndexDateKey(item, item.startAt) !==
+      getAgendaIndexDateKey(item, item.endAt),
   );
 }
 
@@ -1630,11 +1756,12 @@ function getAgendaDateSortDirection(
 export async function getActivities(
   options: GetActivitiesOptions = {},
 ): Promise<ActivityCardViewModel[]> {
-  const now = new Date();
+  const activityNow = getActivityFloatingNow();
+  const publicEventNow = new Date();
   const limit = normalizeLimit(options.limit);
   const baseWhere = getVisibleActivityWhere({
     includePast: options.includePast,
-    now,
+    now: activityNow,
   });
   const filterWhere = getActivityFilterWhere(options.filters);
   const relationWhere = await getActivityRelationWhere(
@@ -1662,7 +1789,7 @@ export async function getActivities(
             AND: [
               getVisiblePublicEventWhere({
                 includePast: options.includePast,
-                now,
+                now: publicEventNow,
               }),
               getPublicEventFilterWhere(options.filters),
             ],
@@ -1712,18 +1839,19 @@ export async function getUpcomingHomeActivities({
 async function getUpcomingHomeActivitiesUncached(
   safeLimit: number,
 ): Promise<ActivityCardViewModel[]> {
-  const now = new Date();
+  const activityNow = getActivityFloatingNow();
+  const publicEventNow = new Date();
   const upcomingActivityWhere: Prisma.ActivityWhereInput = {
     AND: [
-      getVisibleActivityWhere({ now }),
-      getActivityTimeStateWhere("UPCOMING", now),
+      getVisibleActivityWhere({ now: activityNow }),
+      getActivityTimeStateWhere("UPCOMING", activityNow),
       getLegacyPublicActivityInfoWhere(),
     ],
   };
   const upcomingPublicEventWhere: Prisma.PublicEventWhereInput = {
     AND: [
-      getVisiblePublicEventWhere({ now }),
-      getPublicEventTimeStateWhere("UPCOMING", now),
+      getVisiblePublicEventWhere({ now: publicEventNow }),
+      getPublicEventTimeStateWhere("UPCOMING", publicEventNow),
     ],
   };
   const [activities, publicEvents] = await Promise.all([
@@ -1871,7 +1999,7 @@ async function getActivityListWhere(
 
 function getPublicEventListWhere(
   filters: ActivityFilters,
-  now: Date,
+  publicEventNow: Date,
 ): Prisma.PublicEventWhereInput | null {
   if (!shouldIncludePublicEvents(filters)) {
     return null;
@@ -1882,14 +2010,14 @@ function getPublicEventListWhere(
       getVisiblePublicEventWhere({
         includeEnded: true,
         includePast: true,
-        now,
+        now: publicEventNow,
       }),
       getPublicEventFilterWhere(filters),
       ...(filters.dateRange
-        ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
+        ? [getPublicEventDateRangeWhere(filters.dateRange, publicEventNow)]
         : []),
-      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
-        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, publicEventNow)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, publicEventNow)!]
         : []),
     ],
   };
@@ -1920,21 +2048,21 @@ function getPublicInfoActivityListWhere(
 
 function getPublicInfoPublicEventListWhere(
   filters: ActivityFilters,
-  now: Date,
+  publicEventNow: Date,
 ): Prisma.PublicEventWhereInput {
   return {
     AND: [
       getVisiblePublicEventWhere({
         includeEnded: true,
         includePast: true,
-        now,
+        now: publicEventNow,
       }),
       getPublicEventFilterWhere(filters),
       ...(filters.dateRange
-        ? [getPublicEventDateRangeWhere(filters.dateRange, now)]
+        ? [getPublicEventDateRangeWhere(filters.dateRange, publicEventNow)]
         : []),
-      ...(getPublicEventTimeStatesWhere(filters.timeStates, now)
-        ? [getPublicEventTimeStatesWhere(filters.timeStates, now)!]
+      ...(getPublicEventTimeStatesWhere(filters.timeStates, publicEventNow)
+        ? [getPublicEventTimeStatesWhere(filters.timeStates, publicEventNow)!]
         : []),
     ],
   };
@@ -1951,7 +2079,8 @@ function getPublicInfoOnlyFilters(filters: ActivityFilters): ActivityFilters {
 async function getAgendaActivityList(
   filters: ActivityFilters,
   dateGroupPageSize: number,
-  now: Date,
+  activityNow: Date,
+  publicEventNow: Date,
   viewerProfileId: string | null | undefined,
   publicInfoOnly: boolean,
 ): Promise<ActivityListResult> {
@@ -1959,11 +2088,11 @@ async function getAgendaActivityList(
     ? getPublicInfoOnlyFilters(filters)
     : filters;
   const activityWhere = publicInfoOnly
-    ? getPublicInfoActivityListWhere(listFilters, now)
-    : await getActivityListWhere(listFilters, now, viewerProfileId);
+    ? getPublicInfoActivityListWhere(listFilters, activityNow)
+    : await getActivityListWhere(listFilters, activityNow, viewerProfileId);
   const publicEventWhere = publicInfoOnly
-    ? getPublicInfoPublicEventListWhere(listFilters, now)
-    : getPublicEventListWhere(listFilters, now);
+    ? getPublicInfoPublicEventListWhere(listFilters, publicEventNow)
+    : getPublicEventListWhere(listFilters, publicEventNow);
   const [activityIndexRows, publicEventIndexRows] = await Promise.all([
     prisma.activity.findMany({
       where: activityWhere,
@@ -1994,7 +2123,7 @@ async function getAgendaActivityList(
       continue;
     }
 
-    const dateKey = getParisDateKey(item.startAt);
+    const dateKey = getAgendaIndexDateKey(item, item.startAt);
     const currentItems = singleDayGroups.get(dateKey) ?? [];
     currentItems.push(item);
     singleDayGroups.set(dateKey, currentItems);
@@ -2095,11 +2224,16 @@ async function getAgendaActivityList(
 async function getOrderedActivityList(
   filters: ActivityFilters,
   pageSize: number,
-  now: Date,
+  activityNow: Date,
+  publicEventNow: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
-  const where = await getActivityListWhere(filters, now, viewerProfileId);
-  const publicEventWhere = getPublicEventListWhere(filters, now);
+  const where = await getActivityListWhere(
+    filters,
+    activityNow,
+    viewerProfileId,
+  );
+  const publicEventWhere = getPublicEventListWhere(filters, publicEventNow);
   const [activityTotalCount, publicEventTotalCount] = await Promise.all([
     prisma.activity.count({ where }),
     publicEventWhere
@@ -2304,7 +2438,8 @@ async function getRecommendedActivityList(
 async function getPublicInfoOnlyActivityList(
   filters: ActivityFilters,
   pageSize: number,
-  now: Date,
+  activityNow: Date,
+  publicEventNow: Date,
   viewerProfileId: string | null | undefined,
 ): Promise<ActivityListResult> {
   const perf = createActionPerformanceTracker({
@@ -2317,10 +2452,13 @@ async function getPublicInfoOnlyActivityList(
     },
   });
   const publicInfoFilters = getPublicInfoOnlyFilters(filters);
-  const activityWhere = getPublicInfoActivityListWhere(publicInfoFilters, now);
+  const activityWhere = getPublicInfoActivityListWhere(
+    publicInfoFilters,
+    activityNow,
+  );
   const publicEventWhere = getPublicInfoPublicEventListWhere(
     publicInfoFilters,
-    now,
+    publicEventNow,
   );
   const requestedPage = Math.max(filters.page, 1);
   const [activityTotalCount, publicEventTotalCount] = await Promise.all([
@@ -2417,14 +2555,16 @@ export async function getActivityList(
   filters: ActivityFilters,
   options: GetActivityListOptions = {},
 ): Promise<ActivityListResult> {
-  const now = new Date();
+  const activityNow = getActivityFloatingNow();
+  const publicEventNow = new Date();
   const pageSize = normalizeLimit(options.pageSize) ?? defaultActivityPageSize;
 
   if (filters.viewMode === "date") {
     return getAgendaActivityList(
       filters,
       pageSize,
-      now,
+      activityNow,
+      publicEventNow,
       options.viewerProfileId,
       Boolean(options.publicInfoOnly),
     );
@@ -2434,7 +2574,8 @@ export async function getActivityList(
     return getPublicInfoOnlyActivityList(
       filters,
       pageSize,
-      now,
+      activityNow,
+      publicEventNow,
       options.viewerProfileId,
     );
   }
@@ -2442,7 +2583,8 @@ export async function getActivityList(
   return getOrderedActivityList(
     filters,
     pageSize,
-    now,
+    activityNow,
+    publicEventNow,
     options.viewerProfileId,
   );
 }
@@ -2459,13 +2601,14 @@ export async function getActivityFilterOptions(
 
 const getCachedActivityFilterOptions = unstable_cache(
   async () => {
-    const now = new Date();
+    const activityNow = getActivityFloatingNow();
+    const publicEventNow = new Date();
     const [activityCities, publicEventCities] = await Promise.all([
       prisma.activity.findMany({
         where: getVisibleActivityWhere({
           includeEnded: true,
           includePast: true,
-          now,
+          now: activityNow,
         }),
         select: {
           city: true,
@@ -2480,7 +2623,7 @@ const getCachedActivityFilterOptions = unstable_cache(
         where: getVisiblePublicEventWhere({
           includeEnded: true,
           includePast: true,
-          now,
+          now: publicEventNow,
         }),
         select: {
           city: true,
@@ -2507,13 +2650,14 @@ const getCachedActivityFilterOptions = unstable_cache(
 
 const getCachedPublicInfoActivityFilterOptions = unstable_cache(
   async () => {
-    const now = new Date();
+    const activityNow = getActivityFloatingNow();
+    const publicEventNow = new Date();
     const activityWhere = {
       AND: [
         getVisibleActivityWhere({
           includeEnded: true,
           includePast: true,
-          now,
+          now: activityNow,
         }),
         getLegacyPublicActivityInfoWhere(),
       ],
@@ -2534,7 +2678,7 @@ const getCachedPublicInfoActivityFilterOptions = unstable_cache(
         where: getVisiblePublicEventWhere({
           includeEnded: true,
           includePast: true,
-          now,
+          now: publicEventNow,
         }),
         select: {
           city: true,

@@ -7,12 +7,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@chill-club/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
 import Link from "next/link";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import type {
@@ -33,6 +28,7 @@ import type { ActivityCardViewModel } from "../types";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
+  getActivityFloatingNow,
   getActivityTimeState,
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
@@ -140,7 +136,8 @@ function getCardFavoriteLabels(locale: string) {
 
 function getCountdownLabel(activity: ActivityCardViewModel, locale: string) {
   const startAt = new Date(activity.startAt);
-  const now = new Date();
+  const now =
+    activity.type === "PUBLIC_EVENT" ? new Date() : getActivityFloatingNow();
   const hourMs = 60 * 60 * 1000;
   const dayMs = 24 * 60 * 60 * 1000;
   const diffMs = startAt.getTime() - now.getTime();

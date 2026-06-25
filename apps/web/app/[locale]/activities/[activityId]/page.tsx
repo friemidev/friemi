@@ -153,6 +153,7 @@ export async function generateMetadata({
   );
   const dateLabel = getShareDateLabel({
     endAt: activity.endAt,
+    floating: true,
     locale,
     startAt: activity.startAt,
   });

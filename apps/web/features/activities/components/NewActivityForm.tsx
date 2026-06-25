@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type {
-  FormEvent,
-  ReactNode,
-  SelectHTMLAttributes,
-} from "react";
+import type { FormEvent, ReactNode, SelectHTMLAttributes } from "react";
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle } from "lucide-react";
@@ -31,7 +27,7 @@ import {
   type CreateActivityState,
 } from "../actions/createActivity";
 import {
-  parseParisDateTime,
+  parseActivityLocalDateTime,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
@@ -131,7 +127,7 @@ function formatLongDurationDate(date: Date, locale: string) {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Europe/Paris",
+    timeZone: "UTC",
   }).format(date);
 }
 
@@ -147,8 +143,8 @@ function getLongDurationConfirmation(
     return null;
   }
 
-  const startAt = parseParisDateTime(startAtValue);
-  const endAt = endAtValue ? parseParisDateTime(endAtValue) : null;
+  const startAt = parseActivityLocalDateTime(startAtValue);
+  const endAt = endAtValue ? parseActivityLocalDateTime(endAtValue) : null;
 
   if (!startAt || !endAt) {
     return null;
@@ -868,9 +864,7 @@ export function NewActivityForm({
                 checked={isCapacityLimited}
                 className="mt-1"
                 name="capacityLimitEnabled"
-                onChange={(event) =>
-                  setIsCapacityLimited(event.target.checked)
-                }
+                onChange={(event) => setIsCapacityLimited(event.target.checked)}
                 type="checkbox"
               />
               <span>
