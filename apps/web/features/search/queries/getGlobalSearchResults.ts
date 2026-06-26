@@ -204,6 +204,7 @@ function mapPublicEventToSearchActivityCard(
     status: "RECRUITING",
     visibility: "PUBLIC",
     coverTone: getActivityCoverTone(event.id),
+    autoCreatedTeam: null,
     isActivityInfo: true,
     officialUrl: event.officialUrl,
     merchant: null,

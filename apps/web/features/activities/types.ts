@@ -27,6 +27,15 @@ export type ActivityParticipantPreviewViewModel = {
 };
 
 export type ActivityCardViewModel = ActivitySummary & {
+  autoCreatedTeam: {
+    autoCreatedAt: string | null;
+    claimableUntil: string | null;
+    claimedAt: string | null;
+    claimedByUserProfileId: string | null;
+    isClaimable: boolean;
+    sourceActivityId: string | null;
+    sourceActivityTitle: string | null;
+  } | null;
   coverImageUrl: string | null;
   customCoverImageUrl?: string | null;
   coverTone: "moss" | "clay" | "sky";

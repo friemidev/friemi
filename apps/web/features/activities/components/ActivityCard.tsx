@@ -107,6 +107,27 @@ function getCardVisibilityLabel(
   return "开放局";
 }
 
+function getAutoCreatedTeamBadgeCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      claimable: "A reclamer",
+      recommended: "Selection du jour",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      claimable: "Claimable",
+      recommended: "Daily pick",
+    };
+  }
+
+  return {
+    claimable: "可认领",
+    recommended: "系统推荐",
+  };
+}
+
 function getCardFavoriteLabels(locale: string) {
   if (locale === "fr") {
     return {
@@ -482,6 +503,7 @@ export function ActivityCard({
       ? getCountdownLabel(activity, locale)
       : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
+  const autoCreatedBadgeCopy = getAutoCreatedTeamBadgeCopy(locale);
   const actionEventName: AnalyticsEventName =
     canCreateTeam && !isOwnActivity
       ? "team_create_started"
@@ -754,6 +776,20 @@ export function ActivityCard({
                   )}
                 >
                   {getCardVisibilityLabel(activity.visibility, locale)}
+                </span>
+              ) : null}
+              {activity.autoCreatedTeam ? (
+                <span
+                  className={cn(
+                    "rounded-md bg-[rgba(220,244,234,0.94)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#1e6a4f] shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
+                    mobileDenseClass(
+                      "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
+                    ),
+                  )}
+                >
+                  {activity.autoCreatedTeam.isClaimable
+                    ? autoCreatedBadgeCopy.claimable
+                    : autoCreatedBadgeCopy.recommended}
                 </span>
               ) : null}
             </div>

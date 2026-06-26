@@ -27,6 +27,11 @@ import {
   hasPartialActivityTimeStatesFilter,
   isEndedOnlyActivityTimeStatesFilter,
 } from "../utils/activityFilters";
+import {
+  AUTO_CREATED_TEAM_SOURCE,
+  getAutoCreatedTeamMetadata,
+  isAutoCreatedTeamClaimable,
+} from "../utils/autoCreatedTeams";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -136,6 +141,7 @@ export const activityCardSelect = {
     },
   },
   source: true,
+  sourcePayload: true,
   sourceUrl: true,
   externalSource: true,
   externalId: true,
@@ -896,6 +902,10 @@ export function isLegacyActivityInfoSource(activity: {
   importedAt?: Date | string | null;
   sourcePayload?: unknown;
 }) {
+  if (activity.source === AUTO_CREATED_TEAM_SOURCE) {
+    return false;
+  }
+
   if (activity.publicEventId) {
     return false;
   }
@@ -1212,6 +1222,10 @@ export function getActivityCardViewModel(
   activity: ActivityQueryResult,
 ): ActivityCardViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const autoCreatedTeamMetadata = getAutoCreatedTeamMetadata(
+    activity.source,
+    activity.sourcePayload,
+  );
   const participantCount = isActivityInfo
     ? 0
     : activity._count.participants + activity._count.guestParticipants;
@@ -1233,6 +1247,12 @@ export function getActivityCardViewModel(
       ].slice(0, 5);
 
   return {
+    autoCreatedTeam: autoCreatedTeamMetadata
+      ? {
+          ...autoCreatedTeamMetadata,
+          isClaimable: isAutoCreatedTeamClaimable(autoCreatedTeamMetadata),
+        }
+      : null,
     id: activity.id,
     title: activity.title,
     description: activity.description,
@@ -1287,6 +1307,7 @@ function getPublicEventActivityCardViewModel(
 ): RankedActivityCard {
   return {
     card: {
+      autoCreatedTeam: null,
       id: publicEvent.id,
       publicEventId: publicEvent.id,
       title: publicEvent.title,
@@ -1383,6 +1404,7 @@ function getHomeActivityPreviewCardViewModel(
       status: activity.status,
       visibility: activity.visibility,
       coverTone: getActivityCoverTone(activity.id),
+      autoCreatedTeam: null,
       isActivityInfo: true,
       officialUrl: activity.externalUrl ?? activity.sourceUrl,
       merchant: null,
@@ -1420,6 +1442,7 @@ function getHomePublicEventPreviewCardViewModel(
       status: "RECRUITING",
       visibility: "PUBLIC",
       coverTone: getActivityCoverTone(publicEvent.id),
+      autoCreatedTeam: null,
       isActivityInfo: true,
       officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,
       merchant: null,

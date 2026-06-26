@@ -20,6 +20,10 @@ import {
   splitStoredDescription,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
+import {
+  getAutoCreatedTeamMetadata,
+  isAutoCreatedTeamClaimable,
+} from "../utils/autoCreatedTeams";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -108,6 +112,8 @@ const activityDetailSelect = {
     },
   },
   organizerId: true,
+  source: true,
+  sourcePayload: true,
   ticketUrl: true,
   ticketLabel: true,
   shareEnabled: true,
@@ -292,6 +298,10 @@ function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
 ): ActivityDetailViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const autoCreatedTeamMetadata = getAutoCreatedTeamMetadata(
+    activity.source,
+    activity.sourcePayload,
+  );
   const participantCount = isActivityInfo
     ? 0
     : activity._count.participants + activity._count.guestParticipants;
@@ -313,6 +323,12 @@ function getActivityDetailViewModel(
       ];
 
   return {
+    autoCreatedTeam: autoCreatedTeamMetadata
+      ? {
+          ...autoCreatedTeamMetadata,
+          isClaimable: isAutoCreatedTeamClaimable(autoCreatedTeamMetadata),
+        }
+      : null,
     id: activity.id,
     title: activity.title,
     description: activity.description,
