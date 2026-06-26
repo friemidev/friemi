@@ -458,8 +458,8 @@ export default async function HomePage({ params }: HomePageProps) {
                   sizes="(min-width: 1024px) 42vw, 100vw"
                   className="aspect-[4/3] h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-transparent to-transparent" />
-                <p className="absolute inset-x-0 bottom-0 p-6 text-sm leading-6 text-white/82 sm:p-7">
+                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1f140d]/78 via-[#1f140d]/36 to-transparent" />
+                <p className="absolute inset-x-0 bottom-0 p-6 text-sm font-medium leading-6 text-[#fff4e3] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)] sm:p-7">
                   {t.valueImageCaption}
                 </p>
               </div>

@@ -48,10 +48,17 @@ export function HomeActivityCarousel({
   locale,
 }: HomeActivityCarouselProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const activeIndexRef = useRef(0);
   const pauseUntilRef = useRef(0);
+  const programmaticScrollTimeoutRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const hasMultipleActivities = activities.length > 1;
+
+  const updateActiveIndex = useCallback((nextIndex: number) => {
+    activeIndexRef.current = nextIndex;
+    setActiveIndex(nextIndex);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -65,6 +72,18 @@ export function HomeActivityCarousel({
     return () => {
       mediaQuery.removeEventListener("change", updatePreference);
     };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (programmaticScrollTimeoutRef.current) {
+        window.clearTimeout(programmaticScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const pauseAutoplay = useCallback(() => {
+    pauseUntilRef.current = Date.now() + manualPauseMs;
   }, []);
 
   const scrollToIndex = useCallback(
@@ -85,16 +104,23 @@ export function HomeActivityCarousel({
       }
 
       if (shouldPause) {
-        pauseUntilRef.current = Date.now() + manualPauseMs;
+        pauseAutoplay();
+      }
+
+      if (programmaticScrollTimeoutRef.current) {
+        window.clearTimeout(programmaticScrollTimeoutRef.current);
       }
 
       viewport.scrollTo({
         behavior: prefersReducedMotion ? "auto" : "smooth",
         left: nextCard.offsetLeft - viewport.offsetLeft,
       });
-      setActiveIndex(nextIndex);
+      updateActiveIndex(nextIndex);
+      programmaticScrollTimeoutRef.current = window.setTimeout(() => {
+        programmaticScrollTimeoutRef.current = null;
+      }, prefersReducedMotion ? 0 : 720);
     },
-    [activities.length, prefersReducedMotion],
+    [activities.length, pauseAutoplay, prefersReducedMotion, updateActiveIndex],
   );
 
   useEffect(() => {
@@ -121,7 +147,12 @@ export function HomeActivityCarousel({
   ]);
 
   const markManualInteraction = () => {
-    pauseUntilRef.current = Date.now() + manualPauseMs;
+    pauseAutoplay();
+
+    if (programmaticScrollTimeoutRef.current) {
+      window.clearTimeout(programmaticScrollTimeoutRef.current);
+      programmaticScrollTimeoutRef.current = null;
+    }
   };
 
   const updateActiveCard = () => {
@@ -134,21 +165,29 @@ export function HomeActivityCarousel({
     const cards = Array.from(
       viewport.querySelectorAll<HTMLElement>("[data-carousel-index]"),
     );
-    const viewportLeft = viewport.scrollLeft;
+    const viewportCenter = viewport.scrollLeft + viewport.clientWidth / 2;
     const closestCard = cards.reduce<HTMLElement | null>((closest, card) => {
       if (!closest) {
         return card;
       }
 
-      return Math.abs(card.offsetLeft - viewportLeft) <
-        Math.abs(closest.offsetLeft - viewportLeft)
+      const cardCenter =
+        card.offsetLeft - viewport.offsetLeft + card.offsetWidth / 2;
+      const closestCenter =
+        closest.offsetLeft - viewport.offsetLeft + closest.offsetWidth / 2;
+
+      return Math.abs(cardCenter - viewportCenter) <
+        Math.abs(closestCenter - viewportCenter)
         ? card
         : closest;
     }, null);
     const closestIndex = Number(closestCard?.dataset.carouselIndex ?? 0);
 
-    if (Number.isFinite(closestIndex)) {
-      setActiveIndex(closestIndex);
+    if (
+      Number.isFinite(closestIndex) &&
+      closestIndex !== activeIndexRef.current
+    ) {
+      updateActiveIndex(closestIndex);
     }
   };
 
@@ -170,6 +209,8 @@ export function HomeActivityCarousel({
         className="home-activity-carousel -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:gap-5 sm:px-6 lg:-mx-10 lg:px-10"
         onMouseEnter={markManualInteraction}
         onPointerDown={markManualInteraction}
+        onTouchStart={markManualInteraction}
+        onWheel={markManualInteraction}
         onScroll={updateActiveCard}
       >
         {activities.map((activity, index) => (
