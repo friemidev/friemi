@@ -32,6 +32,7 @@ import {
 } from "@/features/analytics/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
@@ -127,6 +128,50 @@ function getStableParticipantAvatarTone(value: string) {
 
 function getParticipantInitial(nickname: string) {
   return nickname.trim().charAt(0).toUpperCase() || "N";
+}
+
+function getAutoCreatedTeamCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      badge: "Selection du jour",
+      claimableBadge: "A reclamer",
+      claimHint: "Cette equipe a ete creee a partir d'une activite populaire. Reclamez-la pour modifier l'heure et le lieu.",
+      deadlinePrefix: "Reclamation ouverte jusqu'au",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      badge: "Daily pick",
+      claimableBadge: "Claimable",
+      claimHint: "This team was created from a popular activity. Claim it to edit the time, location, and plan details.",
+      deadlinePrefix: "Claim window ends at",
+    };
+  }
+
+  return {
+    badge: "系统推荐",
+    claimableBadge: "可认领",
+    claimHint: "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
+    deadlinePrefix: "认领截止",
+  };
+}
+
+function formatClaimDeadline(locale: string, value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 export const dynamic = "force-dynamic";
@@ -649,9 +694,16 @@ export default async function ActivityDetailPage({
     viewerParticipation.status === "PENDING";
   const canContactOrganizer = !isOrganizer;
   const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
+  const activityDetailPath = `/activities/${activity.id}`;
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
   const activityLocationLabel = getActivityLocationLabel(activity);
+  const autoCreatedTeam = activity.autoCreatedTeam;
+  const autoCreatedTeamCopy = getAutoCreatedTeamCopy(locale);
+  const autoCreatedClaimDeadline = formatClaimDeadline(
+    locale,
+    autoCreatedTeam?.claimableUntil ?? null,
+  );
   const activityParticipantLabel =
     activity.capacity > 0
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
@@ -749,6 +801,13 @@ export default async function ActivityDetailPage({
               {activityCategoryLabel}
             </span>
             <ActivityStatusBadge status={displayStatus} locale={locale} />
+            {autoCreatedTeam ? (
+              <span className="rounded-md bg-[#dcf4ea] px-2.5 py-1 text-xs font-semibold text-[#1e6a4f] shadow-sm">
+                {autoCreatedTeam.isClaimable
+                  ? autoCreatedTeamCopy.claimableBadge
+                  : autoCreatedTeamCopy.badge}
+              </span>
+            ) : null}
           </div>
           <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
             {activity.title}
@@ -1203,6 +1262,36 @@ export default async function ActivityDetailPage({
                 {publicEventCopy.linkedEventCta}
                 <ExternalLink className="h-4 w-4" />
               </Link>
+            ) : null}
+
+            {autoCreatedTeam && !isOrganizer ? (
+              <div className="mt-3 rounded-2xl border border-[#c9dccf] bg-[#f3fbf7] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#dcf4ea] px-2.5 py-1 text-[11px] font-semibold text-[#1e6a4f]">
+                    {autoCreatedTeam.isClaimable
+                      ? autoCreatedTeamCopy.claimableBadge
+                      : autoCreatedTeamCopy.badge}
+                  </span>
+                  {autoCreatedClaimDeadline && autoCreatedTeam.isClaimable ? (
+                    <span className="text-[11px] font-medium text-[#547566]">
+                      {autoCreatedTeamCopy.deadlinePrefix} {autoCreatedClaimDeadline}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-[#547566]">
+                  {autoCreatedTeamCopy.claimHint}
+                </p>
+                {autoCreatedTeam.isClaimable ? (
+                  <div className="mt-3">
+                    <ClaimAutoCreatedActivityButton
+                      activityId={activity.id}
+                      isAuthenticated={Boolean(viewerProfile)}
+                      locale={locale}
+                      redirectPath={activityDetailPath}
+                    />
+                  </div>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="mt-3 border-t border-sand pt-3">

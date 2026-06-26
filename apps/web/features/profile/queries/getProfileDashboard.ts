@@ -163,6 +163,7 @@ function mapPublicEventToActivityCard(
     priceText: publicEvent.priceText ?? "",
     status: "RECRUITING",
     coverTone: getActivityCoverTone(publicEvent.id),
+    autoCreatedTeam: null,
     isActivityInfo: true,
     officialUrl: publicEvent.officialUrl,
     merchant: null,

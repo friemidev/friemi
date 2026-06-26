@@ -261,6 +261,7 @@ function mapPublicEventToActivityCard(
     status: "RECRUITING",
     visibility: "PUBLIC",
     coverTone: getActivityCoverTone(publicEvent.id),
+    autoCreatedTeam: null,
     isActivityInfo: true,
     officialUrl: publicEvent.officialUrl,
     ticketUrl: publicEvent.ticketUrl,
