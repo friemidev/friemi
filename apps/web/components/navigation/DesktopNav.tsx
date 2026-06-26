@@ -14,6 +14,7 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
+import { useMobileNavSection } from "./MobileNavSectionContext";
 
 type DesktopNavProps = {
   locale: string;
@@ -29,6 +30,7 @@ type DesktopNavItem = {
 export function DesktopNav({ locale }: DesktopNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
+  const { sectionOverride } = useMobileNavSection();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
@@ -63,6 +65,14 @@ export function DesktopNav({ locale }: DesktopNavProps) {
   ];
 
   function isItemActive(href: string) {
+    if (sectionOverride === "lobby") {
+      return href === "/lobby";
+    }
+
+    if (sectionOverride === "activities") {
+      return href === "/activities";
+    }
+
     const localizedHref = withLocale(currentLocale, href);
 
     if (href === "/") {

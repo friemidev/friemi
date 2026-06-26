@@ -2,6 +2,7 @@ export function getFollowCopy(locale: string) {
   if (locale === "fr") {
     return {
       follow: "Suivre",
+      followed: "Suivi",
       unfollow: "Ne plus suivre",
       following: "Abonnement...",
       unfollowing: "Mise a jour...",
@@ -18,6 +19,7 @@ export function getFollowCopy(locale: string) {
   if (locale === "en") {
     return {
       follow: "Follow",
+      followed: "Following",
       unfollow: "Unfollow",
       following: "Following...",
       unfollowing: "Unfollowing...",
@@ -33,6 +35,7 @@ export function getFollowCopy(locale: string) {
 
   return {
     follow: "关注",
+    followed: "已关注",
     unfollow: "取消关注",
     following: "关注中...",
     unfollowing: "取消中...",
@@ -41,6 +44,6 @@ export function getFollowCopy(locale: string) {
     followingCount: "关注",
     invalidRequest: "请求无效，请稍后再试。",
     cannotFollowSelf: "不能关注自己。",
-    targetUnavailable: "目标用户不存在或暂不可关注。",
+    targetUnavailable: "目标用户不存在或暂时不可关注。",
   };
 }

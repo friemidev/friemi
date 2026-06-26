@@ -464,6 +464,7 @@ export async function getActivityById(
           id: activityViewModel.organizer.id,
           nickname: activityViewModel.organizer.nickname,
           avatarUrl: activityViewModel.organizer.avatarUrl,
+          kind: "user" as const,
         },
         ...(activityViewModel.participantPreview ?? []),
       ],

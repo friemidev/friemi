@@ -1,13 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   CircleUserRound,
   Compass,
-  LoaderCircle,
   MessageCircle,
   UsersRound,
 } from "lucide-react";
@@ -15,6 +14,7 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
+import { useMobileNavSection } from "./MobileNavSectionContext";
 
 type MobileNavProps = {
   locale: string;
@@ -23,7 +23,7 @@ type MobileNavProps = {
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const { sectionOverride } = useMobileNavSection();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
@@ -49,11 +49,15 @@ export function MobileNav({ locale }: MobileNavProps) {
     ],
   );
 
-  useEffect(() => {
-    setPendingHref(null);
-  }, [pathname]);
-
   function isItemActive(href: string) {
+    if (sectionOverride === "lobby") {
+      return href === "/lobby";
+    }
+
+    if (sectionOverride === "activities") {
+      return href === "/activities";
+    }
+
     const localizedHref = withLocale(currentLocale, href);
 
     if (href === "/") {
@@ -87,11 +91,6 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               title={item.label}
-              onClick={() => {
-                if (!active) {
-                  setPendingHref(item.href);
-                }
-              }}
               className={cn(
                 "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
                 item.isPrimary
@@ -101,7 +100,6 @@ export function MobileNav({ locale }: MobileNavProps) {
                   : active
                     ? "bg-white text-ink shadow-sm"
                     : "text-zinc-600 hover:bg-white/65 hover:text-ink",
-                pendingHref === item.href && "scale-[0.97] opacity-80",
               )}
             >
               <span
@@ -112,23 +110,14 @@ export function MobileNav({ locale }: MobileNavProps) {
                 aria-hidden="true"
               />
               <span className="relative inline-flex h-5 min-w-5 items-center justify-center">
-                {pendingHref === item.href ? (
-                  <LoaderCircle
-                    className={cn(
-                      "animate-spin",
-                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                    )}
-                  />
-                ) : (
-                  <Icon
-                    className={cn(
-                      "shrink-0",
-                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                      active ? "text-[#9b654f]" : "",
-                    )}
-                    strokeWidth={active ? 2.4 : 2}
-                  />
-                )}
+                <Icon
+                  className={cn(
+                    "shrink-0",
+                    item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
+                    active ? "text-[#9b654f]" : "",
+                  )}
+                  strokeWidth={active ? 2.4 : 2}
+                />
               </span>
               <span className="max-w-full whitespace-nowrap">{item.label}</span>
             </IntentPrefetchLink>
