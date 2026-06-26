@@ -320,6 +320,65 @@ function getCardActionConfig({
   };
 }
 
+function getMobilePrimaryActionLabel({
+  displayStatus,
+  isActivityInfo,
+  isOwnActivity,
+  locale,
+  viewerParticipationStatus,
+}: {
+  displayStatus: ReturnType<typeof getActivityDisplayStatus>;
+  isActivityInfo: boolean;
+  isOwnActivity: boolean;
+  locale: string;
+  viewerParticipationStatus: ActivityCardViewModel["viewerParticipationStatus"];
+}) {
+  const isInactive = displayStatus === "ENDED" || displayStatus === "CANCELLED";
+
+  if (isOwnActivity) {
+    if (locale === "fr") return isActivityInfo ? "Voir" : "Gerer";
+    if (locale === "en") return isActivityInfo ? "View" : "Manage";
+    return isActivityInfo ? "查看" : "管理";
+  }
+
+  if (viewerParticipationStatus === "PENDING") {
+    if (locale === "fr") return "Attente";
+    if (locale === "en") return "Pending";
+    return "待审";
+  }
+
+  if (
+    viewerParticipationStatus === "JOINED" ||
+    viewerParticipationStatus === "APPROVED"
+  ) {
+    if (locale === "fr") return "Inscrit";
+    if (locale === "en") return "Joined";
+    return "已报";
+  }
+
+  if (!isActivityInfo && displayStatus === "FULL") {
+    if (locale === "fr") return "Complet";
+    if (locale === "en") return "Full";
+    return "已满";
+  }
+
+  if (isActivityInfo) {
+    if (locale === "fr") return isInactive ? "Voir" : "Equipe";
+    if (locale === "en") return isInactive ? "View" : "Team";
+    return isInactive ? "查看" : "组队";
+  }
+
+  if (isInactive) {
+    if (locale === "fr") return "Voir";
+    if (locale === "en") return "View";
+    return "查看";
+  }
+
+  if (locale === "fr") return "Venir";
+  if (locale === "en") return "Join";
+  return "报名";
+}
+
 function getPrimaryActionIcon({
   isActivityInfo,
   isOwnActivity,
@@ -673,6 +732,13 @@ export function ActivityCard({
     tone: resolvedActionConfig.tone,
   });
   const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
+  const mobilePrimaryActionLabel = getMobilePrimaryActionLabel({
+    displayStatus,
+    isActivityInfo,
+    isOwnActivity,
+    locale,
+    viewerParticipationStatus: activity.viewerParticipationStatus ?? null,
+  });
   const compactPrimaryActionClassName =
     resolvedActionConfig.tone === "muted"
       ? "border border-zinc-300 bg-zinc-200 text-zinc-600 shadow-[0_8px_18px_rgba(113,113,122,0.12)] group-hover:border-zinc-400 group-hover:bg-zinc-300 group-hover:text-zinc-800"
@@ -1017,7 +1083,7 @@ export function ActivityCard({
                     <span
                       title={buttonLabel}
                       className={cn(
-                        "flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-[14px] px-3 text-[13px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-active:translate-y-px group-focus-visible:ring-2 group-focus-visible:ring-[#0d4b36]/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:hidden",
+                        "flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-[14px] px-2.5 text-[12px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-active:translate-y-px group-focus-visible:ring-2 group-focus-visible:ring-[#0d4b36]/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:hidden",
                         compactPrimaryActionClassName,
                       )}
                     >
@@ -1025,7 +1091,9 @@ export function ActivityCard({
                         className="h-3.5 w-3.5 shrink-0"
                         aria-hidden="true"
                       />
-                      <span className="min-w-0 truncate">{buttonLabel}</span>
+                      <span className="min-w-0">
+                        {mobilePrimaryActionLabel}
+                      </span>
                     </span>
                     <span
                       className={cn(
