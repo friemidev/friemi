@@ -9,7 +9,8 @@ import {
   Settings2,
   UsersRound,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@chill-club/ui";
 import Link from "next/link";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
@@ -61,6 +62,8 @@ type ActivityCardActionTone =
   | "neutral"
   | "pending"
   | "team";
+
+type AnalyticsLinkEvent = ComponentProps<typeof AnalyticsLink>["event"];
 
 const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
   moss: "bg-moss",
@@ -317,32 +320,6 @@ function getCardActionConfig({
   };
 }
 
-function getCompactActionLabel({
-  locale,
-  isActivityInfo,
-  isOwnActivity,
-}: {
-  locale: string;
-  isActivityInfo: boolean;
-  isOwnActivity: boolean;
-}) {
-  if (isOwnActivity) {
-    if (locale === "fr") return "Gerer";
-    if (locale === "en") return "Manage";
-    return "管理";
-  }
-
-  if (isActivityInfo) {
-    if (locale === "fr") return "Equipe";
-    if (locale === "en") return "Team";
-    return "组队";
-  }
-
-  if (locale === "fr") return "Rejoindre";
-  if (locale === "en") return "Join";
-  return "报名";
-}
-
 function getPrimaryActionIcon({
   isActivityInfo,
   isOwnActivity,
@@ -360,6 +337,148 @@ function getPrimaryActionIcon({
   }
 
   return CopyPlus;
+}
+
+function getCopyTeamButtonLabel(locale: string) {
+  if (locale === "fr") {
+    return "Relancer";
+  }
+
+  if (locale === "en") {
+    return "Run it again";
+  }
+
+  return "再来一局";
+}
+
+function getSplitPrimaryActionClassName(tone: ActivityCardActionTone) {
+  if (tone === "muted") {
+    return "border-zinc-300 bg-zinc-200 text-zinc-600 shadow-[0_12px_24px_rgba(113,113,122,0.16)]";
+  }
+
+  if (tone === "pending") {
+    return "border-[#e2bc67] bg-[#fff0bd] text-[#765113] shadow-[0_14px_26px_rgba(198,156,73,0.2)]";
+  }
+
+  if (tone === "joined" || tone === "neutral") {
+    return "border-[#d6b193] bg-[#f2ddcf] text-[#70432f] shadow-[0_14px_26px_rgba(154,91,61,0.18)]";
+  }
+
+  if (tone === "activity") {
+    return "border-[#8fc1d6] bg-[#dceef7] text-[#245e76] shadow-[0_14px_26px_rgba(84,139,167,0.16)]";
+  }
+
+  return "border-[#d97f61] bg-[#e48768] text-white shadow-[0_16px_30px_rgba(216,129,98,0.3)]";
+}
+
+function LobbySplitActionButton({
+  primaryDetailSource,
+  primaryEvent,
+  primaryHref,
+  primaryIcon: PrimaryIcon,
+  primaryLabel,
+  primaryTone,
+  secondaryHref,
+  secondaryLabel,
+}: {
+  primaryDetailSource?: DetailSourceInput;
+  primaryEvent: AnalyticsLinkEvent;
+  primaryHref: string;
+  primaryIcon: LucideIcon;
+  primaryLabel: string;
+  primaryTone: ActivityCardActionTone;
+  secondaryHref: string;
+  secondaryLabel: string;
+}) {
+  const primaryToneClassName = getSplitPrimaryActionClassName(primaryTone);
+  const sharedHalfLinkClassName =
+    "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf3]";
+  const sharedPanelClassName =
+    "pointer-events-none absolute inset-y-0 z-30 flex w-[calc(200%+1px)] items-center justify-center gap-2 rounded-[13px] border px-4 text-[13px] font-semibold leading-none whitespace-nowrap opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 motion-reduce:transition-none";
+
+  return (
+    <div className="hidden justify-center sm:flex">
+      <div
+        className="relative isolate h-10 w-[9.65rem] overflow-hidden rounded-[14px] border border-[#e0bea0] bg-[#fffaf3] shadow-[0_10px_20px_rgba(122,82,49,0.10),inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-200 hover:-translate-y-0.5"
+        data-lobby-split-action="desktop"
+      >
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 z-0 w-1/2 bg-[#fff0e6]"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 right-0 z-0 w-1/2 bg-[#fffdf9]"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 z-0 h-6 w-px -translate-y-1/2 bg-[#e5ccb3]"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 z-10 flex w-1/2 items-center justify-center text-[#c86548]"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#e48768] text-white shadow-[0_8px_16px_rgba(216,129,98,0.24)]">
+            <PrimaryIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-[#6b4b34]"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] border border-[#d9b993] bg-white shadow-[0_8px_16px_rgba(95,67,41,0.11)]">
+            <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        </span>
+        <AnalyticsLink
+          ariaLabel={primaryLabel}
+          detailSource={primaryDetailSource}
+          event={primaryEvent}
+          href={primaryHref}
+          className={cn(
+            "group left-0 w-1/2 hover:z-40",
+            sharedHalfLinkClassName,
+          )}
+        >
+          <span
+            className={cn(
+              "left-0 group-hover:shadow-[0_16px_28px_rgba(216,129,98,0.28)] group-focus-visible:shadow-[0_16px_28px_rgba(216,129,98,0.28)]",
+              sharedPanelClassName,
+              primaryToneClassName,
+            )}
+          >
+            <PrimaryIcon
+              className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:rotate-90 group-focus-visible:rotate-90 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+            <span>{primaryLabel}</span>
+          </span>
+        </AnalyticsLink>
+        <Link
+          href={secondaryHref}
+          title={secondaryLabel}
+          aria-label={secondaryLabel}
+          className={cn(
+            "group right-0 w-1/2 hover:z-40",
+            sharedHalfLinkClassName,
+          )}
+        >
+          <span
+            className={cn(
+              "right-0 border-[#4f3d30] bg-[#342820] text-[#fff6e8] group-hover:shadow-[0_16px_28px_rgba(47,37,31,0.24)] group-focus-visible:shadow-[0_16px_28px_rgba(47,37,31,0.24)]",
+              sharedPanelClassName,
+            )}
+          >
+            <CopyPlus
+              className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-rotate-12 group-focus-visible:-rotate-12 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+            <span>{secondaryLabel}</span>
+          </span>
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export function ActivityCard({
@@ -568,25 +687,6 @@ export function ActivityCard({
               : "border border-[#74c59b] bg-[#9fe0ba] text-[#114631] shadow-[0_14px_28px_rgba(97,191,142,0.24)] group-hover:border-[#53b07f] group-hover:bg-[#87d5ab] group-hover:text-[#0a3625]";
   const compactSecondaryActionClassName =
     "border border-[#e6b2c4] bg-[#f7d8e4] text-[#6f3150] shadow-[0_12px_24px_rgba(188,105,142,0.22)] group-hover:border-[#d68daa] group-hover:bg-[#fde7ef] group-hover:text-[#55213b]";
-  const compactPrimaryLabel = getCompactActionLabel({
-    locale,
-    isActivityInfo,
-    isOwnActivity,
-  });
-  const compactSecondaryLabel =
-    locale === "fr" ? "Relancer" : locale === "en" ? "Again" : "重开";
-
-  function getCopyTeamButtonLabel(locale: string) {
-    if (locale === "fr") {
-      return "Relancer";
-    }
-
-    if (locale === "en") {
-      return "Run it again";
-    }
-
-    return "再来一局";
-  }
 
   return (
     <Card
@@ -886,7 +986,7 @@ export function ActivityCard({
             className={cn(
               "grid items-center gap-2",
               useCompactDualActions
-                ? "grid-cols-2 justify-center gap-2 sm:flex sm:grid-cols-none sm:justify-center sm:gap-6"
+                ? "grid-cols-[minmax(0,1fr)_2.5rem] justify-center gap-2 sm:flex sm:grid-cols-none sm:justify-center sm:gap-6"
                 : copyActivityHref
                 ? "grid-cols-1 sm:grid-cols-[minmax(4.75rem,0.84fr)_minmax(5.75rem,1fr)]"
                 : "grid-cols-1",
@@ -907,29 +1007,25 @@ export function ActivityCard({
                 }}
                 className={cn(
                   "group min-w-0 rounded-full focus-visible:outline-none",
-                  useCompactDualActions ? "relative justify-self-center sm:w-auto" : null,
+                  useCompactDualActions
+                    ? "relative w-full justify-self-stretch sm:hidden"
+                    : null,
                 )}
               >
                 {useCompactDualActions ? (
                   <>
-                    <span className="flex w-full flex-col items-center gap-1 sm:hidden">
-                      <span
-                        title={buttonLabel}
-                        className={cn(
-                          "flex h-7 min-h-7 w-[3.1rem] min-w-[3.1rem] items-center justify-center rounded-xl px-0 transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:scale-[1.08] group-hover:shadow-[0_18px_32px_rgba(0,0,0,0.16)] group-active:translate-y-0 group-active:scale-100 group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.08] group-focus-visible:ring-2 group-focus-visible:ring-[#0d4b36]/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-9 sm:min-h-9 sm:w-9 sm:min-w-9",
-                          compactPrimaryActionClassName,
-                          "sm:w-9",
-                        )}
-                      >
-                        <PrimaryActionIcon
-                          className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110 sm:h-4 sm:w-4"
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">{buttonLabel}</span>
-                      </span>
-                      <span className="text-[9px] font-semibold leading-none text-[#2f6b4f] sm:hidden">
-                        {compactPrimaryLabel}
-                      </span>
+                    <span
+                      title={buttonLabel}
+                      className={cn(
+                        "flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-[14px] px-3 text-[13px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-active:translate-y-px group-focus-visible:ring-2 group-focus-visible:ring-[#0d4b36]/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:hidden",
+                        compactPrimaryActionClassName,
+                      )}
+                    >
+                      <PrimaryActionIcon
+                        className="h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 truncate">{buttonLabel}</span>
                     </span>
                     <span
                       className={cn(
@@ -964,7 +1060,9 @@ export function ActivityCard({
                 href={copyActivityHref}
                 className={cn(
                   "group min-w-0 rounded-full focus-visible:outline-none",
-                  useCompactDualActions ? "relative justify-self-center sm:w-auto" : null,
+                  useCompactDualActions
+                    ? "relative h-10 w-10 justify-self-end rounded-[14px] sm:hidden"
+                    : null,
                 )}
                 title={useCompactDualActions ? getCopyTeamButtonLabel(locale) : undefined}
                 aria-label={
@@ -973,24 +1071,18 @@ export function ActivityCard({
               >
                 {useCompactDualActions ? (
                   <>
-                    <span className="flex w-full flex-col items-center gap-1 sm:hidden">
-                      <span
-                        className={cn(
-                          "flex h-7 min-h-7 w-[3.1rem] min-w-[3.1rem] items-center justify-center rounded-xl px-0 transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:scale-[1.08] group-hover:shadow-[0_18px_32px_rgba(0,0,0,0.12)] group-active:translate-y-0 group-active:scale-100 group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.08] group-focus-visible:ring-2 group-focus-visible:ring-[#9a4f72]/30 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-9 sm:min-h-9 sm:w-9 sm:min-w-9",
-                          compactSecondaryActionClassName,
-                          "sm:w-9",
-                        )}
-                      >
-                        <CopyPlus
-                          className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110 sm:h-4 sm:w-4"
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">
-                          {getCopyTeamButtonLabel(locale)}
-                        </span>
-                      </span>
-                      <span className="text-[9px] font-semibold leading-none text-[#9a4f72] sm:hidden">
-                        {compactSecondaryLabel}
+                    <span
+                      className={cn(
+                        "flex h-10 min-h-10 w-10 min-w-10 items-center justify-center rounded-[14px] px-0 transition duration-150 ease-out group-active:translate-y-px group-focus-visible:ring-2 group-focus-visible:ring-[#9a4f72]/30 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:hidden",
+                        compactSecondaryActionClassName,
+                      )}
+                    >
+                      <CopyPlus
+                        className="h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only">
+                        {getCopyTeamButtonLabel(locale)}
                       </span>
                     </span>
                     <span
@@ -1015,6 +1107,26 @@ export function ActivityCard({
                   </span>
                 )}
               </Link>
+            ) : null}
+            {useCompactDualActions && copyActivityHref ? (
+              <LobbySplitActionButton
+                primaryDetailSource={
+                  actionHref === cardHref ? detailSource : undefined
+                }
+                primaryEvent={{
+                  name: actionEventName,
+                  entityId: analyticsEntity.entityId,
+                  entityType: analyticsEntity.entityType,
+                  sourceSurface,
+                  properties: baseAnalyticsProperties,
+                }}
+                primaryHref={actionHref}
+                primaryIcon={PrimaryActionIcon}
+                primaryLabel={buttonLabel}
+                primaryTone={resolvedActionConfig.tone}
+                secondaryHref={copyActivityHref}
+                secondaryLabel={getCopyTeamButtonLabel(locale)}
+              />
             ) : null}
           </div>
         </div>
