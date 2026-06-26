@@ -74,6 +74,8 @@ import { openActivityOrganizerConversationAction } from "@/features/direct-messa
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
+import { MobileNavSectionOverride } from "@/components/navigation/MobileNavSectionOverride";
 import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
 import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
@@ -324,6 +326,9 @@ export default async function ActivityDetailPage({
 
     return (
       <PageContainer className="space-y-6">
+        <MobileNavSectionOverride
+          section={activity.isActivityInfo ? "activities" : "lobby"}
+        />
         <DetailSourceRestore sourceKey="activity_detail" />
         <DetailSourceReturnLink
           className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
@@ -937,9 +942,26 @@ export default async function ActivityDetailPage({
               </h2>
             </div>
             <div className="mt-4 flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-ink">
-                {getActivityOrganizerInitial(activity)}
-              </div>
+              <UserProfilePreviewPopover
+                avatarUrl={activity.organizer.avatarUrl}
+                isAuthenticated={Boolean(viewerProfile)}
+                locale={locale}
+                nickname={activity.organizer.nickname}
+                profileId={activity.organizer.id}
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-semibold text-ink">
+                  {activity.organizer.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activity.organizer.avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    getActivityOrganizerInitial(activity)
+                  )}
+                </div>
+              </UserProfilePreviewPopover>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">
                   {activity.organizer.nickname}
@@ -1010,32 +1032,38 @@ export default async function ActivityDetailPage({
               {participantPreview.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {participantPreview.map((participant) => (
-                    <button
-                      key={participant.id}
-                      type="button"
-                      className="group relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm outline-none ring-1 ring-[#ead9bd] transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#d88d72]"
-                      aria-label={participant.nickname}
-                      title={participant.nickname}
-                    >
-                      <span
-                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                    <span key={participant.id}>
+                      <UserProfilePreviewPopover
+                        avatarUrl={participant.avatarUrl}
+                        isAuthenticated={Boolean(viewerProfile)}
+                        isGuest={participant.kind !== "user"}
+                        locale={locale}
+                        nickname={participant.nickname}
+                        profileId={participant.id}
                       >
-                        {participant.avatarUrl ? (
-                          // User avatars are stored as remote profile URLs.
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={participant.avatarUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          getParticipantInitial(participant.nickname)
-                        )}
-                      </span>
-                      <span className="pointer-events-none absolute -top-10 left-1/2 z-20 w-max max-w-[12rem] -translate-x-1/2 whitespace-normal rounded-full bg-ink px-2.5 py-1 text-center text-xs font-semibold leading-4 text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus:opacity-100 group-focus-visible:opacity-100">
-                        {participant.nickname}
-                      </span>
-                    </button>
+                        <span
+                          className="group relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm outline-none ring-1 ring-[#ead9bd] transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#d88d72]"
+                          aria-label={participant.nickname}
+                          title={participant.nickname}
+                        >
+                          <span
+                            className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                          >
+                            {participant.avatarUrl ? (
+                              // User avatars are stored as remote profile URLs.
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={participant.avatarUrl}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              getParticipantInitial(participant.nickname)
+                            )}
+                          </span>
+                        </span>
+                      </UserProfilePreviewPopover>
+                    </span>
                   ))}
                 </div>
               ) : null}

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +15,8 @@ const toggleFollowSchema = z.object({
 
 export type ToggleFollowState = {
   formError?: string;
+  isFollowing?: boolean;
+  ok?: boolean;
 };
 
 function getString(formData: FormData, key: string) {
@@ -79,23 +80,36 @@ export async function toggleFollowUserAction(
     },
   });
 
+  const localizedPath = withLocale(locale, redirectPath);
+
   if (existingFollow) {
     await prisma.userFollow.delete({
       where: {
         id: existingFollow.id,
       },
     });
-  } else {
-    await prisma.userFollow.create({
-      data: {
-        followerId: viewerProfile.id,
-        followingId: targetUserProfileId,
-      },
-    });
+
+    revalidatePath(localizedPath);
+    revalidatePath(withLocale(locale, "/profile"));
+
+    return {
+      isFollowing: false,
+      ok: true,
+    };
   }
 
-  const localizedPath = withLocale(locale, redirectPath);
+  await prisma.userFollow.create({
+    data: {
+      followerId: viewerProfile.id,
+      followingId: targetUserProfileId,
+    },
+  });
+
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
-  redirect(localizedPath);
+
+  return {
+    isFollowing: true,
+    ok: true,
+  };
 }

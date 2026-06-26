@@ -25,6 +25,13 @@ import {
 import { getFriendshipPair, getFriendshipPairKey } from "../utils/friendship";
 
 export type FriendActionState = {
+  code?:
+    | "already_friends"
+    | "invalid_request"
+    | "pending_exists"
+    | "request_failed"
+    | "self_request"
+    | "target_not_found";
   ok?: boolean;
   formError?: string;
 };
@@ -43,6 +50,7 @@ const sendFriendRequestToProfileSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   targetProfileId: z.string().trim().min(1),
   message: z.string().trim().max(240).optional(),
+  redirectPath: z.string().trim().min(1).optional(),
   returnTo: z.enum(["friends", "messages"]).default("friends"),
 });
 
@@ -222,9 +230,9 @@ async function getExistingFriendship(userId: string, otherUserId: string) {
   });
 }
 
-async function hasPendingFriendRequest(userId: string, otherUserId: string) {
+async function getPendingFriendRequest(userId: string, otherUserId: string) {
   const pendingPairKey = getFriendshipPairKey(userId, otherUserId);
-  const pendingRequest = await prisma.friendRequest.findFirst({
+  return prisma.friendRequest.findFirst({
     where: {
       OR: [
         {
@@ -247,10 +255,10 @@ async function hasPendingFriendRequest(userId: string, otherUserId: string) {
     },
     select: {
       id: true,
+      receiverId: true,
+      requesterId: true,
     },
   });
-
-  return Boolean(pendingRequest);
 }
 
 async function createPendingFriendRequest({
@@ -290,14 +298,15 @@ async function createPendingFriendRequest({
     });
 
     return {
+      code: "self_request",
       formError: t.cannotAddSelf,
     };
   }
 
   try {
-    const [existingFriendship, pendingRequestExists] = await Promise.all([
+    const [existingFriendship, pendingRequest] = await Promise.all([
       getExistingFriendship(viewerProfileId, targetProfileId),
-      hasPendingFriendRequest(viewerProfileId, targetProfileId),
+      getPendingFriendRequest(viewerProfileId, targetProfileId),
     ]);
 
     if (existingFriendship) {
@@ -313,11 +322,20 @@ async function createPendingFriendRequest({
       });
 
       return {
+        code: "already_friends",
         formError: t.alreadyFriends,
       };
     }
 
-    if (pendingRequestExists) {
+    if (pendingRequest) {
+      if (pendingRequest.requesterId === viewerProfileId) {
+        await createNotification(prisma, {
+          actorId: viewerProfileId,
+          recipientId: pendingRequest.receiverId,
+          type: "FRIEND_REQUEST",
+        });
+      }
+
       recordFriendRequestLatency({
         durationMs: getDurationMs(),
         locale,
@@ -330,6 +348,7 @@ async function createPendingFriendRequest({
       });
 
       return {
+        code: "pending_exists",
         formError: t.pendingExists,
       };
     }
@@ -349,6 +368,7 @@ async function createPendingFriendRequest({
 
       await createNotification(tx, {
         actorId: viewerProfileId,
+        dedupe: false,
         recipientId: targetProfileId,
         type: "FRIEND_REQUEST",
       });
@@ -371,6 +391,11 @@ async function createPendingFriendRequest({
     });
 
     return {
+      code:
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+          ? "pending_exists"
+          : "request_failed",
       formError:
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
@@ -440,6 +465,7 @@ export async function sendFriendRequestAction(
     });
 
     return {
+      code: "invalid_request",
       formError: fallbackCopy.invalidRequest,
     };
   }
@@ -469,6 +495,7 @@ export async function sendFriendRequestAction(
     });
 
     return {
+      code: "target_not_found",
       formError: t.targetNotFound,
     };
   }
@@ -518,6 +545,7 @@ export async function sendFriendRequestToProfileAction(
     locale: fallbackLocale,
     targetProfileId: getString(formData, "targetProfileId"),
     message: getString(formData, "message") || undefined,
+    redirectPath: getString(formData, "redirectPath") || undefined,
     returnTo: rawReturnTo,
   });
 
@@ -539,15 +567,18 @@ export async function sendFriendRequestToProfileAction(
     });
 
     return {
+      code: "invalid_request",
       formError: fallbackCopy.invalidRequest,
     };
   }
 
-  const { locale, message, targetProfileId } = result.data;
+  const { locale, message, redirectPath, targetProfileId, returnTo } =
+    result.data;
   const t = getFriendsCopy(locale);
   const viewerProfile = await ensureCurrentUserProfile(
     locale,
-    `/profile/${targetProfileId}`,
+    resolveFriendActionRedirectPath(returnTo, redirectPath) ||
+      `/profile/${targetProfileId}`,
   );
 
   const targetUser = await prisma.userProfile.findFirst({
@@ -572,6 +603,7 @@ export async function sendFriendRequestToProfileAction(
     });
 
     return {
+      code: "target_not_found",
       formError: t.targetNotFound,
     };
   }
@@ -580,8 +612,10 @@ export async function sendFriendRequestToProfileAction(
     analytics: {
       lookupType: "profile",
       requestOrigin: "profile_action",
-      route: `/${locale}/profile/${targetUser.id}`,
-      sourceSurface: "profile",
+      route: redirectPath
+        ? `/${locale}${resolveFriendActionRedirectPath(returnTo, redirectPath)}`
+        : `/${locale}/profile/${targetUser.id}`,
+      sourceSurface: getFriendAnalyticsSourceSurface(returnTo),
     },
     getDurationMs,
     locale,
