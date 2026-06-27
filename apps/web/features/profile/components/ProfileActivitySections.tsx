@@ -34,12 +34,12 @@ const profileActivityListLimit = 12;
 function getProfileSpaceCopy(locale: string) {
   if (locale === "en") {
     return {
-      createdTitle: "My created",
+      createdTitle: "Created",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Start a crew",
-      participationTitle: "My joined",
+      participationTitle: "Joined",
       participationAction: "Discover activities",
-      favoriteTitle: "My saved",
+      favoriteTitle: "Saved",
       favoriteAction: "Discover activities",
       sortLatest: "Latest first",
       sortOldest: "Oldest first",
@@ -48,12 +48,12 @@ function getProfileSpaceCopy(locale: string) {
 
   if (locale === "fr") {
     return {
-      createdTitle: "Mes créations",
+      createdTitle: "Créations",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Créer une sortie",
-      participationTitle: "Mes participations",
+      participationTitle: "Rejointes",
       participationAction: "Découvrir",
-      favoriteTitle: "Mes favoris",
+      favoriteTitle: "Favoris",
       favoriteAction: "Découvrir",
       sortLatest: "Plus récent",
       sortOldest: "Plus ancien",
@@ -61,12 +61,12 @@ function getProfileSpaceCopy(locale: string) {
   }
 
   return {
-    createdTitle: "我的发起",
+    createdTitle: "发起",
     sectionCount: (count: number) => `${count}`,
     createdAction: "发起组局",
-    participationTitle: "我的参与",
+    participationTitle: "参与",
     participationAction: "发现活动",
-    favoriteTitle: "我的收藏",
+    favoriteTitle: "收藏",
     favoriteAction: "发现活动",
     sortLatest: "最近",
     sortOldest: "最早",
@@ -269,7 +269,7 @@ export function ProfileActivitySections({
     <section className="space-y-5">
       <DetailSourceRestore sourceKey="profile" />
       {isSelf && tabs.length > 1 ? (
-        <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-10 grid grid-cols-3 gap-2 bg-paper/90 py-2 backdrop-blur md:static md:rounded-2xl md:bg-white/55 md:p-2 md:backdrop-blur-0 md:ring-1 md:ring-black/10">
+        <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-20 grid grid-cols-3 gap-1.5 rounded-[1.35rem] border border-event-border/45 bg-white/88 p-1.5 shadow-[0_12px_28px_rgba(21,98,64,0.08)] backdrop-blur md:static md:gap-2 md:rounded-2xl md:bg-white/72 md:p-2 md:backdrop-blur-0">
           {tabs.map((tab) => {
             const active = activeSection === tab.key;
 
@@ -277,21 +277,23 @@ export function ProfileActivitySections({
               <button
                 key={tab.key}
                 className={cn(
-                  "inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-medium ring-1 transition",
+                  "inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-semibold leading-none ring-1 transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/45 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm",
                   active
-                    ? "bg-clay text-white ring-clay"
-                    : "bg-white text-zinc-700 ring-black/10",
+                    ? "bg-[linear-gradient(135deg,#F1F2E3_0%,#FEFFF9_100%)] text-forest ring-meadow/60 shadow-[0_8px_18px_rgba(21,98,64,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+                    : "bg-transparent text-ink/72 ring-transparent hover:bg-paper hover:text-forest hover:ring-event-border/45",
                 )}
                 onClick={() => onActiveSectionChange(tab.key)}
                 type="button"
               >
-                <span className="min-w-0 truncate">{tab.title}</span>
+                <span className="min-w-0 whitespace-nowrap text-center">
+                  {tab.title}
+                </span>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-1.5 py-0.5 text-xs",
+                    "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none",
                     active
-                      ? "bg-white/20 text-white"
-                      : "bg-zinc-100 text-zinc-500",
+                      ? "bg-white text-forest ring-1 ring-meadow/35"
+                      : "bg-sand/70 text-forest/70",
                   )}
                 >
                   {tab.count}
@@ -337,6 +339,7 @@ export function ProfileActivitySections({
                     activity={activity}
                     isOwnActivity={isSelf}
                     locale={locale}
+                    mobileDense
                     sourceSurface="profile"
                     detailSourceKey="profile"
                     detailSourceState={{ section: "created", sortDirection }}
@@ -438,9 +441,11 @@ export function ProfileActivitySections({
                     {sortedFavoriteActivities.map((favorite) => (
                       <ActivityCard
                         key={favorite.id}
+                        actionContext="profile"
                         activity={favorite.activity}
                         isAuthenticated={isAuthenticated}
                         locale={locale}
+                        mobileDense
                         showFavoriteButton
                         showPrimaryAction={
                           !isPublicEventCard(favorite.activity)

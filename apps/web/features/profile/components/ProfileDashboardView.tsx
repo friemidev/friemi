@@ -35,21 +35,21 @@ type ProfileDashboardViewProps = {
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
     return {
-      created: "Mes créations",
-      joined: "Mes participations",
+      created: "Créés",
+      joined: "Rejoints",
     };
   }
 
   if (locale === "en") {
     return {
-      created: "My created",
-      joined: "My joined",
+      created: "Created",
+      joined: "Joined",
     };
   }
 
   return {
-    created: "我的发起",
-    joined: "我的参与",
+    created: "发起",
+    joined: "参与",
   };
 }
 

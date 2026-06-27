@@ -8,7 +8,7 @@ export function getProfileFollowCopy(locale: string) {
       friendsEmptyDescription:
         "Quand vous ajoutez des amis, leurs profils apparaîtront ici.",
       followersCount: "Abonnés",
-      followingCount: "Abonnements",
+      followingCount: "Suivis",
       followingTitle: "Abonnements",
       followingDescription: "Les personnes que vous suivez apparaissent ici.",
       followingEmptyTitle: "Aucun abonnement",
