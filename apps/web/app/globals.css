@@ -4,6 +4,12 @@
 
 :root {
   --font-sans: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --friemi-brand-cream: #f6fbef;
+  --friemi-brand-green: #049d73;
+  --friemi-brand-green-dark: #006e4d;
+  --friemi-brand-ink: #10265c;
+  --friemi-brand-sand: #d8e7cf;
+  --friemi-brand-warm: #f48d81;
 }
 
 * {
@@ -12,7 +18,7 @@
 
 html {
   min-height: 100%;
-  background: #f5efe2;
+  background: #eef8ea;
 }
 
 body {
@@ -20,21 +26,22 @@ body {
   margin: 0;
   background:
     radial-gradient(
-      circle at top left,
-      rgba(220, 198, 147, 0.2),
+      circle at 10% 0%,
+      rgba(4, 157, 115, 0.14),
       transparent 24rem
     ),
     radial-gradient(
-      circle at top right,
-      rgba(178, 201, 177, 0.14),
-      transparent 22rem
+      circle at 88% 4%,
+      rgba(244, 141, 129, 0.12),
+      transparent 20rem
     ),
     linear-gradient(
       180deg,
-      rgba(255, 251, 244, 0.92),
-      rgba(244, 236, 221, 0.96)
+      #f6fbef 0%,
+      #fffaf2 46%,
+      #eef8ea 100%
     ),
-    #f5efe2;
+    #f6fbef;
   color: #151515;
 }
 
@@ -123,6 +130,16 @@ a {
   }
 }
 
+@keyframes home-luxury-backdrop-drift {
+  0% {
+    transform: scale(1.035) translate3d(-0.35rem, 0, 0);
+  }
+
+  100% {
+    transform: scale(1.055) translate3d(0.35rem, -0.25rem, 0);
+  }
+}
+
 .friemi-brand-loader {
   --loader-size: 8rem;
   --logo-size: 6.25rem;
@@ -193,11 +210,11 @@ a {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    rgba(245, 238, 226, 0.92),
-    rgba(255, 255, 255, 0.9),
-    rgba(219, 232, 236, 0.72)
+    rgba(238, 248, 234, 0.92),
+    rgba(255, 250, 242, 0.9),
+    rgba(213, 234, 207, 0.76)
   );
-  box-shadow: inset 0 0 0 1px rgba(128, 108, 77, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(10, 63, 49, 0.06);
 }
 
 .friemi-shimmer::after {
@@ -247,7 +264,7 @@ a {
 
 .co-creator-benefit-row:hover {
   background: #fffaf2;
-  box-shadow: inset 3px 0 0 #d88d72;
+  box-shadow: inset 3px 0 0 #049d73;
   transform: translateX(0.12rem);
 }
 
@@ -257,6 +274,11 @@ a {
 
 .home-luxury-hero-media {
   animation: home-luxury-slow-zoom 24s ease-out both;
+  transform-origin: center;
+}
+
+.home-luxury-intro-backdrop {
+  animation: home-luxury-backdrop-drift 18s ease-in-out infinite alternate;
   transform-origin: center;
 }
 
@@ -383,6 +405,7 @@ html[data-home-motion-ready="true"]
   .home-carousel-card,
   .home-carousel-card__media img,
   .home-luxury-hero-media,
+  .home-luxury-intro-backdrop,
   .home-luxury-reveal,
   [data-home-reveal],
   .friemi-loading-dots span,

@@ -78,8 +78,8 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbb] bg-paper pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_rgba(21,21,21,0.08)] md:hidden">
-      <div className="mx-auto grid h-[5.15rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#cfe2c6] bg-[#fffaf2] pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_26px_rgba(10,63,49,0.1)] md:hidden">
+      <div className="mx-auto grid h-[5.05rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -92,20 +92,24 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-2.5 h-[4.55rem] bg-[#c97d62] text-white shadow-[0_12px_24px_rgba(216,141,114,0.32)]"
-                    : "-mt-2.5 h-[4.55rem] bg-[#e6a189] text-white shadow-[0_10px_22px_rgba(216,141,114,0.22)] hover:bg-[#d88d72]"
+                    ? "-mt-2.5 h-[4.5rem] bg-[#049d73] text-white shadow-[0_12px_26px_rgba(4,157,115,0.3)]"
+                    : "-mt-2.5 h-[4.5rem] bg-[#f48d81] text-white shadow-[0_10px_22px_rgba(244,141,129,0.24)] hover:bg-[#e77f73]"
                   : active
-                    ? "bg-white text-ink shadow-sm"
-                    : "text-zinc-600 hover:bg-white/65 hover:text-ink",
+                    ? "bg-white text-[#006e4d] shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-[#d9ead6]"
+                    : "text-zinc-600 hover:bg-white hover:text-[#10265c]",
               )}
             >
               <span
                 className={cn(
                   "absolute top-1.5 h-1 w-5 rounded-full transition",
-                  active ? "bg-[#d88d72]" : "bg-transparent",
+                  active
+                    ? item.isPrimary
+                      ? "bg-white/88"
+                      : "bg-[#049d73]"
+                    : "bg-transparent",
                 )}
                 aria-hidden="true"
               />
@@ -114,7 +118,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   className={cn(
                     "shrink-0",
                     item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                    active ? "text-[#9b654f]" : "",
+                    active && item.isPrimary ? "text-white" : "",
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />

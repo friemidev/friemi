@@ -564,13 +564,13 @@ export function ActivitySwipeDiscovery({
       className={cn(
         "overflow-visible px-0 py-1",
         variant === "home"
-          ? "overflow-hidden rounded-[1.5rem] border border-[#d7c7a9] bg-white/82 p-5 shadow-[0_12px_30px_rgba(94,80,52,0.07)]"
+          ? "overflow-hidden rounded-[1.5rem] border border-[#bfd6b7] bg-white/82 p-5 shadow-[0_12px_30px_rgba(16,38,92,0.07)]"
           : null,
         className,
       )}
     >
       <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff5e8] text-[#b36f48] shadow-sm ring-1 ring-[#ead7b8]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f1faeb] text-[#006e4d] shadow-sm ring-1 ring-[#bfd6b7]">
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0">
@@ -642,7 +642,7 @@ export function ActivitySwipeDiscovery({
               <article
                 aria-hidden={!isTopCard}
                 className={cn(
-                  "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(91,69,38,0.13)] ring-1 ring-[#dfceb0]/75",
+                  "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(16,38,92,0.13)] ring-1 ring-[#cfe2c6]/75",
                   isTopCard ? "cursor-grab active:cursor-grabbing" : null,
                   !isTopCard ? "pointer-events-none" : null,
                 )}
@@ -665,7 +665,7 @@ export function ActivitySwipeDiscovery({
                     <span className="rounded-full bg-[#17120f] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
                       {categoryLabel}
                     </span>
-                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#fff8ec] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#2a211a] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/45">
+                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#f7fff3] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#10265c] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35">
                       {statusLabel}
                     </span>
                   </div>
@@ -682,7 +682,7 @@ export function ActivitySwipeDiscovery({
                         </span>
                       </div>
                       <div
-                        className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#d88d72]/28 text-white"
+                        className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#049d73]/26 text-white"
                         style={{
                           opacity: dragX > 0 && canGoPrevious ? dragOpacity : 0,
                         }}
@@ -702,11 +702,11 @@ export function ActivitySwipeDiscovery({
                     </h3>
                     <div className="mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600">
                       <span className="flex min-w-0 items-start gap-2">
-                        <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9a7448]" />
+                        <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
                         <span className="line-clamp-1">{dateLabel}</span>
                       </span>
                       <span className="flex min-w-0 items-start gap-2">
-                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9a7448]" />
+                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
                         <span className="line-clamp-1">{locationLabel}</span>
                       </span>
                     </div>
@@ -736,7 +736,7 @@ export function ActivitySwipeDiscovery({
                         {copy.detail}
                       </Link>
                       <PublicEventFavoriteButton
-                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#dfceb0] hover:bg-[#fffaf4]"
+                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#bfd6b7] hover:bg-[#f7fff3]"
                         favoriteCount={activity.favoriteCount}
                         isAuthenticated={isAuthenticated}
                         isFavorited={Boolean(activity.isFavorited)}
@@ -760,7 +760,7 @@ export function ActivitySwipeDiscovery({
       <div className="mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500">
         {loadMoreFailed && onRetryLoadMore ? (
           <button
-            className="inline-flex h-7 items-center justify-center rounded-full bg-[#fff7ec] px-3 font-semibold text-[#8e5639] ring-1 ring-[#ead7b8] transition hover:bg-white"
+            className="inline-flex h-7 items-center justify-center rounded-full bg-[#f7fff3] px-3 font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7] transition hover:bg-white"
             type="button"
             onClick={onRetryLoadMore}
           >

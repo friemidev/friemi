@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
-import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type WechatWebViewGuideProps = {
@@ -102,7 +103,12 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
   }
 
   return (
-    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[#f7f2e8] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[#f7fff3] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+      <BrandBackdrop
+        className="-right-24 top-12 h-[32rem] w-[19rem] opacity-45"
+        imageClassName="object-contain object-top"
+        variant="mobile-frame"
+      />
       <div className="pointer-events-none fixed right-3 top-2 flex flex-col items-end text-moss">
         <ArrowUpRight className="h-9 w-9 drop-shadow-sm" />
         <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium shadow-sm ring-1 ring-black/10">
@@ -112,20 +118,11 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
 
       <div className="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-xs flex-col py-8">
         <div className="space-y-6 pt-[7svh]">
-          <div className="flex items-center gap-3">
-            <img
-              src={brand.logoIconPath}
-              alt=""
-              className="h-16 w-16 rounded-full border border-black/10 bg-white object-contain shadow-sm"
-            />
-            <img
-              src={brand.titleImagePath}
-              alt={brand.name}
-              className="h-auto w-28 object-contain"
-            />
+          <div className="relative z-10 flex items-center gap-3">
+            <BrandLockup size="lg" />
           </div>
 
-          <header className="space-y-3 pr-12">
+          <header className="relative z-10 space-y-3 pr-12">
             <p className="text-xs font-medium text-moss">{copy.eyebrow}</p>
             <h1 className="text-2xl font-semibold leading-tight tracking-normal text-ink">
               {copy.title}
@@ -135,11 +132,11 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
             </p>
           </header>
 
-          <div className="space-y-2">
+          <div className="relative z-10 space-y-2">
             {copy.steps.map((step, index) => (
               <div
                 key={step}
-                className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-lg border border-black/10 bg-[#faf8f1] p-2.5"
+                className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-lg border border-[#cfe2c6] bg-white/86 p-2.5"
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
                   {index + 1}
@@ -152,7 +149,7 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
           </div>
         </div>
 
-        <div className="mt-auto space-y-3 pt-8">
+        <div className="relative z-10 mt-auto space-y-3 pt-8">
           <p className="rounded-lg bg-[#eef4ef] px-3 py-2 text-xs leading-5 text-moss">
             {copy.fallback}
           </p>

@@ -62,18 +62,18 @@ function CancelActivityConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] grid place-items-center bg-black/45 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/45 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] backdrop-blur-sm"
       role="presentation"
     >
       <div
         aria-describedby="cancel-activity-confirm-description"
         aria-labelledby="cancel-activity-confirm-title"
         aria-modal="true"
-        className="w-full max-w-md overflow-hidden rounded-[1.25rem] border border-[#e2d7c2] bg-[#fffaf1] shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
+        className="w-full max-w-md overflow-hidden rounded-[1.25rem] border border-[#e2d7c2] bg-[#fffaf2] shadow-[0_22px_70px_rgba(36,28,14,0.22)]"
         role="alertdialog"
       >
-        <div className="border-b border-[#eadfcd] px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8a6a40]">
+        <div className="border-b border-[#cfe2c6] px-5 py-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#006e4d]">
             {t.title}
           </p>
           <h2
@@ -90,8 +90,8 @@ function CancelActivityConfirmDialog({
           >
             {t.cancelConfirmDescription}
           </p>
-          <div className="mt-4 rounded-xl border border-[#eadfcd] bg-white/70 px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a6a40]">
+          <div className="mt-4 rounded-xl border border-[#cfe2c6] bg-white/70 px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#006e4d]">
               {t.cancelContextLabel}
             </p>
             <p className="mt-1 break-words text-sm font-semibold leading-5 text-ink">

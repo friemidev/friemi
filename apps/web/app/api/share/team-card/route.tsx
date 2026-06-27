@@ -31,7 +31,7 @@ type TeamShareActivity = NonNullable<
 const avatarColors = [
   ["#111827", "#ffffff"],
   ["#8b8d92", "#ffffff"],
-  ["#d88d72", "#ffffff"],
+  ["#049d73", "#ffffff"],
   ["#72a7cf", "#ffffff"],
   ["#7b8f66", "#ffffff"],
 ] as const;
@@ -127,7 +127,7 @@ function FallbackShareImage({
       >
         <img
           alt={brand.name}
-          src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+          src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
           style={{ height: 96, objectFit: "contain", width: 300 }}
         />
         <div style={{ color: "#6f5841", fontSize: 38, fontWeight: 700 }}>
@@ -183,7 +183,7 @@ function TeamWechatShareImage({
       <div
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, rgba(216,141,114,0.24), rgba(216,141,114,0) 68%)",
+            "radial-gradient(circle at 50% 50%, rgba(4,157,115,0.24), rgba(4,157,115,0) 68%)",
           bottom: -120,
           height: 360,
           left: 30,
@@ -202,13 +202,13 @@ function TeamWechatShareImage({
       >
         <img
           alt={brand.name}
-          src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+          src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
           style={{ height: 36, objectFit: "contain", width: 124 }}
         />
         <div
           style={{
             background: "rgba(255,255,255,0.78)",
-            border: "1px solid rgba(216,141,114,0.34)",
+            border: "1px solid rgba(4,157,115,0.34)",
             borderRadius: 999,
             color: "#96543a",
             fontSize: 18,
@@ -440,12 +440,12 @@ export async function GET(request: Request) {
           <div style={{ alignItems: "center", display: "flex", gap: 18 }}>
             <img
               alt={brand.name}
-              src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+              src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
               style={{ height: 58, objectFit: "contain", width: 188 }}
             />
             <div
               style={{
-                background: "#fff5e8",
+                background: "#f1faeb",
                 border: "1px solid #ead5b3",
                 borderRadius: 999,
                 color: "#8d5f36",

@@ -27,7 +27,7 @@ export function ActivityCommentsSection({
 
   return (
     <section
-      className="rounded-lg border border-black/10 bg-white/75 p-4 sm:p-5"
+      className="rounded-lg border border-[#cfe2c6] bg-white/75 p-4 sm:p-5"
       id="comments"
     >
       <div className="flex items-start gap-3">
@@ -42,17 +42,17 @@ export function ActivityCommentsSection({
         </div>
       </div>
 
-      <div className="mt-5 border-t border-zinc-200 pt-5">
+      <div className="mt-5 border-t border-[#cfe2c6] pt-5">
         {isAuthenticated ? (
           <ActivityCommentForm activityId={activityId} locale={locale} />
         ) : (
-          <div className="rounded-xl border border-[#e5d7bf] bg-white/70 p-3 text-sm">
+          <div className="rounded-xl border border-[#cfe2c6] bg-[#f7fff3]/72 p-3 text-sm">
             <p className="font-medium text-ink">{t.signInTitle}</p>
             <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
               {t.signInDescription}
             </p>
             <Link
-              className="mt-3 inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#d9c6ad] bg-[#fff8ed] px-4 text-sm font-medium text-[#6f5434] transition hover:bg-white"
+              className="mt-3 inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#bfd6b7] bg-white px-4 text-sm font-medium text-[#315b48] transition hover:bg-[#f7fff3]"
               href={getSignInHref(locale, `/activities/${activityId}#comments`)}
             >
               {t.signInTitle}
@@ -61,7 +61,7 @@ export function ActivityCommentsSection({
         )}
       </div>
 
-      <div className="mt-6 divide-y divide-zinc-200/80">
+      <div className="mt-6 divide-y divide-[#cfe2c6]/80">
         {comments.length > 0 ? (
           comments.map((comment) => (
             <ActivityCommentThread
@@ -75,7 +75,7 @@ export function ActivityCommentsSection({
             />
           ))
         ) : (
-          <div className="rounded-md border border-dashed border-zinc-300 bg-white/60 p-5 text-center">
+          <div className="rounded-md border border-dashed border-[#bfd6b7] bg-[#f7fff3]/60 p-5 text-center">
             <UserRound className="mx-auto h-6 w-6 text-zinc-400" />
             <p className="mt-2 font-medium text-ink">{t.emptyTitle}</p>
             <p className="mt-1 text-sm leading-6 text-zinc-500">

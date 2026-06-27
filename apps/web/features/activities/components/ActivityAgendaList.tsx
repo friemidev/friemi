@@ -181,7 +181,7 @@ function ActivityAgendaRow({
         dateLabel,
         activity.city,
       )}
-      className="group grid min-h-[6.5rem] grid-cols-[5.75rem_minmax(0,1fr)_auto] gap-3 rounded-[1rem] border border-[#e6d5bb] bg-white/88 p-2.5 shadow-[0_8px_20px_rgba(92,66,32,0.05)] transition hover:-translate-y-0.5 hover:border-[#d7b78e] hover:bg-white hover:shadow-[0_12px_26px_rgba(92,66,32,0.08)] sm:min-h-[7rem] sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-3"
+      className="group grid min-h-[6.5rem] grid-cols-[5.75rem_minmax(0,1fr)_auto] gap-3 rounded-[1rem] border border-[#e6d5bb] bg-white/88 p-2.5 shadow-[0_8px_20px_rgba(16,38,92,0.05)] transition hover:-translate-y-0.5 hover:border-[#d7b78e] hover:bg-white hover:shadow-[0_12px_26px_rgba(16,38,92,0.08)] sm:min-h-[7rem] sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-3"
       detailSource={{
         sourceKey: "activity_list",
         targetKey: detailSourceTargetKey,
@@ -219,16 +219,16 @@ function ActivityAgendaRow({
       </span>
 
       <span className="min-w-0 self-center">
-        <span className="line-clamp-2 text-base font-semibold leading-6 text-ink group-hover:text-[#a85f40] sm:text-lg sm:leading-7">
+        <span className="line-clamp-2 text-base font-semibold leading-6 text-ink group-hover:text-[#006e4d] sm:text-lg sm:leading-7">
           {activity.title}
         </span>
         <span className="mt-2 grid gap-1.5 text-sm leading-5 text-zinc-600">
           <span className="inline-flex min-w-0 items-center gap-1.5">
-            <Clock3 className="h-4 w-4 shrink-0 text-[#9a7448]" />
+            <Clock3 className="h-4 w-4 shrink-0 text-[#315b48]" />
             <span className="truncate">{dateLabel}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-1.5">
-            <MapPin className="h-4 w-4 shrink-0 text-[#9a7448]" />
+            <MapPin className="h-4 w-4 shrink-0 text-[#315b48]" />
             <span className="truncate">{locationLabel}</span>
           </span>
         </span>
@@ -245,7 +245,7 @@ function ActivityAgendaRow({
         >
           <span className="truncate">{statusLabel}</span>
         </span>
-        <ChevronRight className="h-5 w-5 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-[#a85f40]" />
+        <ChevronRight className="h-5 w-5 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-[#006e4d]" />
       </span>
     </AnalyticsLink>
   );
@@ -437,7 +437,7 @@ export function ActivityAgendaList({
             "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold shadow-sm transition sm:w-auto sm:px-3.5",
             isDatePickerOpen
               ? "bg-ink text-white"
-              : "bg-white/78 text-[#6f4d34] ring-1 ring-[#ead7b8] hover:bg-[#fff8ee]",
+              : "bg-white text-[#315b48] ring-1 ring-[#bfd6b7] hover:bg-[#f7fff3]",
           )}
           onClick={() => setIsDatePickerOpen((isOpen) => !isOpen)}
           type="button"
@@ -459,8 +459,8 @@ export function ActivityAgendaList({
             className={cn(
               "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold shadow-sm transition sm:w-auto sm:px-3.5",
               isLongRunningOpen
-                ? "bg-[#fff0e5] text-[#7d472e] ring-1 ring-[#e7c2aa]"
-                : "bg-white/78 text-[#8b6246] ring-1 ring-[#ead7b8] hover:bg-[#fff8ee]",
+                ? "bg-[#fff0e5] text-[#7d472e] ring-1 ring-[#bfd6b7]"
+                : "bg-white/78 text-[#315b48] ring-1 ring-[#bfd6b7] hover:bg-[#f7fff3]",
             )}
             onClick={toggleLongRunningGroup}
             type="button"
@@ -479,7 +479,7 @@ export function ActivityAgendaList({
       {isDatePickerOpen ? (
         <nav
           aria-label={t.activities.agendaJumpLabel}
-          className="w-full max-w-[23rem] rounded-[1.05rem] border border-[#ead7b8]/72 bg-white/72 p-2.5 shadow-[0_14px_34px_rgba(92,66,32,0.08)] backdrop-blur sm:p-4"
+          className="w-full max-w-[23rem] rounded-[1.05rem] border border-[#bfd6b7]/72 bg-white/72 p-2.5 shadow-[0_14px_34px_rgba(16,38,92,0.08)] backdrop-blur sm:p-4"
           id="activity-agenda-date-picker"
         >
           {activeMonthKey ? (
@@ -493,7 +493,7 @@ export function ActivityAgendaList({
                 <div className="flex items-center gap-1">
                   <button
                     aria-label={t.activities.agendaPreviousMonth}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6f4d34] transition hover:bg-[#fff4e4] disabled:pointer-events-none disabled:text-zinc-300"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#315b48] transition hover:bg-[#f7fff3] disabled:pointer-events-none disabled:text-zinc-300"
                     disabled={activeMonthIndex <= 0}
                     onClick={() => {
                       const previousMonthKey =
@@ -509,7 +509,7 @@ export function ActivityAgendaList({
                   </button>
                   <button
                     aria-label={t.activities.agendaNextMonth}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#6f4d34] transition hover:bg-[#fff4e4] disabled:pointer-events-none disabled:text-zinc-300"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#315b48] transition hover:bg-[#f7fff3] disabled:pointer-events-none disabled:text-zinc-300"
                     disabled={
                       activeMonthIndex < 0 ||
                       activeMonthIndex >= calendarMonthKeys.length - 1
@@ -532,7 +532,7 @@ export function ActivityAgendaList({
               <div className="grid grid-cols-7 gap-0.5 text-center sm:gap-1">
                 {calendarWeekdayLabels.map((label, index) => (
                   <span
-                    className="pb-0.5 text-[11px] font-semibold text-[#8b6246]/72 sm:pb-1"
+                    className="pb-0.5 text-[11px] font-semibold text-[#315b48]/72 sm:pb-1"
                     key={`${label}-${index}`}
                   >
                     {label}
@@ -554,7 +554,7 @@ export function ActivityAgendaList({
                         isActive
                           ? "bg-[#2f7590] text-white shadow-[0_8px_16px_rgba(47,117,144,0.22)]"
                           : isClickable
-                            ? "bg-white text-ink shadow-[inset_0_0_0_1px_rgba(234,215,184,0.9)] hover:bg-[#fff8ee] hover:text-[#9a5838]"
+                            ? "bg-white text-ink shadow-[inset_0_0_0_1px_rgba(234,215,184,0.9)] hover:bg-[#f7fff3] hover:text-[#9a5838]"
                             : cell.isCurrentMonth
                               ? "text-zinc-400"
                               : "text-zinc-300",
@@ -608,7 +608,7 @@ export function ActivityAgendaList({
             >
               <span
                 aria-hidden="true"
-                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#75aec5] bg-[#fffaf4] sm:-left-[2.45rem]"
+                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#5caec1] bg-[#fffaf2] sm:-left-[2.45rem]"
               />
               <div className="flex min-w-0 items-center gap-2 pb-2">
                 <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf7fb] text-[#326b82] ring-1 ring-[#b8d6e3]">
@@ -621,7 +621,7 @@ export function ActivityAgendaList({
                   >
                     {groupTitle}
                   </h3>
-                  <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+                  <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#315b48] ring-1 ring-[#bfd6b7]">
                     {t.activities.agendaActivityCount(group.activities.length)}
                   </span>
                 </span>
@@ -646,7 +646,7 @@ export function ActivityAgendaList({
             className={cn(
               "relative scroll-mt-24",
               activeGroupId === getGroupId(longRunningGroup) &&
-                "rounded-[1rem] bg-[#fff2e9]/58",
+                "rounded-[1rem] bg-[#f1faeb]/58",
             )}
             id={getGroupId(longRunningGroup)}
             ref={(element) => {
@@ -662,10 +662,10 @@ export function ActivityAgendaList({
             >
               <span
                 aria-hidden="true"
-                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#d79a72] bg-[#fffaf4] sm:-left-[2.45rem]"
+                className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#049d73] bg-[#fffaf2] sm:-left-[2.45rem]"
               />
               <span
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff2e9] text-[#9b5f3f] ring-1 ring-[#e7c2aa]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1faeb] text-[#9b5f3f] ring-1 ring-[#bfd6b7]"
                 aria-hidden="true"
               >
                 <Layers3 className="h-4 w-4" />
@@ -677,14 +677,14 @@ export function ActivityAgendaList({
                 >
                   {t.activities.agendaLongRunningTitle}
                 </span>
-                <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#9a7448] ring-1 ring-[#ead7b8]">
+                <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white/86 px-2.5 text-xs font-semibold text-[#315b48] ring-1 ring-[#bfd6b7]">
                   {t.activities.agendaActivityCount(displayedLongRunningCount)}
                 </span>
               </span>
               <span
                 aria-hidden="true"
                 className={cn(
-                  "ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#8b6246] transition",
+                  "ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#315b48] transition",
                   isLongRunningOpen
                     ? "rotate-180 bg-white/82"
                     : "bg-transparent",

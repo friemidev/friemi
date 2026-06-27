@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowDownUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
@@ -10,6 +11,7 @@ import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -83,17 +85,28 @@ function CompactEmptyState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#d8c9b5] bg-white/55 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink">{title}</p>
-        <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
-          {description}
-        </p>
+    <div className="flex flex-col gap-3 rounded-[1.1rem] border border-dashed border-[#bfd6b7] bg-white/[0.62] px-4 py-4 shadow-[0_10px_24px_rgba(10,63,49,0.04)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f4fbef] p-2 ring-1 ring-[#cfe4c8]">
+          <Image
+            src={brand.emptyStateIconPath}
+            alt=""
+            width={36}
+            height={36}
+            className="h-full w-full object-contain"
+          />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#10265c]">{title}</p>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
+            {description}
+          </p>
+        </div>
       </div>
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7] transition hover:bg-[#f7fff3] hover:text-[#10265c]"
         >
           {actionLabel}
         </Link>

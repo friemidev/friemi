@@ -343,18 +343,18 @@ function LongDurationConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-center bg-[#1b160f]/45 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[#10265c]/42 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] backdrop-blur-sm"
       role="presentation"
     >
       <div
         aria-describedby="long-duration-confirm-description"
         aria-labelledby="long-duration-confirm-title"
         aria-modal="true"
-        className="w-full max-w-lg overflow-hidden rounded-[1.35rem] border border-[#e0c9a9] bg-[#fffaf2] shadow-[0_24px_80px_rgba(46,31,12,0.24)]"
+        className="w-full max-w-lg overflow-hidden rounded-[1.35rem] border border-[#bfd6b7] bg-[#fffaf2] shadow-[0_24px_80px_rgba(16,38,92,0.18)]"
         role="alertdialog"
       >
-        <div className="border-b border-[#ecdcc2] bg-[linear-gradient(135deg,#fff8ed,#fffdf8)] px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6a35]">
+        <div className="border-b border-[#cfe2c6] bg-[linear-gradient(135deg,#f7fff3,#fffdf8)] px-5 py-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#006e4d]">
             {copy.eyebrow}
           </p>
           <h2
@@ -373,17 +373,17 @@ function LongDurationConfirmDialog({
             {copy.description}
           </p>
 
-          <div className="grid gap-2 rounded-2xl border border-[#ead8bb] bg-white/75 p-3 text-sm">
-            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+          <div className="grid gap-2 rounded-2xl border border-[#cfe2c6] bg-white/75 p-3 text-sm">
+            <div className="grid gap-1 rounded-xl bg-[#f7fff3] px-3 py-2 ring-1 ring-[#bfd6b7]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#006e4d]">
                 {copy.start}
               </span>
               <span className="font-semibold text-ink">
                 {confirmation.startLabel}
               </span>
             </div>
-            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+            <div className="grid gap-1 rounded-xl bg-[#f7fff3] px-3 py-2 ring-1 ring-[#bfd6b7]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#006e4d]">
                 {copy.end}
               </span>
               <span className="font-semibold text-ink">
@@ -404,7 +404,7 @@ function LongDurationConfirmDialog({
             <Button
               type="button"
               variant="secondary"
-              className="h-11 rounded-full border-[#e0c9a9] bg-white"
+              className="h-11 rounded-full border-[#bfd6b7] bg-white"
               disabled={pending}
               onClick={onClose}
             >
@@ -412,7 +412,7 @@ function LongDurationConfirmDialog({
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-[#101010] text-white hover:bg-[#242424]"
+              className="h-11 rounded-full bg-[#049d73] text-white hover:bg-[#006e4d]"
               disabled={pending}
               onClick={onConfirm}
             >
@@ -618,8 +618,8 @@ export function NewActivityForm({
                     className={cn(
                       "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition",
                       active
-                        ? "border-[#d09a77] bg-[#fff3ea] shadow-sm"
-                        : "border-zinc-200 bg-white hover:border-[#d9c0ad]",
+                        ? "border-[#8fc6ad] bg-[#e9f7e3] shadow-sm"
+                        : "border-zinc-200 bg-white hover:border-[#bfd6b7]",
                     )}
                   >
                     <input

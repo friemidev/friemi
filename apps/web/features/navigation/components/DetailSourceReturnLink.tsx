@@ -91,7 +91,7 @@ export function DetailSourceReturnLink({
   return (
     <Link
       className={cn(
-        "inline-flex h-9 max-w-full items-center gap-2 rounded-full border border-[#dfccb2] bg-white/86 px-3.5 text-sm font-semibold text-[#5f5448] shadow-sm transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/30",
+        "inline-flex h-9 max-w-full items-center gap-2 rounded-full border border-[#bfd6b7] bg-white px-3.5 text-sm font-semibold text-[#315b48] shadow-sm transition hover:bg-[#f7fff3] hover:text-[#10265c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/30",
         className,
       )}
       href={context.sourceHref}
@@ -101,4 +101,3 @@ export function DetailSourceReturnLink({
     </Link>
   );
 }
-

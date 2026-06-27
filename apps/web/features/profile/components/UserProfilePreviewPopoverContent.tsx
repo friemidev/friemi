@@ -166,7 +166,7 @@ function AddFriendQuickButton({
     return (
       <Link href={getSignInHref(locale, redirectPath)}>
         <Button
-          className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#d69791] bg-[#f2c4bf] !px-2 !text-[9px] font-semibold text-[#6b3634] hover:bg-[#f6cfca]"
+          className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#f48d81] bg-[#fff0ed] !px-2 !text-[9px] font-semibold text-[#d86f61] hover:bg-[#ffe4df]"
           variant="secondary"
         >
           <UserPlus className="h-3 w-3 shrink-0" />
@@ -178,7 +178,7 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#e4f2e7] px-2 text-[9px] font-semibold leading-none text-[#3f7a50] ring-1 ring-[#bfdcc7]">
+      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#e9f7e3] px-2 text-[9px] font-semibold leading-none text-[#006e4d] ring-1 ring-[#bfd6b7]">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.alreadyFriends}
       </div>
@@ -192,7 +192,7 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#e4f2e7] px-2 text-[9px] font-semibold leading-none text-[#3f7a50] ring-1 ring-[#bfdcc7]">
+      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#e9f7e3] px-2 text-[9px] font-semibold leading-none text-[#006e4d] ring-1 ring-[#bfd6b7]">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.pendingFriendRequest}
       </div>
@@ -238,7 +238,7 @@ function FriendSubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#d69791] bg-[#f2c4bf] !px-2 !text-[9px] font-semibold text-[#6b3634] hover:bg-[#f6cfca]"
+      className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#f48d81] bg-[#fff0ed] !px-2 !text-[9px] font-semibold text-[#d86f61] hover:bg-[#ffe4df]"
       type="submit"
     >
       {pending ? (

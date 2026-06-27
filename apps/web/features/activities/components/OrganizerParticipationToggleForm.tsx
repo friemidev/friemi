@@ -83,7 +83,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="h-10 w-full gap-2 rounded-full border border-[#d9c6ad] bg-white text-[#6f5434] shadow-none hover:bg-[#fff8ed]"
+      className="h-10 w-full gap-2 rounded-full border border-[#bfd6b7] bg-white text-[#315b48] shadow-none hover:bg-[#f7fff3]"
       disabled={pending}
     >
       {pending ? (
@@ -144,7 +144,7 @@ export function OrganizerParticipationToggleForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
+    <form action={formAction} className="grid gap-2 rounded-2xl border border-[#cfe2c6] bg-white/80 p-3">
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
       <input
@@ -153,7 +153,7 @@ export function OrganizerParticipationToggleForm({
         value={isParticipating ? "not_participating" : "participating"}
       />
       <p className="text-sm font-semibold text-ink">{copy.title}</p>
-      <div className="rounded-xl border border-[#eadcca] bg-[#fffaf2] px-3 py-3 text-sm">
+      <div className="rounded-xl border border-[#cfe2c6] bg-[#f7fff3] px-3 py-3 text-sm">
         <p className="font-medium text-ink">
           {isParticipating ? copy.participatingTitle : copy.skippedTitle}
         </p>

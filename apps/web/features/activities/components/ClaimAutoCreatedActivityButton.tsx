@@ -54,7 +54,7 @@ function SubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="h-10 rounded-full border border-[#d5bf8c] bg-[#fff3d8] px-4 text-sm font-semibold text-[#7b5b1b] shadow-none hover:bg-[#ffefcf]"
+      className="h-10 rounded-full border border-[#8fc6ad] bg-[#e9f7e3] px-4 text-sm font-semibold text-[#315b48] shadow-none hover:bg-[#f1faeb]"
       disabled={pending}
       type="submit"
       variant="secondary"
@@ -98,7 +98,7 @@ export function ClaimAutoCreatedActivityButton({
         <p className="text-xs leading-5 text-zinc-500">{t.helper}</p>
         <Link href={getSignInHref(locale, redirectPath)}>
           <Button
-            className="h-10 rounded-full border border-[#d5bf8c] bg-[#fff3d8] px-4 text-sm font-semibold text-[#7b5b1b] shadow-none hover:bg-[#ffefcf]"
+            className="h-10 rounded-full border border-[#8fc6ad] bg-[#e9f7e3] px-4 text-sm font-semibold text-[#315b48] shadow-none hover:bg-[#f1faeb]"
             variant="secondary"
           >
             <Flag className="h-4 w-4" />

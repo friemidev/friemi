@@ -10,21 +10,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        coral: "#d88d72",
-        "coral-dark": "#c87b61",
-        "coral-soft": "#fff2e7",
-        "event-accent": "#7eb7cf",
-        "event-bg": "#f8fdff",
-        "event-border": "#b9d7e5",
+        "brand-cream": "#f6fbef",
+        "brand-green": "#049d73",
+        "brand-green-dark": "#006e4d",
+        "brand-ink": "#10265c",
+        "brand-sand": "#d8e7cf",
+        "brand-warm": "#f48d81",
+        coral: "#f48d81",
+        "coral-dark": "#e77f73",
+        "coral-soft": "#fff0ed",
+        "event-accent": "#5caec1",
+        "event-bg": "#f8feff",
+        "event-border": "#c6e4e8",
         ink: "#151515",
-        paper: "#f7f3ea",
-        moss: "#556b4e",
-        clay: "#b85f3f",
-        sand: "#eadfce",
-        "sand-strong": "#dfccb2",
-        "team-bg": "#fffaf4",
-        "team-border": "#e1b89c",
-        sky: "#dcebf0"
+        paper: "#f6fbef",
+        moss: "#006e4d",
+        clay: "#d86f61",
+        sand: "#d8e7cf",
+        "sand-strong": "#bfd6b7",
+        "team-bg": "#f7fff3",
+        "team-border": "#bfd6b7",
+        sky: "#eaf6f1"
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"]

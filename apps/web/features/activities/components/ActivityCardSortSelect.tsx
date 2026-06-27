@@ -105,7 +105,7 @@ export function ActivityCardSortSelect({
       <ArrowUpDown
         aria-hidden
         className={cn(
-          "h-3.5 w-3.5 shrink-0 text-[#9a6b3b]",
+          "h-3.5 w-3.5 shrink-0 text-[#006e4d]",
           forceMobileLayout ? "hidden" : "hidden sm:block",
         )}
       />
@@ -123,7 +123,7 @@ export function ActivityCardSortSelect({
         aria-haspopup="listbox"
         aria-label={t.activityFilters.sortLabel}
         className={cn(
-          "inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-full bg-[#f4efe7]/88 px-3 text-left text-[#5e4732] shadow-[inset_0_0_0_1px_rgba(221,194,158,0.78)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efcfbd]",
+          "inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-full bg-white/92 px-3 text-left text-[#315b48] shadow-[inset_0_0_0_1px_rgba(191,214,183,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8fc6ad]",
           forceMobileLayout ? null : "sm:w-auto sm:min-w-[8rem]",
           activityResultsFilterBarHeightClass,
           activityResultsFilterControlClass,
@@ -145,7 +145,7 @@ export function ActivityCardSortSelect({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-[calc(100%+0.4rem)] z-[80] w-max min-w-full overflow-hidden rounded-[0.95rem] bg-[#fffaf2] p-1 text-xs font-semibold text-[#5f4935] shadow-[0_18px_42px_rgba(81,56,27,0.22)] ring-1 ring-[#dcbf96]",
+            "absolute left-0 top-[calc(100%+0.4rem)] z-[80] w-max min-w-full overflow-hidden rounded-[0.95rem] bg-[#fffaf2] p-1 text-xs font-semibold text-[#315b48] shadow-[0_18px_42px_rgba(16,38,92,0.22)] ring-1 ring-[#bfd6b7]",
             forceMobileLayout ? null : "sm:left-auto sm:right-0",
           )}
           role="listbox"
@@ -159,7 +159,7 @@ export function ActivityCardSortSelect({
                 className={cn(
                   "grid w-full min-w-[8.5rem] grid-cols-[minmax(0,1fr)_1rem] items-center gap-3 rounded-[0.7rem] px-3 py-2 text-left transition",
                   isSelected
-                    ? "bg-[#fff2e9] text-[#8e5639]"
+                    ? "bg-[#f1faeb] text-[#006e4d]"
                     : "hover:bg-[#fff8ef]",
                 )}
                 key={sort}

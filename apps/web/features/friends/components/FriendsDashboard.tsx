@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
@@ -39,6 +40,7 @@ import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
@@ -349,7 +351,7 @@ function AddFriendForm({
       <div className="mt-4 grid gap-2 sm:hidden">
         <button
           type="button"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d9c8ad] bg-white/82 px-4 text-sm font-semibold text-[#5f4f3f] shadow-sm shadow-black/5 transition hover:bg-white"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#bfd6b7] bg-white/82 px-4 text-sm font-semibold text-[#315b48] shadow-sm shadow-black/5 transition hover:bg-white"
           onClick={() => setQrScannerOpen(true)}
         >
           <ScanLine className="h-4 w-4" aria-hidden="true" />
@@ -677,7 +679,7 @@ export function AddFriendDialog({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:max-h-[calc(100dvh-10rem)] sm:p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:max-h-[calc(100dvh-10rem)] sm:p-5">
           {incomingRequests.length > 0 ? (
             <section className="grid gap-3">
               <div className="flex min-w-0 items-center justify-between gap-3">
@@ -1085,7 +1087,7 @@ function FriendQrScannerDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[10000] flex min-h-[100svh] items-end justify-center bg-black/40 p-3 sm:items-center"
+      className="fixed inset-0 z-[10000] flex min-h-[100svh] items-end justify-center bg-black/40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:p-3"
       role="dialog"
       aria-modal="true"
       aria-label={t.scanQrAdd}
@@ -1151,7 +1153,7 @@ function FriendQrScannerDialog({
             </span>
             <button
               type="button"
-              className="inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#5f4f3f] shadow-sm ring-1 ring-black/10"
+              className="inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#315b48] shadow-sm ring-1 ring-black/10"
               onClick={onClose}
             >
               {t.manualInput}
@@ -1388,7 +1390,7 @@ export function IncomingRequestCard({
       <div className="mt-3 flex flex-wrap gap-3">
         <SmallActionForm
           action={acceptFriendRequestAction}
-          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#4f6a49]"
+          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#006e4d]"
           icon={Check}
           locale={locale}
           redirectPath={redirectPath}
@@ -1400,7 +1402,7 @@ export function IncomingRequestCard({
         </SmallActionForm>
         <SmallActionForm
           action={rejectFriendRequestAction}
-          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#c65d4b] text-white ring-1 ring-[#c65d4b]/20 shadow-sm shadow-[#c65d4b]/20 hover:bg-[#b14f40]"
+          buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#d86f61] text-white ring-1 ring-[#d86f61]/20 shadow-sm shadow-[#d86f61]/20 hover:bg-[#d86f61]"
           icon={X}
           locale={locale}
           redirectPath={redirectPath}
@@ -1432,7 +1434,7 @@ export function FriendRequestActionButtons({
     <div className="flex flex-wrap gap-3">
       <SmallActionForm
         action={acceptFriendRequestAction}
-        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#4f6a49]"
+        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-moss text-white ring-1 ring-moss/20 shadow-sm shadow-moss/20 hover:bg-[#006e4d]"
         icon={Check}
         locale={locale}
         redirectPath={redirectPath}
@@ -1444,7 +1446,7 @@ export function FriendRequestActionButtons({
       </SmallActionForm>
       <SmallActionForm
         action={rejectFriendRequestAction}
-        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#c65d4b] text-white ring-1 ring-[#c65d4b]/20 shadow-sm shadow-[#c65d4b]/20 hover:bg-[#b14f40]"
+        buttonClassName="h-9 min-h-9 min-w-[6.75rem] px-3 text-[13px] bg-[#d86f61] text-white ring-1 ring-[#d86f61]/20 shadow-sm shadow-[#d86f61]/20 hover:bg-[#d86f61]"
         icon={X}
         locale={locale}
         redirectPath={redirectPath}
@@ -1676,9 +1678,24 @@ function PlainEmptyState({
   description: string;
 }) {
   return (
-    <div className="py-8">
-      <h3 className="text-base font-semibold text-ink">{title}</h3>
-      <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
+    <div className="relative overflow-hidden rounded-[1.15rem] border border-[#d8e7cf] bg-white/[0.68] px-4 py-5 shadow-[0_10px_26px_rgba(10,63,49,0.045)]">
+      <span
+        className="pointer-events-none absolute right-4 top-0 h-16 w-24 rounded-full bg-[#e7f4dc]/60 blur-2xl"
+        aria-hidden="true"
+      />
+      <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f4fbef] p-2 ring-1 ring-[#cfe4c8]">
+        <Image
+          src={brand.emptyStateIconPath}
+          alt=""
+          width={40}
+          height={40}
+          className="h-full w-full object-contain"
+        />
+      </span>
+      <h3 className="relative mt-3 text-base font-semibold text-[#10265c]">
+        {title}
+      </h3>
+      <p className="relative mt-2 max-w-sm text-sm leading-6 text-zinc-500">
         {description}
       </p>
     </div>

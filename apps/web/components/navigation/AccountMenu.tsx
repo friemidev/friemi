@@ -199,9 +199,9 @@ export function AccountMenu({
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-rose-500 text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+          "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#049d73] text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-[#006e4d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35",
           profileActive &&
-            "ring-2 ring-[#d8c9b3] ring-offset-2 ring-offset-paper after:absolute after:inset-[3px] after:rounded-full after:ring-2 after:ring-white/85",
+            "ring-2 ring-[#bfd6b7] ring-offset-2 ring-offset-paper after:absolute after:inset-[3px] after:rounded-full after:ring-2 after:ring-white/85",
         )}
       >
         <AvatarCircle
@@ -265,7 +265,7 @@ export function AccountMenu({
                 <button
                   type="button"
                   className={cn(
-                    "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+                    "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35",
                     hasWechat
                       ? "bg-white ring-1 ring-[#bfe5c8] hover:bg-green-50/50"
                       : "bg-zinc-50 ring-1 ring-black/5 hover:bg-paper",
@@ -462,7 +462,7 @@ function MenuLink({
       className={cn(
         "flex items-start gap-3 px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50",
         description ? "items-start" : "items-center",
-        active && "bg-[#fff7ec] text-ink",
+        active && "bg-[#f7fff3] text-ink",
       )}
     >
       <Icon

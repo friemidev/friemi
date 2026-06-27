@@ -54,15 +54,15 @@ export function ProfileWechatBindingDialog({
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur-sm sm:items-center sm:p-8"
+      className="fixed inset-x-0 top-0 bottom-[calc(5.15rem+env(safe-area-inset-bottom))] z-[80] flex items-end justify-center bg-black/35 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-8 md:inset-0"
       role="dialog"
     >
       <form
         action={formAction}
-        className="flex max-h-[calc(100svh-env(safe-area-inset-bottom)-3rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
+        className="flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
         noValidate
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#fffaf1] px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#fffaf2] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <WechatMark active={isBound} />
@@ -117,7 +117,7 @@ export function ProfileWechatBindingDialog({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-sand bg-[#fffaf1] px-5 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-sand bg-[#fffaf2] px-5 py-4">
           <Button
             className="h-10 rounded-full bg-white"
             onClick={onClose}

@@ -186,11 +186,11 @@ function drawPill(
 ) {
   context.font = "700 28px sans-serif";
   const width = context.measureText(label).width + 44;
-  context.fillStyle = "#eef6ea";
+  context.fillStyle = "#e9f7e3";
   context.beginPath();
   context.roundRect(x, y, width, 52, 26);
   context.fill();
-  context.fillStyle = "#3f5f46";
+  context.fillStyle = "#006e4d";
   context.fillText(label, x + 22, y + 35);
 
   return width;
@@ -428,9 +428,9 @@ export function ActivityShareTools({
         throw new Error("Canvas context is not available");
       }
 
-      context.fillStyle = "#f5f1e8";
+      context.fillStyle = "#f7fff3";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#dbeaf1";
+      context.fillStyle = "#e8f3e2";
       context.fillRect(0, 0, canvas.width, 360);
       let hasCoverBackground = false;
 
@@ -445,11 +445,11 @@ export function ActivityShareTools({
           context.fillRect(0, 0, canvas.width, 360);
           hasCoverBackground = true;
         } catch {
-          context.fillStyle = "#bb603f";
+          context.fillStyle = "#049d73";
           context.fillRect(0, 0, 140, 360);
         }
       } else {
-        context.fillStyle = "#bb603f";
+        context.fillStyle = "#049d73";
         context.fillRect(0, 0, 140, 360);
       }
 
@@ -511,7 +511,7 @@ export function ActivityShareTools({
         maxLines: 1,
       });
       context.font = "700 24px sans-serif";
-      context.fillStyle = "#3f5f46";
+      context.fillStyle = "#006e4d";
       context.fillText(urlHost, 108, 1242);
 
       const posterDataUrl = canvas.toDataURL("image/png");
@@ -595,7 +595,7 @@ export function ActivityShareTools({
         : t.downloadPoster;
 
   return (
-    <div className="rounded-[1.1rem] border border-[#dccba8] bg-[#fff8ec]/78 p-3 shadow-sm">
+    <div className="rounded-[1.1rem] border border-[#bfd6b7] bg-[#f7fff3] p-3 shadow-sm">
       <WechatShareConfigurator
         description={description || shareDescription}
         enabled={shareKind === "team"}
@@ -605,7 +605,7 @@ export function ActivityShareTools({
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#8a6a40] ring-1 ring-[#dccba8]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#006e4d] ring-1 ring-[#bfd6b7]">
             <Share2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
@@ -618,7 +618,7 @@ export function ActivityShareTools({
         <button
           type="button"
           aria-expanded={expanded}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#dccba8] transition hover:bg-[#fffaf2] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/30"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#bfd6b7] transition hover:bg-[#f7fff3] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/30"
           onClick={() => setExpanded((value) => !value)}
           title={expanded ? t.collapse : t.expand}
         >
@@ -632,7 +632,7 @@ export function ActivityShareTools({
       <div className="mt-3 grid grid-cols-2 gap-2">
         {usesSystemSharePrimary ? (
           <Button
-            className="h-10 gap-2 rounded-full border-[#d8a77f] bg-[#111111] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#2a2a2a]"
+            className="h-10 gap-2 rounded-full border-[#10265c] bg-[#10265c] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#0b1c45]"
             disabled={!activityUrl}
             onClick={handleSystemShare}
             type="button"
@@ -649,7 +649,7 @@ export function ActivityShareTools({
               entityType: analyticsEntityType,
               sourceSurface: analyticsSourceSurface,
             }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-ink ring-1 ring-[#dccba8] hover:bg-[#fffaf2]"
+            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7] hover:bg-[#f7fff3]"
             failedLabel={t.copyFailed}
             label={t.copyLink}
             successLabel={t.copied}
@@ -659,7 +659,7 @@ export function ActivityShareTools({
           </ActivityCopyButton>
         ) : (
           <button
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#dccba8]"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#bfd6b7]"
             disabled
             type="button"
           >
@@ -669,7 +669,7 @@ export function ActivityShareTools({
         )}
         <Button
           className={cn(
-            "h-10 gap-2 rounded-full border-[#dccba8] bg-white px-3 text-sm font-semibold text-ink shadow-none hover:bg-[#fffaf2]",
+            "h-10 gap-2 rounded-full border-[#bfd6b7] bg-white px-3 text-sm font-semibold text-[#315b48] shadow-none hover:bg-[#f7fff3]",
             !canDownload && "opacity-70",
           )}
           disabled={!canDownload}
@@ -687,7 +687,7 @@ export function ActivityShareTools({
       </div>
 
       {expanded ? (
-        <div className="mt-2 grid gap-2 border-t border-[#ead9bd] pt-2 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="mt-2 grid gap-2 border-t border-[#cfe2c6] pt-2 sm:grid-cols-2 lg:grid-cols-1">
           {usesSystemSharePrimary && activityUrl ? (
             <ActivityCopyButton
               analyticsEvent={{
@@ -696,7 +696,7 @@ export function ActivityShareTools({
                 entityType: analyticsEntityType,
                 sourceSurface: analyticsSourceSurface,
               }}
-              className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#ead9bd] hover:bg-[#fffaf2]"
+              className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#cfe2c6] hover:bg-[#f7fff3]"
               failedLabel={t.copyFailed}
               label={t.copyLink}
               successLabel={t.copied}
@@ -715,7 +715,7 @@ export function ActivityShareTools({
                 field_name: "title",
               },
             }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#ead9bd] hover:bg-[#fffaf2]"
+            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#cfe2c6] hover:bg-[#f7fff3]"
             failedLabel={t.copyFailed}
             label={t.copyTitle}
             successLabel={t.copied}
@@ -725,7 +725,7 @@ export function ActivityShareTools({
           </ActivityCopyButton>
           <Button
             className={cn(
-              "h-10 gap-2 rounded-full border-[#ead9bd] bg-white px-3 text-sm font-medium text-ink shadow-none hover:bg-[#fffaf2]",
+              "h-10 gap-2 rounded-full border-[#cfe2c6] bg-white px-3 text-sm font-medium text-ink shadow-none hover:bg-[#f7fff3]",
               !canDownloadQr && "opacity-70",
             )}
             disabled={!canDownloadQr}
@@ -744,7 +744,7 @@ export function ActivityShareTools({
       ) : null}
 
       {expanded && activityUrl ? (
-        <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-[#ead9bd]">
+        <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-[#cfe2c6]">
           <LinkIcon className="h-4 w-4 shrink-0" />
           <span className="min-w-0 truncate">{getUrlHost(activityUrl)}</span>
         </div>
@@ -772,10 +772,10 @@ export function ActivityShareTools({
             onClick={() => setShareHelpOpen(false)}
             type="button"
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-[#dccba8] bg-[#fffaf2] p-4 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-[#bfd6b7] bg-[#fffaf2] p-4 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#a76243] ring-1 ring-[#dccba8]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#006e4d] ring-1 ring-[#bfd6b7]">
                   <Share2 className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
@@ -791,7 +791,7 @@ export function ActivityShareTools({
               </div>
               <button
                 aria-label={t.closeShareHelp}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-500 ring-1 ring-[#dccba8] transition hover:text-ink"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-500 ring-1 ring-[#bfd6b7] transition hover:text-ink"
                 onClick={() => setShareHelpOpen(false)}
                 type="button"
               >
@@ -806,7 +806,7 @@ export function ActivityShareTools({
                   entityType: analyticsEntityType,
                   sourceSurface: analyticsSourceSurface,
                 }}
-                className="mt-4 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-ink ring-1 ring-[#dccba8] hover:bg-[#fffaf2]"
+                className="mt-4 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7] hover:bg-[#f7fff3]"
                 failedLabel={t.copyFailed}
                 label={t.copyLink}
                 successLabel={t.copied}
@@ -850,7 +850,7 @@ export function ActivityShareTools({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="relative min-h-0 overflow-hidden rounded-2xl bg-[#f5f1e8] shadow-2xl ring-1 ring-white/20">
+            <div className="relative min-h-0 overflow-hidden rounded-2xl bg-[#f7fff3] shadow-2xl ring-1 ring-white/20">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 alt={t.posterPreviewAlt}
