@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, Mail, Sparkles } from "lucide-react";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 
@@ -44,32 +44,18 @@ export function HomeFooter({ locale }: HomeFooterProps) {
     footerCopy[locale as keyof typeof footerCopy] ?? footerCopy["zh-CN"];
 
   return (
-    <footer className="mt-4 border-t border-black/10 bg-ink text-white">
+    <footer className="mt-4 border-t border-[#0d6d52]/30 bg-[#073f31] text-white">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1.2fr_0.9fr_0.7fr] lg:px-8">
         <div className="space-y-4">
           <Link
             href={withLocale(locale, "/home")}
-            className="inline-flex items-center gap-3"
+            className="group inline-flex items-center gap-3"
           >
-            <span className="flex h-12 w-40 shrink-0 items-center justify-start gap-3 overflow-hidden">
-              <Image
-                src={brand.logoIconPath}
-                alt=""
-                width={48}
-                height={48}
-                className="h-12 w-12 shrink-0 object-contain"
-              />
-              <Image
-                src={brand.titleImagePath}
-                alt={brand.name}
-                width={106}
-                height={36}
-                className="h-auto w-24 object-contain brightness-0 invert"
-              />
-            </span>
-            <span className="sr-only">
-              {brand.name}
-            </span>
+            <BrandLockup
+              className="transition duration-200 group-hover:scale-[1.02]"
+              size="lg"
+              tone="white"
+            />
           </Link>
           <p className="max-w-sm text-sm leading-6 text-white/75">
             {t.description}
@@ -85,7 +71,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               className="flex min-w-0 items-center gap-2 text-sm text-white/75 transition hover:text-white"
               href={`mailto:${t.contactEmail}`}
             >
-              <Mail className="h-4 w-4 shrink-0 text-clay" aria-hidden="true" />
+              <Mail className="h-4 w-4 shrink-0 text-[#f48d81]" aria-hidden="true" />
               <span className="min-w-0 break-all">{t.contactEmail}</span>
             </a>
             <Link
@@ -93,7 +79,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               href={withLocale(locale, "/co-creators")}
             >
               <BadgeCheck
-                className="h-4 w-4 shrink-0 text-clay"
+                className="h-4 w-4 shrink-0 text-[#f48d81]"
                 aria-hidden="true"
               />
               <span className="min-w-0">{t.coCreatorsLabel}</span>

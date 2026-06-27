@@ -34,15 +34,15 @@ export function NotificationHeaderLink({
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+        "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35",
         active &&
-          "bg-white text-ink ring-[#d8c9b3] before:absolute before:bottom-1 before:h-0.5 before:w-4 before:rounded-full before:bg-[#d88d72]",
+          "bg-white text-ink ring-[#bfd6b7] before:absolute before:bottom-1 before:h-0.5 before:w-4 before:rounded-full before:bg-[#049d73]",
       )}
       href={notificationsHref}
       title={label}
     >
       <Bell
-        className={cn("h-5 w-5", active ? "text-[#9b654f]" : "")}
+        className={cn("h-5 w-5", active ? "text-[#006e4d]" : "")}
         strokeWidth={active ? 2.4 : 2}
         aria-hidden="true"
       />

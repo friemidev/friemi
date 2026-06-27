@@ -141,13 +141,13 @@ export function ReportDialog({
 
       {open ? (
         <div
-          className="fixed inset-0 z-[80] flex items-end bg-black/35 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-4"
           role="presentation"
         >
           <div
             aria-describedby={descriptionId}
             aria-modal="true"
-            className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.5rem] border border-black/10 bg-paper shadow-2xl sm:max-w-lg sm:rounded-[1.5rem]"
+            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#d8e7cf] bg-[#fffaf2] shadow-2xl sm:max-w-lg"
             role="dialog"
           >
             <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-5">

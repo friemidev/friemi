@@ -383,10 +383,10 @@ export function ActivityLinkImportPanel({
         <div
           aria-labelledby="link-import-sites-title"
           aria-modal="true"
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-6"
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/35 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:p-6"
           role="dialog"
         >
-          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl border border-black/10 bg-paper p-5 shadow-2xl sm:max-w-lg sm:rounded-2xl">
+          <div className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#d8e7cf] bg-[#fffaf2] p-5 shadow-2xl sm:max-w-lg">
             <div className="flex items-start justify-between gap-3">
               <h2
                 className="text-lg font-semibold text-ink"

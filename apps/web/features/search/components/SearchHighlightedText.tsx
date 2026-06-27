@@ -34,7 +34,7 @@ export function SearchHighlightedText({
             key={`${part}-${index}`}
             className={
               className ??
-              "rounded bg-[#f5d7bf] px-0.5 font-semibold text-[#7b432f]"
+              "rounded bg-[#e9f7e3] px-0.5 font-semibold text-[#006e4d]"
             }
           >
             {part}

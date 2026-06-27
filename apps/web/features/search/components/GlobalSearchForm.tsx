@@ -35,7 +35,7 @@ function SearchSubmitButton({
       aria-label={label}
       disabled={pending}
       className={cn(
-        "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#d88d72] font-medium text-white transition hover:bg-[#c87b61] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e6b3a1] disabled:pointer-events-none disabled:opacity-80",
+        "absolute right-1 inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#049d73] font-medium text-white transition hover:bg-[#006e4d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/30 disabled:pointer-events-none disabled:opacity-80",
         isPage ? "h-10 w-10 px-0 text-sm sm:w-auto sm:px-4" : "h-8 w-8",
       )}
     >
@@ -99,7 +99,7 @@ export function GlobalSearchForm({
         maxLength={globalSearchQueryMaxLength}
         placeholder={t.placeholder}
         className={cn(
-          "min-w-0 flex-1 rounded-full border border-black/10 bg-white/85 pl-10 text-ink outline-none shadow-sm transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-200",
+          "min-w-0 flex-1 rounded-full border border-[#cfe2c6] bg-white pl-10 text-ink outline-none shadow-sm transition placeholder:text-zinc-400 focus:border-[#049d73] focus:bg-white focus:ring-2 focus:ring-[#049d73]/18",
           isPage ? "h-12 pr-14 text-base sm:pr-32" : "h-10 pr-12 text-sm",
         )}
       />

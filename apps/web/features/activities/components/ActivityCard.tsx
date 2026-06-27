@@ -403,14 +403,14 @@ function getSplitPrimaryActionClassName(tone: ActivityCardActionTone) {
   }
 
   if (tone === "joined" || tone === "neutral") {
-    return "border-[#d6b193] bg-[#f2ddcf] text-[#70432f] shadow-[0_14px_26px_rgba(154,91,61,0.18)]";
+    return "border-[#bfd6b7] bg-[#f7fff3] text-[#315b48] shadow-[0_14px_26px_rgba(10,63,49,0.14)]";
   }
 
   if (tone === "activity") {
     return "border-[#8fc1d6] bg-[#dceef7] text-[#245e76] shadow-[0_14px_26px_rgba(84,139,167,0.16)]";
   }
 
-  return "border-[#d97f61] bg-[#e48768] text-white shadow-[0_16px_30px_rgba(216,129,98,0.3)]";
+  return "border-[#0aa97c] bg-[#049d73] text-white shadow-[0_16px_30px_rgba(4,157,115,0.26)]";
 }
 
 function LobbySplitActionButton({
@@ -434,41 +434,41 @@ function LobbySplitActionButton({
 }) {
   const primaryToneClassName = getSplitPrimaryActionClassName(primaryTone);
   const sharedHalfLinkClassName =
-    "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf3]";
+    "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf2]";
   const sharedPanelClassName =
     "pointer-events-none absolute inset-y-0 z-30 flex w-[calc(200%+1px)] items-center justify-center gap-2 rounded-[13px] border px-4 text-[13px] font-semibold leading-none whitespace-nowrap opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 motion-reduce:transition-none";
 
   return (
     <div className="hidden justify-center sm:flex">
       <div
-        className="relative isolate h-10 w-[9.65rem] overflow-hidden rounded-[14px] border border-[#e0bea0] bg-[#fffaf3] shadow-[0_10px_20px_rgba(122,82,49,0.10),inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-200 hover:-translate-y-0.5"
+        className="relative isolate h-10 w-[9.65rem] overflow-hidden rounded-[14px] border border-[#bfd6b7] bg-[#fffaf2] shadow-[0_10px_20px_rgba(10,63,49,0.09),inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-200 hover:-translate-y-0.5"
         data-lobby-split-action="desktop"
       >
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 left-0 z-0 w-1/2 bg-[#fff0e6]"
+          className="absolute inset-y-0 left-0 z-0 w-1/2 bg-[#f1faeb]"
         />
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 right-0 z-0 w-1/2 bg-[#fffdf9]"
+          className="absolute inset-y-0 right-0 z-0 w-1/2 bg-white"
         />
         <span
           aria-hidden="true"
-          className="absolute left-1/2 top-1/2 z-0 h-6 w-px -translate-y-1/2 bg-[#e5ccb3]"
+          className="absolute left-1/2 top-1/2 z-0 h-6 w-px -translate-y-1/2 bg-[#cfe2c6]"
         />
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 left-0 z-10 flex w-1/2 items-center justify-center text-[#c86548]"
+          className="absolute inset-y-0 left-0 z-10 flex w-1/2 items-center justify-center text-[#006e4d]"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#e48768] text-white shadow-[0_8px_16px_rgba(216,129,98,0.24)]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#049d73] text-white shadow-[0_8px_16px_rgba(4,157,115,0.22)]">
             <PrimaryIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-[#6b4b34]"
+          className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-[#315b48]"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] border border-[#d9b993] bg-white shadow-[0_8px_16px_rgba(95,67,41,0.11)]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-[10px] border border-[#bfd6b7] bg-white shadow-[0_8px_16px_rgba(10,63,49,0.1)]">
             <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
@@ -484,7 +484,7 @@ function LobbySplitActionButton({
         >
           <span
             className={cn(
-              "left-0 group-hover:shadow-[0_16px_28px_rgba(216,129,98,0.28)] group-focus-visible:shadow-[0_16px_28px_rgba(216,129,98,0.28)]",
+              "left-0 group-hover:shadow-[0_16px_28px_rgba(4,157,115,0.26)] group-focus-visible:shadow-[0_16px_28px_rgba(4,157,115,0.26)]",
               sharedPanelClassName,
               primaryToneClassName,
             )}
@@ -507,7 +507,7 @@ function LobbySplitActionButton({
         >
           <span
             className={cn(
-              "right-0 border-[#4f3d30] bg-[#342820] text-[#fff6e8] group-hover:shadow-[0_16px_28px_rgba(47,37,31,0.24)] group-focus-visible:shadow-[0_16px_28px_rgba(47,37,31,0.24)]",
+              "right-0 border-[#10265c] bg-[#10265c] text-white group-hover:shadow-[0_16px_28px_rgba(16,38,92,0.22)] group-focus-visible:shadow-[0_16px_28px_rgba(16,38,92,0.22)]",
               sharedPanelClassName,
             )}
           >
@@ -554,7 +554,7 @@ function MobileLobbyActionMenu({
       <summary
         aria-label={copy.open}
         title={copy.open}
-        className="relative mx-auto flex h-10 min-h-10 w-[3.8rem] cursor-pointer list-none items-center justify-center overflow-hidden rounded-[16px] border border-[#db8e72] bg-[linear-gradient(135deg,#ef9a79_0%,#df7e62_58%,#cc6f58_100%)] text-white shadow-[0_13px_24px_rgba(198,105,76,0.28),inset_0_1px_0_rgba(255,255,255,0.32)] transition duration-150 active:translate-y-px group-open/mobile-actions:-translate-y-0.5 group-open/mobile-actions:rotate-[-1deg] group-open/mobile-actions:shadow-[0_18px_30px_rgba(198,105,76,0.34),inset_0_1px_0_rgba(255,255,255,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper [&::-webkit-details-marker]:hidden"
+        className="relative mx-auto flex h-10 min-h-10 w-[3.8rem] cursor-pointer list-none items-center justify-center overflow-hidden rounded-[16px] border border-[#0aa97c] bg-[linear-gradient(135deg,#10b981_0%,#049d73_58%,#006e4d_100%)] text-white shadow-[0_13px_24px_rgba(4,157,115,0.24),inset_0_1px_0_rgba(255,255,255,0.32)] transition duration-150 active:translate-y-px group-open/mobile-actions:-translate-y-0.5 group-open/mobile-actions:rotate-[-1deg] group-open/mobile-actions:shadow-[0_18px_30px_rgba(4,157,115,0.3),inset_0_1px_0_rgba(255,255,255,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper [&::-webkit-details-marker]:hidden"
       >
         <span
           aria-hidden="true"
@@ -562,11 +562,11 @@ function MobileLobbyActionMenu({
         />
         <span
           aria-hidden="true"
-          className="absolute -right-4 bottom-0 h-10 w-10 rounded-full bg-[#8f3f31]/18 blur-[1px]"
+          className="absolute -right-4 bottom-0 h-10 w-10 rounded-full bg-[#004d36]/18 blur-[1px]"
         />
         <span
           aria-hidden="true"
-          className="absolute right-1.5 top-1.5 h-2 w-2 rounded-bl-[6px] rounded-tr-[8px] bg-[#fff2df]/80 shadow-[0_1px_2px_rgba(92,42,30,0.18)]"
+          className="absolute right-1.5 top-1.5 h-2 w-2 rounded-bl-[6px] rounded-tr-[8px] bg-[#fffaf2]/82 shadow-[0_1px_2px_rgba(0,77,54,0.16)]"
         />
         <span className="relative flex h-8 w-10 items-center justify-center">
           <PrimaryIcon
@@ -580,11 +580,11 @@ function MobileLobbyActionMenu({
           />
         </span>
       </summary>
-      <div className="absolute bottom-full left-0 right-0 z-40 mb-2 rounded-[15px] border border-[#e2c2a6] bg-[#fffaf4] p-2.5 text-left shadow-[0_18px_36px_rgba(86,56,32,0.22)] opacity-0 ring-1 ring-white/70 transition duration-150 group-open/mobile-actions:opacity-100">
-        <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-[#b26c4f]">
+      <div className="absolute bottom-full left-0 right-0 z-40 mb-2 rounded-[15px] border border-[#cfe2c6] bg-[#fffaf2] p-2.5 text-left shadow-[0_18px_36px_rgba(10,63,49,0.18)] opacity-0 ring-1 ring-white transition duration-150 group-open/mobile-actions:opacity-100">
+        <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-[#006e4d]">
           {copy.eyebrow}
         </p>
-        <p className="mt-1.5 line-clamp-2 text-[12px] font-semibold leading-snug text-[#2c1d14]">
+        <p className="mt-1.5 line-clamp-2 text-[12px] font-semibold leading-snug text-[#10265c]">
           {activityTitle}
         </p>
         <div className="mt-2 grid gap-1.5">
@@ -593,7 +593,7 @@ function MobileLobbyActionMenu({
             detailSource={primaryDetailSource}
             event={primaryEvent}
             href={primaryHref}
-            className="group/action rounded-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35"
+            className="group/action rounded-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
           >
             <span
               className={cn(
@@ -608,9 +608,9 @@ function MobileLobbyActionMenu({
           <Link
             href={secondaryHref}
             aria-label={secondaryLabel}
-            className="group/action rounded-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35"
+            className="group/action rounded-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
           >
-            <span className="flex min-h-9 items-center justify-center gap-1.5 rounded-[12px] border border-[#d9b993] bg-white px-2.5 text-[12px] font-semibold leading-tight text-[#5c3e2a] shadow-[0_8px_16px_rgba(95,67,41,0.08)] transition group-active/action:translate-y-px">
+            <span className="flex min-h-9 items-center justify-center gap-1.5 rounded-[12px] border border-[#bfd6b7] bg-white px-2.5 text-[12px] font-semibold leading-tight text-[#315b48] shadow-[0_8px_16px_rgba(10,63,49,0.08)] transition group-active/action:translate-y-px">
               <CopyPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 text-center">{secondaryLabel}</span>
             </span>
@@ -764,7 +764,7 @@ export function ActivityCard({
               participant.avatarUrl
                 ? "bg-white"
                 : getStableAvatarTone(participant.id),
-              isTeamCard ? "ring-[#fffaf4]" : "ring-[#f8fdff]",
+              isTeamCard ? "ring-[#f7fff3]" : "ring-[#f8feff]",
               isInactiveCard ? "ring-zinc-50 grayscale" : null,
             )}
             title={participant.nickname}
@@ -785,7 +785,7 @@ export function ActivityCard({
         {participantExtraCount > 0 ? (
           <span
             className={cn(
-              "flex h-6 min-w-6 items-center justify-center rounded-full bg-[#f0ddcf] px-1.5 text-[10px] font-semibold text-[#6f4d34] ring-2 ring-[#fffaf4]",
+              "flex h-6 min-w-6 items-center justify-center rounded-full bg-[#d8e7cf] px-1.5 text-[10px] font-semibold text-[#315b48] ring-2 ring-[#f7fff3]",
               isInactiveCard ? "bg-zinc-200 text-zinc-500 ring-zinc-50" : null,
             )}
           >
@@ -800,14 +800,14 @@ export function ActivityCard({
     resolvedActionConfig.tone === "muted"
       ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
       : resolvedActionConfig.tone === "neutral"
-        ? "bg-team-bg text-[#6f4d34] ring-1 ring-[#dcc7b4] hover:bg-[#fff1e4]"
+        ? "bg-team-bg text-[#315b48] ring-1 ring-team-border hover:bg-[#eef8ea]"
         : resolvedActionConfig.tone === "joined"
-          ? "bg-coral-soft text-[#8f553b] ring-1 ring-[#e2b79d] shadow-[0_8px_18px_rgba(184,112,78,0.12)] hover:bg-[#ffe8d9]"
+          ? "bg-coral-soft text-[#a2453b] ring-1 ring-[#f4c4bd] shadow-[0_8px_18px_rgba(244,141,129,0.12)] hover:bg-[#ffe5e0]"
           : resolvedActionConfig.tone === "pending"
             ? "bg-[#f8e6b8] text-[#7b5622] ring-1 ring-[#e2c27c] shadow-[0_8px_18px_rgba(198,156,73,0.15)] hover:bg-[#f4dda1]"
             : resolvedActionConfig.tone === "activity"
               ? "bg-[#dceef7] text-[#245e76] ring-1 ring-[#9fc6d8] shadow-[0_8px_18px_rgba(84,139,167,0.14)] hover:bg-[#cde6f2]"
-              : "bg-coral text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] hover:bg-coral-dark";
+              : "bg-coral text-white shadow-[0_10px_22px_rgba(244,141,129,0.24)] hover:bg-coral-dark";
   const PrimaryActionIcon = getPrimaryActionIcon({
     isActivityInfo,
     isOwnActivity,
@@ -823,13 +823,13 @@ export function ActivityCard({
         isInactiveCard
           ? "border-zinc-200 bg-zinc-50/90 text-zinc-500 saturate-0"
           : isTeamCard
-            ? "border-team-border bg-team-bg shadow-[0_8px_24px_rgba(142,94,61,0.08)] ring-1 ring-[#efd8c7]"
+            ? "border-team-border bg-team-bg shadow-[0_8px_24px_rgba(10,63,49,0.08)] ring-1 ring-[#d8e7cf]"
             : "border-event-border bg-event-bg shadow-[0_6px_18px_rgba(54,107,130,0.06)]",
         isTeamCard
-          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-coral"
+          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-[#049d73]"
           : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-1 before:bg-event-accent",
         !isInactiveCard && isTeamCard
-          ? "hover:border-[#d79c78] hover:ring-[#e8c2aa]"
+          ? "hover:border-[#9fcb98] hover:ring-[#cfe2c6]"
           : null,
       )}
     >
@@ -930,7 +930,7 @@ export function ActivityCard({
                 "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
               ),
               isTeamCard
-                ? "border-[#f0b79f] bg-[#d88d72]/95 text-white"
+                ? "border-[#75d4b4] bg-[#049d73]/95 text-white"
                 : "border-event-border bg-[#eefaff]/95 text-[#245e76]",
             )}
           >
@@ -946,7 +946,7 @@ export function ActivityCard({
           {isOwnActivity ? (
             <span
               className={cn(
-                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#f5c8b7] bg-[#fff7ed]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur sm:right-4 sm:top-4",
+                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#cfe2c6] bg-[#fffaf2]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#006e4d] shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur sm:right-4 sm:top-4",
                 mobileDenseClass(
                   "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
@@ -965,7 +965,7 @@ export function ActivityCard({
                     "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                   ),
                   isTeamCard
-                    ? "bg-[rgba(103,59,34,0.84)] text-[#fff7ed]"
+                    ? "bg-[rgba(0,110,77,0.84)] text-[#f7fff3]"
                     : "bg-[rgba(22,18,14,0.72)] text-[#fffaf2]",
                 )}
               >
@@ -974,7 +974,7 @@ export function ActivityCard({
               {!isActivityInfo ? (
                 <span
                   className={cn(
-                    "rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-[#6f4d34] shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
+                    "rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-[#315b48] shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
                     mobileDenseClass(
                       "max-[639px]:hidden max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                     ),
@@ -1024,7 +1024,7 @@ export function ActivityCard({
               "line-clamp-2 text-base leading-snug sm:text-lg",
               mobileDenseClass("max-[639px]:text-sm"),
               isInactiveCard ? "text-zinc-600" : null,
-              !isInactiveCard && isTeamCard ? "text-[#24160f]" : null,
+              !isInactiveCard && isTeamCard ? "text-[#10265c]" : null,
             )}
           >
             {titleContent ?? activity.title}
@@ -1166,7 +1166,7 @@ export function ActivityCard({
                 href={copyActivityHref}
                 className="group min-w-0 rounded-full focus-visible:outline-none"
               >
-                <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-[#d9c8ad] bg-white px-2.5 text-xs font-semibold leading-none text-[#5f4f3f] shadow-sm transition duration-150 ease-out hover:bg-white group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-[#d88d72]/25 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-3 sm:text-[13px]">
+                <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-[#bfd6b7] bg-white px-2.5 text-xs font-semibold leading-none text-[#315b48] shadow-sm transition duration-150 ease-out hover:bg-[#f7fff3] group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-[#049d73]/25 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-3 sm:text-[13px]">
                   <Copy
                     className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
                     aria-hidden="true"

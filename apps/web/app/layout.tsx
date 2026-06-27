@@ -6,8 +6,21 @@ export const metadata: Metadata = {
   title: brand.name,
   description: brand.description,
   icons: {
-    icon: brand.logoIconPath,
-    apple: brand.logoIconPath,
+    apple: brand.appleIconPath,
+    icon: [
+      {
+        rel: "icon",
+        sizes: "192x192",
+        type: "image/png",
+        url: brand.faviconPath,
+      },
+      {
+        rel: "icon",
+        sizes: "512x512",
+        type: "image/png",
+        url: brand.manifestIcon512Path,
+      },
+    ],
   },
   openGraph: {
     description: brand.description,

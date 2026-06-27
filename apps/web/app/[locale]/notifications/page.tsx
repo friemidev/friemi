@@ -53,7 +53,7 @@ const notificationCategoryStyles: Record<NotificationCategory, string> = {
   participation: "bg-sky/45 text-ink ring-sky/80",
   social: "bg-ink text-white ring-ink",
   comment: "bg-moss/10 text-moss ring-moss/20",
-  activity: "bg-coral-soft text-[#8a5c3d] ring-sand",
+  activity: "bg-coral-soft text-[#315b48] ring-sand",
   report: "bg-clay/10 text-clay ring-clay/20",
 };
 
@@ -223,8 +223,8 @@ function getNotificationVisual(
     return {
       icon: UserMinus,
       iconClassName: isUnread
-        ? "bg-[#f0e5d6] text-[#8a5c3d]"
-        : "bg-[#f5efe6] text-[#8a6a40]",
+        ? "bg-[#e9f7e3] text-[#315b48]"
+        : "bg-[#f7fff3] text-[#006e4d]",
       cardClassName: isUnread
         ? "border-[#e1cdb8] bg-white"
         : "border-black/10 bg-white/65",

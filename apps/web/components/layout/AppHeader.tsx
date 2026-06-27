@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -10,7 +10,6 @@ import {
   GlobalSearchIconLink,
 } from "@/features/search/components/GlobalSearchForm";
 import { NotificationHeaderLink } from "@/features/notifications/components/NotificationHeaderLink";
-import { brand } from "@/lib/brand";
 
 type AppHeaderProps = {
   locale: string;
@@ -34,34 +33,18 @@ export function AppHeader({
   incomingFriendRequests = [],
 }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#d8cdbb] bg-paper shadow-[0_2px_10px_rgba(36,30,20,0.06)]">
+    <header className="sticky top-0 z-40 border-b border-[#cfe2c6] bg-[#fffaf2] shadow-[0_2px_10px_rgba(10,63,49,0.06)]">
       <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
-          className="flex shrink-0 items-center gap-2"
+          className="group flex shrink-0 items-center gap-2"
           prefetch={false}
         >
-          <span className="flex h-11 w-[128px] items-center justify-start gap-2 overflow-hidden sm:w-[144px]">
-            <Image
-              src={brand.logoIconPath}
-              alt=""
-              width={44}
-              height={44}
-              className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
-              priority
-            />
-            <Image
-              src={brand.titleImagePath}
-              alt={brand.name}
-              width={96}
-              height={32}
-              className="h-auto w-[76px] object-contain sm:w-[88px]"
-              priority
-            />
-          </span>
-          <span className="sr-only">
-            {brand.name}
-          </span>
+          <BrandLockup
+            className="transition duration-200 group-hover:scale-[1.02]"
+            priority
+            size="md"
+          />
         </Link>
 
         <DesktopNav locale={locale} />

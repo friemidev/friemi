@@ -127,7 +127,7 @@ function ActivityListViewToggle({
               "inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[11px] transition sm:h-8 sm:min-w-[5.5rem] sm:gap-1.5 sm:px-3 sm:text-xs",
               isActive
                 ? "bg-ink text-white shadow-[0_8px_18px_rgba(20,20,20,0.14)]"
-                : "text-[#6f4d34] hover:bg-[#fff8ec]",
+                : "text-[#315b48] hover:bg-[#f7fff3]",
             )}
             href={getActivityFilterHref(activitiesHref, {
               ...filters,

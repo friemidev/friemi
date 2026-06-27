@@ -276,7 +276,7 @@ export function ProfileOverviewPanel({
       {activePanel ? (
         <section
           aria-modal="true"
-          className="fixed inset-0 z-50 flex bg-black/32 p-0 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-50 flex bg-black/32 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-sm sm:p-6"
           role="dialog"
         >
           <div className="flex min-h-0 w-full flex-col bg-paper shadow-2xl sm:mx-auto sm:max-w-2xl sm:overflow-hidden sm:rounded-[1.5rem] sm:border sm:border-black/10">
@@ -287,7 +287,7 @@ export function ProfileOverviewPanel({
                     <h2 className="text-xl font-semibold text-ink">
                       {activeTitle}
                     </h2>
-                    <span className="rounded-full bg-[#fff7ed] px-2.5 py-1 text-xs font-semibold text-[#9a5139] ring-1 ring-[#f5c8b7]">
+                    <span className="rounded-full bg-[#fff7ed] px-2.5 py-1 text-xs font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7]">
                       {activeCount}
                     </span>
                   </div>

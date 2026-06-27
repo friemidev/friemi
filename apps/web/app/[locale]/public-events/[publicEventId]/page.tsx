@@ -194,7 +194,7 @@ export default async function PublicEventDetailPage({
         className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
         locale={locale}
       />
-      <div className="relative flex min-h-[13rem] items-end overflow-hidden rounded-[1.25rem] bg-[#d9e9ee] p-3 shadow-[0_18px_42px_rgba(58,49,34,0.14)] sm:min-h-64 sm:p-6 md:min-h-[26rem]">
+      <div className="relative flex min-h-[13rem] items-end overflow-hidden rounded-[1.25rem] bg-[#e8f3e2] p-3 shadow-[0_18px_42px_rgba(16,38,92,0.14)] sm:min-h-64 sm:p-6 md:min-h-[26rem]">
         <ActivityCoverImage
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"
@@ -244,7 +244,7 @@ export default async function PublicEventDetailPage({
 
       <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
-          <div className="rounded-[1.25rem] border border-[#d8ccb4] bg-white/78 p-4 shadow-sm sm:p-5">
+          <div className="rounded-[1.25rem] border border-[#cfe2c6] bg-white/78 p-4 shadow-sm sm:p-5">
             <h2 className="text-lg font-semibold text-ink">
               {t.eventInfoTitle}
             </h2>
@@ -296,7 +296,7 @@ export default async function PublicEventDetailPage({
                     <h2 className="text-2xl font-semibold tracking-normal text-ink">
                       {t.existingTeams}
                     </h2>
-                    <span className="rounded-full bg-[#fff8ec] px-2.5 py-1 text-xs font-semibold text-[#8a6a40] ring-1 ring-[#dccba8]">
+                    <span className="rounded-full bg-[#f7fff3] px-2.5 py-1 text-xs font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7]">
                       {t.teamCount(publicEvent.teamCount)}
                     </span>
                   </div>
@@ -336,9 +336,9 @@ export default async function PublicEventDetailPage({
         </article>
 
         <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-sand bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
-          <div className="mb-4 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+          <div className="mb-4 rounded-xl border border-[#bfd6b7] bg-[#f7fff3] px-3 py-3 text-sm leading-6 text-zinc-700">
             <div className="flex items-center gap-2 font-semibold text-ink">
-              <Ticket className="h-4 w-4 text-[#8a6a40]" />
+              <Ticket className="h-4 w-4 text-[#006e4d]" />
               {t.publicEventRuleTitle}
             </div>
             <p className="mt-1 text-sm leading-6 text-zinc-600">
@@ -356,7 +356,7 @@ export default async function PublicEventDetailPage({
                 location_is_generic: eventLocation.isGenericAddress,
               },
             }}
-            className="mb-4 h-10 w-full gap-2 rounded-full bg-white px-4 text-sm font-semibold text-ink ring-1 ring-[#dccba8] hover:bg-[#fff8ec]"
+            className="mb-4 h-10 w-full gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7] hover:bg-[#f7fff3]"
             failedLabel={appCopy.activityShare.copyFailed}
             label={t.copyEventInfo}
             successLabel={t.copyEventInfoSuccess}
@@ -471,7 +471,7 @@ export default async function PublicEventDetailPage({
           </div>
           {canOpenTicketLink && publicEvent.ticketUrl ? (
             <AnalyticsExternalLink
-              className="mt-5 inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+              className="mt-5 inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#049d73] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d]"
               event={{
                 name: "ticket_link_clicked",
                 entityId: publicEvent.id,
@@ -489,7 +489,7 @@ export default async function PublicEventDetailPage({
             </AnalyticsExternalLink>
           ) : null}
           {!canCreateTeam ? (
-            <p className="mt-5 rounded-xl bg-white/80 px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#dccba8]">
+            <p className="mt-5 rounded-xl bg-white px-3 py-3 text-sm text-zinc-600 ring-1 ring-[#bfd6b7]">
               {unavailableReason}
             </p>
           ) : (
@@ -510,7 +510,7 @@ export default async function PublicEventDetailPage({
                 },
               }}
             >
-              <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#d88d72] text-white hover:bg-[#c87b61]">
+              <Button className="h-11 w-full whitespace-nowrap rounded-full bg-[#049d73] text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] hover:bg-[#006e4d]">
                 {t.teamUp}
               </Button>
             </AnalyticsLink>

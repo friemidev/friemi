@@ -122,7 +122,7 @@ function AdminOperationsOverview({
     {
       icon: Flag,
       label: analytics.newReports,
-      tone: "bg-[#fff7ed] text-clay ring-[#f1c6ae]",
+      tone: "bg-[#fff0ed] text-clay ring-[#f5b6ad]",
       value: operations.reports.newCount,
     },
     {

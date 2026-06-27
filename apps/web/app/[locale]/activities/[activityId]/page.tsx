@@ -379,7 +379,7 @@ export default async function ActivityDetailPage({
           className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
           locale={locale}
         />
-        <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
+        <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(16,38,92,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
           <ActivityCoverImage
             src={activity.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
@@ -483,9 +483,9 @@ export default async function ActivityDetailPage({
           </article>
 
           <aside className="order-first h-fit w-full min-w-0 max-w-full rounded-[1.25rem] border border-black/10 bg-white/80 p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:order-2">
-            <div className="mb-5 rounded-xl border border-[#dccba8] bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-700">
+            <div className="mb-5 rounded-xl border border-[#bfd6b7] bg-[#f7fff3] px-3 py-3 text-sm leading-6 text-zinc-700">
               <div className="flex items-center gap-2 font-semibold text-ink">
-                <Ticket className="h-4 w-4 text-[#8a6a40]" />
+                <Ticket className="h-4 w-4 text-[#006e4d]" />
                 {publicEventCopy.publicEventRuleTitle}
               </div>
               <p className="mt-1 text-sm leading-6 text-zinc-600">
@@ -588,7 +588,7 @@ export default async function ActivityDetailPage({
             <div className="mt-6 grid gap-3">
               {canOpenTicketLink && activity.ticketUrl ? (
                 <AnalyticsExternalLink
-                  className="inline-flex h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+                  className="inline-flex h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#049d73] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d]"
                   event={{
                     name: "ticket_link_clicked",
                     entityId: detailAnalyticsEntity.entityId,
@@ -758,7 +758,7 @@ export default async function ActivityDetailPage({
         className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
         locale={locale}
       />
-      <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(58,49,34,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
+      <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(16,38,92,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
         <ActivityCoverImage
           src={activity.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
@@ -910,14 +910,14 @@ export default async function ActivityDetailPage({
           ) : null}
 
           {activity.publicEvent ? (
-            <div className="rounded-[1.25rem] border border-[#d8ccb4] bg-[#fbf7ef] p-4 shadow-sm sm:p-5">
+            <div className="rounded-[1.25rem] border border-[#bfd6b7] bg-[#f7fff3] p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#b77955] ring-1 ring-[#d8ccb4]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#006e4d] ring-1 ring-[#bfd6b7]">
                     <ExternalLink className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-[#8a6a40]">
+                    <p className="text-xs font-semibold text-[#006e4d]">
                       {publicEventCopy.linkedEventTitle}
                     </p>
                     <p className="mt-1 line-clamp-2 text-base font-semibold text-ink">
@@ -1042,7 +1042,7 @@ export default async function ActivityDetailPage({
             {!isOrganizer ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 <FollowButton
-                  buttonClassName="h-10 rounded-full border border-[#d9c6ad] bg-[#fff8ed] px-5 text-[#6f5434] shadow-none hover:bg-white"
+                  buttonClassName="h-10 rounded-full border border-[#bfd6b7] bg-[#f7fff3] px-5 text-[#315b48] shadow-none hover:bg-white"
                   fullWidth={false}
                   isAuthenticated={Boolean(viewerProfile)}
                   isFollowing={isFollowingOrganizer}
@@ -1065,25 +1065,25 @@ export default async function ActivityDetailPage({
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
-          <div className="order-1 rounded-[1.25rem] border border-[#dccba8] bg-[#fff8ec] p-4 shadow-sm">
+          <div className="order-1 rounded-[1.25rem] border border-[#bfd6b7] bg-[#f7fff3] p-4 shadow-sm">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a6a40]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#006e4d]">
                     {t.activityDetail.participants}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-zinc-600">
                     {activityParticipantLabel}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-[#dccba8]">
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-[#bfd6b7]">
                   {getActivitySeatLabel(activity, locale)}
                 </span>
               </div>
               {activity.capacity > 0 ? (
-                <div className="h-2 overflow-hidden rounded-full bg-[#eadfcf]">
+                <div className="h-2 overflow-hidden rounded-full bg-[#d8e7cf]">
                   <div
-                    className="h-full rounded-full bg-[#d88d72]"
+                    className="h-full rounded-full bg-[#049d73]"
                     style={{ width: `${participantPercent}%` }}
                   />
                 </div>
@@ -1101,7 +1101,7 @@ export default async function ActivityDetailPage({
                         profileId={participant.id}
                       >
                         <span
-                          className="group relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm outline-none ring-1 ring-[#ead9bd] transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#d88d72]"
+                          className="group relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm outline-none ring-1 ring-[#bfd6b7] transition hover:-translate-y-0.5 focus-visible:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#049d73]"
                           aria-label={participant.nickname}
                           title={participant.nickname}
                         >
@@ -1234,7 +1234,7 @@ export default async function ActivityDetailPage({
 
             {canOpenTicketLink && ticketUrl ? (
               <AnalyticsExternalLink
-                className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#d88d72] px-4 text-sm font-semibold text-white transition hover:bg-[#c87b61]"
+                className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#049d73] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d]"
                 event={{
                   name: "ticket_link_clicked",
                   entityId: detailAnalyticsEntity.entityId,
@@ -1303,7 +1303,7 @@ export default async function ActivityDetailPage({
                     isParticipatingByDefault={organizerIsParticipating}
                     locale={locale}
                   />
-                  <div className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
+                  <div className="grid gap-2 rounded-2xl border border-[#cfe2c6] bg-white/80 p-3">
                     <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                       <ShieldAlert className="h-4 w-4 text-moss" />
                       {t.activityOwner.title}
@@ -1458,7 +1458,7 @@ function ContactOrganizerForm({
       <Button
         type="submit"
         variant="secondary"
-        className="h-10 w-full gap-2 rounded-full border border-[#d9c6ad] bg-[#fff8ed] text-[#6f5434] shadow-none hover:bg-white sm:h-11"
+        className="h-10 w-full gap-2 rounded-full border border-[#bfd6b7] bg-[#f7fff3] text-[#315b48] shadow-none hover:bg-white sm:h-11"
         aria-label={`${t.activityDetail.contactOrganizer}: ${organizerNickname}`}
       >
         <MessageCircle className="h-4 w-4 shrink-0 text-[#9c6f4e]" />

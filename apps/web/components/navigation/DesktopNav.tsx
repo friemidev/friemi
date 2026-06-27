@@ -103,14 +103,14 @@ export function DesktopNav({ locale }: DesktopNavProps) {
             key={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex h-full items-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d88d72]/45 lg:px-3 lg:text-sm",
+              "group relative flex h-full items-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#049d73]/35 lg:px-3 lg:text-sm",
               item.isPrimary
                 ? active
-                  ? "text-[#9b5d46]"
-                  : "text-[#b66f55] hover:bg-[#fff7ed] hover:text-[#9b5d46]"
+                  ? "text-[#006e4d]"
+                  : "text-[#0a7a59] hover:bg-[#f1faeb] hover:text-[#006e4d]"
                 : active
-                  ? "text-ink"
-                  : "text-zinc-700 hover:bg-[#fff7ed] hover:text-ink",
+                  ? "text-[#10265c]"
+                  : "text-zinc-700 hover:bg-[#f1faeb] hover:text-[#10265c]",
             )}
             href={withLocale(currentLocale, item.href)}
           >
@@ -118,7 +118,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
               className={cn(
                 "absolute inset-x-2 bottom-0 h-[3px] origin-center rounded-t-full transition lg:inset-x-3",
                 active
-                  ? "scale-x-100 bg-[#d88d72]"
+                  ? "scale-x-100 bg-[#049d73]"
                   : "scale-x-0 bg-transparent",
               )}
               aria-hidden="true"
@@ -126,7 +126,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
             <Icon
               className={cn(
                 "h-4 w-4 shrink-0 transition",
-                active ? "text-[#9b654f]" : "",
+                active ? "text-[#006e4d]" : "",
               )}
               strokeWidth={active ? 2.4 : 2}
             />

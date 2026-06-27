@@ -765,8 +765,8 @@ export function ScraperImportSection({
         </div>
 
         {editingItem ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[1.25rem] bg-white p-4 shadow-xl sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)]">
+            <div className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full max-w-2xl overflow-y-auto rounded-[1.25rem] bg-white p-4 shadow-xl sm:p-6">
               <h3 className="text-lg font-semibold text-zinc-950">
                 导入前编辑
               </h3>
