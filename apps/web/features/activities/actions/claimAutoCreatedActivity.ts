@@ -30,9 +30,9 @@ function getString(formData: FormData, key: string) {
 function getClaimCopy(locale: string) {
   if (locale === "fr") {
     return {
-      failed: "Impossible de reclamer cette equipe pour le moment.",
-      forbidden: "Cette equipe ne peut plus etre reclamee.",
-      self: "Vous etes deja l'organisateur de cette equipe.",
+      failed: "Impossible de réclamer cette équipe pour le moment.",
+      forbidden: "Cette équipe ne peut plus être réclamée.",
+      self: "Vous êtes déjà l'organisateur de cette équipe.",
     };
   }
 

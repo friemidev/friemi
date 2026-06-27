@@ -73,7 +73,7 @@ const coverTones: Record<ActivityCardViewModel["coverTone"], string> = {
 
 function getCardKindLabel(isActivityInfo: boolean, locale: string) {
   if (locale === "fr") {
-    return isActivityInfo ? "Sortie" : "Equipe";
+    return isActivityInfo ? "Sortie" : "Équipe";
   }
 
   if (locale === "en") {
@@ -113,8 +113,8 @@ function getCardVisibilityLabel(
 function getAutoCreatedTeamBadgeCopy(locale: string) {
   if (locale === "fr") {
     return {
-      claimable: "A reclamer",
-      recommended: "Selection du jour",
+      claimable: "À réclamer",
+      recommended: "Sélection du jour",
     };
   }
 
@@ -236,7 +236,7 @@ function getParticipationActionLabel(
 function getOwnActivityLabels(locale: string) {
   if (locale === "fr") {
     return {
-      action: "Voir le detail",
+      action: "Voir le détail",
       badge: "Ma sortie",
     };
   }
@@ -259,9 +259,9 @@ function getCardActionCopy(locale: string) {
     return {
       createTeam: "Organiser un plan",
       joinTeam: "Rejoindre le plan",
-      manageTeam: "Gerer le plan",
-      viewActivity: "Voir l'activite",
-      viewDetails: "Voir les details",
+      manageTeam: "Gérer le plan",
+      viewActivity: "Voir l'activité",
+      viewDetails: "Voir les détails",
     };
   }
 
@@ -672,8 +672,8 @@ export function ActivityCard({
   const primaryActionLabel = isActivityInfo
     ? locale === "fr"
       ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
-        ? "Voir l'evenement"
-        : "Former une equipe"
+        ? "Voir l'événement"
+        : "Former une équipe"
       : locale === "en"
         ? displayStatus === "ENDED" || displayStatus === "CANCELLED"
           ? "View event"

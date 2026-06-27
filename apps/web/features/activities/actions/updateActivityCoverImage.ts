@@ -52,9 +52,9 @@ function getString(formData: FormData, key: string) {
 function getCoverImageCopy(locale: string) {
   if (locale === "fr") {
     return {
-      failed: "Impossible de mettre a jour l'image pour le moment.",
+      failed: "Impossible de mettre à jour l'image pour le moment.",
       forbidden: "Seul l'organisateur peut modifier cette image.",
-      invalid: "Choisissez une image importee valide.",
+      invalid: "Choisissez une image importée valide.",
       unavailable: "Ce plan n'est plus disponible.",
     };
   }

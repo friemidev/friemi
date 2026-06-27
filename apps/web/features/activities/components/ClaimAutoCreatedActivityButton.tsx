@@ -24,10 +24,10 @@ const initialState: ClaimAutoCreatedActivityState = {};
 function getClaimCopy(locale: string) {
   if (locale === "fr") {
     return {
-      claim: "Reclamer l'equipe",
-      claiming: "Reclamation...",
-      helper: "Reclamez cette equipe pour modifier l'horaire et le lieu.",
-      signIn: "Connectez-vous pour reclamer",
+      claim: "Réclamer l'équipe",
+      claiming: "Réclamation...",
+      helper: "Réclamez cette équipe pour modifier l'horaire et le lieu.",
+      signIn: "Connectez-vous pour réclamer",
     };
   }
 

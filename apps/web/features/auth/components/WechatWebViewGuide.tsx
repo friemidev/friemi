@@ -31,10 +31,10 @@ function getGuideCopy(locale: string): GuideCopy {
       description:
         "La connexion Google se termine mieux dans votre navigateur mobile.",
       arrowHint: "Touchez ici",
-      steps: ["Ouvrez le menu en haut a droite.", "Ouvrir dans le navigateur."],
+      steps: ["Ouvrez le menu en haut à droite.", "Ouvrir dans le navigateur."],
       fallback: "Sinon, copiez le lien dans votre navigateur mobile.",
       copyLink: "Copier",
-      copied: "Lien copie",
+      copied: "Lien copié",
     };
   }
 

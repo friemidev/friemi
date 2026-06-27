@@ -25,9 +25,9 @@ function getString(formData: FormData, key: string) {
 function getToggleCopy(locale: string) {
   if (locale === "fr") {
     return {
-      failed: "Impossible de mettre a jour votre participation pour l'instant.",
-      forbidden: "Seul l'organisateur peut modifier cet etat.",
-      unavailable: "Cette activite n'est plus disponible.",
+      failed: "Impossible de mettre à jour votre participation pour l'instant.",
+      forbidden: "Seul l'organisateur peut modifier cet état.",
+      unavailable: "Cette activité n'est plus disponible.",
     };
   }
 

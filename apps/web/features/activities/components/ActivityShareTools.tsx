@@ -164,11 +164,11 @@ function drawWrappedText(
     let lastLine = lines[lastIndex] ?? "";
     while (
       lastLine.length > 0 &&
-      context.measureText(`${lastLine}...`).width > maxWidth
+      context.measureText(`${lastLine}…`).width > maxWidth
     ) {
       lastLine = lastLine.slice(0, -1);
     }
-    lines[lastIndex] = `${lastLine}...`;
+    lines[lastIndex] = `${lastLine}…`;
   }
 
   lines.forEach((line, index) => {

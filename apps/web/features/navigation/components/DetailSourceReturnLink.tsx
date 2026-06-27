@@ -12,19 +12,19 @@ import { cn } from "@/lib/utils";
 function getFallbackLabel(sourceKey: DetailSourceContext["sourceKey"], locale: string) {
   if (locale === "fr") {
     const labels: Record<DetailSourceContext["sourceKey"], string> = {
-      activity_detail: "Retour a la sortie",
-      activity_list: "Retour aux activites",
+      activity_detail: "Retour à la sortie",
+      activity_list: "Retour aux activités",
       admin_analytics: "Retour aux statistiques",
       admin_reports: "Retour aux signalements",
       friends: "Retour aux amis",
-      home: "Retour a l'accueil",
+      home: "Retour à l'accueil",
       lobby: "Retour au hall",
       merchant: "Retour au lieu",
       messages: "Retour au chat",
       notifications: "Retour aux notifications",
       profile: "Retour au profil",
-      public_event: "Retour a l'activite",
-      search: "Retour aux resultats",
+      public_event: "Retour à l'activité",
+      search: "Retour aux résultats",
     };
 
     return labels[sourceKey];

@@ -19,8 +19,40 @@ import {
   activityResultsFilterLabelClass,
 } from "./activityResultsFilterStyles";
 
-function getCardSortLabel(sort: ActivityCardSortOption, locale: string) {
+function getCardSortLabel(
+  sort: ActivityCardSortOption,
+  locale: string,
+  compact = false,
+) {
   const t = getCopy(locale);
+
+  if (compact) {
+    if (locale === "fr") {
+      switch (sort) {
+        case "latest":
+          return "Plus tard";
+        case "shortDuration":
+          return "Court";
+        case "longDuration":
+          return "Long";
+        default:
+          return "Bientôt";
+      }
+    }
+
+    if (locale === "en") {
+      switch (sort) {
+        case "latest":
+          return "Latest";
+        case "shortDuration":
+          return "Short";
+        case "longDuration":
+          return "Long";
+        default:
+          return "Soonest";
+      }
+    }
+  }
 
   switch (sort) {
     case "latest":
@@ -50,7 +82,11 @@ export function ActivityCardSortSelect({
   const activitiesHref = withLocale(locale, "/activities");
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const selectedLabel = getCardSortLabel(filters.sort, locale);
+  const selectedLabel = getCardSortLabel(
+    filters.sort,
+    locale,
+    forceMobileLayout,
+  );
 
   useEffect(() => {
     if (!open) {

@@ -133,10 +133,10 @@ function getParticipantInitial(nickname: string) {
 function getAutoCreatedTeamCopy(locale: string) {
   if (locale === "fr") {
     return {
-      badge: "Selection du jour",
-      claimableBadge: "A reclamer",
-      claimHint: "Cette equipe a ete creee a partir d'une activite populaire. Reclamez-la pour modifier l'heure et le lieu.",
-      deadlinePrefix: "Reclamation ouverte jusqu'au",
+      badge: "Sélection du jour",
+      claimableBadge: "À réclamer",
+      claimHint: "Cette équipe a été créée à partir d'une activité populaire. Réclamez-la pour modifier l'heure et le lieu.",
+      deadlinePrefix: "Réclamation ouverte jusqu'au",
     };
   }
 

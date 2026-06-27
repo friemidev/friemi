@@ -22,16 +22,16 @@ const initialState: ToggleOrganizerParticipationState = {};
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      closed: "Cette activite est terminee ou annulee. Votre statut ne peut plus etre change.",
+      closed: "Cette activité est terminée ou annulée. Votre statut ne peut plus être changé.",
       participatingDescription:
         "Vous comptez actuellement dans le total des participants.",
       participatingTitle: "Vous participez",
       submitParticipating: "Je participe",
       submitSkipping: "Je ne participe pas",
-      submittingParticipating: "Mise a jour...",
-      submittingSkipping: "Mise a jour...",
+      submittingParticipating: "Mise à jour...",
+      submittingSkipping: "Mise à jour...",
       skippedDescription:
-        "Vous n'etes pas compte dans le total des participants pour l'instant.",
+        "Vous n'êtes pas compté dans le total des participants pour l'instant.",
       skippedTitle: "Vous ne participez pas",
       title: "Votre place",
     };

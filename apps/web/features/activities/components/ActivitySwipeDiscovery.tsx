@@ -71,11 +71,11 @@ function getSwipeCopy(locale: string) {
       previous: "Precedent",
       next: "Suivant",
       detail: "Voir",
-      keyboardHint: "Fleches gauche et droite disponibles.",
-      swipeHint: "Glissez a gauche pour le suivant, a droite pour revenir.",
+      keyboardHint: "Flèches gauche et droite disponibles.",
+      swipeHint: "Glissez à gauche pour le suivant, à droite pour revenir.",
       favoriteHint: "Favori",
       loadingMore: "Chargement...",
-      loadMoreFailed: "Reessayer",
+      loadMoreFailed: "Réessayer",
       end: "Fin",
     };
   }

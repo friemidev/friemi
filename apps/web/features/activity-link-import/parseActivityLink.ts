@@ -32,9 +32,9 @@ const requestTimeoutMs = 12_000;
 const maxHtmlLength = 2_000_000;
 
 const supportedHosts: [string, string][] = [
-  ["quefaire.paris.fr", "Que Faire a Paris"],
+  ["quefaire.paris.fr", "Que Faire à Paris"],
   ["opendata.paris.fr", "Paris OpenData"],
-  ["sortiraparis.com", "Sortir a Paris"],
+  ["sortiraparis.com", "Sortir à Paris"],
   ["playinparis.com", "Play in Paris"],
   ["eventbrite.fr", "Eventbrite"],
   ["billetweb.fr", "Billetweb"],

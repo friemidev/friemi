@@ -145,15 +145,18 @@ feature/v2-1-french-accent-copy-polish
 
 需求理解：
 
-当前部分法语文案为了 ASCII 兼容省略了 accent，正式产品里会显得不专业。v2.1 需要单独做一轮法语 copy polish，把全站法语中的 é、è、ê、à、ù、ç、œ 等重音和拼写补齐，并顺手检查法语长文案在移动端按钮、筛选器和卡片里的换行。
+当前部分法语文案为了 ASCII 兼容省略了 accent，正式产品里会显得不专业。v2.1 需要单独做一轮法语 copy polish，把全站法语中的 é、è、ê、à、ù、ç、œ 等重音和拼写补齐，并顺手检查法语和英语长文案在移动端按钮、筛选器、卡片和分享信息里的换行。
 
 小功能：
 
-- [ ] 扫描 `messages/fr.json`、页面内联法语 copy、邮件 / 分享 / toast / 错误提示里的无 accent 法语
-- [ ] 补齐常见词：activité、événement、créateur、communauté、réutilisable、préparation、précédent、détail、société 等
-- [ ] 检查法语按钮、badge、筛选项和导航在 390px 移动端是否被截断或出现难看的省略号
-- [ ] 检查法语分享标题、Open Graph description、微信分享兜底文案是否自然
-- [ ] 保留英文代码 key 和 URL slug，不为了 accent 修改路由、数据库 enum 或稳定标识
+- [x] 扫描 `messages/fr.json`、页面内联法语 copy、邮件 / 分享 / toast / 错误提示里的无 accent 法语
+- [x] 补齐常见词：activité、événement、créateur、communauté、réutilisable、préparation、précédent、détail、société 等
+- [x] 代码级检查法语按钮、badge、筛选项和导航文案，压缩移动端排序和筛选短标签，避免窄屏默认态出现难看的省略号
+- [x] 检查并优化法语分享标题、Open Graph description、微信分享兜底文案
+- [x] 代码级检查英语按钮、badge、筛选项和导航文案，压缩移动端排序和筛选短标签，避免窄屏默认态出现难看的省略号
+- [x] 检查并优化英语分享标题、Open Graph description、微信分享兜底文案
+- [ ] 本地 Clerk 配置恢复后，补跑 390px 运行态截图检查，确认英法按钮、badge、筛选项和导航没有真实截断
+- [x] 保留英文代码 key 和 URL slug，不为了 accent 修改路由、数据库 enum 或稳定标识
 
 验收标准：
 
@@ -169,7 +172,7 @@ feature/v2-1-french-accent-copy-polish
 - [ ] 核心页面移动端 / 网页端样式分离方案有明确记录
 - [x] 至少完成一个核心页面的移动端 / 网页端布局拆分试点
 - [x] 全站品牌风格与 logo 大整改完成一轮页面审计
-- [ ] 法语 accent 与法语文案完成一轮全站修正
+- [x] 法语 accent 与法语文案完成一轮全站修正
 - [ ] 移动端 390px 没有横向滚动条
 - [ ] 桌面端 1280px 没有明显大空白或布局坍塌
 - [ ] 主要按钮触控面积不低于 44px

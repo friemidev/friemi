@@ -205,7 +205,7 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "open":
         return "Publics";
       case "created":
-        return "Creees";
+        return "Créées";
       case "joined":
         return "Rejointes";
       case "favorites":
@@ -261,7 +261,7 @@ function getEmptyCategoryCopy(locale: string) {
     return {
       title: "Rien ici pour le moment.",
       description:
-        "Essayez une autre categorie, lancez un plan, ou decouvrez de nouvelles activites pour remplir votre hall.",
+        "Essayez une autre catégorie, lancez un plan, ou découvrez de nouvelles activités pour remplir votre hall.",
     };
   }
 
@@ -310,7 +310,7 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
         href: "/friends",
         label: "Ajouter des amis",
         description:
-          "Ajoutez d'abord vos proches. Des qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
+          "Ajoutez d'abord vos proches. Dès qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
         tone: "primary",
       },
       {
@@ -322,9 +322,9 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
       },
       {
         href: "/activities",
-        label: "Decouvrir",
+        label: "Découvrir",
         description:
-          "Regardez ce qui se passe deja, puis rejoignez ou gardez de cote ce qui vous attire.",
+          "Regardez ce qui se passe déjà, puis rejoignez ou gardez de côté ce qui vous attire.",
         tone: "tertiary",
       },
     ];
@@ -384,7 +384,7 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
 function getLobbyFilterCopy(locale: string) {
   if (locale === "fr") {
     return {
-      category: "Categorie",
+      category: "Catégorie",
       status: "Statut",
       title: "Filtrer le hall",
     };
@@ -410,7 +410,7 @@ function getMobileLobbyFilterCopy(locale: string) {
     return {
       apply: "Valider",
       close: "Fermer",
-      openCategory: "Categorie",
+      openCategory: "Catégorie",
       openStatus: "Statut",
       title: "Filtrer",
     };
@@ -441,7 +441,7 @@ function getStatusFilterLabel(locale: string, id: LobbyStatusFilterId) {
       case "ongoing":
         return "En cours";
       case "ended":
-        return "Terminees";
+        return "Terminées";
       default:
         return "Tout";
     }
@@ -598,14 +598,14 @@ function getLobbyFeedStatusFilterOptions(
 function getActivityLobbyPreviewCopy(locale: string) {
   if (locale === "fr") {
     return {
-      eyebrow: "Hall d'equipe",
+      eyebrow: "Hall d'équipe",
       title: "Parcourez d'abord",
       description: "Les plans publics sont visibles sans connexion.",
       signIn: "Se connecter",
-      browse: "Activites",
+      browse: "Activités",
       emptyTitle: "Aucun plan pour le moment",
       emptyDescription:
-        "Les plans publics apparaitront ici des qu'ils seront disponibles.",
+        "Les plans publics apparaîtront ici dès qu'ils seront disponibles.",
       sectionTitle: "Plans publics",
     };
   }
@@ -884,7 +884,7 @@ function LobbySectionError({
     locale === "fr"
       ? {
           title: "Chargement impossible.",
-          retry: "Reessayer",
+          retry: "Réessayer",
         }
       : locale === "en"
         ? {
@@ -915,7 +915,7 @@ function getLazyLobbySwipeCopy(locale: string) {
     return {
       eyebrow: "Swipe",
       title: "Swipez",
-      loading: "Preparation des activites...",
+      loading: "Préparation des activités...",
     };
   }
 
@@ -2176,14 +2176,14 @@ export function ActivityLobbyView({
             </p>
             <h2 className="mt-1 text-2xl font-semibold text-ink sm:text-3xl">
               {locale === "fr"
-                ? "Trouvez une sortie a partager"
+                ? "Trouvez une sortie à partager"
                 : locale === "en"
                   ? "Find something to do together"
                   : "今天想找谁一起出门？"}
             </h2>
             <p className="mt-3 text-sm leading-7 text-zinc-600 sm:text-base">
               {locale === "fr"
-                ? "Votre hall se remplira avec vos plans, mais vous pouvez deja partir d'une sortie ouverte ou lancer votre premier groupe."
+                ? "Votre hall se remplira avec vos plans, mais vous pouvez déjà partir d'une sortie ouverte ou lancer votre premier groupe."
                 : locale === "en"
                   ? "Your own lobby will grow with your plans. For now, start from an open activity or create your first crew."
                   : "你的个人组队动态会慢慢长出来。现在可以先从公开活动找人一起去，或者发起第一个局。"}
