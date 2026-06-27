@@ -196,5 +196,5 @@ test("resolveShareImageUrl proxies known hotlink-protected HTTPS covers", () => 
 
 test("truncateShareText keeps metadata fields bounded", () => {
   assert.equal(truncateShareText("abcdef", 6), "abcdef");
-  assert.equal(truncateShareText("abcdef", 5), "ab...");
+  assert.equal(truncateShareText("abcdef", 5), "abcd…");
 });
