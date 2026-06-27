@@ -32,6 +32,7 @@ type JoinActivityFormProps = {
   activityTitle: string;
   accessToken?: string | null;
   compactUnauthenticated?: boolean;
+  formInstanceId?: string;
   locale: string;
   requiresApproval: boolean;
   isFull: boolean;
@@ -137,7 +138,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-coral text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
       disabled={pending}
       aria-busy={pending}
     >
@@ -162,7 +163,7 @@ function GuestSubmitButton({ locale }: { locale: string }) {
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-coral text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
       disabled={pending}
       aria-busy={pending}
     >
@@ -445,6 +446,7 @@ function RejoinNotice({
 function GuestJoinEntry({
   accessToken,
   activityId,
+  formInstanceId,
   formAction,
   locale,
   requiresApproval,
@@ -452,6 +454,7 @@ function GuestJoinEntry({
 }: {
   activityId: string;
   accessToken?: string | null;
+  formInstanceId?: string;
   formAction: (payload: FormData) => void;
   locale: string;
   requiresApproval: boolean;
@@ -459,13 +462,13 @@ function GuestJoinEntry({
 }) {
   const t = getGuestJoinCopy(locale);
   const [showGuestForm, setShowGuestForm] = useState(false);
-  const guestFormId = `guest-join-form-${activityId}`;
+  const guestFormId = `guest-join-form-${activityId}${formInstanceId ? `-${formInstanceId}` : ""}`;
 
   return (
     <div className="grid gap-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         <Link
-          className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-[#369758] px-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
+          className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
           href={getSignInHref(locale, `/activities/${activityId}`)}
         >
           <span className="truncate">{t.loginJoin}</span>
@@ -505,6 +508,7 @@ export function JoinActivityForm({
   activityId,
   activityTitle,
   accessToken = null,
+  formInstanceId,
   locale,
   requiresApproval,
   isFull,
@@ -605,6 +609,7 @@ export function JoinActivityForm({
       <GuestJoinEntry
         accessToken={accessToken}
         activityId={activityId}
+        formInstanceId={formInstanceId}
         formAction={guestFormAction}
         locale={locale}
         requiresApproval={requiresApproval}
