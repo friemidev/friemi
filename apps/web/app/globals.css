@@ -260,6 +260,12 @@ a {
   transform-origin: center;
 }
 
+@media (max-width: 767px) and (min-height: 760px) {
+  .home-mobile-hero-content {
+    padding-bottom: clamp(4rem, 8vh, 5.25rem);
+  }
+}
+
 html[data-home-motion-ready="true"]
   [data-home-reveal]:not([data-home-visible="true"]) {
   opacity: 0;
