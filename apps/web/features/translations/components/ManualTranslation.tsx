@@ -118,7 +118,7 @@ export function ManualTranslationBundle({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#bfd6b7] bg-white px-3 text-xs font-semibold text-[#315b48] shadow-sm transition hover:bg-[#f7fff3] disabled:cursor-wait disabled:opacity-70"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E] bg-white px-3 text-xs font-semibold text-[#156240] shadow-sm transition hover:bg-[#FEFFF9] disabled:cursor-wait disabled:opacity-70"
           disabled={status === "loading"}
           onClick={translateFields}
         >
@@ -147,8 +147,8 @@ export function ManualTranslationBundle({
       ) : null}
 
       {hasTranslations ? (
-        <div className="mt-3 rounded-xl border border-[#cfe2c6] bg-[#fffaf2] p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#006e4d]">
+        <div className="mt-3 rounded-xl border border-[#D6D5B2] bg-[#FFF5E6] p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#156240]">
             <Bot className="h-3.5 w-3.5" />
             {t.translatedBy}
           </div>

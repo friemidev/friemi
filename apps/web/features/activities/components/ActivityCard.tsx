@@ -201,12 +201,12 @@ function getCountdownLabel(activity: ActivityCardViewModel, locale: string) {
 }
 
 const avatarTones = [
-  "bg-[#e98472] text-white",
-  "bg-[#72a7cf] text-white",
-  "bg-[#72b68a] text-white",
-  "bg-[#c795d8] text-white",
-  "bg-[#d8aa64] text-white",
-  "bg-[#7f88d8] text-white",
+  "bg-coral text-white",
+  "bg-forest text-white",
+  "bg-meadow text-white",
+  "bg-sage text-white",
+  "bg-danger text-white",
+  "bg-outline text-white",
 ];
 
 function getStableAvatarTone(value: string) {
@@ -373,36 +373,24 @@ function getCopyTeamButtonLabel(locale: string) {
   return "再来一局";
 }
 
-function getMobileCardViewLabel(locale: string) {
-  if (locale === "fr") {
-    return "Voir";
-  }
-
-  if (locale === "en") {
-    return "View";
-  }
-
-  return "查看";
-}
-
 function getSplitPrimaryActionClassName(tone: ActivityCardActionTone) {
   if (tone === "muted") {
-    return "border-zinc-300 bg-zinc-200 text-zinc-600 shadow-[0_12px_24px_rgba(113,113,122,0.16)]";
+    return "border-outline/35 bg-fog text-ink/60 shadow-[0_12px_24px_rgba(29,29,27,0.08)]";
   }
 
   if (tone === "pending") {
-    return "border-[#e2bc67] bg-[#fff0bd] text-[#765113] shadow-[0_14px_26px_rgba(198,156,73,0.2)]";
+    return "border-sand bg-cream text-danger shadow-[0_14px_26px_rgba(181,48,31,0.12)]";
   }
 
   if (tone === "joined" || tone === "neutral") {
-    return "border-[#bfd6b7] bg-[#f7fff3] text-[#315b48] shadow-[0_14px_26px_rgba(10,63,49,0.14)]";
+    return "border-sage bg-paper text-forest shadow-[0_14px_26px_rgba(21,98,64,0.14)]";
   }
 
   if (tone === "activity") {
-    return "border-[#8fc1d6] bg-[#dceef7] text-[#245e76] shadow-[0_14px_26px_rgba(84,139,167,0.16)]";
+    return "border-sage bg-ice text-forest shadow-[0_14px_26px_rgba(21,98,64,0.12)]";
   }
 
-  return "border-[#f48d81] bg-[#f48d81] text-white shadow-[0_16px_30px_rgba(244,141,129,0.25)]";
+  return "border-coral bg-coral text-white shadow-[0_16px_30px_rgba(240,145,130,0.25)]";
 }
 
 function LobbySplitActionButton({
@@ -426,14 +414,14 @@ function LobbySplitActionButton({
 }) {
   const primaryToneClassName = getSplitPrimaryActionClassName(primaryTone);
   const sharedHalfLinkClassName =
-    "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf2]";
+    "absolute inset-y-0 z-20 focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-cream";
   const sharedPanelClassName =
     "pointer-events-none absolute inset-y-0 z-30 flex w-[calc(200%+2px)] items-center justify-center gap-2 rounded-[1.45rem] border px-4 text-[13px] font-semibold leading-none whitespace-nowrap opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 motion-reduce:transition-none";
 
   return (
     <div className="hidden justify-center sm:flex">
       <div
-        className="relative isolate h-12 w-[12.25rem] overflow-hidden rounded-[1.55rem] border border-[#f3b1a7] bg-[linear-gradient(135deg,#fff8ef_0%,#fff0ed_52%,#f7fff3_100%)] shadow-[0_14px_30px_rgba(244,141,129,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] transition-transform duration-250 hover:-translate-y-0.5"
+        className="relative isolate h-12 w-[12.25rem] overflow-hidden rounded-[1.55rem] border border-rose bg-[linear-gradient(135deg,#FFF5E6_0%,#DEAAB3_52%,#FEFFF9_100%)] shadow-[0_14px_30px_rgba(240,145,130,0.14),inset_0_1px_0_rgba(255,255,255,0.94)] transition-transform duration-250 hover:-translate-y-0.5"
         data-lobby-split-action="desktop"
       >
         <span
@@ -442,25 +430,25 @@ function LobbySplitActionButton({
         />
         <span
           aria-hidden="true"
-          className="absolute inset-y-1.5 right-1.5 z-0 w-[calc(50%-0.375rem)] rounded-[1.2rem] bg-[#f7fff3]/72"
+          className="absolute inset-y-1.5 right-1.5 z-0 w-[calc(50%-0.375rem)] rounded-[1.2rem] bg-paper/72"
         />
         <span
           aria-hidden="true"
-          className="absolute left-1/2 top-1/2 z-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e6d8c4] shadow-[0_0_0_5px_rgba(255,250,242,0.9)]"
+          className="absolute left-1/2 top-1/2 z-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sand shadow-[0_0_0_5px_rgba(255,245,230,0.9)]"
         />
         <span
           aria-hidden="true"
           className="absolute inset-y-0 left-0 z-10 flex w-1/2 items-center justify-center text-white"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f48d81] text-white shadow-[0_9px_18px_rgba(244,141,129,0.28)]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-coral text-white shadow-[0_9px_18px_rgba(240,145,130,0.28)]">
             <PrimaryIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-[#315b48]"
+          className="absolute inset-y-0 right-0 z-10 flex w-1/2 items-center justify-center text-forest"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#bfd6b7] bg-white text-[#006e4d] shadow-[0_9px_18px_rgba(10,63,49,0.12)]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-sage/70 bg-cream text-forest shadow-[0_9px_18px_rgba(21,98,64,0.08)]">
             <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
@@ -476,7 +464,7 @@ function LobbySplitActionButton({
         >
           <span
             className={cn(
-              "left-0 group-hover:shadow-[0_16px_28px_rgba(4,157,115,0.26)] group-focus-visible:shadow-[0_16px_28px_rgba(4,157,115,0.26)]",
+              "left-0 group-hover:shadow-[0_16px_28px_rgba(54,151,88,0.26)] group-focus-visible:shadow-[0_16px_28px_rgba(54,151,88,0.26)]",
               sharedPanelClassName,
               primaryToneClassName,
             )}
@@ -499,7 +487,7 @@ function LobbySplitActionButton({
         >
           <span
             className={cn(
-              "right-0 border-[#006e4d] bg-[#006e4d] text-white group-hover:shadow-[0_16px_28px_rgba(0,110,77,0.22)] group-focus-visible:shadow-[0_16px_28px_rgba(0,110,77,0.22)]",
+              "right-0 border-sage bg-fog text-forest group-hover:shadow-[0_16px_28px_rgba(21,98,64,0.14)] group-focus-visible:shadow-[0_16px_28px_rgba(21,98,64,0.14)]",
               sharedPanelClassName,
             )}
           >
@@ -658,7 +646,7 @@ export function ActivityCard({
               participant.avatarUrl
                 ? "bg-white"
                 : getStableAvatarTone(participant.id),
-              isTeamCard ? "ring-[#f7fff3]" : "ring-[#f8feff]",
+              isTeamCard ? "ring-paper" : "ring-ice",
               isInactiveCard ? "ring-zinc-50 grayscale" : null,
             )}
             title={participant.nickname}
@@ -679,7 +667,7 @@ export function ActivityCard({
         {participantExtraCount > 0 ? (
           <span
             className={cn(
-              "flex h-6 min-w-6 items-center justify-center rounded-full bg-[#d8e7cf] px-1.5 text-[10px] font-semibold text-[#315b48] ring-2 ring-[#f7fff3] max-[639px]:h-5 max-[639px]:min-w-5 max-[639px]:text-[9px]",
+              "flex h-6 min-w-6 items-center justify-center rounded-full bg-sand px-1.5 text-[10px] font-semibold text-forest ring-2 ring-paper max-[639px]:h-5 max-[639px]:min-w-5 max-[639px]:text-[9px]",
               isInactiveCard ? "bg-zinc-200 text-zinc-500 ring-zinc-50" : null,
             )}
           >
@@ -692,24 +680,22 @@ export function ActivityCard({
     mobileDense ? className : null;
   const actionToneClassName =
     resolvedActionConfig.tone === "muted"
-      ? "bg-zinc-300 text-zinc-700 hover:bg-zinc-300"
+      ? "bg-fog text-ink/60 hover:bg-fog"
       : resolvedActionConfig.tone === "neutral"
-        ? "bg-team-bg text-[#315b48] ring-1 ring-team-border hover:bg-[#eef8ea]"
+        ? "bg-team-bg text-forest ring-1 ring-team-border hover:bg-fog"
         : resolvedActionConfig.tone === "joined"
-          ? "bg-coral-soft text-[#a2453b] ring-1 ring-[#f4c4bd] shadow-[0_8px_18px_rgba(244,141,129,0.12)] hover:bg-[#ffe5e0]"
+          ? "bg-rose text-danger ring-1 ring-coral/35 shadow-[0_8px_18px_rgba(240,145,130,0.12)] hover:bg-coral/20"
           : resolvedActionConfig.tone === "pending"
-            ? "bg-[#f8e6b8] text-[#7b5622] ring-1 ring-[#e2c27c] shadow-[0_8px_18px_rgba(198,156,73,0.15)] hover:bg-[#f4dda1]"
+            ? "bg-cream text-danger ring-1 ring-sand shadow-[0_8px_18px_rgba(181,48,31,0.1)] hover:bg-rose/45"
             : resolvedActionConfig.tone === "activity"
-              ? "bg-[#dceef7] text-[#245e76] ring-1 ring-[#9fc6d8] shadow-[0_8px_18px_rgba(84,139,167,0.14)] hover:bg-[#cde6f2]"
-              : "bg-coral text-white shadow-[0_10px_22px_rgba(244,141,129,0.24)] hover:bg-coral-dark";
+              ? "bg-ice text-forest ring-1 ring-sage shadow-[0_8px_18px_rgba(21,98,64,0.1)] hover:bg-fog"
+              : "bg-coral text-white shadow-[0_10px_22px_rgba(240,145,130,0.24)] hover:bg-coral-dark";
   const PrimaryActionIcon = getPrimaryActionIcon({
     isActivityInfo,
     isOwnActivity,
     tone: resolvedActionConfig.tone,
   });
   const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
-  const showMobileActivityInfoQuickAction =
-    mobileDense && isActivityInfo && !showPrimaryAction && !copyActivityHref;
 
   return (
     <Card
@@ -717,15 +703,15 @@ export function ActivityCard({
       className={cn(
         "group/card relative flex h-full flex-col overflow-visible rounded-[1.15rem] transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 sm:rounded-[1.55rem]",
         isInactiveCard
-          ? "border-zinc-200 bg-zinc-50/90 text-zinc-500 shadow-[0_10px_28px_rgba(113,113,122,0.08)] saturate-0"
+          ? "border-outline/30 bg-fog/90 text-ink/55 shadow-[0_10px_28px_rgba(29,29,27,0.07)] saturate-0"
           : isTeamCard
-            ? "border-[#f3b1a7] bg-[#fffaf4] shadow-[0_12px_34px_rgba(244,141,129,0.11)] ring-1 ring-[#fff0ed] hover:shadow-[0_18px_46px_rgba(244,141,129,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(244,141,129,0.13)]"
-            : "border-[#bfd6b7] bg-[#fafff6] shadow-[0_10px_30px_rgba(0,110,77,0.08)] ring-1 ring-[#eef8ea] hover:shadow-[0_18px_44px_rgba(0,110,77,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(0,110,77,0.1)]",
+            ? "border-rose bg-cream shadow-[0_12px_34px_rgba(240,145,130,0.11)] ring-1 ring-rose hover:shadow-[0_18px_46px_rgba(240,145,130,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(240,145,130,0.13)]"
+            : "border-sage bg-paper shadow-[0_10px_30px_rgba(21,98,64,0.08)] ring-1 ring-fog hover:shadow-[0_18px_44px_rgba(21,98,64,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(21,98,64,0.1)]",
         isTeamCard
-          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:hidden before:h-1 before:bg-[#f48d81] sm:before:block"
+          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:hidden before:h-1 before:bg-coral sm:before:block"
           : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:hidden before:h-1 before:bg-event-accent sm:before:block",
         !isInactiveCard && isTeamCard
-          ? "hover:border-[#ee9d91] hover:ring-[#f3b1a7]"
+          ? "hover:border-coral hover:ring-rose"
           : null,
       )}
     >
@@ -811,31 +797,31 @@ export function ActivityCard({
             src={activity.coverImageUrl}
             overlayClassName={cn(
               isTeamCard
-                ? "bg-gradient-to-t from-black/62 via-black/20 to-[#2b1d12]/12"
+                ? "bg-gradient-to-t from-black/62 via-black/20 to-ink/12"
                 : "bg-gradient-to-t from-black/46 via-black/10 to-transparent",
             )}
           />
           <div
             className={cn(
               "absolute inset-x-0 top-0 h-8 bg-gradient-to-b to-transparent",
-              isTeamCard ? "from-[#4a2e1c]/24" : "from-black/10",
+              isTeamCard ? "from-ink/24" : "from-black/10",
             )}
           />
           <span
             className={cn(
-              "absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(16,38,92,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
+              "absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
               mobileDenseClass(
                 "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
               ),
               isTeamCard
-                ? "border-[#f3b1a7] bg-[#fff8ef] text-[#10265c]"
-                : "border-[#b9dce4] bg-[#f8feff] text-[#245e76]",
+                ? "border-rose bg-cream text-ink"
+                : "border-sage bg-ice text-forest",
             )}
           >
             <span
               className={cn(
                 "h-1.5 w-1.5 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)]",
-                isTeamCard ? "bg-[#049d73]" : "bg-[#4e9ab8]",
+                isTeamCard ? "bg-meadow" : "bg-sage",
               )}
               aria-hidden="true"
             />
@@ -844,7 +830,7 @@ export function ActivityCard({
           {isOwnActivity ? (
             <span
               className={cn(
-                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-[#cfe2c6] bg-[#fffaf2]/95 px-3 py-1.5 text-xs font-bold leading-none text-[#006e4d] shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur sm:right-4 sm:top-4",
+                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-sand bg-cream/95 px-3 py-1.5 text-xs font-bold leading-none text-forest shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur sm:right-4 sm:top-4",
                 mobileDenseClass(
                   "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
@@ -863,8 +849,8 @@ export function ActivityCard({
                     "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                   ),
                   isTeamCard
-                    ? "bg-[rgba(16,38,92,0.78)] text-[#fffaf4]"
-                    : "bg-[rgba(22,18,14,0.72)] text-[#fffaf2]",
+                    ? "bg-[rgba(29,29,27,0.78)] text-cream"
+                    : "bg-[rgba(29,29,27,0.72)] text-cream",
                 )}
               >
                 {getCategoryLabel(activity.category, locale)}
@@ -872,7 +858,7 @@ export function ActivityCard({
               {!isActivityInfo ? (
                 <span
                   className={cn(
-                    "rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-[#315b48] shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
+                    "rounded-md bg-[rgba(255,245,230,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
                     mobileDenseClass(
                       "max-[639px]:hidden max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                     ),
@@ -884,7 +870,7 @@ export function ActivityCard({
               {activity.autoCreatedTeam ? (
                 <span
                   className={cn(
-                    "rounded-md bg-[rgba(220,244,234,0.94)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#1e6a4f] shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
+                    "rounded-md bg-[rgba(241,242,227,0.94)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
                     mobileDenseClass(
                       "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                     ),
@@ -899,7 +885,7 @@ export function ActivityCard({
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <span
                 className={cn(
-                  "rounded-full bg-[rgba(255,250,242,0.96)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#006e4d] shadow-[0_8px_18px_rgba(0,0,0,0.15)]",
+                  "rounded-full bg-[rgba(255,245,230,0.96)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.15)]",
                   mobileDenseClass(
                     "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                   ),
@@ -922,8 +908,8 @@ export function ActivityCard({
               "line-clamp-2 text-base font-extrabold leading-snug tracking-normal sm:text-[1.08rem]",
               mobileDenseClass("max-[639px]:text-[0.86rem] max-[639px]:leading-snug"),
               isInactiveCard ? "text-zinc-600" : null,
-              !isInactiveCard && isTeamCard ? "text-[#10265c]" : null,
-              !isInactiveCard && !isTeamCard ? "text-[#10265c]" : null,
+              !isInactiveCard && isTeamCard ? "text-ink" : null,
+              !isInactiveCard && !isTeamCard ? "text-ink" : null,
             )}
           >
             {titleContent ?? activity.title}
@@ -940,13 +926,13 @@ export function ActivityCard({
         >
           <div
             className={cn(
-              "grid gap-2 text-sm font-medium text-[#41665c]",
+              "grid gap-2 text-sm font-medium text-forest/75",
               mobileDenseClass("max-[639px]:gap-1.5 max-[639px]:text-[0.72rem]"),
               isInactiveCard ? "text-zinc-500" : null,
             )}
           >
             {countdownLabel ? (
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#e8f6fb] px-2.5 py-1 text-xs font-semibold text-[#346b82] ring-1 ring-[#b9d7e5]">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ice px-2.5 py-1 text-xs font-semibold text-forest ring-1 ring-sage">
                 <Clock3 className="h-3.5 w-3.5 shrink-0" />
                 {countdownLabel}
               </span>
@@ -955,7 +941,7 @@ export function ActivityCard({
               <CalendarDays
                 className={cn(
                   "mt-0.5 h-4 w-4 shrink-0",
-                  isTeamCard ? "text-[#f48d81]" : "text-[#5caec1]",
+                  isTeamCard ? "text-coral" : "text-sage",
                   mobileDenseClass("max-[639px]:h-3.5 max-[639px]:w-3.5"),
                 )}
               />
@@ -972,7 +958,7 @@ export function ActivityCard({
               <span className="flex items-start gap-2">
                 <MapPin
                   className={cn(
-                    "mt-0.5 h-4 w-4 shrink-0 text-[#5caec1]",
+                    "mt-0.5 h-4 w-4 shrink-0 text-sage",
                     mobileDenseClass("max-[639px]:h-3.5 max-[639px]:w-3.5"),
                   )}
                 />
@@ -983,7 +969,7 @@ export function ActivityCard({
               <span className="flex min-w-0 items-center gap-2">
                 <UsersRound
                   className={cn(
-                    "mt-0.5 h-4 w-4 shrink-0 text-[#10265c]",
+                    "mt-0.5 h-4 w-4 shrink-0 text-ink",
                     mobileDenseClass("max-[639px]:h-3.5 max-[639px]:w-3.5"),
                   )}
                 />
@@ -1090,7 +1076,7 @@ export function ActivityCard({
                 href={copyActivityHref}
                 className="group min-w-0 rounded-full focus-visible:outline-none"
               >
-                <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-[#bfd6b7] bg-white px-2.5 text-xs font-semibold leading-none text-[#315b48] shadow-sm transition duration-150 ease-out hover:bg-[#f7fff3] group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-[#049d73]/25 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-3 sm:text-[13px]">
+                <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-sage bg-paper px-2.5 text-xs font-semibold leading-none text-forest shadow-sm transition duration-150 ease-out hover:bg-fog group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-meadow/25 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-3 sm:text-[13px]">
                   <Copy
                     className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
                     aria-hidden="true"
@@ -1150,29 +1136,6 @@ export function ActivityCard({
               </>
             ) : null}
           </div>
-        </div>
-      ) : null}
-      {showMobileActivityInfoQuickAction ? (
-        <div className="px-3 pb-3 pt-0 sm:hidden">
-          <AnalyticsLink
-            href={cardHref}
-            detailSource={detailSource}
-            event={{
-              name: "activity_card_clicked",
-              entityId: analyticsEntity.entityId,
-              entityType: analyticsEntity.entityType,
-              sourceSurface,
-              properties: baseAnalyticsProperties,
-            }}
-            className="group/view rounded-full focus-visible:outline-none"
-          >
-            <span className="flex h-9 min-h-9 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-full border border-[#d8e7cf] bg-[#eef8ea] px-3 text-[12px] font-extrabold leading-[1.2] text-[#006e4d] shadow-[0_10px_20px_rgba(0,110,77,0.09)] transition group-active/view:translate-y-px group-focus-visible:ring-2 group-focus-visible:ring-[#049d73]/30 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-[#fafff6]">
-              <span className="min-w-0 truncate">
-                {getMobileCardViewLabel(locale)}
-              </span>
-              <span aria-hidden="true">→</span>
-            </span>
-          </AnalyticsLink>
         </div>
       ) : null}
     </Card>

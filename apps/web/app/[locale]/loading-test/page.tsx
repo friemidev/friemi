@@ -21,7 +21,7 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
       />
       <section className="relative z-10 space-y-7">
         <div className="max-w-2xl space-y-3">
-          <p className="text-sm font-medium text-[#48623d]">Loading test</p>
+          <p className="text-sm font-medium text-[#156240]">Loading test</p>
           <h1 className="text-3xl font-bold text-zinc-950 sm:text-4xl">
             品牌加载动效测试
           </h1>
@@ -31,12 +31,12 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-          <div className="flex min-h-[22rem] items-center justify-center rounded-lg border border-[#cfe2c6] bg-white/72 px-6 py-10 shadow-sm">
+          <div className="flex min-h-[22rem] items-center justify-center rounded-lg border border-[#D6D5B2] bg-white/72 px-6 py-10 shadow-sm">
             <BrandLoader label={loadingLabel} size="lg" showLabel />
           </div>
 
           <div className="grid gap-4">
-            <div className="flex items-center justify-between rounded-lg border border-[#cfe2c6] bg-[#fffaf2] px-6 py-5 shadow-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#D6D5B2] bg-[#FFF5E6] px-6 py-5 shadow-sm">
               <div>
                 <p className="text-sm font-semibold text-zinc-950">浅色背景</p>
                 <p className="mt-1 text-sm text-zinc-500">检查是否有白边或底色残留。</p>
@@ -44,7 +44,7 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
               <BrandLoader label={loadingLabel} size="sm" />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border border-[#bfd6b7] bg-[#e9f7e3] px-6 py-5 shadow-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#8AB68E] bg-[#F1F2E3] px-6 py-5 shadow-sm">
               <div>
                 <p className="text-sm font-semibold text-zinc-950">绿色背景</p>
                 <p className="mt-1 text-sm text-zinc-500">检查透明帧是否干净。</p>
@@ -66,7 +66,7 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
           {(["sm", "md", "lg"] as const).map((size) => (
             <div
               key={size}
-              className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-lg border border-[#cfe2c6] bg-white/70 p-6 shadow-sm"
+              className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-lg border border-[#D6D5B2] bg-white/70 p-6 shadow-sm"
             >
               <BrandLoader label={loadingLabel} size={size} showLabel={size === "lg"} />
               <span className="text-sm font-medium uppercase text-zinc-500">

@@ -4,12 +4,38 @@
 
 :root {
   --font-sans: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
-  --friemi-brand-cream: #f6fbef;
-  --friemi-brand-green: #049d73;
-  --friemi-brand-green-dark: #006e4d;
-  --friemi-brand-ink: #10265c;
-  --friemi-brand-sand: #d8e7cf;
-  --friemi-brand-warm: #f48d81;
+  --friemi-palette-forest: #156240;
+  --friemi-palette-sage: #8ab68e;
+  --friemi-palette-rose: #deaab3;
+  --friemi-palette-ice: #deebff;
+  --friemi-palette-meadow: #369758;
+  --friemi-palette-paper: #fefff9;
+  --friemi-palette-outline: #8e8383;
+  --friemi-palette-sand: #d6d5b2;
+  --friemi-palette-danger: #b5301f;
+  --friemi-palette-fog: #f1f2e3;
+  --friemi-palette-ink: #1d1d1b;
+  --friemi-palette-coral: #f09182;
+  --friemi-palette-cream: #fff5e6;
+  --friemi-forest-rgb: 21 98 64;
+  --friemi-sage-rgb: 138 182 142;
+  --friemi-rose-rgb: 222 170 179;
+  --friemi-ice-rgb: 222 235 255;
+  --friemi-meadow-rgb: 54 151 88;
+  --friemi-paper-rgb: 254 255 249;
+  --friemi-outline-rgb: 142 131 131;
+  --friemi-sand-rgb: 214 213 178;
+  --friemi-danger-rgb: 181 48 31;
+  --friemi-fog-rgb: 241 242 227;
+  --friemi-ink-rgb: 29 29 27;
+  --friemi-coral-rgb: 240 145 130;
+  --friemi-cream-rgb: 255 245 230;
+  --friemi-brand-cream: var(--friemi-palette-cream);
+  --friemi-brand-green: var(--friemi-palette-meadow);
+  --friemi-brand-green-dark: var(--friemi-palette-forest);
+  --friemi-brand-ink: var(--friemi-palette-ink);
+  --friemi-brand-sand: var(--friemi-palette-sand);
+  --friemi-brand-warm: var(--friemi-palette-coral);
 }
 
 * {
@@ -18,7 +44,8 @@
 
 html {
   min-height: 100%;
-  background: #eef8ea;
+  background: var(--friemi-palette-fog);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -27,22 +54,22 @@ body {
   background:
     radial-gradient(
       circle at 10% 0%,
-      rgba(4, 157, 115, 0.14),
+      rgb(var(--friemi-meadow-rgb) / 0.14),
       transparent 24rem
     ),
     radial-gradient(
       circle at 88% 4%,
-      rgba(244, 141, 129, 0.12),
+      rgb(var(--friemi-coral-rgb) / 0.12),
       transparent 20rem
     ),
     linear-gradient(
       180deg,
-      #f6fbef 0%,
-      #fffaf2 46%,
-      #eef8ea 100%
+      var(--friemi-palette-fog) 0%,
+      var(--friemi-palette-cream) 46%,
+      var(--friemi-palette-paper) 100%
     ),
-    #f6fbef;
-  color: #151515;
+    var(--friemi-palette-fog);
+  color: var(--friemi-palette-ink);
 }
 
 a {
@@ -50,8 +77,30 @@ a {
   text-decoration: none;
 }
 
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    input:not([type]),
+    input[type="date"],
+    input[type="datetime-local"],
+    input[type="email"],
+    input[type="month"],
+    input[type="number"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="text"],
+    input[type="time"],
+    input[type="url"],
+    input[type="week"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
 .detail-source-restored {
-  outline: 2px solid rgba(216, 141, 114, 0.7);
+  outline: 2px solid rgb(var(--friemi-coral-rgb) / 0.7);
   outline-offset: 4px;
   transition: outline-color 0.3s ease;
 }
@@ -210,11 +259,11 @@ a {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    rgba(238, 248, 234, 0.92),
-    rgba(255, 250, 242, 0.9),
-    rgba(213, 234, 207, 0.76)
+    rgb(var(--friemi-fog-rgb) / 0.92),
+    rgb(var(--friemi-cream-rgb) / 0.9),
+    rgb(var(--friemi-sand-rgb) / 0.76)
   );
-  box-shadow: inset 0 0 0 1px rgba(10, 63, 49, 0.06);
+  box-shadow: inset 0 0 0 1px rgb(var(--friemi-forest-rgb) / 0.06);
 }
 
 .friemi-shimmer::after {
@@ -263,8 +312,8 @@ a {
 }
 
 .co-creator-benefit-row:hover {
-  background: #fffaf2;
-  box-shadow: inset 3px 0 0 #049d73;
+  background: var(--friemi-palette-cream);
+  box-shadow: inset 3px 0 0 var(--friemi-palette-meadow);
   transform: translateX(0.12rem);
 }
 

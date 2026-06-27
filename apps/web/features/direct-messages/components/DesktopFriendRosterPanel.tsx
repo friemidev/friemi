@@ -56,22 +56,22 @@ export function DesktopFriendRosterPanel({
     : "/messages";
 
   return (
-    <aside className="overflow-hidden rounded-[1.45rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(10,63,49,0.08)] ring-1 ring-white/70 lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
-      <div className="flex items-start gap-3 border-b border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_58%,#fff0ed_100%)] p-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)]">
+    <aside className="overflow-hidden rounded-[1.45rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(21,98,64,0.08)] ring-1 ring-white/70 lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
+      <div className="flex items-start gap-3 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_58%,#DEAAB3_100%)] p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)]">
           <MessageCircle className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-ink">
             {t.friendListTitle}
           </h2>
-          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#41665c]">
+          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#156240]">
             {t.friendListDescription}
           </p>
         </div>
         <button
           type="button"
-          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition hover:-translate-y-0.5 hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:-translate-y-0.5 hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           aria-label={t.addFriend}
           title={t.addFriend}
           onClick={() => setAddFriendOpen(true)}
@@ -81,7 +81,7 @@ export function DesktopFriendRosterPanel({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfff7]/72 p-2.5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[#FEFFF9]/72 p-2.5">
         <IncomingFriendRequestsPanel
           className="mb-3"
           incomingRequests={incomingRequests}
@@ -94,7 +94,7 @@ export function DesktopFriendRosterPanel({
             <h3 className="text-sm font-semibold text-ink">
               {t.emptyFriendListTitle}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-[#41665c]">
+            <p className="mt-2 text-sm leading-6 text-[#156240]">
               {t.emptyFriendListDescription}
             </p>
           </div>
@@ -157,7 +157,7 @@ function DesktopFriendRosterRow({
           <span
             className={cn(
               "ml-auto shrink-0 whitespace-nowrap text-xs",
-              isActive ? "text-white/65" : "text-[#6d857c]",
+              isActive ? "text-white/65" : "text-[#8E8383]",
             )}
           >
             {formatActivityDate(time, locale)}
@@ -166,7 +166,7 @@ function DesktopFriendRosterRow({
         <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-white/75" : "text-[#41665c]",
+              isActive ? "text-white/75" : "text-[#156240]",
             )}
         >
           {preview}
@@ -181,8 +181,8 @@ function DesktopFriendRosterRow({
       className={cn(
         "rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
-          ? "bg-moss text-white shadow-[0_14px_26px_rgba(0,110,77,0.18)]"
-          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(10,63,49,0.08)]",
+          ? "bg-moss text-white shadow-[0_14px_26px_rgba(21,98,64,0.18)]"
+          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
       {friend.conversationId ? (
@@ -296,7 +296,7 @@ function DesktopActivitySignalRow({
         "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
           ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
-          : "bg-team-bg text-[#41665c] ring-1 ring-sand hover:bg-white hover:text-ink",
+          : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
       title={label}

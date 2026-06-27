@@ -141,7 +141,7 @@ export function ActivityCardSortSelect({
       <ArrowUpDown
         aria-hidden
         className={cn(
-          "h-3.5 w-3.5 shrink-0 text-[#006e4d]",
+          "h-3.5 w-3.5 shrink-0 text-forest",
           forceMobileLayout ? "hidden" : "hidden sm:block",
         )}
       />
@@ -159,7 +159,7 @@ export function ActivityCardSortSelect({
         aria-haspopup="listbox"
         aria-label={t.activityFilters.sortLabel}
         className={cn(
-          "inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-full bg-white/92 px-3 text-left text-[#315b48] shadow-[inset_0_0_0_1px_rgba(191,214,183,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8fc6ad]",
+          "inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-full bg-paper/92 px-3 text-left text-forest shadow-[inset_0_0_0_1px_rgba(138,182,142,0.9)] transition hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage",
           forceMobileLayout ? null : "sm:w-auto sm:min-w-[8rem]",
           activityResultsFilterBarHeightClass,
           activityResultsFilterControlClass,
@@ -173,7 +173,7 @@ export function ActivityCardSortSelect({
         <ChevronDown
           aria-hidden
           className={cn(
-            "h-3.5 w-3.5 shrink-0 text-[#8a6644] transition",
+            "h-3.5 w-3.5 shrink-0 text-danger transition",
             open ? "rotate-180" : null,
           )}
         />
@@ -181,7 +181,7 @@ export function ActivityCardSortSelect({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-[calc(100%+0.4rem)] z-[80] w-max min-w-full overflow-hidden rounded-[0.95rem] bg-[#fffaf2] p-1 text-xs font-semibold text-[#315b48] shadow-[0_18px_42px_rgba(16,38,92,0.22)] ring-1 ring-[#bfd6b7]",
+            "absolute left-0 top-[calc(100%+0.4rem)] z-[80] w-max min-w-full overflow-hidden rounded-[0.95rem] bg-cream p-1 text-xs font-semibold text-forest shadow-[0_18px_42px_rgba(29,29,27,0.22)] ring-1 ring-sage",
             forceMobileLayout ? null : "sm:left-auto sm:right-0",
           )}
           role="listbox"
@@ -195,8 +195,8 @@ export function ActivityCardSortSelect({
                 className={cn(
                   "grid w-full min-w-[8.5rem] grid-cols-[minmax(0,1fr)_1rem] items-center gap-3 rounded-[0.7rem] px-3 py-2 text-left transition",
                   isSelected
-                    ? "bg-[#f1faeb] text-[#006e4d]"
-                    : "hover:bg-[#fff8ef]",
+                    ? "bg-fog text-forest"
+                    : "hover:bg-paper",
                 )}
                 key={sort}
                 role="option"
@@ -209,7 +209,7 @@ export function ActivityCardSortSelect({
                   {getCardSortLabel(sort, locale)}
                 </span>
                 {isSelected ? (
-                  <Check className="h-3.5 w-3.5 text-[#a26343]" />
+                  <Check className="h-3.5 w-3.5 text-danger" />
                 ) : null}
               </button>
             );

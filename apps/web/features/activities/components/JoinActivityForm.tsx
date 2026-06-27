@@ -137,7 +137,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-[#049d73] text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] hover:bg-[#006e4d]"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]"
       disabled={pending}
       aria-busy={pending}
     >
@@ -162,7 +162,7 @@ function GuestSubmitButton({ locale }: { locale: string }) {
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-[#049d73] text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] hover:bg-[#006e4d]"
+      className="h-11 w-full gap-2 rounded-full border-0 bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] hover:bg-[#156240]"
       disabled={pending}
       aria-busy={pending}
     >
@@ -398,7 +398,7 @@ function ParticipationStatusCard({
       className={
         isPending
           ? "rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm"
-          : "rounded-xl border border-[#d9cfbd] bg-white/90 px-3 py-3 text-sm"
+          : "rounded-xl border border-[#D6D5B2] bg-white/90 px-3 py-3 text-sm"
       }
     >
       <p
@@ -465,7 +465,7 @@ function GuestJoinEntry({
     <div className="grid gap-3">
       <div className="grid grid-cols-2 gap-2">
         <Link
-          className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-[#049d73] px-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
+          className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-[#369758] px-3 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
           href={getSignInHref(locale, `/activities/${activityId}`)}
         >
           <span className="truncate">{t.loginJoin}</span>
@@ -476,8 +476,8 @@ function GuestJoinEntry({
           aria-expanded={showGuestForm}
           className={
             showGuestForm
-              ? "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-[#bfd6b7] bg-white px-3 text-sm font-semibold text-[#006e4d] transition hover:bg-[#f7fff3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/25"
-              : "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-sand bg-white px-3 text-sm font-semibold text-zinc-600 transition hover:border-[#bfd6b7] hover:bg-[#f7fff3] hover:text-[#006e4d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/20"
+              ? "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#FEFFF9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25"
+              : "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-sand bg-white px-3 text-sm font-semibold text-zinc-600 transition hover:border-[#8AB68E] hover:bg-[#FEFFF9] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/20"
           }
           onClick={() => setShowGuestForm(true)}
         >

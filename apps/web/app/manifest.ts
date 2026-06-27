@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { brand } from "@/lib/brand";
+import { brandThemeColors } from "@/lib/brandPalette";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    background_color: "#fffaf2",
+    background_color: brandThemeColors.background,
     description: brand.description,
     display: "standalone",
     icons: [
@@ -35,6 +36,6 @@ export default function manifest(): MetadataRoute.Manifest {
     name: brand.name,
     short_name: brand.name,
     start_url: "/zh-CN/home",
-    theme_color: "#049d73",
+    theme_color: brandThemeColors.theme,
   };
 }

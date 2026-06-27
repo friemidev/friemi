@@ -44,7 +44,7 @@ export function BrandLoader({
       >
         <picture className="friemi-brand-loader__media">
           <source
-            srcSet={brand.logoIconPath}
+            srcSet={brand.logoFullBackgroundPath}
             media="(prefers-reduced-motion: reduce)"
           />
           <img src={brand.loadingImagePath} alt="" />

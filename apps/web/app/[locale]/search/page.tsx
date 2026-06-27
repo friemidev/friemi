@@ -58,7 +58,7 @@ function SearchSectionHeader({
         <h2 className="text-lg font-semibold tracking-normal text-ink">
           {title}
         </h2>
-        <Badge className="shrink-0 bg-white/85 text-[#315b48] ring-1 ring-[#cfe2c6]">
+        <Badge className="shrink-0 bg-white/85 text-[#156240] ring-1 ring-[#D6D5B2]">
           {count}
         </Badge>
       </div>
@@ -90,8 +90,8 @@ function SearchEndedFilterBar({
         aria-pressed={includeEnded}
         className={
           includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#e9f7e3] px-3.5 text-sm font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7] transition hover:bg-[#f1faeb]"
-            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#315b48] ring-1 ring-[#cfe2c6] transition hover:bg-white"
+            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F1F2E3]"
+            : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
         }
         event={{
           name: "filter_applied",
@@ -108,8 +108,8 @@ function SearchEndedFilterBar({
         <span
           className={
             includeEnded
-              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#049d73] text-white shadow-sm"
-              : "h-4 w-4 rounded-[0.32rem] border border-[#bfd6b7] bg-white shadow-inner"
+              ? "flex h-4 w-4 items-center justify-center rounded-[0.32rem] bg-[#369758] text-white shadow-sm"
+              : "h-4 w-4 rounded-[0.32rem] border border-[#8AB68E] bg-white shadow-inner"
           }
           aria-hidden="true"
         >
@@ -142,12 +142,12 @@ function SearchEndedOnlyEmptyState({
   const t = getCopy(locale).globalSearch;
 
   return (
-    <div className="relative overflow-hidden rounded-[1.35rem] border border-[#d8e7cf] bg-white/[0.76] p-6 text-center shadow-[0_14px_34px_rgba(10,63,49,0.06)] sm:p-8">
+    <div className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white/[0.76] p-6 text-center shadow-[0_14px_34px_rgba(21,98,64,0.06)] sm:p-8">
       <span
-        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#e7f4dc]/55 blur-2xl"
+        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2E3]/55 blur-2xl"
         aria-hidden="true"
       />
-      <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4fbef] p-2.5 ring-1 ring-[#cfe4c8]">
+      <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F2E3] p-2.5 ring-1 ring-[#D6D5B2]">
         <Image
           src={brand.emptyStateIconPath}
           alt=""
@@ -155,11 +155,11 @@ function SearchEndedOnlyEmptyState({
           height={56}
           className="h-full w-full object-contain"
         />
-        <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#006e4d] ring-1 ring-[#bfd6b7]">
+        <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
           <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </span>
-      <h2 className="relative mt-4 text-base font-semibold text-[#10265c]">
+      <h2 className="relative mt-4 text-base font-semibold text-[#1D1D1B]">
         {t.onlyEndedResultsTitle}
       </h2>
       <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">
@@ -167,7 +167,7 @@ function SearchEndedOnlyEmptyState({
       </p>
       <AnalyticsLink
         href={getGlobalSearchHref(locale, query, { includeEnded: true })}
-        className="relative mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#006e4d] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)] transition hover:bg-[#049d73]"
+        className="relative mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#156240] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)] transition hover:bg-[#369758]"
         event={{
           name: "filter_applied",
           sourceSurface: "global_search",
@@ -245,7 +245,7 @@ function MerchantResultCard({
           <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">{location || merchant.city}</span>
         </span>
-        <span className="mt-2 inline-flex rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#315b48] ring-1 ring-[#cfe2c6]">
+        <span className="mt-2 inline-flex rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
           {t.merchantActivityCount(merchant.activityCount)}
         </span>
       </span>
@@ -426,7 +426,7 @@ export default async function SearchPage({
       <DetailSourceRestore sourceKey="search" />
       <div className="space-y-4">
         <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#315b48] ring-1 ring-[#cfe2c6]">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
             <Search className="h-4 w-4" aria-hidden="true" />
             {t.eyebrow}
           </p>

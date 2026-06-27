@@ -564,17 +564,17 @@ export function ActivitySwipeDiscovery({
       className={cn(
         "overflow-visible px-0 py-1",
         variant === "home"
-          ? "overflow-hidden rounded-[1.5rem] border border-[#bfd6b7] bg-white/82 p-5 shadow-[0_12px_30px_rgba(16,38,92,0.07)]"
+          ? "overflow-hidden rounded-[1.5rem] border border-[#8AB68E] bg-white/82 p-5 shadow-[0_12px_30px_rgba(29,29,27,0.07)]"
           : null,
         className,
       )}
     >
       <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f1faeb] text-[#006e4d] shadow-sm ring-1 ring-[#bfd6b7]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-[#a26b42]">
+          <p className="text-[10px] font-semibold text-[#B5301F]">
             {copy.eyebrow}
           </p>
           <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
@@ -645,7 +645,7 @@ export function ActivitySwipeDiscovery({
               <article
                 aria-hidden={!isTopCard}
                 className={cn(
-                  "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(16,38,92,0.13)] ring-1 ring-[#cfe2c6]/75",
+                  "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.13)] ring-1 ring-[#D6D5B2]/75",
                   isTopCard ? "cursor-grab active:cursor-grabbing" : null,
                   !isTopCard ? "pointer-events-none" : null,
                 )}
@@ -659,23 +659,23 @@ export function ActivitySwipeDiscovery({
                 onPointerUp={isTopCard ? handlePointerUp : undefined}
                 style={style}
               >
-                <div className="relative h-32 overflow-hidden bg-[#dcecf1]">
+                <div className="relative h-32 overflow-hidden bg-[#DEEBFF]">
                   <ActivityCoverImage
                     src={isTopCard ? activity.coverImageUrl : null}
                     overlayClassName="bg-gradient-to-t from-black/58 via-black/12 to-transparent"
                   />
                   <div className="absolute left-2.5 top-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5">
-                    <span className="rounded-full bg-[#17120f] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
+                    <span className="rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
                       {categoryLabel}
                     </span>
-                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#f7fff3] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#10265c] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35">
+                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35">
                       {statusLabel}
                     </span>
                   </div>
                   {isTopCard ? (
                     <>
                       <div
-                        className="absolute inset-y-0 left-0 flex w-1/2 items-center justify-center bg-[#111]/22 text-white"
+                        className="absolute inset-y-0 left-0 flex w-1/2 items-center justify-center bg-[#1D1D1B]/22 text-white"
                         style={{
                           opacity: dragX < 0 && canGoNext ? dragOpacity : 0,
                         }}
@@ -685,7 +685,7 @@ export function ActivitySwipeDiscovery({
                         </span>
                       </div>
                       <div
-                        className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#049d73]/26 text-white"
+                        className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#369758]/26 text-white"
                         style={{
                           opacity: dragX > 0 && canGoPrevious ? dragOpacity : 0,
                         }}
@@ -705,12 +705,12 @@ export function ActivitySwipeDiscovery({
                     </h3>
                     <div className="mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600">
                       <span className="flex min-w-0 items-start gap-2">
-                        <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
+                        <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
                         <span className="line-clamp-1">{dateLabel}</span>
                       </span>
                       {isActivityInfo ? (
                         <span className="flex min-w-0 items-start gap-2">
-                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
                           <span className="line-clamp-1">{locationLabel}</span>
                         </span>
                       ) : null}
@@ -741,7 +741,7 @@ export function ActivitySwipeDiscovery({
                         {copy.detail}
                       </Link>
                       <PublicEventFavoriteButton
-                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#bfd6b7] hover:bg-[#f7fff3]"
+                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]"
                         favoriteCount={activity.favoriteCount}
                         isAuthenticated={isAuthenticated}
                         isFavorited={Boolean(activity.isFavorited)}
@@ -765,7 +765,7 @@ export function ActivitySwipeDiscovery({
       <div className="mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500">
         {loadMoreFailed && onRetryLoadMore ? (
           <button
-            className="inline-flex h-7 items-center justify-center rounded-full bg-[#f7fff3] px-3 font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7] transition hover:bg-white"
+            className="inline-flex h-7 items-center justify-center rounded-full bg-[#FEFFF9] px-3 font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-white"
             type="button"
             onClick={onRetryLoadMore}
           >

@@ -61,6 +61,54 @@ feature/v2-1-brand-style-overhaul
 - 移动端品牌背景母版。
 - 桌面端需要单独派生横版背景，不要直接复用这张竖图。
 
+### `apps/web/public/色盘.png`
+
+定位：v2.1 全站唯一正式色盘来源。
+
+已提取色值：
+
+| Token | 色值 | 用途 |
+|---|---|---|
+| `forest` | `#156240` | 品牌主深绿、强文字、导航选中、重要图标 |
+| `meadow` | `#369758` | 品牌亮绿、成功/可行动状态、轻强调 |
+| `sage` | `#8AB68E` | 绿色边框、活动类辅助色、柔和 icon |
+| `ice` | `#DEEBFF` | 活动类浅背景、冷静信息提示 |
+| `paper` | `#FEFFF9` | 卡片、弹窗、输入框、空态主体底 |
+| `cream` | `#FFF5E6` | 页面暖底、组局类浅背景、柔和高亮 |
+| `fog` | `#F1F2E3` | skeleton、禁用背景、弱分割面 |
+| `sand` | `#D6D5B2` | 边框、分割线、弱描边 |
+| `outline` | `#8E8383` | 次级文字、禁用文字、弱图标 |
+| `ink` | `#1D1D1B` | 正文、标题、深色图标 |
+| `coral` | `#F09182` | 主行动色、报名/发起动作、强调点 |
+| `rose` | `#DEAAB3` | 珊瑚柔和背景、组局类边界 |
+| `danger` | `#B5301F` | 错误、危险动作、强警示 |
+
+实现约定：
+
+- CSS 变量定义在 `apps/web/app/globals.css`，Tailwind 语义色定义在 `apps/web/tailwind.config.ts`。
+- 共享 TS 色值定义在 `apps/web/lib/brandPalette.ts`，用于 manifest、metadata、服务端生成图等不能直接使用 CSS 变量的场景。
+- 新增组件优先使用 Tailwind 语义类：`forest`、`meadow`、`sage`、`paper`、`cream`、`fog`、`sand`、`coral`、`rose`、`danger`。
+- 不继续新增旧品牌硬编码色；若必须写十六进制，只能写上表色盘值，并且优先局限在 SVG、生成图片或复杂渐变里。
+- 可保留例外：国家旗帜色、用户头像来源图、第三方封面图、图表必要的多序列区分色。但 UI 外框、按钮、卡片、空态、弹窗和筛选器仍应回到色盘 token。
+
+### `apps/web/public/全背景logo.png`
+
+定位：带底方形 logo，不替代 header 横向品牌露出，但适合在“需要一个完整品牌印记”的场景中使用。
+
+适合使用：
+
+- 空状态和错误态 icon。
+- 活动 / 组局封面加载失败时的无图 fallback。
+- loading reduced-motion fallback。
+- 后续分享图、海报、小型品牌水印。
+
+不适合使用：
+
+- 网页端 header 横向 logo。
+- 移动端 header 主 lockup。
+- 已有标准 PWA icon 的 manifest / favicon 场景。
+- 内容卡片里过小的角标。
+
 ## 核心视觉方向
 
 建议把 v2.1 品牌方向定为：
@@ -180,8 +228,9 @@ soft glow        轻微阴影和浮层
 - 建立 `apps/web/public/brand/v2_1/`
 - 放入标准化 logo、lockup、背景、分享图
 - 更新 `brand.ts` 中的路径规划
-- 在 `globals.css` 或 tailwind token 中沉淀品牌色
-- 定义按钮、badge、card、surface 的基础语义
+- 在 `globals.css` 和 tailwind token 中沉淀 `色盘.png` 派生的品牌色
+- 定义按钮、badge、card、surface、弹窗、下拉、空态和错误态的基础语义
+- `全背景logo.png` 只用于空态、错误态、封面 fallback 和 loading fallback，不挤占 header / footer 的横向 lockup
 
 ### Phase 2：全局壳层
 

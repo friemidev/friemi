@@ -287,7 +287,7 @@ export function ProfileOverviewPanel({
                     <h2 className="text-xl font-semibold text-ink">
                       {activeTitle}
                     </h2>
-                    <span className="rounded-full bg-[#fff7ed] px-2.5 py-1 text-xs font-semibold text-[#006e4d] ring-1 ring-[#bfd6b7]">
+                    <span className="rounded-full bg-[#FFF5E6] px-2.5 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
                       {activeCount}
                     </span>
                   </div>

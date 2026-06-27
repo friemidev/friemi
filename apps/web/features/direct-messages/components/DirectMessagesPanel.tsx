@@ -48,16 +48,16 @@ export function ConversationListPanel({
   return (
     <details
       open
-      className="group overflow-hidden rounded-[1.35rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(10,63,49,0.08)] ring-1 ring-white/70"
+      className="group overflow-hidden rounded-[1.35rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(21,98,64,0.08)] ring-1 ring-white/70"
     >
-      <summary className="cursor-pointer list-none border-b border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_58%,#fff0ed_100%)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_58%,#DEAAB3_100%)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)]">
             <MessageCircle className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-ink">{t.listTitle}</h2>
-            <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#41665c]">
+            <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#156240]">
               {t.listDescription}
             </p>
           </div>
@@ -71,7 +71,7 @@ export function ConversationListPanel({
             <h3 className="text-sm font-semibold text-ink">
               {t.emptyListTitle}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-[#41665c]">
+            <p className="mt-2 text-sm leading-6 text-[#156240]">
               {t.emptyListDescription}
             </p>
           </div>
@@ -83,7 +83,7 @@ export function ConversationListPanel({
           </Link>
         </div>
       ) : (
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto bg-[#fbfff7]/72 p-2.5">
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto bg-[#FEFFF9]/72 p-2.5">
           {conversations.map((conversation) => (
             <ConversationListItem
               key={conversation.id}
@@ -124,8 +124,8 @@ function ConversationListItem({
       className={cn(
         "rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
-          ? "bg-moss text-white shadow-[0_14px_26px_rgba(0,110,77,0.18)]"
-          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(10,63,49,0.08)]",
+          ? "bg-moss text-white shadow-[0_14px_26px_rgba(21,98,64,0.18)]"
+          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
       <Link
@@ -145,7 +145,7 @@ function ConversationListItem({
             <span
               className={cn(
                 "ml-auto shrink-0 whitespace-nowrap text-xs",
-                isActive ? "text-white/65" : "text-[#6d857c]",
+                isActive ? "text-white/65" : "text-[#8E8383]",
               )}
             >
               {formatActivityDate(time, locale)}
@@ -154,7 +154,7 @@ function ConversationListItem({
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-white/75" : "text-[#41665c]",
+              isActive ? "text-white/75" : "text-[#156240]",
             )}
           >
             {preview}
@@ -251,7 +251,7 @@ function ActivitySignalRow({
         "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
           ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
-          : "bg-team-bg text-[#41665c] ring-1 ring-sand hover:bg-white hover:text-ink",
+          : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
       detailSource={{
@@ -277,15 +277,15 @@ export function NoConversationSelected({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <section className="hidden h-[calc(100dvh-6.5rem)] items-center justify-center rounded-[1.45rem] border border-sand bg-white/62 p-8 shadow-[0_18px_48px_rgba(10,63,49,0.07)] ring-1 ring-white/70 lg:flex">
+    <section className="hidden h-[calc(100dvh-6.5rem)] items-center justify-center rounded-[1.45rem] border border-sand bg-white/62 p-8 shadow-[0_18px_48px_rgba(21,98,64,0.07)] ring-1 ring-white/70 lg:flex">
       <div className="max-w-md text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-moss text-white shadow-[0_12px_24px_rgba(0,110,77,0.18)]">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-moss text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)]">
           <MessageCircle className="h-6 w-6" />
         </span>
         <h1 className="mt-4 text-2xl font-semibold text-ink">
           {t.noSelectedTitle}
         </h1>
-        <p className="mt-3 text-sm leading-6 text-[#41665c]">
+        <p className="mt-3 text-sm leading-6 text-[#156240]">
           {t.noSelectedDescription}
         </p>
       </div>
@@ -306,14 +306,14 @@ export function MessageThread({
     conversation.messages[conversation.messages.length - 1]?.id;
 
   return (
-    <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(10,63,49,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+    <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
-      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_62%,#fff0ed_100%)] p-4">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
         <div className="flex h-9 w-9 items-center justify-start">
           <Link
             href={withLocale(locale, "/messages")}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition hover:bg-team-bg lg:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg lg:hidden"
             aria-label={t.backToMessages}
             title={t.backToMessages}
           >
@@ -327,13 +327,13 @@ export function MessageThread({
           <summary
             aria-label={t.viewProfile}
             title={t.viewProfile}
-            className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden"
+            className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden"
           >
             <MoreVertical className="h-5 w-5" />
           </summary>
-          <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(10,63,49,0.14)]">
+          <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
             <ContextualDetailLink
-              className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#41665c] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
+              className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}
               detailSource={{
                 sourceKey: "messages",
@@ -348,7 +348,7 @@ export function MessageThread({
         </details>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#fbfff7_0%,#fffaf2_100%)] px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
         {hasMessages ? (
           <div className="grid gap-3">
             {conversation.messages.map((message) => (
@@ -371,7 +371,7 @@ export function MessageThread({
               <h2 className="text-base font-semibold text-ink">
                 {t.emptyThreadTitle}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[#41665c]">
+              <p className="mt-2 text-sm leading-6 text-[#156240]">
                 {conversation.canSend
                   ? t.emptyThreadDescription
                   : t.readOnlyDescription}
@@ -397,7 +397,7 @@ function ReadOnlyMessageComposer({ locale }: { locale: string }) {
     <div className="shrink-0 border-t border-sand bg-white/92 p-3 backdrop-blur md:rounded-b-[1.45rem]">
       <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
-        <p className="mt-1 text-xs leading-5 text-[#41665c]">
+        <p className="mt-1 text-xs leading-5 text-[#156240]">
           {t.readOnlyDescription}
         </p>
       </div>
@@ -428,7 +428,7 @@ function MessageBubble({
       {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
       <div
         className={cn(
-          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(10,63,49,0.08)] sm:max-w-[64%]",
+          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[64%]",
           isMine
             ? "rounded-tr-md bg-moss text-white"
             : "rounded-tl-md bg-white text-ink ring-1 ring-sand",
@@ -438,7 +438,7 @@ function MessageBubble({
         <p
           className={cn(
             "mt-1 text-[11px]",
-            isMine ? "text-white/65" : "text-[#6d857c]",
+            isMine ? "text-white/65" : "text-[#8E8383]",
           )}
         >
           {formatActivityDate(createdAt, locale)}

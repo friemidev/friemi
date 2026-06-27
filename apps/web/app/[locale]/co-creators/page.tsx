@@ -390,7 +390,7 @@ function getActivitiesPath(locale: string) {
 
 function NumberBadge({ value }: { value: number }) {
   return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f48d81] text-xs font-bold text-white">
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F09182] text-xs font-bold text-white">
       {value}
     </span>
   );
@@ -404,7 +404,7 @@ function SectionEyebrow({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-[#006e4d] ring-1 ring-[#cfe2c6]">
+    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
       {icon}
       {children}
     </div>
@@ -413,7 +413,7 @@ function SectionEyebrow({
 
 function LocalizedLogoBadge({ label }: { label: string }) {
   return (
-    <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#315b48] ring-1 ring-[#cfe2c6]">
+    <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
       <Image
         alt=""
         className="h-7 w-7 object-contain"
@@ -435,10 +435,10 @@ function FlowCard({
 }) {
   return (
     <div
-      className="co-creator-flow-card flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-[#fffaf2] px-4 ring-1 ring-[#cfe2c6]"
+      className="co-creator-flow-card flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-[#FFF5E6] px-4 ring-1 ring-[#D6D5B2]"
       style={{ animationDelay: getIndexedAnimationDelay(index) }}
     >
-      <span className="text-sm font-semibold text-[#10265c]">{label}</span>
+      <span className="text-sm font-semibold text-[#1D1D1B]">{label}</span>
       <NumberBadge value={getOneBasedIndex(index)} />
     </div>
   );
@@ -455,15 +455,15 @@ function BenefitRow({
 
   return (
     <article
-      className="co-creator-benefit-row grid gap-3 border-b border-[#cfe2c6] p-3 last:border-b-0 sm:grid-cols-[2.5rem_minmax(7rem,0.42fr)_minmax(0,1fr)] sm:items-center"
+      className="co-creator-benefit-row grid gap-3 border-b border-[#D6D5B2] p-3 last:border-b-0 sm:grid-cols-[2.5rem_minmax(7rem,0.42fr)_minmax(0,1fr)] sm:items-center"
       key={benefit.title}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f1faeb] text-[#006e4d] ring-1 ring-[#bfd6b7]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E]">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">
         <h3 className="text-base font-semibold text-ink">{benefit.title}</h3>
-        <p className="mt-0.5 text-sm font-medium leading-5 text-[#315b48]">
+        <p className="mt-0.5 text-sm font-medium leading-5 text-[#156240]">
           {benefit.subtitle}
         </p>
       </div>
@@ -482,8 +482,8 @@ function RecruitmentLine({
   text: string;
 }) {
   return (
-    <div className="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white p-3 ring-1 ring-[#cfe2c6]">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1faeb] text-sm font-bold text-[#006e4d] ring-1 ring-[#bfd6b7]">
+    <div className="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white p-3 ring-1 ring-[#D6D5B2]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2E3] text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]">
         {getOneBasedIndex(index)}
       </span>
       <p className="self-center text-sm leading-6 text-zinc-700">{text}</p>
@@ -493,7 +493,7 @@ function RecruitmentLine({
 
 function KeywordPill({ label }: { label: string }) {
   return (
-    <span className="rounded-full bg-[#f1faeb] px-3 py-2 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7]">
+    <span className="rounded-full bg-[#F1F2E3] px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
       {label}
     </span>
   );
@@ -532,7 +532,7 @@ function LocalizedCta({
 }) {
   return (
     <Link
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#10265c] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(16,38,92,0.14)] transition hover:bg-[#006e4d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#1D1D1B] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(29,29,27,0.14)] transition hover:bg-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
       href={href}
     >
       {label}
@@ -577,13 +577,13 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           priority
           variant="mobile-frame"
         />
-        <section className="co-creator-reveal relative z-10 grid gap-5 border-b border-[#cfe2c6] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
+        <section className="co-creator-reveal relative z-10 grid gap-5 border-b border-[#D6D5B2] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
           <div className="flex min-w-0 flex-col justify-center gap-5">
             <div className="space-y-4">
               <LocalizedLogoBadge label={t.hero.badge} />
 
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-[#006e4d]">
+                <p className="text-sm font-semibold text-[#156240]">
                   {t.hero.eyebrow}
                 </p>
                 <h1 className="max-w-4xl text-3xl font-semibold leading-tight tracking-normal text-ink sm:text-4xl lg:text-[2.75rem]">
@@ -596,9 +596,9 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <aside className="relative grid content-between gap-5 overflow-hidden rounded-[1.35rem] border border-[#cfe2c6] bg-white p-5 shadow-[0_18px_44px_rgba(16,38,92,0.08)]">
+          <aside className="relative grid content-between gap-5 overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_44px_rgba(29,29,27,0.08)]">
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 border-b border-[#cfe2c6] pb-4">
+              <div className="flex items-center justify-between gap-4 border-b border-[#D6D5B2] pb-4">
                 <BrandLockup priority size="md" />
               </div>
 
@@ -613,15 +613,15 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
               </div>
             </div>
 
-            <p className="rounded-2xl bg-[#fffaf2] p-4 text-sm font-medium leading-6 text-[#315b48] ring-1 ring-[#cfe2c6]">
+            <p className="rounded-2xl bg-[#FFF5E6] p-4 text-sm font-medium leading-6 text-[#156240] ring-1 ring-[#D6D5B2]">
               {t.flowSummary}
             </p>
           </aside>
         </section>
 
         <section className="relative z-10 grid gap-4 py-7 lg:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] lg:gap-5 lg:py-8">
-          <div className="co-creator-reveal rounded-[1.25rem] border border-[#bfd6b7] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(16,38,92,0.08)] lg:sticky lg:top-24 lg:self-start">
-            <p className="text-sm font-semibold text-[#006e4d]">
+          <div className="co-creator-reveal rounded-[1.25rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)] lg:sticky lg:top-24 lg:self-start">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.core.eyebrow}
             </p>
             <h2 className="mt-3 text-xl font-semibold leading-snug tracking-normal">
@@ -635,7 +635,7 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <div className="co-creator-reveal rounded-[1.25rem] border border-[#cfe2c6] bg-white p-3 shadow-[0_18px_44px_rgba(16,38,92,0.06)]">
+          <div className="co-creator-reveal rounded-[1.25rem] border border-[#D6D5B2] bg-white p-3 shadow-[0_18px_44px_rgba(29,29,27,0.06)]">
             {t.benefits.map((benefit, index) => (
               <BenefitRow
                 benefit={benefit}
@@ -646,7 +646,7 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           </div>
         </section>
 
-        <section className="co-creator-reveal relative z-10 grid gap-5 border-y border-[#cfe2c6] py-7 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center lg:gap-7 lg:py-8">
+        <section className="co-creator-reveal relative z-10 grid gap-5 border-y border-[#D6D5B2] py-7 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center lg:gap-7 lg:py-8">
           <div className="space-y-4">
             <SectionEyebrow icon={<Sparkles className="h-4 w-4" />}>
               {t.ip.eyebrow}
@@ -662,10 +662,10 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           <div className="grid gap-3 sm:grid-cols-2">
             {t.ip.examples.map((example, index) => (
               <div
-                className="flex min-h-16 items-center gap-3 rounded-2xl bg-white px-4 text-sm font-semibold leading-6 text-zinc-800 ring-1 ring-[#cfe2c6]"
+                className="flex min-h-16 items-center gap-3 rounded-2xl bg-white px-4 text-sm font-semibold leading-6 text-zinc-800 ring-1 ring-[#D6D5B2]"
                 key={getExampleKey(example, index)}
               >
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[#f48d81]" />
+                <span className="h-2 w-2 shrink-0 rounded-full bg-[#F09182]" />
                 <span>{example}</span>
               </div>
             ))}
@@ -674,7 +674,7 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
 
         <section className="co-creator-reveal relative z-10 grid gap-5 py-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)] lg:items-start lg:gap-5 lg:py-8">
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-[#006e4d]">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.recruitment.eyebrow}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -688,8 +688,8 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <aside className="rounded-[1.25rem] border border-[#bfd6b7] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(16,38,92,0.08)]">
-            <p className="text-sm font-semibold text-[#006e4d]">
+          <aside className="rounded-[1.25rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)]">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.poster.eyebrow}
             </p>
             <h2 className="mt-3 text-xl font-semibold leading-snug tracking-normal">
@@ -706,10 +706,10 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           </aside>
         </section>
 
-        <section className="co-creator-reveal relative z-10 rounded-[1.4rem] border border-[#bfd6b7] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(16,38,92,0.08)] md:p-6">
+        <section className="co-creator-reveal relative z-10 rounded-[1.4rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)] md:p-6">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="space-y-2.5">
-              <p className="text-sm font-bold text-[#006e4d]">
+              <p className="text-sm font-bold text-[#156240]">
                 {t.final.eyebrow}
               </p>
               <h2 className="text-xl font-semibold leading-snug tracking-normal md:text-2xl">

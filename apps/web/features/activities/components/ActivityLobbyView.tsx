@@ -639,7 +639,7 @@ function getActivityLobbyPreviewCopy(locale: string) {
 function FilterGroupRow({ children, label }: FilterGroupRowProps) {
   return (
     <div className="grid gap-0.5 sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center sm:gap-2">
-      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#315b48] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-[0.08em]">
+      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#156240] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-[0.08em]">
         {label}
       </p>
       <div className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
@@ -703,8 +703,8 @@ function MobileLobbyFilterSheet({
         aria-label={copy.close}
         onClick={onClose}
       />
-      <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border border-[#bfd6b7] bg-[#fffaf2] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(16,38,92,0.14)]">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#bfd6b7]" />
+      <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border border-[#8AB68E] bg-[#FFF5E6] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(29,29,27,0.14)]">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#8AB68E]" />
         <div className="flex items-center justify-between gap-3">
           <div>
             <p
@@ -716,7 +716,7 @@ function MobileLobbyFilterSheet({
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#cfe2c6] bg-white text-[#315b48] shadow-sm"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] shadow-sm"
             aria-label={copy.close}
             onClick={onClose}
           >
@@ -726,7 +726,7 @@ function MobileLobbyFilterSheet({
 
         <div className="mt-4 space-y-4">
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#315b48]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
               {filterCopy.category}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -746,8 +746,8 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border px-3 text-left text-sm font-semibold transition",
                       active
-                        ? "border-[#8fc6ad] bg-[#e9f7e3] text-[#006e4d] shadow-[0_6px_16px_rgba(4,157,115,0.12)]"
-                        : "border-[#cfe2c6] bg-white/88 text-[#315b48]",
+                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -756,8 +756,8 @@ function MobileLobbyFilterSheet({
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
                           active
-                            ? "bg-white/78 text-[#006e4d]"
-                            : "bg-[#f1faeb] text-[#315b48]",
+                            ? "bg-white/78 text-[#156240]"
+                            : "bg-[#F1F2E3] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -774,7 +774,7 @@ function MobileLobbyFilterSheet({
           </div>
 
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#315b48]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
               {filterCopy.status}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
@@ -790,8 +790,8 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 flex-col items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
                       active
-                        ? "border-[#8fc6ad] bg-[#e9f7e3] text-[#006e4d]"
-                        : "border-[#cfe2c6] bg-white/88 text-[#315b48]",
+                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
                     <span className="min-w-0 max-w-full truncate">
@@ -809,7 +809,7 @@ function MobileLobbyFilterSheet({
 
         <button
           type="button"
-          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#049d73] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d]"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#369758] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
           onClick={onClose}
         >
           {copy.apply}
@@ -855,10 +855,10 @@ function LobbySectionLoading({ locale }: { locale: string }) {
         : "正在加载...";
 
   return (
-    <div className="rounded-[1.25rem] border border-[#cfe2c6] bg-[#f7fff3]/85 px-4 py-5">
+    <div className="rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9]/85 px-4 py-5">
       <div className="flex items-center gap-3">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#cfe2c6] border-t-[#049d73]" />
-        <p className="text-sm font-semibold text-[#315b48]">{label}</p>
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#369758]" />
+        <p className="text-sm font-semibold text-[#156240]">{label}</p>
       </div>
       <div className="mt-4 grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
@@ -897,12 +897,12 @@ function LobbySectionError({
           };
 
   return (
-    <div className="rounded-[1.25rem] border border-dashed border-[#bfd6b7] bg-[#f7fff3]/85 px-4 py-5">
+    <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/85 px-4 py-5">
       <p className="text-base font-semibold text-ink">{copy.title}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 inline-flex h-9 items-center rounded-full bg-[#049d73] px-4 text-sm font-semibold text-white transition hover:bg-[#006e4d]"
+        className="mt-3 inline-flex h-9 items-center rounded-full bg-[#369758] px-4 text-sm font-semibold text-white transition hover:bg-[#156240]"
       >
         {copy.retry}
       </button>
@@ -946,11 +946,11 @@ function LobbySwipeLoadingShell({
   return (
     <section className={cn("overflow-visible px-0 py-1", className)}>
       <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f1faeb] text-[#006e4d] shadow-sm ring-1 ring-[#bfd6b7]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-[#315b48]">
+          <p className="text-[10px] font-semibold text-[#156240]">
             {copy.eyebrow}
           </p>
           <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
@@ -959,20 +959,20 @@ function LobbySwipeLoadingShell({
         </div>
       </div>
 
-      <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(16,38,92,0.08)] ring-1 ring-[#cfe2c6]/85">
-        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#e8f3e2_0%,#f7fff3_48%,#e8f3e2_100%)]" />
+      <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.08)] ring-1 ring-[#D6D5B2]/85">
+        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#F1F2E3_0%,#FEFFF9_48%,#F1F2E3_100%)]" />
         <div className="space-y-3 p-3.5">
-          <div className="h-5 w-4/5 animate-pulse rounded-full bg-[#e4efdb]" />
-          <div className="h-5 w-2/3 animate-pulse rounded-full bg-[#e4efdb]" />
+          <div className="h-5 w-4/5 animate-pulse rounded-full bg-fog" />
+          <div className="h-5 w-2/3 animate-pulse rounded-full bg-fog" />
           <div className="mt-4 grid gap-2">
-            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#eef7e8]" />
-            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#eef7e8]" />
+            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#F1F2E3]" />
+            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#F1F2E3]" />
           </div>
           <div className="pt-4">
-            <div className="h-10 w-full animate-pulse rounded-full bg-[#cfe2c6]" />
+            <div className="h-10 w-full animate-pulse rounded-full bg-[#D6D5B2]" />
           </div>
         </div>
-        <p className="absolute inset-x-0 bottom-3 text-center text-xs font-semibold text-[#315b48]">
+        <p className="absolute inset-x-0 bottom-3 text-center text-xs font-semibold text-[#156240]">
           {copy.loading}
         </p>
       </div>
@@ -2032,21 +2032,21 @@ export function ActivityLobbyView({
           <div className="sm:hidden">
             <button
               type="button"
-              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#bfd6b7] bg-[linear-gradient(135deg,rgba(255,250,242,0.98),rgba(247,255,243,0.94))] px-3 text-left shadow-[0_8px_20px_rgba(16,38,92,0.07)] transition active:scale-[0.99]"
+              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#8AB68E] bg-[linear-gradient(135deg,rgba(255,250,242,0.98),rgba(247,255,243,0.94))] px-3 text-left shadow-[0_8px_20px_rgba(29,29,27,0.07)] transition active:scale-[0.99]"
               onClick={openMobileFilter}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e9f7e3] text-[#006e4d] shadow-inner shadow-white/50 ring-1 ring-[#bfd6b7]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2E3] text-[#156240] shadow-inner shadow-white/50 ring-1 ring-[#8AB68E]">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-[10px] font-semibold leading-3 text-[#315b48]">
+                <span className="block text-[10px] font-semibold leading-3 text-[#156240]">
                   {mobileFilterCopy.title}
                 </span>
                 <span className="mt-0.5 block truncate text-[13px] font-semibold leading-4 text-ink">
                   {activeCategoryLabel} · {activeStatusLabel}
                 </span>
               </span>
-              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[#f48d81] px-2.5 py-1 text-xs font-bold text-white shadow-[0_4px_10px_rgba(244,141,129,0.24)]">
+              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[#F09182] px-2.5 py-1 text-xs font-bold text-white shadow-[0_4px_10px_rgba(240,145,130,0.24)]">
                 {mobileResultCountLabel}
               </span>
             </button>
@@ -2070,8 +2070,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#8fc6ad] bg-[#e9f7e3] text-[#006e4d] shadow-[0_3px_8px_rgba(4,157,115,0.1)]"
-                        : "border-[#cfe2c6] bg-white/88 text-[#315b48] hover:border-[#bfd6b7] hover:bg-white",
+                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2080,8 +2080,8 @@ export function ActivityLobbyView({
                         className={cn(
                           "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                           active
-                            ? "bg-white/78 text-[#006e4d]"
-                            : "bg-[#f1faeb] text-[#315b48]",
+                            ? "bg-white/78 text-[#156240]"
+                            : "bg-[#F1F2E3] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -2109,8 +2109,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
-                        ? "border-[#8fc6ad] bg-[#e9f7e3] text-[#006e4d]"
-                        : "border-[#cfe2c6] bg-team-bg text-[#315b48] hover:border-[#bfd6b7]",
+                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240]"
+                        : "border-[#D6D5B2] bg-team-bg text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2118,8 +2118,8 @@ export function ActivityLobbyView({
                       className={cn(
                         "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
-                          ? "bg-white/70 text-[#006e4d]"
-                          : "bg-[#f1faeb] text-[#315b48]",
+                          ? "bg-white/70 text-[#156240]"
+                          : "bg-[#F1F2E3] text-[#156240]",
                       )}
                     >
                       {option.count ?? "..."}
@@ -2165,9 +2165,9 @@ export function ActivityLobbyView({
           }}
         />
       ) : !hasActivities && isDefaultLobbyView ? (
-        <section className="rounded-[1.5rem] border border-[#bfd6b7] bg-[linear-gradient(145deg,rgba(255,250,242,0.98),rgba(247,255,243,0.95))] p-4 shadow-[0_12px_30px_rgba(16,38,92,0.06)] sm:p-6">
+        <section className="rounded-[1.5rem] border border-[#8AB68E] bg-[linear-gradient(145deg,rgba(255,250,242,0.98),rgba(247,255,243,0.95))] p-4 shadow-[0_12px_30px_rgba(29,29,27,0.06)] sm:p-6">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-[#006e4d]">
+            <p className="text-sm font-semibold text-[#156240]">
               {locale === "fr"
                 ? "Point de depart"
                 : locale === "en"
@@ -2197,10 +2197,10 @@ export function ActivityLobbyView({
                 className={cn(
                   "rounded-xl border p-3 text-left shadow-sm shadow-black/5",
                   action.tone === "primary"
-                    ? "border-[#8fc6ad] bg-[linear-gradient(145deg,rgba(233,247,227,0.98),rgba(207,226,198,0.92))]"
+                    ? "border-[#8AB68E] bg-[linear-gradient(145deg,rgba(233,247,227,0.98),rgba(207,226,198,0.92))]"
                     : action.tone === "secondary"
-                      ? "border-[#f5b6ad] bg-[linear-gradient(145deg,rgba(255,240,237,0.98),rgba(255,250,242,0.96))]"
-                      : "border-[#cfe2c6] bg-[rgba(255,255,255,0.9)]",
+                      ? "border-[#DEAAB3] bg-[linear-gradient(145deg,rgba(255,240,237,0.98),rgba(255,250,242,0.96))]"
+                      : "border-[#D6D5B2] bg-[rgba(255,255,255,0.9)]",
                 )}
               >
                 <p className="text-base font-semibold text-ink">
@@ -2216,8 +2216,8 @@ export function ActivityLobbyView({
                     action.tone === "primary"
                       ? "bg-coral text-white hover:bg-coral-dark"
                       : action.tone === "secondary"
-                        ? "bg-white/90 text-[#d86f61] hover:bg-white"
-                        : "bg-[#f1faeb] text-[#315b48] hover:bg-white",
+                        ? "bg-white/90 text-[#F09182] hover:bg-white"
+                        : "bg-[#F1F2E3] text-[#156240] hover:bg-white",
                   )}
                 >
                   {action.label}
@@ -2247,7 +2247,7 @@ export function ActivityLobbyView({
                 </div>
                 <Link
                   href={withLocale(locale, "/activities")}
-                  className="inline-flex h-9 w-fit items-center rounded-full border border-[#cfe2c6] bg-white/84 px-4 text-sm font-semibold text-[#315b48] transition hover:bg-white"
+                  className="inline-flex h-9 w-fit items-center rounded-full border border-[#D6D5B2] bg-white/84 px-4 text-sm font-semibold text-[#156240] transition hover:bg-white"
                 >
                   {moreActivitiesLabel}
                 </Link>
@@ -2274,7 +2274,7 @@ export function ActivityLobbyView({
           ) : null}
         </section>
       ) : activeFeedTotalItems === 0 ? (
-        <div className="rounded-[1.25rem] border border-dashed border-[#bfd6b7] bg-[#f7fff3]/85 px-4 py-5">
+        <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/85 px-4 py-5">
           <p className="text-base font-semibold text-ink">
             {emptyCategoryCopy.title}
           </p>
@@ -2287,7 +2287,7 @@ export function ActivityLobbyView({
               setActiveFilter("all");
               setActiveStatusFilter("all");
             }}
-            className="mt-3 inline-flex h-9 items-center rounded-full border border-[#cfe2c6] bg-white/86 px-4 text-sm font-semibold text-[#315b48] transition hover:border-[#bfd6b7] hover:bg-white"
+            className="mt-3 inline-flex h-9 items-center rounded-full border border-[#D6D5B2] bg-white/86 px-4 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
           >
             {emptyCategoryResetLabel}
           </button>
@@ -2295,10 +2295,10 @@ export function ActivityLobbyView({
       ) : (
         <>
           {shouldShowStarterPanel ? (
-            <section className="space-y-3 rounded-[1.25rem] border border-[#bfd6b7] bg-white/78 p-4 shadow-sm shadow-black/5 sm:p-5">
+            <section className="space-y-3 rounded-[1.25rem] border border-[#8AB68E] bg-white/78 p-4 shadow-sm shadow-black/5 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#315b48]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#156240]">
                     {locale === "fr"
                       ? "Pour remplir votre hall"
                       : locale === "en"
@@ -2322,7 +2322,7 @@ export function ActivityLobbyView({
                 </div>
                 <Link
                   href={withLocale(locale, "/activities")}
-                  className="inline-flex h-9 w-fit shrink-0 items-center rounded-full border border-[#cfe2c6] bg-white/84 px-4 text-sm font-semibold text-[#315b48] transition hover:bg-white"
+                  className="inline-flex h-9 w-fit shrink-0 items-center rounded-full border border-[#D6D5B2] bg-white/84 px-4 text-sm font-semibold text-[#156240] transition hover:bg-white"
                 >
                   {moreActivitiesLabel}
                 </Link>
@@ -2358,7 +2358,7 @@ export function ActivityLobbyView({
                   <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
                     {activeCategoryLabel}
                   </h2>
-                  <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#315b48] ring-1 ring-[#cfe2c6]">
+                  <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
                     {activeFeedTotalItems}
                   </span>
                 </div>

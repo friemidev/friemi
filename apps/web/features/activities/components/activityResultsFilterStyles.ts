@@ -7,13 +7,13 @@ export const activityViewToggleBarHeightClass = "h-9";
 export const activityViewToggleInnerHeightClass = "h-8";
 
 export const activityResultsFilterShellClass =
-  "inline-flex items-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(191,214,183,0.78)]";
+  "inline-flex items-center rounded-full bg-paper p-0.5 shadow-[inset_0_0_0_1px_rgba(138,182,142,0.78)]";
 
 export const activityResultsFilterLabelClass =
-  "inline-flex items-center text-xs font-medium leading-[1.2] text-[#315b48]";
+  "inline-flex items-center text-xs font-medium leading-[1.2] text-forest";
 
 export const activityResultsFilterControlClass =
-  "inline-flex items-center justify-center text-xs font-semibold leading-[1.2] text-[#315b48]";
+  "inline-flex items-center justify-center text-xs font-semibold leading-[1.2] text-forest";
 
 export const activityResultsFilterChipClass =
   "rounded-full px-2.5 pb-px sm:px-3";

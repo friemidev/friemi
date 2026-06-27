@@ -464,7 +464,7 @@ export function SearchActivityResultsFeed({
         ) : loadFailed ? (
           <button
             type="button"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#bfd6b7] bg-white/88 px-4 text-sm font-semibold text-[#315b48] shadow-sm transition hover:bg-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-[#8AB68E] bg-white/88 px-4 text-sm font-semibold text-[#156240] shadow-sm transition hover:bg-white"
             onClick={() => {
               setLoadFailed(false);
               void loadMore(true);
@@ -480,7 +480,7 @@ export function SearchActivityResultsFeed({
         ) : relatedLoadFailed ? (
           <button
             type="button"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[#bfd6b7] bg-white/88 px-4 text-sm font-semibold text-[#315b48] shadow-sm transition hover:bg-white"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-[#8AB68E] bg-white/88 px-4 text-sm font-semibold text-[#156240] shadow-sm transition hover:bg-white"
             onClick={() => {
               setRelatedLoadFailed(false);
               void loadRelatedMore(true);

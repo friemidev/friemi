@@ -53,18 +53,18 @@ export function MobileFriendChatRoster({
 
   return (
     <section className="space-y-4 pb-24 lg:hidden">
-      <div className="relative overflow-hidden rounded-[1.35rem] border border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_56%,#fff0ed_100%)] p-4 shadow-[0_16px_38px_rgba(10,63,49,0.08)]">
+      <div className="relative overflow-hidden rounded-[1.35rem] border border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_56%,#DEAAB3_100%)] p-4 shadow-[0_16px_38px_rgba(21,98,64,0.08)]">
         <span
           aria-hidden="true"
           className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-moss/10"
         />
         <div className="relative flex items-start justify-between gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)]">
             <MessageCircle className="h-5 w-5" />
           </span>
           <button
             type="button"
-            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
             aria-label={t.addFriend}
             title={t.addFriend}
             onClick={() => setAddFriendOpen(true)}
@@ -80,7 +80,7 @@ export function MobileFriendChatRoster({
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
             {t.title}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-[#41665c]">
+          <p className="mt-2 text-sm leading-6 text-[#156240]">
             {t.friendListDescription}
           </p>
         </div>
@@ -94,11 +94,11 @@ export function MobileFriendChatRoster({
       />
 
       {friends.length === 0 ? (
-        <div className="rounded-[1.2rem] border border-dashed border-sand bg-white/70 p-5 shadow-[0_10px_24px_rgba(10,63,49,0.06)]">
+        <div className="rounded-[1.2rem] border border-dashed border-sand bg-white/70 p-5 shadow-[0_10px_24px_rgba(21,98,64,0.06)]">
           <h2 className="text-base font-semibold text-ink">
             {t.emptyFriendListTitle}
           </h2>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-[#41665c]">
+          <p className="mt-2 max-w-sm text-sm leading-6 text-[#156240]">
             {t.emptyFriendListDescription}
           </p>
           <Button
@@ -165,11 +165,11 @@ function MobileFriendChatRow({
           <span className="truncate text-sm font-semibold text-ink">
             {friend.friend.nickname}
           </span>
-          <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#6d857c]">
+          <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#8E8383]">
             {formatActivityDate(time, locale)}
           </span>
         </span>
-        <span className="mt-1 block truncate text-xs leading-5 text-[#41665c]">
+        <span className="mt-1 block truncate text-xs leading-5 text-[#156240]">
           {preview}
         </span>
       </span>
@@ -177,7 +177,7 @@ function MobileFriendChatRow({
   );
 
   return (
-    <article className="min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(10,63,49,0.06)] transition active:translate-y-px">
+    <article className="min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:translate-y-px">
       {friend.conversationId ? (
         <Link
           aria-label={t.openConversation(friend.friend.nickname)}
@@ -270,7 +270,7 @@ function MobileActivitySignalRow({
   return (
     <Link
       aria-label={t.openActivity(activity.title)}
-      className="grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full bg-team-bg px-2.5 py-1 text-xs leading-5 text-[#41665c] ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+      className="grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full bg-team-bg px-2.5 py-1 text-xs leading-5 text-[#156240] ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
       href={withLocale(locale, `/activities/${activity.id}`)}
       title={label}
     >
