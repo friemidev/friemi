@@ -268,6 +268,8 @@ apps/web/public/brand/v2_1/
 | `friemi-og-default-1200x630.png` | 1200x630 | 默认分享图 | 第一版，可先接入 |
 | `friemi-empty-state-mark.png` | 512x512 | 空状态插图 | 可用 |
 | `friemi-loading-mark.webp` | 320x320 | 静态 loading fallback | 可用 |
+| `friemi-card-style-board.svg` | 1600x1050 | 活动 / 组局卡片第二阶段风格素材源稿 | 可用 |
+| `friemi-card-style-board.png` | 1600x1050 | 活动 / 组局卡片第二阶段风格素材预览图 | 可用 |
 
 ## Phase 1 / Phase 2 第一轮接入状态
 

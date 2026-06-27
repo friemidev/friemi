@@ -7,7 +7,7 @@ export const brand = {
     "Friemi helps overseas Chinese-speaking users discover activities, bring friends, and start plans nearby.",
   faviconPath: "/brand/v2_1/friemi-icon-pwa-192.png",
   legacyName: "Friemi",
-  loadingImagePath: "/brand/v2_1/friemi-loading-mark.webp",
+  loadingImagePath: "/logo_loading_3d_counterclockwise_clean.svg",
   lockupHorizontalNavyPath: "/brand/v2_1/friemi-lockup-horizontal-navy.png",
   lockupHorizontalWhitePath: "/brand/v2_1/friemi-lockup-horizontal-white.png",
   logoIconPath: "/brand/v2_1/friemi-icon-transparent-512.png",

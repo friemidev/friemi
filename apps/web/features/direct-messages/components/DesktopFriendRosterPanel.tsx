@@ -56,22 +56,22 @@ export function DesktopFriendRosterPanel({
     : "/messages";
 
   return (
-    <aside className="overflow-hidden rounded-lg border border-black/10 bg-white/82 shadow-sm lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
-      <div className="flex items-start gap-3 border-b border-black/10 p-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+    <aside className="overflow-hidden rounded-[1.45rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(10,63,49,0.08)] ring-1 ring-white/70 lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
+      <div className="flex items-start gap-3 border-b border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_58%,#fff0ed_100%)] p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)]">
           <MessageCircle className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-ink">
             {t.friendListTitle}
           </h2>
-          <p className="mt-1 line-clamp-2 text-sm leading-5 text-zinc-500">
+          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#41665c]">
             {t.friendListDescription}
           </p>
         </div>
         <button
           type="button"
-          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition hover:-translate-y-0.5 hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           aria-label={t.addFriend}
           title={t.addFriend}
           onClick={() => setAddFriendOpen(true)}
@@ -81,7 +81,7 @@ export function DesktopFriendRosterPanel({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfff7]/72 p-2.5">
         <IncomingFriendRequestsPanel
           className="mb-3"
           incomingRequests={incomingRequests}
@@ -90,11 +90,11 @@ export function DesktopFriendRosterPanel({
           returnTo="messages"
         />
         {friends.length === 0 ? (
-          <div className="p-2">
+          <div className="rounded-2xl border border-dashed border-sand bg-white/70 p-4">
             <h3 className="text-sm font-semibold text-ink">
               {t.emptyFriendListTitle}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
+            <p className="mt-2 text-sm leading-6 text-[#41665c]">
               {t.emptyFriendListDescription}
             </p>
           </div>
@@ -157,17 +157,17 @@ function DesktopFriendRosterRow({
           <span
             className={cn(
               "ml-auto shrink-0 whitespace-nowrap text-xs",
-              isActive ? "text-white/65" : "text-zinc-400",
+              isActive ? "text-white/65" : "text-[#6d857c]",
             )}
           >
             {formatActivityDate(time, locale)}
           </span>
         </span>
         <span
-          className={cn(
-            "mt-1 block truncate text-xs leading-5",
-            isActive ? "text-white/75" : "text-zinc-500",
-          )}
+            className={cn(
+              "mt-1 block truncate text-xs leading-5",
+              isActive ? "text-white/75" : "text-[#41665c]",
+            )}
         >
           {preview}
         </span>
@@ -179,16 +179,16 @@ function DesktopFriendRosterRow({
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-lg p-2.5 transition",
+        "rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
-          ? "bg-ink text-white shadow-sm"
-          : "text-ink hover:bg-white hover:shadow-sm",
+          ? "bg-moss text-white shadow-[0_14px_26px_rgba(0,110,77,0.18)]"
+          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(10,63,49,0.08)]",
       )}
     >
       {friend.conversationId ? (
         <Link
           aria-label={t.openConversation(friend.friend.nickname)}
-          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           href={withLocale(locale, `/messages/${friend.conversationId}`)}
         >
           {content}
@@ -199,7 +199,7 @@ function DesktopFriendRosterRow({
           <input name="friendProfileId" type="hidden" value={friend.friend.id} />
           <button
             type="submit"
-            className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
             aria-label={t.openConversation(friend.friend.nickname)}
           >
             {content}
@@ -242,10 +242,10 @@ function DesktopActivitySignals({
         <details className="group min-w-0">
           <summary
             className={cn(
-              "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden",
+              "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden",
               isActive
                 ? "bg-white/10 text-white/80 hover:bg-white/15"
-                : "bg-moss/10 text-moss hover:bg-moss/15",
+                : "bg-team-bg text-moss ring-1 ring-sand hover:bg-white",
             )}
             aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
           >
@@ -293,10 +293,10 @@ function DesktopActivitySignalRow({
     <Link
       aria-label={t.openActivity(activity.title)}
       className={cn(
-        "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-md px-2 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+        "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
           ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
-          : "bg-moss/5 text-zinc-600 hover:bg-moss/10 hover:text-ink",
+          : "bg-team-bg text-[#41665c] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
       title={label}
