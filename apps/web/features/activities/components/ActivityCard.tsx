@@ -607,6 +607,13 @@ export function ActivityCard({
     displayStatus !== "ENDED" &&
     displayStatus !== "CANCELLED";
   const isTeamCard = !isActivityInfo;
+  const isProfileCard = actionContext === "profile";
+  const isProfileOwnCard = isProfileCard && isOwnActivity;
+  const autoCreatedTeam = activity.autoCreatedTeam;
+  const showCoverKindBadge = !isProfileOwnCard;
+  const showCoverVisibilityBadge = !isProfileCard && !isActivityInfo;
+  const showCoverAutoCreatedBadge =
+    autoCreatedTeam !== null && !isProfileOwnCard;
   const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
   const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
   const participantPreview = isTeamCard
@@ -708,8 +715,8 @@ export function ActivityCard({
             ? "border-rose bg-cream shadow-[0_12px_34px_rgba(240,145,130,0.11)] ring-1 ring-rose hover:shadow-[0_18px_46px_rgba(240,145,130,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(240,145,130,0.13)]"
             : "border-sage bg-paper shadow-[0_10px_30px_rgba(21,98,64,0.08)] ring-1 ring-fog hover:shadow-[0_18px_44px_rgba(21,98,64,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(21,98,64,0.1)]",
         isTeamCard
-          ? "before:absolute before:inset-x-0 before:top-0 before:z-10 before:hidden before:h-1 before:bg-coral sm:before:block"
-          : "before:absolute before:inset-x-0 before:top-0 before:z-10 before:hidden before:h-1 before:bg-event-accent sm:before:block",
+          ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
+          : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
         !isInactiveCard && isTeamCard
           ? "hover:border-coral hover:ring-rose"
           : null,
@@ -807,47 +814,65 @@ export function ActivityCard({
               isTeamCard ? "from-ink/24" : "from-black/10",
             )}
           />
-          <span
-            className={cn(
-              "absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
-              mobileDenseClass(
-                "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
-              ),
-              isTeamCard
-                ? "border-rose bg-cream text-ink"
-                : "border-sage bg-ice text-forest",
-            )}
-          >
+          {showCoverKindBadge ? (
             <span
               className={cn(
-                "h-1.5 w-1.5 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)]",
-                isTeamCard ? "bg-meadow" : "bg-sage",
+                "absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
+                mobileDenseClass(
+                  "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
+                ),
+                isTeamCard
+                  ? "border-rose bg-cream text-ink"
+                  : "border-sage bg-ice text-forest",
               )}
-              aria-hidden="true"
-            />
-            {getCardKindLabel(isActivityInfo, locale)}
-          </span>
+            >
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)]",
+                  isTeamCard ? "bg-meadow" : "bg-sage",
+                )}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 truncate">
+                {getCardKindLabel(isActivityInfo, locale)}
+              </span>
+            </span>
+          ) : null}
           {isOwnActivity ? (
             <span
               className={cn(
-                "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-sand bg-cream/95 px-3 py-1.5 text-xs font-bold leading-none text-forest shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur sm:right-4 sm:top-4",
+                "absolute top-3 z-10 inline-flex w-fit max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-sand bg-cream/95 px-3 py-1.5 text-xs font-bold leading-none text-forest shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur sm:top-4",
                 mobileDenseClass(
-                  "max-[639px]:right-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
+                  "max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
+                isProfileOwnCard
+                  ? "left-3 max-[639px]:left-2 sm:left-4"
+                  : "right-3 max-[639px]:right-2 sm:right-4",
               )}
             >
               <Crown className="h-3.5 w-3.5 shrink-0" />
-              {ownActivityLabels.badge}
+              <span className="min-w-0 truncate">{ownActivityLabels.badge}</span>
             </span>
           ) : null}
-          <div className="relative mt-auto flex w-full items-end justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap gap-1.5">
+          <div
+            className={cn(
+              "relative mt-auto flex w-full items-end justify-between gap-2",
+              isProfileOwnCard ? "gap-1.5" : null,
+            )}
+          >
+            <div
+              className={cn(
+                "flex min-w-0 flex-wrap gap-1.5",
+                isProfileOwnCard ? "gap-1" : null,
+              )}
+            >
               <span
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-[11px] font-semibold leading-none shadow-[0_8px_18px_rgba(0,0,0,0.18)] ring-1 ring-white/10",
+                  "max-w-full truncate rounded-md px-2.5 py-1 text-[11px] font-semibold leading-none shadow-[0_8px_18px_rgba(0,0,0,0.18)] ring-1 ring-white/10",
                   mobileDenseClass(
                     "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                   ),
+                  isProfileOwnCard ? "px-2 py-0.5 text-[10px]" : null,
                   isTeamCard
                     ? "bg-[rgba(29,29,27,0.78)] text-cream"
                     : "bg-[rgba(29,29,27,0.72)] text-cream",
@@ -855,7 +880,7 @@ export function ActivityCard({
               >
                 {getCategoryLabel(activity.category, locale)}
               </span>
-              {!isActivityInfo ? (
+              {showCoverVisibilityBadge ? (
                 <span
                   className={cn(
                     "rounded-md bg-[rgba(255,245,230,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
@@ -867,7 +892,7 @@ export function ActivityCard({
                   {getCardVisibilityLabel(activity.visibility, locale)}
                 </span>
               ) : null}
-              {activity.autoCreatedTeam ? (
+              {showCoverAutoCreatedBadge ? (
                 <span
                   className={cn(
                     "rounded-md bg-[rgba(241,242,227,0.94)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
@@ -876,7 +901,7 @@ export function ActivityCard({
                     ),
                   )}
                 >
-                  {activity.autoCreatedTeam.isClaimable
+                  {autoCreatedTeam.isClaimable
                     ? autoCreatedBadgeCopy.claimable
                     : autoCreatedBadgeCopy.recommended}
                 </span>
@@ -889,6 +914,7 @@ export function ActivityCard({
                   mobileDenseClass(
                     "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
                   ),
+                  isProfileOwnCard ? "px-2 py-0.5 text-[10px]" : null,
                 )}
               >
                 {t.activityLabels.timeStates[timeState]}
