@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 type HomeActivityCarouselProps = {
   activities: ActivityCardViewModel[];
+  density?: "mobile" | "desktop";
   locale: string;
   labels: {
     ariaLabel: string;
@@ -44,6 +45,7 @@ function getLocationLabel(activity: ActivityCardViewModel) {
 
 export function HomeActivityCarousel({
   activities,
+  density = "desktop",
   labels,
   locale,
 }: HomeActivityCarouselProps) {
@@ -193,8 +195,13 @@ export function HomeActivityCarousel({
 
   if (activities.length === 0) {
     return (
-      <div className="rounded-[1.75rem] border border-white/35 bg-white/70 px-6 py-10 text-center shadow-[0_22px_70px_rgba(64,46,31,0.08)]">
-        <p className="font-serif text-2xl text-[#241911]">{labels.emptyTitle}</p>
+      <div
+        className="rounded-[1.75rem] border border-white/35 bg-white/70 px-6 py-10 text-center shadow-[0_22px_70px_rgba(64,46,31,0.08)]"
+        data-density={density}
+      >
+        <p className="font-serif text-2xl text-[#241911]">
+          {labels.emptyTitle}
+        </p>
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6f6258]">
           {labels.emptyDescription}
         </p>
@@ -207,6 +214,7 @@ export function HomeActivityCarousel({
       <div
         ref={viewportRef}
         className="home-activity-carousel -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:gap-5 sm:px-6 lg:-mx-10 lg:px-10"
+        data-density={density}
         onMouseEnter={markManualInteraction}
         onPointerDown={markManualInteraction}
         onTouchStart={markManualInteraction}

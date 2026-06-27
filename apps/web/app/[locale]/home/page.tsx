@@ -15,6 +15,7 @@ import { HomeFooter } from "@/components/layout/HomeFooter";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
+import type { ActivityCardViewModel } from "@/features/activities/types";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -42,7 +43,6 @@ type LuxuryHomeCopy = {
   introDescription: string;
   valueEyebrow: string;
   valueTitle: string;
-  valueDescription: string;
   valueImageCaption: string;
   values: {
     body: string;
@@ -96,8 +96,6 @@ const luxuryHomeCopy: Record<string, LuxuryHomeCopy> = {
       "每一次读书会、桌游局、city walk 或展览同行，都可以从一段群消息，变成一个可传播、可复用、可沉淀的活动入口。",
     valueEyebrow: "The host journey",
     valueTitle: "把主理人的日常工作，整理成一条更轻的路径。",
-    valueDescription:
-      "首页先保留六个最核心的价值点，用短句和节奏帮助用户快速理解，不把招募页内容整页搬过来。",
     valueImageCaption: "从发起、报名到复用，主理人的每一步都应该更轻。",
     values: [
       {
@@ -168,8 +166,6 @@ const luxuryHomeCopy: Record<string, LuxuryHomeCopy> = {
       "Book clubs, board game nights, city walks, exhibitions, and small dinners can move beyond group-chat text into a reusable activity page.",
     valueEyebrow: "The host journey",
     valueTitle: "A lighter path for the work hosts already do.",
-    valueDescription:
-      "The homepage keeps the six sharpest value points up front, with short editorial rhythm instead of dense feature copy.",
     valueImageCaption:
       "From sharing to signups to reuse, every hosting step should feel lighter.",
     values: [
@@ -233,23 +229,21 @@ const luxuryHomeCopy: Record<string, LuxuryHomeCopy> = {
   },
   fr: {
     heroEyebrow: "Friemi Co-Creators",
-    heroTitle: "Transformez de petits rendez-vous en communaute durable.",
+    heroTitle: "Transformez de petits rendez-vous en communauté durable.",
     heroDescription:
-      "Friemi aide les organisateurs a mieux partager leurs sorties, gerer les inscriptions, garder le lien et construire une image plus claire.",
-    primaryCta: "Devenir co-createur",
-    secondaryCta: "Voir les activites",
-    heroNotes: ["Facile a partager", "Facile a rejoindre", "Fait pour durer"],
+      "Friemi aide les organisateurs à mieux partager leurs sorties, gérer les inscriptions, garder le lien et construire une image plus claire.",
+    primaryCta: "Devenir co-créateur",
+    secondaryCta: "Voir les activités",
+    heroNotes: ["Facile à partager", "Facile à rejoindre", "Fait pour durer"],
     introEyebrow: "A social ritual, not another form",
     introTitle:
-      "Vous rassemblez les gens. Friemi rend ce moment plus clair, plus fiable et plus memorable.",
+      "Vous rassemblez les gens. Friemi rend ce moment plus clair, plus fiable et plus mémorable.",
     introDescription:
-      "Clubs de lecture, jeux de societe, balades urbaines, expositions ou diners peuvent devenir une page d'activite reutilisable.",
+      "Clubs de lecture, jeux de société, balades urbaines, expositions ou dîners peuvent devenir une page d'activité réutilisable.",
     valueEyebrow: "The host journey",
-    valueTitle: "Un chemin plus leger pour le travail deja fait par les hotes.",
-    valueDescription:
-      "La page d'accueil garde les six benefices les plus importants, avec un rythme editorial court et lisible.",
+    valueTitle: "Un chemin plus léger pour le travail déjà fait par les hôtes.",
     valueImageCaption:
-      "Du partage aux inscriptions puis a la reutilisation, chaque etape doit etre plus legere.",
+      "Du partage aux inscriptions puis à la réutilisation, chaque étape doit être plus légère.",
     values: [
       {
         title: "Partage clair",
@@ -257,55 +251,55 @@ const luxuryHomeCopy: Record<string, LuxuryHomeCopy> = {
       },
       {
         title: "Plus pro",
-        body: "Horaire, lieu, places, prix, regles et inscription sont reunis au meme endroit.",
+        body: "Horaire, lieu, places, prix, règles et inscription sont réunis au même endroit.",
       },
       {
         title: "Inscription simple",
-        body: "Moins de messages prives, moins de listes manuelles, plus de controle.",
+        body: "Moins de messages privés, moins de listes manuelles, plus de contrôle.",
       },
       {
-        title: "Reutilisable",
-        body: "Les rendez-vous recurrents ne repartent pas de zero a chaque fois.",
+        title: "Réutilisable",
+        body: "Les rendez-vous récurrents ne repartent pas de zéro à chaque fois.",
       },
       {
-        title: "Memoire",
-        body: "Chaque activite laisse une trace, des habitues et du contexte social.",
+        title: "Mémoire",
+        body: "Chaque activité laisse une trace, des habitués et du contexte social.",
       },
       {
         title: "Image personnelle",
-        body: "Organiser regulierement rend votre theme et votre style plus reconnaissables.",
+        body: "Organiser régulièrement rend votre thème et votre style plus reconnaissables.",
       },
     ],
     activityEyebrow: "Live from Friemi",
     activityTitle: "Commencer par une sortie",
     activityDescription:
-      "Une pause dans le recit avec de vraies activites de la plateforme, pensees pour explorer sans forcer.",
+      "Une pause dans le récit avec de vraies activités de la plateforme, pensées pour explorer sans forcer.",
     carousel: {
-      ariaLabel: "Carrousel d'activites selectionnees",
-      emptyTitle: "Les activites sont en preparation",
-      emptyDescription: "Les prochaines activites apparaitront ici.",
-      next: "Activites suivantes",
-      previous: "Activites precedentes",
-      viewActivity: "Voir le detail",
+      ariaLabel: "Carrousel d'activités sélectionnées",
+      emptyTitle: "Les activités sont en préparation",
+      emptyDescription: "Les prochaines activités apparaîtront ici.",
+      next: "Activités suivantes",
+      previous: "Activités précédentes",
+      viewActivity: "Voir le détail",
     },
     ipEyebrow: "Personal IP",
     ipTitle: "On retient mieux ce que vous rassemblez.",
     ipLead:
-      "Friemi transforme des impressions dispersees en une identite d'organisateur plus claire, plus professionnelle et plus partageable.",
+      "Friemi transforme des impressions dispersées en une identité d'organisateur plus claire, plus professionnelle et plus partageable.",
     ipLines: [
-      "Vous etes la personne qui fait vivre un club de lecture.",
-      "Vous etes la personne qui organise de bonnes soirees jeux.",
-      "Vous etes la personne qui connait les balades et expos a faire.",
-      "Vous etes la personne qui sait rassembler.",
+      "Vous êtes la personne qui fait vivre un club de lecture.",
+      "Vous êtes la personne qui organise de bonnes soirées jeux.",
+      "Vous êtes la personne qui connaît les balades et expos à faire.",
+      "Vous êtes la personne qui sait rassembler.",
     ],
     identityEyebrow: "Early co-creator identity",
-    identityTitle: "Une identite de plateforme, pas seulement un badge.",
+    identityTitle: "Une identité de plateforme, pas seulement un badge.",
     identityDescription:
-      "Certification initiale, mise en avant, co-creation produit et futures collaborations aident les organisateurs serieux a etre vus plus tot.",
+      "Certification initiale, mise en avant, co-création produit et futures collaborations aident les organisateurs sérieux à être vus plus tôt.",
     identityBenefits: [
       "Certification initiale",
       "Mise en avant",
-      "Co-creation produit",
+      "Co-création produit",
       "Collaborations futures",
     ],
   },
@@ -314,6 +308,12 @@ const luxuryHomeCopy: Record<string, LuxuryHomeCopy> = {
 function getLuxuryHomeCopy(locale: string) {
   return luxuryHomeCopy[locale] ?? luxuryHomeCopy["zh-CN"];
 }
+
+type LuxuryHomeLayoutProps = {
+  activities: ActivityCardViewModel[];
+  locale: string;
+  t: LuxuryHomeCopy;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -362,296 +362,572 @@ export default async function HomePage({ params }: HomePageProps) {
       <HomeLuxuryMotion />
       <DetailSourceRestore sourceKey="home" />
       <main className="overflow-hidden bg-[#f6efe3] text-[#21170f]">
-        <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#17110c] text-white md:min-h-[calc(100vh-4rem)]">
-          <video
-            className="home-luxury-hero-media absolute inset-0 hidden h-full w-full object-cover md:block"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-          >
-            <source src={homeMedia.heroVideo} type="video/mp4" />
-          </video>
-          <Image
-            src={homeMedia.heroMobile}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="home-luxury-hero-media object-cover md:hidden"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,10,6,0.76),rgba(15,10,6,0.38)_45%,rgba(15,10,6,0.12)),linear-gradient(180deg,rgba(15,10,6,0.2),rgba(15,10,6,0.72))]" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#17110c] to-transparent" />
+        <MobileLuxuryHome
+          activities={activitiesResult.activities}
+          locale={locale}
+          t={t}
+        />
+        <DesktopLuxuryHome
+          activities={activitiesResult.activities}
+          locale={locale}
+          t={t}
+        />
+      </main>
+      <HomeFooter locale={locale} />
+    </>
+  );
+}
 
-          <div className="relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6 md:min-h-[calc(100vh-4rem)] md:px-8 md:pb-16 lg:px-10">
-            <div className="home-luxury-reveal max-w-4xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
-                {t.heroEyebrow}
-              </p>
-              <h1 className="mt-5 max-w-3xl font-serif text-[2.35rem] leading-[1.02] tracking-normal text-white min-[390px]:text-[2.55rem] sm:text-6xl md:text-7xl lg:text-[5.8rem]">
-                {t.heroTitle}
-              </h1>
-              <p className="mt-5 max-w-2xl text-[15px] leading-7 text-white/78 sm:mt-6 sm:text-lg md:text-xl md:leading-8">
-                {t.heroDescription}
-              </p>
-              <div className="mt-7 grid max-w-md grid-cols-2 gap-2 sm:mt-8 sm:flex sm:max-w-none sm:gap-3">
-                <Link
-                  href={withLocale(locale, "/co-creators")}
-                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
-                >
-                  {t.primaryCta}
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <Link
-                  href={withLocale(locale, "/activities")}
-                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/32 bg-white/10 px-3 text-xs font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/55 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
-                >
-                  {t.secondaryCta}
-                  <Compass className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </div>
-            </div>
+function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
+  return (
+    <div className="md:hidden">
+      <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#17110c] text-white">
+        <Image
+          src={homeMedia.heroMobile}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="home-luxury-hero-media object-cover"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,10,6,0.76),rgba(15,10,6,0.38)_45%,rgba(15,10,6,0.12)),linear-gradient(180deg,rgba(15,10,6,0.2),rgba(15,10,6,0.72))]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#17110c] to-transparent" />
 
-            <div className="home-luxury-reveal mt-7 flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/76 sm:mt-10 sm:text-xs">
-              {t.heroNotes.map((note) => (
-                <span
-                  key={note}
-                  className="rounded-full border border-white/18 bg-white/10 px-3 py-1.5 backdrop-blur"
-                >
-                  {note}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="relative px-5 py-16 sm:px-6 md:py-28 lg:px-8">
-          <div
-            className="mx-auto max-w-4xl text-center"
-            data-home-reveal="up"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
-              {t.introEyebrow}
+        <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6">
+          <div className="home-luxury-reveal max-w-4xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+              {t.heroEyebrow}
             </p>
-            <h2 className="mt-5 font-serif text-[2rem] leading-tight text-[#21170f] sm:text-5xl">
-              {t.introTitle}
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-8 text-[#6b5d51] sm:mt-6 sm:text-lg">
-              {t.introDescription}
+            <h1 className="mt-5 max-w-3xl font-serif text-[2.35rem] leading-[1.02] tracking-normal text-white min-[390px]:text-[2.55rem] sm:text-6xl">
+              {t.heroTitle}
+            </h1>
+            <p className="mt-5 max-w-2xl text-[15px] leading-7 text-white/78 sm:mt-6 sm:text-lg">
+              {t.heroDescription}
             </p>
-          </div>
-        </section>
-
-        <section className="px-5 pb-16 sm:px-6 md:pb-28 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
-            <div
-              className="lg:sticky lg:top-24 lg:self-start"
-              data-home-reveal="left"
-            >
-              <div className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.16)]">
-                <Image
-                  src={homeMedia.creatorHosting}
-                  alt=""
-                  width={1600}
-                  height={1100}
-                  sizes="(min-width: 1024px) 42vw, 100vw"
-                  className="aspect-[4/3] h-full w-full object-cover"
-                />
-                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1f140d]/78 via-[#1f140d]/36 to-transparent" />
-                <p className="absolute inset-x-0 bottom-0 p-6 text-sm font-medium leading-6 text-[#fff4e3] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)] sm:p-7">
-                  {t.valueImageCaption}
-                </p>
-              </div>
-            </div>
-
-            <div className="self-center">
-              <div className="max-w-2xl" data-home-reveal="right">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
-                  {t.valueEyebrow}
-                </p>
-                <h2 className="mt-4 font-serif text-[2rem] leading-tight text-[#21170f] sm:text-5xl">
-                  {t.valueTitle}
-                </h2>
-                <p className="mt-4 text-[15px] leading-8 text-[#6b5d51] sm:mt-5 sm:text-base">
-                  {t.valueDescription}
-                </p>
-              </div>
-
-              <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-8 sm:block sm:divide-y sm:divide-[#d9c7ad] sm:border-y sm:border-[#d9c7ad]">
-                {t.values.map((item, index) => (
-                  <div
-                    key={item.title}
-                    className="group rounded-2xl border border-[#ddc9aa] bg-white/20 p-4 transition hover:bg-white/30 sm:grid sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:py-5 sm:grid-cols-[5rem_1fr] sm:gap-4"
-                    data-home-reveal="up"
-                    style={
-                      {
-                        "--home-reveal-delay": `${index * 70}ms`,
-                      } as CSSProperties
-                    }
-                  >
-                    <span className="font-serif text-xl text-[#b87555] sm:text-3xl">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <div>
-                      <h3 className="mt-2 text-base font-semibold text-[#21170f] sm:mt-0 sm:text-lg">
-                        {item.title}
-                      </h3>
-                      <p className="mt-2 max-w-2xl text-xs leading-6 text-[#6b5d51] sm:text-base sm:leading-7">
-                        {item.body}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative bg-[#eadccb] px-5 py-16 sm:px-6 md:py-24 lg:px-8">
-          <div className="absolute inset-0 opacity-[0.13]">
-            <Image
-              src={homeMedia.eventsMood}
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover"
-            />
-          </div>
-          <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.32fr_minmax(0,0.68fr)] lg:items-center">
-            <div data-home-reveal="left">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
-                {t.activityEyebrow}
-              </p>
-              <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#21170f] sm:text-5xl">
-                {t.activityTitle}
-              </h2>
-              <p className="mt-4 max-w-sm text-[15px] leading-8 text-[#6b5d51] sm:mt-5 sm:text-base">
-                {t.activityDescription}
-              </p>
-              <Link
-                href={withLocale(locale, "/activities")}
-                className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#caaa84] bg-[#fffaf2]/78 px-4 text-sm font-semibold text-[#60432f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40"
-              >
-                {t.secondaryCta}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </div>
-
-            <div className="min-w-0" data-home-reveal="slide-right">
-              <HomeActivityCarousel
-                activities={activitiesResult.activities}
-                labels={t.carousel}
-                locale={locale}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="px-5 py-16 sm:px-6 md:py-28 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.48fr_0.52fr] lg:items-center lg:gap-16">
-            <div
-              className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.14)]"
-              data-home-reveal="left"
-            >
-              <Image
-                src={homeMedia.friendsArrival}
-                alt=""
-                width={1100}
-                height={1600}
-                sizes="(min-width: 1024px) 43vw, 100vw"
-                className="aspect-[4/5] h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/46 via-transparent to-transparent" />
-            </div>
-
-            <div data-home-reveal="right">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
-                {t.ipEyebrow}
-              </p>
-              <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#21170f] sm:text-5xl">
-                {t.ipTitle}
-              </h2>
-              <p className="mt-4 max-w-xl text-[15px] leading-8 text-[#6b5d51] sm:mt-5 sm:text-lg">
-                {t.ipLead}
-              </p>
-              <div className="mt-7 grid gap-2 border-l border-[#caaa84] pl-4 sm:mt-8 sm:gap-3 sm:pl-5">
-                {t.ipLines.map((line, index) => (
-                  <p
-                    key={line}
-                    className="font-serif text-xl leading-snug text-[#21170f] min-[390px]:text-[1.35rem] sm:text-3xl"
-                    data-home-reveal="up"
-                    style={
-                      {
-                        "--home-reveal-delay": `${index * 80}ms`,
-                      } as CSSProperties
-                    }
-                  >
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="relative isolate overflow-hidden bg-[#1d140f] px-5 py-16 text-white sm:px-6 md:py-28 lg:px-8">
-          <Image
-            src={homeMedia.creatorIdentity}
-            alt=""
-            fill
-            sizes="100vw"
-            className="absolute inset-0 -z-10 object-cover opacity-[0.36]"
-          />
-          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,20,15,0.94),rgba(29,20,15,0.76)_54%,rgba(29,20,15,0.56))]" />
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.56fr_0.44fr] lg:items-end">
-            <div data-home-reveal="left">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#e0b98e]">
-                {t.identityEyebrow}
-              </p>
-              <h2 className="mt-4 max-w-3xl font-serif text-[2.15rem] leading-tight text-white sm:text-6xl">
-                {t.identityTitle}
-              </h2>
-              <p className="mt-5 max-w-2xl text-[15px] leading-8 text-white/72 sm:mt-6 sm:text-lg">
-                {t.identityDescription}
-              </p>
+            <div className="mt-7 grid max-w-md grid-cols-2 gap-2 sm:mt-8 sm:flex sm:max-w-none sm:gap-3">
               <Link
                 href={withLocale(locale, "/co-creators")}
-                className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-6"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
               >
                 {t.primaryCta}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-              {t.identityBenefits.map((benefit, index) => {
-                const icons = [BadgeCheck, Gem, Layers3, PenLine] as const;
-                const Icon = icons[index % icons.length];
-
-                return (
-                  <div
-                    key={benefit}
-                    className="rounded-2xl border border-white/12 bg-white/[0.07] p-4 backdrop-blur sm:rounded-3xl sm:p-5"
-                    data-home-reveal="up"
-                    style={
-                      {
-                        "--home-reveal-delay": `${index * 80}ms`,
-                      } as CSSProperties
-                    }
-                  >
-                    <Icon className="h-4 w-4 text-[#e0b98e] sm:h-5 sm:w-5" aria-hidden="true" />
-                    <p className="mt-3 text-xs font-semibold text-white sm:mt-4 sm:text-sm">
-                      {benefit}
-                    </p>
-                  </div>
-                );
-              })}
+              <Link
+                href={withLocale(locale, "/activities")}
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/32 bg-white/10 px-3 text-xs font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/55 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
+              >
+                {t.secondaryCta}
+                <Compass className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
           </div>
-        </section>
-      </main>
-      <HomeFooter locale={locale} />
-    </>
+
+          <div className="home-luxury-reveal mt-7 flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/76 sm:mt-10 sm:text-xs">
+            {t.heroNotes.map((note) => (
+              <span
+                key={note}
+                className="rounded-full border border-white/18 bg-white/10 px-3 py-1.5 backdrop-blur"
+              >
+                {note}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative px-5 py-16 sm:px-6">
+        <div
+          className="mx-auto max-w-4xl text-center"
+          data-home-reveal="up"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+            {t.introEyebrow}
+          </p>
+          <h2 className="mt-5 font-serif text-[2rem] leading-tight text-[#21170f] sm:text-5xl">
+            {t.introTitle}
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-8 text-[#6b5d51] sm:mt-6 sm:text-lg">
+            {t.introDescription}
+          </p>
+        </div>
+      </section>
+
+      <section className="px-5 pb-16 sm:px-6">
+        <div
+          className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.16)]"
+          data-home-reveal="up"
+        >
+          <Image
+            src={homeMedia.creatorHosting}
+            alt=""
+            width={1600}
+            height={1100}
+            sizes="100vw"
+            className="aspect-[4/3] h-full w-full object-cover"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1f140d]/78 via-[#1f140d]/36 to-transparent" />
+          <p className="absolute inset-x-0 bottom-0 p-6 text-sm font-medium leading-6 text-[#fff4e3] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)] sm:p-7">
+            {t.valueImageCaption}
+          </p>
+        </div>
+
+        <div className="mt-8 max-w-2xl" data-home-reveal="up">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+            {t.valueEyebrow}
+          </p>
+          <h2 className="mt-4 font-serif text-[2rem] leading-tight text-[#21170f] sm:text-5xl">
+            {t.valueTitle}
+          </h2>
+        </div>
+
+        <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-8">
+          {t.values.map((item, index) => (
+            <div
+              key={item.title}
+              className="group rounded-2xl border border-[#ddc9aa] bg-white/20 p-4 transition hover:bg-white/30"
+              data-home-reveal="up"
+              style={
+                {
+                  "--home-reveal-delay": `${index * 70}ms`,
+                } as CSSProperties
+              }
+            >
+              <span className="font-serif text-xl text-[#b87555] sm:text-3xl">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-2 text-base font-semibold text-[#21170f]">
+                {item.title}
+              </h3>
+              <p className="mt-2 max-w-2xl text-xs leading-6 text-[#6b5d51]">
+                {item.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="relative bg-[#eadccb] px-5 py-16 sm:px-6">
+        <div className="absolute inset-0 opacity-[0.13]">
+          <Image
+            src={homeMedia.eventsMood}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
+        <div className="relative mx-auto grid max-w-7xl gap-10">
+          <div data-home-reveal="up">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+              {t.activityEyebrow}
+            </p>
+            <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#21170f] sm:text-5xl">
+              {t.activityTitle}
+            </h2>
+            <p className="mt-4 max-w-sm text-[15px] leading-8 text-[#6b5d51] sm:mt-5 sm:text-base">
+              {t.activityDescription}
+            </p>
+            <Link
+              href={withLocale(locale, "/activities")}
+              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#caaa84] bg-[#fffaf2]/78 px-4 text-sm font-semibold text-[#60432f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40"
+            >
+              {t.secondaryCta}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="min-w-0" data-home-reveal="slide-right">
+            <HomeActivityCarousel
+              activities={activities}
+              density="mobile"
+              labels={t.carousel}
+              locale={locale}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-16 sm:px-6">
+        <div
+          className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.14)]"
+          data-home-reveal="up"
+        >
+          <Image
+            src={homeMedia.friendsArrival}
+            alt=""
+            width={1100}
+            height={1600}
+            sizes="100vw"
+            className="aspect-[4/5] h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/46 via-transparent to-transparent" />
+        </div>
+
+        <div className="mt-8" data-home-reveal="up">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+            {t.ipEyebrow}
+          </p>
+          <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#21170f] sm:text-5xl">
+            {t.ipTitle}
+          </h2>
+          <p className="mt-4 max-w-xl text-[15px] leading-8 text-[#6b5d51] sm:mt-5 sm:text-lg">
+            {t.ipLead}
+          </p>
+        </div>
+
+        <div className="mt-7 grid gap-2 border-l border-[#caaa84] pl-4 sm:mt-8 sm:gap-3 sm:pl-5">
+          {t.ipLines.map((line, index) => (
+            <p
+              key={line}
+              className="font-serif text-xl leading-snug text-[#21170f] min-[390px]:text-[1.35rem] sm:text-3xl"
+              data-home-reveal="up"
+              style={
+                {
+                  "--home-reveal-delay": `${index * 80}ms`,
+                } as CSSProperties
+              }
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      </section>
+
+      <section className="relative isolate overflow-hidden bg-[#1d140f] px-5 py-16 text-white sm:px-6">
+        <Image
+          src={homeMedia.creatorIdentity}
+          alt=""
+          fill
+          sizes="100vw"
+          className="absolute inset-0 -z-10 object-cover opacity-[0.36]"
+        />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,20,15,0.94),rgba(29,20,15,0.76)_54%,rgba(29,20,15,0.56))]" />
+        <div data-home-reveal="up">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#e0b98e]">
+            {t.identityEyebrow}
+          </p>
+          <h2 className="mt-4 max-w-3xl font-serif text-[2.15rem] leading-tight text-white sm:text-6xl">
+            {t.identityTitle}
+          </h2>
+          <p className="mt-5 max-w-2xl text-[15px] leading-8 text-white/72 sm:mt-6 sm:text-lg">
+            {t.identityDescription}
+          </p>
+          <Link
+            href={withLocale(locale, "/co-creators")}
+            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-6"
+          >
+            {t.primaryCta}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 gap-2.5 sm:gap-3">
+          {t.identityBenefits.map((benefit, index) => {
+            const icons = [BadgeCheck, Gem, Layers3, PenLine] as const;
+            const Icon = icons[index % icons.length];
+
+            return (
+              <div
+                key={benefit}
+                className="rounded-2xl border border-white/12 bg-white/[0.07] p-4 backdrop-blur sm:rounded-3xl sm:p-5"
+                data-home-reveal="up"
+                style={
+                  {
+                    "--home-reveal-delay": `${index * 80}ms`,
+                  } as CSSProperties
+                }
+              >
+                <Icon className="h-4 w-4 text-[#e0b98e] sm:h-5 sm:w-5" aria-hidden="true" />
+                <p className="mt-3 text-xs font-semibold text-white sm:mt-4 sm:text-sm">
+                  {benefit}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
+  return (
+    <div className="hidden md:block">
+      <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#17110c] text-white">
+        <video
+          className="home-luxury-hero-media absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+        >
+          <source src={homeMedia.heroVideo} type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,10,6,0.76),rgba(15,10,6,0.38)_45%,rgba(15,10,6,0.12)),linear-gradient(180deg,rgba(15,10,6,0.2),rgba(15,10,6,0.72))]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#17110c] to-transparent" />
+
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-end px-8 pb-16 pt-16 lg:px-10">
+          <div className="home-luxury-reveal max-w-4xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+              {t.heroEyebrow}
+            </p>
+            <h1 className="mt-5 max-w-3xl font-serif text-7xl leading-[1.02] tracking-normal text-white lg:text-[5.8rem]">
+              {t.heroTitle}
+            </h1>
+            <p className="mt-6 max-w-2xl text-xl leading-8 text-white/78">
+              {t.heroDescription}
+            </p>
+            <div className="mt-8 flex gap-3">
+              <Link
+                href={withLocale(locale, "/co-creators")}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                {t.primaryCta}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href={withLocale(locale, "/activities")}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/32 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
+              >
+                {t.secondaryCta}
+                <Compass className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="home-luxury-reveal mt-10 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/76">
+            {t.heroNotes.map((note) => (
+              <span
+                key={note}
+                className="rounded-full border border-white/18 bg-white/10 px-3 py-1.5 backdrop-blur"
+              >
+                {note}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative px-8 py-28">
+        <div className="mx-auto max-w-4xl text-center" data-home-reveal="up">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+            {t.introEyebrow}
+          </p>
+          <h2 className="mt-5 font-serif text-5xl leading-tight text-[#21170f]">
+            {t.introTitle}
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#6b5d51]">
+            {t.introDescription}
+          </p>
+        </div>
+      </section>
+
+      <section className="px-8 pb-28">
+        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.92fr_1.08fr]">
+          <div
+            className="lg:sticky lg:top-24 lg:self-start"
+            data-home-reveal="left"
+          >
+            <div className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.16)]">
+              <Image
+                src={homeMedia.creatorHosting}
+                alt=""
+                width={1600}
+                height={1100}
+                sizes="(min-width: 1024px) 42vw, 100vw"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1f140d]/78 via-[#1f140d]/36 to-transparent" />
+              <p className="absolute inset-x-0 bottom-0 p-7 text-sm font-medium leading-6 text-[#fff4e3] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)]">
+                {t.valueImageCaption}
+              </p>
+            </div>
+          </div>
+
+          <div className="self-center">
+            <div className="max-w-2xl" data-home-reveal="right">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+                {t.valueEyebrow}
+              </p>
+              <h2 className="mt-4 font-serif text-5xl leading-tight text-[#21170f]">
+                {t.valueTitle}
+              </h2>
+            </div>
+
+            <div className="mt-8 divide-y divide-[#d9c7ad] border-y border-[#d9c7ad]">
+              {t.values.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="group grid grid-cols-[5rem_1fr] gap-4 py-5 transition hover:bg-white/18"
+                  data-home-reveal="up"
+                  style={
+                    {
+                      "--home-reveal-delay": `${index * 70}ms`,
+                    } as CSSProperties
+                  }
+                >
+                  <span className="font-serif text-3xl text-[#b87555]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#21170f]">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-base leading-7 text-[#6b5d51]">
+                      {item.body}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative bg-[#eadccb] px-8 py-24">
+        <div className="absolute inset-0 opacity-[0.13]">
+          <Image
+            src={homeMedia.eventsMood}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
+        <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.32fr_minmax(0,0.68fr)] lg:items-center">
+          <div data-home-reveal="left">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+              {t.activityEyebrow}
+            </p>
+            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#21170f]">
+              {t.activityTitle}
+            </h2>
+            <p className="mt-5 max-w-sm text-base leading-8 text-[#6b5d51]">
+              {t.activityDescription}
+            </p>
+            <Link
+              href={withLocale(locale, "/activities")}
+              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#caaa84] bg-[#fffaf2]/78 px-4 text-sm font-semibold text-[#60432f] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40"
+            >
+              {t.secondaryCta}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="min-w-0" data-home-reveal="slide-right">
+            <HomeActivityCarousel
+              activities={activities}
+              density="desktop"
+              labels={t.carousel}
+              locale={locale}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="px-8 py-28">
+        <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[0.48fr_0.52fr] lg:items-center">
+          <div
+            className="relative overflow-hidden rounded-[2rem] bg-[#21170f] shadow-[0_30px_90px_rgba(64,46,31,0.14)]"
+            data-home-reveal="left"
+          >
+            <Image
+              src={homeMedia.friendsArrival}
+              alt=""
+              width={1100}
+              height={1600}
+              sizes="(min-width: 1024px) 43vw, 100vw"
+              className="aspect-[4/5] h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/46 via-transparent to-transparent" />
+          </div>
+
+          <div data-home-reveal="right">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8c6a4b]">
+              {t.ipEyebrow}
+            </p>
+            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#21170f]">
+              {t.ipTitle}
+            </h2>
+            <p className="mt-5 max-w-xl text-lg leading-8 text-[#6b5d51]">
+              {t.ipLead}
+            </p>
+            <div className="mt-8 grid gap-3 border-l border-[#caaa84] pl-5">
+              {t.ipLines.map((line, index) => (
+                <p
+                  key={line}
+                  className="font-serif text-3xl leading-snug text-[#21170f]"
+                  data-home-reveal="up"
+                  style={
+                    {
+                      "--home-reveal-delay": `${index * 80}ms`,
+                    } as CSSProperties
+                  }
+                >
+                  {line}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative isolate overflow-hidden bg-[#1d140f] px-8 py-28 text-white">
+        <Image
+          src={homeMedia.creatorIdentity}
+          alt=""
+          fill
+          sizes="100vw"
+          className="absolute inset-0 -z-10 object-cover opacity-[0.36]"
+        />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,20,15,0.94),rgba(29,20,15,0.76)_54%,rgba(29,20,15,0.56))]" />
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.56fr_0.44fr] lg:items-end">
+          <div data-home-reveal="left">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#e0b98e]">
+              {t.identityEyebrow}
+            </p>
+            <h2 className="mt-4 max-w-3xl font-serif text-6xl leading-tight text-white">
+              {t.identityTitle}
+            </h2>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/72">
+              {t.identityDescription}
+            </p>
+            <Link
+              href={withLocale(locale, "/co-creators")}
+              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#1e140e] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#fff6e8] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              {t.primaryCta}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {t.identityBenefits.map((benefit, index) => {
+              const icons = [BadgeCheck, Gem, Layers3, PenLine] as const;
+              const Icon = icons[index % icons.length];
+
+              return (
+                <div
+                  key={benefit}
+                  className="rounded-3xl border border-white/12 bg-white/[0.07] p-5 backdrop-blur"
+                  data-home-reveal="up"
+                  style={
+                    {
+                      "--home-reveal-delay": `${index * 80}ms`,
+                    } as CSSProperties
+                  }
+                >
+                  <Icon className="h-5 w-5 text-[#e0b98e]" aria-hidden="true" />
+                  <p className="mt-4 text-sm font-semibold text-white">
+                    {benefit}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
