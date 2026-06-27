@@ -44,7 +44,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
     footerCopy[locale as keyof typeof footerCopy] ?? footerCopy["zh-CN"];
 
   return (
-    <footer className="mt-4 border-t border-[#0d6d52]/30 bg-[#073f31] text-white">
+    <footer className="mt-4 border-t border-[#156240]/30 bg-[#156240] text-white">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1.2fr_0.9fr_0.7fr] lg:px-8">
         <div className="space-y-4">
           <Link
@@ -71,7 +71,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               className="flex min-w-0 items-center gap-2 text-sm text-white/75 transition hover:text-white"
               href={`mailto:${t.contactEmail}`}
             >
-              <Mail className="h-4 w-4 shrink-0 text-[#f48d81]" aria-hidden="true" />
+              <Mail className="h-4 w-4 shrink-0 text-[#F09182]" aria-hidden="true" />
               <span className="min-w-0 break-all">{t.contactEmail}</span>
             </a>
             <Link
@@ -79,7 +79,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               href={withLocale(locale, "/co-creators")}
             >
               <BadgeCheck
-                className="h-4 w-4 shrink-0 text-[#f48d81]"
+                className="h-4 w-4 shrink-0 text-[#F09182]"
                 aria-hidden="true"
               />
               <span className="min-w-0">{t.coCreatorsLabel}</span>

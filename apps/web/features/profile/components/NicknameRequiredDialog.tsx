@@ -41,7 +41,7 @@ export function NicknameRequiredDialog({
       aria-modal="true"
       aria-labelledby="nickname-required-title"
     >
-      <div className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#d8e7cf] bg-[#fffaf2] p-5 shadow-2xl sm:max-w-md">
+      <div className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#D6D5B2] bg-[#FFF5E6] p-5 shadow-2xl sm:max-w-md">
         <p className="text-sm font-medium text-moss">{t.nicknameLabel}</p>
         <h2
           id="nickname-required-title"

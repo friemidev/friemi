@@ -8,12 +8,11 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary:
-    "bg-zinc-950 text-white shadow-sm shadow-black/10 hover:bg-zinc-800",
+  primary: "bg-ink text-paper shadow-sm shadow-ink/10 hover:bg-forest",
   secondary:
-    "bg-white/88 text-zinc-950 shadow-sm ring-1 ring-sand-strong hover:bg-team-bg",
-  ghost: "text-zinc-700 hover:bg-white/72 hover:text-zinc-950",
-  success: "bg-moss text-white shadow-sm shadow-moss/20 hover:bg-[#465d40]",
+    "bg-paper/88 text-ink shadow-sm ring-1 ring-sand-strong hover:bg-team-bg",
+  ghost: "text-ink/70 hover:bg-paper/72 hover:text-ink",
+  success: "bg-moss text-paper shadow-sm shadow-moss/20 hover:bg-meadow",
 };
 
 export function Button({

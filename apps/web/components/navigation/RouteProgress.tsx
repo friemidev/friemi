@@ -156,7 +156,7 @@ export function RouteProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-1"
     >
       <div
-        className="h-full bg-[#049d73] shadow-[0_0_18px_rgba(4,157,115,0.42)] transition-[width,opacity] duration-200 ease-out"
+        className="h-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out"
         style={{
           opacity: isActive ? (isFinishing ? 0.55 : 1) : 0,
           width: `${progress}%`,

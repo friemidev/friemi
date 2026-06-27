@@ -81,7 +81,7 @@ function CoverManagerSubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className="inline-flex h-11 items-center justify-center rounded-full bg-[#049d73] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(4,157,115,0.18)] transition hover:bg-[#006e4d] disabled:cursor-not-allowed disabled:bg-[#bfd6b7] disabled:text-white/80"
+      className="inline-flex h-11 items-center justify-center rounded-full bg-[#369758] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240] disabled:cursor-not-allowed disabled:bg-[#8AB68E] disabled:text-white/80"
     >
       {pending ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -154,10 +154,10 @@ export function ActivityCoverImageManager({
         className={cn(
           "inline-flex h-8 items-center justify-center gap-1.5 rounded-full border text-[11px] font-bold backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
           triggerTone === "detail"
-            ? "border-[#75d4b4] bg-[#049d73] px-3 text-white shadow-[0_12px_30px_rgba(4,157,115,0.28)] ring-2 ring-white/80 hover:bg-[#006e4d]"
+            ? "border-[#8AB68E] bg-[#369758] px-3 text-white shadow-[0_12px_30px_rgba(54,151,88,0.28)] ring-2 ring-white/80 hover:bg-[#156240]"
             : compact
-              ? "w-8 border-[#10265c]/20 bg-[#fffaf2] px-0 text-[#10265c] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(0,0,0,0.3)] ring-2 ring-white/85 hover:bg-white min-[460px]:w-auto min-[460px]:px-2.5"
-              : "border-[#bfd6b7] bg-white/96 px-2.5 text-[#315b48] shadow-[0_10px_24px_rgba(0,0,0,0.16)] hover:bg-[#f7fff3]",
+              ? "w-8 border-[#1D1D1B]/20 bg-[#FFF5E6] px-0 text-[#1D1D1B] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(0,0,0,0.3)] ring-2 ring-white/85 hover:bg-white min-[460px]:w-auto min-[460px]:px-2.5"
+              : "border-[#8AB68E] bg-white/96 px-2.5 text-[#156240] shadow-[0_10px_24px_rgba(0,0,0,0.16)] hover:bg-[#FEFFF9]",
           className,
         )}
         aria-label={copy.trigger}
@@ -170,7 +170,7 @@ export function ActivityCoverImageManager({
         <ImageUp
           className={cn(
             "h-3.5 w-3.5",
-            compact && triggerTone !== "detail" ? "text-[#049d73]" : null,
+            compact && triggerTone !== "detail" ? "text-[#369758]" : null,
           )}
           aria-hidden
         />
@@ -198,7 +198,7 @@ export function ActivityCoverImageManager({
             aria-label={copy.close}
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-[1.35rem] border border-[#bfd6b7] bg-[#fffaf2] p-4 shadow-[0_24px_70px_rgba(16,38,92,0.18)] sm:p-5">
+          <div className="relative flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-[1.35rem] border border-[#8AB68E] bg-[#FFF5E6] p-4 shadow-[0_24px_70px_rgba(29,29,27,0.18)] sm:p-5">
             <div className="flex shrink-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p
@@ -213,7 +213,7 @@ export function ActivityCoverImageManager({
               </div>
               <button
                 type="button"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#cfe2c6] bg-white text-[#315b48] shadow-sm transition hover:bg-[#f7fff3]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] shadow-sm transition hover:bg-[#FEFFF9]"
                 aria-label={copy.close}
                 onClick={() => setOpen(false)}
               >
@@ -242,10 +242,10 @@ export function ActivityCoverImageManager({
                 </p>
               ) : null}
 
-              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#cfe2c6] bg-[#fffaf2] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#D6D5B2] bg-[#FFF5E6] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#cfe2c6] bg-white/90 px-4 text-sm font-semibold text-[#315b48] transition hover:bg-[#f7fff3] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#D6D5B2] bg-white/90 px-4 text-sm font-semibold text-[#156240] transition hover:bg-[#FEFFF9] disabled:cursor-not-allowed disabled:opacity-55"
                   disabled={!coverImageUrl || isUploading}
                   onClick={() => setCoverImageUrl("")}
                 >

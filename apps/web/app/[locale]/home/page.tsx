@@ -362,7 +362,7 @@ export default async function HomePage({ params }: HomePageProps) {
     <>
       <HomeLuxuryMotion />
       <DetailSourceRestore sourceKey="home" />
-      <main className="overflow-hidden bg-[#f7fff3] text-[#10265c]">
+      <main className="overflow-hidden bg-[#FEFFF9] text-[#1D1D1B]">
         <MobileLuxuryHome
           activities={activitiesResult.activities}
           locale={locale}
@@ -382,7 +382,7 @@ export default async function HomePage({ params }: HomePageProps) {
 function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
     <div className="md:hidden">
-      <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#10265c] text-white">
+      <section className="relative isolate min-h-[calc(68vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
         <BrandBackdrop
           className="-right-28 top-10 z-0 h-[30rem] w-[18rem] opacity-35 blur-[0.2px]"
           imageClassName="object-contain object-top"
@@ -397,8 +397,8 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           sizes="100vw"
           className="home-luxury-hero-media object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,38,92,0.76),rgba(16,38,92,0.38)_45%,rgba(16,38,92,0.12)),linear-gradient(180deg,rgba(16,38,92,0.2),rgba(16,38,92,0.72))]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#10265c] to-transparent" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(29,29,27,0.76),rgba(29,29,27,0.38)_45%,rgba(29,29,27,0.12)),linear-gradient(180deg,rgba(29,29,27,0.2),rgba(29,29,27,0.72))]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1D1D1B] to-transparent" />
 
         <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6">
           <div className="home-luxury-reveal max-w-4xl">
@@ -414,7 +414,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             <div className="mt-7 grid max-w-md grid-cols-2 gap-2 sm:mt-8 sm:flex sm:max-w-none sm:gap-3">
               <Link
                 href={withLocale(locale, "/co-creators")}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-[#10265c] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#f7fff3] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-[#1D1D1B] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#FEFFF9] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm"
               >
                 {t.primaryCta}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -442,22 +442,22 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate overflow-hidden bg-[#f7fff3] px-5 py-14 sm:px-6">
+      <section className="relative isolate overflow-hidden bg-[#FEFFF9] px-5 py-14 sm:px-6">
         <div
-          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,#f7fff3_0%,#fffaf2_54%,#f7fff3_100%)]"
+          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_54%,#FEFFF9_100%)]"
           aria-hidden="true"
         />
         <div
           className="relative z-10 mx-auto max-w-4xl text-center"
           data-home-reveal="up"
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
             {t.introEyebrow}
           </p>
-          <h2 className="mt-5 font-serif text-[2rem] leading-tight text-[#10265c] sm:text-5xl">
+          <h2 className="mt-5 font-serif text-[2rem] leading-tight text-[#1D1D1B] sm:text-5xl">
             {t.introTitle}
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-8 text-[#315b48] sm:mt-6 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-8 text-[#156240] sm:mt-6 sm:text-lg">
             {t.introDescription}
           </p>
         </div>
@@ -465,7 +465,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
       <section className="px-5 pb-16 sm:px-6">
         <div
-          className="relative overflow-hidden rounded-[2rem] bg-[#10265c] shadow-[0_30px_90px_rgba(16,38,92,0.16)]"
+          className="relative overflow-hidden rounded-[2rem] bg-[#1D1D1B] shadow-[0_30px_90px_rgba(29,29,27,0.16)]"
           data-home-reveal="up"
         >
           <Image
@@ -476,17 +476,17 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             sizes="100vw"
             className="aspect-[4/3] h-full w-full object-cover"
           />
-          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#10265c]/78 via-[#10265c]/36 to-transparent" />
-          <p className="absolute inset-x-0 bottom-0 p-6 text-sm font-medium leading-6 text-[#fffaf2] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)] sm:p-7">
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1D1D1B]/78 via-[#1D1D1B]/36 to-transparent" />
+          <p className="absolute inset-x-0 bottom-0 p-6 text-sm font-medium leading-6 text-[#FFF5E6] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)] sm:p-7">
             {t.valueImageCaption}
           </p>
         </div>
 
         <div className="mt-8 max-w-2xl" data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
             {t.valueEyebrow}
           </p>
-          <h2 className="mt-4 font-serif text-[2rem] leading-tight text-[#10265c] sm:text-5xl">
+          <h2 className="mt-4 font-serif text-[2rem] leading-tight text-[#1D1D1B] sm:text-5xl">
             {t.valueTitle}
           </h2>
         </div>
@@ -495,7 +495,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           {t.values.map((item, index) => (
             <div
               key={item.title}
-              className="group rounded-2xl border border-[#bfd6b7] bg-white/20 p-4 transition hover:bg-white/30"
+              className="group rounded-2xl border border-[#8AB68E] bg-white/20 p-4 transition hover:bg-white/30"
               data-home-reveal="up"
               style={
                 {
@@ -503,13 +503,13 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                 } as CSSProperties
               }
             >
-              <span className="font-serif text-xl text-[#f48d81] sm:text-3xl">
+              <span className="font-serif text-xl text-[#F09182] sm:text-3xl">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <h3 className="mt-2 text-base font-semibold text-[#10265c]">
+              <h3 className="mt-2 text-base font-semibold text-[#1D1D1B]">
                 {item.title}
               </h3>
-              <p className="mt-2 max-w-2xl text-xs leading-6 text-[#315b48]">
+              <p className="mt-2 max-w-2xl text-xs leading-6 text-[#156240]">
                 {item.body}
               </p>
             </div>
@@ -517,7 +517,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate bg-[#e9f7e3] px-5 py-16 sm:px-6">
+      <section className="relative isolate bg-[#F1F2E3] px-5 py-16 sm:px-6">
         <BrandBackdrop
           className="inset-x-0 top-0 z-0 h-full opacity-45"
           imageClassName="object-cover"
@@ -534,18 +534,18 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
         <div className="relative z-10 mx-auto grid max-w-7xl gap-10">
           <div data-home-reveal="up">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
               {t.activityEyebrow}
             </p>
-            <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#10265c] sm:text-5xl">
+            <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#1D1D1B] sm:text-5xl">
               {t.activityTitle}
             </h2>
-            <p className="mt-4 max-w-sm text-[15px] leading-8 text-[#315b48] sm:mt-5 sm:text-base">
+            <p className="mt-4 max-w-sm text-[15px] leading-8 text-[#156240] sm:mt-5 sm:text-base">
               {t.activityDescription}
             </p>
             <Link
               href={withLocale(locale, "/activities")}
-              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#8fc6ad] bg-[#fffaf2]/78 px-4 text-sm font-semibold text-[#315b48] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/40"
+              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FFF5E6]/78 px-4 text-sm font-semibold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40"
             >
               {t.secondaryCta}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -565,7 +565,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
       <section className="px-5 py-16 sm:px-6">
         <div
-          className="relative overflow-hidden rounded-[2rem] bg-[#10265c] shadow-[0_30px_90px_rgba(16,38,92,0.14)]"
+          className="relative overflow-hidden rounded-[2rem] bg-[#1D1D1B] shadow-[0_30px_90px_rgba(29,29,27,0.14)]"
           data-home-reveal="up"
         >
           <Image
@@ -580,22 +580,22 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
 
         <div className="mt-8" data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
             {t.ipEyebrow}
           </p>
-          <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#10265c] sm:text-5xl">
+          <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#1D1D1B] sm:text-5xl">
             {t.ipTitle}
           </h2>
-          <p className="mt-4 max-w-xl text-[15px] leading-8 text-[#315b48] sm:mt-5 sm:text-lg">
+          <p className="mt-4 max-w-xl text-[15px] leading-8 text-[#156240] sm:mt-5 sm:text-lg">
             {t.ipLead}
           </p>
         </div>
 
-        <div className="mt-7 grid gap-2 border-l border-[#8fc6ad] pl-4 sm:mt-8 sm:gap-3 sm:pl-5">
+        <div className="mt-7 grid gap-2 border-l border-[#8AB68E] pl-4 sm:mt-8 sm:gap-3 sm:pl-5">
           {t.ipLines.map((line, index) => (
             <p
               key={line}
-              className="font-serif text-xl leading-snug text-[#10265c] min-[390px]:text-[1.35rem] sm:text-3xl"
+              className="font-serif text-xl leading-snug text-[#1D1D1B] min-[390px]:text-[1.35rem] sm:text-3xl"
               data-home-reveal="up"
               style={
                 {
@@ -609,7 +609,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate overflow-hidden bg-[#10265c] px-5 py-16 text-white sm:px-6">
+      <section className="relative isolate overflow-hidden bg-[#1D1D1B] px-5 py-16 text-white sm:px-6">
         <BrandBackdrop
           className="inset-y-0 right-0 -z-10 w-full opacity-25"
           imageClassName="object-cover"
@@ -622,9 +622,9 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           sizes="100vw"
           className="absolute inset-0 -z-10 object-cover opacity-[0.36]"
         />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(16,38,92,0.94),rgba(16,38,92,0.76)_54%,rgba(16,38,92,0.56))]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,29,27,0.94),rgba(29,29,27,0.76)_54%,rgba(29,29,27,0.56))]" />
         <div data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#f48d81]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#F09182]">
             {t.identityEyebrow}
           </p>
           <h2 className="mt-4 max-w-3xl font-serif text-[2.15rem] leading-tight text-white sm:text-6xl">
@@ -635,7 +635,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           </p>
           <Link
             href={withLocale(locale, "/co-creators")}
-            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#10265c] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#f7fff3] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-6"
+            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#1D1D1B] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#FEFFF9] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:px-6"
           >
             {t.primaryCta}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -658,7 +658,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                   } as CSSProperties
                 }
               >
-                <Icon className="h-4 w-4 text-[#f48d81] sm:h-5 sm:w-5" aria-hidden="true" />
+                <Icon className="h-4 w-4 text-[#F09182] sm:h-5 sm:w-5" aria-hidden="true" />
                 <p className="mt-3 text-xs font-semibold text-white sm:mt-4 sm:text-sm">
                   {benefit}
                 </p>
@@ -674,7 +674,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
     <div className="hidden md:block">
-      <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#10265c] text-white">
+      <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
         <video
           className="home-luxury-hero-media absolute inset-0 h-full w-full object-cover"
           autoPlay
@@ -685,8 +685,8 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         >
           <source src={homeMedia.heroVideo} type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,38,92,0.76),rgba(16,38,92,0.38)_45%,rgba(16,38,92,0.12)),linear-gradient(180deg,rgba(16,38,92,0.2),rgba(16,38,92,0.72))]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#10265c] to-transparent" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(29,29,27,0.76),rgba(29,29,27,0.38)_45%,rgba(29,29,27,0.12)),linear-gradient(180deg,rgba(29,29,27,0.2),rgba(29,29,27,0.72))]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1D1D1B] to-transparent" />
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-end px-8 pb-16 pt-16 lg:px-10">
           <div className="home-luxury-reveal max-w-4xl">
@@ -702,7 +702,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             <div className="mt-8 flex gap-3">
               <Link
                 href={withLocale(locale, "/co-creators")}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#10265c] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#f7fff3] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#1D1D1B] shadow-[0_18px_54px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#FEFFF9] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 {t.primaryCta}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -737,13 +737,13 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           variant="desktop-wide"
         />
         <div className="relative z-10 mx-auto max-w-4xl text-center" data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
             {t.introEyebrow}
           </p>
-          <h2 className="mt-5 font-serif text-5xl leading-tight text-[#10265c]">
+          <h2 className="mt-5 font-serif text-5xl leading-tight text-[#1D1D1B]">
             {t.introTitle}
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#315b48]">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#156240]">
             {t.introDescription}
           </p>
         </div>
@@ -755,7 +755,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             className="lg:sticky lg:top-24 lg:self-start"
             data-home-reveal="left"
           >
-            <div className="relative overflow-hidden rounded-[2rem] bg-[#10265c] shadow-[0_30px_90px_rgba(16,38,92,0.16)]">
+            <div className="relative overflow-hidden rounded-[2rem] bg-[#1D1D1B] shadow-[0_30px_90px_rgba(29,29,27,0.16)]">
               <Image
                 src={homeMedia.creatorHosting}
                 alt=""
@@ -764,8 +764,8 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                 sizes="(min-width: 1024px) 42vw, 100vw"
                 className="aspect-[4/3] h-full w-full object-cover"
               />
-              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#10265c]/78 via-[#10265c]/36 to-transparent" />
-              <p className="absolute inset-x-0 bottom-0 p-7 text-sm font-medium leading-6 text-[#fffaf2] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)]">
+              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#1D1D1B]/78 via-[#1D1D1B]/36 to-transparent" />
+              <p className="absolute inset-x-0 bottom-0 p-7 text-sm font-medium leading-6 text-[#FFF5E6] drop-shadow-[0_2px_8px_rgba(0,0,0,0.48)]">
                 {t.valueImageCaption}
               </p>
             </div>
@@ -773,15 +773,15 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
           <div className="self-center lg:pt-4 xl:pt-6">
             <div className="max-w-2xl" data-home-reveal="right">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
                 {t.valueEyebrow}
               </p>
-              <h2 className="mt-4 font-serif text-5xl leading-tight text-[#10265c]">
+              <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
                 {t.valueTitle}
               </h2>
             </div>
 
-            <div className="mt-8 divide-y divide-[#bfd6b7] border-y border-[#bfd6b7]">
+            <div className="mt-8 divide-y divide-[#8AB68E] border-y border-[#8AB68E]">
               {t.values.map((item, index) => (
                 <div
                   key={item.title}
@@ -793,14 +793,14 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                     } as CSSProperties
                   }
                 >
-                  <span className="font-serif text-3xl text-[#f48d81]">
+                  <span className="font-serif text-3xl text-[#F09182]">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <div>
-                    <h3 className="text-lg font-semibold text-[#10265c]">
+                    <h3 className="text-lg font-semibold text-[#1D1D1B]">
                       {item.title}
                     </h3>
-                    <p className="mt-2 max-w-2xl text-base leading-7 text-[#315b48]">
+                    <p className="mt-2 max-w-2xl text-base leading-7 text-[#156240]">
                       {item.body}
                     </p>
                   </div>
@@ -811,7 +811,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate bg-[#e9f7e3] px-8 py-24">
+      <section className="relative isolate bg-[#F1F2E3] px-8 py-24">
         <BrandBackdrop
           className="inset-x-0 top-0 z-0 h-full opacity-50"
           imageClassName="object-cover"
@@ -828,18 +828,18 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
         <div className="relative z-10 mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.32fr_minmax(0,0.68fr)] lg:items-center">
           <div data-home-reveal="left">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
               {t.activityEyebrow}
             </p>
-            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#10265c]">
+            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
               {t.activityTitle}
             </h2>
-            <p className="mt-5 max-w-sm text-base leading-8 text-[#315b48]">
+            <p className="mt-5 max-w-sm text-base leading-8 text-[#156240]">
               {t.activityDescription}
             </p>
             <Link
               href={withLocale(locale, "/activities")}
-              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#8fc6ad] bg-[#fffaf2]/78 px-4 text-sm font-semibold text-[#315b48] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/40"
+              className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FFF5E6]/78 px-4 text-sm font-semibold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40"
             >
               {t.secondaryCta}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -860,7 +860,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
       <section className="px-8 py-28">
         <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[0.48fr_0.52fr] lg:items-center">
           <div
-            className="relative overflow-hidden rounded-[2rem] bg-[#10265c] shadow-[0_30px_90px_rgba(16,38,92,0.14)]"
+            className="relative overflow-hidden rounded-[2rem] bg-[#1D1D1B] shadow-[0_30px_90px_rgba(29,29,27,0.14)]"
             data-home-reveal="left"
           >
             <Image
@@ -875,20 +875,20 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           </div>
 
           <div data-home-reveal="right">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#006e4d]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
               {t.ipEyebrow}
             </p>
-            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#10265c]">
+            <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
               {t.ipTitle}
             </h2>
-            <p className="mt-5 max-w-xl text-lg leading-8 text-[#315b48]">
+            <p className="mt-5 max-w-xl text-lg leading-8 text-[#156240]">
               {t.ipLead}
             </p>
-            <div className="mt-8 grid gap-3 border-l border-[#8fc6ad] pl-5">
+            <div className="mt-8 grid gap-3 border-l border-[#8AB68E] pl-5">
               {t.ipLines.map((line, index) => (
                 <p
                   key={line}
-                  className="font-serif text-3xl leading-snug text-[#10265c]"
+                  className="font-serif text-3xl leading-snug text-[#1D1D1B]"
                   data-home-reveal="up"
                   style={
                     {
@@ -904,7 +904,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate overflow-hidden bg-[#10265c] px-8 py-28 text-white">
+      <section className="relative isolate overflow-hidden bg-[#1D1D1B] px-8 py-28 text-white">
         <BrandBackdrop
           className="inset-y-0 right-0 -z-10 w-full opacity-28"
           imageClassName="object-cover"
@@ -917,10 +917,10 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           sizes="100vw"
           className="absolute inset-0 -z-10 object-cover opacity-[0.36]"
         />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(16,38,92,0.94),rgba(16,38,92,0.76)_54%,rgba(16,38,92,0.56))]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,29,27,0.94),rgba(29,29,27,0.76)_54%,rgba(29,29,27,0.56))]" />
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.56fr_0.44fr] lg:items-end">
           <div data-home-reveal="left">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#f48d81]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#F09182]">
               {t.identityEyebrow}
             </p>
             <h2 className="mt-4 max-w-3xl font-serif text-6xl leading-tight text-white">
@@ -931,7 +931,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             </p>
             <Link
               href={withLocale(locale, "/co-creators")}
-              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#10265c] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#f7fff3] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#1D1D1B] shadow-[0_18px_54px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:bg-[#FEFFF9] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               {t.primaryCta}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -954,7 +954,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                     } as CSSProperties
                   }
                 >
-                  <Icon className="h-5 w-5 text-[#f48d81]" aria-hidden="true" />
+                  <Icon className="h-5 w-5 text-[#F09182]" aria-hidden="true" />
                   <p className="mt-4 text-sm font-semibold text-white">
                     {benefit}
                   </p>

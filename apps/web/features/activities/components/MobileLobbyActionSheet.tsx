@@ -52,22 +52,22 @@ function getMobileActionMenuCopy(locale: string) {
 
 function getPrimaryActionClassName(tone: ActivityCardActionTone) {
   if (tone === "muted") {
-    return "border-zinc-300 bg-zinc-200 text-zinc-600 shadow-[0_12px_24px_rgba(113,113,122,0.16)]";
+    return "border-outline/35 bg-fog text-ink/60 shadow-[0_12px_24px_rgba(29,29,27,0.08)]";
   }
 
   if (tone === "pending") {
-    return "border-[#e2bc67] bg-[#fff0bd] text-[#765113] shadow-[0_14px_26px_rgba(198,156,73,0.2)]";
+    return "border-sand bg-cream text-danger shadow-[0_14px_26px_rgba(181,48,31,0.12)]";
   }
 
   if (tone === "joined" || tone === "neutral") {
-    return "border-[#bfd6b7] bg-[#f7fff3] text-[#315b48] shadow-[0_14px_26px_rgba(10,63,49,0.14)]";
+    return "border-sage bg-paper text-forest shadow-[0_14px_26px_rgba(21,98,64,0.14)]";
   }
 
   if (tone === "activity") {
-    return "border-[#8fc1d6] bg-[#dceef7] text-[#245e76] shadow-[0_14px_26px_rgba(84,139,167,0.16)]";
+    return "border-sage bg-ice text-forest shadow-[0_14px_26px_rgba(21,98,64,0.12)]";
   }
 
-  return "border-[#f48d81] bg-[#f48d81] text-white shadow-[0_16px_30px_rgba(244,141,129,0.25)]";
+  return "border-coral bg-coral text-white shadow-[0_16px_30px_rgba(240,145,130,0.25)]";
 }
 
 function getActionIcon(name: MobileActionIconName): LucideIcon {
@@ -123,7 +123,7 @@ export function MobileLobbyActionSheet({
       <button
         aria-label={copy.close}
         className={cn(
-          "absolute inset-0 h-full w-full cursor-default bg-[#10265c]/32 backdrop-blur-[2px] transition-opacity duration-200 ease-out motion-reduce:transition-none",
+          "absolute inset-0 h-full w-full cursor-default bg-ink/32 backdrop-blur-[2px] transition-opacity duration-200 ease-out motion-reduce:transition-none",
           sheetVisible ? "opacity-100" : "opacity-0",
         )}
         type="button"
@@ -131,25 +131,25 @@ export function MobileLobbyActionSheet({
       />
       <div
         className={cn(
-          "absolute inset-x-3 bottom-0 rounded-t-[1.65rem] border border-[#cfe2c6] bg-[#fffdf6] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3.5 text-left shadow-[0_-20px_50px_rgba(16,38,92,0.22)] ring-1 ring-white transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "absolute inset-x-3 bottom-0 rounded-t-[1.65rem] border border-sand bg-paper px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3.5 text-left shadow-[0_-20px_50px_rgba(29,29,27,0.22)] ring-1 ring-white transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           sheetVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-5 opacity-0",
         )}
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[#cfe2c6]" />
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-sand" />
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-[#006e4d]">
+            <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-forest">
               {copy.eyebrow}
             </p>
-            <p className="mt-2 line-clamp-2 text-sm font-extrabold leading-snug text-[#10265c]">
+            <p className="mt-2 line-clamp-2 text-sm font-extrabold leading-snug text-ink">
               {activityTitle}
             </p>
           </div>
           <button
             aria-label={copy.close}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#cfe2c6] bg-white text-[#315b48] shadow-[0_8px_18px_rgba(10,63,49,0.08)]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sand bg-paper text-forest shadow-[0_8px_18px_rgba(21,98,64,0.08)]"
             type="button"
             onClick={closeSheet}
           >
@@ -162,7 +162,7 @@ export function MobileLobbyActionSheet({
             detailSource={primaryDetailSource}
             event={primaryEvent}
             href={primaryHref}
-            className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
+            className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35"
           >
             <span
               className={cn(
@@ -177,9 +177,9 @@ export function MobileLobbyActionSheet({
           <Link
             href={secondaryHref}
             aria-label={secondaryLabel}
-            className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35"
+            className="group/action rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35"
           >
-            <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[#bfd6b7] bg-[#f7fff3] px-3 text-[13px] font-bold leading-tight text-[#006e4d] shadow-[0_8px_16px_rgba(10,63,49,0.08)] transition group-active/action:translate-y-px">
+            <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-sage bg-paper px-3 text-[13px] font-bold leading-tight text-forest shadow-[0_8px_16px_rgba(21,98,64,0.08)] transition group-active/action:translate-y-px">
               <CopyPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 text-center">{secondaryLabel}</span>
             </span>
@@ -244,7 +244,7 @@ export function MobileLobbyActionSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.open}
-        className="relative mx-auto flex h-9 min-h-9 w-full cursor-pointer list-none items-center justify-center gap-2 overflow-hidden rounded-[1.15rem] border border-[#f3b1a7] bg-[linear-gradient(135deg,#fff0ed_0%,#fff8ef_58%,#f7fff3_100%)] px-2.5 text-[#10265c] shadow-[0_10px_20px_rgba(244,141,129,0.12),inset_0_1px_0_rgba(255,255,255,0.94)] transition duration-150 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="relative mx-auto flex h-9 min-h-9 w-full cursor-pointer list-none items-center justify-center gap-2 overflow-hidden rounded-[1.15rem] border border-coral/45 bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_56%,#F1F2E3_100%)] px-2.5 text-forest shadow-[0_10px_20px_rgba(240,145,130,0.1),inset_0_1px_0_rgba(255,255,255,0.94)] transition duration-150 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         type="button"
         onClick={() => {
           setOpen(true);
@@ -252,24 +252,24 @@ export function MobileLobbyActionSheet({
       >
         <span
           aria-hidden="true"
-          className="absolute -left-4 top-0 h-9 w-9 rounded-full bg-[#f48d81]/16 blur-[0.5px]"
+          className="absolute -left-4 top-0 h-9 w-9 rounded-full bg-coral/18 blur-[0.5px]"
         />
         <span
           aria-hidden="true"
-          className="absolute -right-4 bottom-0 h-10 w-10 rounded-full bg-[#049d73]/14 blur-[1px]"
+          className="absolute -right-5 bottom-0 h-10 w-10 rounded-full bg-sage/14 blur-[1px]"
         />
         <span className="relative flex h-6 w-[2.85rem] shrink-0 items-center justify-center">
-          <span className="absolute left-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#f48d81] text-white shadow-[0_8px_16px_rgba(244,141,129,0.24)]">
+          <span className="absolute left-0 flex h-6 w-6 items-center justify-center rounded-full bg-coral text-white shadow-[0_8px_16px_rgba(240,145,130,0.24)]">
             <PrimaryIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
-          <span className="absolute right-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#bfd6b7] bg-white text-[#006e4d] shadow-[0_8px_16px_rgba(10,63,49,0.1)]">
+          <span className="absolute right-0 flex h-6 w-6 items-center justify-center rounded-full border border-sage/70 bg-cream text-forest shadow-[0_8px_16px_rgba(21,98,64,0.07)]">
             <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         </span>
         <span className="relative min-w-0 translate-y-px truncate text-[12px] font-bold leading-[1.25]">
           {copy.open}
         </span>
-        <span className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-[#049d73]/70" />
+        <span className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-coral/65" />
       </button>
 
       {sheetRendered && mounted ? createPortal(overlay, document.body) : null}

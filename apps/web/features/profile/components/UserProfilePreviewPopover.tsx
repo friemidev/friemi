@@ -212,7 +212,7 @@ export function UserProfilePreviewPopover({
       <button
         type="button"
         className={cn(
-          "inline-flex cursor-pointer items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/35",
+          "inline-flex cursor-pointer items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
           triggerClassName,
         )}
         aria-expanded={isOpen}

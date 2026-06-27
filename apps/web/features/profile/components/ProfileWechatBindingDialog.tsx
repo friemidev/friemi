@@ -62,7 +62,7 @@ export function ProfileWechatBindingDialog({
         className="flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-3xl border border-sand bg-white shadow-2xl shadow-black/15"
         noValidate
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#fffaf2] px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-sand bg-[#FFF5E6] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <WechatMark active={isBound} />
@@ -100,7 +100,7 @@ export function ProfileWechatBindingDialog({
             />
           </label>
 
-          <p className="rounded-2xl bg-[#f8f1e7] px-3 py-2 text-xs leading-5 text-zinc-600 ring-1 ring-sand/70">
+          <p className="rounded-2xl bg-[#FFF5E6] px-3 py-2 text-xs leading-5 text-zinc-600 ring-1 ring-sand/70">
             {t.wechatPrivacyHint}
           </p>
 
@@ -117,7 +117,7 @@ export function ProfileWechatBindingDialog({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-sand bg-[#fffaf2] px-5 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-sand bg-[#FFF5E6] px-5 py-4">
           <Button
             className="h-10 rounded-full bg-white"
             onClick={onClose}
@@ -163,7 +163,7 @@ function WechatMark({ active }: { active: boolean }) {
       aria-hidden="true"
       className={
         active
-          ? "inline-flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#bfe5c8]"
+          ? "inline-flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#8AB68E]"
           : "inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 ring-1 ring-zinc-200"
       }
     >

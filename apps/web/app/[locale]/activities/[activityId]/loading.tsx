@@ -6,7 +6,7 @@ import {
 export default function ActivityDetailLoading() {
   return (
     <LoadingPageShell className="space-y-6">
-      <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] border border-black/10 bg-[#e8f3e2] p-4 shadow-[0_16px_36px_rgba(16,38,92,0.08)] sm:p-5 md:min-h-72">
+      <div className="relative flex min-h-52 items-end overflow-hidden rounded-[1.25rem] border border-black/10 bg-[#F1F2E3] p-4 shadow-[0_16px_36px_rgba(29,29,27,0.08)] sm:p-5 md:min-h-72">
         <ShimmerBlock className="absolute inset-0 rounded-none" />
         <div className="relative w-full max-w-3xl space-y-3 rounded-[1.15rem] bg-white/35 p-3 ring-1 ring-white/30 backdrop-blur-sm sm:p-4">
           <ShimmerBlock className="h-7 w-24 rounded-full bg-white/75" />

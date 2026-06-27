@@ -148,8 +148,8 @@ export function PaginationControl(props: PaginationControlProps) {
     const className = cn(
       "hidden h-8 min-w-8 items-center justify-center rounded-full px-2.5 text-sm font-semibold transition min-[520px]:inline-flex",
       isCurrent
-        ? "bg-[#049d73] text-white shadow-sm"
-        : "text-[#405b4d] hover:bg-white",
+        ? "bg-[#369758] text-white shadow-sm"
+        : "text-[#156240] hover:bg-white",
     );
 
     if (props.mode === "link") {
@@ -180,7 +180,7 @@ export function PaginationControl(props: PaginationControlProps) {
   };
 
   const sideButtonClassName =
-    "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#315b48] ring-1 ring-sand-strong transition hover:bg-white disabled:cursor-not-allowed disabled:text-zinc-400 disabled:ring-sand";
+    "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-[#156240] ring-1 ring-sand-strong transition hover:bg-white disabled:cursor-not-allowed disabled:text-zinc-400 disabled:ring-sand";
 
   const sideButton = (
     page: number,
@@ -241,12 +241,12 @@ export function PaginationControl(props: PaginationControlProps) {
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-full bg-white p-1 ring-1 ring-sand sm:inline-flex sm:grid-cols-none sm:justify-center">
         {sideButton(previousPage, previousDisabled, "previous")}
         <div className="min-w-20 text-center min-[520px]:hidden">
-          <p className="text-xs font-semibold text-[#315b48]">
+          <p className="text-xs font-semibold text-[#156240]">
             {t.pageSummary(currentPage, totalPages)}
           </p>
           <div className="mx-auto mt-1 h-1 w-14 overflow-hidden rounded-full bg-sand">
             <div
-              className="h-full rounded-full bg-[#049d73]"
+              className="h-full rounded-full bg-[#369758]"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -285,7 +285,7 @@ export function PaginationControl(props: PaginationControlProps) {
           goToPage(page);
         }}
       >
-        <span className="text-xs font-medium text-[#587465]">
+        <span className="text-xs font-medium text-[#156240]">
           {t.jumpLabel}
         </span>
         <input
@@ -299,8 +299,8 @@ export function PaginationControl(props: PaginationControlProps) {
           }}
           placeholder={String(currentPage)}
           className={cn(
-            "h-8 w-14 rounded-full border bg-white px-2 text-center text-sm font-semibold text-ink outline-none transition focus:border-[#049d73] focus:ring-2 focus:ring-[#049d73]/18",
-            error ? "border-[#d96f55]" : "border-sand-strong",
+            "h-8 w-14 rounded-full border bg-white px-2 text-center text-sm font-semibold text-ink outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/18",
+            error ? "border-[#F09182]" : "border-sand-strong",
           )}
         />
         <span className="text-xs text-zinc-500">
@@ -308,12 +308,12 @@ export function PaginationControl(props: PaginationControlProps) {
         </span>
         <button
           type="submit"
-          className="inline-flex h-8 items-center justify-center rounded-full bg-[#006e4d] px-3.5 text-xs font-semibold text-white transition hover:bg-[#049d73]"
+          className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3.5 text-xs font-semibold text-white transition hover:bg-[#369758]"
         >
           {t.jumpAction}
         </button>
         {error ? (
-          <span className="basis-full text-center text-xs text-[#b95f49]">
+          <span className="basis-full text-center text-xs text-[#B5301F]">
             {t.invalidPage(totalPages)}
           </span>
         ) : null}

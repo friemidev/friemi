@@ -72,7 +72,7 @@ function SubmitButton({ locale }: { locale: string }) {
     <Button
       type="submit"
       disabled={pending}
-      className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(0,110,77,0.18)] hover:bg-[#005f43] sm:min-w-[5.25rem] sm:px-4"
+      className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5.25rem] sm:px-4"
       aria-busy={pending}
     >
       {pending ? (
@@ -204,8 +204,8 @@ export function MessageComposer({
             <Smile className="h-5 w-5" />
           </button>
           {emojiPanelOpen ? (
-            <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[1.1rem] border border-sand bg-white p-3 shadow-[0_18px_34px_rgba(10,63,49,0.14)]">
-              <p className="px-1 text-xs font-medium text-[#41665c]">
+            <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[1.1rem] border border-sand bg-white p-3 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
+              <p className="px-1 text-xs font-medium text-[#156240]">
                 {t.addEmoji}
               </p>
               <div className="mt-2 grid grid-cols-7 gap-1.5 sm:grid-cols-8">
@@ -234,7 +234,7 @@ export function MessageComposer({
             maxLength={messageMaxLength}
             defaultValue={state.ok ? "" : state.values?.body}
             placeholder={t.messagePlaceholder}
-            className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#fbfff7] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
+            className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
             onChange={(event) => setBodyLength(event.currentTarget.value.length)}
           />
         </label>
@@ -244,7 +244,7 @@ export function MessageComposer({
         <p
           className={cn(
             "mt-2 text-right text-xs leading-5",
-            bodyLength >= messageMaxLength ? "text-clay" : "text-[#6d857c]",
+            bodyLength >= messageMaxLength ? "text-clay" : "text-[#8E8383]",
           )}
         >
           {bodyLength}/{messageMaxLength}

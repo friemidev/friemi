@@ -162,12 +162,17 @@ export function resolveShareImageUrl(
 
 export function truncateShareText(value: string, maxLength: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
+  const ellipsis = "…";
 
   if (normalized.length <= maxLength) {
     return normalized;
   }
 
-  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+  if (maxLength <= 0) {
+    return "";
+  }
+
+  return `${normalized.slice(0, maxLength - ellipsis.length).trimEnd()}${ellipsis}`;
 }
 
 export function getShareDescription({

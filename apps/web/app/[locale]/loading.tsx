@@ -5,7 +5,7 @@ function SkeletonBlock({
 }) {
   return (
     <div
-      className={`friemi-shimmer rounded-2xl border border-[#cfe2c6] bg-[#f1faeb] ${className}`}
+      className={`friemi-shimmer rounded-2xl border border-[#D6D5B2] bg-[#F1F2E3] ${className}`}
     />
   );
 }
@@ -15,8 +15,8 @@ export default function LocaleLoading() {
     <div className="min-h-[calc(100vh-4rem)] bg-transparent">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="h-2.5 w-2.5 rounded-full bg-[#049d73]" />
-          <p className="text-sm font-medium text-[#315b48]">Loading...</p>
+          <div className="h-2.5 w-2.5 rounded-full bg-[#369758]" />
+          <p className="text-sm font-medium text-[#156240]">Loading...</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

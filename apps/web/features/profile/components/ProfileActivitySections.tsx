@@ -85,9 +85,9 @@ function CompactEmptyState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-[1.1rem] border border-dashed border-[#bfd6b7] bg-white/[0.62] px-4 py-4 shadow-[0_10px_24px_rgba(10,63,49,0.04)] sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-[1.1rem] border border-dashed border-[#8AB68E] bg-white/[0.62] px-4 py-4 shadow-[0_10px_24px_rgba(21,98,64,0.04)] sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f4fbef] p-2 ring-1 ring-[#cfe4c8]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] p-2 ring-1 ring-[#D6D5B2]">
           <Image
             src={brand.emptyStateIconPath}
             alt=""
@@ -97,7 +97,7 @@ function CompactEmptyState({
           />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#10265c]">{title}</p>
+          <p className="text-sm font-semibold text-[#1D1D1B]">{title}</p>
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
             {description}
           </p>
@@ -106,7 +106,7 @@ function CompactEmptyState({
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#315b48] ring-1 ring-[#bfd6b7] transition hover:bg-[#f7fff3] hover:text-[#10265c]"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-[#1D1D1B]"
         >
           {actionLabel}
         </Link>

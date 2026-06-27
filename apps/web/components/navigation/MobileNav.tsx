@@ -78,7 +78,7 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#cfe2c6] bg-[#fffaf2] pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_26px_rgba(10,63,49,0.1)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#FFF5E6] pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_26px_rgba(21,98,64,0.1)] md:hidden">
       <div className="mx-auto grid h-[5.05rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
@@ -92,14 +92,14 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#049d73]/30",
+                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-2.5 h-[4.5rem] bg-[#049d73] text-white shadow-[0_12px_26px_rgba(4,157,115,0.3)]"
-                    : "-mt-2.5 h-[4.5rem] bg-[#f48d81] text-white shadow-[0_10px_22px_rgba(244,141,129,0.24)] hover:bg-[#e77f73]"
+                    ? "-mt-2.5 h-[4.5rem] bg-meadow text-white shadow-[0_12px_26px_rgba(54,151,88,0.3)]"
+                    : "-mt-2.5 h-[4.5rem] bg-coral text-white shadow-[0_10px_22px_rgba(240,145,130,0.24)] hover:bg-danger"
                   : active
-                    ? "bg-white text-[#006e4d] shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-[#d9ead6]"
-                    : "text-zinc-600 hover:bg-white hover:text-[#10265c]",
+                    ? "bg-paper text-forest shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sage"
+                    : "text-zinc-600 hover:bg-paper hover:text-ink",
               )}
             >
               <span
@@ -108,7 +108,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   active
                     ? item.isPrimary
                       ? "bg-white/88"
-                      : "bg-[#049d73]"
+                      : "bg-[#369758]"
                     : "bg-transparent",
                 )}
                 aria-hidden="true"

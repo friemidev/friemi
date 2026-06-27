@@ -215,13 +215,13 @@ feature/v2-1-brand-palette-token-unification
 
 小功能：
 
-- [ ] 从 `apps/web/public/色盘.png` 提取正式品牌色值，定义主色、辅助色、文字色、背景色、边框色、状态色和阴影色 token
-- [ ] 盘点全站 hardcoded 色值，区分必须替换、暂时保留和第三方 / 语义例外
-- [ ] 将按钮、卡片、badge、筛选器、下拉栏、分页、弹窗、toast、空态和错误态切到统一色盘
-- [ ] 统一移动端底部导航、顶部 header、浮层、action sheet 和安全区背景色，避免新旧色混用
-- [ ] 评估 `apps/web/public/全背景logo.png` 的适用场景：方形图标、无图 fallback、空状态、loading reduced-motion、分享图或 PWA 入口
-- [ ] 保留透明 logo 和横向 lockup 的使用边界，避免所有场景都强行使用同一张图
-- [ ] 更新品牌视觉文档，记录色盘 token、使用规则和禁止继续新增散落色值的约定
+- [x] 从 `apps/web/public/色盘.png` 提取正式品牌色值，定义主色、辅助色、文字色、背景色、边框色、状态色和阴影色 token
+- [x] 盘点全站 hardcoded 色值，区分必须替换、暂时保留和第三方 / 语义例外
+- [x] 将按钮、卡片、badge、筛选器、下拉栏、分页、弹窗、toast、空态和错误态切到统一色盘
+- [x] 统一移动端底部导航、顶部 header、浮层、action sheet 和安全区背景色，避免新旧色混用
+- [x] 评估 `apps/web/public/全背景logo.png` 的适用场景：方形图标、无图 fallback、空状态、loading reduced-motion、分享图或 PWA 入口
+- [x] 保留透明 logo 和横向 lockup 的使用边界，避免所有场景都强行使用同一张图
+- [x] 更新品牌视觉文档，记录色盘 token、使用规则和禁止继续新增散落色值的约定
 
 验收标准：
 
@@ -270,7 +270,7 @@ feature/v2-1-team-detail-cta-redesign
 - [x] 至少完成一个核心页面的移动端 / 网页端布局拆分试点
 - [x] 全站品牌风格与 logo 大整改完成一轮页面审计
 - [ ] 网页端组件风格统一、移动端活动 / 组局卡片设计完成第二阶段风格化整改
-- [ ] 色盘驱动的全站颜色统一方案完成并接入核心组件
+- [x] 色盘驱动的全站颜色统一方案完成并接入核心组件
 - [ ] 组局详情页报名 CTA 在桌面端和移动端完成分层重构
 - [x] 法语 accent 与法语文案完成一轮全站修正
 - [ ] 移动端 390px 没有横向滚动条

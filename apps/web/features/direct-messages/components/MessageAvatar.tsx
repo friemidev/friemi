@@ -15,7 +15,7 @@ export function MessageAvatar({
 
   return (
     <span
-      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f7fff3] text-center font-semibold text-moss shadow-[0_8px_18px_rgba(10,63,49,0.1)] ring-1 ring-sand`}
+      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FEFFF9] text-center font-semibold text-moss shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-sand`}
     >
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

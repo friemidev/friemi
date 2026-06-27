@@ -613,7 +613,7 @@ function FocusList({ items, locale }: { items: FocusItem[]; locale: string }) {
           <>
             <span
               className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                item.severity === "good" ? "bg-[#eef5ea]" : "bg-[#fff0ed]"
+                item.severity === "good" ? "bg-[#F1F2E3]" : "bg-[#DEAAB3]"
               }`}
             >
               {icon}
@@ -845,7 +845,7 @@ function DashboardControls({
               key={section}
               className={`inline-flex h-9 min-w-0 items-center justify-center rounded-full px-3 text-sm font-medium ring-1 transition ${
                 section === activeSection
-                  ? "bg-[#eef5ea] text-moss ring-[#c1d2ba]"
+                  ? "bg-[#F1F2E3] text-moss ring-[#8AB68E]"
                   : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
               }`}
               href={buildAnalyticsHref({
@@ -1000,7 +1000,7 @@ function PopularItemsPanel({
   return (
     <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 p-3 shadow-sm sm:p-5">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff0ed] text-clay ring-1 ring-[#f5b6ad] sm:h-10 sm:w-10">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#DEAAB3] text-clay ring-1 ring-[#DEAAB3] sm:h-10 sm:w-10">
           <Flame className="h-4 w-4 sm:h-5 sm:w-5" />
         </span>
         <div className="min-w-0">
@@ -1188,7 +1188,7 @@ function LatencyPanel({
                       <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
                         {getLatencyKindLabel(item.kind, t)}
                       </span>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#eef5ea] px-2 text-xs font-medium text-moss ring-1 ring-[#c1d2ba]">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#F1F2E3] px-2 text-xs font-medium text-moss ring-1 ring-[#8AB68E]">
                         {item.environment}
                       </span>
                       <p className="min-w-0 flex-1 break-words text-sm font-semibold text-ink">
@@ -1297,7 +1297,7 @@ export default async function AdminAnalyticsPage({
 
       <section className="min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/82 shadow-sm sm:rounded-[1.5rem]">
         <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
-          <div className="min-w-0 bg-[#f8f4ea] p-3 sm:p-5 md:p-6">
+          <div className="min-w-0 bg-[#FFF5E6] p-3 sm:p-5 md:p-6">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-clay" />
               <h2 className="text-lg font-semibold text-ink">
@@ -1310,13 +1310,13 @@ export default async function AdminAnalyticsPage({
                 label={`${t.actionUsers} · ${t.intentWindow(
                   dashboard.intentWindowDays,
                 )}`}
-                tone="bg-[#eef5ea] text-moss ring-[#c1d2ba]"
+                tone="bg-[#F1F2E3] text-moss ring-[#8AB68E]"
                 value={dashboard.northStar.activeIntentUsers}
               />
               <MetricTile
                 icon={TrendingUp}
                 label={t.intentActions}
-                tone="bg-white text-clay ring-[#f5b6ad]"
+                tone="bg-white text-clay ring-[#DEAAB3]"
                 value={dashboard.northStar.intentActionCount}
               />
               <MetricTile

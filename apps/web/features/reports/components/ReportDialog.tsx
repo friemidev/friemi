@@ -147,7 +147,7 @@ export function ReportDialog({
           <div
             aria-describedby={descriptionId}
             aria-modal="true"
-            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#d8e7cf] bg-[#fffaf2] shadow-2xl sm:max-w-lg"
+            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#D6D5B2] bg-[#FFF5E6] shadow-2xl sm:max-w-lg"
             role="dialog"
           >
             <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-5">
@@ -224,7 +224,7 @@ export function ReportDialog({
                   />
                 </label>
 
-                <div className="rounded-2xl bg-[#eef5ea] px-4 py-3 text-sm leading-6 text-moss">
+                <div className="rounded-2xl bg-[#F1F2E3] px-4 py-3 text-sm leading-6 text-moss">
                   <ShieldAlert className="mb-1 h-4 w-4" />
                   {t.descriptionHint}
                 </div>

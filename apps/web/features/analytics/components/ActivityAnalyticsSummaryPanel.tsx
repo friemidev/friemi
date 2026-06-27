@@ -123,9 +123,9 @@ export function ActivityAnalyticsSummaryPanel({
   ];
 
   return (
-    <section className="mb-3 rounded-[1rem] border border-[#bfd6b7] bg-[#f7fff3] p-3">
+    <section className="mb-3 rounded-[1rem] border border-[#8AB68E] bg-[#FEFFF9] p-3">
       <div className="flex items-start gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#006e4d] ring-1 ring-[#bfd6b7]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
           <BarChart3 className="h-4 w-4" />
         </span>
         <div className="min-w-0">
