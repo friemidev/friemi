@@ -47,13 +47,13 @@ const initialGuestState: GuestJoinActivityState = {};
 function getGuestJoinCopy(locale: string) {
   if (locale === "fr") {
     return {
-      title: "Inscription invite",
+      title: "Inscription invité",
       description:
-        "Laissez seulement un nom pour vous inscrire. Telephone, e-mail et WeChat restent optionnels; e-mail ou WeChat aideront a retrouver cette inscription plus tard.",
+        "Laissez seulement un nom pour vous inscrire. Téléphone, e-mail et WeChat restent optionnels; e-mail ou WeChat aideront à retrouver cette inscription plus tard.",
       displayNameLabel: "Nom ou pseudo",
-      displayNamePlaceholder: "Votre nom affiche",
-      phoneLabel: "Telephone",
-      phonePlaceholder: "Telephone, optionnel",
+      displayNamePlaceholder: "Votre nom affiché",
+      phoneLabel: "Téléphone",
+      phonePlaceholder: "Téléphone, optionnel",
       emailLabel: "E-mail",
       emailPlaceholder: "E-mail, optionnel",
       wechatLabel: "WeChat",
@@ -64,11 +64,11 @@ function getGuestJoinCopy(locale: string) {
       submit: "S'inscrire",
       submitting: "Envoi...",
       loginJoin: "S'inscrire avec un compte",
-      guestJoin: "Continuer en invite",
+      guestJoin: "Continuer en invité",
       signIn: "Se connecter",
-      successTitle: "Inscription recue",
+      successTitle: "Inscription reçue",
       successDescription:
-        "Votre inscription est enregistree. En creant un compte avec le meme e-mail ou WeChat, elle sera rattachee automatiquement.",
+        "Votre inscription est enregistrée. En créant un compte avec le même e-mail ou WeChat, elle sera rattachée automatiquement.",
     };
   }
 

@@ -30,10 +30,10 @@ function getProfileSocialActionCopy(locale: string) {
   if (locale === "fr") {
     return {
       addFriend: "Ajouter ami",
-      friendRequestSent: "Demande envoyee",
-      incomingRequest: "Demande recue",
+      friendRequestSent: "Demande envoyée",
+      incomingRequest: "Demande reçue",
       signInToAddFriend: "Connexion ami",
-      alreadyFriend: "Deja ami",
+      alreadyFriend: "Déjà ami",
     };
   }
 

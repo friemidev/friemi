@@ -40,7 +40,7 @@ import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
-  generalPageShareDescription,
+  getGeneralPageShareDescription,
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: generalPageShareDescription,
+    description: getGeneralPageShareDescription(locale),
     path: withLocale(locale, "/activities"),
     title: `${t.activities.title} · ${brand.name}`,
   });

@@ -28,11 +28,11 @@ function getCoverManagerCopy(locale: string) {
     return {
       close: "Fermer",
       description:
-        "Cette image s'affiche seulement sur ce plan. L'activite d'origine ne sera pas modifiee.",
-      remove: "Revenir a l'image d'origine",
+        "Cette image s'affiche seulement sur ce plan. L'activité d'origine ne sera pas modifiée.",
+      remove: "Revenir à l'image d'origine",
       save: "Enregistrer",
       saving: "Enregistrement...",
-      success: "Image mise a jour.",
+      success: "Image mise à jour.",
       title: "Image du plan",
       trigger: "Changer l'image",
       triggerShort: "Image",

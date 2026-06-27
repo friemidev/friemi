@@ -254,106 +254,106 @@ const coCreatorsCopy = {
   },
   fr: {
     metadata: {
-      title: "Programme co-createurs FRIEMI",
+      title: "Programme co-créateurs FRIEMI",
       description:
-        "Transformez des sorties ponctuelles en communaute durable, visible et facile a partager.",
+        "Transformez des sorties ponctuelles en communauté durable, visible et facile à partager.",
     },
     hero: {
-      badge: "Programme co-createurs FRIEMI",
-      eyebrow: "Que peut apporter FRIEMI aux co-createurs ?",
-      title: "Transformez vos petites sorties en communaute qui grandit.",
+      badge: "Programme co-créateurs FRIEMI",
+      eyebrow: "Que peut apporter FRIEMI aux co-créateurs ?",
+      title: "Transformez vos petites sorties en communauté qui grandit.",
       description:
-        "Rendez vos activites plus faciles a partager, a rejoindre, a reutiliser, et a transformer en image personnelle plus claire.",
+        "Rendez vos activités plus faciles à partager, à rejoindre, à réutiliser, et à transformer en image personnelle plus claire.",
     },
-    flowSteps: ["Invitation eparse", "Page claire", "Memoire de communaute"],
+    flowSteps: ["Invitation éparse", "Page claire", "Mémoire de communauté"],
     flowSummary:
-      "Commencez par une activite, puis construisez votre style d'organisation, vos habitues et une identite de createur partageable.",
+      "Commencez par une activité, puis construisez votre style d'organisation, vos habitués et une identité de créateur partageable.",
     core: {
-      eyebrow: "Idee centrale",
-      title: "Faire de l'organisation d'activites une force qui se repete.",
+      eyebrow: "Idée centrale",
+      title: "Faire de l'organisation d'activités une force qui se répète.",
       description:
-        "Votre activite n'est plus seulement une annonce ponctuelle. Elle devient une entree partageable, reutilisable et facile a rejoindre.",
+        "Votre activité n'est plus seulement une annonce ponctuelle. Elle devient une entrée partageable, réutilisable et facile à rejoindre.",
     },
     benefits: [
       {
         title: "Partageable",
         subtitle: "Un lien clair pour chaque canal",
         description:
-          "Remplacez les messages eparpilles par une page complete, facile a partager dans les groupes, Moments, Xiaohongshu, Instagram et ailleurs.",
+          "Remplacez les messages éparpillés par une page complète, facile à partager dans les groupes, Moments, Xiaohongshu, Instagram et ailleurs.",
       },
       {
         title: "Plus pro",
         subtitle: "Une page qui inspire confiance",
         description:
-          "Heure, lieu, places, prix, regles et inscription sont presentes au meme endroit pour que chacun comprenne vite l'activite.",
+          "Heure, lieu, places, prix, règles et inscription sont présentés au même endroit pour que chacun comprenne vite l'activité.",
       },
       {
         title: "Inscription simple",
-        subtitle: "Moins de messages prives",
+        subtitle: "Moins de messages privés",
         description:
-          "Collectez les informations et gerez les participants sans refaire les memes messages ni compter les places a la main.",
+          "Collectez les informations et gérez les participants sans refaire les mêmes messages ni compter les places à la main.",
       },
       {
-        title: "Reutilisable",
-        subtitle: "Des modeles pour les sorties regulieres",
+        title: "Réutilisable",
+        subtitle: "Des modèles pour les sorties régulières",
         description:
-          "Transformez vos activites recurrentes en modeles pour ne pas recommencer depuis zero a chaque nouvelle edition.",
+          "Transformez vos activités récurrentes en modèles pour ne pas recommencer depuis zéro à chaque nouvelle édition.",
       },
       {
         title: "Relations durables",
-        subtitle: "Historique, habitues et communaute",
+        subtitle: "Historique, habitués et communauté",
         description:
-          "Chaque activite peut enrichir votre historique, vos relations avec les participants et votre petite communaute.",
+          "Chaque activité peut enrichir votre historique, vos relations avec les participants et votre petite communauté.",
       },
       {
         title: "IP plus forte",
-        subtitle: "Un style de createur plus visible",
+        subtitle: "Un style de créateur plus visible",
         description:
-          "Avec des activites regulieres, une identite de host visible et des retours accumules, vous devenez plus qu'une personne qui organise parfois.",
+          "Avec des activités régulières, une identité de host visible et des retours accumulés, vous devenez plus qu'une personne qui organise parfois.",
       },
       {
-        title: "Identite",
-        subtitle: "Reconnaissance et priorite",
+        title: "Identité",
+        subtitle: "Reconnaissance et priorité",
         description:
-          "Obtenez l'identite de co-createur FRIEMI, une reconnaissance precoce, plus de visibilite, un acces a la co-creation produit et de futures opportunites.",
+          "Obtenez l'identité de co-créateur FRIEMI, une reconnaissance précoce, plus de visibilité, un accès à la co-création produit et de futures opportunités.",
       },
     ],
     ip: {
       eyebrow: "Une marque personnelle plus claire",
-      title: "Aidez les autres a mieux vous retenir et vous faire confiance.",
+      title: "Aidez les autres à mieux vous retenir et vous faire confiance.",
       description:
-        "FRIEMI transforme des impressions dispersees en une image de createur plus claire, plus professionnelle et plus facile a partager.",
+        "FRIEMI transforme des impressions dispersées en une image de créateur plus claire, plus professionnelle et plus facile à partager.",
       examples: [
-        "Vous etes la personne qui fait vivre le club de lecture.",
-        "Vous etes connu pour des soirees jeux bien organisees.",
-        "Vous organisez des balades urbaines et des sorties cafe avec gout.",
-        "Vous etes la personne qui rassemble les autres.",
+        "Vous êtes la personne qui fait vivre le club de lecture.",
+        "Vous êtes connu pour des soirées jeux bien organisées.",
+        "Vous organisez des balades urbaines et des sorties café avec goût.",
+        "Vous êtes la personne qui rassemble les autres.",
       ],
     },
     recruitment: {
       eyebrow: "Version pour page de recrutement",
       lines: [
-        "Utilisez une page claire au lieu de recopier le meme texte dans les groupes.",
-        "Affichez heure, lieu, prix, places, regles et inscription dans un format fiable.",
-        "Reduisez les messages prives, les listes manuelles et les confirmations repetees.",
-        "Utilisez des modeles et l'historique pour ne pas repartir de zero.",
-        "Gardez la trace des participants, des activites rejointes et des relations qui se construisent.",
-        "Construisez une identite de host reconnaissable grace a des activites coherentes.",
-        "Profitez d'une reconnaissance precoce, d'une meilleure visibilite, de la co-creation produit et de futures collaborations.",
+        "Utilisez une page claire au lieu de recopier le même texte dans les groupes.",
+        "Affichez heure, lieu, prix, places, règles et inscription dans un format fiable.",
+        "Réduisez les messages privés, les listes manuelles et les confirmations répétées.",
+        "Utilisez des modèles et l'historique pour ne pas repartir de zéro.",
+        "Gardez la trace des participants, des activités rejointes et des relations qui se construisent.",
+        "Construisez une identité de host reconnaissable grâce à des activités cohérentes.",
+        "Profitez d'une reconnaissance précoce, d'une meilleure visibilité, de la co-création produit et de futures collaborations.",
       ],
     },
     poster: {
       eyebrow: "Version courte pour affiche",
-      title: "Que gagnez-vous en devenant co-createur FRIEMI ?",
+      title: "Que gagnez-vous en devenant co-créateur FRIEMI ?",
     },
     final: {
-      eyebrow: "Mots-cles finaux",
+      eyebrow: "Mots-clés finaux",
       title:
-        "Partageable | Plus pro | Inscription simple | Reutilisable | Relations durables | IP plus forte | Identite",
+        "Partageable | Plus pro | Inscription simple | Réutilisable | Relations durables | IP plus forte | Identité",
       description:
-        "Transformez des sorties ponctuelles en communaute cumulative ; transformez votre image personnelle en marque de createur plus claire.",
+        "Transformez des sorties ponctuelles en communauté cumulative ; transformez votre image personnelle en marque de créateur plus claire.",
     },
-    cta: "Voir les activites",
+    cta: "Voir les activités",
   },
 } as const;
 

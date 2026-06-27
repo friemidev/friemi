@@ -32,7 +32,7 @@ const footerCopy = {
       "Trouvez des sorties, invitez des amis et rencontrez du monde.",
     contactTitle: "Contact",
     contactEmail: "friemi.dev@gmail.com",
-    coCreatorsLabel: "Programme co-createurs",
+    coCreatorsLabel: "Programme co-créateurs",
     versionLabel: "Version",
     updatesLabel: "Notes de version",
     copyright: `© 2026 ${brand.name}`,

@@ -22,7 +22,7 @@ import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
-  generalPageShareDescription,
+  getGeneralPageShareDescription,
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 
@@ -328,7 +328,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: generalPageShareDescription,
+    description: getGeneralPageShareDescription(locale),
     path: withLocale(locale, "/home"),
     title: `Friemi · ${t.heroTitle}`,
   });

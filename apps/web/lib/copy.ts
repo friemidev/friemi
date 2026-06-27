@@ -1097,7 +1097,7 @@ const copy = {
         "Narrow activities by keyword, topic, city, date range, relationship, format, and timing.",
       publicInfoDescription:
         "Narrow activity info by keyword, topic, city, date range, and timing.",
-      mobileSummary: "Search / Filter",
+      mobileSummary: "Filter",
       keywordLabel: "Keyword",
       keywordPlaceholder: "Search title or description, e.g. film night",
       categoryLabel: "Topic",
@@ -1213,7 +1213,7 @@ const copy = {
       systemShare: "Share",
       systemShareHint: "Open the system share sheet and send this link.",
       wechatShareHint:
-        "In WeChat, tap the top-right ··· menu, then send to a friend or group.",
+        "In WeChat, use the top-right ··· menu to send this link.",
       shareUnavailable:
         "This browser cannot open the share sheet. Copy the link instead.",
       closeShareHelp: "Close sharing help",
@@ -1235,7 +1235,7 @@ const copy = {
       posterPreviewAlt: "Activity poster preview",
       posterPreviewTitle: "Share poster",
       longPressPoster: "Press and hold to save",
-      posterSaveHint: "Save it, then post to Moments.",
+      posterSaveHint: "Save it, then post to WeChat Moments.",
       closePosterPreview: "Close poster",
     },
     merchant: {
@@ -1646,7 +1646,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Enter a valid https link.",
         UNSUPPORTED_HOST:
-          "This website is not supported yet. Use Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
+          "This website is not supported yet. Use Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
         UNSUPPORTED_CONTENT: "This link is not a parsable activity page.",
         FETCH_FAILED:
           "Failed to parse the link. Try again later or fill the form manually.",
@@ -1922,7 +1922,7 @@ const copy = {
         "L'inscription est en préparation. Réessayez plus tard.",
     },
     home: {
-      eyebrow: "De vraies activites · de vraies connexions",
+      eyebrow: "De vraies activités · de vraies connexions",
       title: "Friemi",
       tagline: "La prochaine sortie commence ici.",
       description:
@@ -2011,7 +2011,7 @@ const copy = {
         "Affinez les activités par mot-clé, thème, ville, période, relation, format et avancement.",
       publicInfoDescription:
         "Affinez les sorties par mot-clé, thème, ville, période et avancement.",
-      mobileSummary: "Recherche / Filtre",
+      mobileSummary: "Filtrer",
       keywordLabel: "Mot-clé",
       keywordPlaceholder: "Titre ou description, ex. cine-club",
       categoryLabel: "Thème",
@@ -2132,7 +2132,7 @@ const copy = {
       systemShareHint:
         "Ouvrez le panneau de partage système pour envoyer ce lien.",
       wechatShareHint:
-        "Dans WeChat, touchez le menu ··· en haut à droite, puis envoyez à un ami ou à un groupe.",
+        "Dans WeChat, menu ··· en haut à droite pour envoyer ce lien.",
       shareUnavailable:
         "Ce navigateur ne peut pas ouvrir le partage système. Copiez plutôt le lien.",
       closeShareHelp: "Fermer l'aide au partage",
@@ -2154,7 +2154,7 @@ const copy = {
       posterPreviewAlt: "Aperçu de l'affiche de l'activité",
       posterPreviewTitle: "Affiche de partage",
       longPressPoster: "Appuyez longuement pour enregistrer",
-      posterSaveHint: "Enregistrez-la, puis publiez-la dans Moments.",
+      posterSaveHint: "Enregistrez-la, puis publiez-la dans WeChat Moments.",
       closePosterPreview: "Fermer l'affiche",
     },
     merchant: {
@@ -2473,7 +2473,7 @@ const copy = {
       hiddenParticipation: (limit: number, count: number) =>
         `Affichage des ${limit} dernières participations. ${count} plus anciennes ne sont pas encore affichées.`,
       hiddenFavorite: (limit: number, count: number) =>
-        `Affichage des ${limit} dernieres activites favorites. ${count} plus anciennes ne sont pas encore affichees.`,
+        `Affichage des ${limit} dernières activités favorites. ${count} plus anciennes ne sont pas encore affichées.`,
       signedUpAt: (date: string) => `Inscrit le ${date}`,
       cancelledAt: (date: string) => `Annulé le ${date}`,
       participationAria: (
@@ -2583,7 +2583,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Saisissez un lien https valide.",
         UNSUPPORTED_HOST:
-          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
+          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
         UNSUPPORTED_CONTENT:
           "Ce lien n'est pas une page d'activité analysable.",
         FETCH_FAILED:
@@ -2693,7 +2693,7 @@ const copy = {
         FULL: "Complet",
         DRAFT: "Brouillon",
         RECRUITING: "Rejoignable",
-        CONFIRMED: "Confirme",
+        CONFIRMED: "Confirmé",
         ENDED: "Terminé",
         CANCELLED: "Annulé",
       },

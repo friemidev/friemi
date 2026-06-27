@@ -19,8 +19,8 @@ function getCopy(locale: string) {
       comments: "Discussions",
       contact: "Contacts",
       share: "Partages",
-      source: "Premiere entree",
-      sourceFallback: "Pas encore assez de donnees",
+      source: "Première entrée",
+      sourceFallback: "Pas encore assez de données",
     };
   }
 
@@ -85,16 +85,16 @@ function getSourceLabel(locale: string, sourceSurface: string | null) {
     share_link: "Shared link",
   };
   const fr: Record<string, string> = {
-    activity_detail: "Detail",
-    activity_list: "Activites",
+    activity_detail: "Détail",
+    activity_list: "Activités",
     friend_activity: "Amis",
     global_search: "Recherche",
     home_recent: "Accueil",
     messages: "Messages",
     notification: "Notifications",
     profile: "Profil",
-    public_event_detail: "Evenement",
-    share_link: "Lien partage",
+    public_event_detail: "Événement",
+    share_link: "Lien partagé",
   };
   const labels = locale === "fr" ? fr : locale === "en" ? en : zh;
 

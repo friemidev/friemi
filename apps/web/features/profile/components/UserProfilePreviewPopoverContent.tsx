@@ -77,9 +77,9 @@ function getPreviewCopy(locale: string) {
   if (locale === "fr") {
     return {
       addFriend: "Ajouter",
-      alreadyFriends: "Deja ami",
-      emptyBio: "Pas encore de presentation.",
-      failed: "Echec du chargement.",
+      alreadyFriends: "Déjà ami",
+      emptyBio: "Pas encore de présentation.",
+      failed: "Échec du chargement.",
       followingCount: "Abonnements",
       guestNotice: "Cet utilisateur est encore visiteur.",
       openProfile: "Profil",

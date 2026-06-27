@@ -5,12 +5,12 @@ export function getFollowCopy(locale: string) {
       followed: "Suivi",
       unfollow: "Ne plus suivre",
       following: "Abonnement...",
-      unfollowing: "Mise a jour...",
+      unfollowing: "Mise à jour...",
       signInToFollow: "Se connecter pour suivre",
-      followers: "Abonnes",
+      followers: "Abonnés",
       followingCount: "Abonnements",
-      invalidRequest: "Requete invalide. Reessayez plus tard.",
-      cannotFollowSelf: "Vous ne pouvez pas vous suivre vous-meme.",
+      invalidRequest: "Requête invalide. Réessayez plus tard.",
+      cannotFollowSelf: "Vous ne pouvez pas vous suivre vous-même.",
       targetUnavailable:
         "Cet utilisateur est introuvable ou temporairement indisponible.",
     };
