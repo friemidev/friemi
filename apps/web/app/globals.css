@@ -386,7 +386,7 @@ html[data-home-motion-ready="true"]
   }
 }
 
-@container (min-width: 68rem) {
+@container (min-width: 80rem) {
   .activity-card-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }

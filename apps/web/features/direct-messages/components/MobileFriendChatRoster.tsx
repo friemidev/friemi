@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   CalendarDays,
   ChevronDown,
+  MessageCircle,
   UserPlus,
 } from "lucide-react";
 import {
@@ -51,27 +52,38 @@ export function MobileFriendChatRoster({
   const redirectPath = "/messages";
 
   return (
-    <section className="space-y-4 lg:hidden">
-      <div className="flex items-start justify-between gap-3">
+    <section className="space-y-4 pb-24 lg:hidden">
+      <div className="relative overflow-hidden rounded-[1.35rem] border border-sand bg-[linear-gradient(135deg,#f7fff3_0%,#fffaf2_56%,#fff0ed_100%)] p-4 shadow-[0_16px_38px_rgba(10,63,49,0.08)]">
+        <span
+          aria-hidden="true"
+          className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-moss/10"
+        />
+        <div className="relative flex items-start justify-between gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(0,110,77,0.18)]">
+            <MessageCircle className="h-5 w-5" />
+          </span>
+          <button
+            type="button"
+            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(10,63,49,0.08)] ring-1 ring-sand transition active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            aria-label={t.addFriend}
+            title={t.addFriend}
+            onClick={() => setAddFriendOpen(true)}
+          >
+            <UserPlus className="h-4 w-4" />
+            <RequestCountBadge count={incomingRequests.length} />
+          </button>
+        </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-moss">{t.friendListTitle}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-normal text-ink">
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-moss">
+            {t.friendListTitle}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
             {t.title}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
+          <p className="mt-2 text-sm leading-6 text-[#41665c]">
             {t.friendListDescription}
           </p>
         </div>
-        <button
-          type="button"
-          className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white shadow-sm transition hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-          aria-label={t.addFriend}
-          title={t.addFriend}
-          onClick={() => setAddFriendOpen(true)}
-        >
-          <UserPlus className="h-5 w-5" />
-          <RequestCountBadge count={incomingRequests.length} />
-        </button>
       </div>
 
       <IncomingFriendRequestsPanel
@@ -82,17 +94,17 @@ export function MobileFriendChatRoster({
       />
 
       {friends.length === 0 ? (
-        <div className="py-10">
+        <div className="rounded-[1.2rem] border border-dashed border-sand bg-white/70 p-5 shadow-[0_10px_24px_rgba(10,63,49,0.06)]">
           <h2 className="text-base font-semibold text-ink">
             {t.emptyFriendListTitle}
           </h2>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
+          <p className="mt-2 max-w-sm text-sm leading-6 text-[#41665c]">
             {t.emptyFriendListDescription}
           </p>
           <Button
             type="button"
             variant="secondary"
-            className="relative mt-5 h-11 gap-2 bg-white px-5"
+            className="relative mt-5 h-11 gap-2 rounded-full bg-white px-5 text-moss ring-1 ring-sand"
             onClick={() => setAddFriendOpen(true)}
           >
             <UserPlus className="h-4 w-4" />
@@ -101,7 +113,7 @@ export function MobileFriendChatRoster({
           </Button>
         </div>
       ) : (
-        <div className="-mx-2 divide-y divide-black/10">
+        <div className="grid gap-2">
           {friends.map((friend) => (
             <MobileFriendChatRow
               key={friend.friendshipId}
@@ -153,11 +165,11 @@ function MobileFriendChatRow({
           <span className="truncate text-sm font-semibold text-ink">
             {friend.friend.nickname}
           </span>
-          <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-zinc-400">
+          <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#6d857c]">
             {formatActivityDate(time, locale)}
           </span>
         </span>
-        <span className="mt-1 block truncate text-xs leading-5 text-zinc-500">
+        <span className="mt-1 block truncate text-xs leading-5 text-[#41665c]">
           {preview}
         </span>
       </span>
@@ -165,11 +177,11 @@ function MobileFriendChatRow({
   );
 
   return (
-    <article className="min-w-0 px-2 py-3.5 transition hover:bg-white/60">
+    <article className="min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(10,63,49,0.06)] transition active:translate-y-px">
       {friend.conversationId ? (
         <Link
           aria-label={t.openConversation(friend.friend.nickname)}
-          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           href={withLocale(locale, `/messages/${friend.conversationId}`)}
         >
           {content}
@@ -180,7 +192,7 @@ function MobileFriendChatRow({
           <input name="friendProfileId" type="hidden" value={friend.friend.id} />
           <button
             type="submit"
-            className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md px-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+            className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
             aria-label={t.openConversation(friend.friend.nickname)}
           >
             {content}
@@ -215,7 +227,7 @@ function MobileActivitySignals({
       {remainingActivities.length > 0 ? (
         <details className="group min-w-0">
           <summary
-            className="inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-md bg-moss/10 px-2 text-xs font-semibold text-moss transition hover:bg-moss/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden"
+            className="inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-full bg-team-bg px-2.5 text-xs font-semibold text-moss ring-1 ring-sand transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden"
             aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
           >
             <span className="group-open:hidden">
@@ -258,7 +270,7 @@ function MobileActivitySignalRow({
   return (
     <Link
       aria-label={t.openActivity(activity.title)}
-      className="grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-md bg-moss/5 px-2 py-1 text-xs leading-5 text-zinc-600 transition hover:bg-moss/10 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+      className="grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full bg-team-bg px-2.5 py-1 text-xs leading-5 text-[#41665c] ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
       href={withLocale(locale, `/activities/${activity.id}`)}
       title={label}
     >

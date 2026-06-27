@@ -67,8 +67,8 @@ export default async function MessageThreadPage({
   }
 
   return (
-    <PageContainer className="max-md:h-[calc(100dvh-10rem)] max-md:overflow-hidden max-md:py-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
-      <div className="grid min-h-0 gap-4">
+    <PageContainer className="max-md:fixed max-md:inset-x-0 max-md:bottom-[calc(5.05rem+env(safe-area-inset-bottom))] max-md:top-[calc(4rem+3px)] max-md:z-30 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+      <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
         <IncomingFriendRequestsPanel
           className="lg:hidden"
           incomingRequests={incomingRequests}

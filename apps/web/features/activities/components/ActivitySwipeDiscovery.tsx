@@ -610,6 +610,9 @@ export function ActivitySwipeDiscovery({
           .map((activity, stackIndex) => {
             const isTopCard = stackIndex === 0;
             const displayStatus = getActivityDisplayStatus(activity);
+            const isActivityInfo = Boolean(
+              activity.type === "PUBLIC_EVENT" || activity.isActivityInfo,
+            );
             const timeState = getActivityTimeState(activity);
             const dateLabel = getActivityDateLabel(activity, locale);
             const locationLabel = getActivityLocationLabel(activity);
@@ -705,10 +708,12 @@ export function ActivitySwipeDiscovery({
                         <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
                         <span className="line-clamp-1">{dateLabel}</span>
                       </span>
-                      <span className="flex min-w-0 items-start gap-2">
-                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
-                        <span className="line-clamp-1">{locationLabel}</span>
-                      </span>
+                      {isActivityInfo ? (
+                        <span className="flex min-w-0 items-start gap-2">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#315b48]" />
+                          <span className="line-clamp-1">{locationLabel}</span>
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 

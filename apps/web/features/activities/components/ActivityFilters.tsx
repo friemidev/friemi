@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ActivityCategory } from "@chill-club/shared";
 import {
+  Check,
   ChevronDown,
   FilterX,
   Search,
@@ -49,12 +50,127 @@ type ActiveFilterChip = {
 };
 
 const selectClassName =
-  "h-11 w-full rounded-2xl border border-[#bfd6b7] bg-white/90 px-3 text-sm font-normal text-zinc-900 shadow-[0_8px_18px_rgba(116,83,45,0.05)] outline-none transition hover:border-[#8fc6ad] hover:bg-white focus:border-[#049d73] focus:bg-white focus:ring-2 focus:ring-[#bfd6b7]/70";
+  "h-11 w-full rounded-2xl border border-[#bfd6b7] bg-[#fffdf6] px-3 text-sm font-semibold text-[#10265c] shadow-[0_8px_18px_rgba(4,157,115,0.06)] outline-none transition hover:border-[#8fc6ad] hover:bg-white focus:border-[#049d73] focus:bg-white focus:ring-2 focus:ring-[#bfd6b7]/70";
 const desktopSelectClassName =
   "sm:h-10 md:h-9 md:rounded-xl md:text-[13px] md:shadow-none";
 const fieldLabelClassName =
-  "grid gap-1.5 text-[12px] font-semibold text-[#8d673c]";
-const desktopFieldLabelClassName = "md:gap-1 md:text-[11px] md:leading-none";
+  "grid gap-1.5 text-[12px] font-semibold text-[#315b48]";
+const desktopFieldLabelClassName =
+  "md:gap-1 md:text-[11px] md:leading-[1.25]";
+
+type FilterSelectOption = {
+  label: string;
+  value: string;
+};
+
+function ActivityFilterSelect({
+  className,
+  name,
+  onValueChange,
+  options,
+  value,
+}: {
+  className?: string;
+  name: string;
+  onValueChange: (value: string) => void;
+  options: FilterSelectOption[];
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selectedOption =
+    options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div
+      className={cn("relative min-w-0", open ? "z-[90]" : "z-10")}
+      ref={rootRef}
+    >
+      <input name={name} type="hidden" value={value} />
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className={cn(
+          "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-left",
+          className,
+        )}
+        type="button"
+        onClick={() => {
+          setOpen((current) => !current);
+        }}
+      >
+        <span className="min-w-0 truncate">{selectedOption?.label}</span>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "h-4 w-4 shrink-0 text-[#006e4d] transition",
+            open ? "rotate-180" : null,
+          )}
+        />
+      </button>
+      {open ? (
+        <div
+          className="absolute left-0 top-[calc(100%+0.4rem)] z-[90] max-h-72 w-full min-w-[12rem] overflow-y-auto rounded-[1rem] border border-[#bfd6b7] bg-[#fffdf6] p-1.5 text-sm font-semibold text-[#10265c] shadow-[0_20px_46px_rgba(16,38,92,0.18)] ring-1 ring-white"
+          role="listbox"
+        >
+          {options.map((option) => {
+            const isSelected = option.value === value;
+
+            return (
+              <button
+                aria-selected={isSelected}
+                className={cn(
+                  "grid min-h-9 w-full grid-cols-[minmax(0,1fr)_1rem] items-center gap-3 rounded-[0.8rem] px-3 py-2 text-left transition",
+                  isSelected
+                    ? "bg-[#eaf6f1] text-[#006e4d]"
+                    : "hover:bg-[#f7fff3]",
+                )}
+                key={option.value || "__empty"}
+                role="option"
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onValueChange(option.value);
+                }}
+              >
+                <span className="truncate">{option.label}</span>
+                {isSelected ? (
+                  <Check className="h-3.5 w-3.5 text-[#049d73]" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function ActivityFilters({
   cities,
@@ -316,125 +432,130 @@ export function ActivityFilters({
               : null,
           )}
         >
-          <label className={labelClassName}>
-            {t.activityFilters.categoryLabel}
-            <select
+          <div className={labelClassName}>
+            <span>{t.activityFilters.categoryLabel}</span>
+            <ActivityFilterSelect
               className={selectControlClassName}
-              defaultValue={filters.category ?? ""}
               name="category"
-              onChange={(event) =>
+              options={[
+                {
+                  label: t.activityFilters.allCategories,
+                  value: "",
+                },
+                ...activityCategoryOptions.map((category) => ({
+                  label: getCategoryLabel(category, locale),
+                  value: category,
+                })),
+              ]}
+              value={filters.category ?? ""}
+              onValueChange={(value) =>
                 applyFilterChange({
-                  category: event.target.value
-                    ? (event.target.value as ActivityCategory)
-                    : undefined,
+                  category: value ? (value as ActivityCategory) : undefined,
                 })
               }
-            >
-              <option value="">{t.activityFilters.allCategories}</option>
-              {activityCategoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {getCategoryLabel(category, locale)}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
 
-          <label className={labelClassName}>
-            {t.activityFilters.cityLabel}
-            <select
+          <div className={labelClassName}>
+            <span>{t.activityFilters.cityLabel}</span>
+            <ActivityFilterSelect
               className={selectControlClassName}
-              defaultValue={selectedCity}
               name="city"
-              onChange={(event) =>
+              options={[
+                {
+                  label: t.activityFilters.allCities,
+                  value: "",
+                },
+                ...cityOptions.map((city) => ({
+                  label: city,
+                  value: city,
+                })),
+              ]}
+              value={selectedCity}
+              onValueChange={(value) =>
                 applyFilterChange({
-                  city: event.target.value || undefined,
+                  city: value || undefined,
                 })
               }
-            >
-              <option value="">{t.activityFilters.allCities}</option>
-              {cityOptions.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
 
-          <label
+          <div
             className={cn(labelClassName, isMobileLayout ? "col-span-2" : null)}
           >
-            {t.activityFilters.dateRangeLabel}
-            <select
+            <span>{t.activityFilters.dateRangeLabel}</span>
+            <ActivityFilterSelect
               className={selectControlClassName}
-              defaultValue={filters.dateRange ?? ""}
               name="dateRange"
-              onChange={(event) =>
+              options={[
+                {
+                  label: t.activityFilters.allDateRanges,
+                  value: "",
+                },
+                ...activityDateRangeOptions.map((dateRange) => ({
+                  label: t.activityFilters.dateRangeOptions[dateRange],
+                  value: dateRange,
+                })),
+              ]}
+              value={filters.dateRange ?? ""}
+              onValueChange={(value) =>
                 applyFilterChange({
-                  dateRange: event.target.value
-                    ? (event.target.value as ActivityDateRange)
-                    : undefined,
+                  dateRange: value ? (value as ActivityDateRange) : undefined,
                 })
               }
-            >
-              <option value="">{t.activityFilters.allDateRanges}</option>
-              {activityDateRangeOptions.map((dateRange) => (
-                <option key={dateRange} value={dateRange}>
-                  {t.activityFilters.dateRangeOptions[dateRange]}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
 
           {!publicInfoOnly ? (
             <>
-              <label className={labelClassName}>
-                {t.activityFilters.relationLabel}
-                <select
+              <div className={labelClassName}>
+                <span>{t.activityFilters.relationLabel}</span>
+                <ActivityFilterSelect
                   className={selectControlClassName}
-                  defaultValue={filters.relation}
                   name="relation"
-                  onChange={(event) =>
-                    applyFilterChange({
-                      relation: event.target.value as ActivityRelationFilter,
-                    })
-                  }
-                >
-                  {activityRelationFilters.map((relation) => (
-                    <option key={relation} value={relation}>
-                      {relation === "ALL"
+                  options={activityRelationFilters.map((relation) => ({
+                    label:
+                      relation === "ALL"
                         ? t.activityFilters.allRelations
                         : relation === "FRIEND_HOSTED"
                           ? t.activityFilters.relationFriendHosted
                           : relation === "FRIEND_JOINED"
                             ? t.activityFilters.relationFriendJoined
-                            : t.activityFilters.relationMine}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={labelClassName}>
-                {t.activityFilters.typeLabel}
-                <select
-                  className={selectControlClassName}
-                  defaultValue={filters.type ?? ""}
-                  name="type"
-                  onChange={(event) =>
+                            : t.activityFilters.relationMine,
+                    value: relation,
+                  }))}
+                  value={filters.relation}
+                  onValueChange={(value) =>
                     applyFilterChange({
-                      type: event.target.value
-                        ? (event.target.value as ActivityFilterType)
-                        : undefined,
+                      relation: value as ActivityRelationFilter,
                     })
                   }
-                >
-                  <option value="">{t.activityFilters.allTypes}</option>
-                  {activityFilterTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {getTypeLabel(type, locale)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                />
+              </div>
+
+              <div className={labelClassName}>
+                <span>{t.activityFilters.typeLabel}</span>
+                <ActivityFilterSelect
+                  className={selectControlClassName}
+                  name="type"
+                  options={[
+                    {
+                      label: t.activityFilters.allTypes,
+                      value: "",
+                    },
+                    ...activityFilterTypes.map((type) => ({
+                      label: getTypeLabel(type, locale),
+                      value: type,
+                    })),
+                  ]}
+                  value={filters.type ?? ""}
+                  onValueChange={(value) =>
+                    applyFilterChange({
+                      type: value ? (value as ActivityFilterType) : undefined,
+                    })
+                  }
+                />
+              </div>
             </>
           ) : null}
 
@@ -471,7 +592,7 @@ export function ActivityFilters({
 
   return (
     <section className="space-y-2.5 sm:space-y-3">
-      <div className="relative z-20 hidden overflow-visible rounded-[1.25rem] border border-[#cfe2c6] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
+      <div className="relative z-[35] hidden overflow-visible rounded-[1.25rem] border border-[#cfe2c6] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1faeb] text-[#006e4d] ring-1 ring-[#bfd6b7]">
@@ -500,7 +621,7 @@ export function ActivityFilters({
       </div>
 
       <div className="md:hidden">
-        <details className="group relative z-20 rounded-[1.35rem] border border-[#cfe2c6] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
+        <details className="group relative z-[35] rounded-[1.35rem] border border-[#cfe2c6] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             <span className="inline-flex min-w-0 items-center gap-2">
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f1faeb] text-[#006e4d] ring-1 ring-[#bfd6b7]">

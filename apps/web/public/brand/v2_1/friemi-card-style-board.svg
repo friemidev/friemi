@@ -1,0 +1,244 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">Friemi v2.1 activity and team card style board</title>
+  <desc id="desc">A visual style board for Friemi activity cards and team cards using the v2.1 green, cream, navy and coral brand palette.</desc>
+  <defs>
+    <linearGradient id="pageBg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f6fbef"/>
+      <stop offset="48%" stop-color="#fff8ef"/>
+      <stop offset="100%" stop-color="#eaf6f1"/>
+    </linearGradient>
+    <linearGradient id="mediaEvent" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5caec1"/>
+      <stop offset="48%" stop-color="#f7d6ae"/>
+      <stop offset="100%" stop-color="#049d73"/>
+    </linearGradient>
+    <linearGradient id="mediaTeam" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#10265c"/>
+      <stop offset="48%" stop-color="#f48d81"/>
+      <stop offset="100%" stop-color="#049d73"/>
+    </linearGradient>
+    <linearGradient id="mobileFrame" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7fff3"/>
+      <stop offset="55%" stop-color="#fff8ef"/>
+      <stop offset="100%" stop-color="#fff0ed"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#006e4d" flood-opacity="0.13"/>
+    </filter>
+    <filter id="coralShadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#f48d81" flood-opacity="0.20"/>
+    </filter>
+    <pattern id="dotGrid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#006e4d" opacity="0.18"/>
+    </pattern>
+    <style>
+      text { font-family: "Noto Sans SC", "Segoe UI", system-ui, sans-serif; }
+      .label { font-size: 13px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+      .board-title { font-size: 38px; font-weight: 750; letter-spacing: 0; }
+      .section { font-size: 24px; font-weight: 750; letter-spacing: 0; }
+      .h3 { font-size: 22px; font-weight: 760; letter-spacing: 0; }
+      .body { font-size: 16px; font-weight: 500; letter-spacing: 0; }
+      .small { font-size: 13px; font-weight: 650; letter-spacing: 0; }
+      .tiny { font-size: 11px; font-weight: 700; letter-spacing: 0; }
+      .cn-title { font-size: 20px; font-weight: 800; letter-spacing: 0; }
+      .cn-mobile { font-size: 14px; font-weight: 800; letter-spacing: 0; }
+      .meta { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+      .mobile-meta { font-size: 11px; font-weight: 600; letter-spacing: 0; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1050" fill="url(#pageBg)"/>
+  <rect x="0" y="0" width="1600" height="1050" fill="url(#dotGrid)" opacity="0.6"/>
+  <circle cx="1450" cy="120" r="230" fill="#f48d81" opacity="0.10"/>
+  <circle cx="90" cy="920" r="280" fill="#049d73" opacity="0.10"/>
+
+  <g transform="translate(80 64)">
+    <rect x="0" y="0" width="64" height="64" rx="18" fill="#049d73"/>
+    <circle cx="24" cy="34" r="9" fill="#f48d81"/>
+    <circle cx="43" cy="26" r="9" fill="#fff8e2"/>
+    <path d="M24 42 C32 54 47 48 47 35" fill="none" stroke="#fff8e2" stroke-width="8" stroke-linecap="round"/>
+    <text class="label" x="84" y="22" fill="#006e4d">Friemi v2.1 card materials</text>
+    <text class="board-title" x="84" y="64" fill="#10265c">活动卡片轻一点，组局卡片更有人的温度。</text>
+  </g>
+
+  <g transform="translate(84 158)">
+    <rect x="0" y="0" width="1432" height="800" rx="42" fill="#fffff8" opacity="0.78" stroke="#d8e7cf"/>
+    <path d="M40 96 C220 20 350 44 470 100 C610 165 730 124 880 56 C1030 -12 1220 4 1392 80 L1392 0 L40 0 Z" fill="#dff3df" opacity="0.55"/>
+  </g>
+
+  <g transform="translate(134 204)">
+    <text class="label" x="0" y="0" fill="#006e4d">desktop cards</text>
+    <text class="body" x="0" y="34" fill="#41665c">1280px 优先 4 列，超宽屏再进 5 列。卡片要有品牌感，但内容仍然是主角。</text>
+  </g>
+
+  <g transform="translate(134 286)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="330" height="522" rx="24" fill="#fafff6" stroke="#bfd6b7"/>
+    <rect x="0" y="0" width="330" height="6" rx="3" fill="#5caec1"/>
+    <clipPath id="eventMediaClip">
+      <rect x="14" y="14" width="302" height="184" rx="20"/>
+    </clipPath>
+    <g clip-path="url(#eventMediaClip)">
+      <rect x="14" y="14" width="302" height="184" fill="url(#mediaEvent)"/>
+      <circle cx="86" cy="58" r="54" fill="#fff8e2" opacity="0.28"/>
+      <path d="M30 160 C84 94 124 106 172 132 C230 164 262 98 318 68 L318 198 L30 198 Z" fill="#10265c" opacity="0.34"/>
+      <path d="M14 14 L316 198" stroke="#fff8e2" stroke-width="3" opacity="0.28"/>
+    </g>
+    <rect x="28" y="28" width="78" height="28" rx="14" fill="#f8feff" stroke="#c6e4e8"/>
+    <circle cx="43" cy="42" r="4" fill="#5caec1"/>
+    <text class="tiny" x="54" y="46" fill="#10265c">活动</text>
+    <rect x="236" y="162" width="66" height="28" rx="14" fill="#f6fbef"/>
+    <text class="tiny" x="254" y="181" fill="#006e4d">进行中</text>
+    <circle cx="282" cy="42" r="22" fill="#fffff8" stroke="#d8e7cf"/>
+    <path d="M274 39 C274 33 282 32 286 37 C290 32 298 33 298 39 C298 49 286 55 286 55 C286 55 274 49 274 39 Z" fill="none" stroke="#10265c" stroke-width="2.4" stroke-linejoin="round"/>
+    <text class="cn-title" x="24" y="250" fill="#10265c">周末艺术市集与夜间展览</text>
+    <text class="cn-title" x="24" y="280" fill="#10265c">沿河散步路线</text>
+    <g transform="translate(24 314)">
+      <rect x="0" y="-13" width="22" height="22" rx="7" fill="#eef8ea" stroke="#d8e7cf"/>
+      <path d="M6 -5 L16 -5 M8 -9 L8 -1 M14 -9 L14 -1 M6 1 L16 1" stroke="#006e4d" stroke-width="1.5" stroke-linecap="round"/>
+      <text class="meta" x="32" y="3" fill="#41665c">6月28日 17:00-19:00</text>
+    </g>
+    <g transform="translate(24 350)">
+      <circle cx="11" cy="-3" r="10" fill="#eef8ea" stroke="#d8e7cf"/>
+      <path d="M11 -9 C15 -9 18 -6 18 -2 C18 4 11 10 11 10 C11 10 4 4 4 -2 C4 -6 7 -9 11 -9 Z" fill="none" stroke="#006e4d" stroke-width="1.5"/>
+      <circle cx="11" cy="-2" r="2" fill="#006e4d"/>
+      <text class="meta" x="32" y="3" fill="#41665c">Paris · Le Marais</text>
+    </g>
+    <line x1="24" y1="386" x2="306" y2="386" stroke="#d8e7cf"/>
+    <text class="small" x="24" y="426" fill="#5caec1">整卡进入详情</text>
+    <path d="M128 421 L144 421 M139 416 L144 421 L139 426" stroke="#5caec1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="tiny" x="24" y="478" fill="#41665c">轻发现 · 少按钮 · 信息清楚</text>
+  </g>
+
+  <g transform="translate(508 286)" filter="url(#coralShadow)">
+    <rect x="0" y="0" width="330" height="522" rx="24" fill="#fffaf4" stroke="#f3b1a7"/>
+    <rect x="0" y="0" width="330" height="6" rx="3" fill="#f48d81"/>
+    <clipPath id="teamMediaClip">
+      <rect x="14" y="14" width="302" height="184" rx="20"/>
+    </clipPath>
+    <g clip-path="url(#teamMediaClip)">
+      <rect x="14" y="14" width="302" height="184" fill="url(#mediaTeam)"/>
+      <circle cx="262" cy="48" r="62" fill="#fff8e2" opacity="0.23"/>
+      <path d="M14 158 C58 116 98 115 138 136 C184 160 224 142 268 100 C290 80 306 70 316 66 L316 198 L14 198 Z" fill="#006e4d" opacity="0.38"/>
+      <circle cx="80" cy="76" r="34" fill="#f48d81" opacity="0.36"/>
+    </g>
+    <rect x="28" y="28" width="82" height="28" rx="14" fill="#fff0ed" stroke="#f3b1a7"/>
+    <circle cx="43" cy="42" r="4" fill="#049d73"/>
+    <text class="tiny" x="54" y="46" fill="#10265c">组局</text>
+    <rect x="218" y="162" width="84" height="28" rx="14" fill="#f6fbef"/>
+    <text class="tiny" x="239" y="181" fill="#006e4d">开放局</text>
+    <circle cx="282" cy="42" r="22" fill="#fffff8" stroke="#f3b1a7"/>
+    <path d="M274 39 C274 33 282 32 286 37 C290 32 298 33 298 39 C298 49 286 55 286 55 C286 55 274 49 274 39 Z" fill="none" stroke="#10265c" stroke-width="2.4" stroke-linejoin="round"/>
+    <text class="cn-title" x="24" y="250" fill="#10265c">一起去看河岸夏日晚场</text>
+    <text class="cn-title" x="24" y="280" fill="#10265c">结束后附近小聚</text>
+    <g transform="translate(24 314)">
+      <rect x="0" y="-13" width="22" height="22" rx="7" fill="#fff0ed" stroke="#f3b1a7"/>
+      <path d="M6 -5 L16 -5 M8 -9 L8 -1 M14 -9 L14 -1 M6 1 L16 1" stroke="#d86f61" stroke-width="1.5" stroke-linecap="round"/>
+      <text class="meta" x="32" y="3" fill="#41665c">6月28日 17:00-19:00</text>
+    </g>
+    <g transform="translate(24 350)">
+      <circle cx="11" cy="-3" r="10" fill="#fff0ed" stroke="#f3b1a7"/>
+      <path d="M11 -9 C15 -9 18 -6 18 -2 C18 4 11 10 11 10 C11 10 4 4 4 -2 C4 -6 7 -9 11 -9 Z" fill="none" stroke="#d86f61" stroke-width="1.5"/>
+      <circle cx="11" cy="-2" r="2" fill="#d86f61"/>
+      <text class="meta" x="32" y="3" fill="#41665c">Paris · Canal Saint-Martin</text>
+    </g>
+    <g transform="translate(24 390)">
+      <circle cx="12" cy="0" r="12" fill="#f48d81"/>
+      <text class="tiny" x="8" y="4" fill="#fffaf4">L</text>
+      <circle cx="31" cy="0" r="12" fill="#049d73" stroke="#fffaf4" stroke-width="2"/>
+      <text class="tiny" x="26" y="4" fill="#fffaf4">J</text>
+      <circle cx="50" cy="0" r="12" fill="#10265c" stroke="#fffaf4" stroke-width="2"/>
+      <text class="tiny" x="45" y="4" fill="#fffaf4">M</text>
+      <rect x="78" y="-14" width="92" height="28" rx="14" fill="#f7fff3" stroke="#bfd6b7"/>
+      <text class="small" x="93" y="5" fill="#006e4d">3/6 已报名</text>
+    </g>
+    <g transform="translate(24 438)">
+      <rect x="0" y="0" width="282" height="48" rx="24" fill="#fff8ef" stroke="#f3b1a7"/>
+      <rect x="4" y="4" width="137" height="40" rx="20" fill="#f48d81"/>
+      <circle cx="31" cy="24" r="12" fill="#fffaf4" opacity="0.95"/>
+      <path d="M31 18 L31 30 M25 24 L37 24" stroke="#f48d81" stroke-width="2.2" stroke-linecap="round"/>
+      <text class="small" x="55" y="29" fill="#fffaf4">报名加入</text>
+      <circle cx="232" cy="24" r="17" fill="#fffaf4" stroke="#d8e7cf"/>
+      <path d="M226 20 L237 20 L237 31 L226 31 Z M222 16 L233 16 L233 27" fill="none" stroke="#10265c" stroke-width="1.8" stroke-linejoin="round"/>
+    </g>
+    <text class="tiny" x="24" y="504" fill="#41665c">有人气 · 有动作 · 但移动端不塞长按钮</text>
+  </g>
+
+  <g transform="translate(920 204)">
+    <text class="label" x="0" y="0" fill="#006e4d">mobile two-column</text>
+    <text class="body" x="0" y="34" fill="#41665c">390px 下保持双列，长文案进弹层，不让卡片被按钮撑高。</text>
+  </g>
+
+  <g transform="translate(920 286)">
+    <rect x="-30" y="-34" width="514" height="482" rx="38" fill="url(#mobileFrame)" stroke="#d8e7cf"/>
+    <rect x="-8" y="-12" width="220" height="396" rx="28" fill="#10265c" opacity="0.08"/>
+    <rect x="0" y="0" width="190" height="330" rx="20" fill="#fafff6" stroke="#bfd6b7" filter="url(#softShadow)"/>
+    <rect x="9" y="9" width="172" height="105" rx="16" fill="url(#mediaEvent)"/>
+    <rect x="19" y="19" width="58" height="22" rx="11" fill="#f8feff" stroke="#c6e4e8"/>
+    <circle cx="31" cy="30" r="3" fill="#5caec1"/>
+    <text class="tiny" x="40" y="34" fill="#10265c">展览</text>
+    <circle cx="160" cy="30" r="17" fill="#fffff8" stroke="#d8e7cf"/>
+    <path d="M153 28 C153 24 158 23 160 26 C163 23 168 24 168 28 C168 35 160 39 160 39 C160 39 153 35 153 28 Z" fill="none" stroke="#10265c" stroke-width="1.8"/>
+    <rect x="116" y="91" width="56" height="20" rx="10" fill="#f6fbef"/>
+    <text class="tiny" x="128" y="106" fill="#006e4d">进行中</text>
+    <text class="cn-mobile" x="14" y="146" fill="#10265c">市集夜场与沿河</text>
+    <text class="cn-mobile" x="14" y="168" fill="#10265c">散步路线</text>
+    <text class="mobile-meta" x="34" y="200" fill="#41665c">6月28日 17:00-19:00</text>
+    <path d="M17 188 L29 188 M19 184 L19 192 M27 184 L27 192 M17 196 L29 196" stroke="#5caec1" stroke-width="1.4" stroke-linecap="round"/>
+    <text class="mobile-meta" x="34" y="226" fill="#41665c">Paris</text>
+    <path d="M23 211 C28 211 31 215 31 219 C31 226 23 232 23 232 C23 232 15 226 15 219 C15 215 18 211 23 211 Z" fill="none" stroke="#5caec1" stroke-width="1.4"/>
+    <rect x="14" y="272" width="106" height="34" rx="17" fill="#eef8ea" stroke="#d8e7cf"/>
+    <text class="small" x="35" y="294" fill="#006e4d">查看</text>
+    <path d="M83 288 L97 288 M92 283 L97 288 L92 293" stroke="#006e4d" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(1140 286)">
+    <rect x="0" y="0" width="190" height="330" rx="20" fill="#fffaf4" stroke="#f3b1a7" filter="url(#coralShadow)"/>
+    <rect x="9" y="9" width="172" height="105" rx="16" fill="url(#mediaTeam)"/>
+    <rect x="19" y="19" width="56" height="22" rx="11" fill="#fff0ed" stroke="#f3b1a7"/>
+    <circle cx="31" cy="30" r="3" fill="#049d73"/>
+    <text class="tiny" x="40" y="34" fill="#10265c">组局</text>
+    <circle cx="160" cy="30" r="17" fill="#fffff8" stroke="#f3b1a7"/>
+    <path d="M153 28 C153 24 158 23 160 26 C163 23 168 24 168 28 C168 35 160 39 160 39 C160 39 153 35 153 28 Z" fill="none" stroke="#10265c" stroke-width="1.8"/>
+    <rect x="114" y="91" width="58" height="20" rx="10" fill="#f6fbef"/>
+    <text class="tiny" x="126" y="106" fill="#006e4d">开放局</text>
+    <text class="cn-mobile" x="14" y="146" fill="#10265c">看展后附近</text>
+    <text class="cn-mobile" x="14" y="168" fill="#10265c">一起小聚</text>
+    <text class="mobile-meta" x="34" y="200" fill="#41665c">6月28日 17:00</text>
+    <path d="M17 188 L29 188 M19 184 L19 192 M27 184 L27 192 M17 196 L29 196" stroke="#f48d81" stroke-width="1.4" stroke-linecap="round"/>
+    <g transform="translate(14 225)">
+      <circle cx="10" cy="0" r="10" fill="#f48d81"/>
+      <text class="tiny" x="7" y="4" fill="#fffaf4">L</text>
+      <circle cx="26" cy="0" r="10" fill="#049d73" stroke="#fffaf4" stroke-width="2"/>
+      <text class="tiny" x="23" y="4" fill="#fffaf4">J</text>
+      <circle cx="42" cy="0" r="10" fill="#10265c" stroke="#fffaf4" stroke-width="2"/>
+      <text class="tiny" x="39" y="4" fill="#fffaf4">M</text>
+      <text class="mobile-meta" x="62" y="4" fill="#41665c">3/6</text>
+    </g>
+    <rect x="14" y="270" width="162" height="36" rx="18" fill="#fff0ed" stroke="#f3b1a7"/>
+    <circle cx="36" cy="288" r="12" fill="#f48d81"/>
+    <path d="M36 282 L36 294 M30 288 L42 288" stroke="#fffaf4" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="66" cy="288" r="12" fill="#fffaf4" stroke="#f3b1a7"/>
+    <path d="M61 284 L70 284 L70 293 L61 293 Z M58 281 L67 281 L67 290" fill="none" stroke="#10265c" stroke-width="1.4"/>
+    <text class="small" x="91" y="293" fill="#10265c">操作</text>
+  </g>
+
+  <g transform="translate(920 706)">
+    <rect x="0" y="0" width="418" height="148" rx="28" fill="#fffff8" stroke="#d8e7cf"/>
+    <text class="label" x="28" y="38" fill="#006e4d">mobile action sheet</text>
+    <text class="body" x="28" y="72" fill="#10265c">点击组局卡片里的一个动作入口后，再展示完整文案。</text>
+    <rect x="28" y="96" width="170" height="34" rx="17" fill="#f48d81"/>
+    <circle cx="48" cy="113" r="9" fill="#fffaf4"/>
+    <path d="M48 108 L48 118 M43 113 L53 113" stroke="#f48d81" stroke-width="1.6" stroke-linecap="round"/>
+    <text class="small" x="66" y="118" fill="#fffaf4">报名加入</text>
+    <rect x="214" y="96" width="170" height="34" rx="17" fill="#f7fff3" stroke="#bfd6b7"/>
+    <path d="M239 108 L249 108 L249 118 L239 118 Z M234 103 L244 103 L244 113" fill="none" stroke="#006e4d" stroke-width="1.6"/>
+    <text class="small" x="264" y="118" fill="#006e4d">再来一局</text>
+  </g>
+
+  <g transform="translate(134 868)">
+    <text class="label" x="0" y="0" fill="#006e4d">rules</text>
+    <text class="body" x="0" y="38" fill="#41665c">活动卡片少操作，负责“发现”。组局卡片强调人和行动，负责“加入”。</text>
+    <text class="body" x="0" y="72" fill="#41665c">移动端双列优先：标题 2 行、地点 1 行、按钮短文案；英文/法语长文案进弹层。</text>
+    <text class="body" x="0" y="106" fill="#41665c">桌面端保持密度：1280px 4 列更稳，5 列只给超宽屏。</text>
+  </g>
+</svg>
