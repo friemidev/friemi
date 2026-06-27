@@ -43,6 +43,7 @@ import { OrganizerParticipationToggleForm } from "@/features/activities/componen
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
+import { TeamDetailMobileCtaSheet } from "@/features/activities/components/TeamDetailMobileCtaSheet";
 import {
   getActivityById,
   getActivityShareMetadataById,
@@ -82,6 +83,7 @@ import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWea
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
@@ -119,6 +121,14 @@ const participantAvatarTones = [
   "bg-sand text-white",
   "bg-outline text-white",
 ];
+
+type DetailViewerParticipationStatus =
+  | "JOINED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED"
+  | null;
 
 function getStableParticipantAvatarTone(value: string) {
   const total = [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0);
@@ -172,6 +182,74 @@ function formatClaimDeadline(locale: string, value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function getTeamDetailCtaCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      eyebrow: "Prochaine étape",
+      title: "Rejoindre ce plan",
+      organizerTitle: "Gérer ce plan",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      eyebrow: "Next step",
+      title: "Join this plan",
+      organizerTitle: "Manage this plan",
+    };
+  }
+
+  return {
+    eyebrow: "下一步",
+    title: "报名这个组局",
+    organizerTitle: "管理这个组局",
+  };
+}
+
+function getTeamDetailCtaTitle({
+  isClosed,
+  isFull,
+  isOrganizer,
+  locale,
+  requiresApproval,
+  viewerParticipationStatus,
+}: {
+  isClosed: boolean;
+  isFull: boolean;
+  isOrganizer: boolean;
+  locale: string;
+  requiresApproval: boolean;
+  viewerParticipationStatus: DetailViewerParticipationStatus;
+}) {
+  const t = getCopy(locale).join;
+  const ctaCopy = getTeamDetailCtaCopy(locale);
+
+  if (isOrganizer) {
+    return ctaCopy.organizerTitle;
+  }
+
+  if (isClosed) {
+    return t.closedTitle;
+  }
+
+  if (viewerParticipationStatus === "PENDING") {
+    return t.pendingTitle;
+  }
+
+  if (
+    viewerParticipationStatus === "JOINED" ||
+    viewerParticipationStatus === "APPROVED"
+  ) {
+    return t.joinedTitle;
+  }
+
+  if (isFull) {
+    return t.fullTitle;
+  }
+
+  return requiresApproval ? t.submitApproval : ctaCopy.title;
 }
 
 export const dynamic = "force-dynamic";
@@ -722,6 +800,15 @@ export default async function ActivityDetailPage({
     activity.visibility === "PRIVATE"
       ? t.activityDetail.visibilityPrivate
       : t.activityDetail.visibilityPublic;
+  const teamDetailCtaCopy = getTeamDetailCtaCopy(locale);
+  const teamDetailCtaTitle = getTeamDetailCtaTitle({
+    isClosed,
+    isFull,
+    isOrganizer,
+    locale,
+    requiresApproval: activity.requiresApproval,
+    viewerParticipationStatus: viewerParticipation?.status ?? null,
+  });
   const [pendingParticipants, analyticsSummary] = await perf.measure(
     "activity.organizerData",
     () =>
@@ -1065,7 +1152,106 @@ export default async function ActivityDetailPage({
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
-          <div className="order-1 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm">
+          <div
+            className={cn(
+              "order-1 rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2E3_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white",
+              !isOrganizer ? "hidden md:block" : null,
+            )}
+          >
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
+                {teamDetailCtaCopy.eyebrow}
+              </p>
+              <h2 className="mt-1 text-xl font-extrabold leading-tight text-ink">
+                {teamDetailCtaTitle}
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-forest">
+                <span className="rounded-full bg-white/88 px-3 py-1 ring-1 ring-sage/70">
+                  {getActivitySeatLabel(activity, locale)}
+                </span>
+                <span className="rounded-full bg-white/88 px-3 py-1 ring-1 ring-sage/70">
+                  {activityParticipantLabel}
+                </span>
+              </div>
+            </div>
+
+            {isOrganizer ? (
+              <div className="grid gap-3">
+                <OrganizerParticipationToggleForm
+                  activityId={activity.id}
+                  isClosed={isClosed}
+                  isParticipatingByDefault={organizerIsParticipating}
+                  locale={locale}
+                />
+                <div className="grid gap-2 rounded-2xl border border-sand bg-white/80 p-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <ShieldAlert className="h-4 w-4 text-forest" />
+                    {t.activityOwner.title}
+                  </p>
+                  {canEditActivity ? (
+                    <Link
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-sand transition hover:bg-paper"
+                      href={withLocale(
+                        locale,
+                        `/activities/${activity.id}/edit`,
+                      )}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      {t.activityDetail.editActivity}
+                    </Link>
+                  ) : null}
+                  {!isCancelled && !isEndedByTime ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.cancelDescription}
+                    </p>
+                  ) : null}
+                  <CancelActivityForm
+                    activityId={activity.id}
+                    activityTitle={activity.title}
+                    disabled={isCancelled || isEndedByTime}
+                    locale={locale}
+                  />
+                  {isCancelled ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.cancelledHint}
+                    </p>
+                  ) : isEndedByTime ? (
+                    <p className="text-xs leading-5 text-zinc-500">
+                      {t.activityOwner.endedHint}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                <JoinActivityForm
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  accessToken={accessToken ?? null}
+                  compactUnauthenticated
+                  formInstanceId="desktop"
+                  locale={locale}
+                  requiresApproval={activity.requiresApproval}
+                  isFull={isFull}
+                  isClosed={isClosed}
+                  isOrganizer={isOrganizer}
+                  isAuthenticated={Boolean(viewerProfile)}
+                  viewerParticipationStatus={viewerParticipation?.status ?? null}
+                />
+                {canContactOrganizer ? (
+                  <ContactOrganizerForm
+                    accessToken={accessToken ?? null}
+                    activityId={activity.id}
+                    locale={locale}
+                    organizerNickname={activity.organizer.nickname}
+                    organizerProfileId={activity.organizer.id}
+                  />
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="order-2 mt-3 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -1129,7 +1315,7 @@ export default async function ActivityDetailPage({
             </div>
           </div>
 
-          <div className="order-2 mt-3">
+          <div className="order-3 mt-3">
             <ActivityShareTools
               activityTitle={activity.title}
               analyticsEntityId={detailAnalyticsEntity.entityId}
@@ -1149,7 +1335,7 @@ export default async function ActivityDetailPage({
 
           {weatherInput ? (
             <ActivityWeatherWidget
-              className="order-3 mt-3"
+              className="order-4 mt-3"
               date={weatherInput.date}
               latitude={weatherInput.latitude}
               locale={locale}
@@ -1158,7 +1344,7 @@ export default async function ActivityDetailPage({
             />
           ) : null}
 
-          <div className="order-4 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
+          <div className="order-5 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
@@ -1294,86 +1480,9 @@ export default async function ActivityDetailPage({
               </div>
             ) : null}
 
-            <div className="mt-3 border-t border-sand pt-3">
-              {isOrganizer ? (
-                <div className="grid gap-3">
-                  <OrganizerParticipationToggleForm
-                    activityId={activity.id}
-                    isClosed={isClosed}
-                    isParticipatingByDefault={organizerIsParticipating}
-                    locale={locale}
-                  />
-                  <div className="grid gap-2 rounded-2xl border border-[#D6D5B2] bg-white/80 p-3">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                      <ShieldAlert className="h-4 w-4 text-moss" />
-                      {t.activityOwner.title}
-                    </p>
-                    {canEditActivity ? (
-                      <Link
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-zinc-200 transition hover:bg-zinc-50"
-                        href={withLocale(
-                          locale,
-                          `/activities/${activity.id}/edit`,
-                        )}
-                      >
-                        <Pencil className="h-4 w-4" />
-                        {t.activityDetail.editActivity}
-                      </Link>
-                    ) : null}
-                    {!isCancelled && !isEndedByTime ? (
-                      <p className="text-xs leading-5 text-zinc-500">
-                        {t.activityOwner.cancelDescription}
-                      </p>
-                    ) : null}
-                    <CancelActivityForm
-                      activityId={activity.id}
-                      activityTitle={activity.title}
-                      disabled={isCancelled || isEndedByTime}
-                      locale={locale}
-                    />
-                    {isCancelled ? (
-                      <p className="text-xs leading-5 text-zinc-500">
-                        {t.activityOwner.cancelledHint}
-                      </p>
-                    ) : isEndedByTime ? (
-                      <p className="text-xs leading-5 text-zinc-500">
-                        {t.activityOwner.endedHint}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-3">
-                  <JoinActivityForm
-                    activityId={activity.id}
-                    activityTitle={activity.title}
-                    accessToken={accessToken ?? null}
-                    compactUnauthenticated
-                    locale={locale}
-                    requiresApproval={activity.requiresApproval}
-                    isFull={isFull}
-                    isClosed={isClosed}
-                    isOrganizer={isOrganizer}
-                    isAuthenticated={Boolean(viewerProfile)}
-                    viewerParticipationStatus={
-                      viewerParticipation?.status ?? null
-                    }
-                  />
-                  {canContactOrganizer ? (
-                    <ContactOrganizerForm
-                      accessToken={accessToken ?? null}
-                      activityId={activity.id}
-                      locale={locale}
-                      organizerNickname={activity.organizer.nickname}
-                      organizerProfileId={activity.organizer.id}
-                    />
-                  ) : null}
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="order-4 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
+          <div className="order-6 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
             <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <ClipboardList className="h-4 w-4 shrink-0" />
@@ -1415,13 +1524,47 @@ export default async function ActivityDetailPage({
             <ActivityFriendSignalPanel locale={locale} signal={friendSignal} />
           </div>
 
-          <div className="order-5 mt-6 hidden lg:block">
+          <div className="order-7 mt-6 hidden lg:block">
             <ActivityAnalyticsSummaryPanel
               locale={locale}
               summary={analyticsSummary}
             />
           </div>
         </aside>
+        {!isOrganizer ? (
+          <TeamDetailMobileCtaSheet
+            activityTitle={activity.title}
+            locale={locale}
+            participantLabel={activityParticipantLabel}
+            statusLabel={getActivitySeatLabel(activity, locale)}
+          >
+            <div className="grid gap-3">
+              <JoinActivityForm
+                activityId={activity.id}
+                activityTitle={activity.title}
+                accessToken={accessToken ?? null}
+                compactUnauthenticated
+                formInstanceId="mobile"
+                locale={locale}
+                requiresApproval={activity.requiresApproval}
+                isFull={isFull}
+                isClosed={isClosed}
+                isOrganizer={isOrganizer}
+                isAuthenticated={Boolean(viewerProfile)}
+                viewerParticipationStatus={viewerParticipation?.status ?? null}
+              />
+              {canContactOrganizer ? (
+                <ContactOrganizerForm
+                  accessToken={accessToken ?? null}
+                  activityId={activity.id}
+                  locale={locale}
+                  organizerNickname={activity.organizer.nickname}
+                  organizerProfileId={activity.organizer.id}
+                />
+              ) : null}
+            </div>
+          </TeamDetailMobileCtaSheet>
+        ) : null}
       </section>
     </PageContainer>
   );
