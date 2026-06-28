@@ -46,6 +46,7 @@ type NotificationCategory =
   | "participation"
   | "social"
   | "comment"
+  | "message"
   | "activity"
   | "report";
 
@@ -53,6 +54,7 @@ const notificationCategoryStyles: Record<NotificationCategory, string> = {
   participation: "bg-ice text-forest ring-sage/70",
   social: "bg-ink text-paper ring-ink",
   comment: "bg-fog text-forest ring-sage/60",
+  message: "bg-ice text-forest ring-sage/70",
   activity: "bg-cream text-danger ring-rose",
   report: "bg-rose text-danger ring-coral/35",
 };
@@ -72,6 +74,10 @@ function getNotificationCategory(
 
   if (type === "FRIEND_REQUEST") {
     return "social";
+  }
+
+  if (type === "DIRECT_MESSAGE") {
+    return "message";
   }
 
   if (type === "ACTIVITY_COMMENTED" || type === "COMMENT_REPLY") {
@@ -119,7 +125,8 @@ function getNotificationText(
     notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
     notification.type === "ACTIVITY_COMMENTED" ||
-    notification.type === "COMMENT_REPLY"
+    notification.type === "COMMENT_REPLY" ||
+    notification.type === "DIRECT_MESSAGE"
   ) {
     const copy = t.types[notification.type];
 
@@ -286,6 +293,18 @@ function getNotificationVisual(
       icon: MessageCircle,
       iconClassName: isUnread
         ? "bg-fog text-forest"
+        : "bg-fog text-outline",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
+
+  if (type === "DIRECT_MESSAGE") {
+    return {
+      icon: MessageCircle,
+      iconClassName: isUnread
+        ? "bg-ice text-forest"
         : "bg-fog text-outline",
       cardClassName: isUnread
         ? "border-sage bg-paper"

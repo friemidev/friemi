@@ -5,6 +5,7 @@ import {
   getFriendNearestActivitySignals,
   type FriendNearestActivitySignalViewModel,
 } from "@/features/friends/queries/getFriendNearestActivitySignals";
+import { buildPrivateActivityShareAccessWhere } from "@/features/activities/utils/activityShareAccess";
 import { canSendDirectMessageToProfile } from "../services/directMessages";
 import {
   getConversationPair,
@@ -100,6 +101,10 @@ export type DirectMessagePreviewViewModel = {
   senderId: string;
   body: string;
   createdAt: string;
+  sourceActivity: {
+    id: string;
+    title: string;
+  } | null;
 };
 
 export type DirectConversationActivitySignalViewModel =
@@ -139,6 +144,13 @@ export type DirectConversationThreadViewModel =
     currentUser: DirectMessageUserViewModel;
     messages: DirectMessageThreadItemViewModel[];
   };
+
+export type DirectConversationActivityContextViewModel = {
+  id: string;
+  title: string;
+  startAt: string;
+  locationLabel: string;
+};
 
 function mapUserProfile(user: {
   id: string;
@@ -202,6 +214,7 @@ function mapLastMessage(
     senderId: lastMessage.senderId,
     body: lastMessage.body,
     createdAt: lastMessage.createdAt.toISOString(),
+    sourceActivity: null,
   };
 }
 
@@ -476,4 +489,65 @@ export async function getDirectConversationThread(
     currentUserProfileId,
     canSend,
   );
+}
+
+export async function getDirectConversationActivityContext({
+  accessToken,
+  activityId,
+  currentUserProfileId,
+  peerProfileId,
+}: {
+  accessToken?: string | null;
+  activityId: string;
+  currentUserProfileId: string;
+  peerProfileId: string;
+}): Promise<DirectConversationActivityContextViewModel | null> {
+  const activity = await prisma.activity.findFirst({
+    where: {
+      id: activityId,
+      organizerId: {
+        in: [currentUserProfileId, peerProfileId],
+      },
+      type: {
+        not: "PUBLIC_EVENT",
+      },
+      OR: [
+        {
+          visibility: "PUBLIC",
+        },
+        {
+          organizerId: currentUserProfileId,
+        },
+        {
+          participants: {
+            some: {
+              userProfileId: currentUserProfileId,
+              status: {
+                in: ["JOINED", "APPROVED", "PENDING"],
+              },
+            },
+          },
+        },
+        ...buildPrivateActivityShareAccessWhere(accessToken),
+      ],
+    },
+    select: {
+      id: true,
+      title: true,
+      startAt: true,
+      city: true,
+      address: true,
+    },
+  });
+
+  if (!activity) {
+    return null;
+  }
+
+  return {
+    id: activity.id,
+    title: activity.title,
+    startAt: activity.startAt.toISOString(),
+    locationLabel: [activity.city, activity.address].filter(Boolean).join(" · "),
+  };
 }

@@ -138,6 +138,9 @@ function DesktopFriendRosterRow({
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
   const isMine = lastMessage?.senderId === currentUserProfileId;
+  const sourceLabel = lastMessage?.sourceActivity
+    ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
+    : null;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
     : t.startChat;
@@ -157,7 +160,7 @@ function DesktopFriendRosterRow({
           <span
             className={cn(
               "ml-auto shrink-0 whitespace-nowrap text-xs",
-              isActive ? "text-white/65" : "text-[#8E8383]",
+              isActive ? "text-[#8E8383]" : "text-[#8E8383]",
             )}
           >
             {formatActivityDate(time, locale)}
@@ -166,10 +169,10 @@ function DesktopFriendRosterRow({
         <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-white/75" : "text-[#156240]",
+              isActive ? "text-[#156240]" : "text-[#156240]",
             )}
         >
-          {preview}
+          {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
         </span>
       </span>
     </>
@@ -181,7 +184,7 @@ function DesktopFriendRosterRow({
       className={cn(
         "rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
-          ? "bg-moss text-white shadow-[0_14px_26px_rgba(21,98,64,0.18)]"
+          ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
           : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
@@ -244,7 +247,7 @@ function DesktopActivitySignals({
             className={cn(
               "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden",
               isActive
-                ? "bg-white/10 text-white/80 hover:bg-white/15"
+                ? "bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white"
                 : "bg-team-bg text-moss ring-1 ring-sand hover:bg-white",
             )}
             aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
@@ -295,7 +298,7 @@ function DesktopActivitySignalRow({
       className={cn(
         "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
-          ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
+          ? "bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
           : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
@@ -304,7 +307,7 @@ function DesktopActivitySignalRow({
       <CalendarDays
         className={cn(
           "h-3.5 w-3.5 shrink-0",
-          isActive ? "text-white/60" : "text-moss",
+          isActive ? "text-moss" : "text-moss",
         )}
       />
       <span className="truncate">{label}</span>

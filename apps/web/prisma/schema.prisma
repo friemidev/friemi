@@ -98,6 +98,7 @@ enum NotificationType {
   FRIEND_REQUEST
   ACTIVITY_COMMENTED
   COMMENT_REPLY
+  DIRECT_MESSAGE
   REPORT_CREATED
 }
 
@@ -218,6 +219,7 @@ model Activity {
   notifications    Notification[]
   sourceLinks      ActivitySourceLink[]
   favorites        ActivityFavorite[]
+  directMessages   DirectMessage[]
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
@@ -537,15 +539,18 @@ model DirectMessage {
   id             String       @id @default(cuid())
   conversationId String
   senderId       String
+  activityId     String?
   body           String
   readAt         DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  activity       Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
+  @@index([activityId])
 }
 
 model AnalyticsEvent {
