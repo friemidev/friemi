@@ -8,7 +8,6 @@ import {
   ClipboardList,
   ExternalLink,
   MapPin,
-  MessageCircle,
   Pencil,
   ShieldAlert,
   Route,
@@ -72,7 +71,7 @@ import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendId
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
-import { openActivityOrganizerConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
@@ -1242,6 +1241,7 @@ export default async function ActivityDetailPage({
                   <ContactOrganizerForm
                     accessToken={accessToken ?? null}
                     activityId={activity.id}
+                    isAuthenticated={Boolean(viewerProfile)}
                     locale={locale}
                     organizerNickname={activity.organizer.nickname}
                     organizerProfileId={activity.organizer.id}
@@ -1557,6 +1557,7 @@ export default async function ActivityDetailPage({
                 <ContactOrganizerForm
                   accessToken={accessToken ?? null}
                   activityId={activity.id}
+                  isAuthenticated={Boolean(viewerProfile)}
                   locale={locale}
                   organizerNickname={activity.organizer.nickname}
                   organizerProfileId={activity.organizer.id}
@@ -1573,43 +1574,33 @@ export default async function ActivityDetailPage({
 function ContactOrganizerForm({
   accessToken,
   activityId,
+  isAuthenticated,
   locale,
   organizerNickname,
   organizerProfileId,
 }: {
   accessToken?: string | null;
   activityId: string;
+  isAuthenticated: boolean;
   locale: string;
   organizerNickname: string;
   organizerProfileId: string;
 }) {
   const t = getCopy(locale);
+  const label = isAuthenticated
+    ? t.activityDetail.contactOrganizer
+    : t.activityDetail.contactOrganizerLogin;
 
   return (
-    <form
-      action={openActivityOrganizerConversationAction}
-      className="grid gap-2"
-    >
-      <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="activityId" value={activityId} />
-      <input
-        type="hidden"
-        name="organizerProfileId"
-        value={organizerProfileId}
-      />
-      <input type="hidden" name="accessToken" value={accessToken ?? ""} />
-      <Button
-        type="submit"
-        variant="secondary"
-        className="h-10 w-full gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] text-[#156240] shadow-none hover:bg-white sm:h-11"
-        aria-label={`${t.activityDetail.contactOrganizer}: ${organizerNickname}`}
-      >
-        <MessageCircle className="h-4 w-4 shrink-0 text-[#B5301F]" />
-        {t.activityDetail.contactOrganizer}
-      </Button>
-      <p className="hidden px-1 text-xs leading-5 text-zinc-500 sm:block">
-        {t.activityDetail.contactOrganizerHint}
-      </p>
-    </form>
+    <ActivityOrganizerContactForm
+      accessToken={accessToken}
+      activityId={activityId}
+      hint={t.activityDetail.contactOrganizerHint}
+      isAuthenticated={isAuthenticated}
+      label={label}
+      locale={locale}
+      organizerNickname={organizerNickname}
+      organizerProfileId={organizerProfileId}
+    />
   );
 }

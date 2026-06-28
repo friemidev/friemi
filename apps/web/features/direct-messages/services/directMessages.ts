@@ -254,33 +254,43 @@ export async function getOrCreateActivityOrganizerConversation({
   organizerProfileId: string;
   activityId: string;
 }): Promise<DirectConversationViewModel> {
-  return prisma.$transaction(async (tx) => {
-    assertDifferentUsers(currentUserProfileId, organizerProfileId);
+  assertDifferentUsers(currentUserProfileId, organizerProfileId);
+
+  let activity = await findOrganizerMessageActivity(
+    prisma,
+    currentUserProfileId,
+    organizerProfileId,
+    [],
+    accessToken,
+    activityId,
+  );
+
+  if (!activity) {
     const friendIds = await getViewerFriendIds(currentUserProfileId);
 
-    const activity = await findOrganizerMessageActivity(
-      tx,
+    activity = await findOrganizerMessageActivity(
+      prisma,
       currentUserProfileId,
       organizerProfileId,
       friendIds,
       accessToken,
       activityId,
     );
+  }
 
-    if (!activity) {
-      throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
-    }
+  if (!activity) {
+    throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
+  }
 
-    const pair = getConversationPair(currentUserProfileId, organizerProfileId);
+  const pair = getConversationPair(currentUserProfileId, organizerProfileId);
 
-    return tx.conversation.upsert({
-      where: {
-        userAId_userBId: pair,
-      },
-      create: pair,
-      update: {},
-      select: directConversationSelect,
-    });
+  return prisma.conversation.upsert({
+    where: {
+      userAId_userBId: pair,
+    },
+    create: pair,
+    update: {},
+    select: directConversationSelect,
   });
 }
 
@@ -289,6 +299,7 @@ export async function sendDirectMessage({
   conversationId,
   body,
 }: {
+  activityId?: string | null;
   currentUserProfileId: string;
   conversationId: string;
   body: string;
@@ -318,11 +329,12 @@ export async function sendDirectMessage({
       throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
     }
 
-    await assertDirectMessageSendAccess(
-      tx,
+    const peerProfileId = getConversationPeerId(
+      conversation,
       currentUserProfileId,
-      getConversationPeerId(conversation, currentUserProfileId),
     );
+
+    await assertDirectMessageSendAccess(tx, currentUserProfileId, peerProfileId);
 
     const message = await tx.directMessage.create({
       data: {

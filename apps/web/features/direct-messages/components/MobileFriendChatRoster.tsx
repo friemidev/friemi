@@ -150,6 +150,9 @@ function MobileFriendChatRow({
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
   const isMine = lastMessage?.senderId === currentUserProfileId;
+  const sourceLabel = lastMessage?.sourceActivity
+    ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
+    : null;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
     : t.startChat;
@@ -170,7 +173,7 @@ function MobileFriendChatRow({
           </span>
         </span>
         <span className="mt-1 block truncate text-xs leading-5 text-[#156240]">
-          {preview}
+          {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
         </span>
       </span>
     </>

@@ -291,6 +291,7 @@ const copy = {
       organizerTitle: "发起人",
       emptyOrganizerBio: "这个发起人还没有填写简介。",
       contactOrganizer: "联系发起人",
+      contactOrganizerLogin: "登录后联系发起人",
       contactOrganizerHint: "活动前有问题，可以直接确认。",
       type: "活动类型",
       visibility: "可见范围",
@@ -477,6 +478,7 @@ const copy = {
         participation: "报名",
         social: "好友",
         comment: "评论",
+        message: "私信",
         activity: "活动",
         report: "举报",
       },
@@ -545,6 +547,11 @@ const copy = {
           title: "有人回复了你",
           body: (activityTitle: string, actorName = "有人") =>
             `${actorName}回复了你在「${activityTitle}」下的评论。`,
+        },
+        DIRECT_MESSAGE: {
+          title: "有新的私信",
+          body: (activityTitle: string, actorName = "有人") =>
+            `${actorName}就「${activityTitle}」联系了你。`,
         },
         REPORT_CREATED: {
           title: "有新的举报",
@@ -1163,6 +1170,7 @@ const copy = {
       organizerTitle: "Organizer",
       emptyOrganizerBio: "This organizer has not added a bio yet.",
       contactOrganizer: "Message organizer",
+      contactOrganizerLogin: "Sign in to message organizer",
       contactOrganizerHint: "Ask before joining or heading out.",
       type: "Type",
       visibility: "Visibility",
@@ -1357,6 +1365,7 @@ const copy = {
         participation: "Joins",
         social: "Friends",
         comment: "Comments",
+        message: "Messages",
         activity: "Activity",
         report: "Reports",
       },
@@ -1427,6 +1436,11 @@ const copy = {
           title: "New reply",
           body: (activityTitle: string, actorName = "Someone") =>
             `${actorName} replied to your comment on "${activityTitle}".`,
+        },
+        DIRECT_MESSAGE: {
+          title: "New message",
+          body: (activityTitle: string, actorName = "Someone") =>
+            `${actorName} messaged you about "${activityTitle}".`,
         },
         REPORT_CREATED: {
           title: "New report",
@@ -2080,6 +2094,7 @@ const copy = {
       organizerTitle: "Organisateur",
       emptyOrganizerBio: "Cet organisateur n'a pas encore ajouté de bio.",
       contactOrganizer: "Contacter l'organisateur",
+      contactOrganizerLogin: "Se connecter pour contacter l'organisateur",
       contactOrganizerHint: "Posez vos questions avant de rejoindre.",
       type: "Type",
       visibility: "Visibilité",
@@ -2282,6 +2297,7 @@ const copy = {
         participation: "Inscriptions",
         social: "Amis",
         comment: "Commentaires",
+        message: "Messages",
         activity: "Activité",
         report: "Signalements",
       },
@@ -2352,6 +2368,11 @@ const copy = {
           title: "Nouvelle réponse",
           body: (activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} a répondu à votre commentaire sur « ${activityTitle} ».`,
+        },
+        DIRECT_MESSAGE: {
+          title: "Nouveau message",
+          body: (activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} vous a écrit au sujet de « ${activityTitle} ».`,
         },
         REPORT_CREATED: {
           title: "Nouveau signalement",

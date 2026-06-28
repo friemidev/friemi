@@ -18,11 +18,13 @@ import {
 import { getDirectMessagesCopy } from "../copy";
 
 type MessageComposerProps = {
+  activityId?: string | null;
   conversationId: string;
+  initialBody?: string;
   locale: string;
 };
 
-const initialState: DirectMessageActionState = {
+const defaultInitialState: DirectMessageActionState = {
   values: {
     body: "",
   },
@@ -89,20 +91,22 @@ function SubmitButton({ locale }: { locale: string }) {
 }
 
 export function MessageComposer({
+  activityId,
   conversationId,
+  initialBody,
   locale,
 }: MessageComposerProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const emojiRootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [bodyLength, setBodyLength] = useState(
-    initialState.values?.body?.length ?? 0,
-  );
+  const [bodyLength, setBodyLength] = useState(initialBody?.length ?? 0);
   const [emojiPanelOpen, setEmojiPanelOpen] = useState(false);
-  const [state, formAction] = useActionState(
-    sendDirectMessageAction,
-    initialState,
-  );
+  const [state, formAction] = useActionState(sendDirectMessageAction, {
+    ...defaultInitialState,
+    values: {
+      body: initialBody ?? "",
+    },
+  });
   const t = getDirectMessagesCopy(locale);
 
   useEffect(() => {
@@ -186,6 +190,9 @@ export function MessageComposer({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="conversationId" type="hidden" value={conversationId} />
+      {activityId ? (
+        <input name="activityId" type="hidden" value={activityId} />
+      ) : null}
       {state.formError ? (
         <div className="mb-2 rounded-[0.9rem] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {state.formError}
@@ -232,7 +239,7 @@ export function MessageComposer({
             key={state.messageId ?? "new-message"}
             name="body"
             maxLength={messageMaxLength}
-            defaultValue={state.ok ? "" : state.values?.body}
+            defaultValue={state.ok ? "" : state.values?.body ?? initialBody}
             placeholder={t.messagePlaceholder}
             className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
             onChange={(event) => setBodyLength(event.currentTarget.value.length)}
