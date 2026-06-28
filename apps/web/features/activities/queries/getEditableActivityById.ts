@@ -5,6 +5,7 @@ import {
   splitStoredDescription,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
+import { getActivityAddressPrivacy } from "../utils/activityAddressPrivacy";
 
 const editableActivitySelect = {
   id: true,
@@ -30,6 +31,7 @@ const editableActivitySelect = {
   priceText: true,
   ticketUrl: true,
   ticketLabel: true,
+  sourcePayload: true,
   organizerId: true,
 } satisfies Prisma.ActivitySelect;
 
@@ -73,6 +75,9 @@ function getEditableActivityValues(
     city: activity.city,
     destination: activity.destination ?? "",
     address: activity.address,
+    hideAddressFromNonParticipants: getActivityAddressPrivacy(
+      activity.sourcePayload,
+    ).hideFromNonParticipants,
     latitude: activity.latitude === null ? "" : String(activity.latitude),
     longitude: activity.longitude === null ? "" : String(activity.longitude),
     startAt: formatActivityLocalDateTimeInput(activity.startAt),

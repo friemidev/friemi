@@ -306,6 +306,7 @@ const copy = {
       approvalAuto: "报名后自动确认",
       editActivity: "编辑组局",
       locationMapTitle: "活动地点",
+      hiddenAddressNotice: "完整地址仅参与者可见。",
       openMap: "打开地图",
       openGoogleMaps: "打开 Google Maps",
     },
@@ -782,6 +783,9 @@ const copy = {
       destinationPlaceholder: "例如：Nice / Amsterdam / London",
       destinationHint: "旅行搭子需要填写目的地，方便用户判断是否感兴趣。",
       address: "集合地址",
+      hideAddressFromNonParticipants: "仅参与者可见详细地址",
+      hideAddressFromNonParticipantsHint:
+        "开启后，未报名或未通过的人只会看到城市；发起人和参与者仍可看到完整地址和地图。",
       placePickerTitle: "地图定位",
       placePickerHint: "根据城市和地址匹配坐标；保存后详情页会显示地图位置。",
       placeSearch: "匹配地点",
@@ -1185,6 +1189,7 @@ const copy = {
       approvalAuto: "Auto-confirmed after joining",
       editActivity: "Edit plan",
       locationMapTitle: "Activity location",
+      hiddenAddressNotice: "The exact address is visible to participants only.",
       openMap: "Open map",
       openGoogleMaps: "Open in Google Maps",
     },
@@ -1692,6 +1697,9 @@ const copy = {
       destinationHint:
         "Trips need a destination so users can quickly judge fit.",
       address: "Meetup address",
+      hideAddressFromNonParticipants: "Show exact address to participants only",
+      hideAddressFromNonParticipantsHint:
+        "When enabled, people who have not joined only see the city. The organizer and participants can still see the full address and map.",
       placePickerTitle: "Map location",
       placePickerHint:
         "Match coordinates from the city and address. The detail page will show a map after saving.",
@@ -2109,6 +2117,8 @@ const copy = {
       approvalAuto: "Confirmation automatique après inscription",
       editActivity: "Modifier le plan",
       locationMapTitle: "Lieu de l'activité",
+      hiddenAddressNotice:
+        "L'adresse exacte est visible uniquement par les participants.",
       openMap: "Ouvrir la carte",
       openGoogleMaps: "Ouvrir dans Google Maps",
     },
@@ -2642,6 +2652,10 @@ const copy = {
       destinationHint:
         "Les voyages nécessitent une destination pour juger rapidement l'intérêt.",
       address: "Adresse du rendez-vous",
+      hideAddressFromNonParticipants:
+        "Afficher l'adresse exacte uniquement aux participants",
+      hideAddressFromNonParticipantsHint:
+        "Si activé, les personnes qui n'ont pas rejoint ne voient que la ville. L'organisateur et les participants voient toujours l'adresse complète et la carte.",
       placePickerTitle: "Position sur la carte",
       placePickerHint:
         "Associe des coordonnées à partir de la ville et de l'adresse. La page détail affichera une carte après l'enregistrement.",
