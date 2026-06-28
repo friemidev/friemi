@@ -156,10 +156,10 @@ export function ActivityCoverUpload({
         }}
       />
 
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-[#D6D5B2] bg-white shadow-sm">
         <div
           className={cn(
-            "relative flex aspect-[16/9] min-h-44 items-center justify-center bg-sky/60 transition",
+            "relative flex h-28 items-center justify-center bg-[#DEEBFF]/42 transition sm:h-32",
             isDragging && "bg-white ring-2 ring-inset ring-moss",
           )}
           onDragEnter={(event) => {
@@ -190,25 +190,26 @@ export function ActivityCoverUpload({
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="flex flex-col items-center gap-2 px-4 text-center text-zinc-600">
-              <ImagePlus className="h-9 w-9 text-zinc-500" aria-hidden />
-              <span className="text-sm font-medium text-ink">
+            <div className="flex flex-col items-center gap-1.5 px-4 text-center text-zinc-600">
+              <ImagePlus className="h-6 w-6 text-zinc-500" aria-hidden />
+              <span className="text-base font-semibold text-ink">
                 {isDragging ? t.coverDropHere : t.coverDefault}
               </span>
-              <span className="text-xs leading-5 text-zinc-500">
+              <span className="text-base leading-7 text-zinc-600">
                 {t.coverImageHint}
               </span>
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-zinc-100 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-zinc-500">{t.coverFileHint}</p>
+        <div className="flex flex-col gap-2 border-t border-[#D6D5B2]/70 bg-[#FEFFF9] p-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-base leading-7 text-zinc-600">{t.coverFileHint}</p>
           <div className="flex shrink-0 gap-2">
             {imageUrl ? (
               <Button
                 type="button"
                 variant="ghost"
+                className="h-8"
                 disabled={isUploading}
                 onClick={() => updateImageUrl("")}
               >
@@ -219,6 +220,7 @@ export function ActivityCoverUpload({
             <Button
               type="button"
               variant="secondary"
+              className="h-10 rounded-full border-[#8AB68E] bg-white px-4 text-base"
               disabled={isUploading}
               onClick={() => inputRef.current?.click()}
             >
