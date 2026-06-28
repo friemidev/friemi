@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import {
   getActivityLobbyFeedPage,
   type ActivityLobbyFeedStatus,
@@ -33,9 +34,18 @@ function parseLobbyFeedPage(value: string | null) {
   return Math.floor(page);
 }
 
+function parseLobbyFeedCategory(value: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  return activityCategoryOptions.find((category) => category === value);
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    const category = parseLobbyFeedCategory(url.searchParams.get("category"));
     const status = parseLobbyFeedStatus(url.searchParams.get("status")) ?? "all";
     const page = parseLobbyFeedPage(url.searchParams.get("page"));
     const viewerProfileId = await getOptionalAuthenticatedProfileId();
@@ -51,6 +61,7 @@ export async function GET(request: Request) {
     }
 
     const feed = await getActivityLobbyFeedPage(viewerProfileId, {
+      category,
       page,
       status,
     });

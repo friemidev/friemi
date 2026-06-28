@@ -63,7 +63,7 @@ async function main() {
         description: "一起看展，结束后附近喝咖啡。",
         itinerary: "13:00 门口集合\n13:15 入场看展\n16:00 附近咖啡聊天",
         type: "LOCAL",
-        category: "EXHIBITION",
+        category: "ART",
         city: "Paris",
         address: "Musée d'Orsay",
         startAt: new Date("2026-06-07T13:00:00.000Z"),

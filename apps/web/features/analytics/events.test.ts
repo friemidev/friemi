@@ -22,7 +22,7 @@ test("normalizeAnalyticsProperties removes sensitive fields and limits values", 
   const properties = normalizeAnalyticsProperties({
     email: "user@example.com",
     comment_content: "private text",
-    activity_category: "EXHIBITION",
+    activity_category: "ART",
     long_label: "x".repeat(180),
     tags: ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
   });
@@ -31,7 +31,7 @@ test("normalizeAnalyticsProperties removes sensitive fields and limits values", 
   assert.deepEqual(properties?.comment_content, undefined);
   assert.deepEqual(properties?.user_email, undefined);
   assert.deepEqual(properties?.contact_phone, undefined);
-  assert.equal(properties?.activity_category, "EXHIBITION");
+  assert.equal(properties?.activity_category, "ART");
   assert.equal(String(properties?.long_label).length, 120);
   assert.equal(Array.isArray(properties?.tags), true);
   assert.equal((properties?.tags as unknown[]).length, 10);

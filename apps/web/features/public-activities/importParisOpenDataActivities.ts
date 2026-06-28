@@ -423,18 +423,16 @@ function mapCategory(record: ParisOpenDataRecord): ActivityCategory {
     .join(" ")
     .toLowerCase();
 
-  if (/expo|exposition|musée|museum|art|visite/.test(searchable)) {
-    return "EXHIBITION";
+  if (/expo|exposition|musée|museum|art/.test(searchable)) {
+    return "ART";
   }
 
-  if (
-    /concert|musique|music|festival|chanson|danse|spectacle/.test(searchable)
-  ) {
+  if (/concert|musique|music|festival|chanson|danse/.test(searchable)) {
     return "MUSIC";
   }
 
-  if (/cin[eé]ma|film|movie|projection/.test(searchable)) {
-    return "MOVIE";
+  if (/cin[eé]ma|film|movie|projection|spectacle|th[eé]âtre/.test(searchable)) {
+    return "AUDIO_VISUAL";
   }
 
   if (/sport|course|running|yoga|fitness|vélo|velo/.test(searchable)) {
@@ -447,6 +445,14 @@ function mapCategory(record: ParisOpenDataRecord): ActivityCategory {
     )
   ) {
     return "FOOD";
+  }
+
+  if (/visite|balade|promenade|city walk|walk/.test(searchable)) {
+    return "WANDER";
+  }
+
+  if (/atelier|workshop|lecture|cours|conf[eé]rence|apprendre/.test(searchable)) {
+    return "GROWTH";
   }
 
   return "OTHER";

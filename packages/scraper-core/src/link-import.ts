@@ -480,18 +480,18 @@ export function mapParisFrCategory(
   const text = `${tagLine} ${title} ${description}`.toLowerCase();
 
   if (/\bexpos\b|\bexposition\b|expo poético|poético-drôle/i.test(text)) {
-    return "EXHIBITION";
+    return "ART";
   }
 
   if (
     /théâtre|theatre|theater|pièce\b|comédie|舞台剧|戏剧/.test(text) &&
     !/\bexpos\b/.test(text)
   ) {
-    return "THEATER";
+    return "AUDIO_VISUAL";
   }
 
   if (/\bgratuit\b/i.test(html) && /\bexpos\b/i.test(text)) {
-    return "EXHIBITION";
+    return "ART";
   }
 
   return guessCategory(`${title} ${description}`);
@@ -1500,7 +1500,7 @@ function mapFeverPlanCategory(
   const tagAndTitle = `${tags} ${title}`.toLowerCase();
 
   if (slug === "art") {
-    return "EXHIBITION";
+    return "ART";
   }
 
   if (slug === "concert") {
@@ -1516,7 +1516,7 @@ function mapFeverPlanCategory(
       `${slug} ${tagAndTitle}`,
     )
   ) {
-    return "EXHIBITION";
+    return "ART";
   }
 
   return guessCategory(`${title} ${description}`);
@@ -1533,7 +1533,7 @@ function guessCategory(text: string): ScrapedActivity["category"] {
     /(théâtre|theatre|theater|pièce\b|comédie|舞台剧|戏剧)/i.test(value) &&
     !/\bexpos\b|exposition/i.test(value)
   ) {
-    return "THEATER";
+    return "AUDIO_VISUAL";
   }
 
   if (
@@ -1549,14 +1549,14 @@ function guessCategory(text: string): ScrapedActivity["category"] {
       value,
     )
   ) {
-    return "EXHIBITION";
+    return "ART";
   }
 
   if (
     /(电影|cinema|movie|\bfilm\b|projection)/i.test(value) &&
     !/candlelight/i.test(value)
   ) {
-    return "MOVIE";
+    return "AUDIO_VISUAL";
   }
 
   if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value)) {
@@ -1564,9 +1564,15 @@ function guessCategory(text: string): ScrapedActivity["category"] {
   }
 
   if (
-    /(旅行|city\s*walk|\btour\b|travel|hike|\bvoyage\b|漫步|散步|excursion|randonnée)/i.test(
+    /(闲逛|city\s*walk|balade|promenade|漫步|散步)/i.test(
       value,
     )
+  ) {
+    return "WANDER";
+  }
+
+  if (
+    /(旅行|\btour\b|travel|hike|\bvoyage\b|excursion|randonnée)/i.test(value)
   ) {
     return "TRAVEL";
   }
@@ -1580,7 +1586,15 @@ function guessCategory(text: string): ScrapedActivity["category"] {
   }
 
   if (/(博物馆|艺术|\bart\b)/i.test(value)) {
-    return "EXHIBITION";
+    return "ART";
+  }
+
+  if (
+    /(成长|学习|读书|讲座|workshop|atelier|course|class|lecture|reading|language exchange)/i.test(
+      value,
+    )
+  ) {
+    return "GROWTH";
   }
 
   return "OTHER";

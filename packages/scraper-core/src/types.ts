@@ -15,14 +15,15 @@ export type ScrapedActivity = {
   itinerary: string | null;
   type: "PUBLIC_EVENT";
   category:
+    | "FOOD"
+    | "WANDER"
+    | "AUDIO_VISUAL"
+    | "ART"
     | "BOARD_GAME"
-    | "MOVIE"
+    | "GROWTH"
+    | "TRAVEL"
     | "MUSIC"
     | "SPORTS"
-    | "TRAVEL"
-    | "FOOD"
-    | "EXHIBITION"
-    | "THEATER"
     | "OTHER";
   city: string;
   destination: string | null;
