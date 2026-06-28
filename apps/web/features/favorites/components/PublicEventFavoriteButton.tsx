@@ -31,7 +31,7 @@ const initialState: TogglePublicEventFavoriteState = {};
 
 function FavoriteTooltip({ label }: { label: string }) {
   return (
-    <span className="pointer-events-none absolute right-0 top-full z-30 mt-2 max-w-40 whitespace-nowrap rounded-md bg-zinc-950 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100">
+    <span className="pointer-events-none absolute right-0 top-full z-30 mt-2 hidden max-w-40 whitespace-nowrap rounded-md bg-zinc-950 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100 md:block">
       {label}
     </span>
   );
