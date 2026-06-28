@@ -547,15 +547,22 @@ export default async function ActivityDetailPage({
             {activity.latitude !== null ||
             activity.longitude !== null ||
             activityLocationLabel.trim() ? (
-              <ActivityMapPreview
-                address={activityLocationLabel}
-                city={activity.city}
-                latitude={activity.latitude}
-                longitude={activity.longitude}
-                openLabel={t.activityDetail.openGoogleMaps}
-                queryAddress={activity.address}
-                title={t.activityDetail.locationMapTitle}
-              />
+              <>
+                <ActivityMapPreview
+                  address={activityLocationLabel}
+                  city={activity.city}
+                  latitude={activity.latitude}
+                  longitude={activity.longitude}
+                  openLabel={t.activityDetail.openGoogleMaps}
+                  queryAddress={activity.address}
+                  title={t.activityDetail.locationMapTitle}
+                />
+                {activity.isAddressHiddenFromViewer ? (
+                  <p className="-mt-3 rounded-md border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 text-sm font-medium text-[#156240]">
+                    {t.activityDetail.hiddenAddressNotice}
+                  </p>
+                ) : null}
+              </>
             ) : null}
           </article>
 
@@ -984,15 +991,22 @@ export default async function ActivityDetailPage({
           {activity.latitude !== null ||
           activity.longitude !== null ||
           activityLocationLabel.trim() ? (
-            <ActivityMapPreview
-              address={activityLocationLabel}
-              city={activity.city}
-              latitude={activity.latitude}
-              longitude={activity.longitude}
-              openLabel={t.activityDetail.openGoogleMaps}
-              queryAddress={activity.address}
-              title={t.activityDetail.locationMapTitle}
-            />
+            <>
+              <ActivityMapPreview
+                address={activityLocationLabel}
+                city={activity.city}
+                latitude={activity.latitude}
+                longitude={activity.longitude}
+                openLabel={t.activityDetail.openGoogleMaps}
+                queryAddress={activity.address}
+                title={t.activityDetail.locationMapTitle}
+              />
+              {activity.isAddressHiddenFromViewer ? (
+                <p className="-mt-3 rounded-md border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 text-sm font-medium text-[#156240]">
+                  {t.activityDetail.hiddenAddressNotice}
+                </p>
+              ) : null}
+            </>
           ) : null}
 
           {activity.publicEvent ? (

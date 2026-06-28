@@ -13,6 +13,7 @@ export type ActivityFormValues = {
   city: string;
   destination: string;
   address: string;
+  hideAddressFromNonParticipants: boolean;
   latitude: string;
   longitude: string;
   startAt: string;
@@ -174,6 +175,8 @@ export function getActivityFormValues(formData: FormData): ActivityFormValues {
     city: getString(formData, "city"),
     destination: getString(formData, "destination"),
     address: getString(formData, "address"),
+    hideAddressFromNonParticipants:
+      formData.get("hideAddressFromNonParticipants") === "on",
     latitude: getString(formData, "latitude"),
     longitude: getString(formData, "longitude"),
     startAt: getString(formData, "startAt"),

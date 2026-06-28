@@ -815,6 +815,23 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.address} />
             </label>
 
+            <label className="flex items-start gap-3 rounded-md border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm text-zinc-700">
+              <input
+                className="mt-1"
+                defaultChecked={values?.hideAddressFromNonParticipants}
+                name="hideAddressFromNonParticipants"
+                type="checkbox"
+              />
+              <span>
+                <span className="font-medium text-ink">
+                  {t.form.hideAddressFromNonParticipants}
+                </span>
+                <span className="mt-1 block text-zinc-500">
+                  {t.form.hideAddressFromNonParticipantsHint}
+                </span>
+              </span>
+            </label>
+
             <ActivityPlacePicker
               initialAddress={values?.address}
               initialLatitude={values?.latitude}

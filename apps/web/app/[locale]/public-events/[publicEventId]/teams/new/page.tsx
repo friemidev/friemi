@@ -75,6 +75,7 @@ function getInitialValues(
     city: publicEvent.city,
     destination: "",
     address: publicEvent.address,
+    hideAddressFromNonParticipants: false,
     latitude: publicEvent.latitude?.toString() ?? "",
     longitude: publicEvent.longitude?.toString() ?? "",
     startAt: formatParisDateTimeInput(publicEvent.startAt),

@@ -42,6 +42,8 @@ export type ActivityCardViewModel = ActivitySummary & {
   favoriteCount: number;
   latitude: number | null;
   longitude: number | null;
+  hideAddressFromNonParticipants?: boolean;
+  isAddressHiddenFromViewer?: boolean;
   visibility?: ActivityVisibility;
   merchant: ActivityMerchantViewModel | null;
   isActivityInfo?: boolean;

@@ -32,6 +32,10 @@ import {
   getAutoCreatedTeamMetadata,
   isAutoCreatedTeamClaimable,
 } from "../utils/autoCreatedTeams";
+import {
+  getActivityAddressPrivacy,
+  isAddressPrivacyOnlySourcePayload,
+} from "../utils/activityAddressPrivacy";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -916,13 +920,20 @@ export function isLegacyActivityInfoSource(activity: {
     includesKnownPublicActivitySource(activity.sourceUrl) ||
     includesKnownPublicActivitySource(activity.externalUrl);
 
+  const sourcePayloadLooksPublic = Boolean(
+    activity.sourcePayload &&
+      !isAddressPrivacyOnlySourcePayload(
+        activity.sourcePayload as Prisma.JsonValue,
+      ),
+  );
+
   return Boolean(
     sourceLooksPublic ||
     activity.externalSource ||
     activity.externalId ||
     activity.externalUrl ||
     activity.importedAt ||
-    activity.sourcePayload,
+    sourcePayloadLooksPublic,
   );
 }
 
@@ -1226,6 +1237,9 @@ export function getActivityCardViewModel(
     activity.source,
     activity.sourcePayload,
   );
+  const hideAddressFromNonParticipants = getActivityAddressPrivacy(
+    activity.sourcePayload,
+  ).hideFromNonParticipants;
   const participantCount = isActivityInfo
     ? 0
     : activity._count.participants + activity._count.guestParticipants;
@@ -1259,9 +1273,9 @@ export function getActivityCardViewModel(
     type: isActivityInfo ? "PUBLIC_EVENT" : activity.type,
     category: activity.category,
     city: activity.city,
-    address: activity.address,
-    latitude: activity.latitude,
-    longitude: activity.longitude,
+    address: hideAddressFromNonParticipants ? activity.city : activity.address,
+    latitude: hideAddressFromNonParticipants ? null : activity.latitude,
+    longitude: hideAddressFromNonParticipants ? null : activity.longitude,
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
@@ -1275,6 +1289,8 @@ export function getActivityCardViewModel(
     ticketLabel: activity.ticketLabel,
     status: activity.status,
     visibility: activity.visibility,
+    hideAddressFromNonParticipants,
+    isAddressHiddenFromViewer: hideAddressFromNonParticipants,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,

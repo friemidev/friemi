@@ -88,6 +88,7 @@ export const createActivitySchema = z
     city: nonEmptyString.default("Paris"),
     destination: optionalText,
     address: nonEmptyString,
+    hideAddressFromNonParticipants: z.coerce.boolean().default(false),
     latitude: optionalCoordinate(-90, 90, "纬度必须在 -90 到 90 之间"),
     longitude: optionalCoordinate(-180, 180, "经度必须在 -180 到 180 之间"),
     startAt: nonEmptyString,
