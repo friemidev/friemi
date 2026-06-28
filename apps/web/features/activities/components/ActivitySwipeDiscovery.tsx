@@ -554,6 +554,7 @@ export function ActivitySwipeDiscovery({
     !hasMoreActivities &&
     !isLoadingMore &&
     index >= deck.length - 1;
+  const isHomeVariant = variant === "home";
 
   if (deck.length === 0) {
     return null;
@@ -563,30 +564,34 @@ export function ActivitySwipeDiscovery({
     <section
       className={cn(
         "overflow-visible px-0 py-1",
-        variant === "home"
-          ? "overflow-hidden rounded-[1.5rem] border border-[#8AB68E] bg-white/82 p-5 shadow-[0_12px_30px_rgba(29,29,27,0.07)]"
+        isHomeVariant
+          ? "overflow-visible rounded-[1.3rem] border border-[#8AB68E] bg-transparent p-0"
           : null,
         className,
       )}
     >
-      <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
-          <Compass className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-[#B5301F]">
-            {copy.eyebrow}
-          </p>
-          <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
-            {copy.title}
-          </h2>
+      {!isHomeVariant ? (
+        <div className="flex items-center gap-2 px-1">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
+            <Compass className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-[#B5301F]">
+              {copy.eyebrow}
+            </p>
+            <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
+              {copy.title}
+            </h2>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div
         className={cn(
           "relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
-          variant === "home" ? "md:mx-0" : null,
+          isHomeVariant
+            ? "mt-0 h-[clamp(12.6rem,31svh,14.4rem)] max-w-none md:mx-0"
+            : null,
         )}
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") {
@@ -601,7 +606,16 @@ export function ActivitySwipeDiscovery({
         }}
         tabIndex={0}
         aria-label={copy.keyboardHint}
-        style={{ contain: "layout paint" }}
+        style={
+          isHomeVariant
+            ? ({
+                "--home-swipe-cover-height": "clamp(6.55rem,16.4svh,7.75rem)",
+                contain: "layout paint",
+              } as CSSProperties & {
+                "--home-swipe-cover-height": string;
+              })
+            : { contain: "layout paint" }
+        }
       >
         <p className="sr-only" aria-live="polite">
           {currentActivity ? currentActivity.title : copy.title}
@@ -646,6 +660,9 @@ export function ActivitySwipeDiscovery({
                 aria-hidden={!isTopCard}
                 className={cn(
                   "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.13)] ring-1 ring-[#D6D5B2]/75",
+                  isHomeVariant
+                    ? "rounded-[1.28rem] bg-[#FEFFF9]/92 shadow-[0_16px_34px_rgba(21,98,64,0.16)] ring-white/80 backdrop-blur-sm"
+                    : null,
                   isTopCard ? "cursor-grab active:cursor-grabbing" : null,
                   !isTopCard ? "pointer-events-none" : null,
                 )}
@@ -659,16 +676,38 @@ export function ActivitySwipeDiscovery({
                 onPointerUp={isTopCard ? handlePointerUp : undefined}
                 style={style}
               >
-                <div className="relative h-32 overflow-hidden bg-[#DEEBFF]">
+                <div
+                  className={cn(
+                    "relative h-32 overflow-hidden bg-[#DEEBFF]",
+                    isHomeVariant ? "h-[var(--home-swipe-cover-height)]" : null,
+                  )}
+                >
                   <ActivityCoverImage
                     src={isTopCard ? activity.coverImageUrl : null}
                     overlayClassName="bg-gradient-to-t from-black/58 via-black/12 to-transparent"
                   />
-                  <div className="absolute left-2.5 top-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5">
-                    <span className="rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70">
+                  <div
+                    className={cn(
+                      "absolute left-2.5 top-2.5 flex max-w-[calc(100%-1.25rem)] flex-wrap gap-1.5",
+                      isHomeVariant ? "left-2 top-2 gap-1" : null,
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70",
+                        isHomeVariant ? "px-2 py-0.5 text-[9px]" : null,
+                      )}
+                    >
                       {categoryLabel}
                     </span>
-                    <span className="inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35">
+                    <span
+                      className={cn(
+                        "inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35",
+                        isHomeVariant
+                          ? "min-h-[1.15rem] px-2 py-0.5 text-[9px]"
+                          : null,
+                      )}
+                    >
                       {statusLabel}
                     </span>
                   </div>
@@ -698,17 +737,36 @@ export function ActivitySwipeDiscovery({
                   ) : null}
                 </div>
 
-                <div className="grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5">
+                <div
+                  className={cn(
+                    "grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5",
+                    isHomeVariant
+                      ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-1.5 p-2.5"
+                      : null,
+                  )}
+                >
                   <div className="min-w-0">
-                    <h3 className="line-clamp-2 text-lg font-semibold leading-[1.12] text-ink">
+                    <h3
+                      className={cn(
+                        "line-clamp-2 text-lg font-semibold leading-[1.12] text-ink",
+                        isHomeVariant ? "text-[15px] leading-[1.12]" : null,
+                      )}
+                    >
                       {activity.title}
                     </h3>
-                    <div className="mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600">
+                    <div
+                      className={cn(
+                        "mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600",
+                        isHomeVariant
+                          ? "mt-1 grid-cols-1 text-[11px] leading-4"
+                          : null,
+                      )}
+                    >
                       <span className="flex min-w-0 items-start gap-2">
                         <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
                         <span className="line-clamp-1">{dateLabel}</span>
                       </span>
-                      {isActivityInfo ? (
+                      {isActivityInfo && !isHomeVariant ? (
                         <span className="flex min-w-0 items-start gap-2">
                           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
                           <span className="line-clamp-1">{locationLabel}</span>
@@ -720,7 +778,12 @@ export function ActivitySwipeDiscovery({
                   {isTopCard && analyticsEntity ? (
                     <div className="grid grid-cols-[1fr_auto] items-center gap-2">
                       <Link
-                        className="inline-flex h-10 items-center justify-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                        className={cn(
+                          "inline-flex h-10 items-center justify-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800",
+                          isHomeVariant
+                            ? "h-7 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758]"
+                            : null,
+                        )}
                         href={href}
                         onClick={() =>
                           trackClientAnalyticsEvent({
@@ -741,7 +804,12 @@ export function ActivitySwipeDiscovery({
                         {copy.detail}
                       </Link>
                       <PublicEventFavoriteButton
-                        className="size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]"
+                        className={cn(
+                          "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
+                          isHomeVariant
+                            ? "size-8 min-h-8 min-w-8 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70"
+                            : null,
+                        )}
                         favoriteCount={activity.favoriteCount}
                         isAuthenticated={isAuthenticated}
                         isFavorited={Boolean(activity.isFavorited)}
@@ -753,7 +821,10 @@ export function ActivitySwipeDiscovery({
                       />
                     </div>
                   ) : (
-                    <div className="h-10" aria-hidden />
+                    <div
+                      className={cn("h-10", isHomeVariant ? "h-7" : null)}
+                      aria-hidden
+                    />
                   )}
                 </div>
               </article>
@@ -762,7 +833,12 @@ export function ActivitySwipeDiscovery({
           .reverse()}
       </div>
 
-      <div className="mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500">
+      <div
+        className={cn(
+          "mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500",
+          isHomeVariant ? "hidden" : null,
+        )}
+      >
         {loadMoreFailed && onRetryLoadMore ? (
           <button
             className="inline-flex h-7 items-center justify-center rounded-full bg-[#FEFFF9] px-3 font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-white"

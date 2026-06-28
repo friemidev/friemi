@@ -142,23 +142,30 @@ function parseDateTimeString(value: string) {
 function guessCategory(text: string): ScrapedActivity["category"] {
   const value = text.toLowerCase();
   if (/(桌游|board\s*game|jenga|狼人杀|卡牌)/i.test(value)) return "BOARD_GAME";
-  if (/(电影|cinema|movie|film)/i.test(value)) return "MOVIE";
-  if (/(音乐|concert|live|dj|k-pop|kpop|festival|show|opera)/i.test(value))
-    return "MUSIC";
-  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value))
-    return "SPORTS";
-  if (/(旅行|walk|city\s*walk|tour|travel|hike|voyage|漫步|散步)/i.test(value))
-    return "TRAVEL";
   if (
     /(美食|food|wine|drink|restaurant|café|cafe|brunch|dinner|cooking|餐|吃)/i.test(
       value,
     )
   )
     return "FOOD";
+  if (/(音乐|concert|live|dj|k-pop|kpop|festival|show|opera)/i.test(value))
+    return "MUSIC";
+  if (/(电影|cinema|movie|film|projection|théâtre|theatre|theater|pièce|舞台剧|戏剧)/i.test(value))
+    return "AUDIO_VISUAL";
   if (/(展|exhibition|museum|gallery|art|博物馆|艺术|\bexpos\b)/i.test(value))
-    return "EXHIBITION";
-  if (/(théâtre|theatre|theater|pièce|舞台剧|戏剧)/i.test(value))
-    return "THEATER";
+    return "ART";
+  if (/(运动|sport|run|fitness|yoga|tennis|足球|篮球|游泳)/i.test(value))
+    return "SPORTS";
+  if (/(闲逛|walk|city\s*walk|balade|promenade|漫步|散步)/i.test(value))
+    return "WANDER";
+  if (/(旅行|tour|travel|hike|voyage|excursion|randonnée)/i.test(value))
+    return "TRAVEL";
+  if (
+    /(成长|学习|读书|讲座|workshop|atelier|course|class|lecture|reading|language exchange)/i.test(
+      value,
+    )
+  )
+    return "GROWTH";
   return "OTHER";
 }
 

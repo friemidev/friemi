@@ -6,15 +6,16 @@ export const activityTypes = {
 } as const;
 
 export const activityCategories = {
+  FOOD: "饭局",
+  WANDER: "闲逛",
+  AUDIO_VISUAL: "视听",
+  ART: "艺术",
   BOARD_GAME: "桌游",
-  MOVIE: "电影",
+  GROWTH: "进步",
+  TRAVEL: "旅行",
   MUSIC: "音乐",
   SPORTS: "运动",
-  TRAVEL: "旅行",
-  FOOD: "饭局",
-  EXHIBITION: "展览",
-  THEATER: "戏剧",
-  OTHER: "其他"
+  OTHER: "其它"
 } as const;
 
 export const activityStatuses = {

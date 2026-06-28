@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import type { ActivityCategory } from "@chill-club/shared";
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
@@ -24,7 +25,6 @@ const activityLobbySectionLimit = 6;
 const activityLobbyFeedPageSize = 10;
 const activityLobbyPreviewLimit = activityLobbyFeedPageSize * 2;
 const activityLobbyStarterLimit = 8;
-const activityLobbyInitialSwipeLimit = 8;
 const activityLobbySwipeLimit = 24;
 const activityLobbySwipeExcludeLimit = 160;
 const visibleLobbyParticipationStatuses = [
@@ -116,7 +116,6 @@ export type ActivityLobbyViewModel = {
   friendHostedActivities: ActivityCardViewModel[];
   friendJoinedActivities: ActivityCardViewModel[];
   starterActivities: ActivityCardViewModel[];
-  swipeActivities: ActivityCardViewModel[];
 };
 
 type LobbyActivityRecord = Prisma.ActivityGetPayload<{
@@ -549,6 +548,7 @@ async function getLobbyQueryContext(
 export async function getActivityLobbyFeedPage(
   viewerProfileId: string,
   options: {
+    category?: ActivityCategory;
     context?: ActivityLobbyQueryContext;
     decorate?: boolean;
     page?: number;
@@ -565,11 +565,19 @@ export async function getActivityLobbyFeedPage(
   const decorate = options.decorate ?? true;
   const status = options.status ?? "all";
   const requestedPage = options.page ?? 1;
+  const categoryWhere: Prisma.ActivityWhereInput = options.category
+    ? { category: options.category }
+    : {};
   const ongoingWhere: Prisma.ActivityWhereInput = {
-    AND: [context.accessibleActiveWhere, strictTeamCardWhere],
+    AND: [context.accessibleActiveWhere, strictTeamCardWhere, categoryWhere],
   };
   const endedWhere: Prisma.ActivityWhereInput = {
-    AND: [context.accessibleWhere, strictTeamCardWhere, context.archivedWhere],
+    AND: [
+      context.accessibleWhere,
+      strictTeamCardWhere,
+      context.archivedWhere,
+      categoryWhere,
+    ],
   };
 
   if (options.skipCounts && requestedPage === 1 && status === "all") {
@@ -918,7 +926,6 @@ export async function getActivityLobbyInitial(
     openActivities,
     createdActivities,
     joinedActivities,
-    swipeActivities,
   ] = await Promise.all([
     friendIdsPromise,
     friendIdsPromise.then((resolvedFriendIds) =>
@@ -934,13 +941,6 @@ export async function getActivityLobbyInitial(
     getOpenLobbySection(viewerProfileId, sectionContext),
     getCreatedLobbySection(viewerProfileId, sectionContext),
     getJoinedLobbySection(viewerProfileId, sectionContext),
-    getLobbySwipePublicEventActivities(viewerProfileId, {
-      limit: activityLobbyInitialSwipeLimit,
-    }).catch((error: unknown) => {
-      console.error("Failed to load initial lobby swipe activities", error);
-
-      return [];
-    }),
   ]);
   const uniqueActivities = Array.from(
     new Map(
@@ -992,7 +992,6 @@ export async function getActivityLobbyInitial(
     friendHostedActivities: [],
     friendJoinedActivities: [],
     starterActivities: starterActivityCards,
-    swipeActivities,
   };
 }
 
@@ -1057,12 +1056,14 @@ export async function getActivityLobby(
     friendHostedActivities,
     friendJoinedActivities,
     starterActivities: initialLobby.starterActivities,
-    swipeActivities: initialLobby.swipeActivities,
   };
 }
 
-export async function getActivityLobbyPreview() {
+export async function getActivityLobbyPreview(category?: ActivityCategory) {
   const now = new Date();
+  const categoryWhere: Prisma.ActivityWhereInput = category
+    ? { category }
+    : {};
   const publicTeamWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({
@@ -1073,6 +1074,7 @@ export async function getActivityLobbyPreview() {
       }),
       { visibility: "PUBLIC" },
       strictTeamCardWhere,
+      categoryWhere,
     ],
   };
   const publicActiveTeamWhere: Prisma.ActivityWhereInput = {
@@ -1085,6 +1087,7 @@ export async function getActivityLobbyPreview() {
       }),
       { visibility: "PUBLIC" },
       strictTeamCardWhere,
+      categoryWhere,
     ],
   };
   const [activeActivities, archivedActivities] = await Promise.all([

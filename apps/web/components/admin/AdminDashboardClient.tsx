@@ -12,6 +12,7 @@ import {
   Input,
   Textarea,
 } from "@chill-club/ui";
+import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 import type {
   AdminActivityListItem,
   AdminMerchantOption,
@@ -34,16 +35,7 @@ type ActivityFormState = {
   description: string;
   itinerary: string;
   type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
-  category:
-    | "BOARD_GAME"
-    | "MOVIE"
-    | "MUSIC"
-    | "SPORTS"
-    | "TRAVEL"
-    | "FOOD"
-    | "EXHIBITION"
-    | "THEATER"
-    | "OTHER";
+  category: ActivityCategory;
   city: string;
   destination: string;
   address: string;
@@ -72,6 +64,10 @@ type ActivityFormState = {
 
 type DashboardTab = "activities" | "scraper";
 
+const adminActivityCategoryOptions = Object.keys(
+  activityCategories,
+) as ActivityCategory[];
+
 const emptyActivityForm = (
   organizerId = "",
   merchantId = "",
@@ -80,7 +76,7 @@ const emptyActivityForm = (
   description: "",
   itinerary: "",
   type: "PUBLIC_EVENT",
-  category: "EXHIBITION",
+  category: "ART",
   city: "Paris",
   destination: "",
   address: "",
@@ -545,15 +541,11 @@ export function AdminDashboardClient({
                         })
                       }
                     >
-                      <option value="BOARD_GAME">BOARD_GAME</option>
-                      <option value="MOVIE">MOVIE</option>
-                      <option value="MUSIC">MUSIC</option>
-                      <option value="SPORTS">SPORTS</option>
-                      <option value="TRAVEL">TRAVEL</option>
-                      <option value="FOOD">FOOD</option>
-                      <option value="EXHIBITION">EXHIBITION</option>
-                      <option value="THEATER">THEATER</option>
-                      <option value="OTHER">OTHER</option>
+                      {adminActivityCategoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
                     </select>
                   </FormField>
                   <FormField label="计费方式">

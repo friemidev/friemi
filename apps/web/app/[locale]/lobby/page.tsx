@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import {
   ActivityLobbyPreviewView,
   ActivityLobbyView,
@@ -9,7 +10,6 @@ import {
   createEmptyActivityLobbyFeedPage,
   getActivityLobbyInitial,
   getActivityLobbyPreview,
-  getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { brand } from "@/lib/brand";
@@ -25,6 +25,9 @@ import {
 type ActivityLobbyPageProps = {
   params: Promise<{
     locale: string;
+  }>;
+  searchParams?: Promise<{
+    category?: string | string[];
   }>;
 };
 
@@ -48,8 +51,16 @@ export async function generateMetadata({
 
 export default async function ActivityLobbyPage({
   params,
+  searchParams,
 }: ActivityLobbyPageProps) {
   const { locale } = await params;
+  const query = (await searchParams) ?? {};
+  const categoryParam = Array.isArray(query.category)
+    ? query.category[0]
+    : query.category;
+  const initialCategoryFilter =
+    activityCategoryOptions.find((category) => category === categoryParam) ??
+    null;
   const perf = createPerformanceTracker({
     locale,
     route: "/lobby",
@@ -60,22 +71,19 @@ export default async function ActivityLobbyPage({
   const profile = viewerState.profile;
 
   if (!profile) {
-    const [previewActivities, swipeActivities] = await perf.measure(
+    const previewActivities = await perf.measure(
       "lobby.preview",
-      () =>
-        Promise.all([
-          getActivityLobbyPreview(),
-          getLobbySwipePublicEventActivities(null, { limit: 8 }),
-        ]).catch((error: unknown) => {
+      () => getActivityLobbyPreview(initialCategoryFilter ?? undefined).catch(
+        (error: unknown) => {
           console.error("Failed to load public activity lobby preview", error);
 
-          return [[], []];
-        }),
+          return [];
+        },
+      ),
     );
     perf.finish({
       hasViewer: false,
       previewCount: previewActivities.length,
-      swipeCount: swipeActivities.length,
     }, {
       route: `/${locale}/lobby`,
       routeKey: "lobby",
@@ -85,8 +93,8 @@ export default async function ActivityLobbyPage({
       <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
         <ActivityLobbyPreviewView
           activities={previewActivities}
+          initialCategoryFilter={initialCategoryFilter}
           locale={locale}
-          swipeActivities={swipeActivities}
         />
       </PageContainer>
     );
@@ -106,7 +114,6 @@ export default async function ActivityLobbyPage({
         friendHostedActivities: [],
         friendJoinedActivities: [],
         starterActivities: [],
-        swipeActivities: [],
       };
     }),
   );
@@ -116,7 +123,6 @@ export default async function ActivityLobbyPage({
     favoriteCount: lobby.favoriteActivities.length,
     hasViewer: true,
     joinedCount: lobby.joinedActivities.length,
-    swipeCount: lobby.swipeActivities.length,
   }, {
     route: `/${locale}/lobby`,
     routeKey: "lobby",
@@ -135,8 +141,8 @@ export default async function ActivityLobbyPage({
         favoriteActivities={lobby.favoriteActivities}
         friendHostedActivities={lobby.friendHostedActivities}
         friendJoinedActivities={lobby.friendJoinedActivities}
+        initialCategoryFilter={initialCategoryFilter}
         starterActivities={lobby.starterActivities}
-        swipeActivities={lobby.swipeActivities}
         locale={locale}
       />
     </PageContainer>

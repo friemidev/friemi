@@ -4,9 +4,9 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
-  CalendarPlus,
   CircleUserRound,
   Compass,
+  House,
   MessageCircle,
   UsersRound,
 } from "lucide-react";
@@ -20,6 +20,24 @@ type MobileNavProps = {
   locale: string;
 };
 
+function getMobileNavToneClasses(tone: string, active: boolean) {
+  if (tone === "rose") {
+    return active
+      ? "bg-[linear-gradient(145deg,#FEFFF9,#DEAAB3_135%)] text-[#B5301F] ring-[#DEAAB3]/80 shadow-[0_10px_20px_rgba(181,48,31,0.16)]"
+      : "bg-[#DEAAB3]/20 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+  }
+
+  if (tone === "cream") {
+    return active
+      ? "bg-[linear-gradient(145deg,#FEFFF9,#F1F2E3)] text-[#156240] ring-[#D6D5B2]/90 shadow-[0_10px_20px_rgba(21,98,64,0.12)]"
+      : "bg-[#FEFFF9]/74 text-[#1D1D1B]/68 ring-[#8E8383]/12";
+  }
+
+  return active
+    ? "bg-[linear-gradient(145deg,#FEFFF9,#DEEBFF)] text-[#156240] ring-[#8AB68E]/70 shadow-[0_10px_20px_rgba(21,98,64,0.13)]"
+    : "bg-[#DEEBFF]/58 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+}
+
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
@@ -29,22 +47,43 @@ export function MobileNav({ locale }: MobileNavProps) {
     : "zh-CN";
   const items = useMemo(
     () => [
-      { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
-      { href: "/activities", label: t.nav.activities, icon: Compass },
       {
-        href: "/activities/new",
-        label: t.nav.newActivityShort,
-        icon: CalendarPlus,
-        isPrimary: true,
+        href: "/activities",
+        label: t.nav.activities,
+        icon: Compass,
+        tone: "blue",
       },
-      { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
-      { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
+      {
+        href: "/lobby",
+        label: t.nav.lobbyShort,
+        icon: UsersRound,
+        tone: "rose",
+      },
+      {
+        href: "/mobile-home",
+        label: t.nav.hallShort,
+        icon: House,
+        isPrimary: true,
+        tone: "green",
+      },
+      {
+        href: "/messages",
+        label: t.nav.messagesShort,
+        icon: MessageCircle,
+        tone: "rose",
+      },
+      {
+        href: "/profile",
+        label: t.nav.profileShort,
+        icon: CircleUserRound,
+        tone: "cream",
+      },
     ],
     [
       t.nav.activities,
+      t.nav.hallShort,
       t.nav.lobbyShort,
       t.nav.messagesShort,
-      t.nav.newActivityShort,
       t.nav.profileShort,
     ],
   );
@@ -74,12 +113,14 @@ export function MobileNav({ locale }: MobileNavProps) {
       );
     }
 
-    return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
+    return (
+      pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
+    );
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#FFF5E6] pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_26px_rgba(21,98,64,0.1)] md:hidden">
-      <div className="mx-auto grid h-[5.05rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#FFF5E6] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
+      <div className="mx-auto grid h-[5.35rem] max-w-md grid-cols-[0.92fr_0.92fr_1.22fr_0.92fr_0.92fr] gap-1.5 px-3 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -92,38 +133,59 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                "relative flex min-w-0 flex-col items-center justify-end gap-1 rounded-[1.35rem] px-1 pb-1.5 pt-1 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-2.5 h-[4.5rem] bg-meadow text-white shadow-[0_12px_26px_rgba(54,151,88,0.3)]"
-                    : "-mt-2.5 h-[4.5rem] bg-coral text-white shadow-[0_10px_22px_rgba(240,145,130,0.24)] hover:bg-danger"
+                    ? "-mt-5 h-[5.35rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#156240_0%,#369758_62%,#8AB68E_140%)] text-white shadow-[0_18px_34px_rgba(21,98,64,0.38)] ring-2 ring-[#FEFFF9]/80"
+                    : "-mt-4 h-[5.15rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#369758,#156240)] text-white shadow-[0_14px_28px_rgba(21,98,64,0.24)] ring-1 ring-[#FEFFF9]/70"
                   : active
-                    ? "bg-paper text-forest shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sage"
-                    : "text-zinc-600 hover:bg-paper hover:text-ink",
+                    ? "-translate-y-1 bg-[#FEFFF9]/72 text-forest shadow-[0_10px_22px_rgba(21,98,64,0.11)] ring-1 ring-[#8E8383]/12"
+                    : "text-[#1D1D1B]/72",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-1.5 h-1 w-5 rounded-full transition",
-                  active
-                    ? item.isPrimary
-                      ? "bg-white/88"
-                      : "bg-[#369758]"
-                    : "bg-transparent",
+                  "absolute rounded-full transition duration-200",
+                  item.isPrimary
+                    ? active
+                      ? "top-1.5 h-1.5 w-8 bg-white/92"
+                      : "top-1.5 h-1 w-0 bg-transparent"
+                    : active
+                      ? "-top-1 h-1.5 w-5 bg-[#369758]"
+                      : "-top-0.5 h-1 w-0 bg-transparent",
                 )}
                 aria-hidden="true"
               />
-              <span className="relative inline-flex h-5 min-w-5 items-center justify-center">
+              <span
+                className={cn(
+                  "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
+                  item.isPrimary
+                    ? active
+                      ? "h-11 w-11 bg-white/18 text-white ring-white/34 shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]"
+                      : "h-10 w-10 bg-white/14 text-white ring-white/24"
+                    : getMobileNavToneClasses(item.tone, active),
+                )}
+              >
                 <Icon
                   className={cn(
                     "shrink-0",
-                    item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                    active && item.isPrimary ? "text-white" : "",
+                    item.isPrimary ? "h-[22px] w-[22px]" : "h-[17px] w-[17px]",
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />
               </span>
-              <span className="max-w-full whitespace-nowrap">{item.label}</span>
+              <span
+                className={cn(
+                  "max-w-full whitespace-nowrap transition",
+                  item.isPrimary
+                    ? "text-[11px] font-extrabold"
+                    : active
+                      ? "rounded-full bg-[#FEFFF9]/72 px-1.5 py-0.5 font-extrabold text-forest shadow-[0_1px_0_rgba(255,255,255,0.7)]"
+                      : null,
+                )}
+              >
+                {item.label}
+              </span>
             </IntentPrefetchLink>
           );
         })}

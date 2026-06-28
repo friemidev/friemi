@@ -187,7 +187,7 @@ test("parseFeverupEventHtml builds ticket price range and venue address", () => 
 
   assert.ok(activity);
   assert.equal(activity.source, "feverup");
-  assert.equal(activity.category, "EXHIBITION");
+  assert.equal(activity.category, "ART");
   assert.equal(activity.capacity, 99);
   assert.match(activity.title, /Renaissance/i);
   assert.match(activity.address, /Atelier des Lumières/);
