@@ -144,7 +144,8 @@ function getAutoCreatedTeamCopy(locale: string) {
     return {
       badge: "Sélection du jour",
       claimableBadge: "À réclamer",
-      claimHint: "Cette équipe a été créée à partir d'une activité populaire. Réclamez-la pour modifier l'heure et le lieu.",
+      claimHint:
+        "Cette équipe a été créée à partir d'une activité populaire. Réclamez-la pour modifier l'heure et le lieu.",
       deadlinePrefix: "Réclamation ouverte jusqu'au",
     };
   }
@@ -153,7 +154,8 @@ function getAutoCreatedTeamCopy(locale: string) {
     return {
       badge: "Daily pick",
       claimableBadge: "Claimable",
-      claimHint: "This team was created from a popular activity. Claim it to edit the time, location, and plan details.",
+      claimHint:
+        "This team was created from a popular activity. Claim it to edit the time, location, and plan details.",
       deadlinePrefix: "Claim window ends at",
     };
   }
@@ -161,7 +163,8 @@ function getAutoCreatedTeamCopy(locale: string) {
   return {
     badge: "系统推荐",
     claimableBadge: "可认领",
-    claimHint: "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
+    claimHint:
+      "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
     deadlinePrefix: "认领截止",
   };
 }
@@ -249,6 +252,130 @@ function getTeamDetailCtaTitle({
   }
 
   return requiresApproval ? t.submitApproval : ctaCopy.title;
+}
+
+function getApprovalModeNoticeCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      autoDescription:
+        "Les personnes sont ajoutées à la liste des participants après inscription.",
+      autoTitle: "Inscription directe",
+      organizerEmptyDescription:
+        "Les prochaines demandes apparaîtront dans l'espace de validation.",
+      organizerEmptyTitle: "Validation active",
+      organizerPendingDescription:
+        "Traitez-les avant que les places ne soient comptabilisées.",
+      organizerPendingTitle: (count: number) =>
+        `${count} demande${count > 1 ? "s" : ""} en attente`,
+      requiredDescription:
+        "La demande passe d'abord par l'organisateur, puis compte une fois validée.",
+      requiredTitle: "Validation requise",
+      reviewAction: "Valider",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      autoDescription:
+        "People are added to the participant list after joining.",
+      autoTitle: "Direct join",
+      organizerEmptyDescription:
+        "New requests will appear in the review area when people apply.",
+      organizerEmptyTitle: "Review is on",
+      organizerPendingDescription:
+        "Review them before they count toward available seats.",
+      organizerPendingTitle: (count: number) =>
+        `${count} pending request${count === 1 ? "" : "s"}`,
+      requiredDescription:
+        "The organizer reviews requests first. Approved requests count toward seats.",
+      requiredTitle: "Approval required",
+      reviewAction: "Review",
+    };
+  }
+
+  return {
+    autoDescription: "报名后会直接进入参与名单。",
+    autoTitle: "直接报名",
+    organizerEmptyDescription: "新的报名申请会显示在审核区，处理后才计入人数。",
+    organizerEmptyTitle: "已开启报名审核",
+    organizerPendingDescription: "处理通过后才会计入报名人数。",
+    organizerPendingTitle: (count: number) => `${count} 个报名待审核`,
+    requiredDescription: "报名后先由发起人确认，通过后才会计入人数。",
+    requiredTitle: "报名需审核",
+    reviewAction: "去审核",
+  };
+}
+
+function ApprovalModeNotice({
+  className,
+  isOrganizer,
+  locale,
+  pendingCount = 0,
+  requiresApproval,
+}: {
+  className?: string;
+  isOrganizer: boolean;
+  locale: string;
+  pendingCount?: number;
+  requiresApproval: boolean;
+}) {
+  const copy = getApprovalModeNoticeCopy(locale);
+  const hasPendingRequests =
+    isOrganizer && requiresApproval && pendingCount > 0;
+  const Icon = requiresApproval ? ShieldAlert : CheckCircle2;
+  const title = isOrganizer
+    ? hasPendingRequests
+      ? copy.organizerPendingTitle(pendingCount)
+      : requiresApproval
+        ? copy.organizerEmptyTitle
+        : copy.autoTitle
+    : requiresApproval
+      ? copy.requiredTitle
+      : copy.autoTitle;
+  const description = isOrganizer
+    ? hasPendingRequests
+      ? copy.organizerPendingDescription
+      : requiresApproval
+        ? copy.organizerEmptyDescription
+        : copy.autoDescription
+    : requiresApproval
+      ? copy.requiredDescription
+      : copy.autoDescription;
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-2.5 rounded-2xl px-3 py-2.5 text-left ring-1",
+        requiresApproval
+          ? "bg-[#FFF5E6]/90 text-[#8A3B21] ring-coral/35"
+          : "bg-white/82 text-[#156240] ring-[#8AB68E]/55",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/88",
+          requiresApproval ? "text-coral" : "text-[#156240]",
+        )}
+      >
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-extrabold leading-5">{title}</p>
+        <p className="mt-0.5 text-xs font-medium leading-5 opacity-[0.82]">
+          {description}
+        </p>
+      </div>
+      {hasPendingRequests ? (
+        <Link
+          href="#participation-approval"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
+        >
+          {copy.reviewAction}
+        </Link>
+      ) : null}
+    </div>
+  );
 }
 
 export const dynamic = "force-dynamic";
@@ -672,7 +799,7 @@ export default async function ActivityDetailPage({
             <div className="mt-6 grid gap-3">
               {canOpenTicketLink && activity.ticketUrl ? (
                 <AnalyticsExternalLink
-                  className="inline-flex h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
+                  className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#369758] px-4 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
                   event={{
                     name: "ticket_link_clicked",
                     entityId: detailAnalyticsEntity.entityId,
@@ -684,7 +811,9 @@ export default async function ActivityDetailPage({
                   }}
                   href={activity.ticketUrl}
                 >
-                  <span className="min-w-0 truncate">{ticketCtaLabel}</span>
+                  <span className="min-w-0 leading-tight">
+                    {ticketCtaLabel}
+                  </span>
                   <ExternalLink className="h-4 w-4" />
                 </AnalyticsExternalLink>
               ) : null}
@@ -1186,6 +1315,13 @@ export default async function ActivityDetailPage({
                   {activityParticipantLabel}
                 </span>
               </div>
+              <ApprovalModeNotice
+                className="mt-3"
+                isOrganizer={isOrganizer}
+                locale={locale}
+                pendingCount={pendingParticipants.length}
+                requiresApproval={activity.requiresApproval}
+              />
             </div>
 
             {isOrganizer ? (
@@ -1249,7 +1385,9 @@ export default async function ActivityDetailPage({
                   isClosed={isClosed}
                   isOrganizer={isOrganizer}
                   isAuthenticated={Boolean(viewerProfile)}
-                  viewerParticipationStatus={viewerParticipation?.status ?? null}
+                  viewerParticipationStatus={
+                    viewerParticipation?.status ?? null
+                  }
                 />
                 {canContactOrganizer ? (
                   <ContactOrganizerForm
@@ -1434,7 +1572,7 @@ export default async function ActivityDetailPage({
 
             {canOpenTicketLink && ticketUrl ? (
               <AnalyticsExternalLink
-                className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
+                className="inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-[#369758] px-4 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
                 event={{
                   name: "ticket_link_clicked",
                   entityId: detailAnalyticsEntity.entityId,
@@ -1446,7 +1584,7 @@ export default async function ActivityDetailPage({
                 }}
                 href={ticketUrl}
               >
-                <span className="min-w-0 truncate">{ticketLabel}</span>
+                <span className="min-w-0 leading-tight">{ticketLabel}</span>
                 <ExternalLink className="h-4 w-4" />
               </AnalyticsExternalLink>
             ) : null}
@@ -1474,7 +1612,8 @@ export default async function ActivityDetailPage({
                   </span>
                   {autoCreatedClaimDeadline && autoCreatedTeam.isClaimable ? (
                     <span className="text-[11px] font-medium text-[#156240]">
-                      {autoCreatedTeamCopy.deadlinePrefix} {autoCreatedClaimDeadline}
+                      {autoCreatedTeamCopy.deadlinePrefix}{" "}
+                      {autoCreatedClaimDeadline}
                     </span>
                   ) : null}
                 </div>
@@ -1493,7 +1632,6 @@ export default async function ActivityDetailPage({
                 ) : null}
               </div>
             ) : null}
-
           </div>
 
           <div className="order-6 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
@@ -1553,6 +1691,11 @@ export default async function ActivityDetailPage({
             statusLabel={getActivitySeatLabel(activity, locale)}
           >
             <div className="grid gap-3">
+              <ApprovalModeNotice
+                isOrganizer={false}
+                locale={locale}
+                requiresApproval={activity.requiresApproval}
+              />
               <JoinActivityForm
                 activityId={activity.id}
                 activityTitle={activity.title}

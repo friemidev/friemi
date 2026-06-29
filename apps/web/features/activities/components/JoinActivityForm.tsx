@@ -62,14 +62,19 @@ function getGuestJoinCopy(locale: string) {
       contactHint:
         "Les contacts sont optionnels. E-mail ou WeChat facilitent le rattachement a votre compte plus tard.",
       messageLabel: "Message",
+      submitApproval: "Envoyer une demande",
       submit: "S'inscrire",
       submitting: "Envoi...",
+      loginJoinApproval: "Se connecter pour demander",
       loginJoin: "S'inscrire avec un compte",
+      guestJoinApproval: "Demande invité",
       guestJoin: "Continuer en invité",
       signIn: "Se connecter",
       successTitle: "Inscription reçue",
       successDescription:
         "Votre inscription est enregistrée. En créant un compte avec le même e-mail ou WeChat, elle sera rattachée automatiquement.",
+      successDescriptionApproval:
+        "Votre demande est envoyée. Elle sera visible par l'organisateur et comptera une fois validée.",
     };
   }
 
@@ -89,14 +94,19 @@ function getGuestJoinCopy(locale: string) {
       contactHint:
         "Contact fields are optional. Email or WeChat makes it easier to recover this signup later.",
       messageLabel: "Message",
+      submitApproval: "Send request",
       submit: "Join as guest",
       submitting: "Submitting...",
+      loginJoinApproval: "Sign in to request",
       loginJoin: "Sign in to join",
+      guestJoinApproval: "Guest request",
       guestJoin: "Guest signup",
       signIn: "Sign in instead",
       successTitle: "Signup received",
       successDescription:
         "Your signup is saved. If you create an account with the same email or WeChat, it will link automatically.",
+      successDescriptionApproval:
+        "Your request is submitted. The organizer can review it, and it will count once approved.",
     };
   }
 
@@ -114,14 +124,19 @@ function getGuestJoinCopy(locale: string) {
     wechatPlaceholder: "微信号，可选",
     contactHint: "联系方式可选；填写邮箱或微信后，更方便之后找回报名。",
     messageLabel: "报名留言",
+    submitApproval: "提交游客申请",
     submit: "游客报名",
     submitting: "提交中...",
+    loginJoinApproval: "登录申请加入",
     loginJoin: "登录报名",
+    guestJoinApproval: "游客申请加入",
     guestJoin: "游客报名",
     signIn: "已有账号，去登录",
     successTitle: "报名已提交",
     successDescription:
       "报名记录已保存。以后使用相同邮箱或微信绑定账号，会自动关联到你的账号。",
+    successDescriptionApproval:
+      "申请已提交给发起人，通过后会计入报名人数。以后使用相同邮箱或微信绑定账号，也会自动关联。",
   };
 }
 
@@ -138,14 +153,14 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-coral text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
+      className="min-h-11 h-auto w-full gap-2 rounded-full border-0 bg-coral px-4 py-2 text-center leading-tight text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
       disabled={pending}
       aria-busy={pending}
     >
       {pending ? (
         <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
       ) : null}
-      <span className="truncate">
+      <span className="min-w-0 text-center leading-tight">
         {pending
           ? t.submitting
           : requiresApproval
@@ -156,21 +171,33 @@ function SubmitButton({
   );
 }
 
-function GuestSubmitButton({ locale }: { locale: string }) {
+function GuestSubmitButton({
+  locale,
+  requiresApproval,
+}: {
+  locale: string;
+  requiresApproval: boolean;
+}) {
   const { pending } = useFormStatus();
   const t = getGuestJoinCopy(locale);
 
   return (
     <Button
       type="submit"
-      className="h-11 w-full gap-2 rounded-full border-0 bg-coral text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
+      className="min-h-11 h-auto w-full gap-2 rounded-full border-0 bg-coral px-4 py-2 text-center leading-tight text-white shadow-[0_14px_28px_rgba(240,145,130,0.24)] hover:bg-danger"
       disabled={pending}
       aria-busy={pending}
     >
       {pending ? (
         <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
       ) : null}
-      <span className="truncate">{pending ? t.submitting : t.submit}</span>
+      <span className="min-w-0 text-center leading-tight">
+        {pending
+          ? t.submitting
+          : requiresApproval
+            ? t.submitApproval
+            : t.submit}
+      </span>
     </Button>
   );
 }
@@ -355,7 +382,7 @@ function GuestJoinForm({
       </label>
 
       <PendingSubmitNotice locale={locale} />
-      <GuestSubmitButton locale={locale} />
+      <GuestSubmitButton locale={locale} requiresApproval={requiresApproval} />
       <Link
         className="text-center text-xs font-medium text-zinc-500 underline-offset-4 hover:text-ink hover:underline"
         href={getSignInHref(locale, `/activities/${activityId}`)}
@@ -461,6 +488,8 @@ function GuestJoinEntry({
   state: GuestJoinActivityState;
 }) {
   const t = getGuestJoinCopy(locale);
+  const loginJoinLabel = requiresApproval ? t.loginJoinApproval : t.loginJoin;
+  const guestJoinLabel = requiresApproval ? t.guestJoinApproval : t.guestJoin;
   const [showGuestForm, setShowGuestForm] = useState(false);
   const guestFormId = `guest-join-form-${activityId}${formInstanceId ? `-${formInstanceId}` : ""}`;
 
@@ -468,10 +497,10 @@ function GuestJoinEntry({
     <div className="grid gap-3">
       <div className="grid gap-2 sm:grid-cols-2">
         <Link
-          className="inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
+          className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
           href={getSignInHref(locale, `/activities/${activityId}`)}
         >
-          <span className="truncate">{t.loginJoin}</span>
+          <span className="min-w-0 leading-tight">{loginJoinLabel}</span>
         </Link>
         <button
           type="button"
@@ -479,12 +508,12 @@ function GuestJoinEntry({
           aria-expanded={showGuestForm}
           className={
             showGuestForm
-              ? "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#FEFFF9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25"
-              : "inline-flex h-11 min-w-0 items-center justify-center rounded-full border border-sand bg-white px-3 text-sm font-semibold text-zinc-600 transition hover:border-[#8AB68E] hover:bg-[#FEFFF9] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/20"
+              ? "inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-[#8AB68E] bg-white px-3 py-2 text-center text-sm font-semibold leading-tight text-[#156240] transition hover:bg-[#FEFFF9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25"
+              : "inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-sand bg-white px-3 py-2 text-center text-sm font-semibold leading-tight text-zinc-600 transition hover:border-[#8AB68E] hover:bg-[#FEFFF9] hover:text-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/20"
           }
           onClick={() => setShowGuestForm(true)}
         >
-          <span className="truncate">{t.guestJoin}</span>
+          <span className="min-w-0 leading-tight">{guestJoinLabel}</span>
         </button>
       </div>
 
@@ -555,12 +584,7 @@ export function JoinActivityForm({
     startTransition(() => {
       router.refresh();
     });
-  }, [
-    guestState.guestStatus,
-    guestState.success,
-    router,
-    startTransition,
-  ]);
+  }, [guestState.guestStatus, guestState.success, router, startTransition]);
 
   if (isClosed) {
     return (
@@ -584,7 +608,9 @@ export function JoinActivityForm({
         />
         {joinedAsGuest ? (
           <p className="px-1 text-xs leading-5 text-zinc-500">
-            {getGuestJoinCopy(locale).successDescription}
+            {effectiveParticipationStatus === "PENDING"
+              ? getGuestJoinCopy(locale).successDescriptionApproval
+              : getGuestJoinCopy(locale).successDescription}
           </p>
         ) : (
           <CancelParticipationForm
