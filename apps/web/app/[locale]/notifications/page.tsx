@@ -201,6 +201,10 @@ function getNotificationActionLabel(
     return t.openComments;
   }
 
+  if (notification.type === "DIRECT_MESSAGE") {
+    return t.openMessages;
+  }
+
   if (notification.type === "PARTICIPATION_PENDING" && notification.actor) {
     return t.openReview;
   }
@@ -363,7 +367,9 @@ function NotificationCard({
   const hasAction =
     (notification.type === "FRIEND_REQUEST"
       ? false
-      : Boolean(notification.activity) || notification.type === "REPORT_CREATED");
+      : Boolean(notification.activity) ||
+        notification.type === "REPORT_CREATED" ||
+        notification.type === "DIRECT_MESSAGE");
   const canInlineResolveFriendRequest =
     notification.type === "FRIEND_REQUEST" &&
     Boolean(notification.friendRequestId);

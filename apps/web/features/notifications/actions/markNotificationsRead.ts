@@ -7,6 +7,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -66,7 +67,6 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   });
 
   revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, "/"), "layout");
   redirect(withLocale(locale, "/notifications"));
 }
 
@@ -89,7 +89,6 @@ export async function markNotificationReadAction(formData: FormData) {
   }
 
   revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, "/"), "layout");
   redirect(withLocale(locale, "/notifications"));
 }
 
@@ -125,7 +124,6 @@ export async function openNotificationActivityAction(formData: FormData) {
     if (notification.actorId) {
       revalidatePath(withLocale(locale, `/profile/${notification.actorId}`));
     }
-    revalidatePath(withLocale(locale, "/"), "layout");
     trackNotificationOpened({
       locale,
       notificationId,
@@ -155,7 +153,6 @@ export async function openNotificationActivityAction(formData: FormData) {
 
     revalidatePath(withLocale(locale, "/notifications"));
     revalidatePath(withLocale(locale, "/admin/reports"));
-    revalidatePath(withLocale(locale, "/"), "layout");
     trackNotificationOpened({
       locale,
       notificationId,
@@ -164,6 +161,49 @@ export async function openNotificationActivityAction(formData: FormData) {
       userProfileId: profile.id,
     });
     redirect(withLocale(locale, "/admin/reports"));
+  }
+
+  if (notification?.type === "DIRECT_MESSAGE" && notification.actorId) {
+    const conversation = await prisma.conversation.findUnique({
+      where: {
+        userAId_userBId: getConversationPair(profile.id, notification.actorId),
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    if (conversation?.id) {
+      revalidatePath(withLocale(locale, `/messages/${conversation.id}`));
+    }
+    revalidatePath(withLocale(locale, "/messages"));
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "messages",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+
+    const target = conversation?.id
+      ? notification.activityId
+        ? `/messages/${conversation.id}?activityId=${encodeURIComponent(notification.activityId)}`
+        : `/messages/${conversation.id}`
+      : "/messages";
+
+    redirect(withLocale(locale, target));
   }
 
   if (!notification?.activityId) {
@@ -191,7 +231,6 @@ export async function openNotificationActivityAction(formData: FormData) {
   });
 
   revalidatePath(withLocale(locale, "/notifications"));
-  revalidatePath(withLocale(locale, "/"), "layout");
 
   const target =
     notification.type === "PARTICIPATION_PENDING" && notification.actorId

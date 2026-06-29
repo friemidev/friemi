@@ -410,7 +410,6 @@ export async function sendDirectMessageAction(
     );
     refreshConversation(result.data.locale, conversation.id);
     revalidatePath(withLocale(result.data.locale, "/notifications"));
-    revalidatePath(withLocale(result.data.locale, "/"), "layout");
 
     return {
       ok: true,
