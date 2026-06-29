@@ -16,7 +16,6 @@ import {
   buildPrivateActivityShareAccessWhere,
 } from "../utils/activityShareAccess";
 import {
-  formatActivityLocalDateTimeInput,
   splitStoredDescription,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
@@ -543,8 +542,8 @@ function getActivityCopyValues(
       activity.hideAddressFromNonParticipants ?? false,
     latitude: activity.latitude === null ? "" : String(activity.latitude),
     longitude: activity.longitude === null ? "" : String(activity.longitude),
-    startAt: formatActivityLocalDateTimeInput(activity.startAt),
-    endAt: formatActivityLocalDateTimeInput(activity.endAt),
+    startAt: "",
+    endAt: "",
     capacity: String(activity.capacity),
     capacityLimitEnabled: activity.capacity > 0,
     minParticipants: activity.minParticipants

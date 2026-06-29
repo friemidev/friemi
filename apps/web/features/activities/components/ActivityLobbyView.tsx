@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ActivityCategory } from "@chill-club/shared";
-import { Compass, SlidersHorizontal, X } from "lucide-react";
+import { CalendarPlus, Compass, SlidersHorizontal, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -1770,7 +1770,8 @@ export function ActivityLobbyView({
   starterActivities,
   locale,
 }: ActivityLobbyViewProps) {
-  const t = getCopy(locale).activityLobby;
+  const appCopy = getCopy(locale);
+  const t = appCopy.activityLobby;
   const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
@@ -3050,6 +3051,19 @@ export function ActivityLobbyView({
                   {getStatusFilterLabel(locale, activeStatusFilter)}
                 </p>
               </div>
+              <Link
+                href={withLocale(locale, "/activities/new")}
+                className="mobile-home-quick-action inline-flex h-9 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-extrabold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] sm:h-10 sm:min-w-[6.2rem] sm:px-4 sm:text-sm"
+                title={appCopy.nav.newActivity}
+              >
+                <CalendarPlus
+                  className="h-4 w-4 shrink-0 sm:h-5 sm:w-5"
+                  aria-hidden="true"
+                />
+                <span className="whitespace-nowrap">
+                  {appCopy.nav.newActivity}
+                </span>
+              </Link>
             </div>
 
             <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">

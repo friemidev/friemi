@@ -852,7 +852,7 @@ const copy = {
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
       copyTimeReminder:
-        "此为复制组局草稿，时间、地点、费用等信息可能需要重新调整，请务必检查并修改为新的行程。",
+        "此为复制组局草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
       create: "发布组局",
       saving: "保存中...",
@@ -1802,7 +1802,7 @@ const copy = {
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
       copyTimeReminder:
-        "This draft is prefilled from an existing crew. Please review and update times, location, cost, and other details for your new plan.",
+        "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -2788,7 +2788,7 @@ const copy = {
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
       copyTimeReminder:
-        "Ce brouillon est prérempli à partir d'un groupe existant. Vérifiez et ajustez les horaires, le lieu, le coût et les autres détails pour votre nouveau plan.",
+        "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",

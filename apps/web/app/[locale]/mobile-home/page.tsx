@@ -80,7 +80,7 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureBadge: "大厅",
     featureStatus: "今日入口",
     featureTitle: "今天先滑一张。",
-    featureDescription: "先翻一张今日灵感。心动就约，不来电就继续滑。",
+    featureDescription: "先翻一张推荐活动。心动就约，不来电就继续滑。",
     featureKicker: "Friemi Hall",
     searchPlaceholder: "搜索活动、组局或朋友",
     categoriesTitle: "按心情找活动",
