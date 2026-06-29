@@ -1,6 +1,6 @@
-import { SignUp } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
 import {
   authRedirectParamName,
@@ -65,12 +65,13 @@ export default async function SignUpPage({
 
   return (
     <PageContainer className="flex min-h-[70vh] items-center justify-center">
-      <SignUp
+      <ClerkAuthMountGuard
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={redirectTarget}
+        locale={locale}
+        mode="sign-up"
         path={`/${locale}/sign-up`}
-        routing="path"
-        signInUrl={getSignInHref(locale, redirectTarget)}
+        secondaryUrl={getSignInHref(locale, redirectTarget)}
       />
     </PageContainer>
   );
