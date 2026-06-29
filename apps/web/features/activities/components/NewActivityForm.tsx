@@ -73,11 +73,11 @@ const categoryOptions = (
   return 0;
 });
 const selectClassName =
-  "h-12 w-full rounded-lg border border-[#D6D5B2] bg-white px-4 text-lg font-semibold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20";
+  "h-11 w-full rounded-lg border border-[#D6D5B2] bg-white px-3 text-base font-semibold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 sm:h-12 sm:px-4 sm:text-lg";
 const compactInputClassName =
-  "h-12 rounded-lg border-[#D6D5B2] bg-white/95 px-4 text-lg font-semibold text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20";
+  "h-11 rounded-lg border-[#D6D5B2] bg-white/95 px-3 text-base font-semibold text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:h-12 sm:px-4 sm:text-lg";
 const compactTextareaClassName =
-  "min-h-24 rounded-lg border-[#D6D5B2] bg-white/95 px-4 py-3 text-lg font-medium leading-8 text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20";
+  "min-h-24 rounded-lg border-[#D6D5B2] bg-white/95 px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
 
 type FormSectionTone = "cream" | "mint" | "rose" | "sky";
@@ -552,7 +552,7 @@ function DateTimePickerField({
       <input name={name} type="hidden" value={value} />
       <button
         type="button"
-        className="flex h-12 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-4 text-left text-lg font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15"
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-3 text-left text-base font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((currentValue) => !currentValue)}
       >
@@ -687,7 +687,7 @@ function FormSection({
   return (
     <section
       className={cn(
-        "relative overflow-visible rounded-2xl border-[3px] p-3 pl-4 shadow-[0_8px_24px_rgba(21,98,64,0.05)] ring-1 ring-white/80 sm:p-3.5 sm:pl-5",
+        "relative min-w-0 overflow-visible rounded-2xl border-2 p-3 pl-4 shadow-[0_8px_24px_rgba(21,98,64,0.05)] ring-1 ring-white/80 sm:border-[3px] sm:p-3.5 sm:pl-5",
         toneClassNames.section,
       )}
     >
@@ -707,9 +707,11 @@ function FormSection({
         <span
           className={cn("h-2 w-2 shrink-0 rounded-full", toneClassNames.dot)}
         />
-        <h3 className="text-lg font-semibold leading-7 text-ink">{title}</h3>
+        <h3 className="text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
+          {title}
+        </h3>
       </div>
-      <div className="mt-3 grid gap-3.5">{children}</div>
+      <div className="mt-3 grid gap-3 sm:gap-3.5">{children}</div>
     </section>
   );
 }
@@ -729,8 +731,8 @@ function TeamFormSectionSwitcher({
   }>;
 }) {
   return (
-    <div className="rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
-      <div className="flex gap-1.5 md:hidden">
+    <div className="w-full min-w-0 rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
         {sections.map((section, index) => {
           const active = activeSection === section.id;
 
@@ -741,7 +743,7 @@ function TeamFormSectionSwitcher({
               onClick={() => onSelect(section.id)}
               aria-pressed={active}
               className={cn(
-                "min-w-0 flex-1 rounded-full border px-1.5 py-1.5 text-center text-[0.72rem] font-semibold leading-4 transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "min-w-[7.25rem] flex-1 rounded-full border px-2 py-1.5 text-center text-sm font-semibold leading-5 transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 active
                   ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
@@ -755,7 +757,7 @@ function TeamFormSectionSwitcher({
         })}
       </div>
 
-      <div className="hidden gap-2 md:grid md:grid-cols-4">
+      <div className="hidden gap-2 lg:grid lg:grid-cols-4">
         {sections.map((section, index) => {
           const active = activeSection === section.id;
 
@@ -811,10 +813,10 @@ function SettingCheckbox({
         <Check className="h-3.5 w-3.5 opacity-0 transition" />
       </span>
       <span className="min-w-0">
-        <span className="block text-lg font-semibold leading-7 text-ink">
+        <span className="block text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
           {title}
         </span>
-        <span className="mt-1 block text-lg leading-8 text-zinc-600">
+        <span className="mt-1 block text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
           {description}
         </span>
       </span>
@@ -969,7 +971,7 @@ function LongDurationConfirmDialog({
             </div>
           </div>
 
-          <div className="grid gap-2 pt-1 sm:grid-cols-2">
+          <div className="grid gap-2 pt-1 lg:grid-cols-2">
             <Button
               type="button"
               variant="secondary"
@@ -1038,6 +1040,7 @@ function StepSwitchActions({
 }) {
   const isFirst = activeSection === "visibility";
   const isLast = activeSection === "people-price";
+  const t = getCopy(locale).form;
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2]/80 bg-white/78 px-3 py-3">
@@ -1052,7 +1055,7 @@ function StepSwitchActions({
             : "border border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
         )}
       >
-        上一步
+        {t.previousStep}
       </button>
       <button
         type="button"
@@ -1065,7 +1068,7 @@ function StepSwitchActions({
             : "bg-[#369758] text-white shadow-[0_8px_18px_rgba(54,151,88,0.16)] hover:bg-[#156240]",
         )}
       >
-        下一步
+        {t.nextStep}
       </button>
     </div>
   );
@@ -1114,31 +1117,28 @@ export function NewActivityForm({
     title: string;
   }> = [
     {
-      description:
-        visibility === "PRIVATE"
-          ? "公开范围与权限"
-          : "公开范围与权限",
+      description: t.form.sectionVisibilityDescription,
       id: "visibility",
-      mobileTitle: "谁可以看",
-      title: "谁可以看",
+      mobileTitle: t.form.sectionVisibilityTitle,
+      title: t.form.sectionVisibilityTitle,
     },
     {
-      description: "标题、说明和封面",
+      description: t.form.sectionActivityContentDescription,
       id: "activity-content",
-      mobileTitle: "内容安排",
-      title: "内容安排",
+      mobileTitle: t.form.sectionActivityContentTitle,
+      title: t.form.sectionActivityContentTitle,
     },
     {
-      description: "集合时间和地点",
+      description: t.form.sectionTimeLocationDescription,
       id: "time-location",
-      mobileTitle: "时间地点",
-      title: "时间地点",
+      mobileTitle: t.form.sectionTimeLocationTitle,
+      title: t.form.sectionTimeLocationTitle,
     },
     {
-      description: "人数限制与费用",
+      description: t.form.sectionPeoplePriceDescription,
       id: "people-price",
-      mobileTitle: "人数费用",
-      title: "人数和费用",
+      mobileTitle: t.form.sectionPeoplePriceMobileTitle,
+      title: t.form.sectionPeoplePriceTitle,
     },
   ];
   const isSectionActive = (sectionId: TeamFormSectionId) =>
@@ -1215,17 +1215,17 @@ export function NewActivityForm({
   }
 
   return (
-    <Card className="overflow-visible border-[#D6D5B2] bg-[#FEFFF9]/70 shadow-[0_14px_42px_rgba(21,98,64,0.065)]">
+    <Card className="w-full min-w-0 overflow-visible border-[#D6D5B2] bg-[#FEFFF9]/70 shadow-[0_14px_42px_rgba(21,98,64,0.065)]">
       <CardHeader className="border-b border-[#D6D5B2]/70 bg-white/68 px-4 py-3 sm:px-5">
-        <CardTitle className="text-xl">
+        <CardTitle className="text-lg sm:text-xl">
           {publicEventTeamFormCopy?.cardTitle ?? t.form.basicInfo}
         </CardTitle>
       </CardHeader>
-      <CardContent className="bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] p-3 sm:p-5">
+      <CardContent className="min-w-0 bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] p-3 sm:p-5">
         <form
           key={`${state.version ?? 0}-${prefillVersion}`}
           action={formAction}
-          className="grid gap-5 sm:gap-6"
+          className="grid min-w-0 gap-5 sm:gap-6"
           onSubmit={handleSubmit}
           noValidate
           ref={formRef}
@@ -1283,9 +1283,9 @@ export function NewActivityForm({
             </>
           ) : null}
 
-          <div className={cn(!isSectionActive("visibility") && "hidden")}>
+          <div className={cn("min-w-0", !isSectionActive("visibility") && "hidden")}>
             <FormSection title={t.form.visibilityTitle} tone="mint">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
               {visibilityOptions.map((option) => {
                 const active = visibility === option;
                 const isPrivate = option === "PRIVATE";
@@ -1309,12 +1309,12 @@ export function NewActivityForm({
                       onChange={() => setVisibility(option)}
                     />
                     <span className="min-w-0">
-                      <span className="block text-lg font-semibold leading-7 text-ink">
+                      <span className="block text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
                         {isPrivate
                           ? t.form.visibilityPrivate
                           : t.form.visibilityPublic}
                       </span>
-                      <span className="mt-1 block text-lg leading-8 text-zinc-600">
+                      <span className="mt-1 block text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                         {isPrivate
                           ? t.form.visibilityPrivateHint
                           : t.form.visibilityPublicHint}
@@ -1328,14 +1328,14 @@ export function NewActivityForm({
             </FormSection>
           </div>
 
-          <div className={cn(!isSectionActive("activity-content") && "hidden")}>
+          <div className={cn("min-w-0", !isSectionActive("activity-content") && "hidden")}>
             <FormSection
               title={
                 publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
               }
               tone="sky"
             >
-            <div className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               <span>{t.form.coverImage}</span>
               <ActivityCoverUpload
                 initialUrl={values?.coverImageUrl}
@@ -1345,7 +1345,7 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.coverImageUrl} />
             </div>
 
-            <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.title ?? t.form.title}
               <Input
                 className={compactInputClassName}
@@ -1361,7 +1361,7 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.title} />
             </label>
 
-            <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.description ?? t.form.description}
               <Textarea
                 className={compactTextareaClassName}
@@ -1377,7 +1377,7 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
-            <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.itinerary ?? t.form.itinerary}
               <Textarea
                 className={cn(compactTextareaClassName, "min-h-[72px]")}
@@ -1393,8 +1393,8 @@ export function NewActivityForm({
             </label>
 
             {!isPublicEventTeam ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {t.form.type}
                   <Select
                     name="type"
@@ -1408,13 +1408,13 @@ export function NewActivityForm({
                     </option>
                     <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
                   </Select>
-                  <span className="text-lg font-normal leading-8 text-zinc-600">
+                  <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                     {t.form.typeHint}
                   </span>
                   <FieldError errors={state.fieldErrors?.type} />
                 </label>
 
-                <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {t.form.category}
                   <Select
                     name="category"
@@ -1429,7 +1429,7 @@ export function NewActivityForm({
                       </option>
                     ))}
                   </Select>
-                  <span className="text-lg font-normal leading-8 text-zinc-600">
+                  <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                     {t.form.categoryHint}
                   </span>
                   <FieldError errors={state.fieldErrors?.category} />
@@ -1438,7 +1438,7 @@ export function NewActivityForm({
             ) : null}
 
             {!isPublicEventTeam && category === "OTHER" ? (
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.otherCategory}
                 <Input
                   className={compactInputClassName}
@@ -1449,7 +1449,7 @@ export function NewActivityForm({
                   placeholder={t.form.otherCategoryPlaceholder}
                   required
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.otherCategoryHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.otherCategoryText} />
@@ -1458,12 +1458,12 @@ export function NewActivityForm({
             </FormSection>
           </div>
 
-          <div className={cn(!isSectionActive("time-location") && "hidden")}>
+          <div className={cn("min-w-0", !isSectionActive("time-location") && "hidden")}>
             <FormSection
               title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
               tone="cream"
             >
-            <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {t.form.city}
               <Input
                 className={compactInputClassName}
@@ -1476,7 +1476,7 @@ export function NewActivityForm({
             </label>
 
             {activityType === "TRIP" ? (
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.destination}
                 <Input
                   className={compactInputClassName}
@@ -1486,14 +1486,14 @@ export function NewActivityForm({
                   placeholder={t.form.destinationPlaceholder}
                   required
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.destinationHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.destination} />
               </label>
             ) : null}
 
-            <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {t.form.address}
               <Input
                 className={compactInputClassName}
@@ -1522,28 +1522,28 @@ export function NewActivityForm({
               longitudeErrors={state.fieldErrors?.longitude}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.startAt}
                 <DateTimePickerField
                   defaultValue={values?.startAt}
                   locale={locale}
                   name="startAt"
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.startAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.startAt} />
               </label>
 
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.endAt}
                 <DateTimePickerField
                   defaultValue={values?.endAt}
                   locale={locale}
                   name="endAt"
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.endAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.endAt} />
@@ -1552,7 +1552,7 @@ export function NewActivityForm({
             </FormSection>
           </div>
 
-          <div className={cn(!isSectionActive("people-price") && "hidden")}>
+          <div className={cn("min-w-0", !isSectionActive("people-price") && "hidden")}>
             <FormSection
               title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
               tone="rose"
@@ -1566,8 +1566,8 @@ export function NewActivityForm({
             />
 
             {isCapacityLimited ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
                   <Input
                     className={compactInputClassName}
@@ -1585,7 +1585,7 @@ export function NewActivityForm({
                   <FieldError errors={state.fieldErrors?.capacity} />
                 </label>
 
-                <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {publicEventTeamFormCopy?.minParticipants ??
                     t.form.minParticipants}
                   <Input
@@ -1608,8 +1608,8 @@ export function NewActivityForm({
               </>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.priceType}
                 <Select
                   name="priceType"
@@ -1627,7 +1627,7 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.priceType} />
               </label>
 
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
                 <Input
                   className={compactInputClassName}
@@ -1641,8 +1641,8 @@ export function NewActivityForm({
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.ticketUrl}
                 <Input
                   className={compactInputClassName}
@@ -1653,13 +1653,13 @@ export function NewActivityForm({
                   placeholder={t.form.ticketUrlPlaceholder}
                   type="url"
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.ticketHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.ticketUrl} />
               </label>
 
-              <label className="grid gap-2 text-lg font-semibold text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.ticketLabel}
                 <Input
                   className={compactInputClassName}
@@ -1669,7 +1669,7 @@ export function NewActivityForm({
                   maxLength={40}
                   placeholder={t.form.ticketLabelPlaceholder}
                 />
-                <span className="text-lg font-normal leading-8 text-zinc-600">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.ticketLabelPlaceholder}
                 </span>
                 <FieldError errors={state.fieldErrors?.ticketLabel} />

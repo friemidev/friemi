@@ -29,6 +29,10 @@ import type { FriendRequestViewModel } from "@/features/friends/queries/getFrien
 import { MessageAvatar } from "./MessageAvatar";
 
 type DesktopFriendRosterPanelProps = {
+  activityContextQuery?: {
+    accessToken?: string | null;
+    activityId: string;
+  } | null;
   currentUserProfileId: string;
   currentUserFriendCode?: string | null;
   friends: DirectMessageFriendRosterItemViewModel[];
@@ -39,6 +43,7 @@ type DesktopFriendRosterPanelProps = {
 };
 
 export function DesktopFriendRosterPanel({
+  activityContextQuery = null,
   currentUserProfileId,
   currentUserFriendCode = null,
   friends,
@@ -105,6 +110,11 @@ export function DesktopFriendRosterPanel({
               currentUserProfileId={currentUserProfileId}
               friend={friend}
               isActive={friend.conversationId === selectedConversationId}
+              activityContextQuery={
+                friend.conversationId === selectedConversationId
+                  ? activityContextQuery
+                  : null
+              }
               locale={locale}
             />
           ))
@@ -124,12 +134,46 @@ export function DesktopFriendRosterPanel({
   );
 }
 
+function getConversationHref({
+  activityContextQuery,
+  conversationId,
+  locale,
+}: {
+  activityContextQuery?: {
+    accessToken?: string | null;
+    activityId: string;
+  } | null;
+  conversationId: string;
+  locale: string;
+}) {
+  const basePath = `/messages/${conversationId}`;
+
+  if (!activityContextQuery) {
+    return withLocale(locale, basePath);
+  }
+
+  const searchParams = new URLSearchParams({
+    activityId: activityContextQuery.activityId,
+  });
+
+  if (activityContextQuery.accessToken) {
+    searchParams.set("access", activityContextQuery.accessToken);
+  }
+
+  return withLocale(locale, `${basePath}?${searchParams.toString()}`);
+}
+
 function DesktopFriendRosterRow({
+  activityContextQuery,
   currentUserProfileId,
   friend,
   isActive,
   locale,
 }: {
+  activityContextQuery?: {
+    accessToken?: string | null;
+    activityId: string;
+  } | null;
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   isActive: boolean;
@@ -146,6 +190,13 @@ function DesktopFriendRosterRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const conversationHref = friend.conversationId
+    ? getConversationHref({
+        activityContextQuery,
+        conversationId: friend.conversationId,
+        locale,
+      })
+    : null;
   const content = (
     <>
       <MessageAvatar
@@ -192,7 +243,10 @@ function DesktopFriendRosterRow({
         <Link
           aria-label={t.openConversation(friend.friend.nickname)}
           className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={withLocale(locale, `/messages/${friend.conversationId}`)}
+          href={
+            conversationHref ??
+            withLocale(locale, `/messages/${friend.conversationId}`)
+          }
         >
           {content}
         </Link>
