@@ -81,6 +81,11 @@ const compactTextareaClassName =
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
 
 type FormSectionTone = "cream" | "mint" | "rose" | "sky";
+type TeamFormSectionId =
+  | "visibility"
+  | "activity-content"
+  | "time-location"
+  | "people-price";
 
 const formSectionTones: Record<
   FormSectionTone,
@@ -106,8 +111,8 @@ const formSectionTones: Record<
   rose: {
     accent: "bg-[#DEAAB3]",
     dot: "bg-[#DEAAB3]",
-    header: "border-[#DEAAB3]",
-    section: "border-[#DEAAB3] bg-[#FFF5E6]",
+    header: "border-[#F0D8DC]",
+    section: "border-[#F2DDE0] bg-[#FFFDFC]",
   },
   sky: {
     accent: "bg-[#DEEBFF]",
@@ -709,6 +714,74 @@ function FormSection({
   );
 }
 
+function TeamFormSectionSwitcher({
+  activeSection,
+  onSelect,
+  sections,
+}: {
+  activeSection: TeamFormSectionId;
+  onSelect: (id: TeamFormSectionId) => void;
+  sections: Array<{
+    description: string;
+    id: TeamFormSectionId;
+    mobileTitle?: string;
+    title: string;
+  }>;
+}) {
+  return (
+    <div className="rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
+      <div className="flex gap-1.5 md:hidden">
+        {sections.map((section, index) => {
+          const active = activeSection === section.id;
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-pressed={active}
+              className={cn(
+                "min-w-0 flex-1 rounded-full border px-1.5 py-1.5 text-center text-[0.72rem] font-semibold leading-4 transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                active
+                  ? "border-[#369758] bg-[#F1F2E3] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
+              )}
+            >
+              <span className="block truncate">
+                {index + 1}. {section.mobileTitle ?? section.title}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden gap-2 md:grid md:grid-cols-4">
+        {sections.map((section, index) => {
+          const active = activeSection === section.id;
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-pressed={active}
+              className={cn(
+                "flex min-w-[6.4rem] shrink-0 items-center justify-center rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                active
+                  ? "border-[#369758] bg-[#F1F2E3] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  : "border-[#D6D5B2] bg-[#FFFCF8] text-zinc-600 hover:border-[#8AB68E] hover:bg-white",
+              )}
+            >
+              <span className="truncate">{index + 1}. {section.title}</span>
+            </button>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+}
+
 function SettingCheckbox({
   checked,
   defaultChecked,
@@ -776,7 +849,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="w-full gap-2 rounded-full bg-[#369758] px-6 text-white shadow-[0_10px_24px_rgba(54,151,88,0.22)] hover:bg-[#156240] sm:w-auto"
+      className="mx-auto min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-white shadow-[0_10px_24px_rgba(54,151,88,0.22)] hover:bg-[#156240] sm:mx-0 sm:min-w-0"
       disabled={pending || disabled}
       aria-busy={pending || disabled}
     >
@@ -952,6 +1025,52 @@ function FormActions({
   );
 }
 
+function StepSwitchActions({
+  activeSection,
+  locale,
+  onPrevious,
+  onNext,
+}: {
+  activeSection: TeamFormSectionId;
+  locale: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const isFirst = activeSection === "visibility";
+  const isLast = activeSection === "people-price";
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2]/80 bg-white/78 px-3 py-3">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={isFirst}
+        className={cn(
+          "inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition",
+          isFirst
+            ? "cursor-not-allowed border border-[#E8E1CF] bg-[#F8F6EE] text-zinc-400"
+            : "border border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+        )}
+      >
+        上一步
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={isLast}
+        className={cn(
+          "inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition",
+          isLast
+            ? "cursor-not-allowed border border-[#E8E1CF] bg-[#F8F6EE] text-zinc-400"
+            : "bg-[#369758] text-white shadow-[0_8px_18px_rgba(54,151,88,0.16)] hover:bg-[#156240]",
+        )}
+      >
+        下一步
+      </button>
+    </div>
+  );
+}
+
 export function NewActivityForm({
   activityId,
   cancelHref,
@@ -986,6 +1105,50 @@ export function NewActivityForm({
   const [isCapacityLimited, setIsCapacityLimited] = useState(
     values?.capacityLimitEnabled ?? Number(values?.capacity ?? 0) > 0,
   );
+  const [activeSection, setActiveSection] =
+    useState<TeamFormSectionId>("visibility");
+  const formSections: Array<{
+    description: string;
+    id: TeamFormSectionId;
+    mobileTitle?: string;
+    title: string;
+  }> = [
+    {
+      description:
+        visibility === "PRIVATE"
+          ? "公开范围与权限"
+          : "公开范围与权限",
+      id: "visibility",
+      mobileTitle: "谁可以看",
+      title: "谁可以看",
+    },
+    {
+      description: "标题、说明和封面",
+      id: "activity-content",
+      mobileTitle: "内容安排",
+      title: "内容安排",
+    },
+    {
+      description: "集合时间和地点",
+      id: "time-location",
+      mobileTitle: "时间地点",
+      title: "时间地点",
+    },
+    {
+      description: "人数限制与费用",
+      id: "people-price",
+      mobileTitle: "人数费用",
+      title: "人数和费用",
+    },
+  ];
+  const isSectionActive = (sectionId: TeamFormSectionId) =>
+    activeSection === sectionId;
+  const sectionOrder: TeamFormSectionId[] = [
+    "visibility",
+    "activity-content",
+    "time-location",
+    "people-price",
+  ];
 
   function applyImportedValues(nextValues: Partial<ActivityFormValues>) {
     setImportedValues((currentValues) => ({
@@ -1039,8 +1202,20 @@ export function NewActivityForm({
     });
   }
 
+  function goToNextSection() {
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const nextSection = sectionOrder[Math.min(currentIndex + 1, sectionOrder.length - 1)];
+    setActiveSection(nextSection);
+  }
+
+  function goToPreviousSection() {
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const previousSection = sectionOrder[Math.max(currentIndex - 1, 0)];
+    setActiveSection(previousSection);
+  }
+
   return (
-    <Card className="overflow-hidden border-[#D6D5B2] bg-[#FEFFF9]/70 shadow-[0_14px_42px_rgba(21,98,64,0.065)]">
+    <Card className="overflow-visible border-[#D6D5B2] bg-[#FEFFF9]/70 shadow-[0_14px_42px_rgba(21,98,64,0.065)]">
       <CardHeader className="border-b border-[#D6D5B2]/70 bg-white/68 px-4 py-3 sm:px-5">
         <CardTitle className="text-xl">
           {publicEventTeamFormCopy?.cardTitle ?? t.form.basicInfo}
@@ -1083,6 +1258,12 @@ export function NewActivityForm({
             />
           ) : null}
 
+          <TeamFormSectionSwitcher
+            activeSection={activeSection}
+            onSelect={setActiveSection}
+            sections={formSections}
+          />
+
           {values?.importSourceUrl ? (
             <input
               name="importSourceUrl"
@@ -1102,7 +1283,8 @@ export function NewActivityForm({
             </>
           ) : null}
 
-          <FormSection title={t.form.visibilityTitle} tone="mint">
+          <div className={cn(!isSectionActive("visibility") && "hidden")}>
+            <FormSection title={t.form.visibilityTitle} tone="mint">
             <div className="grid gap-3 sm:grid-cols-2">
               {visibilityOptions.map((option) => {
                 const active = visibility === option;
@@ -1143,14 +1325,16 @@ export function NewActivityForm({
               })}
             </div>
             <FieldError errors={state.fieldErrors?.visibility} />
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={
-              publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
-            }
-            tone="sky"
-          >
+          <div className={cn(!isSectionActive("activity-content") && "hidden")}>
+            <FormSection
+              title={
+                publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
+              }
+              tone="sky"
+            >
             <div className="grid gap-2 text-lg font-semibold text-zinc-700">
               <span>{t.form.coverImage}</span>
               <ActivityCoverUpload
@@ -1271,12 +1455,14 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.otherCategoryText} />
               </label>
             ) : null}
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
-            tone="cream"
-          >
+          <div className={cn(!isSectionActive("time-location") && "hidden")}>
+            <FormSection
+              title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
+              tone="cream"
+            >
             <label className="grid gap-2 text-lg font-semibold text-zinc-700">
               {t.form.city}
               <Input
@@ -1363,12 +1549,14 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.endAt} />
               </label>
             </div>
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
-            tone="rose"
-          >
+          <div className={cn(!isSectionActive("people-price") && "hidden")}>
+            <FormSection
+              title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
+              tone="rose"
+            >
             <SettingCheckbox
               checked={isCapacityLimited}
               description={t.form.capacityLimitHint}
@@ -1494,14 +1682,24 @@ export function NewActivityForm({
               name="requiresApproval"
               title={t.form.requiresApproval}
             />
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormActions
-            cancelHref={cancelHref}
-            isCoverUploading={isCoverUploading}
-            locale={locale}
-            mode={mode}
-          />
+          {mode === "create" && activeSection !== "people-price" ? (
+            <StepSwitchActions
+              activeSection={activeSection}
+              locale={locale}
+              onNext={goToNextSection}
+              onPrevious={goToPreviousSection}
+            />
+          ) : (
+            <FormActions
+              cancelHref={cancelHref}
+              isCoverUploading={isCoverUploading}
+              locale={locale}
+              mode={mode}
+            />
+          )}
 
           {longDurationConfirmation ? (
             <LongDurationConfirmDialog
