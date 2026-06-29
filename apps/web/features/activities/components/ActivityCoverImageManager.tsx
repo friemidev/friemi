@@ -28,11 +28,11 @@ function getCoverManagerCopy(locale: string) {
     return {
       close: "Fermer",
       description:
-        "Cette image s'affiche seulement sur ce plan. L'activite d'origine ne sera pas modifiee.",
-      remove: "Revenir a l'image d'origine",
+        "Cette image s'affiche seulement sur ce plan. L'activité d'origine ne sera pas modifiée.",
+      remove: "Revenir à l'image d'origine",
       save: "Enregistrer",
       saving: "Enregistrement...",
-      success: "Image mise a jour.",
+      success: "Image mise à jour.",
       title: "Image du plan",
       trigger: "Changer l'image",
       triggerShort: "Image",
@@ -81,7 +81,7 @@ function CoverManagerSubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className="inline-flex h-11 items-center justify-center rounded-full bg-coral px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(216,141,114,0.24)] transition hover:bg-coral-dark disabled:cursor-not-allowed disabled:bg-[#e8c7b8] disabled:text-white/80"
+      className="inline-flex h-11 items-center justify-center rounded-full bg-[#369758] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240] disabled:cursor-not-allowed disabled:bg-[#8AB68E] disabled:text-white/80"
     >
       {pending ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -154,10 +154,10 @@ export function ActivityCoverImageManager({
         className={cn(
           "inline-flex h-8 items-center justify-center gap-1.5 rounded-full border text-[11px] font-bold backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
           triggerTone === "detail"
-            ? "border-[#f0b79f] bg-[#d88d72] px-3 text-white shadow-[0_12px_30px_rgba(34,22,14,0.34)] ring-2 ring-white/80 hover:bg-[#c8795f]"
+            ? "border-[#8AB68E] bg-[#369758] px-3 text-white shadow-[0_12px_30px_rgba(54,151,88,0.28)] ring-2 ring-white/80 hover:bg-[#156240]"
             : compact
-              ? "w-8 border-[#4a2e1e]/30 bg-[#fffaf2] px-0 text-[#2b1a10] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(0,0,0,0.36)] ring-2 ring-white/85 hover:bg-white min-[460px]:w-auto min-[460px]:px-2.5"
-              : "border-[#f1c8b9] bg-[#fff7ed]/96 px-2.5 text-[#9a5139] shadow-[0_10px_24px_rgba(0,0,0,0.2)] hover:bg-white",
+              ? "w-8 border-[#1D1D1B]/20 bg-[#FFF5E6] px-0 text-[#1D1D1B] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_30px_rgba(0,0,0,0.3)] ring-2 ring-white/85 hover:bg-white min-[460px]:w-auto min-[460px]:px-2.5"
+              : "border-[#8AB68E] bg-white/96 px-2.5 text-[#156240] shadow-[0_10px_24px_rgba(0,0,0,0.16)] hover:bg-[#FEFFF9]",
           className,
         )}
         aria-label={copy.trigger}
@@ -170,7 +170,7 @@ export function ActivityCoverImageManager({
         <ImageUp
           className={cn(
             "h-3.5 w-3.5",
-            compact && triggerTone !== "detail" ? "text-[#c45f42]" : null,
+            compact && triggerTone !== "detail" ? "text-[#369758]" : null,
           )}
           aria-hidden
         />
@@ -187,7 +187,7 @@ export function ActivityCoverImageManager({
 
       {open ? (
         <div
-          className="fixed inset-x-0 top-0 bottom-[calc(5.15rem+env(safe-area-inset-bottom))] z-[80] flex items-end justify-center bg-black/42 px-3 pb-3 pt-4 backdrop-blur-[2px] md:inset-0 md:items-center md:p-6"
+          className="fixed inset-x-0 top-0 bottom-[calc(5.15rem+env(safe-area-inset-bottom))] z-[80] flex items-end justify-center bg-black/42 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] md:inset-0 md:items-center md:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`cover-manager-title-${activityId}`}
@@ -198,7 +198,7 @@ export function ActivityCoverImageManager({
             aria-label={copy.close}
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-[1.35rem] border border-[#decfb7] bg-[#fffaf2] p-4 shadow-[0_24px_70px_rgba(35,26,17,0.25)] sm:p-5">
+          <div className="relative flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-[1.35rem] border border-[#8AB68E] bg-[#FFF5E6] p-4 shadow-[0_24px_70px_rgba(29,29,27,0.18)] sm:p-5">
             <div className="flex shrink-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p
@@ -213,7 +213,7 @@ export function ActivityCoverImageManager({
               </div>
               <button
                 type="button"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#dfceb0] bg-white text-[#6b5b4a] shadow-sm transition hover:bg-[#fff7ed]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] shadow-sm transition hover:bg-[#FEFFF9]"
                 aria-label={copy.close}
                 onClick={() => setOpen(false)}
               >
@@ -242,10 +242,10 @@ export function ActivityCoverImageManager({
                 </p>
               ) : null}
 
-              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#e7d8c4] bg-[#fffaf2]/96 pt-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+              <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[#D6D5B2] bg-[#FFF5E6] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#dfceb0] bg-white/90 px-4 text-sm font-semibold text-[#7b6b56] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#D6D5B2] bg-white/90 px-4 text-sm font-semibold text-[#156240] transition hover:bg-[#FEFFF9] disabled:cursor-not-allowed disabled:opacity-55"
                   disabled={!coverImageUrl || isUploading}
                   onClick={() => setCoverImageUrl("")}
                 >

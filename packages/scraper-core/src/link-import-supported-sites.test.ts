@@ -43,7 +43,7 @@ const siteParserCases: SiteParserCase[] = [
     parse: parseFeverupEventHtml,
     expect: {
       title: /Renaissance/i,
-      category: "EXHIBITION",
+      category: "ART",
       capacity: linkImportDefaultCapacity,
       priceType: "RANGE",
       priceText: /12,50\s*€.*19,50\s*€/,
@@ -109,7 +109,7 @@ const siteParserCases: SiteParserCase[] = [
     parse: parseParisFrEventHtml,
     expect: {
       title: /Ogrelet/i,
-      category: "THEATER",
+      category: "AUDIO_VISUAL",
       priceType: "RANGE",
       priceText: /12\.95.*16\.5/i,
       address: /Théâtre Essaïon/i,
@@ -123,7 +123,7 @@ const siteParserCases: SiteParserCase[] = [
     parse: parseParisFrEventHtml,
     expect: {
       title: /PASSIONS/i,
-      category: "EXHIBITION",
+      category: "ART",
       priceType: "FREE",
     },
   },

@@ -49,7 +49,7 @@ export function ActivityTimeStateFilter({
       <Clock3
         aria-hidden
         className={cn(
-          "h-3.5 w-3.5 shrink-0 text-[#9a6b3b]",
+          "h-3.5 w-3.5 shrink-0 text-[#156240]",
           forceMobileLayout ? "hidden" : "hidden sm:block",
         )}
       />
@@ -83,8 +83,8 @@ export function ActivityTimeStateFilter({
                 activityResultsFilterControlClass,
                 activityResultsFilterChipClass,
                 isSelected
-                  ? "bg-[#fff2e9] text-[#8e5639] ring-1 ring-[#e7c2aa]"
-                  : "text-[#6f4d34] hover:bg-[#fff8ec]",
+                  ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]"
+                  : "text-[#156240] hover:bg-[#FEFFF9]",
                 isLocked ? "cursor-not-allowed opacity-95" : null,
               )}
               key={timeState}

@@ -138,15 +138,15 @@ export function ActivityWeatherWidget({
     return (
       <section
         className={cn(
-          "rounded-[1.1rem] border border-[#d8ccb4] bg-white/72 p-3 shadow-sm sm:p-4",
+          "rounded-[1.1rem] border border-[#D6D5B2] bg-white/72 p-3 shadow-sm sm:p-4",
           className,
         )}
       >
         <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <LoaderCircle className="h-4 w-4 animate-spin text-[#8aa5a0]" />
+          <LoaderCircle className="h-4 w-4 animate-spin text-[#369758]" />
           {t.loading}
         </div>
-        <div className="mt-3 h-12 rounded-xl bg-gradient-to-r from-[#f3ecde] via-white to-[#e8f1ef]" />
+        <div className="mt-3 h-12 rounded-xl bg-gradient-to-r from-[#F1F2EC] via-white to-[#F1F2EC]" />
       </section>
     );
   }
@@ -155,12 +155,12 @@ export function ActivityWeatherWidget({
     return (
       <section
         className={cn(
-          "rounded-[1.1rem] border border-[#ead9bd] bg-white/58 p-3 text-sm text-zinc-500 sm:p-4",
+          "rounded-[1.1rem] border border-[#D6D5B2] bg-white/58 p-3 text-sm text-zinc-500 sm:p-4",
           className,
         )}
       >
         <div className="flex items-center gap-2">
-          <CloudSun className="h-4 w-4 text-[#8aa5a0]" />
+          <CloudSun className="h-4 w-4 text-[#369758]" />
           <span>{t.unavailable}</span>
         </div>
       </section>
@@ -175,7 +175,7 @@ export function ActivityWeatherWidget({
   return (
     <section
       className={cn(
-        "rounded-[1.1rem] border border-[#d8ccb4] bg-[#f9f4ea] p-3 text-sm text-zinc-700 shadow-sm sm:p-4",
+        "rounded-[1.1rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm text-zinc-700 shadow-sm sm:p-4",
         className,
       )}
       aria-label={t.title}
@@ -183,19 +183,19 @@ export function ActivityWeatherWidget({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold text-ink">
-            <Icon className="h-4 w-4 text-[#7f9e97]" />
+            <Icon className="h-4 w-4 text-[#369758]" />
             {t.title}
           </div>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
             {forecast.locationLabel || t.locationFallback}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#6f5434] ring-1 ring-[#dccba8]">
+        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
           {date.slice(5)}
         </span>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white/76 p-3 ring-1 ring-[#ead9bd]">
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-white/76 p-3 ring-1 ring-[#D6D5B2]">
         <div>
           <p className="text-xs font-medium text-zinc-500">{conditionLabel}</p>
           <p className="mt-1 text-2xl font-semibold tracking-normal text-ink">
@@ -203,7 +203,7 @@ export function ActivityWeatherWidget({
             {formatTemperature(forecast.temperatureMax)}
           </p>
         </div>
-        <ThermometerSun className="h-8 w-8 shrink-0 text-[#d88d72]" />
+        <ThermometerSun className="h-8 w-8 shrink-0 text-[#369758]" />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">

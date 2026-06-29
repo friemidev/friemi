@@ -40,7 +40,7 @@ import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
-  generalPageShareDescription,
+  getGeneralPageShareDescription,
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,7 @@ export async function generateMetadata({
 
   return buildPageShareMetadata({
     baseUrl,
-    description: generalPageShareDescription,
+    description: getGeneralPageShareDescription(locale),
     path: withLocale(locale, "/activities"),
     title: `${t.activities.title} · ${brand.name}`,
   });
@@ -127,7 +127,7 @@ function ActivityListViewToggle({
               "inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[11px] transition sm:h-8 sm:min-w-[5.5rem] sm:gap-1.5 sm:px-3 sm:text-xs",
               isActive
                 ? "bg-ink text-white shadow-[0_8px_18px_rgba(20,20,20,0.14)]"
-                : "text-[#6f4d34] hover:bg-[#fff8ec]",
+                : "text-[#156240] hover:bg-[#FEFFF9]",
             )}
             href={getActivityFilterHref(activitiesHref, {
               ...filters,

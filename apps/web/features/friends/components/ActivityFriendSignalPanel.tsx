@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, UsersRound } from "lucide-react";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import type {
   ActivityFriendSignalUserViewModel,
   ActivityFriendSignalViewModel,
@@ -67,7 +68,7 @@ export function ActivityFriendSignalPanel({
         )}
       >
         {visibleFriends.map((friend) => (
-          <FriendSignalChip key={friend.id} friend={friend} />
+          <FriendSignalChip friend={friend} key={friend.id} locale={locale} />
         ))}
       </div>
     </section>
@@ -76,14 +77,23 @@ export function ActivityFriendSignalPanel({
 
 function FriendSignalChip({
   friend,
+  locale,
 }: {
   friend: ActivityFriendSignalUserViewModel;
+  locale: string;
 }) {
   return (
-    <span className="inline-flex min-w-0 max-w-[10rem] items-center gap-2 rounded-full bg-white px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-black/10 sm:max-w-[12rem]">
-      <FriendSignalAvatar friend={friend} />
-      <span className="truncate">{friend.nickname}</span>
-    </span>
+    <UserProfilePreviewPopover
+      avatarUrl={friend.avatarUrl}
+      locale={locale}
+      nickname={friend.nickname}
+      profileId={friend.id}
+    >
+      <span className="inline-flex min-w-0 max-w-[10rem] items-center gap-2 rounded-full bg-white px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-black/10 sm:max-w-[12rem]">
+        <FriendSignalAvatar friend={friend} />
+        <span className="truncate">{friend.nickname}</span>
+      </span>
+    </UserProfilePreviewPopover>
   );
 }
 

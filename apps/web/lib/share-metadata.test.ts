@@ -61,7 +61,7 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   assert.equal(metadata.openGraph?.url, "https://friemi.example/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
-    "https://friemi.example/logotitle.png",
+    "https://friemi.example/brand/v2_1/friemi-og-default-1200x630.png",
   ]);
 });
 
@@ -173,7 +173,7 @@ test("resolveShareImageUrl falls back when a remote image is not HTTPS", () => {
       "http://images.example.com/event.jpg",
       "https://friemi.example",
     ),
-    "https://friemi.example/logotitle.png",
+    "https://friemi.example/brand/v2_1/friemi-og-default-1200x630.png",
   );
   assert.equal(
     resolveShareImageUrl(
@@ -196,5 +196,5 @@ test("resolveShareImageUrl proxies known hotlink-protected HTTPS covers", () => 
 
 test("truncateShareText keeps metadata fields bounded", () => {
   assert.equal(truncateShareText("abcdef", 6), "abcdef");
-  assert.equal(truncateShareText("abcdef", 5), "ab...");
+  assert.equal(truncateShareText("abcdef", 5), "abcd…");
 });

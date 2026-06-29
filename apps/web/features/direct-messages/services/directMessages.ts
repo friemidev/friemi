@@ -43,6 +43,7 @@ const directMessageSelect = {
   id: true,
   conversationId: true,
   senderId: true,
+  activityId: true,
   body: true,
   readAt: true,
   createdAt: true,
@@ -64,6 +65,27 @@ export class DirectMessageDomainError extends Error {
     this.name = "DirectMessageDomainError";
     this.code = code;
   }
+}
+
+async function createDirectMessageNotification(
+  db: DbClient,
+  input: {
+    activityId?: string | null;
+    actorId: string;
+    recipientId: string;
+  },
+) {
+  return db.notification.create({
+    data: {
+      type: "DIRECT_MESSAGE",
+      recipientId: input.recipientId,
+      actorId: input.actorId,
+      activityId: input.activityId ?? null,
+    },
+    select: {
+      id: true,
+    },
+  });
 }
 
 function assertDifferentUsers(userId: string, otherUserId: string) {
@@ -254,41 +276,53 @@ export async function getOrCreateActivityOrganizerConversation({
   organizerProfileId: string;
   activityId: string;
 }): Promise<DirectConversationViewModel> {
-  return prisma.$transaction(async (tx) => {
-    assertDifferentUsers(currentUserProfileId, organizerProfileId);
+  assertDifferentUsers(currentUserProfileId, organizerProfileId);
+
+  let activity = await findOrganizerMessageActivity(
+    prisma,
+    currentUserProfileId,
+    organizerProfileId,
+    [],
+    accessToken,
+    activityId,
+  );
+
+  if (!activity) {
     const friendIds = await getViewerFriendIds(currentUserProfileId);
 
-    const activity = await findOrganizerMessageActivity(
-      tx,
+    activity = await findOrganizerMessageActivity(
+      prisma,
       currentUserProfileId,
       organizerProfileId,
       friendIds,
       accessToken,
       activityId,
     );
+  }
 
-    if (!activity) {
-      throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
-    }
+  if (!activity) {
+    throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
+  }
 
-    const pair = getConversationPair(currentUserProfileId, organizerProfileId);
+  const pair = getConversationPair(currentUserProfileId, organizerProfileId);
 
-    return tx.conversation.upsert({
-      where: {
-        userAId_userBId: pair,
-      },
-      create: pair,
-      update: {},
-      select: directConversationSelect,
-    });
+  return prisma.conversation.upsert({
+    where: {
+      userAId_userBId: pair,
+    },
+    create: pair,
+    update: {},
+    select: directConversationSelect,
   });
 }
 
 export async function sendDirectMessage({
+  activityId,
   currentUserProfileId,
   conversationId,
   body,
 }: {
+  activityId?: string | null;
   currentUserProfileId: string;
   conversationId: string;
   body: string;
@@ -318,19 +352,27 @@ export async function sendDirectMessage({
       throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
     }
 
-    await assertDirectMessageSendAccess(
-      tx,
+    const peerProfileId = getConversationPeerId(
+      conversation,
       currentUserProfileId,
-      getConversationPeerId(conversation, currentUserProfileId),
     );
+
+    await assertDirectMessageSendAccess(tx, currentUserProfileId, peerProfileId);
 
     const message = await tx.directMessage.create({
       data: {
         conversationId: conversation.id,
         senderId: currentUserProfileId,
+        activityId: activityId ?? null,
         body: normalizedBody,
       },
       select: directMessageSelect,
+    });
+
+    await createDirectMessageNotification(tx, {
+      activityId: activityId ?? null,
+      actorId: currentUserProfileId,
+      recipientId: peerProfileId,
     });
 
     const updatedConversation = await tx.conversation.update({
@@ -383,6 +425,10 @@ export async function sendDirectMessageToFriend({
         body: normalizedBody,
       },
       select: directMessageSelect,
+    });
+    await createDirectMessageNotification(tx, {
+      actorId: currentUserProfileId,
+      recipientId: friendProfileId,
     });
     const updatedConversation = await tx.conversation.update({
       where: {

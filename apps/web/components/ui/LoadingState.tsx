@@ -50,7 +50,7 @@ export function LoadingHeroSkeleton({
   return (
     <section
       className={cn(
-        "rounded-[1.35rem] border border-sand bg-white/62 px-4 text-center shadow-[0_12px_28px_rgba(99,78,48,0.05)] sm:rounded-[2rem]",
+        "rounded-[1.35rem] border border-sand bg-white/62 px-4 text-center shadow-[0_12px_28px_rgba(29,29,27,0.05)] sm:rounded-[2rem]",
         compact ? "py-4 sm:py-6" : "py-5 sm:px-8 sm:py-9",
       )}
     >

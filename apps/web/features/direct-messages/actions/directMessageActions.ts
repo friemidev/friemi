@@ -28,6 +28,10 @@ export type DirectMessageActionState = {
   };
 };
 
+export type OpenActivityOrganizerConversationState = {
+  formError?: string;
+};
+
 const createDirectConversationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   friendProfileId: z.string().min(1),
@@ -43,6 +47,7 @@ const createActivityOrganizerConversationSchema = z.object({
 const sendDirectMessageSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   conversationId: z.string().min(1),
+  activityId: z.string().trim().optional(),
   body: z.string().trim().min(1).max(directMessageBodyMaxLength),
 });
 
@@ -252,7 +257,98 @@ export async function openActivityOrganizerConversationAction(
     );
   }
 
-  redirect(withLocale(result.data.locale, `/messages/${conversationId}`));
+  const searchParams = new URLSearchParams({
+    activityId: result.data.activityId,
+  });
+
+  if (result.data.accessToken) {
+    searchParams.set("access", result.data.accessToken);
+  }
+
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/messages/${conversationId}?${searchParams.toString()}`,
+    ),
+  );
+}
+
+export async function openActivityOrganizerConversationFormAction(
+  _previousState: OpenActivityOrganizerConversationState,
+  formData: FormData,
+): Promise<OpenActivityOrganizerConversationState> {
+  const rawInput = {
+    accessToken: getString(formData, "accessToken").trim() || undefined,
+    locale: getString(formData, "locale") || "zh-CN",
+    activityId: getString(formData, "activityId"),
+    organizerProfileId: getString(formData, "organizerProfileId"),
+  };
+  const result = createActivityOrganizerConversationSchema.safeParse(rawInput);
+  const t = getDirectMessagesCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
+  let conversationId: string;
+
+  try {
+    const conversation = await getOrCreateActivityOrganizerConversation({
+      accessToken: result.data.accessToken,
+      currentUserProfileId: profile.id,
+      organizerProfileId: result.data.organizerProfileId,
+      activityId: result.data.activityId,
+    });
+
+    conversationId = conversation.id;
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "organizer_contact_clicked",
+        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        entityId: result.data.activityId,
+        entityType: "team",
+        sourceSurface: "activity_detail",
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
+    trackConversationOpened({
+      conversationId,
+      locale: result.data.locale,
+      sourceSurface: "activity_detail",
+      userProfileId: profile.id,
+    });
+    refreshConversation(result.data.locale, conversation.id);
+  } catch (error) {
+    console.error("Failed to open activity organizer conversation", error);
+
+    return {
+      formError: getActionErrorMessage(result.data.locale, error),
+    };
+  }
+
+  const searchParams = new URLSearchParams({
+    activityId: result.data.activityId,
+  });
+
+  if (result.data.accessToken) {
+    searchParams.set("access", result.data.accessToken);
+  }
+
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/messages/${conversationId}?${searchParams.toString()}`,
+    ),
+  );
 }
 
 export async function sendDirectMessageAction(
@@ -262,6 +358,7 @@ export async function sendDirectMessageAction(
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     conversationId: getString(formData, "conversationId"),
+    activityId: getString(formData, "activityId").trim() || undefined,
     body: getString(formData, "body"),
   };
 
@@ -289,6 +386,7 @@ export async function sendDirectMessageAction(
       `/messages/${result.data.conversationId}`,
     );
     const { conversation, message } = await sendDirectMessage({
+      activityId: result.data.activityId,
       currentUserProfileId: profile.id,
       conversationId: result.data.conversationId,
       body: result.data.body,
@@ -311,6 +409,7 @@ export async function sendDirectMessageAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    revalidatePath(withLocale(result.data.locale, "/notifications"));
 
     return {
       ok: true,

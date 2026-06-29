@@ -5,16 +5,18 @@ export function normalizeGuestEmail(value: string | null | undefined) {
 }
 
 export function normalizeGuestPhone(value: string | null | undefined) {
-  const digits = value?.replace(/[^\d+]/g, "").trim();
+  const trimmed = value?.trim();
+  const digits = trimmed?.replace(/\D/g, "") ?? "";
 
-  return digits && digits.length >= 6 ? digits : null;
+  if (digits.length < 6) {
+    return null;
+  }
+
+  return trimmed?.startsWith("+") ? `+${digits}` : digits;
 }
 
 export function normalizeGuestWechatId(value: string | null | undefined) {
-  const normalized = value
-    ?.trim()
-    .toLowerCase()
-    .replace(/\s+/g, "");
+  const normalized = value?.trim().toLowerCase().replace(/\s+/g, "");
 
   return normalized && normalized.length >= 3 ? normalized : null;
 }

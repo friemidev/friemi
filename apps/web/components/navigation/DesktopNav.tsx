@@ -6,6 +6,7 @@ import { locales } from "@chill-club/shared";
 import {
   CalendarPlus,
   Compass,
+  House,
   MessageCircle,
   UsersRound,
   type LucideIcon,
@@ -14,6 +15,7 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
+import { useMobileNavSection } from "./MobileNavSectionContext";
 
 type DesktopNavProps = {
   locale: string;
@@ -29,40 +31,32 @@ type DesktopNavItem = {
 export function DesktopNav({ locale }: DesktopNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
+  const { sectionOverride } = useMobileNavSection();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
-  const messagesLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.messagesShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.messages}</span>
-    </>
-  );
-  const lobbyLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.lobbyShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.lobby}</span>
-    </>
-  );
-  const newActivityLabel = (
-    <>
-      <span className="2xl:hidden">{t.nav.newActivityShort}</span>
-      <span className="hidden 2xl:inline">{t.nav.newActivity}</span>
-    </>
-  );
   const items: DesktopNavItem[] = [
-    { href: "/lobby", label: lobbyLabel, icon: UsersRound },
+    { href: "/mobile-home", label: t.nav.hallShort, icon: House },
+    { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
     { href: "/activities", label: t.nav.activities, icon: Compass },
-    { href: "/messages", label: messagesLabel, icon: MessageCircle },
+    { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
     {
       href: "/activities/new",
-      label: newActivityLabel,
+      label: t.nav.newActivity,
       icon: CalendarPlus,
       isPrimary: true,
     },
   ];
 
   function isItemActive(href: string) {
+    if (sectionOverride === "lobby") {
+      return href === "/lobby";
+    }
+
+    if (sectionOverride === "activities") {
+      return href === "/activities";
+    }
+
     const localizedHref = withLocale(currentLocale, href);
 
     if (href === "/") {
@@ -79,11 +73,13 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       );
     }
 
-    return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
+    return (
+      pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
+    );
   }
 
   return (
-    <nav className="hidden h-full min-w-0 items-center justify-center gap-1 md:flex">
+    <nav className="hidden h-full min-w-0 items-center justify-center gap-0 md:flex lg:gap-1">
       {items.map((item) => {
         const Icon = item.icon;
         const active = isItemActive(item.href);
@@ -93,14 +89,14 @@ export function DesktopNav({ locale }: DesktopNavProps) {
             key={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex h-full items-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d88d72]/45 lg:px-3 lg:text-sm",
+              "group relative flex h-full items-center gap-1.5 whitespace-nowrap px-1.5 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#369758]/35 min-[900px]:px-2.5 min-[900px]:text-xs lg:px-3 lg:text-sm",
               item.isPrimary
                 ? active
-                  ? "text-[#9b5d46]"
-                  : "text-[#b66f55] hover:bg-[#fff7ed] hover:text-[#9b5d46]"
+                  ? "text-[#156240]"
+                  : "text-[#156240] hover:bg-[#F1F2EC] hover:text-[#156240]"
                 : active
-                  ? "text-ink"
-                  : "text-zinc-700 hover:bg-[#fff7ed] hover:text-ink",
+                  ? "text-[#1D1D1B]"
+                  : "text-zinc-700 hover:bg-[#F1F2EC] hover:text-[#1D1D1B]",
             )}
             href={withLocale(currentLocale, item.href)}
           >
@@ -108,15 +104,15 @@ export function DesktopNav({ locale }: DesktopNavProps) {
               className={cn(
                 "absolute inset-x-2 bottom-0 h-[3px] origin-center rounded-t-full transition lg:inset-x-3",
                 active
-                  ? "scale-x-100 bg-[#d88d72]"
+                  ? "scale-x-100 bg-[#369758]"
                   : "scale-x-0 bg-transparent",
               )}
               aria-hidden="true"
             />
             <Icon
               className={cn(
-                "h-4 w-4 shrink-0 transition",
-                active ? "text-[#9b654f]" : "",
+                "hidden h-4 w-4 shrink-0 transition min-[900px]:block",
+                active ? "text-[#156240]" : "",
               )}
               strokeWidth={active ? 2.4 : 2}
             />

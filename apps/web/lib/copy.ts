@@ -34,7 +34,8 @@ const copy = {
       home: "首页",
       activities: "活动",
       lobby: "组队大厅",
-      lobbyShort: "组队",
+      lobbyShort: "组局",
+      hallShort: "大厅",
       newActivity: "我要组局",
       newActivityShort: "组局",
       messages: "消息",
@@ -290,6 +291,7 @@ const copy = {
       organizerTitle: "发起人",
       emptyOrganizerBio: "这个发起人还没有填写简介。",
       contactOrganizer: "联系发起人",
+      contactOrganizerLogin: "登录后联系发起人",
       contactOrganizerHint: "活动前有问题，可以直接确认。",
       type: "活动类型",
       visibility: "可见范围",
@@ -304,6 +306,7 @@ const copy = {
       approvalAuto: "报名后自动确认",
       editActivity: "编辑组局",
       locationMapTitle: "活动地点",
+      hiddenAddressNotice: "完整地址仅参与者可见。",
       openMap: "打开地图",
       openGoogleMaps: "打开 Google Maps",
     },
@@ -476,6 +479,7 @@ const copy = {
         participation: "报名",
         social: "好友",
         comment: "评论",
+        message: "私信",
         activity: "活动",
         report: "举报",
       },
@@ -486,8 +490,8 @@ const copy = {
       emptyAction: "去发现活动",
       openActivity: "查看活动",
       openComments: "查看评论",
+      openMessages: "查看私信",
       openProfile: "查看主页",
-      openMessages: "去处理",
       openReview: "去审核",
       openReports: "查看举报",
       fallbackActivity: "相关活动",
@@ -545,6 +549,11 @@ const copy = {
           body: (activityTitle: string, actorName = "有人") =>
             `${actorName}回复了你在「${activityTitle}」下的评论。`,
         },
+        DIRECT_MESSAGE: {
+          title: "有新的私信",
+          body: (activityTitle: string, actorName = "有人") =>
+            `${actorName}就「${activityTitle}」联系了你。`,
+        },
         REPORT_CREATED: {
           title: "有新的举报",
           body: (_activityTitle: string, actorName = "有人") =>
@@ -593,7 +602,7 @@ const copy = {
       failedError: "审核报名失败，请稍后重试。",
     },
     newActivity: {
-      title: "发起组局",
+      title: "我要组局",
       description: "填写组局信息，约好时间地点，发布后就可以邀请大家加入。",
     },
     editActivity: {
@@ -633,15 +642,39 @@ const copy = {
       wechatSaved: "微信号已保存",
       wechatError: "请输入有效微信号，或留空取消绑定。",
       wechatLinkedCount: (count: number) => `已同步 ${count} 条游客报名记录`,
+      contactBindingsTitle: "账号绑定",
+      contactBindingsBound: "身份字段已绑定",
+      contactBindingsUnbound: "身份字段未绑定",
+      contactBindingsEmpty: "还没有绑定联系身份",
+      contactBindingsCount: (count: number) => `已绑定 ${count} 项`,
+      contactBindingsDescription:
+        "邮箱、电话和微信号只用于找回游客报名、账号合并和必要联系。",
+      loginEmailLabel: "登录邮箱",
+      loginEmailHint: "登录邮箱来自 Clerk，不会在这里被修改。",
+      contactEmailLabel: "联系邮箱",
+      contactEmailPlaceholder: "填写用于找回报名的邮箱",
+      phoneLabel: "手机号",
+      phonePlaceholder: "建议包含国家区号，例如 +33 6...",
+      contactBindingsPrivacyHint:
+        "这些字段不会展示在公开主页、活动详情或参与人列表中。留空保存可以取消对应绑定。",
+      saveContactBindings: "保存绑定",
+      savingContactBindings: "保存中...",
+      contactBindingsSaved: "账号绑定已保存",
+      contactBindingEmailError: "请输入有效邮箱，或留空取消绑定。",
+      contactBindingPhoneError: "请输入有效手机号，或留空取消绑定。",
+      contactBindingWechatError: "请输入有效微信号，或留空取消绑定。",
+      contactBindingEmailTaken: "这个邮箱已被其他账号绑定。",
+      contactBindingPhoneTaken: "这个手机号已被其他账号绑定。",
+      contactBindingWechatTaken: "这个微信号已被其他账号绑定。",
       close: "关闭",
       cancel: "取消",
-      createdCount: "发起组局",
+      createdCount: "我的组局",
       participationCount: "参加活动",
       errorTitle: "个人空间加载失败",
       errorDescription: "部分内容暂时无法加载，请稍后再试。",
       createdTitle: "发起的活动",
       createdDescription: "",
-      createdEmptyTitle: "暂无发起组局",
+      createdEmptyTitle: "暂无组局",
       createdEmptyDescription: "有活动后会显示在这里。",
       participationTitle: "参加的活动",
       participationDescription: "",
@@ -651,7 +684,7 @@ const copy = {
       favoriteEmptyTitle: "暂无收藏活动",
       favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
-        `当前显示最近 ${limit} 个发起组局，另有 ${count} 个更早的内容暂未展示。`,
+        `当前显示最近 ${limit} 个组局，另有 ${count} 个更早的内容暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
       hiddenFavorite: (limit: number, count: number) =>
@@ -774,6 +807,9 @@ const copy = {
       destinationPlaceholder: "例如：Nice / Amsterdam / London",
       destinationHint: "旅行搭子需要填写目的地，方便用户判断是否感兴趣。",
       address: "集合地址",
+      hideAddressFromNonParticipants: "仅参与者可见详细地址",
+      hideAddressFromNonParticipantsHint:
+        "开启后，未报名或未通过的人只会看到城市；发起人和参与者仍可看到完整地址和地图。",
       placePickerTitle: "地图定位",
       placePickerHint: "根据城市和地址匹配坐标；保存后详情页会显示地图位置。",
       placeSearch: "匹配地点",
@@ -797,6 +833,20 @@ const copy = {
       visibilityPublicHint: "会出现在组队大厅，登录用户都可以看到并申请加入。",
       visibilityPrivate: "私人局",
       visibilityPrivateHint: "只对你的好友可见，适合先和熟人约局。",
+      sectionVisibilityTitle: "谁可以看",
+      sectionVisibilityMobileTitle: "谁可以看",
+      sectionVisibilityDescription: "公开范围与权限",
+      sectionActivityContentTitle: "内容安排",
+      sectionActivityContentMobileTitle: "内容安排",
+      sectionActivityContentDescription: "标题、说明和封面",
+      sectionTimeLocationTitle: "时间地点",
+      sectionTimeLocationMobileTitle: "时间地点",
+      sectionTimeLocationDescription: "集合时间和地点",
+      sectionPeoplePriceTitle: "人数和费用",
+      sectionPeoplePriceMobileTitle: "人数费用",
+      sectionPeoplePriceDescription: "人数限制与费用",
+      previousStep: "上一步",
+      nextStep: "下一步",
       peoplePrice: "人数和费用",
       capacityLimitToggle: "限制组局人数",
       capacityLimitHint: "默认不限制人数；需要控制名额时再开启。",
@@ -816,7 +866,7 @@ const copy = {
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
       copyTimeReminder:
-        "此为复制组局草稿，时间、地点、费用等信息可能需要重新调整，请务必检查并修改为新的行程。",
+        "此为复制组局草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
       create: "发布组局",
       saving: "保存中...",
@@ -827,15 +877,16 @@ const copy = {
       activityAria: (title: string, date: string, location: string) =>
         `${title}，${date}，${location}`,
       categories: {
+        FOOD: "饭局",
+        WANDER: "闲逛",
+        AUDIO_VISUAL: "视听",
+        ART: "艺术",
         BOARD_GAME: "桌游",
-        MOVIE: "电影",
+        GROWTH: "进步",
+        TRAVEL: "旅行",
         MUSIC: "音乐",
         SPORTS: "运动",
-        TRAVEL: "旅行",
-        FOOD: "饭局",
-        EXHIBITION: "展览",
-        THEATER: "戏剧",
-        OTHER: "其他",
+        OTHER: "其它",
       },
       statuses: {
         OPEN: "可参与",
@@ -885,7 +936,8 @@ const copy = {
       home: "Home",
       activities: "Activities",
       lobby: "Lobby",
-      lobbyShort: "Lobby",
+      lobbyShort: "Plans",
+      hallShort: "Hall",
       newActivity: "Start a plan",
       newActivityShort: "Plan",
       messages: "Messages",
@@ -1097,7 +1149,7 @@ const copy = {
         "Narrow activities by keyword, topic, city, date range, relationship, format, and timing.",
       publicInfoDescription:
         "Narrow activity info by keyword, topic, city, date range, and timing.",
-      mobileSummary: "Search / Filter",
+      mobileSummary: "Filter",
       keywordLabel: "Keyword",
       keywordPlaceholder: "Search title or description, e.g. film night",
       categoryLabel: "Topic",
@@ -1160,6 +1212,7 @@ const copy = {
       organizerTitle: "Organizer",
       emptyOrganizerBio: "This organizer has not added a bio yet.",
       contactOrganizer: "Message organizer",
+      contactOrganizerLogin: "Sign in to message organizer",
       contactOrganizerHint: "Ask before joining or heading out.",
       type: "Type",
       visibility: "Visibility",
@@ -1174,6 +1227,7 @@ const copy = {
       approvalAuto: "Auto-confirmed after joining",
       editActivity: "Edit plan",
       locationMapTitle: "Activity location",
+      hiddenAddressNotice: "The exact address is visible to participants only.",
       openMap: "Open map",
       openGoogleMaps: "Open in Google Maps",
     },
@@ -1213,7 +1267,7 @@ const copy = {
       systemShare: "Share",
       systemShareHint: "Open the system share sheet and send this link.",
       wechatShareHint:
-        "In WeChat, tap the top-right ··· menu, then send to a friend or group.",
+        "In WeChat, use the top-right ··· menu to send this link.",
       shareUnavailable:
         "This browser cannot open the share sheet. Copy the link instead.",
       closeShareHelp: "Close sharing help",
@@ -1235,7 +1289,7 @@ const copy = {
       posterPreviewAlt: "Activity poster preview",
       posterPreviewTitle: "Share poster",
       longPressPoster: "Press and hold to save",
-      posterSaveHint: "Save it, then post to Moments.",
+      posterSaveHint: "Save it, then post to WeChat Moments.",
       closePosterPreview: "Close poster",
     },
     merchant: {
@@ -1354,6 +1408,7 @@ const copy = {
         participation: "Joins",
         social: "Friends",
         comment: "Comments",
+        message: "Messages",
         activity: "Activity",
         report: "Reports",
       },
@@ -1365,8 +1420,8 @@ const copy = {
       emptyAction: "Browse activities",
       openActivity: "Open activity",
       openComments: "Open comments",
+      openMessages: "Open chat",
       openProfile: "View profile",
-      openMessages: "Review",
       openReview: "Review",
       openReports: "Open reports",
       fallbackActivity: "Related activity",
@@ -1424,6 +1479,11 @@ const copy = {
           title: "New reply",
           body: (activityTitle: string, actorName = "Someone") =>
             `${actorName} replied to your comment on "${activityTitle}".`,
+        },
+        DIRECT_MESSAGE: {
+          title: "New message",
+          body: (activityTitle: string, actorName = "Someone") =>
+            `${actorName} messaged you about "${activityTitle}".`,
         },
         REPORT_CREATED: {
           title: "New report",
@@ -1520,6 +1580,36 @@ const copy = {
       wechatError: "Enter a valid WeChat ID, or leave it empty to disconnect.",
       wechatLinkedCount: (count: number) =>
         `${count} guest signup records linked`,
+      contactBindingsTitle: "Account bindings",
+      contactBindingsBound: "Identity fields connected",
+      contactBindingsUnbound: "No identity fields connected",
+      contactBindingsEmpty: "No contact identity connected yet",
+      contactBindingsCount: (count: number) => `${count} connected`,
+      contactBindingsDescription:
+        "Email, phone, and WeChat are used for guest signup recovery, account merging, and essential contact only.",
+      loginEmailLabel: "Sign-in email",
+      loginEmailHint: "This comes from Clerk and is not changed here.",
+      contactEmailLabel: "Contact email",
+      contactEmailPlaceholder: "Email for recovering guest signups",
+      phoneLabel: "Phone",
+      phonePlaceholder: "Include country code, e.g. +33 6...",
+      contactBindingsPrivacyHint:
+        "These fields are not shown on public profiles, activity pages, or participant lists. Save an empty field to disconnect it.",
+      saveContactBindings: "Save bindings",
+      savingContactBindings: "Saving...",
+      contactBindingsSaved: "Account bindings saved",
+      contactBindingEmailError:
+        "Enter a valid email, or leave it empty to disconnect.",
+      contactBindingPhoneError:
+        "Enter a valid phone number, or leave it empty to disconnect.",
+      contactBindingWechatError:
+        "Enter a valid WeChat ID, or leave it empty to disconnect.",
+      contactBindingEmailTaken:
+        "This email is already connected to another account.",
+      contactBindingPhoneTaken:
+        "This phone number is already connected to another account.",
+      contactBindingWechatTaken:
+        "This WeChat ID is already connected to another account.",
       close: "Close",
       cancel: "Cancel",
       createdCount: "Created",
@@ -1646,7 +1736,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Enter a valid https link.",
         UNSUPPORTED_HOST:
-          "This website is not supported yet. Use Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
+          "This website is not supported yet. Use Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
         UNSUPPORTED_CONTENT: "This link is not a parsable activity page.",
         FETCH_FAILED:
           "Failed to parse the link. Try again later or fill the form manually.",
@@ -1675,6 +1765,9 @@ const copy = {
       destinationHint:
         "Trips need a destination so users can quickly judge fit.",
       address: "Meetup address",
+      hideAddressFromNonParticipants: "Show exact address to participants only",
+      hideAddressFromNonParticipantsHint:
+        "When enabled, people who have not joined only see the city. The organizer and participants can still see the full address and map.",
       placePickerTitle: "Map location",
       placePickerHint:
         "Match coordinates from the city and address. The detail page will show a map after saving.",
@@ -1702,6 +1795,20 @@ const copy = {
       visibilityPrivate: "Private crew",
       visibilityPrivateHint:
         "Only your friends can see it. Best for plans with people you know.",
+      sectionVisibilityTitle: "Visibility",
+      sectionVisibilityMobileTitle: "Visibility",
+      sectionVisibilityDescription: "Audience and access",
+      sectionActivityContentTitle: "Details",
+      sectionActivityContentMobileTitle: "Details",
+      sectionActivityContentDescription: "Title, note, and cover",
+      sectionTimeLocationTitle: "Time and place",
+      sectionTimeLocationMobileTitle: "Time & place",
+      sectionTimeLocationDescription: "Meetup time and location",
+      sectionPeoplePriceTitle: "People and cost",
+      sectionPeoplePriceMobileTitle: "People & cost",
+      sectionPeoplePriceDescription: "Seat limits and cost",
+      previousStep: "Previous",
+      nextStep: "Next",
       peoplePrice: "People and cost",
       capacityLimitToggle: "Limit crew size",
       capacityLimitHint:
@@ -1723,7 +1830,7 @@ const copy = {
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
       copyTimeReminder:
-        "This draft is prefilled from an existing crew. Please review and update times, location, cost, and other details for your new plan.",
+        "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -1734,14 +1841,15 @@ const copy = {
       activityAria: (title: string, date: string, location: string) =>
         `${title}. ${date}. ${location}.`,
       categories: {
-        BOARD_GAME: "Board games",
-        MOVIE: "Movies",
+        FOOD: "Food",
+        WANDER: "Wander",
+        AUDIO_VISUAL: "Watch",
+        ART: "Art",
+        BOARD_GAME: "Games",
+        GROWTH: "Growth",
+        TRAVEL: "Trips",
         MUSIC: "Music",
         SPORTS: "Sports",
-        TRAVEL: "Travel",
-        FOOD: "Food",
-        EXHIBITION: "Exhibition",
-        THEATER: "Theater",
         OTHER: "Other",
       },
       statuses: {
@@ -1792,7 +1900,8 @@ const copy = {
       home: "Accueil",
       activities: "Activités",
       lobby: "Hall d'équipe",
-      lobbyShort: "Hall",
+      lobbyShort: "Plans",
+      hallShort: "Hall",
       newActivity: "Je lance un plan",
       newActivityShort: "Lancer",
       messages: "Messages",
@@ -1922,7 +2031,7 @@ const copy = {
         "L'inscription est en préparation. Réessayez plus tard.",
     },
     home: {
-      eyebrow: "De vraies activites · de vraies connexions",
+      eyebrow: "De vraies activités · de vraies connexions",
       title: "Friemi",
       tagline: "La prochaine sortie commence ici.",
       description:
@@ -2011,7 +2120,7 @@ const copy = {
         "Affinez les activités par mot-clé, thème, ville, période, relation, format et avancement.",
       publicInfoDescription:
         "Affinez les sorties par mot-clé, thème, ville, période et avancement.",
-      mobileSummary: "Recherche / Filtre",
+      mobileSummary: "Filtrer",
       keywordLabel: "Mot-clé",
       keywordPlaceholder: "Titre ou description, ex. cine-club",
       categoryLabel: "Thème",
@@ -2075,6 +2184,7 @@ const copy = {
       organizerTitle: "Organisateur",
       emptyOrganizerBio: "Cet organisateur n'a pas encore ajouté de bio.",
       contactOrganizer: "Contacter l'organisateur",
+      contactOrganizerLogin: "Se connecter pour contacter l'organisateur",
       contactOrganizerHint: "Posez vos questions avant de rejoindre.",
       type: "Type",
       visibility: "Visibilité",
@@ -2089,6 +2199,8 @@ const copy = {
       approvalAuto: "Confirmation automatique après inscription",
       editActivity: "Modifier le plan",
       locationMapTitle: "Lieu de l'activité",
+      hiddenAddressNotice:
+        "L'adresse exacte est visible uniquement par les participants.",
       openMap: "Ouvrir la carte",
       openGoogleMaps: "Ouvrir dans Google Maps",
     },
@@ -2132,7 +2244,7 @@ const copy = {
       systemShareHint:
         "Ouvrez le panneau de partage système pour envoyer ce lien.",
       wechatShareHint:
-        "Dans WeChat, touchez le menu ··· en haut à droite, puis envoyez à un ami ou à un groupe.",
+        "Dans WeChat, menu ··· en haut à droite pour envoyer ce lien.",
       shareUnavailable:
         "Ce navigateur ne peut pas ouvrir le partage système. Copiez plutôt le lien.",
       closeShareHelp: "Fermer l'aide au partage",
@@ -2154,7 +2266,7 @@ const copy = {
       posterPreviewAlt: "Aperçu de l'affiche de l'activité",
       posterPreviewTitle: "Affiche de partage",
       longPressPoster: "Appuyez longuement pour enregistrer",
-      posterSaveHint: "Enregistrez-la, puis publiez-la dans Moments.",
+      posterSaveHint: "Enregistrez-la, puis publiez-la dans WeChat Moments.",
       closePosterPreview: "Fermer l'affiche",
     },
     merchant: {
@@ -2277,6 +2389,7 @@ const copy = {
         participation: "Inscriptions",
         social: "Amis",
         comment: "Commentaires",
+        message: "Messages",
         activity: "Activité",
         report: "Signalements",
       },
@@ -2288,8 +2401,8 @@ const copy = {
       emptyAction: "Voir les activités",
       openActivity: "Voir l'activité",
       openComments: "Voir les commentaires",
+      openMessages: "Ouvrir le chat",
       openProfile: "Voir le profil",
-      openMessages: "Traiter",
       openReview: "Valider",
       openReports: "Voir les signalements",
       fallbackActivity: "Activité liée",
@@ -2347,6 +2460,11 @@ const copy = {
           title: "Nouvelle réponse",
           body: (activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} a répondu à votre commentaire sur « ${activityTitle} ».`,
+        },
+        DIRECT_MESSAGE: {
+          title: "Nouveau message",
+          body: (activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} vous a écrit au sujet de « ${activityTitle} ».`,
         },
         REPORT_CREATED: {
           title: "Nouveau signalement",
@@ -2449,6 +2567,33 @@ const copy = {
         "Saisissez un WeChat valide, ou laissez vide pour le délier.",
       wechatLinkedCount: (count: number) =>
         `${count} inscription(s) invité reliée(s)`,
+      contactBindingsTitle: "Identités liées",
+      contactBindingsBound: "Identités de contact liées",
+      contactBindingsUnbound: "Aucune identité de contact liée",
+      contactBindingsEmpty: "Aucune identité liée pour le moment",
+      contactBindingsCount: (count: number) => `${count} liée(s)`,
+      contactBindingsDescription:
+        "E-mail, téléphone et WeChat servent uniquement à retrouver des inscriptions invité, fusionner un compte et vous contacter si nécessaire.",
+      loginEmailLabel: "E-mail de connexion",
+      loginEmailHint: "Cet e-mail vient de Clerk et ne se modifie pas ici.",
+      contactEmailLabel: "E-mail de contact",
+      contactEmailPlaceholder: "E-mail pour retrouver vos inscriptions",
+      phoneLabel: "Téléphone",
+      phonePlaceholder: "Ajoutez l'indicatif, ex. +33 6...",
+      contactBindingsPrivacyHint:
+        "Ces champs ne sont pas affichés sur le profil public, les activités ni les listes de participants. Enregistrez un champ vide pour le délier.",
+      saveContactBindings: "Enregistrer",
+      savingContactBindings: "Enregistrement...",
+      contactBindingsSaved: "Identités liées enregistrées",
+      contactBindingEmailError:
+        "Saisissez un e-mail valide, ou laissez vide pour le délier.",
+      contactBindingPhoneError:
+        "Saisissez un téléphone valide, ou laissez vide pour le délier.",
+      contactBindingWechatError:
+        "Saisissez un WeChat valide, ou laissez vide pour le délier.",
+      contactBindingEmailTaken: "Cet e-mail est déjà lié à un autre compte.",
+      contactBindingPhoneTaken: "Ce téléphone est déjà lié à un autre compte.",
+      contactBindingWechatTaken: "Ce WeChat est déjà lié à un autre compte.",
       close: "Fermer",
       cancel: "Annuler",
       createdCount: "Créées",
@@ -2473,7 +2618,7 @@ const copy = {
       hiddenParticipation: (limit: number, count: number) =>
         `Affichage des ${limit} dernières participations. ${count} plus anciennes ne sont pas encore affichées.`,
       hiddenFavorite: (limit: number, count: number) =>
-        `Affichage des ${limit} dernieres activites favorites. ${count} plus anciennes ne sont pas encore affichees.`,
+        `Affichage des ${limit} dernières activités favorites. ${count} plus anciennes ne sont pas encore affichées.`,
       signedUpAt: (date: string) => `Inscrit le ${date}`,
       cancelledAt: (date: string) => `Annulé le ${date}`,
       participationAria: (
@@ -2583,7 +2728,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Saisissez un lien https valide.",
         UNSUPPORTED_HOST:
-          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire a Paris, Sortir a Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
+          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
         UNSUPPORTED_CONTENT:
           "Ce lien n'est pas une page d'activité analysable.",
         FETCH_FAILED:
@@ -2616,6 +2761,10 @@ const copy = {
       destinationHint:
         "Les voyages nécessitent une destination pour juger rapidement l'intérêt.",
       address: "Adresse du rendez-vous",
+      hideAddressFromNonParticipants:
+        "Afficher l'adresse exacte uniquement aux participants",
+      hideAddressFromNonParticipantsHint:
+        "Si activé, les personnes qui n'ont pas rejoint ne voient que la ville. L'organisateur et les participants voient toujours l'adresse complète et la carte.",
       placePickerTitle: "Position sur la carte",
       placePickerHint:
         "Associe des coordonnées à partir de la ville et de l'adresse. La page détail affichera une carte après l'enregistrement.",
@@ -2645,6 +2794,20 @@ const copy = {
       visibilityPrivate: "Groupe privé",
       visibilityPrivateHint:
         "Visible uniquement par vos amis. Pratique pour organiser avec des proches.",
+      sectionVisibilityTitle: "Visibilité",
+      sectionVisibilityMobileTitle: "Visibilité",
+      sectionVisibilityDescription: "Audience et accès",
+      sectionActivityContentTitle: "Détails",
+      sectionActivityContentMobileTitle: "Détails",
+      sectionActivityContentDescription: "Titre, message et couverture",
+      sectionTimeLocationTitle: "Date et lieu",
+      sectionTimeLocationMobileTitle: "Date & lieu",
+      sectionTimeLocationDescription: "Rendez-vous et lieu",
+      sectionPeoplePriceTitle: "Places et coût",
+      sectionPeoplePriceMobileTitle: "Places & coût",
+      sectionPeoplePriceDescription: "Limites de places et coût",
+      previousStep: "Précédent",
+      nextStep: "Suivant",
       peoplePrice: "Places et coût",
       capacityLimitToggle: "Limiter le nombre de places",
       capacityLimitHint:
@@ -2667,7 +2830,7 @@ const copy = {
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
       copyTimeReminder:
-        "Ce brouillon est prérempli à partir d'un groupe existant. Vérifiez et ajustez les horaires, le lieu, le coût et les autres détails pour votre nouveau plan.",
+        "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",
@@ -2678,14 +2841,15 @@ const copy = {
       activityAria: (title: string, date: string, location: string) =>
         `${title}. ${date}. ${location}.`,
       categories: {
+        FOOD: "Repas",
+        WANDER: "Balade",
+        AUDIO_VISUAL: "Écran",
+        ART: "Art",
         BOARD_GAME: "Jeux",
-        MOVIE: "Cinéma",
+        GROWTH: "Progrès",
+        TRAVEL: "Voyage",
         MUSIC: "Musique",
         SPORTS: "Sport",
-        TRAVEL: "Voyage",
-        FOOD: "Repas",
-        EXHIBITION: "Expo",
-        THEATER: "Théâtre",
         OTHER: "Autre",
       },
       statuses: {
@@ -2693,7 +2857,7 @@ const copy = {
         FULL: "Complet",
         DRAFT: "Brouillon",
         RECRUITING: "Rejoignable",
-        CONFIRMED: "Confirme",
+        CONFIRMED: "Confirmé",
         ENDED: "Terminé",
         CANCELLED: "Annulé",
       },

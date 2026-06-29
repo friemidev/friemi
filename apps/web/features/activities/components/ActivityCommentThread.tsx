@@ -16,6 +16,7 @@ import {
   updateActivityCommentAction,
 } from "../actions/createActivityComment";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { ManualTranslationText } from "@/features/translations/components/ManualTranslation";
 import type {
   ActivityCommentReplyViewModel,
@@ -77,28 +78,42 @@ function SubmitButton({
 
 function CommentAvatar({
   avatarUrl,
+  isAuthenticated,
+  locale,
   nickname,
+  profileId,
   size = "md",
 }: {
   avatarUrl: string | null;
+  isAuthenticated: boolean;
+  locale: string;
   nickname: string;
+  profileId: string;
   size?: "sm" | "md";
 }) {
   return (
-    <div
-      className={
-        size === "sm"
-          ? "flex h-7 w-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-xs font-semibold text-moss"
-          : "flex h-9 w-9 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-sm font-semibold text-moss"
-      }
+    <UserProfilePreviewPopover
+      avatarUrl={avatarUrl}
+      isAuthenticated={isAuthenticated}
+      locale={locale}
+      nickname={nickname}
+      profileId={profileId}
     >
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <span>{getInitial(nickname)}</span>
-      )}
-    </div>
+      <div
+        className={
+          size === "sm"
+            ? "flex h-7 w-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-xs font-semibold text-moss"
+            : "flex h-9 w-9 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-sm font-semibold text-moss"
+        }
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span>{getInitial(nickname)}</span>
+        )}
+      </div>
+    </UserProfilePreviewPopover>
   );
 }
 
@@ -437,7 +452,10 @@ function ReplyItem({
     <div className="flex gap-2 py-3">
       <CommentAvatar
         avatarUrl={reply.author.avatarUrl}
+        isAuthenticated={isAuthenticated}
+        locale={locale}
         nickname={reply.author.nickname}
+        profileId={reply.author.id}
         size="sm"
       />
       <div className="min-w-0 flex-1">
@@ -528,7 +546,10 @@ export function ActivityCommentThread({
       <div className="flex items-start gap-3">
         <CommentAvatar
           avatarUrl={comment.author.avatarUrl}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
           nickname={comment.author.nickname}
+          profileId={comment.author.id}
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
@@ -13,65 +13,107 @@ import {
 import { getFollowCopy } from "../copy";
 
 type FollowButtonProps = {
-  locale: string;
-  targetUserProfileId: string;
-  redirectPath: string;
-  isAuthenticated: boolean;
-  isFollowing: boolean;
+  activeButtonClassName?: string;
+  activeLabel?: string;
   buttonClassName?: string;
   fullWidth?: boolean;
+  icon?: LucideIcon;
+  isAuthenticated: boolean;
+  isFollowing: boolean;
+  locale: string;
+  onStateChange?: (isFollowing: boolean) => void;
+  redirectPath: string;
+  targetUserProfileId: string;
 };
 
 const initialState: ToggleFollowState = {};
 
 function SubmitButton({
+  activeButtonClassName,
+  activeLabel,
   buttonClassName,
   fullWidth,
-  locale,
+  icon: Icon,
+  isDisabled,
   isFollowing,
+  locale,
 }: {
+  activeButtonClassName?: string;
+  activeLabel?: string;
   buttonClassName?: string;
   fullWidth: boolean;
-  locale: string;
+  icon?: LucideIcon;
+  isDisabled: boolean;
   isFollowing: boolean;
+  locale: string;
 }) {
-  const { pending } = useFormStatus();
   const t = getFollowCopy(locale);
-
-  let label = t.follow;
-
-  if (pending) {
-    label = isFollowing ? t.unfollowing : t.following;
-  } else if (isFollowing) {
-    label = t.unfollow;
-  }
+  const label = isFollowing ? activeLabel ?? t.unfollow : t.follow;
 
   return (
     <Button
-      className={cn(fullWidth ? "w-full" : "w-auto", buttonClassName)}
+      className={cn(
+        fullWidth ? "w-full" : "w-auto",
+        isFollowing && activeButtonClassName
+          ? activeButtonClassName
+          : buttonClassName,
+      )}
       type="submit"
       variant={isFollowing ? "secondary" : "primary"}
-      disabled={pending}
+      disabled={isDisabled}
     >
-      {label}
+      <span className="inline-flex items-center gap-0.5 whitespace-nowrap leading-none">
+        {Icon ? <Icon className="h-3 w-3" /> : null}
+        {label}
+      </span>
     </Button>
   );
 }
 
 export function FollowButton({
+  activeButtonClassName,
+  activeLabel,
   buttonClassName,
   fullWidth = true,
-  locale,
-  targetUserProfileId,
-  redirectPath,
+  icon,
   isAuthenticated,
   isFollowing,
+  locale,
+  onStateChange,
+  redirectPath,
+  targetUserProfileId,
 }: FollowButtonProps) {
   const [state, formAction] = useActionState(
     toggleFollowUserAction,
     initialState,
   );
   const t = getFollowCopy(locale);
+  const Icon = icon;
+  const [optimisticIsFollowing, setOptimisticIsFollowing] = useState(isFollowing);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const effectiveIsFollowing = state.isFollowing ?? optimisticIsFollowing;
+
+  useEffect(() => {
+    setOptimisticIsFollowing(isFollowing);
+  }, [isFollowing]);
+
+  useEffect(() => {
+    if (state.formError) {
+      setOptimisticIsFollowing(isFollowing);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (typeof state.isFollowing === "boolean") {
+      onStateChange?.(state.isFollowing);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (state.ok) {
+      setIsSubmitting(false);
+    }
+  }, [isFollowing, onStateChange, state.formError, state.isFollowing, state.ok]);
 
   if (!isAuthenticated) {
     return (
@@ -80,14 +122,24 @@ export function FollowButton({
           className={cn(fullWidth ? "w-full" : "w-auto", buttonClassName)}
           variant="secondary"
         >
-          {t.signInToFollow}
+          <span className="inline-flex items-center gap-1">
+            {Icon ? <Icon className="h-3 w-3" /> : null}
+            {t.signInToFollow}
+          </span>
         </Button>
       </Link>
     );
   }
 
   return (
-    <form action={formAction} className="grid gap-2">
+    <form
+      action={formAction}
+      className="inline-grid gap-1 justify-items-center"
+      onSubmit={() => {
+        setOptimisticIsFollowing((current) => !current);
+        setIsSubmitting(true);
+      }}
+    >
       <input name="locale" type="hidden" value={locale} />
       <input
         name="targetUserProfileId"
@@ -101,9 +153,13 @@ export function FollowButton({
         </p>
       ) : null}
       <SubmitButton
+        activeButtonClassName={activeButtonClassName}
+        activeLabel={activeLabel}
         buttonClassName={buttonClassName}
         fullWidth={fullWidth}
-        isFollowing={isFollowing}
+        icon={icon}
+        isDisabled={isSubmitting}
+        isFollowing={effectiveIsFollowing}
         locale={locale}
       />
     </form>

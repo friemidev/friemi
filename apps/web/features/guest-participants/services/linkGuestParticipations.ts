@@ -1,6 +1,7 @@
 import type { ParticipantStatus, Prisma, PrismaClient } from "@prisma/client";
 import {
   normalizeGuestEmail,
+  normalizeGuestPhone,
   normalizeGuestWechatId,
 } from "../utils/contactIdentity";
 
@@ -18,29 +19,43 @@ const existingParticipantStatuses: ParticipantStatus[] = [
 ];
 
 function getGuestMatchWhere(profile: {
+  contactEmail?: string | null;
   email?: string | null;
   emailVerifiedAt?: Date | string | null;
+  normalizedContactEmail?: string | null;
+  normalizedPhone?: string | null;
   normalizedWechatId?: string | null;
+  phone?: string | null;
   verifiedEmail?: string | null;
   wechatId?: string | null;
 }): Prisma.GuestActivityParticipantWhereInput[] {
-  const normalizedEmail = normalizeGuestEmail(
-    profile.verifiedEmail ?? (profile.emailVerifiedAt ? profile.email : null),
+  const normalizedEmails = new Set(
+    [
+      profile.normalizedContactEmail,
+      normalizeGuestEmail(profile.contactEmail),
+      normalizeGuestEmail(
+        profile.verifiedEmail ??
+          (profile.emailVerifiedAt ? profile.email : null),
+      ),
+    ].filter(Boolean) as string[],
   );
+  const normalizedPhone =
+    profile.normalizedPhone ?? normalizeGuestPhone(profile.phone);
   const normalizedWechatId =
     profile.normalizedWechatId ?? normalizeGuestWechatId(profile.wechatId);
   const matches: Prisma.GuestActivityParticipantWhereInput[] = [];
 
-  if (normalizedEmail) {
+  for (const normalizedEmail of normalizedEmails) {
     matches.push({ normalizedEmail });
+  }
+
+  if (normalizedPhone) {
+    matches.push({ normalizedPhone });
   }
 
   if (normalizedWechatId) {
     matches.push({
       normalizedWechatId,
-      OR: normalizedEmail
-        ? [{ normalizedEmail: null }, { normalizedEmail }]
-        : [{ normalizedEmail: null }],
     });
   }
 
@@ -149,10 +164,14 @@ async function linkGuestParticipation(
 export async function linkGuestParticipationsForProfile(
   prismaClient: PrismaClient,
   profile: {
+    contactEmail?: string | null;
     email?: string | null;
     emailVerifiedAt?: Date | string | null;
     id: string;
+    normalizedContactEmail?: string | null;
+    normalizedPhone?: string | null;
     normalizedWechatId?: string | null;
+    phone?: string | null;
     verifiedEmail?: string | null;
     wechatId?: string | null;
   },

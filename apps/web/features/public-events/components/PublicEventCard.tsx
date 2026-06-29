@@ -87,7 +87,7 @@ export function PublicEventCard({
   const eventLocation = getPublicEventLocationDisplay(event, locale);
 
   return (
-    <Card className="group relative flex h-full flex-col overflow-hidden border-[#ded2bc] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cdb88f] hover:shadow-lg">
+    <Card className="group relative flex h-full flex-col overflow-hidden border-[#8AB68E] bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-lg">
       {showFavoriteButton ? (
         <div className="absolute right-3 top-4 z-20 sm:top-5">
           <PublicEventFavoriteButton
@@ -106,14 +106,14 @@ export function PublicEventCard({
         className="flex flex-1 flex-col"
         href={eventHref}
       >
-        <div className="relative flex h-40 items-end justify-between gap-2 overflow-hidden bg-[#d9e9ee] p-3 sm:h-44 sm:p-4">
+        <div className="relative flex h-40 items-end justify-between gap-2 overflow-hidden bg-[#F1F2EC] p-3 sm:h-44 sm:p-4">
           <ActivityCoverImage
             src={event.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/48 via-black/12 to-black/5"
           />
           <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/8 to-transparent" />
           <div className="relative mt-auto flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="rounded-md bg-[rgba(22,18,14,0.76)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#fffaf2] shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10">
+            <span className="rounded-md bg-[rgba(22,18,14,0.76)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#FFF5E6] shadow-[0_8px_18px_rgba(0,0,0,0.24)] ring-1 ring-white/10">
               {getCategoryLabel(event.category, locale)}
             </span>
             <span className="rounded-md bg-[rgba(255,250,242,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-zinc-900 shadow-[0_8px_18px_rgba(0,0,0,0.18)]">
@@ -132,13 +132,13 @@ export function PublicEventCard({
           </p>
           <div className="grid gap-2.5 text-sm text-zinc-600">
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#156240]" />
               <span className="min-w-0">
                 {getEventDateLabel(event, locale)}
               </span>
             </span>
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#156240]" />
               <span className="min-w-0 line-clamp-1">
                 {eventLocation.displayLabel}
               </span>
@@ -146,7 +146,7 @@ export function PublicEventCard({
           </div>
           <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-black/5 pt-3 text-sm text-zinc-600">
             <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-ink">
-              <Ticket className="h-3.5 w-3.5 shrink-0 text-[#80613b]" />
+              <Ticket className="h-3.5 w-3.5 shrink-0 text-[#156240]" />
               <span className="min-w-0 truncate">
                 {getEventPriceLabel(event, locale)}
               </span>
@@ -160,7 +160,7 @@ export function PublicEventCard({
       </Link>
       <div className="px-4 pb-4 sm:px-5 sm:pb-5">
         <Link href={eventActionHref}>
-          <Button className="h-10 w-full whitespace-nowrap rounded-full border-0 bg-[#d88d72] text-white transition group-hover:bg-[#c87b61]">
+          <Button className="h-10 w-full whitespace-nowrap rounded-full border-0 bg-[#369758] text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition group-hover:bg-[#156240]">
             {event.teamCount > 0 ? t.viewTeams : t.viewEvent}
             <ArrowRight className="h-4 w-4" />
           </Button>

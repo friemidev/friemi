@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/import-public-activities",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/auto-create-teams-from-hot-activities",
+      "schedule": "30 3 * * *"
     }
   ]
 }

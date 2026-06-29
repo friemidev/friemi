@@ -29,6 +29,10 @@ type DirectMessagesCopy = {
   openFriends: string;
   openConversation: (name: string) => string;
   startConversation: string;
+  activityContextLabel: string;
+  activityContextCta: string;
+  activityMessageSuggestion: (title: string) => string;
+  sourceActivityLabel: (title: string) => string;
   addFriend: string;
   startChat: string;
   activitySignal: (
@@ -81,6 +85,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
       startConversation: "Message",
+      activityContextLabel: "À propos de cette sortie",
+      activityContextCta: "Voir la sortie",
+      activityMessageSuggestion: (title: string) =>
+        `Bonjour, j'ai une question sur « ${title} ».`,
+      sourceActivityLabel: (title: string) => `Depuis « ${title} »`,
       addFriend: "Ajouter",
       startChat: "Démarrer la discussion",
       activitySignal: (date: string, title: string, state) =>
@@ -139,6 +148,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
       startConversation: "Message",
+      activityContextLabel: "About this activity",
+      activityContextCta: "View activity",
+      activityMessageSuggestion: (title: string) =>
+        `Hi, I have a question about "${title}".`,
+      sourceActivityLabel: (title: string) => `From "${title}"`,
       addFriend: "Add",
       startChat: "Start chat",
       activitySignal: (date: string, title: string, state) =>
@@ -193,6 +207,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
     startConversation: "发消息",
+    activityContextLabel: "关于这个组局",
+    activityContextCta: "查看组局",
+    activityMessageSuggestion: (title: string) =>
+      `你好，我想了解一下「${title}」的具体安排。`,
+    sourceActivityLabel: (title: string) => `来自「${title}」`,
     addFriend: "添加",
     startChat: "开始聊天",
     activitySignal: (date: string, title: string, state) =>

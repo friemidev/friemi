@@ -18,6 +18,7 @@ import type {
   ProfileFollowUserViewModel,
   ProfileFriendUserViewModel,
 } from "../queries/getProfileDashboard";
+import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import type { ProfileSectionKey } from "./ProfileActivitySections";
 
 type ProfileOverviewPanelProps = {
@@ -57,16 +58,27 @@ function InteractiveStatCard({
     <button
       aria-expanded={active}
       className={cn(
-        "min-w-0 rounded-lg bg-white/72 px-2 py-2 text-left ring-1 ring-transparent transition hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40 sm:px-3 sm:py-2.5",
-        active && "bg-white ring-clay/45 shadow-sm",
+        "min-w-0 rounded-xl bg-white/68 px-2 py-2 text-center ring-1 ring-transparent transition duration-200 ease-out hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/40 sm:px-3 sm:py-2.5",
+        active &&
+          "bg-[linear-gradient(135deg,#FEFFF9_0%,#F1F2EC_100%)] ring-meadow/55 shadow-[0_8px_18px_rgba(21,98,64,0.1)]",
       )}
       onClick={onClick}
       type="button"
     >
-      <p className="text-lg font-semibold leading-none text-ink sm:text-2xl">
+      <p
+        className={cn(
+          "text-lg font-semibold leading-none sm:text-2xl",
+          active ? "text-forest" : "text-ink",
+        )}
+      >
         {value}
       </p>
-      <p className="mt-0.5 truncate text-[11px] leading-4 text-zinc-500 sm:text-xs">
+      <p
+        className={cn(
+          "mt-0.5 flex min-h-4 items-center justify-center text-center text-[10.5px] font-medium leading-[1.15] sm:text-xs",
+          active ? "text-forest/78" : "text-zinc-500",
+        )}
+      >
         {label}
       </p>
     </button>
@@ -106,9 +118,14 @@ function CompactUserRow({
         </div>
       )}
       <Link className="min-w-0 flex-1" href={profileHref}>
-        <p className="truncate text-sm font-semibold text-ink">
-          {user.nickname}
-        </p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-sm font-semibold text-ink">
+            {user.nickname}
+          </p>
+          {user.isCoCreator ? (
+            <CoCreatorIdentityBadge locale={locale} variant="icon" />
+          ) : null}
+        </div>
         <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
           {user.bio ?? t.noBio}
         </p>
@@ -276,7 +293,7 @@ export function ProfileOverviewPanel({
       {activePanel ? (
         <section
           aria-modal="true"
-          className="fixed inset-0 z-50 flex bg-black/32 p-0 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-50 flex bg-black/32 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] backdrop-blur-sm sm:p-6"
           role="dialog"
         >
           <div className="flex min-h-0 w-full flex-col bg-paper shadow-2xl sm:mx-auto sm:max-w-2xl sm:overflow-hidden sm:rounded-[1.5rem] sm:border sm:border-black/10">
@@ -287,7 +304,7 @@ export function ProfileOverviewPanel({
                     <h2 className="text-xl font-semibold text-ink">
                       {activeTitle}
                     </h2>
-                    <span className="rounded-full bg-[#fff7ed] px-2.5 py-1 text-xs font-semibold text-[#9a5139] ring-1 ring-[#f5c8b7]">
+                    <span className="rounded-full bg-[#FFF5E6] px-2.5 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
                       {activeCount}
                     </span>
                   </div>

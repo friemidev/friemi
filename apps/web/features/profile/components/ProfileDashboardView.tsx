@@ -15,6 +15,7 @@ import {
   ProfileActivitySections,
   type ProfileSectionKey,
 } from "./ProfileActivitySections";
+import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
@@ -35,21 +36,21 @@ type ProfileDashboardViewProps = {
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
     return {
-      created: "Mes créations",
-      joined: "Mes participations",
+      created: "Créés",
+      joined: "Rejoints",
     };
   }
 
   if (locale === "en") {
     return {
-      created: "My created",
-      joined: "My joined",
+      created: "Created",
+      joined: "Joined",
     };
   }
 
   return {
-    created: "我的发起",
-    joined: "我的参与",
+    created: "发起",
+    joined: "参与",
   };
 }
 
@@ -110,6 +111,9 @@ export function ProfileDashboardView({
                 <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
                   {profile.nickname}
                 </h1>
+                {profile.isCoCreator ? (
+                  <CoCreatorIdentityBadge className="mt-2" locale={locale} />
+                ) : null}
                 {profile.bio ? (
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-500">
                     {profile.bio}

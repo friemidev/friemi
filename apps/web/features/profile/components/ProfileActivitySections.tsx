@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowDownUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
@@ -10,6 +11,7 @@ import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
+import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -32,12 +34,12 @@ const profileActivityListLimit = 12;
 function getProfileSpaceCopy(locale: string) {
   if (locale === "en") {
     return {
-      createdTitle: "My created",
+      createdTitle: "Created",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Start a crew",
-      participationTitle: "My joined",
+      participationTitle: "Joined",
       participationAction: "Discover activities",
-      favoriteTitle: "My saved",
+      favoriteTitle: "Saved",
       favoriteAction: "Discover activities",
       sortLatest: "Latest first",
       sortOldest: "Oldest first",
@@ -46,12 +48,12 @@ function getProfileSpaceCopy(locale: string) {
 
   if (locale === "fr") {
     return {
-      createdTitle: "Mes créations",
+      createdTitle: "Créations",
       sectionCount: (count: number) => `${count}`,
       createdAction: "Créer une sortie",
-      participationTitle: "Mes participations",
+      participationTitle: "Rejointes",
       participationAction: "Découvrir",
-      favoriteTitle: "Mes favoris",
+      favoriteTitle: "Favoris",
       favoriteAction: "Découvrir",
       sortLatest: "Plus récent",
       sortOldest: "Plus ancien",
@@ -59,12 +61,12 @@ function getProfileSpaceCopy(locale: string) {
   }
 
   return {
-    createdTitle: "我的发起",
+    createdTitle: "发起",
     sectionCount: (count: number) => `${count}`,
-    createdAction: "发起组局",
-    participationTitle: "我的参与",
+    createdAction: "我要组局",
+    participationTitle: "参与",
     participationAction: "发现活动",
-    favoriteTitle: "我的收藏",
+    favoriteTitle: "收藏",
     favoriteAction: "发现活动",
     sortLatest: "最近",
     sortOldest: "最早",
@@ -83,17 +85,28 @@ function CompactEmptyState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#d8c9b5] bg-white/55 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink">{title}</p>
-        <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
-          {description}
-        </p>
+    <div className="flex flex-col gap-3 rounded-[1.1rem] border border-dashed border-[#8AB68E] bg-white/[0.62] px-4 py-4 shadow-[0_10px_24px_rgba(21,98,64,0.04)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] p-2 ring-1 ring-[#D6D5B2]">
+          <Image
+            src={brand.emptyStateIconPath}
+            alt=""
+            width={36}
+            height={36}
+            className="h-full w-full object-contain"
+          />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#1D1D1B]">{title}</p>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-500">
+            {description}
+          </p>
+        </div>
       </div>
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-[#1D1D1B]"
         >
           {actionLabel}
         </Link>
@@ -256,7 +269,7 @@ export function ProfileActivitySections({
     <section className="space-y-5">
       <DetailSourceRestore sourceKey="profile" />
       {isSelf && tabs.length > 1 ? (
-        <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-10 grid grid-cols-3 gap-2 bg-paper/90 py-2 backdrop-blur md:static md:rounded-2xl md:bg-white/55 md:p-2 md:backdrop-blur-0 md:ring-1 md:ring-black/10">
+        <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-20 grid grid-cols-3 gap-1.5 rounded-[1.35rem] border border-event-border/45 bg-white/88 p-1.5 shadow-[0_12px_28px_rgba(21,98,64,0.08)] backdrop-blur md:static md:gap-2 md:rounded-2xl md:bg-white/72 md:p-2 md:backdrop-blur-0">
           {tabs.map((tab) => {
             const active = activeSection === tab.key;
 
@@ -264,21 +277,23 @@ export function ProfileActivitySections({
               <button
                 key={tab.key}
                 className={cn(
-                  "inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-medium ring-1 transition",
+                  "inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-semibold leading-none ring-1 transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/45 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm",
                   active
-                    ? "bg-clay text-white ring-clay"
-                    : "bg-white text-zinc-700 ring-black/10",
+                    ? "bg-[linear-gradient(135deg,#F1F2EC_0%,#FEFFF9_100%)] text-forest ring-meadow/60 shadow-[0_8px_18px_rgba(21,98,64,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+                    : "bg-transparent text-ink/72 ring-transparent hover:bg-paper hover:text-forest hover:ring-event-border/45",
                 )}
                 onClick={() => onActiveSectionChange(tab.key)}
                 type="button"
               >
-                <span className="min-w-0 truncate">{tab.title}</span>
+                <span className="min-w-0 whitespace-nowrap text-center">
+                  {tab.title}
+                </span>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-1.5 py-0.5 text-xs",
+                    "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none",
                     active
-                      ? "bg-white/20 text-white"
-                      : "bg-zinc-100 text-zinc-500",
+                      ? "bg-white text-forest ring-1 ring-meadow/35"
+                      : "bg-sand/70 text-forest/70",
                   )}
                 >
                   {tab.count}
@@ -324,6 +339,7 @@ export function ProfileActivitySections({
                     activity={activity}
                     isOwnActivity={isSelf}
                     locale={locale}
+                    mobileDense
                     sourceSurface="profile"
                     detailSourceKey="profile"
                     detailSourceState={{ section: "created", sortDirection }}
@@ -425,9 +441,11 @@ export function ProfileActivitySections({
                     {sortedFavoriteActivities.map((favorite) => (
                       <ActivityCard
                         key={favorite.id}
+                        actionContext="profile"
                         activity={favorite.activity}
                         isAuthenticated={isAuthenticated}
                         locale={locale}
+                        mobileDense
                         showFavoriteButton
                         showPrimaryAction={
                           !isPublicEventCard(favorite.activity)

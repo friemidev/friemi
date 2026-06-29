@@ -18,6 +18,18 @@ const defaultDescription = brand.description;
 export const generalPageShareDescription =
   "搭子·活动·组局，找你所需，探你所想，生活与快乐就在下一站等你！";
 
+export function getGeneralPageShareDescription(locale: string) {
+  if (locale === "fr") {
+    return "Découvrez des sorties, lancez un groupe et retrouvez des amis autour de vous.";
+  }
+
+  if (locale === "en") {
+    return "Discover activities, start crews, and bring friends together nearby.";
+  }
+
+  return generalPageShareDescription;
+}
+
 type HeaderGetter = {
   get(name: string): string | null;
 };
@@ -150,12 +162,17 @@ export function resolveShareImageUrl(
 
 export function truncateShareText(value: string, maxLength: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
+  const ellipsis = "…";
 
   if (normalized.length <= maxLength) {
     return normalized;
   }
 
-  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+  if (maxLength <= 0) {
+    return "";
+  }
+
+  return `${normalized.slice(0, maxLength - ellipsis.length).trimEnd()}${ellipsis}`;
 }
 
 export function getShareDescription({

@@ -13,6 +13,7 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { brand } from "@/lib/brand";
@@ -252,106 +253,106 @@ const coCreatorsCopy = {
   },
   fr: {
     metadata: {
-      title: "Programme co-createurs FRIEMI",
+      title: "Programme co-créateurs FRIEMI",
       description:
-        "Transformez des sorties ponctuelles en communaute durable, visible et facile a partager.",
+        "Transformez des sorties ponctuelles en communauté durable, visible et facile à partager.",
     },
     hero: {
-      badge: "Programme co-createurs FRIEMI",
-      eyebrow: "Que peut apporter FRIEMI aux co-createurs ?",
-      title: "Transformez vos petites sorties en communaute qui grandit.",
+      badge: "Programme co-créateurs FRIEMI",
+      eyebrow: "Que peut apporter FRIEMI aux co-créateurs ?",
+      title: "Transformez vos petites sorties en communauté qui grandit.",
       description:
-        "Rendez vos activites plus faciles a partager, a rejoindre, a reutiliser, et a transformer en image personnelle plus claire.",
+        "Rendez vos activités plus faciles à partager, à rejoindre, à réutiliser, et à transformer en image personnelle plus claire.",
     },
-    flowSteps: ["Invitation eparse", "Page claire", "Memoire de communaute"],
+    flowSteps: ["Invitation éparse", "Page claire", "Mémoire de communauté"],
     flowSummary:
-      "Commencez par une activite, puis construisez votre style d'organisation, vos habitues et une identite de createur partageable.",
+      "Commencez par une activité, puis construisez votre style d'organisation, vos habitués et une identité de créateur partageable.",
     core: {
-      eyebrow: "Idee centrale",
-      title: "Faire de l'organisation d'activites une force qui se repete.",
+      eyebrow: "Idée centrale",
+      title: "Faire de l'organisation d'activités une force qui se répète.",
       description:
-        "Votre activite n'est plus seulement une annonce ponctuelle. Elle devient une entree partageable, reutilisable et facile a rejoindre.",
+        "Votre activité n'est plus seulement une annonce ponctuelle. Elle devient une entrée partageable, réutilisable et facile à rejoindre.",
     },
     benefits: [
       {
         title: "Partageable",
         subtitle: "Un lien clair pour chaque canal",
         description:
-          "Remplacez les messages eparpilles par une page complete, facile a partager dans les groupes, Moments, Xiaohongshu, Instagram et ailleurs.",
+          "Remplacez les messages éparpillés par une page complète, facile à partager dans les groupes, Moments, Xiaohongshu, Instagram et ailleurs.",
       },
       {
         title: "Plus pro",
         subtitle: "Une page qui inspire confiance",
         description:
-          "Heure, lieu, places, prix, regles et inscription sont presentes au meme endroit pour que chacun comprenne vite l'activite.",
+          "Heure, lieu, places, prix, règles et inscription sont présentés au même endroit pour que chacun comprenne vite l'activité.",
       },
       {
         title: "Inscription simple",
-        subtitle: "Moins de messages prives",
+        subtitle: "Moins de messages privés",
         description:
-          "Collectez les informations et gerez les participants sans refaire les memes messages ni compter les places a la main.",
+          "Collectez les informations et gérez les participants sans refaire les mêmes messages ni compter les places à la main.",
       },
       {
-        title: "Reutilisable",
-        subtitle: "Des modeles pour les sorties regulieres",
+        title: "Réutilisable",
+        subtitle: "Des modèles pour les sorties régulières",
         description:
-          "Transformez vos activites recurrentes en modeles pour ne pas recommencer depuis zero a chaque nouvelle edition.",
+          "Transformez vos activités récurrentes en modèles pour ne pas recommencer depuis zéro à chaque nouvelle édition.",
       },
       {
         title: "Relations durables",
-        subtitle: "Historique, habitues et communaute",
+        subtitle: "Historique, habitués et communauté",
         description:
-          "Chaque activite peut enrichir votre historique, vos relations avec les participants et votre petite communaute.",
+          "Chaque activité peut enrichir votre historique, vos relations avec les participants et votre petite communauté.",
       },
       {
         title: "IP plus forte",
-        subtitle: "Un style de createur plus visible",
+        subtitle: "Un style de créateur plus visible",
         description:
-          "Avec des activites regulieres, une identite de host visible et des retours accumules, vous devenez plus qu'une personne qui organise parfois.",
+          "Avec des activités régulières, une identité de host visible et des retours accumulés, vous devenez plus qu'une personne qui organise parfois.",
       },
       {
-        title: "Identite",
-        subtitle: "Reconnaissance et priorite",
+        title: "Identité",
+        subtitle: "Reconnaissance et priorité",
         description:
-          "Obtenez l'identite de co-createur FRIEMI, une reconnaissance precoce, plus de visibilite, un acces a la co-creation produit et de futures opportunites.",
+          "Obtenez l'identité de co-créateur FRIEMI, une reconnaissance précoce, plus de visibilité, un accès à la co-création produit et de futures opportunités.",
       },
     ],
     ip: {
       eyebrow: "Une marque personnelle plus claire",
-      title: "Aidez les autres a mieux vous retenir et vous faire confiance.",
+      title: "Aidez les autres à mieux vous retenir et vous faire confiance.",
       description:
-        "FRIEMI transforme des impressions dispersees en une image de createur plus claire, plus professionnelle et plus facile a partager.",
+        "FRIEMI transforme des impressions dispersées en une image de créateur plus claire, plus professionnelle et plus facile à partager.",
       examples: [
-        "Vous etes la personne qui fait vivre le club de lecture.",
-        "Vous etes connu pour des soirees jeux bien organisees.",
-        "Vous organisez des balades urbaines et des sorties cafe avec gout.",
-        "Vous etes la personne qui rassemble les autres.",
+        "Vous êtes la personne qui fait vivre le club de lecture.",
+        "Vous êtes connu pour des soirées jeux bien organisées.",
+        "Vous organisez des balades urbaines et des sorties café avec goût.",
+        "Vous êtes la personne qui rassemble les autres.",
       ],
     },
     recruitment: {
       eyebrow: "Version pour page de recrutement",
       lines: [
-        "Utilisez une page claire au lieu de recopier le meme texte dans les groupes.",
-        "Affichez heure, lieu, prix, places, regles et inscription dans un format fiable.",
-        "Reduisez les messages prives, les listes manuelles et les confirmations repetees.",
-        "Utilisez des modeles et l'historique pour ne pas repartir de zero.",
-        "Gardez la trace des participants, des activites rejointes et des relations qui se construisent.",
-        "Construisez une identite de host reconnaissable grace a des activites coherentes.",
-        "Profitez d'une reconnaissance precoce, d'une meilleure visibilite, de la co-creation produit et de futures collaborations.",
+        "Utilisez une page claire au lieu de recopier le même texte dans les groupes.",
+        "Affichez heure, lieu, prix, places, règles et inscription dans un format fiable.",
+        "Réduisez les messages privés, les listes manuelles et les confirmations répétées.",
+        "Utilisez des modèles et l'historique pour ne pas repartir de zéro.",
+        "Gardez la trace des participants, des activités rejointes et des relations qui se construisent.",
+        "Construisez une identité de host reconnaissable grâce à des activités cohérentes.",
+        "Profitez d'une reconnaissance précoce, d'une meilleure visibilité, de la co-création produit et de futures collaborations.",
       ],
     },
     poster: {
       eyebrow: "Version courte pour affiche",
-      title: "Que gagnez-vous en devenant co-createur FRIEMI ?",
+      title: "Que gagnez-vous en devenant co-créateur FRIEMI ?",
     },
     final: {
-      eyebrow: "Mots-cles finaux",
+      eyebrow: "Mots-clés finaux",
       title:
-        "Partageable | Plus pro | Inscription simple | Reutilisable | Relations durables | IP plus forte | Identite",
+        "Partageable | Plus pro | Inscription simple | Réutilisable | Relations durables | IP plus forte | Identité",
       description:
-        "Transformez des sorties ponctuelles en communaute cumulative ; transformez votre image personnelle en marque de createur plus claire.",
+        "Transformez des sorties ponctuelles en communauté cumulative ; transformez votre image personnelle en marque de créateur plus claire.",
     },
-    cta: "Voir les activites",
+    cta: "Voir les activités",
   },
 } as const;
 
@@ -388,7 +389,7 @@ function getActivitiesPath(locale: string) {
 
 function NumberBadge({ value }: { value: number }) {
   return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#d88d72] text-xs font-bold text-white">
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F09182] text-xs font-bold text-white">
       {value}
     </span>
   );
@@ -402,7 +403,7 @@ function SectionEyebrow({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-[#a85f40] ring-1 ring-[#ddcdb1]">
+    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
       {icon}
       {children}
     </div>
@@ -411,7 +412,7 @@ function SectionEyebrow({
 
 function LocalizedLogoBadge({ label }: { label: string }) {
   return (
-    <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#5f4935] ring-1 ring-[#ddcdb1]">
+    <div className="inline-flex w-fit items-center gap-3 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
       <Image
         alt=""
         className="h-7 w-7 object-contain"
@@ -433,10 +434,10 @@ function FlowCard({
 }) {
   return (
     <div
-      className="co-creator-flow-card flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-[#fffaf2] px-4 ring-1 ring-[#e5d5b9]"
+      className="co-creator-flow-card flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-[#FFF5E6] px-4 ring-1 ring-[#D6D5B2]"
       style={{ animationDelay: getIndexedAnimationDelay(index) }}
     >
-      <span className="text-sm font-semibold text-[#47382b]">{label}</span>
+      <span className="text-sm font-semibold text-[#1D1D1B]">{label}</span>
       <NumberBadge value={getOneBasedIndex(index)} />
     </div>
   );
@@ -453,15 +454,15 @@ function BenefitRow({
 
   return (
     <article
-      className="co-creator-benefit-row grid gap-3 border-b border-[#ecdeca] p-3 last:border-b-0 sm:grid-cols-[2.5rem_minmax(7rem,0.42fr)_minmax(0,1fr)] sm:items-center"
+      className="co-creator-benefit-row grid gap-3 border-b border-[#D6D5B2] p-3 last:border-b-0 sm:grid-cols-[2.5rem_minmax(7rem,0.42fr)_minmax(0,1fr)] sm:items-center"
       key={benefit.title}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#fff4ea] text-[#a85f40] ring-1 ring-[#e7c5aa]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">
         <h3 className="text-base font-semibold text-ink">{benefit.title}</h3>
-        <p className="mt-0.5 text-sm font-medium leading-5 text-[#856141]">
+        <p className="mt-0.5 text-sm font-medium leading-5 text-[#156240]">
           {benefit.subtitle}
         </p>
       </div>
@@ -480,8 +481,8 @@ function RecruitmentLine({
   text: string;
 }) {
   return (
-    <div className="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white p-3 ring-1 ring-[#dfcfb5]">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff4ea] text-sm font-bold text-[#9a593b] ring-1 ring-[#e7c5aa]">
+    <div className="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white p-3 ring-1 ring-[#D6D5B2]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]">
         {getOneBasedIndex(index)}
       </span>
       <p className="self-center text-sm leading-6 text-zinc-700">{text}</p>
@@ -491,7 +492,7 @@ function RecruitmentLine({
 
 function KeywordPill({ label }: { label: string }) {
   return (
-    <span className="rounded-full bg-[#fff4ea] px-3 py-2 text-sm font-semibold text-[#6b4b35] ring-1 ring-[#e7c5aa]">
+    <span className="rounded-full bg-[#F1F2EC] px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
       {label}
     </span>
   );
@@ -530,7 +531,7 @@ function LocalizedCta({
 }) {
   return (
     <Link
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#111111] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(17,17,17,0.14)] transition hover:bg-[#2a2a2a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#1D1D1B] px-5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(29,29,27,0.14)] transition hover:bg-[#156240] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
       href={href}
     >
       {label}
@@ -562,14 +563,14 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
 
   return (
     <>
-      <PageContainer className="co-creator-page pb-8 pt-4 md:pb-12 md:pt-7">
-        <section className="co-creator-reveal grid gap-5 border-b border-[#ddcdb1] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
+      <PageContainer className="co-creator-page relative isolate overflow-hidden pb-8 pt-4 md:pb-12 md:pt-7">
+        <section className="co-creator-reveal relative z-10 grid gap-5 border-b border-[#D6D5B2] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
           <div className="flex min-w-0 flex-col justify-center gap-5">
             <div className="space-y-4">
               <LocalizedLogoBadge label={t.hero.badge} />
 
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-[#a85f40]">
+                <p className="text-sm font-semibold text-[#156240]">
                   {t.hero.eyebrow}
                 </p>
                 <h1 className="max-w-4xl text-3xl font-semibold leading-tight tracking-normal text-ink sm:text-4xl lg:text-[2.75rem]">
@@ -582,17 +583,10 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <aside className="relative grid content-between gap-5 overflow-hidden rounded-[1.35rem] border border-[#ddcdb1] bg-white p-5 shadow-[0_18px_44px_rgba(96,72,42,0.08)]">
+          <aside className="relative grid content-between gap-5 overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_44px_rgba(29,29,27,0.08)]">
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 border-b border-[#e8d8bd] pb-4">
-                <Image
-                  alt={brand.name}
-                  className="h-auto w-32 object-contain"
-                  height={64}
-                  priority
-                  src={brand.titleImagePath}
-                  width={190}
-                />
+              <div className="flex items-center justify-between gap-4 border-b border-[#D6D5B2] pb-4">
+                <BrandLockup priority size="md" />
               </div>
 
               <div className="grid gap-2.5">
@@ -606,15 +600,15 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
               </div>
             </div>
 
-            <p className="rounded-2xl bg-[#fffaf2] p-4 text-sm font-medium leading-6 text-[#6b5948] ring-1 ring-[#e5d5b9]">
+            <p className="rounded-2xl bg-[#FFF5E6] p-4 text-sm font-medium leading-6 text-[#156240] ring-1 ring-[#D6D5B2]">
               {t.flowSummary}
             </p>
           </aside>
         </section>
 
-        <section className="grid gap-4 py-7 lg:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] lg:gap-5 lg:py-8">
-          <div className="co-creator-reveal rounded-[1.25rem] border border-[#d9c8ad] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(96,72,42,0.08)] lg:sticky lg:top-24 lg:self-start">
-            <p className="text-sm font-semibold text-[#a85f40]">
+        <section className="relative z-10 grid gap-4 py-7 lg:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] lg:gap-5 lg:py-8">
+          <div className="co-creator-reveal rounded-[1.25rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)] lg:sticky lg:top-24 lg:self-start">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.core.eyebrow}
             </p>
             <h2 className="mt-3 text-xl font-semibold leading-snug tracking-normal">
@@ -628,7 +622,7 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <div className="co-creator-reveal rounded-[1.25rem] border border-[#dfcfb5] bg-white p-3 shadow-[0_18px_44px_rgba(96,72,42,0.06)]">
+          <div className="co-creator-reveal rounded-[1.25rem] border border-[#D6D5B2] bg-white p-3 shadow-[0_18px_44px_rgba(29,29,27,0.06)]">
             {t.benefits.map((benefit, index) => (
               <BenefitRow
                 benefit={benefit}
@@ -639,7 +633,7 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           </div>
         </section>
 
-        <section className="co-creator-reveal grid gap-5 border-y border-[#ddcdb1] py-7 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center lg:gap-7 lg:py-8">
+        <section className="co-creator-reveal relative z-10 grid gap-5 border-y border-[#D6D5B2] py-7 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-center lg:gap-7 lg:py-8">
           <div className="space-y-4">
             <SectionEyebrow icon={<Sparkles className="h-4 w-4" />}>
               {t.ip.eyebrow}
@@ -655,19 +649,19 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           <div className="grid gap-3 sm:grid-cols-2">
             {t.ip.examples.map((example, index) => (
               <div
-                className="flex min-h-16 items-center gap-3 rounded-2xl bg-white px-4 text-sm font-semibold leading-6 text-zinc-800 ring-1 ring-[#dfcfb5]"
+                className="flex min-h-16 items-center gap-3 rounded-2xl bg-white px-4 text-sm font-semibold leading-6 text-zinc-800 ring-1 ring-[#D6D5B2]"
                 key={getExampleKey(example, index)}
               >
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[#d88d72]" />
+                <span className="h-2 w-2 shrink-0 rounded-full bg-[#F09182]" />
                 <span>{example}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="co-creator-reveal grid gap-5 py-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)] lg:items-start lg:gap-5 lg:py-8">
+        <section className="co-creator-reveal relative z-10 grid gap-5 py-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)] lg:items-start lg:gap-5 lg:py-8">
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-[#a85f40]">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.recruitment.eyebrow}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -681,8 +675,8 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
             </div>
           </div>
 
-          <aside className="rounded-[1.25rem] border border-[#d9c8ad] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(96,72,42,0.08)]">
-            <p className="text-sm font-semibold text-[#a85f40]">
+          <aside className="rounded-[1.25rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)]">
+            <p className="text-sm font-semibold text-[#156240]">
               {t.poster.eyebrow}
             </p>
             <h2 className="mt-3 text-xl font-semibold leading-snug tracking-normal">
@@ -699,10 +693,10 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
           </aside>
         </section>
 
-        <section className="co-creator-reveal rounded-[1.4rem] border border-[#d9c8ad] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(96,72,42,0.08)] md:p-6">
+        <section className="co-creator-reveal relative z-10 rounded-[1.4rem] border border-[#8AB68E] bg-white p-5 text-ink shadow-[0_18px_44px_rgba(29,29,27,0.08)] md:p-6">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="space-y-2.5">
-              <p className="text-sm font-bold text-[#a85f40]">
+              <p className="text-sm font-bold text-[#156240]">
                 {t.final.eyebrow}
               </p>
               <h2 className="text-xl font-semibold leading-snug tracking-normal md:text-2xl">

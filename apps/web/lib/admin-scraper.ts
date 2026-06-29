@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   buildFingerprint,
   scrapeActivities,
-  type ScraperSource,
   type ScrapedActivity,
+  type ScraperSource,
 } from "@chill-club/scraper-core";
 import { geocodeActivitiesMissingCoordinates } from "@/lib/nominatim-geocode";
 
@@ -88,16 +88,7 @@ type AdminActivityInput = {
   description: string;
   itinerary?: string | null;
   type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
-  category:
-    | "BOARD_GAME"
-    | "MOVIE"
-    | "MUSIC"
-    | "SPORTS"
-    | "TRAVEL"
-    | "FOOD"
-    | "EXHIBITION"
-    | "THEATER"
-    | "OTHER";
+  category: ScrapedActivity["category"];
   city: string;
   destination?: string | null;
   address: string;

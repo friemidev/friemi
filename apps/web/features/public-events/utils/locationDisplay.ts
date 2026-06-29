@@ -79,7 +79,7 @@ function getFallbackLabels(locale: string) {
 
   if (normalizedLocale === "fr") {
     return {
-      coordinateLabel: "Coordonnees carte",
+      coordinateLabel: "Coordonnées carte",
       genericWithMap:
         "Point carte disponible ; adresse exacte selon la page officielle",
       genericWithoutMap: "Adresse exacte selon la page officielle",

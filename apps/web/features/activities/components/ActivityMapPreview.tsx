@@ -69,8 +69,8 @@ export function ActivityMapPreview({
     <div
       className={
         className
-          ? `overflow-hidden rounded-lg border border-black/10 bg-white ${className}`
-          : "overflow-hidden rounded-lg border border-black/10 bg-white"
+          ? `overflow-hidden rounded-lg border border-[#D6D5B2] bg-white ${className}`
+          : "overflow-hidden rounded-lg border border-[#D6D5B2] bg-white"
       }
     >
       <div className="flex items-start justify-between gap-3 px-4 py-3">
@@ -82,7 +82,7 @@ export function ActivityMapPreview({
           <p className="mt-1 truncate text-xs text-zinc-500">{address}</p>
         </div>
         <a
-          className="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white px-2.5 text-xs font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
+          className="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white px-2.5 text-xs font-medium text-ink ring-1 ring-[#D6D5B2] transition hover:bg-[#FEFFF9]"
           href={googleMapsUrl}
           target="_blank"
           rel="noreferrer"
@@ -113,7 +113,7 @@ export function ActivityMapPreview({
           </p>
         </>
       ) : (
-        <div className="border-t border-black/5 bg-[#fbf7ef] px-4 py-6 text-center text-sm leading-6 text-zinc-600">
+        <div className="border-t border-[#D6D5B2] bg-[#FEFFF9] px-4 py-6 text-center text-sm leading-6 text-zinc-600">
           <MapPin className="mx-auto mb-2 h-5 w-5 text-moss" />
           <p>{address}</p>
         </div>

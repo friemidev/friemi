@@ -19,6 +19,7 @@ import {
 import { validateActivitySchedule } from "@/features/activities/utils/validateActivitySchedule";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
+import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -68,6 +69,7 @@ export async function updateActivityAction(
       id: true,
       endAt: true,
       shareToken: true,
+      sourcePayload: true,
       startAt: true,
       status: true,
       participants: {
@@ -236,6 +238,10 @@ export async function updateActivityAction(
           priceText: result.data.priceText,
           ticketUrl: result.data.ticketUrl ?? null,
           ticketLabel: result.data.ticketLabel ?? null,
+          sourcePayload: mergeActivityAddressPrivacy(
+            editableActivity.sourcePayload,
+            result.data.hideAddressFromNonParticipants,
+          ),
           shareEnabled: result.data.visibility === "PRIVATE",
           shareToken:
             result.data.visibility === "PRIVATE"

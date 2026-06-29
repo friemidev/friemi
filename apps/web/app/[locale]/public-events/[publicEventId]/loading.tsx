@@ -5,8 +5,8 @@ export default function PublicEventDetailLoading() {
   return (
     <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">
       <div className="h-5 w-32 animate-pulse rounded bg-white/70" />
-      <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] border border-black/10 bg-[#dbe8ec] p-4 shadow-[0_18px_42px_rgba(58,49,34,0.1)] sm:p-6 md:min-h-[26rem]">
-        <div className="absolute inset-0 animate-pulse bg-[#dbe8ec]" />
+      <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] border border-black/10 bg-[#F1F2EC] p-4 shadow-[0_18px_42px_rgba(29,29,27,0.1)] sm:p-6 md:min-h-[26rem]">
+        <div className="absolute inset-0 animate-pulse bg-[#F1F2EC]" />
         <div className="relative max-w-4xl space-y-4 rounded-[1.25rem] bg-white/35 p-3 ring-1 ring-white/30 backdrop-blur-sm sm:p-4">
           <div className="flex gap-2">
             <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />

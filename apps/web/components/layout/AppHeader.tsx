@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
@@ -10,14 +10,16 @@ import {
   GlobalSearchIconLink,
 } from "@/features/search/components/GlobalSearchForm";
 import { NotificationHeaderLink } from "@/features/notifications/components/NotificationHeaderLink";
-import { brand } from "@/lib/brand";
 
 type AppHeaderProps = {
   locale: string;
   showNotificationNav?: boolean;
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
+  viewerContactEmail?: string | null;
+  viewerEmail?: string | null;
   viewerFriendCode?: string | null;
+  viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
@@ -28,45 +30,32 @@ export function AppHeader({
   showNotificationNav = false,
   showAdminNav = false,
   unreadNotificationCount = 0,
+  viewerContactEmail = null,
+  viewerEmail = null,
   viewerFriendCode = null,
+  viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
 }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#d8cdbb] bg-paper shadow-[0_2px_10px_rgba(36,30,20,0.06)]">
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
+      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4 lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
-          className="flex shrink-0 items-center gap-2"
+          className="group flex shrink-0 items-center gap-2"
           prefetch={false}
         >
-          <span className="flex h-11 w-[128px] items-center justify-start gap-2 overflow-hidden sm:w-[144px]">
-            <Image
-              src={brand.logoIconPath}
-              alt=""
-              width={44}
-              height={44}
-              className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
-              priority
-            />
-            <Image
-              src={brand.titleImagePath}
-              alt={brand.name}
-              width={96}
-              height={32}
-              className="h-auto w-[76px] object-contain sm:w-[88px]"
-              priority
-            />
-          </span>
-          <span className="sr-only">
-            {brand.name}
-          </span>
+          <BrandLockup
+            className="transition duration-200 group-hover:scale-[1.02] max-[900px]:h-8 max-[900px]:w-[6.8rem]"
+            priority
+            size="md"
+          />
         </Link>
 
         <DesktopNav locale={locale} />
 
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-1 max-[900px]:gap-0.5 lg:gap-2">
           <GlobalSearchForm
             locale={locale}
             className="hidden min-[1480px]:flex"
@@ -83,7 +72,10 @@ export function AppHeader({
           <UserMenu
             locale={locale}
             showAdminLink={showAdminNav}
+            viewerContactEmail={viewerContactEmail}
+            viewerEmail={viewerEmail}
             viewerFriendCode={viewerFriendCode}
+            viewerPhone={viewerPhone}
             viewerWechatId={viewerWechatId}
             viewerNickname={viewerNickname}
             incomingFriendRequests={incomingFriendRequests}

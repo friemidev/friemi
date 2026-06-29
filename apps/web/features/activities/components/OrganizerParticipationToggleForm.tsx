@@ -22,16 +22,16 @@ const initialState: ToggleOrganizerParticipationState = {};
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
-      closed: "Cette activite est terminee ou annulee. Votre statut ne peut plus etre change.",
+      closed: "Cette activité est terminée ou annulée. Votre statut ne peut plus être changé.",
       participatingDescription:
         "Vous comptez actuellement dans le total des participants.",
       participatingTitle: "Vous participez",
       submitParticipating: "Je participe",
       submitSkipping: "Je ne participe pas",
-      submittingParticipating: "Mise a jour...",
-      submittingSkipping: "Mise a jour...",
+      submittingParticipating: "Mise à jour...",
+      submittingSkipping: "Mise à jour...",
       skippedDescription:
-        "Vous n'etes pas compte dans le total des participants pour l'instant.",
+        "Vous n'êtes pas compté dans le total des participants pour l'instant.",
       skippedTitle: "Vous ne participez pas",
       title: "Votre place",
     };
@@ -83,7 +83,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="h-10 w-full gap-2 rounded-full border border-[#d9c6ad] bg-white text-[#6f5434] shadow-none hover:bg-[#fff8ed]"
+      className="h-10 w-full gap-2 rounded-full border border-[#8AB68E] bg-white text-[#156240] shadow-none hover:bg-[#FEFFF9]"
       disabled={pending}
     >
       {pending ? (
@@ -144,7 +144,7 @@ export function OrganizerParticipationToggleForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-2 rounded-2xl border border-[#e5d7bf] bg-white/80 p-3">
+    <form action={formAction} className="grid gap-2 rounded-2xl border border-[#D6D5B2] bg-white/80 p-3">
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
       <input
@@ -153,7 +153,7 @@ export function OrganizerParticipationToggleForm({
         value={isParticipating ? "not_participating" : "participating"}
       />
       <p className="text-sm font-semibold text-ink">{copy.title}</p>
-      <div className="rounded-xl border border-[#eadcca] bg-[#fffaf2] px-3 py-3 text-sm">
+      <div className="rounded-xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-3 text-sm">
         <p className="font-medium text-ink">
           {isParticipating ? copy.participatingTitle : copy.skippedTitle}
         </p>

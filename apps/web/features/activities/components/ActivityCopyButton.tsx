@@ -152,7 +152,7 @@ export function ActivityCopyButton({
             onClick={() => setManualCopyOpen(false)}
             type="button"
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-[#dccba8] bg-[#fffaf2] p-4 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-[#8AB68E] bg-[#FFF5E6] p-4 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">{label}</p>
@@ -162,7 +162,7 @@ export function ActivityCopyButton({
               </div>
               <button
                 aria-label="Close"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-500 ring-1 ring-[#dccba8] transition hover:text-ink"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-500 ring-1 ring-[#8AB68E] transition hover:text-ink"
                 onClick={() => setManualCopyOpen(false)}
                 type="button"
               >
@@ -171,7 +171,7 @@ export function ActivityCopyButton({
             </div>
             <textarea
               autoFocus
-              className="mt-3 max-h-44 min-h-24 w-full resize-none rounded-xl border border-[#dccba8] bg-white p-3 text-sm leading-6 text-zinc-800 outline-none focus:ring-2 focus:ring-[#d88d72]/35"
+              className="mt-3 max-h-44 min-h-24 w-full resize-none rounded-xl border border-[#8AB68E] bg-white p-3 text-sm leading-6 text-zinc-800 outline-none focus:ring-2 focus:ring-[#369758]/25"
               onFocus={handleManualTextareaFocus}
               readOnly
               value={value}

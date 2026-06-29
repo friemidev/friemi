@@ -66,6 +66,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           friendCode: profile.friendCode,
           avatarUrl: profile.avatarUrl,
           bio: profile.bio,
+          isCoCreator: profile.isCoCreator,
         }}
       />
     </PageContainer>

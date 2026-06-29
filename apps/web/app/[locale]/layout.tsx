@@ -4,7 +4,9 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { OrientationLockOverlay } from "@/components/layout/OrientationLockOverlay";
 import { MobileNav } from "@/components/navigation/MobileNav";
+import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSectionContext";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
@@ -50,30 +52,40 @@ export default async function LocaleLayout({
       <ViewerProfileProvider initialNickname={viewerProfile?.nickname ?? null}>
         <NotificationBadgeProvider
           enabled={Boolean(viewerProfile)}
-          initialUnreadNotificationCount={0}
+          initialUnreadNotificationCount={
+            viewerState.initialUnreadNotificationCount
+          }
         >
-          <div className="min-h-screen pb-24 md:pb-0">
-            <RouteProgress />
-            <AppHeader
-              locale={locale}
-              showNotificationNav={Boolean(viewerProfile)}
-              showAdminNav={viewerState.showAdminNav}
-              viewerFriendCode={viewerProfile?.friendCode ?? null}
-              viewerWechatId={viewerProfile?.wechatId ?? null}
-              viewerNickname={viewerProfile?.nickname ?? null}
-              incomingFriendRequests={[]}
-              unreadNotificationCount={0}
-            />
-            <MobileScrollProgress />
-            <IdleRoutePrefetcher
-              enabled={Boolean(viewerProfile)}
-              idleDelayMs={4000}
-              locale={locale}
-            />
-            {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
-            {children}
-            <MobileNav locale={locale} />
-          </div>
+          <MobileNavSectionProvider>
+            <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
+              <RouteProgress />
+              <AppHeader
+                locale={locale}
+                showNotificationNav={Boolean(viewerProfile)}
+                showAdminNav={viewerState.showAdminNav}
+                viewerContactEmail={viewerProfile?.contactEmail ?? null}
+                viewerEmail={viewerProfile?.email ?? null}
+                viewerFriendCode={viewerProfile?.friendCode ?? null}
+                viewerPhone={viewerProfile?.phone ?? null}
+                viewerWechatId={viewerProfile?.wechatId ?? null}
+                viewerNickname={viewerProfile?.nickname ?? null}
+                incomingFriendRequests={[]}
+                unreadNotificationCount={
+                  viewerState.initialUnreadNotificationCount
+                }
+              />
+              <MobileScrollProgress />
+              <IdleRoutePrefetcher
+                enabled={Boolean(viewerProfile)}
+                idleDelayMs={4000}
+                locale={locale}
+              />
+              {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
+              {children}
+              <MobileNav locale={locale} />
+            </div>
+            <OrientationLockOverlay locale={locale} />
+          </MobileNavSectionProvider>
         </NotificationBadgeProvider>
       </ViewerProfileProvider>
     </NextIntlClientProvider>

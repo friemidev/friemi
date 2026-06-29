@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
-import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type WechatWebViewGuideProps = {
@@ -25,27 +26,34 @@ type GuideCopy = {
 function getGuideCopy(locale: string): GuideCopy {
   if (locale === "fr") {
     return {
-      eyebrow: "Connexion",
+      eyebrow: "Ouvert dans WeChat",
       title: "Continuez dans le navigateur",
       description:
-        "La connexion Google se termine mieux dans votre navigateur mobile.",
-      arrowHint: "Touchez ici",
-      steps: ["Ouvrez le menu en haut a droite.", "Ouvrir dans le navigateur."],
-      fallback: "Sinon, copiez le lien dans votre navigateur mobile.",
-      copyLink: "Copier",
-      copied: "Lien copie",
+        "La connexion Google doit se terminer dans le navigateur de votre téléphone.",
+      arrowHint: "Menu",
+      steps: [
+        "Touchez le menu ··· en haut à droite.",
+        "Choisissez Ouvrir dans le navigateur.",
+      ],
+      fallback: "Si l'option n'apparaît pas, copiez le lien.",
+      copyLink: "Copier le lien",
+      copied: "Lien copié",
     };
   }
 
   if (locale === "en") {
     return {
-      eyebrow: "Sign in",
+      eyebrow: "Opened in WeChat",
       title: "Continue in your browser",
-      description: "Google sign-in works best in your phone browser.",
-      arrowHint: "Tap here",
-      steps: ["Open the top-right menu.", "Choose Open in browser."],
-      fallback: "Or copy this link into your phone browser.",
-      copyLink: "Copy",
+      description:
+        "Google sign-in needs to finish in your phone browser.",
+      arrowHint: "Menu",
+      steps: [
+        "Tap the top-right ··· menu.",
+        "Choose Open in browser.",
+      ],
+      fallback: "If you do not see that option, copy this link.",
+      copyLink: "Copy link",
       copied: "Link copied",
     };
   }
@@ -53,10 +61,10 @@ function getGuideCopy(locale: string): GuideCopy {
   return {
     eyebrow: "微信内打开",
     title: "用浏览器继续登录",
-    description: "Google 登录建议在手机浏览器中完成。",
-    arrowHint: "点这里",
-    steps: ["打开右上角菜单。", "选择「在浏览器中打开」。"],
-    fallback: "找不到入口时，复制链接到手机浏览器。",
+    description: "Google 登录需要在手机浏览器中完成。",
+    arrowHint: "菜单",
+    steps: ["点击右上角 ··· 菜单。", "选择「在浏览器中打开」。"],
+    fallback: "找不到入口时，可以复制链接。",
     copyLink: "复制链接",
     copied: "链接已复制",
   };
@@ -102,49 +110,47 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
   }
 
   return (
-    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[#f7f2e8] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
-      <div className="pointer-events-none fixed right-3 top-2 flex flex-col items-end text-moss">
-        <ArrowUpRight className="h-9 w-9 drop-shadow-sm" />
-        <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium shadow-sm ring-1 ring-black/10">
+    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[linear-gradient(165deg,#FEFFF9_0%,#F1F2EC_52%,#FFF5E6_100%)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+      <BrandBackdrop
+        className="-right-56 top-28 h-[29rem] w-[19rem] opacity-20"
+        imageClassName="object-contain object-top"
+        variant="mobile-frame"
+      />
+      <div className="pointer-events-none fixed right-10 top-3 z-20 flex flex-col items-end text-forest">
+        <ArrowUpRight className="h-8 w-8 drop-shadow-sm" />
+        <span className="-mt-1 rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold shadow-[0_8px_18px_rgba(21,98,64,0.12)] ring-1 ring-sage/55">
           {copy.arrowHint}
         </span>
       </div>
 
-      <div className="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-xs flex-col py-8">
-        <div className="space-y-6 pt-[7svh]">
-          <div className="flex items-center gap-3">
-            <img
-              src={brand.logoIconPath}
-              alt=""
-              className="h-16 w-16 rounded-full border border-black/10 bg-white object-contain shadow-sm"
-            />
-            <img
-              src={brand.titleImagePath}
-              alt={brand.name}
-              className="h-auto w-28 object-contain"
-            />
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-[22rem] flex-col py-8">
+        <div className="space-y-6 pt-[min(10svh,5.5rem)]">
+          <div className="relative z-10 flex items-center gap-3">
+            <BrandLockup size="lg" />
           </div>
 
-          <header className="space-y-3 pr-12">
-            <p className="text-xs font-medium text-moss">{copy.eyebrow}</p>
-            <h1 className="text-2xl font-semibold leading-tight tracking-normal text-ink">
+          <header className="relative z-10 space-y-3 pr-14">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-forest">
+              {copy.eyebrow}
+            </p>
+            <h1 className="text-[1.75rem] font-semibold leading-[1.08] tracking-normal text-ink">
               {copy.title}
             </h1>
-            <p className="text-sm leading-5 text-zinc-600">
+            <p className="max-w-[17rem] text-sm leading-6 text-forest/78">
               {copy.description}
             </p>
           </header>
 
-          <div className="space-y-2">
+          <div className="relative z-10 overflow-hidden rounded-[1.35rem] border border-sage/45 bg-white/90 p-2 shadow-[0_18px_38px_rgba(21,98,64,0.08)] backdrop-blur">
             {copy.steps.map((step, index) => (
               <div
                 key={step}
-                className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-lg border border-black/10 bg-[#faf8f1] p-2.5"
+                className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-2 rounded-[1rem] px-2.5 py-3"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white shadow-[0_8px_16px_rgba(29,29,27,0.16)]">
                   {index + 1}
                 </span>
-                <p className="self-center text-sm leading-5 text-zinc-700">
+                <p className="text-sm font-medium leading-5 text-ink/82">
                   {step}
                 </p>
               </div>
@@ -152,16 +158,16 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
           </div>
         </div>
 
-        <div className="mt-auto space-y-3 pt-8">
-          <p className="rounded-lg bg-[#eef4ef] px-3 py-2 text-xs leading-5 text-moss">
+        <div className="relative z-10 mt-auto space-y-3 pt-10">
+          <p className="rounded-2xl bg-white/72 px-3.5 py-3 text-xs font-medium leading-5 text-forest ring-1 ring-sage/35">
             {copy.fallback}
           </p>
           <Button
             type="button"
             onClick={handleCopy}
             className={cn(
-              "h-11 w-full gap-2 rounded-full",
-              copied ? "bg-moss hover:bg-moss" : null,
+              "h-12 w-full gap-2 rounded-full bg-ink text-sm font-semibold text-white shadow-[0_14px_30px_rgba(29,29,27,0.18)] hover:bg-ink/90",
+              copied ? "bg-forest hover:bg-forest" : null,
             )}
           >
             {copied ? (

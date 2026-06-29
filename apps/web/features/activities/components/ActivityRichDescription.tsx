@@ -114,7 +114,7 @@ export function ActivityRichDescription({
           <Fragment key={`${index}-${part.value}`}>
             <span className="inline-flex max-w-full items-center gap-1 align-baseline">
               <AnalyticsExternalLink
-                className="inline-flex min-w-0 max-w-full items-center gap-1 break-all rounded-md px-1 font-medium text-[#8a4d35] underline decoration-[#d8a083] underline-offset-4 transition hover:bg-[#fff4e8] hover:text-[#6f3b28]"
+                className="inline-flex min-w-0 max-w-full items-center gap-1 break-all rounded-md px-1 font-medium text-[#B5301F] underline decoration-[#F09182] underline-offset-4 transition hover:bg-[#FFF5E6] hover:text-[#B5301F]"
                 event={{
                   name: "public_event_source_clicked",
                   entityId,

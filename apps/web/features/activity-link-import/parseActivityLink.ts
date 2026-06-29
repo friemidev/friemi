@@ -32,9 +32,9 @@ const requestTimeoutMs = 12_000;
 const maxHtmlLength = 2_000_000;
 
 const supportedHosts: [string, string][] = [
-  ["quefaire.paris.fr", "Que Faire a Paris"],
+  ["quefaire.paris.fr", "Que Faire à Paris"],
   ["opendata.paris.fr", "Paris OpenData"],
-  ["sortiraparis.com", "Sortir a Paris"],
+  ["sortiraparis.com", "Sortir à Paris"],
   ["playinparis.com", "Play in Paris"],
   ["eventbrite.fr", "Eventbrite"],
   ["billetweb.fr", "Billetweb"],
@@ -890,7 +890,7 @@ function mapCategory(input: string): ActivityCategory {
     /théâtre|theatre|theater|pièce|comédie|舞台剧|戏剧/.test(searchable) &&
     !/\bexpos\b|exposition/.test(searchable)
   ) {
-    return "THEATER";
+    return "AUDIO_VISUAL";
   }
 
   if (/candlelight|concert|musique|music|festival|danse|quatuor/.test(searchable)) {
@@ -902,11 +902,11 @@ function mapCategory(input: string): ActivityCategory {
       searchable,
     )
   ) {
-    return "EXHIBITION";
+    return "ART";
   }
 
   if (/cin[eé]ma|\bfilm\b|movie|projection/.test(searchable) && !/candlelight/.test(searchable)) {
-    return "MOVIE";
+    return "AUDIO_VISUAL";
   }
 
   if (/sport|course|running|yoga|fitness|v[eé]lo/.test(searchable)) {
@@ -914,10 +914,12 @@ function mapCategory(input: string): ActivityCategory {
   }
 
   if (
-    /travel|trip|randonn[eé]e|balade|city walk|excursion|\bvoyage\b|旅行/.test(
-      searchable,
-    )
+    /balade|city walk|promenade|walk|闲逛|漫步|散步/.test(searchable)
   ) {
+    return "WANDER";
+  }
+
+  if (/travel|trip|randonn[eé]e|excursion|\bvoyage\b|旅行/.test(searchable)) {
     return "TRAVEL";
   }
 
@@ -925,6 +927,14 @@ function mapCategory(input: string): ActivityCategory {
     /food|cuisine|repas|restaurant|march[eé]|d[eé]gustation/.test(searchable)
   ) {
     return "FOOD";
+  }
+
+  if (
+    /workshop|atelier|course|class|lecture|reading|language exchange|成长|学习|读书|讲座/.test(
+      searchable,
+    )
+  ) {
+    return "GROWTH";
   }
 
   return "OTHER";

@@ -59,7 +59,7 @@ export function GlobalSearchUserResults({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 items-center justify-center rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#5b4b3a] ring-1 ring-sand transition hover:bg-white"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
             onClick={() =>
               setExpanded((current) => {
                 const nextExpanded = !current;
@@ -158,7 +158,7 @@ function GlobalSearchUserCard({
               aria-hidden="true"
             />
           </span>
-          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#6b5b48] ring-1 ring-sand">
+          <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">
               {user.friendCode
                 ? `${t.friendCodeLabel} ${user.friendCode}`
@@ -270,7 +270,7 @@ function AddFriendSubmitButton({ locale }: { locale: string }) {
     <button
       type="submit"
       className={cn(
-        "inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-moss px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#465a40] disabled:pointer-events-none disabled:opacity-60",
+        "inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#156240] disabled:pointer-events-none disabled:opacity-60",
         pending ? "cursor-wait" : null,
       )}
       disabled={pending}

@@ -106,7 +106,7 @@ const reportCopy = {
     title: "Report content",
     description: "Tell us what looks wrong. We will review it soon.",
     reasonLabel: "Reason",
-    descriptionLabel: "Details",
+    descriptionLabel: "Détails",
     descriptionPlaceholder: "Optional. Briefly describe what happened",
     descriptionHint:
       "Please do not include phone numbers, addresses, or private details.",

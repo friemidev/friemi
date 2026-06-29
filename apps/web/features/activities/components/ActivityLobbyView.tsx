@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Compass, SlidersHorizontal, X } from "lucide-react";
+import type { ActivityCategory } from "@chill-club/shared";
+import { CalendarPlus, Compass, SlidersHorizontal, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -11,14 +12,16 @@ import {
   type ReactNode,
 } from "react";
 import { PaginationControl } from "@/components/ui/PaginationControl";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
 } from "@/features/navigation/contextualDetailReturn";
-import { getCopy } from "@/lib/copy";
+import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { activityCategoryOptions } from "../utils/activityFilters";
 import type { ActivityCardViewModel } from "../types";
 import { ActivityCard } from "./ActivityCard";
 import { ActivitySwipeDiscovery } from "./ActivitySwipeDiscovery";
@@ -39,8 +42,8 @@ type ActivityLobbyViewProps = {
   favoriteActivities: ActivityCardViewModel[];
   friendHostedActivities: ActivityCardViewModel[];
   friendJoinedActivities: ActivityCardViewModel[];
+  initialCategoryFilter?: ActivityCategory | null;
   starterActivities: ActivityCardViewModel[];
-  swipeActivities: ActivityCardViewModel[];
   locale: string;
 };
 
@@ -60,10 +63,16 @@ type FilterOption = {
 };
 
 type LobbyStatusFilterId = ActivityLobbyFeedStatus;
+type LobbyTypeFilterId = ActivityCategory | "all";
 
 type StatusFilterOption = {
   id: LobbyStatusFilterId;
   count: number | null;
+  label: string;
+};
+
+type TypeFilterOption = {
+  id: LobbyTypeFilterId;
   label: string;
 };
 
@@ -98,6 +107,21 @@ const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
 const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
 const LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS = 2500;
 const LOBBY_DEFERRED_SECTION_STAGGER_MS = 700;
+const CATEGORY_FALLBACK_MIN_RESULTS = 4;
+const CATEGORY_FALLBACK_LIMIT = 4;
+
+const categoryFallbackMap = {
+  FOOD: ["WANDER", "BOARD_GAME", "OTHER"],
+  WANDER: ["TRAVEL", "ART", "FOOD"],
+  AUDIO_VISUAL: ["MUSIC", "ART", "OTHER"],
+  ART: ["AUDIO_VISUAL", "WANDER", "MUSIC"],
+  BOARD_GAME: ["FOOD", "GROWTH", "OTHER"],
+  GROWTH: ["WANDER", "OTHER", "ART"],
+  TRAVEL: ["WANDER", "FOOD", "ART"],
+  MUSIC: ["AUDIO_VISUAL", "ART", "FOOD"],
+  SPORTS: ["WANDER", "GROWTH", "TRAVEL"],
+  OTHER: ["WANDER", "FOOD", "ART"],
+} satisfies Record<ActivityCategory, ActivityCategory[]>;
 
 function scheduleIdleTask(callback: () => void, timeout = 900) {
   if (typeof window === "undefined") {
@@ -175,6 +199,7 @@ type FilterGroupRowProps = {
 type MobileLobbyFilterSheetProps = {
   activeFilter: LobbyFilterId;
   activeStatusFilter: LobbyStatusFilterId;
+  activeTypeFilter: LobbyTypeFilterId;
   failedFilters: Partial<Record<LobbyFilterId, boolean>>;
   filterCopy: ReturnType<typeof getLobbyFilterCopy>;
   filterOptions: FilterOption[];
@@ -184,7 +209,9 @@ type MobileLobbyFilterSheetProps = {
   onClose: () => void;
   onFilterChange: (filter: LobbyFilterId) => void;
   onStatusChange: (status: LobbyStatusFilterId) => void;
+  onTypeChange: (type: LobbyTypeFilterId) => void;
   statusFilterOptions: StatusFilterOption[];
+  typeFilterOptions: TypeFilterOption[];
 };
 
 function getAllLabel(locale: string) {
@@ -205,7 +232,7 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "open":
         return "Publics";
       case "created":
-        return "Creees";
+        return "Créées";
       case "joined":
         return "Rejointes";
       case "favorites":
@@ -261,7 +288,7 @@ function getEmptyCategoryCopy(locale: string) {
     return {
       title: "Rien ici pour le moment.",
       description:
-        "Essayez une autre categorie, lancez un plan, ou decouvrez de nouvelles activites pour remplir votre hall.",
+        "Essayez une autre catégorie, lancez un plan, ou découvrez de nouvelles activités pour remplir votre hall.",
     };
   }
 
@@ -310,7 +337,7 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
         href: "/friends",
         label: "Ajouter des amis",
         description:
-          "Ajoutez d'abord vos proches. Des qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
+          "Ajoutez d'abord vos proches. Dès qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
         tone: "primary",
       },
       {
@@ -322,9 +349,9 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
       },
       {
         href: "/activities",
-        label: "Decouvrir",
+        label: "Découvrir",
         description:
-          "Regardez ce qui se passe deja, puis rejoignez ou gardez de cote ce qui vous attire.",
+          "Regardez ce qui se passe déjà, puis rejoignez ou gardez de côté ce qui vous attire.",
         tone: "tertiary",
       },
     ];
@@ -384,24 +411,27 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
 function getLobbyFilterCopy(locale: string) {
   if (locale === "fr") {
     return {
-      category: "Categorie",
+      category: "Vue",
       status: "Statut",
       title: "Filtrer le hall",
+      type: "Type",
     };
   }
 
   if (locale === "en") {
     return {
-      category: "Category",
+      category: "Scope",
       status: "Status",
       title: "Filter the lobby",
+      type: "Type",
     };
   }
 
   return {
-    category: "分类",
+    category: "范围",
     status: "状态",
-    title: "筛选组队车",
+    title: "筛选组局",
+    type: "类型",
   };
 }
 
@@ -410,7 +440,7 @@ function getMobileLobbyFilterCopy(locale: string) {
     return {
       apply: "Valider",
       close: "Fermer",
-      openCategory: "Categorie",
+      openCategory: "Catégorie",
       openStatus: "Statut",
       title: "Filtrer",
     };
@@ -441,7 +471,7 @@ function getStatusFilterLabel(locale: string, id: LobbyStatusFilterId) {
       case "ongoing":
         return "En cours";
       case "ended":
-        return "Terminees";
+        return "Terminées";
       default:
         return "Tout";
     }
@@ -478,8 +508,12 @@ function getLobbyActivityKey(activity: ActivityCardViewModel) {
     : `activity:${activity.id}`;
 }
 
-function getLobbyFeedCacheKey(status: LobbyStatusFilterId, page: number) {
-  return `${status}:${page}`;
+function getLobbyFeedCacheKey(
+  status: LobbyStatusFilterId,
+  page: number,
+  typeFilter: LobbyTypeFilterId = "all",
+) {
+  return `${typeFilter}:${status}:${page}`;
 }
 
 function getLobbyFeedStatusCount(
@@ -499,6 +533,22 @@ function getLobbyFeedStatusCount(
   }
 
   return feed.totalCount;
+}
+
+function createEmptyLobbyFeedForStatus(
+  status: LobbyStatusFilterId,
+): ActivityLobbyFeedPage {
+  return {
+    activities: [],
+    countsApproximate: true,
+    endedCount: 0,
+    ongoingCount: 0,
+    page: 1,
+    pageSize: LOBBY_PAGE_SIZE,
+    status,
+    totalCount: 0,
+    totalPages: 1,
+  };
 }
 
 function getLobbyTotalPages(totalItems: number, pageSize = LOBBY_PAGE_SIZE) {
@@ -560,6 +610,136 @@ function filterLobbyActivitiesByStatus(
   return activities;
 }
 
+function filterLobbyActivitiesByType(
+  activities: ActivityCardViewModel[],
+  typeFilter: LobbyTypeFilterId,
+) {
+  if (typeFilter === "all") {
+    return activities;
+  }
+
+  return activities.filter((activity) => activity.category === typeFilter);
+}
+
+function getCategoryFallbackActivities({
+  currentActivities,
+  limit = CATEGORY_FALLBACK_LIMIT,
+  sourceActivities,
+  statusFilter,
+  typeFilter,
+}: {
+  currentActivities: ActivityCardViewModel[];
+  limit?: number;
+  sourceActivities: ActivityCardViewModel[];
+  statusFilter: LobbyStatusFilterId;
+  typeFilter: LobbyTypeFilterId;
+}) {
+  if (typeFilter === "all" || currentActivities.length >= limit) {
+    return [];
+  }
+
+  const currentActivityKeys = new Set(
+    currentActivities.map(getLobbyActivityKey),
+  );
+  const adjacentCategories = categoryFallbackMap[typeFilter];
+  const adjacentCategorySet = new Set<ActivityCategory>(adjacentCategories);
+  const candidates = filterLobbyActivitiesByStatus(
+    dedupeLobbyActivities(sourceActivities),
+    statusFilter,
+  ).filter((activity) => {
+    if (activity.category === typeFilter) {
+      return false;
+    }
+
+    return !currentActivityKeys.has(getLobbyActivityKey(activity));
+  });
+  const adjacentActivities = candidates.filter((activity) =>
+    adjacentCategorySet.has(activity.category),
+  );
+  const broadActivities = candidates.filter(
+    (activity) => !adjacentCategorySet.has(activity.category),
+  );
+
+  return sortLobbyActivities([...adjacentActivities, ...broadActivities]).slice(
+    0,
+    limit,
+  );
+}
+
+function syncLobbyCategorySearchParam(typeFilter: LobbyTypeFilterId) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+
+  if (typeFilter === "all") {
+    url.searchParams.delete("category");
+  } else {
+    url.searchParams.set("category", typeFilter);
+  }
+
+  const nextHref = `${url.pathname}${url.search}${url.hash}`;
+  const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextHref !== currentHref) {
+    window.history.replaceState(window.history.state, "", nextHref);
+  }
+}
+
+function getCategoryFallbackCopy({
+  currentCount,
+  locale,
+  typeLabel,
+}: {
+  currentCount: number;
+  locale: string;
+  typeLabel: string;
+}) {
+  if (locale === "fr") {
+    return {
+      eyebrow: currentCount > 0 ? "Aussi dans le même élan" : "À explorer",
+      title:
+        currentCount > 0
+          ? `${typeLabel} est encore calme`
+          : `Pas encore de ${typeLabel}`,
+      description:
+        currentCount > 0
+          ? "On garde vos résultats en premier, puis on ajoute quelques idées proches pour continuer sans page vide."
+          : "Cette catégorie est encore rare. Voici des idées proches pour garder le fil.",
+      badge: "Suggestion proche",
+      resetLabel: "Voir tout le hall",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      eyebrow: currentCount > 0 ? "Nearby picks" : "Keep browsing",
+      title:
+        currentCount > 0
+          ? `${typeLabel} is still light`
+          : `No ${typeLabel} yet`,
+      description:
+        currentCount > 0
+          ? "Your selected category stays first. These nearby picks keep the page useful while this topic grows."
+          : "This topic is still quiet, so here are nearby picks instead of a blank stop.",
+      badge: "Nearby pick",
+      resetLabel: "View all lobby",
+    };
+  }
+
+  return {
+    eyebrow: currentCount > 0 ? "顺手看看" : "先别空着",
+    title: currentCount > 0 ? `${typeLabel} 还不多` : `暂时没有${typeLabel}`,
+    description:
+      currentCount > 0
+        ? "当前分类会排在前面，下面补几张相近主题，继续逛不掉线。"
+        : "这个分类还比较冷门，先给你补几张相近方向，避免停在空页面。",
+    badge: "相近推荐",
+    resetLabel: "查看全部大厅",
+  };
+}
+
 function getStatusFilterOptions(
   activities: ActivityCardViewModel[],
   locale: string,
@@ -598,14 +778,14 @@ function getLobbyFeedStatusFilterOptions(
 function getActivityLobbyPreviewCopy(locale: string) {
   if (locale === "fr") {
     return {
-      eyebrow: "Hall d'equipe",
+      eyebrow: "Hall d'équipe",
       title: "Parcourez d'abord",
       description: "Les plans publics sont visibles sans connexion.",
       signIn: "Se connecter",
-      browse: "Activites",
+      browse: "Activités",
       emptyTitle: "Aucun plan pour le moment",
       emptyDescription:
-        "Les plans publics apparaitront ici des qu'ils seront disponibles.",
+        "Les plans publics apparaîtront ici dès qu'ils seront disponibles.",
       sectionTitle: "Plans publics",
     };
   }
@@ -639,7 +819,7 @@ function getActivityLobbyPreviewCopy(locale: string) {
 function FilterGroupRow({ children, label }: FilterGroupRowProps) {
   return (
     <div className="grid gap-0.5 sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center sm:gap-2">
-      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8a7455] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-[0.08em]">
+      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#156240] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-[0.08em]">
         {label}
       </p>
       <div className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
@@ -652,6 +832,7 @@ function FilterGroupRow({ children, label }: FilterGroupRowProps) {
 function MobileLobbyFilterSheet({
   activeFilter,
   activeStatusFilter,
+  activeTypeFilter,
   failedFilters,
   filterCopy,
   filterOptions,
@@ -661,7 +842,9 @@ function MobileLobbyFilterSheet({
   onClose,
   onFilterChange,
   onStatusChange,
+  onTypeChange,
   statusFilterOptions,
+  typeFilterOptions,
 }: MobileLobbyFilterSheetProps) {
   const copy = getMobileLobbyFilterCopy(locale);
 
@@ -703,8 +886,8 @@ function MobileLobbyFilterSheet({
         aria-label={copy.close}
         onClick={onClose}
       />
-      <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border border-[#decfb7] bg-[#fffaf2] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(70,55,32,0.18)]">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#d9c9ad]" />
+      <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border border-[#8AB68E] bg-[#FFF5E6] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 shadow-[0_-22px_50px_rgba(29,29,27,0.14)]">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#8AB68E]" />
         <div className="flex items-center justify-between gap-3">
           <div>
             <p
@@ -716,7 +899,7 @@ function MobileLobbyFilterSheet({
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#dfceb0] bg-white text-[#6b5b4a] shadow-sm"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] shadow-sm"
             aria-label={copy.close}
             onClick={onClose}
           >
@@ -726,7 +909,7 @@ function MobileLobbyFilterSheet({
 
         <div className="mt-4 space-y-4">
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a7455]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
               {filterCopy.category}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -746,8 +929,8 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border px-3 text-left text-sm font-semibold transition",
                       active
-                        ? "border-[#b8cda8] bg-[#e4efd9] text-[#526a39] shadow-[0_6px_16px_rgba(96,124,69,0.11)]"
-                        : "border-[#e2d6c2] bg-white/82 text-[#65584b]",
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -756,8 +939,8 @@ function MobileLobbyFilterSheet({
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
                           active
-                            ? "bg-white/78 text-[#526a39]"
-                            : "bg-[#f3ecdf] text-[#8a7a65]",
+                            ? "bg-white/78 text-[#156240]"
+                            : "bg-[#F1F2EC] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -774,7 +957,37 @@ function MobileLobbyFilterSheet({
           </div>
 
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8a7455]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
+              {filterCopy.type}
+            </p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {typeFilterOptions.map((option) => {
+                const active = option.id === activeTypeFilter;
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onTypeChange(option.id)}
+                    className={cn(
+                      "flex h-10 min-w-0 items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
+                      active
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240]",
+                    )}
+                  >
+                    <span className="min-w-0 max-w-full truncate">
+                      {option.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
               {filterCopy.status}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
@@ -790,8 +1003,8 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 flex-col items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
                       active
-                        ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
-                        : "border-[#e2d6c2] bg-white/82 text-[#65584b]",
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
                     <span className="min-w-0 max-w-full truncate">
@@ -809,7 +1022,7 @@ function MobileLobbyFilterSheet({
 
         <button
           type="button"
-          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-ink text-sm font-semibold text-white shadow-[0_10px_22px_rgba(0,0,0,0.16)]"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#369758] text-sm font-semibold text-white shadow-[0_10px_22px_rgba(54,151,88,0.18)] transition hover:bg-[#156240]"
           onClick={onClose}
         >
           {copy.apply}
@@ -855,10 +1068,10 @@ function LobbySectionLoading({ locale }: { locale: string }) {
         : "正在加载...";
 
   return (
-    <div className="rounded-[1.25rem] border border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
+    <div className="rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9]/85 px-4 py-5">
       <div className="flex items-center gap-3">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d7bea0] border-t-[#a66d4c]" />
-        <p className="text-sm font-semibold text-[#665747]">{label}</p>
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#369758]" />
+        <p className="text-sm font-semibold text-[#156240]">{label}</p>
       </div>
       <div className="mt-4 grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
@@ -884,7 +1097,7 @@ function LobbySectionError({
     locale === "fr"
       ? {
           title: "Chargement impossible.",
-          retry: "Reessayer",
+          retry: "Réessayer",
         }
       : locale === "en"
         ? {
@@ -897,12 +1110,12 @@ function LobbySectionError({
           };
 
   return (
-    <div className="rounded-[1.25rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
-      <p className="text-base font-semibold text-[#433a30]">{copy.title}</p>
+    <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/85 px-4 py-5">
+      <p className="text-base font-semibold text-ink">{copy.title}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 inline-flex h-9 items-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        className="mt-3 inline-flex h-9 items-center rounded-full bg-[#369758] px-4 text-sm font-semibold text-white transition hover:bg-[#156240]"
       >
         {copy.retry}
       </button>
@@ -915,7 +1128,7 @@ function getLazyLobbySwipeCopy(locale: string) {
     return {
       eyebrow: "Swipe",
       title: "Swipez",
-      loading: "Preparation des activites...",
+      loading: "Préparation des activités...",
     };
   }
 
@@ -946,11 +1159,11 @@ function LobbySwipeLoadingShell({
   return (
     <section className={cn("overflow-visible px-0 py-1", className)}>
       <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#fff5e8] text-[#b36f48] shadow-sm ring-1 ring-[#ead7b8]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-[#a26b42]">
+          <p className="text-[10px] font-semibold text-[#156240]">
             {copy.eyebrow}
           </p>
           <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
@@ -959,20 +1172,20 @@ function LobbySwipeLoadingShell({
         </div>
       </div>
 
-      <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(91,69,38,0.1)] ring-1 ring-[#dfceb0]/75">
-        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#e7edf0_0%,#f7f2ea_48%,#e7edf0_100%)]" />
+      <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.08)] ring-1 ring-[#D6D5B2]/85">
+        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#F1F2EC_0%,#FEFFF9_48%,#F1F2EC_100%)]" />
         <div className="space-y-3 p-3.5">
-          <div className="h-5 w-4/5 animate-pulse rounded-full bg-[#efe6d7]" />
-          <div className="h-5 w-2/3 animate-pulse rounded-full bg-[#efe6d7]" />
+          <div className="h-5 w-4/5 animate-pulse rounded-full bg-fog" />
+          <div className="h-5 w-2/3 animate-pulse rounded-full bg-fog" />
           <div className="mt-4 grid gap-2">
-            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#f1eadf]" />
-            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#f1eadf]" />
+            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#F1F2EC]" />
+            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#F1F2EC]" />
           </div>
           <div className="pt-4">
-            <div className="h-10 w-full animate-pulse rounded-full bg-[#e7d8c4]" />
+            <div className="h-10 w-full animate-pulse rounded-full bg-[#D6D5B2]" />
           </div>
         </div>
-        <p className="absolute inset-x-0 bottom-3 text-center text-xs font-semibold text-[#8a7455]">
+        <p className="absolute inset-x-0 bottom-3 text-center text-xs font-semibold text-[#156240]">
           {copy.loading}
         </p>
       </div>
@@ -980,16 +1193,20 @@ function LobbySwipeLoadingShell({
   );
 }
 
-function LazyLobbySwipeDiscovery({
+export function LazyLobbySwipeDiscovery({
   className,
+  favoriteRedirectPath = "/lobby",
   initialActivities,
   isAuthenticated,
   locale,
+  variant = "lobby",
 }: {
   className?: string;
+  favoriteRedirectPath?: string;
   initialActivities: ActivityCardViewModel[];
   isAuthenticated: boolean;
   locale: string;
+  variant?: "lobby" | "home";
 }) {
   const [activities, setActivities] = useState(() =>
     prepareInitialLobbySwipeActivities(initialActivities),
@@ -1189,6 +1406,7 @@ function LazyLobbySwipeDiscovery({
     <ActivitySwipeDiscovery
       activities={activities}
       className={className}
+      favoriteRedirectPath={favoriteRedirectPath}
       hasMoreActivities={hasMore}
       isAuthenticated={isAuthenticated}
       isLoadingMore={loadingMore}
@@ -1198,31 +1416,224 @@ function LazyLobbySwipeDiscovery({
       onRetryLoadMore={requestMoreSwipeActivities}
       shuffleDeck={false}
       sourceSurface="activity_list"
-      variant="lobby"
+      variant={variant}
     />
+  );
+}
+
+function CategoryFallbackSection({
+  activities,
+  currentCount,
+  detailSourceKey,
+  detailSourceState,
+  favoriteRedirectPath,
+  isAuthenticated,
+  locale,
+  onViewAll,
+  selectedCategory,
+  titleId,
+}: {
+  activities: ActivityCardViewModel[];
+  currentCount: number;
+  detailSourceKey: "lobby";
+  detailSourceState?: Record<string, boolean | number | string>;
+  favoriteRedirectPath: string;
+  isAuthenticated: boolean;
+  locale: string;
+  onViewAll?: () => void;
+  selectedCategory: ActivityCategory;
+  titleId?: string;
+}) {
+  if (activities.length === 0) {
+    return null;
+  }
+
+  const selectedCategoryLabel = getCategoryLabel(selectedCategory, locale);
+  const copy = getCategoryFallbackCopy({
+    currentCount,
+    locale,
+    typeLabel: selectedCategoryLabel,
+  });
+  const fallbackCategoryLabels = Array.from(
+    new Set(
+      activities.map((activity) => getCategoryLabel(activity.category, locale)),
+    ),
+  ).slice(0, 3);
+
+  const trackFallbackClick = () => {
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: selectedCategory,
+        fallback_count: activities.length,
+        filter_count: 1,
+        filter_name: "category_fallback_click",
+        result_count: currentCount,
+      },
+    });
+  };
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-[linear-gradient(135deg,rgba(254,255,249,0.96),rgba(241,242,236,0.62)_58%,rgba(222,235,255,0.42))] p-4 shadow-[0_16px_36px_rgba(21,98,64,0.09)] sm:p-5"
+    >
+      <div
+        className="absolute -right-14 -top-16 h-36 w-36 rounded-full bg-coral/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#156240]">
+            {copy.eyebrow}
+          </p>
+          <h3
+            id={titleId}
+            className="mt-1 text-lg font-semibold leading-tight text-[#0E2A66] sm:text-xl"
+          >
+            {copy.title}
+          </h3>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#156240]/78">
+            {copy.description}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          <span className="inline-flex h-7 items-center rounded-full border border-[#8AB68E] bg-[#FEFFF9]/80 px-2.5 text-[11px] font-bold text-[#156240]">
+            {copy.badge}
+          </span>
+          {fallbackCategoryLabels.map((label) => (
+            <span
+              key={label}
+              className="inline-flex h-7 items-center rounded-full border border-[#D6D5B2] bg-white/64 px-2.5 text-[11px] font-semibold text-[#156240]/86"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="relative mt-4 grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-4"
+        onClickCapture={(event) => {
+          const target = event.target;
+
+          if (!(target instanceof HTMLElement)) {
+            return;
+          }
+
+          if (target.closest("a")) {
+            trackFallbackClick();
+          }
+        }}
+      >
+        {activities.map((activity) => (
+          <ActivityCard
+            key={`fallback:${selectedCategory}:${getLobbyActivityKey(activity)}`}
+            actionContext="lobby"
+            activity={activity}
+            detailSourceKey={detailSourceKey}
+            detailSourceState={{
+              ...detailSourceState,
+              fallbackFor: selectedCategory,
+            }}
+            favoriteRedirectPath={favoriteRedirectPath}
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            mobileDense
+            showFavoriteButton
+            showPrimaryAction
+            sourceSurface="activity_list"
+          />
+        ))}
+      </div>
+
+      {onViewAll ? (
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="relative mt-4 inline-flex h-9 items-center rounded-full border border-[#D6D5B2] bg-white/80 px-4 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+        >
+          {copy.resetLabel}
+        </button>
+      ) : null}
+    </section>
   );
 }
 
 export function ActivityLobbyPreviewView({
   activities,
+  initialCategoryFilter = null,
   locale,
-  swipeActivities,
 }: {
   activities: ActivityCardViewModel[];
+  initialCategoryFilter?: ActivityCategory | null;
   locale: string;
-  swipeActivities: ActivityCardViewModel[];
 }) {
   const previewCopy = getActivityLobbyPreviewCopy(locale);
+  const [activeTypeFilter, setActiveTypeFilter] = useState<LobbyTypeFilterId>(
+    initialCategoryFilter ?? "all",
+  );
   const [page, setPage] = useState(1);
+  const typeFilterOptions: TypeFilterOption[] = useMemo(
+    () => [
+      {
+        id: "all",
+        label: getAllLabel(locale),
+      },
+      ...activityCategoryOptions.map((category) => ({
+        id: category,
+        label: getCategoryLabel(category, locale),
+      })),
+    ],
+    [locale],
+  );
   const dedupedActivities = useMemo(
-    () => dedupeLobbyActivities(activities),
-    [activities],
+    () =>
+      filterLobbyActivitiesByType(
+        dedupeLobbyActivities(activities),
+        activeTypeFilter,
+      ),
+    [activeTypeFilter, activities],
   );
   const totalPages = getLobbyTotalPages(dedupedActivities.length);
   const visibleActivities = useMemo(
     () => getPagedLobbyActivities(dedupedActivities, page),
     [dedupedActivities, page],
   );
+  const fallbackActivities = useMemo(
+    () =>
+      getCategoryFallbackActivities({
+        currentActivities: dedupedActivities,
+        sourceActivities: activities,
+        statusFilter: "all",
+        typeFilter: activeTypeFilter,
+      }),
+    [activeTypeFilter, activities, dedupedActivities],
+  );
+  const shouldShowFallback =
+    activeTypeFilter !== "all" &&
+    dedupedActivities.length < CATEGORY_FALLBACK_MIN_RESULTS &&
+    fallbackActivities.length > 0;
+
+  useEffect(() => {
+    if (activeTypeFilter === "all") {
+      return;
+    }
+
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: activeTypeFilter,
+        fallback_count: fallbackActivities.length,
+        filter_count: 1,
+        filter_name: "lobby_preview_category",
+        result_count: dedupedActivities.length,
+      },
+    });
+  }, [activeTypeFilter, dedupedActivities.length, fallbackActivities.length]);
 
   useEffect(() => {
     setPage(1);
@@ -1234,27 +1645,47 @@ export function ActivityLobbyPreviewView({
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    syncLobbyCategorySearchParam(activeTypeFilter);
+  }, [activeTypeFilter]);
+
   return (
     <div className="space-y-6">
       <DetailSourceRestore sourceKey="lobby" />
-      <LazyLobbySwipeDiscovery
-        className="sm:hidden"
-        isAuthenticated={false}
-        initialActivities={swipeActivities}
-        locale={locale}
-      />
 
       <section
         id="lobby-preview-results"
         className="space-y-4 sm:rounded-[1.5rem] sm:border sm:border-black/8 sm:bg-white/78 sm:p-5 sm:shadow-sm sm:shadow-black/5"
       >
-        <div>
+        <div className="space-y-3">
           <h2 className="text-xl font-semibold text-ink">
             {previewCopy.sectionTitle}
           </h2>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {typeFilterOptions.map((option) => {
+              const active = option.id === activeTypeFilter;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  className={cn(
+                    "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition",
+                    active
+                      ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
+                      : "border-[#D6D5B2] bg-white/88 text-[#156240]",
+                  )}
+                  onClick={() => setActiveTypeFilter(option.id)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {dedupedActivities.length === 0 ? (
+        {dedupedActivities.length === 0 && !shouldShowFallback ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-paper/65 px-4 py-7 text-center">
             <p className="text-sm font-semibold text-zinc-700">
               {previewCopy.emptyTitle}
@@ -1265,31 +1696,59 @@ export function ActivityLobbyPreviewView({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleActivities.map((activity) => (
-                <ActivityCard
-                  key={getLobbyActivityKey(activity)}
-                  actionContext="lobby"
-                  activity={activity}
-                  favoriteRedirectPath="/lobby"
-                  isAuthenticated={false}
+            {dedupedActivities.length > 0 ? (
+              <>
+                <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                  {visibleActivities.map((activity) => (
+                    <ActivityCard
+                      key={getLobbyActivityKey(activity)}
+                      actionContext="lobby"
+                      activity={activity}
+                      favoriteRedirectPath="/lobby"
+                      isAuthenticated={false}
+                      locale={locale}
+                      mobileDense
+                      showFavoriteButton
+                      showPrimaryAction
+                      sourceSurface="activity_list"
+                      detailSourceKey="lobby"
+                      detailSourceState={{
+                        category:
+                          activeTypeFilter === "all" ? "all" : activeTypeFilter,
+                        page,
+                      }}
+                    />
+                  ))}
+                </div>
+                <LobbyPagination
                   locale={locale}
-                  mobileDense
-                  showFavoriteButton
-                  showPrimaryAction
-                  sourceSurface="activity_list"
-                  detailSourceKey="lobby"
-                  detailSourceState={{ page }}
+                  onPageChange={setPage}
+                  page={page}
+                  scrollTargetId="lobby-preview-results"
+                  totalItems={dedupedActivities.length}
                 />
-              ))}
-            </div>
-            <LobbyPagination
-              locale={locale}
-              onPageChange={setPage}
-              page={page}
-              scrollTargetId="lobby-preview-results"
-              totalItems={dedupedActivities.length}
-            />
+              </>
+            ) : null}
+
+            {shouldShowFallback ? (
+              <CategoryFallbackSection
+                activities={fallbackActivities}
+                currentCount={dedupedActivities.length}
+                detailSourceKey="lobby"
+                detailSourceState={{
+                  category: activeTypeFilter,
+                  fallback: true,
+                }}
+                favoriteRedirectPath="/lobby"
+                isAuthenticated={false}
+                locale={locale}
+                onViewAll={() => {
+                  setActiveTypeFilter("all");
+                }}
+                selectedCategory={activeTypeFilter}
+                titleId="lobby-preview-category-fallback"
+              />
+            ) : null}
           </>
         )}
       </section>
@@ -1307,14 +1766,18 @@ export function ActivityLobbyView({
   favoriteActivities,
   friendHostedActivities,
   friendJoinedActivities,
+  initialCategoryFilter = null,
   starterActivities,
-  swipeActivities,
   locale,
 }: ActivityLobbyViewProps) {
-  const t = getCopy(locale).activityLobby;
+  const appCopy = getCopy(locale);
+  const t = appCopy.activityLobby;
   const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>("all");
+  const [activeTypeFilter, setActiveTypeFilter] = useState<LobbyTypeFilterId>(
+    initialCategoryFilter ?? "all",
+  );
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [lazySections, setLazySections] = useState<
@@ -1331,11 +1794,12 @@ export function ActivityLobbyView({
   const [feedCache, setFeedCache] = useState<
     Record<string, ActivityLobbyFeedPage>
   >(() => ({
-    [getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page)]:
+    [getLobbyFeedCacheKey(allActivityFeed.status, allActivityFeed.page, "all")]:
       allActivityFeed,
   }));
   const feedCacheRef = useRef(feedCache);
   const inFlightFeedRefs = useRef(new Set<string>());
+  const categoryAnalyticsKeyRef = useRef<string | null>(null);
   const [loadingFeedKey, setLoadingFeedKey] = useState<string | null>(null);
   const [failedFeedKeys, setFailedFeedKeys] = useState<Record<string, boolean>>(
     {},
@@ -1356,6 +1820,7 @@ export function ActivityLobbyView({
     const key = getLobbyFeedCacheKey(
       allActivityFeed.status,
       allActivityFeed.page,
+      "all",
     );
 
     setFeedCache((current) => {
@@ -1381,6 +1846,7 @@ export function ActivityLobbyView({
 
     const filter = context.sourceState?.filter;
     const status = context.sourceState?.status;
+    const category = context.sourceState?.category;
     const restoredPage = Number(context.sourceState?.page);
 
     if (
@@ -1399,6 +1865,13 @@ export function ActivityLobbyView({
       setActiveStatusFilter(status);
     }
 
+    if (
+      typeof category === "string" &&
+      activityCategoryOptions.includes(category as ActivityCategory)
+    ) {
+      setActiveTypeFilter(category as ActivityCategory);
+    }
+
     if (Number.isInteger(restoredPage) && restoredPage > 0) {
       setPage(restoredPage);
     }
@@ -1411,7 +1884,7 @@ export function ActivityLobbyView({
     [createdActivities],
   );
   const allFeedSummary =
-    feedCache[getLobbyFeedCacheKey("all", 1)] ?? allActivityFeed;
+    feedCache[getLobbyFeedCacheKey("all", 1, "all")] ?? allActivityFeed;
   const favoriteSectionActivities =
     lazySections.favorites ?? favoriteActivities;
   const friendHostedSectionActivities =
@@ -1487,6 +1960,7 @@ export function ActivityLobbyView({
     ],
     [
       allActivities,
+      allFeedSummary.countsApproximate,
       allFeedSummary.totalCount,
       createdActivities,
       deferredFilterSet,
@@ -1508,23 +1982,33 @@ export function ActivityLobbyView({
       t.openTitle,
     ],
   );
+  const activeAllFeedSummary =
+    feedCache[getLobbyFeedCacheKey("all", 1, activeTypeFilter)] ??
+    (activeTypeFilter === "all" ? allActivityFeed : null);
   const activeCategoryActivities = useMemo(() => {
     const group = categoryGroups.find((item) => item.id === activeFilter);
 
     const dedupedActivities = dedupeLobbyActivities(group?.activities ?? []);
+    const typeFilteredActivities = filterLobbyActivitiesByType(
+      dedupedActivities,
+      activeTypeFilter,
+    );
 
     if (activeFilter === "all") {
-      return dedupedActivities;
+      return typeFilteredActivities;
     }
 
-    return sortLobbyActivities(dedupedActivities);
-  }, [activeFilter, categoryGroups]);
+    return sortLobbyActivities(typeFilteredActivities);
+  }, [activeFilter, activeTypeFilter, categoryGroups]);
   const statusFilterOptions = useMemo(
     () =>
       activeFilter === "all"
-        ? getLobbyFeedStatusFilterOptions(allFeedSummary, locale)
+        ? getLobbyFeedStatusFilterOptions(
+            activeAllFeedSummary ?? createEmptyLobbyFeedForStatus("all"),
+            locale,
+          )
         : getStatusFilterOptions(activeCategoryActivities, locale),
-    [activeCategoryActivities, activeFilter, allFeedSummary, locale],
+    [activeAllFeedSummary, activeCategoryActivities, activeFilter, locale],
   );
   const clientVisibleActivities = useMemo(
     () =>
@@ -1534,32 +2018,41 @@ export function ActivityLobbyView({
       ),
     [activeCategoryActivities, activeStatusFilter],
   );
-  const activeFeedPageSize = allFeedSummary.pageSize || LOBBY_PAGE_SIZE;
+  const activeFeedPageSize = activeAllFeedSummary?.pageSize || LOBBY_PAGE_SIZE;
   const activeFeedStatusCount =
     activeFilter === "all"
-      ? getLobbyFeedStatusCount(allFeedSummary, activeStatusFilter)
+      ? activeAllFeedSummary
+        ? getLobbyFeedStatusCount(activeAllFeedSummary, activeStatusFilter)
+        : null
       : clientVisibleActivities.length;
   const activeFeedTotalItems =
     activeFeedStatusCount ??
     (activeFilter === "all"
       ? (
-          feedCache[getLobbyFeedCacheKey(activeStatusFilter, page)]
-            ?.activities ?? allFeedSummary.activities
+          feedCache[
+            getLobbyFeedCacheKey(activeStatusFilter, page, activeTypeFilter)
+          ]?.activities ??
+          activeAllFeedSummary?.activities ??
+          []
         ).length
       : clientVisibleActivities.length);
   const activeFeedTotalPages =
-    activeFilter === "all" && allFeedSummary.countsApproximate
-      ? allFeedSummary.totalPages
+    activeFilter === "all" && activeAllFeedSummary?.countsApproximate
+      ? activeAllFeedSummary.totalPages
       : getLobbyTotalPages(
           activeFeedTotalItems,
           activeFilter === "all" ? activeFeedPageSize : LOBBY_PAGE_SIZE,
         );
-  const activeFeedKey = getLobbyFeedCacheKey(activeStatusFilter, page);
+  const activeFeedKey = getLobbyFeedCacheKey(
+    activeStatusFilter,
+    page,
+    activeTypeFilter,
+  );
   const activeFeed = activeFilter === "all" ? feedCache[activeFeedKey] : null;
   const activeFeedFailed = Boolean(failedFeedKeys[activeFeedKey]);
   const activeFeedNeedsLoad =
     activeFilter === "all" &&
-    activeFeedTotalItems > 0 &&
+    (activeTypeFilter !== "all" || activeFeedTotalItems > 0) &&
     !activeFeed &&
     !activeFeedFailed;
   const activeFeedLoading =
@@ -1594,11 +2087,60 @@ export function ActivityLobbyView({
         : getPagedLobbyActivities(visibleActivities, page),
     [activeFilter, page, visibleActivities],
   );
+  const categoryFallbackSourceActivities = useMemo(
+    () =>
+      dedupeLobbyActivities([
+        ...allActivities,
+        ...allFeedSummary.activities,
+        ...openActivities,
+        ...starterActivities,
+        ...favoriteSectionActivities,
+        ...friendHostedSectionActivities,
+        ...friendJoinedSectionActivities,
+      ]),
+    [
+      allActivities,
+      allFeedSummary.activities,
+      favoriteSectionActivities,
+      friendHostedSectionActivities,
+      friendJoinedSectionActivities,
+      openActivities,
+      starterActivities,
+    ],
+  );
+  const categoryFallbackActivities = useMemo(
+    () =>
+      getCategoryFallbackActivities({
+        currentActivities: visibleActivities,
+        sourceActivities: categoryFallbackSourceActivities,
+        statusFilter: activeStatusFilter,
+        typeFilter: activeTypeFilter,
+      }),
+    [
+      activeStatusFilter,
+      activeTypeFilter,
+      categoryFallbackSourceActivities,
+      visibleActivities,
+    ],
+  );
   const filterOptions: FilterOption[] = categoryGroups.map((group) => ({
     id: group.id,
     count: group.isDeferred ? null : group.count,
     label: group.label,
   }));
+  const typeFilterOptions: TypeFilterOption[] = useMemo(
+    () => [
+      {
+        id: "all",
+        label: getAllLabel(locale),
+      },
+      ...activityCategoryOptions.map((category) => ({
+        id: category,
+        label: getCategoryLabel(category, locale),
+      })),
+    ],
+    [locale],
+  );
   const hasActivities = allFeedSummary.countsApproximate
     ? allFeedSummary.activities.length > 0
     : allFeedSummary.totalCount > 0;
@@ -1609,7 +2151,9 @@ export function ActivityLobbyView({
     friendHostedActivities.length > 0 ||
     friendJoinedActivities.length > 0;
   const isDefaultLobbyView =
-    activeFilter === "all" && activeStatusFilter === "all";
+    activeFilter === "all" &&
+    activeStatusFilter === "all" &&
+    activeTypeFilter === "all";
   const shouldShowStarterPanel =
     isDefaultLobbyView &&
     starterPanelActivities.length > 0 &&
@@ -1628,6 +2172,13 @@ export function ActivityLobbyView({
     (activeFeedLoading ||
       loadingFilter === activeFilter ||
       activeCategoryDeferred);
+  const shouldShowCategoryFallback =
+    activeFilter === "all" &&
+    activeTypeFilter !== "all" &&
+    !activeFilterLoading &&
+    !activeFilterFailed &&
+    activeFeedTotalItems < CATEGORY_FALLBACK_MIN_RESULTS &&
+    categoryFallbackActivities.length > 0;
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
   const emptyCategoryResetLabel = getEmptyCategoryResetLabel(locale);
   const moreActivitiesLabel = getMoreActivitiesLabel(locale);
@@ -1648,6 +2199,9 @@ export function ActivityLobbyView({
   const mobileFilterCopy = getMobileLobbyFilterCopy(locale);
   const activeCategoryLabel =
     filterOptions.find((option) => option.id === activeFilter)?.label ??
+    getAllLabel(locale);
+  const activeTypeLabel =
+    typeFilterOptions.find((option) => option.id === activeTypeFilter)?.label ??
     getAllLabel(locale);
   const activeStatusLabel = getStatusFilterLabel(locale, activeStatusFilter);
   const mobileResultCountLabel = activeFilterFailed
@@ -1676,16 +2230,21 @@ export function ActivityLobbyView({
     [],
   );
 
+  const handleTypeFilterChange = useCallback((type: LobbyTypeFilterId) => {
+    setActiveTypeFilter(type);
+  }, []);
+
   const loadLobbyFeedPage = useCallback(
     async (
       status: LobbyStatusFilterId,
       targetPage: number,
+      typeFilter: LobbyTypeFilterId,
       options: {
         visual?: boolean;
       } = {},
     ) => {
       const normalizedPage = Math.max(1, Math.floor(targetPage));
-      const cacheKey = getLobbyFeedCacheKey(status, normalizedPage);
+      const cacheKey = getLobbyFeedCacheKey(status, normalizedPage, typeFilter);
 
       if (
         feedCacheRef.current[cacheKey] ||
@@ -1716,6 +2275,9 @@ export function ActivityLobbyView({
           page: normalizedPage.toString(),
           status,
         });
+        if (typeFilter !== "all") {
+          params.set("category", typeFilter);
+        }
         const response = await fetch(`/api/lobby/feed?${params.toString()}`, {
           credentials: "same-origin",
           headers: {
@@ -1737,7 +2299,11 @@ export function ActivityLobbyView({
         }
 
         setFeedCache((current) => {
-          const responseKey = getLobbyFeedCacheKey(feed.status, feed.page);
+          const responseKey = getLobbyFeedCacheKey(
+            feed.status,
+            feed.page,
+            typeFilter,
+          );
           const next = {
             ...current,
             [cacheKey]: feed,
@@ -1859,7 +2425,7 @@ export function ActivityLobbyView({
 
   useEffect(() => {
     setPage(1);
-  }, [activeFilter, activeStatusFilter]);
+  }, [activeFilter, activeStatusFilter, activeTypeFilter]);
 
   useEffect(() => {
     if (
@@ -1884,18 +2450,22 @@ export function ActivityLobbyView({
       activeFilter !== "all" ||
       activeFeed ||
       activeFeedFailed ||
-      activeFeedTotalItems === 0
+      !activeFeedNeedsLoad
     ) {
       return;
     }
 
-    void loadLobbyFeedPage(activeStatusFilter, page, { visual: true });
+    void loadLobbyFeedPage(activeStatusFilter, page, activeTypeFilter, {
+      visual: true,
+    });
   }, [
     activeFeed,
     activeFeedFailed,
+    activeFeedNeedsLoad,
     activeFeedTotalItems,
     activeFilter,
     activeStatusFilter,
+    activeTypeFilter,
     loadLobbyFeedPage,
     page,
   ]);
@@ -1916,7 +2486,7 @@ export function ActivityLobbyView({
         candidate >= 1 &&
         candidate <= totalPages &&
         !feedCacheRef.current[
-          getLobbyFeedCacheKey(activeStatusFilter, candidate)
+          getLobbyFeedCacheKey(activeStatusFilter, candidate, activeTypeFilter)
         ],
     );
 
@@ -1926,7 +2496,11 @@ export function ActivityLobbyView({
 
     return scheduleIdleTask(() => {
       for (const targetPage of pagesToPrefetch) {
-        void loadLobbyFeedPage(activeStatusFilter, targetPage);
+        void loadLobbyFeedPage(
+          activeStatusFilter,
+          targetPage,
+          activeTypeFilter,
+        );
       }
     }, LOBBY_FEED_PREFETCH_IDLE_MS);
   }, [
@@ -1935,6 +2509,7 @@ export function ActivityLobbyView({
     activeFeedTotalItems,
     activeFilter,
     activeStatusFilter,
+    activeTypeFilter,
     loadLobbyFeedPage,
     page,
     totalPages,
@@ -1987,18 +2562,62 @@ export function ActivityLobbyView({
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    syncLobbyCategorySearchParam(activeTypeFilter);
+  }, [activeTypeFilter]);
+
+  useEffect(() => {
+    if (
+      activeFilter !== "all" ||
+      activeTypeFilter === "all" ||
+      activeFilterLoading ||
+      activeFilterFailed
+    ) {
+      return;
+    }
+
+    const analyticsKey = [
+      activeTypeFilter,
+      activeStatusFilter,
+      activeFeedTotalItems,
+      categoryFallbackActivities.length,
+    ].join(":");
+
+    if (categoryAnalyticsKeyRef.current === analyticsKey) {
+      return;
+    }
+
+    categoryAnalyticsKeyRef.current = analyticsKey;
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: activeTypeFilter,
+        fallback_count: categoryFallbackActivities.length,
+        filter_count: 1,
+        filter_name: "lobby_category",
+        is_empty: activeFeedTotalItems === 0,
+        result_count: activeFeedTotalItems,
+        status: activeStatusFilter,
+      },
+    });
+  }, [
+    activeFeedTotalItems,
+    activeFilter,
+    activeFilterFailed,
+    activeFilterLoading,
+    activeStatusFilter,
+    activeTypeFilter,
+    categoryFallbackActivities.length,
+  ]);
+
   return (
     <div className="space-y-3">
       <DetailSourceRestore sourceKey="lobby" />
-      <LazyLobbySwipeDiscovery
-        className="sm:hidden"
-        isAuthenticated
-        initialActivities={swipeActivities}
-        locale={locale}
-      />
       <MobileLobbyFilterSheet
         activeFilter={activeFilter}
         activeStatusFilter={activeStatusFilter}
+        activeTypeFilter={activeTypeFilter}
         failedFilters={failedFilters}
         filterCopy={filterCopy}
         filterOptions={filterOptions}
@@ -2008,7 +2627,9 @@ export function ActivityLobbyView({
         onClose={closeMobileFilter}
         onFilterChange={handleCategoryFilterChange}
         onStatusChange={handleStatusFilterChange}
+        onTypeChange={handleTypeFilterChange}
         statusFilterOptions={statusFilterOptions}
+        typeFilterOptions={typeFilterOptions}
       />
       <section>
         <div className="flex flex-col gap-2 sm:gap-3">
@@ -2023,7 +2644,7 @@ export function ActivityLobbyView({
               </p>
             </div>
             <p className="text-[11px] font-medium leading-4 text-zinc-500 sm:text-xs">
-              {activeCategoryLabel} ·{" "}
+              {activeCategoryLabel} · {activeTypeLabel} ·{" "}
               {getStatusFilterLabel(locale, activeStatusFilter)} ·{" "}
               {activeFeedTotalItems}
             </p>
@@ -2032,21 +2653,22 @@ export function ActivityLobbyView({
           <div className="sm:hidden">
             <button
               type="button"
-              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#dfceb0] bg-[linear-gradient(135deg,rgba(255,253,247,0.96),rgba(255,246,234,0.92))] px-3 text-left shadow-[0_8px_20px_rgba(91,69,38,0.08)] transition active:scale-[0.99]"
+              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#8AB68E] bg-[linear-gradient(135deg,rgba(255,250,242,0.98),rgba(247,255,243,0.94))] px-3 text-left shadow-[0_8px_20px_rgba(29,29,27,0.07)] transition active:scale-[0.99]"
               onClick={openMobileFilter}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1dfb6] text-[#7a552b] shadow-inner shadow-white/50 ring-1 ring-[#dfceb0]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] shadow-inner shadow-white/50 ring-1 ring-[#8AB68E]">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-[10px] font-semibold leading-3 text-[#9a7448]">
+                <span className="block text-[10px] font-semibold leading-3 text-[#156240]">
                   {mobileFilterCopy.title}
                 </span>
                 <span className="mt-0.5 block truncate text-[13px] font-semibold leading-4 text-ink">
-                  {activeCategoryLabel} · {activeStatusLabel}
+                  {activeCategoryLabel} · {activeTypeLabel} ·{" "}
+                  {activeStatusLabel}
                 </span>
               </span>
-              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[#e18a6d] px-2.5 py-1 text-xs font-bold text-white shadow-[0_4px_10px_rgba(211,120,91,0.28)]">
+              <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-[#F09182] px-2.5 py-1 text-xs font-bold text-white shadow-[0_4px_10px_rgba(240,145,130,0.24)]">
                 {mobileResultCountLabel}
               </span>
             </button>
@@ -2070,8 +2692,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#b8cda8] bg-[#e4efd9] text-[#526a39] shadow-[0_3px_8px_rgba(96,124,69,0.1)]"
-                        : "border-sand bg-white/86 text-[#665c51] hover:border-sand-strong hover:bg-white",
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2080,8 +2702,8 @@ export function ActivityLobbyView({
                         className={cn(
                           "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                           active
-                            ? "bg-white/78 text-[#526a39]"
-                            : "bg-[#f3ecdf] text-[#8a7a65]",
+                            ? "bg-white/78 text-[#156240]"
+                            : "bg-[#F1F2EC] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -2091,6 +2713,29 @@ export function ActivityLobbyView({
                             : option.count}
                       </span>
                     ) : null}
+                  </button>
+                );
+              })}
+            </FilterGroupRow>
+
+            <FilterGroupRow label={filterCopy.type}>
+              {typeFilterOptions.map((option) => {
+                const active = option.id === activeTypeFilter;
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => handleTypeFilterChange(option.id)}
+                    className={cn(
+                      "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:px-3.5 sm:text-sm",
+                      active
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
+                        : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
+                    )}
+                  >
+                    <span className="min-w-0 truncate">{option.label}</span>
                   </button>
                 );
               })}
@@ -2109,8 +2754,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
-                        ? "border-[#d0b58b] bg-[#f1dfb6] text-[#76552a]"
-                        : "border-sand bg-team-bg text-[#776b5f] hover:border-sand-strong",
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
+                        : "border-[#D6D5B2] bg-team-bg text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2118,8 +2763,8 @@ export function ActivityLobbyView({
                       className={cn(
                         "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
-                          ? "bg-white/70 text-[#76552a]"
-                          : "bg-[#f4ecde] text-[#8a7455]",
+                          ? "bg-white/70 text-[#156240]"
+                          : "bg-[#F1F2EC] text-[#156240]",
                       )}
                     >
                       {option.count ?? "..."}
@@ -2139,15 +2784,24 @@ export function ActivityLobbyView({
           locale={locale}
           onRetry={() => {
             if (activeFilter === "all") {
-              const retryKey = getLobbyFeedCacheKey(activeStatusFilter, page);
+              const retryKey = getLobbyFeedCacheKey(
+                activeStatusFilter,
+                page,
+                activeTypeFilter,
+              );
 
               setFailedFeedKeys((current) => ({
                 ...current,
                 [retryKey]: false,
               }));
-              void loadLobbyFeedPage(activeStatusFilter, page, {
-                visual: true,
-              });
+              void loadLobbyFeedPage(
+                activeStatusFilter,
+                page,
+                activeTypeFilter,
+                {
+                  visual: true,
+                },
+              );
 
               return;
             }
@@ -2165,9 +2819,9 @@ export function ActivityLobbyView({
           }}
         />
       ) : !hasActivities && isDefaultLobbyView ? (
-        <section className="rounded-[1.5rem] border border-[#dfceb0] bg-[linear-gradient(145deg,rgba(255,252,247,0.98),rgba(246,237,222,0.94))] p-4 shadow-[0_12px_30px_rgba(94,80,52,0.06)] sm:p-6">
+        <section className="rounded-[1.5rem] border border-[#8AB68E] bg-[linear-gradient(145deg,rgba(255,250,242,0.98),rgba(247,255,243,0.95))] p-4 shadow-[0_12px_30px_rgba(29,29,27,0.06)] sm:p-6">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-[#8a5d3f]">
+            <p className="text-sm font-semibold text-[#156240]">
               {locale === "fr"
                 ? "Point de depart"
                 : locale === "en"
@@ -2176,14 +2830,14 @@ export function ActivityLobbyView({
             </p>
             <h2 className="mt-1 text-2xl font-semibold text-ink sm:text-3xl">
               {locale === "fr"
-                ? "Trouvez une sortie a partager"
+                ? "Trouvez une sortie à partager"
                 : locale === "en"
                   ? "Find something to do together"
                   : "今天想找谁一起出门？"}
             </h2>
             <p className="mt-3 text-sm leading-7 text-zinc-600 sm:text-base">
               {locale === "fr"
-                ? "Votre hall se remplira avec vos plans, mais vous pouvez deja partir d'une sortie ouverte ou lancer votre premier groupe."
+                ? "Votre hall se remplira avec vos plans, mais vous pouvez déjà partir d'une sortie ouverte ou lancer votre premier groupe."
                 : locale === "en"
                   ? "Your own lobby will grow with your plans. For now, start from an open activity or create your first crew."
                   : "你的个人组队动态会慢慢长出来。现在可以先从公开活动找人一起去，或者发起第一个局。"}
@@ -2197,10 +2851,10 @@ export function ActivityLobbyView({
                 className={cn(
                   "rounded-xl border p-3 text-left shadow-sm shadow-black/5",
                   action.tone === "primary"
-                    ? "border-[#d8c39f] bg-[linear-gradient(145deg,rgba(242,229,206,0.98),rgba(230,213,185,0.95))]"
+                    ? "border-[#8AB68E] bg-[linear-gradient(145deg,rgba(233,247,227,0.98),rgba(207,226,198,0.92))]"
                     : action.tone === "secondary"
-                      ? "border-[#d7c2b8] bg-[linear-gradient(145deg,rgba(246,233,228,0.96),rgba(239,223,216,0.94))]"
-                      : "border-[#dfd6c7] bg-[rgba(255,252,246,0.9)]",
+                      ? "border-[#DEAAB3] bg-[linear-gradient(145deg,rgba(255,240,237,0.98),rgba(255,250,242,0.96))]"
+                      : "border-[#D6D5B2] bg-[rgba(255,255,255,0.9)]",
                 )}
               >
                 <p className="text-base font-semibold text-ink">
@@ -2216,8 +2870,8 @@ export function ActivityLobbyView({
                     action.tone === "primary"
                       ? "bg-coral text-white hover:bg-coral-dark"
                       : action.tone === "secondary"
-                        ? "bg-white/85 text-[#8c5f4b] hover:bg-white"
-                        : "bg-[#f6efe3] text-[#7b6b56] hover:bg-[#efe5d5]",
+                        ? "bg-white/90 text-[#F09182] hover:bg-white"
+                        : "bg-[#F1F2EC] text-[#156240] hover:bg-white",
                   )}
                 >
                   {action.label}
@@ -2247,7 +2901,7 @@ export function ActivityLobbyView({
                 </div>
                 <Link
                   href={withLocale(locale, "/activities")}
-                  className="inline-flex h-9 w-fit items-center rounded-full border border-sand bg-white/80 px-4 text-sm font-semibold text-[#705f4d] transition hover:bg-white"
+                  className="inline-flex h-9 w-fit items-center rounded-full border border-[#D6D5B2] bg-white/84 px-4 text-sm font-semibold text-[#156240] transition hover:bg-white"
                 >
                   {moreActivitiesLabel}
                 </Link>
@@ -2273,9 +2927,40 @@ export function ActivityLobbyView({
             </div>
           ) : null}
         </section>
+      ) : activeFeedTotalItems === 0 && shouldShowCategoryFallback ? (
+        <div className="space-y-3">
+          <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/86 px-4 py-4">
+            <p className="text-base font-semibold text-ink">
+              {emptyCategoryCopy.title}
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-zinc-500">
+              {emptyCategoryCopy.description}
+            </p>
+          </div>
+          <CategoryFallbackSection
+            activities={categoryFallbackActivities}
+            currentCount={activeFeedTotalItems}
+            detailSourceKey="lobby"
+            detailSourceState={{
+              category: activeTypeFilter,
+              fallback: true,
+              page,
+              status: activeStatusFilter,
+            }}
+            favoriteRedirectPath="/lobby"
+            isAuthenticated
+            locale={locale}
+            onViewAll={() => {
+              setActiveTypeFilter("all");
+              setActiveStatusFilter("all");
+            }}
+            selectedCategory={activeTypeFilter}
+            titleId="lobby-category-empty-fallback"
+          />
+        </div>
       ) : activeFeedTotalItems === 0 ? (
-        <div className="rounded-[1.25rem] border border-dashed border-[#dccfb1] bg-[rgba(255,250,241,0.8)] px-4 py-5">
-          <p className="text-base font-semibold text-[#433a30]">
+        <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/85 px-4 py-5">
+          <p className="text-base font-semibold text-ink">
             {emptyCategoryCopy.title}
           </p>
           <p className="mt-1.5 text-sm leading-6 text-zinc-500">
@@ -2287,7 +2972,7 @@ export function ActivityLobbyView({
               setActiveFilter("all");
               setActiveStatusFilter("all");
             }}
-            className="mt-3 inline-flex h-9 items-center rounded-full border border-sand bg-white/86 px-4 text-sm font-semibold text-[#705f4d] transition hover:border-sand-strong hover:bg-white"
+            className="mt-3 inline-flex h-9 items-center rounded-full border border-[#D6D5B2] bg-white/86 px-4 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
           >
             {emptyCategoryResetLabel}
           </button>
@@ -2295,10 +2980,10 @@ export function ActivityLobbyView({
       ) : (
         <>
           {shouldShowStarterPanel ? (
-            <section className="space-y-3 rounded-[1.25rem] border border-[#dfceb0] bg-white/72 p-4 shadow-sm shadow-black/5 sm:p-5">
+            <section className="space-y-3 rounded-[1.25rem] border border-[#8AB68E] bg-white/78 p-4 shadow-sm shadow-black/5 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7455]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#156240]">
                     {locale === "fr"
                       ? "Pour remplir votre hall"
                       : locale === "en"
@@ -2322,7 +3007,7 @@ export function ActivityLobbyView({
                 </div>
                 <Link
                   href={withLocale(locale, "/activities")}
-                  className="inline-flex h-9 w-fit shrink-0 items-center rounded-full border border-sand bg-white/80 px-4 text-sm font-semibold text-[#705f4d] transition hover:bg-white"
+                  className="inline-flex h-9 w-fit shrink-0 items-center rounded-full border border-[#D6D5B2] bg-white/84 px-4 text-sm font-semibold text-[#156240] transition hover:bg-white"
                 >
                   {moreActivitiesLabel}
                 </Link>
@@ -2358,7 +3043,7 @@ export function ActivityLobbyView({
                   <h2 className="truncate text-lg font-semibold text-ink sm:text-xl">
                     {activeCategoryLabel}
                   </h2>
-                  <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#8a7455] ring-1 ring-sand">
+                  <span className="shrink-0 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2]">
                     {activeFeedTotalItems}
                   </span>
                 </div>
@@ -2366,6 +3051,19 @@ export function ActivityLobbyView({
                   {getStatusFilterLabel(locale, activeStatusFilter)}
                 </p>
               </div>
+              <Link
+                href={withLocale(locale, "/activities/new")}
+                className="mobile-home-quick-action inline-flex h-9 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-extrabold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] sm:h-10 sm:min-w-[6.2rem] sm:px-4 sm:text-sm"
+                title={appCopy.nav.newActivity}
+              >
+                <CalendarPlus
+                  className="h-4 w-4 shrink-0 sm:h-5 sm:w-5"
+                  aria-hidden="true"
+                />
+                <span className="whitespace-nowrap">
+                  {appCopy.nav.newActivity}
+                </span>
+              </Link>
             </div>
 
             <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -2387,6 +3085,7 @@ export function ActivityLobbyView({
                   detailSourceKey="lobby"
                   detailSourceState={{
                     filter: activeFilter,
+                    category: activeTypeFilter,
                     page,
                     status: activeStatusFilter,
                   }}
@@ -2401,6 +3100,29 @@ export function ActivityLobbyView({
               totalItems={activeFeedTotalItems}
             />
           </section>
+
+          {shouldShowCategoryFallback ? (
+            <CategoryFallbackSection
+              activities={categoryFallbackActivities}
+              currentCount={activeFeedTotalItems}
+              detailSourceKey="lobby"
+              detailSourceState={{
+                category: activeTypeFilter,
+                fallback: true,
+                page,
+                status: activeStatusFilter,
+              }}
+              favoriteRedirectPath="/lobby"
+              isAuthenticated
+              locale={locale}
+              onViewAll={() => {
+                setActiveTypeFilter("all");
+                setActiveStatusFilter("all");
+              }}
+              selectedCategory={activeTypeFilter}
+              titleId="lobby-category-fallback"
+            />
+          ) : null}
         </>
       )}
     </div>

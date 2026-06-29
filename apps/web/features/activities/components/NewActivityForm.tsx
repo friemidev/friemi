@@ -1,10 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import type { FormEvent, ReactNode, SelectHTMLAttributes } from "react";
-import { useActionState, useRef, useState } from "react";
+import type {
+  ChangeEventHandler,
+  FormEvent,
+  ReactNode,
+  SelectHTMLAttributes,
+} from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  LoaderCircle,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -61,8 +73,54 @@ const categoryOptions = (
   return 0;
 });
 const selectClassName =
-  "h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400";
+  "h-11 w-full rounded-lg border border-[#D6D5B2] bg-white px-3 text-base font-semibold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 sm:h-12 sm:px-4 sm:text-lg";
+const compactInputClassName =
+  "h-11 rounded-lg border-[#D6D5B2] bg-white/95 px-3 text-base font-semibold text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:h-12 sm:px-4 sm:text-lg";
+const compactTextareaClassName =
+  "min-h-24 rounded-lg border-[#D6D5B2] bg-white/95 px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
+
+type FormSectionTone = "cream" | "mint" | "rose" | "sky";
+type TeamFormSectionId =
+  | "visibility"
+  | "activity-content"
+  | "time-location"
+  | "people-price";
+
+const formSectionTones: Record<
+  FormSectionTone,
+  {
+    accent: string;
+    dot: string;
+    header: string;
+    section: string;
+  }
+> = {
+  cream: {
+    accent: "bg-[#F09182]",
+    dot: "bg-[#F09182]",
+    header: "border-[#F09182]/55",
+    section: "border-[#F09182] bg-[#FEFFF9]",
+  },
+  mint: {
+    accent: "bg-[#369758]",
+    dot: "bg-[#369758]",
+    header: "border-[#369758]/45",
+    section: "border-[#369758] bg-[#F1F2EC]",
+  },
+  rose: {
+    accent: "bg-[#DEAAB3]",
+    dot: "bg-[#DEAAB3]",
+    header: "border-[#F0D8DC]",
+    section: "border-[#F2DDE0] bg-[#FFFDFC]",
+  },
+  sky: {
+    accent: "bg-[#DEEBFF]",
+    dot: "bg-[#DEEBFF] ring-1 ring-[#156240]/35",
+    header: "border-[#DEEBFF]",
+    section: "border-[#DEEBFF] bg-[#FEFFF9]",
+  },
+};
 
 type LongDurationConfirmation = {
   durationLabel: string;
@@ -238,18 +296,531 @@ function Select({
   );
 }
 
-function FormSection({
-  title,
-  children,
+function getDateTimePickerCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      choose: "Choisir",
+      dateTime: "Date et heure",
+      done: "OK",
+      nextMonth: "Mois suivant",
+      previousMonth: "Mois précédent",
+      time: "Heure",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      choose: "Choose",
+      dateTime: "Date and time",
+      done: "Done",
+      nextMonth: "Next month",
+      previousMonth: "Previous month",
+      time: "Time",
+    };
+  }
+
+  return {
+    choose: "选择",
+    dateTime: "日期和时间",
+    done: "确定",
+    nextMonth: "下个月",
+    previousMonth: "上个月",
+    time: "时间",
+  };
+}
+
+function getDateTimeParts(value?: string) {
+  const [date = "", time = ""] = value?.split("T") ?? [];
+
+  return {
+    date,
+    time: time.slice(0, 5),
+  };
+}
+
+function getMonthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getDateKey(date: Date) {
+  return `${getMonthKey(date)}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getTodayDateKey() {
+  return getDateKey(new Date());
+}
+
+function isDateBeforeToday(dateKey: string) {
+  return dateKey < getTodayDateKey();
+}
+
+function getCalendarCells(monthDate: Date) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const startDate = new Date(year, month, 1 - startOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+
+    return {
+      date,
+      dateKey: getDateKey(date),
+      isCurrentMonth: date.getMonth() === month,
+    };
+  });
+}
+
+function getWeekdayLabels(locale: string) {
+  return Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+      new Date(Date.UTC(2026, 0, 5 + index, 12)),
+    ),
+  );
+}
+
+function formatDateTimeFieldValue(
+  dateKey: string,
+  time: string,
+  locale: string,
+) {
+  if (!dateKey && !time) {
+    return "";
+  }
+
+  if (!dateKey) {
+    return time;
+  }
+
+  const date = new Date(`${dateKey}T${time || "00:00"}:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateKey;
+  }
+
+  if (!time) {
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+    }).format(date);
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function clampTimePart(value: string, max: number) {
+  const numericValue = Number.parseInt(value, 10);
+
+  if (Number.isNaN(numericValue)) {
+    return "";
+  }
+
+  return String(Math.min(Math.max(numericValue, 0), max)).padStart(2, "0");
+}
+
+function normalizeTimeValue(time: string) {
+  const [hour = "", minute = ""] = time.split(":");
+
+  if (!hour && !minute) {
+    return "";
+  }
+
+  const normalizedHour = hour ? clampTimePart(hour, 23) : "00";
+  const normalizedMinute = minute ? clampTimePart(minute, 59) : "00";
+
+  return `${normalizedHour}:${normalizedMinute}`;
+}
+
+function DateTimePickerField({
+  defaultValue,
+  locale,
+  name,
 }: {
-  title: string;
+  defaultValue?: string;
+  locale: string;
+  name: string;
+}) {
+  const initialParts = getDateTimeParts(defaultValue);
+  const initialMonthDate = initialParts.date
+    ? new Date(`${initialParts.date}T12:00:00`)
+    : new Date();
+  const [dateKey, setDateKey] = useState(initialParts.date);
+  const [isOpen, setIsOpen] = useState(false);
+  const [monthDate, setMonthDate] = useState(
+    Number.isNaN(initialMonthDate.getTime()) ? new Date() : initialMonthDate,
+  );
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [time, setTime] = useState(initialParts.time);
+  const copy = getDateTimePickerCopy(locale);
+  const normalizedTime = normalizeTimeValue(time);
+  const hasCompleteTime = /^\d{2}:\d{2}$/.test(normalizedTime);
+  const value =
+    dateKey && hasCompleteTime ? `${dateKey}T${normalizedTime}` : "";
+  const calendarCells = getCalendarCells(monthDate);
+  const displayValue =
+    formatDateTimeFieldValue(dateKey, normalizedTime, locale) || copy.choose;
+  const monthLabel = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(monthDate);
+  const weekdayLabels = getWeekdayLabels(locale);
+  const [selectedHour = "", selectedMinute = ""] = time.split(":");
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function closeOnOutsideInteraction(event: MouseEvent | TouchEvent) {
+      const target = event.target;
+
+      if (
+        target instanceof Node &&
+        pickerRef.current &&
+        !pickerRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("touchstart", closeOnOutsideInteraction);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("touchstart", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function moveMonth(offset: number) {
+    setMonthDate(
+      (currentDate) =>
+        new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1),
+    );
+  }
+
+  function updateTimePart(part: "hour" | "minute", nextValue: string) {
+    const [currentHour = "", currentMinute = ""] = time.split(":");
+    const normalizedValue = nextValue.replace(/\D/g, "").slice(0, 2);
+    const nextHour = part === "hour" ? normalizedValue : currentHour;
+    const nextMinute = part === "minute" ? normalizedValue : currentMinute;
+
+    if (!nextHour && !nextMinute) {
+      setTime("");
+      return;
+    }
+
+    setTime(`${nextHour}:${nextMinute}`);
+  }
+
+  function handleTimeBlur(part: "hour" | "minute", nextValue: string) {
+    const normalizedValue = clampTimePart(nextValue, part === "hour" ? 23 : 59);
+    const [currentHour = "", currentMinute = ""] = time.split(":");
+    const nextHour = part === "hour" ? normalizedValue : currentHour;
+    const nextMinute = part === "minute" ? normalizedValue : currentMinute;
+
+    if (!nextHour && !nextMinute) {
+      setTime("");
+      return;
+    }
+
+    setTime(normalizeTimeValue(`${nextHour}:${nextMinute}`));
+  }
+
+  function handleDone() {
+    if (time) {
+      setTime(normalizeTimeValue(time));
+    }
+
+    setIsOpen(false);
+  }
+
+  return (
+    <div className="relative" ref={pickerRef}>
+      <input name={name} type="hidden" value={value} />
+      <button
+        type="button"
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-3 text-left text-base font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((currentValue) => !currentValue)}
+      >
+        <span className={cn(!value && "text-zinc-400")}>{displayValue}</span>
+        <CalendarDays className="h-5 w-5 shrink-0 text-[#156240]" aria-hidden />
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-0 top-[calc(100%+0.5rem)] z-[90] w-[min(21rem,calc(100vw-2rem))] rounded-xl border-2 border-[#8AB68E] bg-[#FEFFF9] p-2.5 shadow-[0_18px_48px_rgba(29,29,27,0.16)] max-sm:!fixed max-sm:!bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] max-sm:!left-3 max-sm:!right-3 max-sm:!top-auto max-sm:!w-auto max-sm:!translate-x-0 max-sm:overflow-y-auto max-sm:p-3 sm:p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-ink sm:text-base">
+              {copy.dateTime}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition hover:border-[#8AB68E] sm:h-8 sm:w-8"
+                aria-label={copy.previousMonth}
+                onClick={() => moveMonth(-1)}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] transition hover:border-[#8AB68E] sm:h-8 sm:w-8"
+                aria-label={copy.nextMonth}
+                onClick={() => moveMonth(1)}
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-1.5 text-center text-base font-semibold text-[#156240]">
+            {monthLabel}
+          </p>
+
+          <div className="mt-2 grid grid-cols-7 gap-0.5 text-center text-sm font-semibold text-zinc-600">
+            {weekdayLabels.map((weekdayLabel) => (
+              <span key={weekdayLabel}>{weekdayLabel}</span>
+            ))}
+          </div>
+
+          <div className="mt-1 grid grid-cols-7 gap-0.5">
+            {calendarCells.map((cell) => {
+              const isSelected = cell.dateKey === dateKey;
+              const isPastDate = isDateBeforeToday(cell.dateKey);
+              const isDisabled = !cell.isCurrentMonth || isPastDate;
+
+              return (
+                <button
+                  key={cell.dateKey}
+                  type="button"
+                  disabled={isDisabled}
+                  className={cn(
+                    "grid h-7 place-items-center rounded-md text-sm font-semibold transition disabled:cursor-not-allowed sm:h-8 sm:text-base",
+                    !isDisabled
+                      ? "text-zinc-800 hover:bg-[#F1F2EC]"
+                      : "text-zinc-300 opacity-45",
+                    isSelected &&
+                      !isDisabled &&
+                      "bg-[#369758] text-white hover:bg-[#369758]",
+                  )}
+                  onClick={() => {
+                    if (!isDisabled) {
+                      setDateKey(cell.dateKey);
+                    }
+                  }}
+                >
+                  {cell.date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-2.5 rounded-xl border border-[#D6D5B2] bg-white px-2.5 py-2.5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#156240] sm:text-base">
+              <Clock3 className="h-4 w-4" aria-hidden />
+              {copy.time}
+            </div>
+            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+              <input
+                aria-label="hour"
+                className="h-10 rounded-lg border-2 border-[#D6D5B2] bg-[#FEFFF9] px-3 text-center text-base font-bold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-4 focus:ring-[#8AB68E]/15"
+                inputMode="numeric"
+                onBlur={(event) => handleTimeBlur("hour", event.target.value)}
+                onChange={(event) => updateTimePart("hour", event.target.value)}
+                placeholder="18"
+                type="text"
+                value={selectedHour}
+              />
+              <span className="text-lg font-bold text-[#156240]">:</span>
+              <input
+                aria-label="minute"
+                className="h-10 rounded-lg border-2 border-[#D6D5B2] bg-[#FEFFF9] px-3 text-center text-base font-bold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-4 focus:ring-[#8AB68E]/15"
+                inputMode="numeric"
+                onBlur={(event) => handleTimeBlur("minute", event.target.value)}
+                onChange={(event) =>
+                  updateTimePart("minute", event.target.value)
+                }
+                placeholder="00"
+                type="text"
+                value={selectedMinute}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="mt-2.5 h-10 w-full rounded-full bg-[#369758] text-base font-semibold text-white transition hover:bg-[#156240]"
+            onClick={handleDone}
+          >
+            {copy.done}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FormSection({
+  children,
+  title,
+  tone = "cream",
+}: {
   children: ReactNode;
+  title: string;
+  tone?: FormSectionTone;
+}) {
+  const toneClassNames = formSectionTones[tone];
+
+  return (
+    <section
+      className={cn(
+        "relative min-w-0 overflow-visible rounded-2xl border-2 p-3 pl-4 shadow-[0_8px_24px_rgba(21,98,64,0.05)] ring-1 ring-white/80 sm:border-[3px] sm:p-3.5 sm:pl-5",
+        toneClassNames.section,
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-0 left-0 w-2 rounded-l-[0.85rem]",
+          toneClassNames.accent,
+        )}
+      />
+      <div
+        className={cn(
+          "flex items-center gap-2 border-b pb-2.5",
+          toneClassNames.header,
+        )}
+      >
+        <span
+          className={cn("h-2 w-2 shrink-0 rounded-full", toneClassNames.dot)}
+        />
+        <h3 className="text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
+          {title}
+        </h3>
+      </div>
+      <div className="mt-3 grid gap-3 sm:gap-3.5">{children}</div>
+    </section>
+  );
+}
+
+function TeamFormSectionSwitcher({
+  activeSection,
+  onSelect,
+  sections,
+}: {
+  activeSection: TeamFormSectionId;
+  onSelect: (id: TeamFormSectionId) => void;
+  sections: Array<{
+    description: string;
+    id: TeamFormSectionId;
+    mobileTitle?: string;
+    title: string;
+  }>;
 }) {
   return (
-    <section className="grid gap-4 border-t border-zinc-100 pt-5 first:border-t-0 first:pt-0">
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
-      <div className="grid gap-5">{children}</div>
-    </section>
+    <div className="w-full min-w-0 rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
+      <div className="grid grid-cols-4 gap-1.5 lg:hidden">
+        {sections.map((section, index) => {
+          const active = activeSection === section.id;
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-pressed={active}
+              className={cn(
+                "flex min-h-10 min-w-0 items-center justify-center rounded-full border px-1 py-1.5 text-center text-[0.66rem] font-semibold leading-[1.12] transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-1.5 sm:text-xs",
+                active
+                  ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
+              )}
+            >
+              <span className="block whitespace-normal break-words">
+                {index + 1}. {section.mobileTitle ?? section.title}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden gap-2 lg:grid lg:grid-cols-4">
+        {sections.map((section, index) => {
+          const active = activeSection === section.id;
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-pressed={active}
+              className={cn(
+                "flex min-w-[6.4rem] shrink-0 items-center justify-center rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                active
+                  ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  : "border-[#D6D5B2] bg-[#FFFCF8] text-zinc-600 hover:border-[#8AB68E] hover:bg-white",
+              )}
+            >
+              <span className="truncate">{index + 1}. {section.title}</span>
+            </button>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+}
+
+function SettingCheckbox({
+  checked,
+  defaultChecked,
+  description,
+  name,
+  onChange,
+  title,
+}: {
+  checked?: boolean;
+  defaultChecked?: boolean;
+  description: string;
+  name: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
+  title: string;
+}) {
+  return (
+    <label className="group grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border border-[#D6D5B2]/85 bg-white/72 p-3 text-base text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:shadow-sm">
+      <input
+        checked={checked}
+        className="peer sr-only"
+        defaultChecked={defaultChecked}
+        name={name}
+        onChange={onChange}
+        type="checkbox"
+      />
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[#8E8383]/70 bg-white text-white transition peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:[&>svg]:opacity-100">
+        <Check className="h-3.5 w-3.5 opacity-0 transition" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
+          {title}
+        </span>
+        <span className="mt-1 block text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
+          {description}
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -280,7 +851,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="w-full gap-2 sm:w-auto"
+      className="mx-auto min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-white shadow-[0_10px_24px_rgba(54,151,88,0.22)] hover:bg-[#156240] sm:mx-0 sm:min-w-0"
       disabled={pending || disabled}
       aria-busy={pending || disabled}
     >
@@ -343,18 +914,18 @@ function LongDurationConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-center bg-[#1b160f]/45 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[#1D1D1B]/42 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] backdrop-blur-sm"
       role="presentation"
     >
       <div
         aria-describedby="long-duration-confirm-description"
         aria-labelledby="long-duration-confirm-title"
         aria-modal="true"
-        className="w-full max-w-lg overflow-hidden rounded-[1.35rem] border border-[#e0c9a9] bg-[#fffaf2] shadow-[0_24px_80px_rgba(46,31,12,0.24)]"
+        className="w-full max-w-lg overflow-hidden rounded-[1.35rem] border border-[#8AB68E] bg-[#FFF5E6] shadow-[0_24px_80px_rgba(29,29,27,0.18)]"
         role="alertdialog"
       >
-        <div className="border-b border-[#ecdcc2] bg-[linear-gradient(135deg,#fff8ed,#fffdf8)] px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6a35]">
+        <div className="border-b border-[#D6D5B2] bg-[linear-gradient(135deg,#FEFFF9,#FEFFF9)] px-5 py-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
             {copy.eyebrow}
           </p>
           <h2
@@ -373,17 +944,17 @@ function LongDurationConfirmDialog({
             {copy.description}
           </p>
 
-          <div className="grid gap-2 rounded-2xl border border-[#ead8bb] bg-white/75 p-3 text-sm">
-            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+          <div className="grid gap-2 rounded-2xl border border-[#D6D5B2] bg-white/75 p-3 text-sm">
+            <div className="grid gap-1 rounded-xl bg-[#FEFFF9] px-3 py-2 ring-1 ring-[#8AB68E]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#156240]">
                 {copy.start}
               </span>
               <span className="font-semibold text-ink">
                 {confirmation.startLabel}
               </span>
             </div>
-            <div className="grid gap-1 rounded-xl bg-[#fff8ec] px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b6a35]">
+            <div className="grid gap-1 rounded-xl bg-[#FEFFF9] px-3 py-2 ring-1 ring-[#8AB68E]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#156240]">
                 {copy.end}
               </span>
               <span className="font-semibold text-ink">
@@ -400,11 +971,11 @@ function LongDurationConfirmDialog({
             </div>
           </div>
 
-          <div className="grid gap-2 pt-1 sm:grid-cols-2">
+          <div className="grid gap-2 pt-1 lg:grid-cols-2">
             <Button
               type="button"
               variant="secondary"
-              className="h-11 rounded-full border-[#e0c9a9] bg-white"
+              className="h-11 rounded-full border-[#8AB68E] bg-white"
               disabled={pending}
               onClick={onClose}
             >
@@ -412,7 +983,7 @@ function LongDurationConfirmDialog({
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-[#101010] text-white hover:bg-[#242424]"
+              className="h-11 rounded-full bg-[#369758] text-white hover:bg-[#156240]"
               disabled={pending}
               onClick={onConfirm}
             >
@@ -456,6 +1027,53 @@ function FormActions({
   );
 }
 
+function StepSwitchActions({
+  activeSection,
+  locale,
+  onPrevious,
+  onNext,
+}: {
+  activeSection: TeamFormSectionId;
+  locale: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const isFirst = activeSection === "visibility";
+  const isLast = activeSection === "people-price";
+  const t = getCopy(locale).form;
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2]/80 bg-white/78 px-3 py-3">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={isFirst}
+        className={cn(
+          "inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition",
+          isFirst
+            ? "cursor-not-allowed border border-[#E8E1CF] bg-[#F8F6EE] text-zinc-400"
+            : "border border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+        )}
+      >
+        {t.previousStep}
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={isLast}
+        className={cn(
+          "inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition",
+          isLast
+            ? "cursor-not-allowed border border-[#E8E1CF] bg-[#F8F6EE] text-zinc-400"
+            : "bg-[#369758] text-white shadow-[0_8px_18px_rgba(54,151,88,0.16)] hover:bg-[#156240]",
+        )}
+      >
+        {t.nextStep}
+      </button>
+    </div>
+  );
+}
+
 export function NewActivityForm({
   activityId,
   cancelHref,
@@ -490,6 +1108,47 @@ export function NewActivityForm({
   const [isCapacityLimited, setIsCapacityLimited] = useState(
     values?.capacityLimitEnabled ?? Number(values?.capacity ?? 0) > 0,
   );
+  const [activeSection, setActiveSection] =
+    useState<TeamFormSectionId>("visibility");
+  const formSections: Array<{
+    description: string;
+    id: TeamFormSectionId;
+    mobileTitle?: string;
+    title: string;
+  }> = [
+    {
+      description: t.form.sectionVisibilityDescription,
+      id: "visibility",
+      mobileTitle: t.form.sectionVisibilityMobileTitle,
+      title: t.form.sectionVisibilityTitle,
+    },
+    {
+      description: t.form.sectionActivityContentDescription,
+      id: "activity-content",
+      mobileTitle: t.form.sectionActivityContentMobileTitle,
+      title: t.form.sectionActivityContentTitle,
+    },
+    {
+      description: t.form.sectionTimeLocationDescription,
+      id: "time-location",
+      mobileTitle: t.form.sectionTimeLocationMobileTitle,
+      title: t.form.sectionTimeLocationTitle,
+    },
+    {
+      description: t.form.sectionPeoplePriceDescription,
+      id: "people-price",
+      mobileTitle: t.form.sectionPeoplePriceMobileTitle,
+      title: t.form.sectionPeoplePriceTitle,
+    },
+  ];
+  const isSectionActive = (sectionId: TeamFormSectionId) =>
+    activeSection === sectionId;
+  const sectionOrder: TeamFormSectionId[] = [
+    "visibility",
+    "activity-content",
+    "time-location",
+    "people-price",
+  ];
 
   function applyImportedValues(nextValues: Partial<ActivityFormValues>) {
     setImportedValues((currentValues) => ({
@@ -543,18 +1202,30 @@ export function NewActivityForm({
     });
   }
 
+  function goToNextSection() {
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const nextSection = sectionOrder[Math.min(currentIndex + 1, sectionOrder.length - 1)];
+    setActiveSection(nextSection);
+  }
+
+  function goToPreviousSection() {
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const previousSection = sectionOrder[Math.max(currentIndex - 1, 0)];
+    setActiveSection(previousSection);
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
+    <Card className="w-full min-w-0 overflow-visible border-[#D6D5B2] bg-[#FEFFF9]/70 shadow-[0_14px_42px_rgba(21,98,64,0.065)]">
+      <CardHeader className="border-b border-[#D6D5B2]/70 bg-white/68 px-4 py-3 sm:px-5">
+        <CardTitle className="text-lg sm:text-xl">
           {publicEventTeamFormCopy?.cardTitle ?? t.form.basicInfo}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] p-3 sm:p-5">
         <form
           key={`${state.version ?? 0}-${prefillVersion}`}
           action={formAction}
-          className="grid gap-6"
+          className="grid min-w-0 gap-5 sm:gap-6"
           onSubmit={handleSubmit}
           noValidate
           ref={formRef}
@@ -587,6 +1258,12 @@ export function NewActivityForm({
             />
           ) : null}
 
+          <TeamFormSectionSwitcher
+            activeSection={activeSection}
+            onSelect={setActiveSection}
+            sections={formSections}
+          />
+
           {values?.importSourceUrl ? (
             <input
               name="importSourceUrl"
@@ -606,8 +1283,9 @@ export function NewActivityForm({
             </>
           ) : null}
 
-          <FormSection title={t.form.visibilityTitle}>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className={cn("min-w-0", !isSectionActive("visibility") && "hidden")}>
+            <FormSection title={t.form.visibilityTitle} tone="mint">
+            <div className="grid gap-3 lg:grid-cols-2">
               {visibilityOptions.map((option) => {
                 const active = visibility === option;
                 const isPrivate = option === "PRIVATE";
@@ -616,27 +1294,27 @@ export function NewActivityForm({
                   <label
                     key={option}
                     className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition",
+                      "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border p-3 text-base transition",
                       active
-                        ? "border-[#d09a77] bg-[#fff3ea] shadow-sm"
-                        : "border-zinc-200 bg-white hover:border-[#d9c0ad]",
+                        ? "border-[#8AB68E] bg-[#F1F2EC] shadow-sm"
+                        : "border-[#D6D5B2] bg-white/84 hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >
                     <input
-                      className="mt-1"
+                      className="mt-1 accent-[#156240]"
                       name="visibility"
                       type="radio"
                       value={option}
                       checked={active}
                       onChange={() => setVisibility(option)}
                     />
-                    <span>
-                      <span className="block font-semibold text-ink">
+                    <span className="min-w-0">
+                      <span className="block text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
                         {isPrivate
                           ? t.form.visibilityPrivate
                           : t.form.visibilityPublic}
                       </span>
-                      <span className="mt-1 block leading-6 text-zinc-500">
+                      <span className="mt-1 block text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                         {isPrivate
                           ? t.form.visibilityPrivateHint
                           : t.form.visibilityPublicHint}
@@ -647,14 +1325,17 @@ export function NewActivityForm({
               })}
             </div>
             <FieldError errors={state.fieldErrors?.visibility} />
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={
-              publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
-            }
-          >
-            <div className="grid gap-2 text-sm font-medium text-zinc-700">
+          <div className={cn("min-w-0", !isSectionActive("activity-content") && "hidden")}>
+            <FormSection
+              title={
+                publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
+              }
+              tone="sky"
+            >
+            <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               <span>{t.form.coverImage}</span>
               <ActivityCoverUpload
                 initialUrl={values?.coverImageUrl}
@@ -664,9 +1345,10 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.coverImageUrl} />
             </div>
 
-            <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.title ?? t.form.title}
               <Input
+                className={compactInputClassName}
                 name="title"
                 aria-invalid={Boolean(state.fieldErrors?.title)}
                 defaultValue={values?.title}
@@ -679,9 +1361,10 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.title} />
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.description ?? t.form.description}
               <Textarea
+                className={compactTextareaClassName}
                 name="description"
                 aria-invalid={Boolean(state.fieldErrors?.description)}
                 defaultValue={values?.description}
@@ -694,9 +1377,10 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {publicEventTeamFormCopy?.itinerary ?? t.form.itinerary}
               <Textarea
+                className={cn(compactTextareaClassName, "min-h-[72px]")}
                 name="itinerary"
                 aria-invalid={Boolean(state.fieldErrors?.itinerary)}
                 defaultValue={values?.itinerary}
@@ -709,8 +1393,8 @@ export function NewActivityForm({
             </label>
 
             {!isPublicEventTeam ? (
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {t.form.type}
                   <Select
                     name="type"
@@ -724,13 +1408,13 @@ export function NewActivityForm({
                     </option>
                     <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
                   </Select>
-                  <span className="text-xs font-normal text-zinc-500">
+                  <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                     {t.form.typeHint}
                   </span>
                   <FieldError errors={state.fieldErrors?.type} />
                 </label>
 
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {t.form.category}
                   <Select
                     name="category"
@@ -745,7 +1429,7 @@ export function NewActivityForm({
                       </option>
                     ))}
                   </Select>
-                  <span className="text-xs font-normal text-zinc-500">
+                  <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                     {t.form.categoryHint}
                   </span>
                   <FieldError errors={state.fieldErrors?.category} />
@@ -754,9 +1438,10 @@ export function NewActivityForm({
             ) : null}
 
             {!isPublicEventTeam && category === "OTHER" ? (
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.otherCategory}
                 <Input
+                  className={compactInputClassName}
                   name="otherCategoryText"
                   aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
                   defaultValue={values?.otherCategoryText}
@@ -764,20 +1449,24 @@ export function NewActivityForm({
                   placeholder={t.form.otherCategoryPlaceholder}
                   required
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.otherCategoryHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.otherCategoryText} />
               </label>
             ) : null}
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
-          >
-            <label className="grid gap-2 text-sm font-medium text-zinc-700">
+          <div className={cn("min-w-0", !isSectionActive("time-location") && "hidden")}>
+            <FormSection
+              title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
+              tone="cream"
+            >
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {t.form.city}
               <Input
+                className={compactInputClassName}
                 name="city"
                 aria-invalid={Boolean(state.fieldErrors?.city)}
                 defaultValue={values?.city ?? "Paris"}
@@ -787,25 +1476,27 @@ export function NewActivityForm({
             </label>
 
             {activityType === "TRIP" ? (
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.destination}
                 <Input
+                  className={compactInputClassName}
                   name="destination"
                   aria-invalid={Boolean(state.fieldErrors?.destination)}
                   defaultValue={values?.destination}
                   placeholder={t.form.destinationPlaceholder}
                   required
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.destinationHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.destination} />
               </label>
             ) : null}
 
-            <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               {t.form.address}
               <Input
+                className={compactInputClassName}
                 name="address"
                 aria-invalid={Boolean(state.fieldErrors?.address)}
                 defaultValue={values?.address}
@@ -814,6 +1505,13 @@ export function NewActivityForm({
               />
               <FieldError errors={state.fieldErrors?.address} />
             </label>
+
+            <SettingCheckbox
+              defaultChecked={values?.hideAddressFromNonParticipants}
+              description={t.form.hideAddressFromNonParticipantsHint}
+              name="hideAddressFromNonParticipants"
+              title={t.form.hideAddressFromNonParticipants}
+            />
 
             <ActivityPlacePicker
               initialAddress={values?.address}
@@ -824,64 +1522,55 @@ export function NewActivityForm({
               longitudeErrors={state.fieldErrors?.longitude}
             />
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.startAt}
-                <Input
-                  name="startAt"
-                  aria-invalid={Boolean(state.fieldErrors?.startAt)}
+                <DateTimePickerField
                   defaultValue={values?.startAt}
-                  type="datetime-local"
-                  required
+                  locale={locale}
+                  name="startAt"
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.startAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.startAt} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.endAt}
-                <Input
-                  name="endAt"
-                  aria-invalid={Boolean(state.fieldErrors?.endAt)}
+                <DateTimePickerField
                   defaultValue={values?.endAt}
-                  type="datetime-local"
+                  locale={locale}
+                  name="endAt"
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.endAtHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.endAt} />
               </label>
             </div>
-          </FormSection>
+            </FormSection>
+          </div>
 
-          <FormSection
-            title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
-          >
-            <label className="flex items-start gap-3 rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
-              <input
-                checked={isCapacityLimited}
-                className="mt-1"
-                name="capacityLimitEnabled"
-                onChange={(event) => setIsCapacityLimited(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                <span className="font-medium text-ink">
-                  {t.form.capacityLimitToggle}
-                </span>
-                <span className="mt-1 block text-zinc-500">
-                  {t.form.capacityLimitHint}
-                </span>
-              </span>
-            </label>
+          <div className={cn("min-w-0", !isSectionActive("people-price") && "hidden")}>
+            <FormSection
+              title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
+              tone="rose"
+            >
+            <SettingCheckbox
+              checked={isCapacityLimited}
+              description={t.form.capacityLimitHint}
+              name="capacityLimitEnabled"
+              onChange={(event) => setIsCapacityLimited(event.target.checked)}
+              title={t.form.capacityLimitToggle}
+            />
 
             {isCapacityLimited ? (
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
                   <Input
+                    className={compactInputClassName}
                     name="capacity"
                     aria-invalid={Boolean(state.fieldErrors?.capacity)}
                     type="number"
@@ -896,10 +1585,11 @@ export function NewActivityForm({
                   <FieldError errors={state.fieldErrors?.capacity} />
                 </label>
 
-                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                   {publicEventTeamFormCopy?.minParticipants ??
                     t.form.minParticipants}
                   <Input
+                    className={compactInputClassName}
                     name="minParticipants"
                     aria-invalid={Boolean(state.fieldErrors?.minParticipants)}
                     type="number"
@@ -918,8 +1608,8 @@ export function NewActivityForm({
               </>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.priceType}
                 <Select
                   name="priceType"
@@ -937,9 +1627,10 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.priceType} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
                 <Input
+                  className={compactInputClassName}
                   name="priceText"
                   aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
@@ -950,10 +1641,11 @@ export function NewActivityForm({
               </label>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.ticketUrl}
                 <Input
+                  className={compactInputClassName}
                   name="ticketUrl"
                   aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
                   defaultValue={values?.ticketUrl}
@@ -961,52 +1653,53 @@ export function NewActivityForm({
                   placeholder={t.form.ticketUrlPlaceholder}
                   type="url"
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.ticketHint}
                 </span>
                 <FieldError errors={state.fieldErrors?.ticketUrl} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-zinc-700">
+              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.ticketLabel}
                 <Input
+                  className={compactInputClassName}
                   name="ticketLabel"
                   aria-invalid={Boolean(state.fieldErrors?.ticketLabel)}
                   defaultValue={values?.ticketLabel}
                   maxLength={40}
                   placeholder={t.form.ticketLabelPlaceholder}
                 />
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="text-base font-normal leading-7 text-zinc-600 sm:text-lg sm:leading-8">
                   {t.form.ticketLabelPlaceholder}
                 </span>
                 <FieldError errors={state.fieldErrors?.ticketLabel} />
               </label>
             </div>
 
-            <label className="flex items-start gap-3 rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
-              <input
-                className="mt-1"
-                name="requiresApproval"
-                type="checkbox"
-                defaultChecked={values?.requiresApproval}
-              />
-              <span>
-                <span className="font-medium text-ink">
-                  {t.form.requiresApproval}
-                </span>
-                <span className="mt-1 block text-zinc-500">
-                  {t.form.requiresApprovalHint}
-                </span>
-              </span>
-            </label>
-          </FormSection>
+            <SettingCheckbox
+              defaultChecked={values?.requiresApproval}
+              description={t.form.requiresApprovalHint}
+              name="requiresApproval"
+              title={t.form.requiresApproval}
+            />
+            </FormSection>
+          </div>
 
-          <FormActions
-            cancelHref={cancelHref}
-            isCoverUploading={isCoverUploading}
-            locale={locale}
-            mode={mode}
-          />
+          {mode === "create" && activeSection !== "people-price" ? (
+            <StepSwitchActions
+              activeSection={activeSection}
+              locale={locale}
+              onNext={goToNextSection}
+              onPrevious={goToPreviousSection}
+            />
+          ) : (
+            <FormActions
+              cancelHref={cancelHref}
+              isCoverUploading={isCoverUploading}
+              locale={locale}
+              mode={mode}
+            />
+          )}
 
           {longDurationConfirmation ? (
             <LongDurationConfirmDialog

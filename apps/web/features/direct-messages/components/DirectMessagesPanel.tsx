@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronDown,
+  MapPin,
   MessageCircle,
   MoreVertical,
   UserRound,
@@ -21,6 +22,7 @@ import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
+  DirectConversationActivityContextViewModel,
   DirectConversationListItemViewModel,
   DirectConversationThreadViewModel,
   DirectMessageUserViewModel,
@@ -48,20 +50,20 @@ export function ConversationListPanel({
   return (
     <details
       open
-      className="group overflow-hidden rounded-lg border border-black/10 bg-white/80 shadow-sm"
+      className="group overflow-hidden rounded-[1.35rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(21,98,64,0.08)] ring-1 ring-white/70"
     >
-      <summary className="cursor-pointer list-none border-b border-black/10 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_58%,#DEAAB3_100%)] p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)]">
             <MessageCircle className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-ink">{t.listTitle}</h2>
-            <p className="mt-1 line-clamp-2 text-sm leading-5 text-zinc-500">
+            <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#156240]">
               {t.listDescription}
             </p>
           </div>
-          <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 transition group-open:rotate-180" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-moss transition group-open:rotate-180" />
         </div>
       </summary>
 
@@ -71,19 +73,19 @@ export function ConversationListPanel({
             <h3 className="text-sm font-semibold text-ink">
               {t.emptyListTitle}
             </h3>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">
+            <p className="mt-2 text-sm leading-6 text-[#156240]">
               {t.emptyListDescription}
             </p>
           </div>
           <Link href={withLocale(locale, "/friends")} className="w-full">
-            <Button variant="secondary" className="w-full gap-2">
+            <Button variant="secondary" className="w-full gap-2 rounded-full">
               <UsersRound className="h-4 w-4" />
               {t.openFriends}
             </Button>
           </Link>
         </div>
       ) : (
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto p-2">
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto bg-[#FEFFF9]/72 p-2.5">
           {conversations.map((conversation) => (
             <ConversationListItem
               key={conversation.id}
@@ -113,6 +115,9 @@ function ConversationListItem({
   const t = getDirectMessagesCopy(locale);
   const lastMessage = conversation.lastMessage;
   const isMine = lastMessage?.senderId === currentUserProfileId;
+  const sourceLabel = lastMessage?.sourceActivity
+    ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
+    : null;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
     : t.lastMessageEmpty;
@@ -122,15 +127,15 @@ function ConversationListItem({
     <article
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "rounded-lg p-2.5 transition",
+        "rounded-[1.05rem] p-2.5 transition duration-200",
         isActive
-          ? "bg-ink text-white shadow-sm"
-          : "text-ink hover:bg-white hover:shadow-sm",
+          ? "border border-[#8AB68E] bg-[#FEFFF9] text-[#1D1D1B] shadow-[0_14px_26px_rgba(21,98,64,0.12)]"
+          : "text-ink hover:bg-white hover:shadow-[0_10px_24px_rgba(21,98,64,0.08)]",
       )}
     >
       <Link
         aria-label={t.openConversation(conversation.peer.nickname)}
-        className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+        className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
         href={withLocale(locale, `/messages/${conversation.id}`)}
       >
         <MessageAvatar
@@ -145,7 +150,7 @@ function ConversationListItem({
             <span
               className={cn(
                 "ml-auto shrink-0 whitespace-nowrap text-xs",
-                isActive ? "text-white/65" : "text-zinc-400",
+                isActive ? "text-[#8E8383]" : "text-[#8E8383]",
               )}
             >
               {formatActivityDate(time, locale)}
@@ -154,10 +159,10 @@ function ConversationListItem({
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-white/75" : "text-zinc-500",
+              isActive ? "text-[#156240]" : "text-[#156240]",
             )}
           >
-            {preview}
+            {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
           </span>
         </span>
       </Link>
@@ -197,10 +202,10 @@ function ConversationActivitySignals({
         <details className="group min-w-0">
           <summary
             className={cn(
-              "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden",
+              "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden",
               isActive
-                ? "bg-white/10 text-white/80 hover:bg-white/15"
-                : "bg-moss/10 text-moss hover:bg-moss/15",
+                ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white"
+                : "bg-team-bg text-moss ring-1 ring-sand hover:bg-white",
             )}
             aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
           >
@@ -248,10 +253,10 @@ function ActivitySignalRow({
     <ContextualDetailLink
       aria-label={t.openActivity(activity.title)}
       className={cn(
-        "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-md px-2 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300",
+        "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
-          ? "bg-white/10 text-white/75 hover:bg-white/20 hover:text-white"
-          : "bg-moss/5 text-zinc-600 hover:bg-moss/10 hover:text-ink",
+          ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
+          : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}
       detailSource={{
@@ -265,7 +270,7 @@ function ActivitySignalRow({
       <CalendarDays
         className={cn(
           "h-3.5 w-3.5 shrink-0",
-          isActive ? "text-white/60" : "text-moss",
+          isActive ? "text-moss" : "text-moss",
         )}
       />
       <span className="truncate">{label}</span>
@@ -277,15 +282,15 @@ export function NoConversationSelected({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <section className="hidden h-[calc(100dvh-6.5rem)] items-center justify-center p-8 lg:flex">
+    <section className="hidden h-[calc(100dvh-6.5rem)] items-center justify-center rounded-[1.45rem] border border-sand bg-white/62 p-8 shadow-[0_18px_48px_rgba(21,98,64,0.07)] ring-1 ring-white/70 lg:flex">
       <div className="max-w-md text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-moss text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)]">
           <MessageCircle className="h-6 w-6" />
         </span>
         <h1 className="mt-4 text-2xl font-semibold text-ink">
           {t.noSelectedTitle}
         </h1>
-        <p className="mt-3 text-sm leading-6 text-zinc-600">
+        <p className="mt-3 text-sm leading-6 text-[#156240]">
           {t.noSelectedDescription}
         </p>
       </div>
@@ -294,9 +299,11 @@ export function NoConversationSelected({ locale }: { locale: string }) {
 }
 
 export function MessageThread({
+  activityContext,
   conversation,
   locale,
 }: {
+  activityContext?: DirectConversationActivityContextViewModel | null;
   conversation: DirectConversationThreadViewModel;
   locale: string;
 }) {
@@ -306,14 +313,14 @@ export function MessageThread({
     conversation.messages[conversation.messages.length - 1]?.id;
 
   return (
-    <section className="-mx-4 flex h-full min-h-0 flex-col overflow-hidden bg-white/82 md:mx-0 md:min-h-[calc(100dvh-8.25rem)] md:rounded-lg md:border md:border-black/10 md:shadow-sm lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
+    <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
-      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-black/10 bg-white/80 p-4">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
         <div className="flex h-9 w-9 items-center justify-start">
           <Link
             href={withLocale(locale, "/messages")}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 lg:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg lg:hidden"
             aria-label={t.backToMessages}
             title={t.backToMessages}
           >
@@ -327,13 +334,13 @@ export function MessageThread({
           <summary
             aria-label={t.viewProfile}
             title={t.viewProfile}
-            className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:bg-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300 [&::-webkit-details-marker]:hidden"
+            className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden"
           >
             <MoreVertical className="h-5 w-5" />
           </summary>
-          <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl">
+          <div className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[1rem] border border-sand bg-white py-1 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
             <ContextualDetailLink
-              className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-ink focus:outline-none focus-visible:bg-zinc-50"
+              className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm font-medium text-[#156240] transition hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:bg-team-bg"
               href={withLocale(locale, `/profile/${conversation.peer.id}`)}
               detailSource={{
                 sourceKey: "messages",
@@ -348,9 +355,15 @@ export function MessageThread({
         </details>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-50/60 px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
+        {activityContext ? (
+          <ActivityContextCard
+            activityContext={activityContext}
+            locale={locale}
+          />
+        ) : null}
         {hasMessages ? (
-          <div className="grid gap-3">
+          <div className={cn("grid gap-3", activityContext ? "mt-4" : "")}>
             {conversation.messages.map((message) => (
               <MessageBubble
                 key={message.id}
@@ -371,7 +384,7 @@ export function MessageThread({
               <h2 className="text-base font-semibold text-ink">
                 {t.emptyThreadTitle}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
+              <p className="mt-2 text-sm leading-6 text-[#156240]">
                 {conversation.canSend
                   ? t.emptyThreadDescription
                   : t.readOnlyDescription}
@@ -382,10 +395,74 @@ export function MessageThread({
       </div>
 
       {conversation.canSend ? (
-        <MessageComposer conversationId={conversation.id} locale={locale} />
+        <MessageComposer
+          activityId={activityContext?.id}
+          conversationId={conversation.id}
+          initialBody={
+            activityContext && !hasMessages
+              ? t.activityMessageSuggestion(activityContext.title)
+              : undefined
+          }
+          locale={locale}
+        />
       ) : (
         <ReadOnlyMessageComposer locale={locale} />
       )}
+    </section>
+  );
+}
+
+function ActivityContextCard({
+  activityContext,
+  locale,
+}: {
+  activityContext: DirectConversationActivityContextViewModel;
+  locale: string;
+}) {
+  const t = getDirectMessagesCopy(locale);
+
+  return (
+    <section className="rounded-[1rem] border border-[#8AB68E] bg-white/78 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.08)]">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FEFFF9] text-moss ring-1 ring-[#8AB68E]">
+          <CalendarDays className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#156240]">
+            {t.activityContextLabel}
+          </p>
+          <h2 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-ink">
+            {activityContext.title}
+          </h2>
+          <div className="mt-2 grid gap-1 text-xs leading-5 text-zinc-600">
+            <p className="flex min-w-0 items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-moss" />
+              <span className="min-w-0 truncate">
+                {formatActivityDate(activityContext.startAt, locale)}
+              </span>
+            </p>
+            {activityContext.locationLabel ? (
+              <p className="flex min-w-0 items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-moss" />
+                <span className="min-w-0 truncate">
+                  {activityContext.locationLabel}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <ContextualDetailLink
+          className="shrink-0 rounded-full bg-[#FEFFF9] px-3 py-1.5 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+          href={withLocale(locale, `/activities/${activityContext.id}`)}
+          detailSource={{
+            sourceKey: "messages",
+            targetKey: `activity:${activityContext.id}`,
+            targetKind: "activity",
+          }}
+        >
+          {t.activityContextCta}
+        </ContextualDetailLink>
+      </div>
     </section>
   );
 }
@@ -394,10 +471,10 @@ function ReadOnlyMessageComposer({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <div className="shrink-0 border-t border-black/10 bg-white/95 p-3 backdrop-blur md:rounded-b-lg">
-      <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3">
+    <div className="shrink-0 border-t border-sand bg-white/92 p-3 backdrop-blur md:rounded-b-[1.45rem]">
+      <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
-        <p className="mt-1 text-xs leading-5 text-zinc-500">
+        <p className="mt-1 text-xs leading-5 text-[#156240]">
           {t.readOnlyDescription}
         </p>
       </div>
@@ -428,17 +505,17 @@ function MessageBubble({
       {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
       <div
         className={cn(
-          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm sm:max-w-[64%]",
+          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[64%]",
           isMine
-            ? "rounded-tr-md bg-moss/12 text-ink ring-1 ring-moss/20"
-            : "rounded-tl-md bg-white text-ink ring-1 ring-black/10",
+            ? "rounded-tr-md bg-moss text-white"
+            : "rounded-tl-md bg-white text-ink ring-1 ring-sand",
         )}
       >
         <p className="whitespace-pre-wrap break-words">{body}</p>
         <p
           className={cn(
             "mt-1 text-[11px]",
-            isMine ? "text-moss/75" : "text-zinc-400",
+            isMine ? "text-white/65" : "text-[#8E8383]",
           )}
         >
           {formatActivityDate(createdAt, locale)}
@@ -459,7 +536,7 @@ function MessageBubbleAvatar({
   return (
     <ContextualDetailLink
       aria-label={user.nickname}
-      className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+      className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
       href={withLocale(locale, `/profile/${user.id}`)}
       detailSource={{
         sourceKey: "messages",

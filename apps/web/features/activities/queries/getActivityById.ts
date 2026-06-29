@@ -16,10 +16,17 @@ import {
   buildPrivateActivityShareAccessWhere,
 } from "../utils/activityShareAccess";
 import {
-  formatActivityLocalDateTimeInput,
   splitStoredDescription,
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
+import {
+  getAutoCreatedTeamMetadata,
+  isAutoCreatedTeamClaimable,
+} from "../utils/autoCreatedTeams";
+import {
+  getActivityAddressPrivacy,
+  shouldHideActivityAddressFromViewer,
+} from "../utils/activityAddressPrivacy";
 
 const detailActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -108,6 +115,8 @@ const activityDetailSelect = {
     },
   },
   organizerId: true,
+  source: true,
+  sourcePayload: true,
   ticketUrl: true,
   ticketLabel: true,
   shareEnabled: true,
@@ -202,6 +211,7 @@ const activityShareMetadataSelect = {
   visibility: true,
   shareEnabled: true,
   shareToken: true,
+  sourcePayload: true,
 } satisfies Prisma.ActivitySelect;
 
 type ActivityDetailQueryResult = Prisma.ActivityGetPayload<{
@@ -290,8 +300,14 @@ function getShareMetadataParticipantPreview(
 
 function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
+  viewerProfileId?: string | null,
 ): ActivityDetailViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const autoCreatedTeamMetadata = getAutoCreatedTeamMetadata(
+    activity.source,
+    activity.sourcePayload,
+  );
+  const addressPrivacy = getActivityAddressPrivacy(activity.sourcePayload);
   const participantCount = isActivityInfo
     ? 0
     : activity._count.participants + activity._count.guestParticipants;
@@ -311,8 +327,27 @@ function getActivityDetailViewModel(
           kind: "guest" as const,
         })),
       ];
+  const isViewerParticipant = Boolean(
+    viewerProfileId &&
+      activity.participants?.some(
+        (participant) => participant.userProfile.id === viewerProfileId,
+      ),
+  );
+  const isAddressHiddenFromViewer = shouldHideActivityAddressFromViewer({
+    isActivityInfo,
+    isViewerParticipant,
+    organizerId: activity.organizerId,
+    sourcePayload: activity.sourcePayload,
+    viewerProfileId,
+  });
 
   return {
+    autoCreatedTeam: autoCreatedTeamMetadata
+      ? {
+          ...autoCreatedTeamMetadata,
+          isClaimable: isAutoCreatedTeamClaimable(autoCreatedTeamMetadata),
+        }
+      : null,
     id: activity.id,
     title: activity.title,
     description: activity.description,
@@ -321,9 +356,9 @@ function getActivityDetailViewModel(
     category: activity.category,
     city: activity.city,
     destination: activity.destination,
-    address: activity.address,
-    latitude: activity.latitude,
-    longitude: activity.longitude,
+    address: isAddressHiddenFromViewer ? activity.city : activity.address,
+    latitude: isAddressHiddenFromViewer ? null : activity.latitude,
+    longitude: isAddressHiddenFromViewer ? null : activity.longitude,
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
@@ -338,6 +373,8 @@ function getActivityDetailViewModel(
     priceText: activity.priceText,
     status: activity.status,
     visibility: activity.visibility ?? "PUBLIC",
+    hideAddressFromNonParticipants: addressPrivacy.hideFromNonParticipants,
+    isAddressHiddenFromViewer,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -453,7 +490,7 @@ export async function getActivityById(
       status: true,
     },
   });
-  const activityViewModel = getActivityDetailViewModel(activity);
+  const activityViewModel = getActivityDetailViewModel(activity, viewerProfileId);
 
   if (!activityViewModel.isActivityInfo && !organizerParticipation) {
     return {
@@ -464,6 +501,7 @@ export async function getActivityById(
           id: activityViewModel.organizer.id,
           nickname: activityViewModel.organizer.nickname,
           avatarUrl: activityViewModel.organizer.avatarUrl,
+          kind: "user" as const,
         },
         ...(activityViewModel.participantPreview ?? []),
       ],
@@ -500,10 +538,12 @@ function getActivityCopyValues(
     city: activity.city,
     destination: activity.destination ?? "",
     address: activity.address,
+    hideAddressFromNonParticipants:
+      activity.hideAddressFromNonParticipants ?? false,
     latitude: activity.latitude === null ? "" : String(activity.latitude),
     longitude: activity.longitude === null ? "" : String(activity.longitude),
-    startAt: formatActivityLocalDateTimeInput(activity.startAt),
-    endAt: formatActivityLocalDateTimeInput(activity.endAt),
+    startAt: "",
+    endAt: "",
     capacity: String(activity.capacity),
     capacityLimitEnabled: activity.capacity > 0,
     minParticipants: activity.minParticipants
@@ -580,6 +620,9 @@ export async function getActivityShareMetadataById(
     activity._count.guestParticipants +
     (organizerIsCounted ? 0 : 1);
   const participantPreview = getShareMetadataParticipantPreview(activity);
+  const hideAddressFromShare = getActivityAddressPrivacy(
+    activity.sourcePayload,
+  ).hideFromNonParticipants;
 
   return {
     id: activity.id,
@@ -588,9 +631,9 @@ export async function getActivityShareMetadataById(
     category: activity.category,
     city: activity.city,
     capacity: activity.capacity,
-    address: activity.address,
-    latitude: activity.latitude,
-    longitude: activity.longitude,
+    address: hideAddressFromShare ? activity.city : activity.address,
+    latitude: hideAddressFromShare ? null : activity.latitude,
+    longitude: hideAddressFromShare ? null : activity.longitude,
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     priceType: activity.priceType,

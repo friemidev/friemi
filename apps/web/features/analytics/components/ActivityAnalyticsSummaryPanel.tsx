@@ -19,8 +19,8 @@ function getCopy(locale: string) {
       comments: "Discussions",
       contact: "Contacts",
       share: "Partages",
-      source: "Premiere entree",
-      sourceFallback: "Pas encore assez de donnees",
+      source: "Première entrée",
+      sourceFallback: "Pas encore assez de données",
     };
   }
 
@@ -85,16 +85,16 @@ function getSourceLabel(locale: string, sourceSurface: string | null) {
     share_link: "Shared link",
   };
   const fr: Record<string, string> = {
-    activity_detail: "Detail",
-    activity_list: "Activites",
+    activity_detail: "Détail",
+    activity_list: "Activités",
     friend_activity: "Amis",
     global_search: "Recherche",
     home_recent: "Accueil",
     messages: "Messages",
     notification: "Notifications",
     profile: "Profil",
-    public_event_detail: "Evenement",
-    share_link: "Lien partage",
+    public_event_detail: "Événement",
+    share_link: "Lien partagé",
   };
   const labels = locale === "fr" ? fr : locale === "en" ? en : zh;
 
@@ -123,9 +123,9 @@ export function ActivityAnalyticsSummaryPanel({
   ];
 
   return (
-    <section className="mb-3 rounded-[1rem] border border-[#d8ccb4] bg-[#fffaf1] p-3">
+    <section className="mb-3 rounded-[1rem] border border-[#8AB68E] bg-[#FEFFF9] p-3">
       <div className="flex items-start gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#8a6a40] ring-1 ring-[#dccba8]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
           <BarChart3 className="h-4 w-4" />
         </span>
         <div className="min-w-0">

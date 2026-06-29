@@ -29,11 +29,11 @@ type TeamShareActivity = NonNullable<
 >;
 
 const avatarColors = [
-  ["#111827", "#ffffff"],
-  ["#8b8d92", "#ffffff"],
-  ["#d88d72", "#ffffff"],
-  ["#72a7cf", "#ffffff"],
-  ["#7b8f66", "#ffffff"],
+  ["#1D1D1B", "#FEFFF9"],
+  ["#8E8383", "#FEFFF9"],
+  ["#369758", "#FEFFF9"],
+  ["#8AB68E", "#FEFFF9"],
+  ["#8AB68E", "#FEFFF9"],
 ] as const;
 
 function getAvatarInitial(nickname: string) {
@@ -108,8 +108,8 @@ function FallbackShareImage({
       style={{
         alignItems: "center",
         background:
-          "linear-gradient(135deg, #fffaf2 0%, #f4ecdd 48%, #e8f1f3 100%)",
-        color: "#151515",
+          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 48%, #F1F2EC 100%)",
+        color: "#1D1D1B",
         display: "flex",
         height: "100%",
         justifyContent: "center",
@@ -127,10 +127,10 @@ function FallbackShareImage({
       >
         <img
           alt={brand.name}
-          src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+          src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
           style={{ height: 96, objectFit: "contain", width: 300 }}
         />
-        <div style={{ color: "#6f5841", fontSize: 38, fontWeight: 700 }}>
+        <div style={{ color: "#8E8383", fontSize: 38, fontWeight: 700 }}>
           {copy.fallbackTitle}
         </div>
       </div>
@@ -168,8 +168,8 @@ function TeamWechatShareImage({
       style={{
         alignItems: "center",
         background:
-          "linear-gradient(145deg, #fffaf2 0%, #f5e8d5 58%, #dceef5 100%)",
-        color: "#151515",
+          "linear-gradient(145deg, #FFF5E6 0%, #FFF5E6 58%, #DEEBFF 100%)",
+        color: "#1D1D1B",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -183,7 +183,7 @@ function TeamWechatShareImage({
       <div
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, rgba(216,141,114,0.24), rgba(216,141,114,0) 68%)",
+            "radial-gradient(circle at 50% 50%, rgba(54,151,88,0.24), rgba(54,151,88,0) 68%)",
           bottom: -120,
           height: 360,
           left: 30,
@@ -202,15 +202,15 @@ function TeamWechatShareImage({
       >
         <img
           alt={brand.name}
-          src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+          src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
           style={{ height: 36, objectFit: "contain", width: 124 }}
         />
         <div
           style={{
             background: "rgba(255,255,255,0.78)",
-            border: "1px solid rgba(216,141,114,0.34)",
+            border: "1px solid rgba(54,151,88,0.34)",
             borderRadius: 999,
-            color: "#96543a",
+            color: "#B5301F",
             fontSize: 18,
             fontWeight: 900,
             padding: "8px 13px",
@@ -250,7 +250,7 @@ function TeamWechatShareImage({
                 style={{
                   alignItems: "center",
                   background,
-                  border: "7px solid #fffaf2",
+                  border: "7px solid #FFF5E6",
                   borderRadius: 999,
                   boxShadow: "0 16px 34px rgba(76, 55, 31, 0.22)",
                   color,
@@ -284,11 +284,11 @@ function TeamWechatShareImage({
             <div
               style={{
                 alignItems: "center",
-                background: "#151515",
-                border: "7px solid #fffaf2",
+                background: "#1D1D1B",
+                border: "7px solid #FFF5E6",
                 borderRadius: 999,
                 boxShadow: "0 16px 34px rgba(76, 55, 31, 0.2)",
-                color: "#ffffff",
+                color: "#FEFFF9",
                 display: "flex",
                 fontSize: extraCount > 99 ? 27 : 34,
                 fontWeight: 900,
@@ -309,7 +309,7 @@ function TeamWechatShareImage({
             background: "rgba(255,255,255,0.82)",
             border: "1px solid rgba(226, 190, 158, 0.85)",
             borderRadius: 999,
-            color: "#6d4a34",
+            color: "#8E8383",
             display: "flex",
             fontSize: 24,
             fontWeight: 900,
@@ -322,7 +322,7 @@ function TeamWechatShareImage({
 
       <div
         style={{
-          color: "#2f2a25",
+          color: "#1D1D1B",
           fontSize: 24,
           fontWeight: 900,
           lineHeight: 1.14,
@@ -407,8 +407,8 @@ export async function GET(request: Request) {
     <div
       style={{
         background:
-          "linear-gradient(135deg, #fff9ef 0%, #f5eddf 46%, #e8f2f5 100%)",
-        color: "#151515",
+          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 46%, #F1F2EC 100%)",
+        color: "#1D1D1B",
         display: "flex",
         height: "100%",
         padding: 48,
@@ -440,15 +440,15 @@ export async function GET(request: Request) {
           <div style={{ alignItems: "center", display: "flex", gap: 18 }}>
             <img
               alt={brand.name}
-              src={new URL("/friemi-logotitle.png", baseUrl).toString()}
+              src={new URL(brand.lockupHorizontalNavyPath, baseUrl).toString()}
               style={{ height: 58, objectFit: "contain", width: 188 }}
             />
             <div
               style={{
-                background: "#fff5e8",
-                border: "1px solid #ead5b3",
+                background: "#F1F2EC",
+                border: "1px solid #D6D5B2",
                 borderRadius: 999,
-                color: "#8d5f36",
+                color: "#B5301F",
                 fontSize: 22,
                 fontWeight: 800,
                 padding: "11px 18px",
@@ -460,7 +460,7 @@ export async function GET(request: Request) {
 
           <div
             style={{
-              color: "#876445",
+              color: "#8E8383",
               fontSize: 28,
               fontWeight: 800,
               letterSpacing: 0,
@@ -472,7 +472,7 @@ export async function GET(request: Request) {
 
           <div
             style={{
-              color: "#141414",
+              color: "#1D1D1B",
               fontSize: 60,
               fontWeight: 900,
               lineHeight: 1.05,
@@ -485,7 +485,7 @@ export async function GET(request: Request) {
 
           <div
             style={{
-              color: "#5d5147",
+              color: "#8E8383",
               fontSize: 26,
               fontWeight: 700,
               lineHeight: 1.35,
@@ -517,7 +517,7 @@ export async function GET(request: Request) {
                     style={{
                       alignItems: "center",
                       background,
-                      border: "4px solid #fffaf2",
+                      border: "4px solid #FFF5E6",
                       borderRadius: 999,
                       color,
                       display: "flex",
@@ -550,10 +550,10 @@ export async function GET(request: Request) {
                 <div
                   style={{
                     alignItems: "center",
-                    background: "#151515",
-                    border: "4px solid #fffaf2",
+                    background: "#1D1D1B",
+                    border: "4px solid #FFF5E6",
                     borderRadius: 999,
-                    color: "#ffffff",
+                    color: "#FEFFF9",
                     display: "flex",
                     fontSize: 24,
                     fontWeight: 900,
@@ -569,7 +569,7 @@ export async function GET(request: Request) {
             </div>
             <div
               style={{
-                color: "#6f5944",
+                color: "#8E8383",
                 fontSize: 24,
                 fontWeight: 800,
                 marginLeft: 18,
@@ -615,7 +615,7 @@ export async function GET(request: Request) {
           >
             <div
               style={{
-                color: "#ffffff",
+                color: "#FEFFF9",
                 fontSize: 28,
                 fontWeight: 900,
                 lineHeight: 1.15,

@@ -18,7 +18,7 @@ export default function ActivitiesLoading() {
           </div>
           <ShimmerBlock className="h-8 w-20 rounded-full" />
         </div>
-        <div className="rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#ead7b8] md:hidden">
+        <div className="rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#8AB68E] md:hidden">
           <div className="flex h-12 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <ShimmerBlock className="h-4 w-4 shrink-0 rounded-full" />
@@ -27,7 +27,7 @@ export default function ActivitiesLoading() {
             <ShimmerBlock className="h-7 w-20 shrink-0 rounded-full" />
           </div>
         </div>
-        <div className="hidden rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#ead7b8] md:block">
+        <div className="hidden rounded-[1.25rem] bg-white/62 p-3 shadow-sm ring-1 ring-[#8AB68E] md:block">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_6rem]">
             <ShimmerBlock className="h-11 rounded-xl sm:h-10" />
             <ShimmerBlock className="h-11 rounded-xl sm:h-10" delay={45} />

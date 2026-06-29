@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 type HomeActivityCarouselProps = {
   activities: ActivityCardViewModel[];
+  density?: "mobile" | "desktop";
   locale: string;
   labels: {
     ariaLabel: string;
@@ -44,6 +45,7 @@ function getLocationLabel(activity: ActivityCardViewModel) {
 
 export function HomeActivityCarousel({
   activities,
+  density = "desktop",
   labels,
   locale,
 }: HomeActivityCarouselProps) {
@@ -193,9 +195,14 @@ export function HomeActivityCarousel({
 
   if (activities.length === 0) {
     return (
-      <div className="rounded-[1.75rem] border border-white/35 bg-white/70 px-6 py-10 text-center shadow-[0_22px_70px_rgba(64,46,31,0.08)]">
-        <p className="font-serif text-2xl text-[#241911]">{labels.emptyTitle}</p>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6f6258]">
+      <div
+        className="rounded-[1.75rem] border border-white/35 bg-white/70 px-6 py-10 text-center shadow-[0_22px_70px_rgba(29,29,27,0.08)]"
+        data-density={density}
+      >
+        <p className="font-serif text-2xl text-[#1D1D1B]">
+          {labels.emptyTitle}
+        </p>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#156240]">
           {labels.emptyDescription}
         </p>
       </div>
@@ -207,6 +214,7 @@ export function HomeActivityCarousel({
       <div
         ref={viewportRef}
         className="home-activity-carousel -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:gap-5 sm:px-6 lg:-mx-10 lg:px-10"
+        data-density={density}
         onMouseEnter={markManualInteraction}
         onPointerDown={markManualInteraction}
         onTouchStart={markManualInteraction}
@@ -220,19 +228,19 @@ export function HomeActivityCarousel({
             data-active-card={index === activeIndex ? "true" : undefined}
             href={getActivityHref(activity, locale)}
             className={cn(
-              "home-carousel-card group relative flex min-h-[19.5rem] shrink-0 basis-[72%] snap-start flex-col overflow-hidden rounded-[1.35rem] border border-white/35 bg-[#fffaf2] shadow-[0_18px_48px_rgba(64,46,31,0.1)] transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40 sm:min-h-[24rem] sm:basis-[46%] sm:rounded-[1.75rem] sm:shadow-[0_22px_70px_rgba(64,46,31,0.11)] lg:basis-[31%]",
+              "home-carousel-card group relative flex min-h-[19.5rem] shrink-0 basis-[72%] snap-start flex-col overflow-hidden rounded-[1.35rem] border border-white/35 bg-[#FFF5E6] shadow-[0_18px_48px_rgba(29,29,27,0.1)] transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40 sm:min-h-[24rem] sm:basis-[46%] sm:rounded-[1.75rem] sm:shadow-[0_22px_70px_rgba(29,29,27,0.11)] lg:basis-[31%]",
               index === activeIndex
-                ? "ring-1 ring-[#d8b68d]/70"
+                ? "ring-1 ring-[#8AB68E]/70"
                 : "ring-1 ring-black/5",
             )}
           >
-            <div className="home-carousel-card__media relative aspect-[16/10] overflow-hidden bg-[#e8ddcf] sm:aspect-[5/4]">
+            <div className="home-carousel-card__media relative aspect-[16/10] overflow-hidden bg-[#F1F2EC] sm:aspect-[5/4]">
               <ActivityCoverImage
                 alt={activity.title}
                 src={activity.coverImageUrl}
                 overlayClassName="bg-gradient-to-t from-black/52 via-black/10 to-transparent"
               />
-              <div className="absolute left-3 top-3 rounded-full bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[#6c513a] shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:text-[11px]">
+              <div className="absolute left-3 top-3 rounded-full bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[#156240] shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:text-[11px]">
                 {getCategoryLabel(activity.category, locale)}
               </div>
               <span className="absolute bottom-3 left-3 rounded-full border border-white/30 bg-black/42 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur sm:bottom-4 sm:left-4 sm:px-3 sm:text-[11px]">
@@ -241,20 +249,20 @@ export function HomeActivityCarousel({
             </div>
 
             <div className="flex flex-1 flex-col p-4 sm:p-6">
-              <h3 className="line-clamp-2 font-serif text-xl leading-tight text-[#241911] transition group-hover:text-[#7c432f] sm:text-2xl">
+              <h3 className="line-clamp-2 font-serif text-xl leading-tight text-[#1D1D1B] transition group-hover:text-[#156240] sm:text-2xl">
                 {activity.title}
               </h3>
-              <div className="mt-4 grid gap-2.5 text-xs leading-5 text-[#66594f] sm:mt-5 sm:gap-3 sm:text-sm">
+              <div className="mt-4 grid gap-2.5 text-xs leading-5 text-[#156240] sm:mt-5 sm:gap-3 sm:text-sm">
                 <p className="flex gap-2">
                   <CalendarDays
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#a97450] sm:h-4 sm:w-4"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#369758] sm:h-4 sm:w-4"
                     aria-hidden="true"
                   />
                   <span>{getActivityDateLabel(activity, locale)}</span>
                 </p>
                 <p className="flex gap-2">
                   <MapPin
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#a97450] sm:h-4 sm:w-4"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#369758] sm:h-4 sm:w-4"
                     aria-hidden="true"
                   />
                   <span className="line-clamp-2">
@@ -262,7 +270,7 @@ export function HomeActivityCarousel({
                   </span>
                 </p>
               </div>
-              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-xs font-semibold text-[#7c432f] sm:pt-7 sm:text-sm">
+              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-xs font-semibold text-[#156240] sm:pt-7 sm:text-sm">
                 {labels.viewActivity}
                 <ArrowRight
                   className="h-3.5 w-3.5 transition group-hover:translate-x-1 sm:h-4 sm:w-4"
@@ -283,8 +291,8 @@ export function HomeActivityCarousel({
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   index === activeIndex
-                    ? "w-7 bg-[#271c13]"
-                    : "w-1.5 bg-[#d8c3aa]",
+                    ? "w-7 bg-[#1D1D1B]"
+                    : "w-1.5 bg-[#8AB68E]",
                 )}
               />
             ))}
@@ -292,7 +300,7 @@ export function HomeActivityCarousel({
           <div className="flex gap-2">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#ddc5a8] bg-[#fffaf2] text-[#4f3b2b] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#8AB68E] bg-[#FFF5E6] text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40"
               onClick={() => scrollToIndex(activeIndex - 1)}
               aria-label={labels.previous}
             >
@@ -300,7 +308,7 @@ export function HomeActivityCarousel({
             </button>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#ddc5a8] bg-[#fffaf2] text-[#4f3b2b] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c28a62]/40"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#8AB68E] bg-[#FFF5E6] text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40"
               onClick={() => scrollToIndex(activeIndex + 1)}
               aria-label={labels.next}
             >

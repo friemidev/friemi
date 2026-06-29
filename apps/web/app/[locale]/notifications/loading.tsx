@@ -6,7 +6,7 @@ import {
 function NotificationSkeleton({ index }: { index: number }) {
   return (
     <article
-      className="flex gap-3 rounded-lg border border-black/10 bg-white/70 p-4 shadow-sm sm:p-5"
+      className="flex gap-3 rounded-[1.2rem] border border-sand bg-paper/68 p-4 shadow-[0_12px_30px_rgba(21,98,64,0.055)] sm:p-5"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <ShimmerBlock className="h-8 w-8 shrink-0 rounded-full" delay={index * 45} />
@@ -29,13 +29,22 @@ function NotificationSkeleton({ index }: { index: number }) {
 
 export default function NotificationsLoading() {
   return (
-    <LoadingPageShell className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-lg border border-black/10 bg-white/75 p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between sm:p-5">
+    <LoadingPageShell className="space-y-6 pb-24">
+      <section className="relative overflow-hidden rounded-[1.65rem] border border-sand bg-paper/82 p-4 shadow-[0_20px_56px_rgba(21,98,64,0.075)] sm:p-5">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-16 h-36 w-36 rounded-full bg-rose/34 blur-3xl"
+        />
         <div className="min-w-0 space-y-3">
-          <ShimmerBlock className="h-8 w-36" />
-          <ShimmerBlock className="h-4 w-full max-w-md" delay={60} />
+          <ShimmerBlock className="h-7 w-32 rounded-full" />
+          <ShimmerBlock className="h-9 w-40 rounded-xl" delay={60} />
+          <ShimmerBlock className="h-4 w-full max-w-md" delay={100} />
         </div>
-        <ShimmerBlock className="h-10 w-full rounded-full sm:w-28" delay={100} />
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:max-w-md">
+          <ShimmerBlock className="h-16 rounded-[1rem]" delay={120} />
+          <ShimmerBlock className="h-16 rounded-[1rem]" delay={160} />
+          <ShimmerBlock className="h-16 rounded-[1rem]" delay={200} />
+        </div>
       </section>
 
       <section className="grid gap-3">

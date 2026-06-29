@@ -26,6 +26,7 @@ import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActi
 import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
+import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -384,6 +385,10 @@ export async function createActivityAction(
           result.data.ticketLabel ?? publicEvent?.ticketLabel ?? null,
         source: importSourceHost,
         sourceUrl: importSourceUrl,
+        sourcePayload: mergeActivityAddressPrivacy(
+          null,
+          result.data.hideAddressFromNonParticipants,
+        ),
         publicEventId: publicEvent?.id ?? null,
         status: "RECRUITING",
         visibility: result.data.visibility,

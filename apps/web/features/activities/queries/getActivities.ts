@@ -27,6 +27,15 @@ import {
   hasPartialActivityTimeStatesFilter,
   isEndedOnlyActivityTimeStatesFilter,
 } from "../utils/activityFilters";
+import {
+  AUTO_CREATED_TEAM_SOURCE,
+  getAutoCreatedTeamMetadata,
+  isAutoCreatedTeamClaimable,
+} from "../utils/autoCreatedTeams";
+import {
+  getActivityAddressPrivacy,
+  isAddressPrivacyOnlySourcePayload,
+} from "../utils/activityAddressPrivacy";
 
 export const visibleActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -136,6 +145,7 @@ export const activityCardSelect = {
     },
   },
   source: true,
+  sourcePayload: true,
   sourceUrl: true,
   externalSource: true,
   externalId: true,
@@ -896,6 +906,10 @@ export function isLegacyActivityInfoSource(activity: {
   importedAt?: Date | string | null;
   sourcePayload?: unknown;
 }) {
+  if (activity.source === AUTO_CREATED_TEAM_SOURCE) {
+    return false;
+  }
+
   if (activity.publicEventId) {
     return false;
   }
@@ -906,13 +920,20 @@ export function isLegacyActivityInfoSource(activity: {
     includesKnownPublicActivitySource(activity.sourceUrl) ||
     includesKnownPublicActivitySource(activity.externalUrl);
 
+  const sourcePayloadLooksPublic = Boolean(
+    activity.sourcePayload &&
+    !isAddressPrivacyOnlySourcePayload(
+      activity.sourcePayload as Prisma.JsonValue,
+    ),
+  );
+
   return Boolean(
     sourceLooksPublic ||
     activity.externalSource ||
     activity.externalId ||
     activity.externalUrl ||
     activity.importedAt ||
-    activity.sourcePayload,
+    sourcePayloadLooksPublic,
   );
 }
 
@@ -1212,6 +1233,13 @@ export function getActivityCardViewModel(
   activity: ActivityQueryResult,
 ): ActivityCardViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
+  const autoCreatedTeamMetadata = getAutoCreatedTeamMetadata(
+    activity.source,
+    activity.sourcePayload,
+  );
+  const hideAddressFromNonParticipants = getActivityAddressPrivacy(
+    activity.sourcePayload,
+  ).hideFromNonParticipants;
   const participantCount = isActivityInfo
     ? 0
     : activity._count.participants + activity._count.guestParticipants;
@@ -1233,15 +1261,21 @@ export function getActivityCardViewModel(
       ].slice(0, 5);
 
   return {
+    autoCreatedTeam: autoCreatedTeamMetadata
+      ? {
+          ...autoCreatedTeamMetadata,
+          isClaimable: isAutoCreatedTeamClaimable(autoCreatedTeamMetadata),
+        }
+      : null,
     id: activity.id,
     title: activity.title,
     description: activity.description,
     type: isActivityInfo ? "PUBLIC_EVENT" : activity.type,
     category: activity.category,
     city: activity.city,
-    address: activity.address,
-    latitude: activity.latitude,
-    longitude: activity.longitude,
+    address: hideAddressFromNonParticipants ? activity.city : activity.address,
+    latitude: hideAddressFromNonParticipants ? null : activity.latitude,
+    longitude: hideAddressFromNonParticipants ? null : activity.longitude,
     startAt: toIsoString(activity.startAt) ?? new Date().toISOString(),
     endAt: toIsoString(activity.endAt),
     capacity: isActivityInfo ? 0 : activity.capacity,
@@ -1255,6 +1289,8 @@ export function getActivityCardViewModel(
     ticketLabel: activity.ticketLabel,
     status: activity.status,
     visibility: activity.visibility,
+    hideAddressFromNonParticipants,
+    isAddressHiddenFromViewer: hideAddressFromNonParticipants,
     coverTone: getActivityCoverTone(activity.id),
     isActivityInfo,
     officialUrl: activity.externalUrl ?? activity.sourceUrl,
@@ -1287,6 +1323,7 @@ function getPublicEventActivityCardViewModel(
 ): RankedActivityCard {
   return {
     card: {
+      autoCreatedTeam: null,
       id: publicEvent.id,
       publicEventId: publicEvent.id,
       title: publicEvent.title,
@@ -1383,6 +1420,7 @@ function getHomeActivityPreviewCardViewModel(
       status: activity.status,
       visibility: activity.visibility,
       coverTone: getActivityCoverTone(activity.id),
+      autoCreatedTeam: null,
       isActivityInfo: true,
       officialUrl: activity.externalUrl ?? activity.sourceUrl,
       merchant: null,
@@ -1420,6 +1458,7 @@ function getHomePublicEventPreviewCardViewModel(
       status: "RECRUITING",
       visibility: "PUBLIC",
       coverTone: getActivityCoverTone(publicEvent.id),
+      autoCreatedTeam: null,
       isActivityInfo: true,
       officialUrl: publicEvent.externalUrl ?? publicEvent.sourceUrl,
       merchant: null,
@@ -1854,20 +1893,18 @@ async function getUpcomingHomeActivitiesUncached(
       getPublicEventTimeStateWhere("UPCOMING", publicEventNow),
     ],
   };
-  const [activities, publicEvents] = await Promise.all([
-    prisma.activity.findMany({
-      where: upcomingActivityWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: safeLimit,
-      select: homeActivityPreviewSelect,
-    }),
-    prisma.publicEvent.findMany({
-      where: upcomingPublicEventWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: safeLimit,
-      select: homePublicEventPreviewSelect,
-    }),
-  ]);
+  const activities = await prisma.activity.findMany({
+    where: upcomingActivityWhere,
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    take: safeLimit,
+    select: homeActivityPreviewSelect,
+  });
+  const publicEvents = await prisma.publicEvent.findMany({
+    where: upcomingPublicEventWhere,
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    take: safeLimit,
+    select: homePublicEventPreviewSelect,
+  });
   const rankedActivities = [
     ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
       getHomeActivityPreviewCardViewModel,

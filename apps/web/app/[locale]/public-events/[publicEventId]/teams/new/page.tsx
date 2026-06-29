@@ -75,6 +75,7 @@ function getInitialValues(
     city: publicEvent.city,
     destination: "",
     address: publicEvent.address,
+    hideAddressFromNonParticipants: false,
     latitude: publicEvent.latitude?.toString() ?? "",
     longitude: publicEvent.longitude?.toString() ?? "",
     startAt: formatParisDateTimeInput(publicEvent.startAt),
@@ -132,7 +133,7 @@ export default async function NewPublicEventTeamPage({
       </div>
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-        <aside className="min-w-0 rounded-[1.25rem] border border-[#d8ccb4] bg-white/80 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2">
+        <aside className="min-w-0 rounded-[1.25rem] border border-[#D6D5B2] bg-white/80 p-4 shadow-sm lg:sticky lg:top-24 lg:order-2">
           <p className="text-xs font-semibold uppercase text-moss">
             {t.detailSource}
           </p>
@@ -141,23 +142,23 @@ export default async function NewPublicEventTeamPage({
           </h2>
           <div className="mt-4 grid gap-3 text-sm text-zinc-600">
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#156240]" />
               <span className="min-w-0 break-words">
                 {getEventDateLabel(publicEvent, locale)}
               </span>
             </span>
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#156240]" />
               <span className="min-w-0 break-words">{publicEvent.address}</span>
             </span>
             <span className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
-              <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-[#80613b]" />
+              <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-[#156240]" />
               <span className="min-w-0 break-words">
                 {getEventPriceLabel(publicEvent, locale)}
               </span>
             </span>
           </div>
-          <div className="mt-4 rounded-2xl bg-[#fff8ec] px-3 py-3 text-sm leading-6 text-zinc-600 ring-1 ring-[#dccba8]">
+          <div className="mt-4 rounded-2xl bg-[#FEFFF9] px-3 py-3 text-sm leading-6 text-zinc-600 ring-1 ring-[#8AB68E]">
             {t.publicEventRuleDescription}
           </div>
         </aside>

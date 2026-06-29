@@ -1,13 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
-  CalendarPlus,
   CircleUserRound,
   Compass,
-  LoaderCircle,
+  House,
   MessageCircle,
   UsersRound,
 } from "lucide-react";
@@ -15,45 +14,89 @@ import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
+import { useMobileNavSection } from "./MobileNavSectionContext";
 
 type MobileNavProps = {
   locale: string;
 };
 
+function getMobileNavToneClasses(tone: string, active: boolean) {
+  if (tone === "rose") {
+    return active
+      ? "bg-[linear-gradient(145deg,#FEFFF9,#DEAAB3_135%)] text-[#B5301F] ring-[#DEAAB3]/80 shadow-[0_10px_20px_rgba(181,48,31,0.16)]"
+      : "bg-[#DEAAB3]/20 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+  }
+
+  if (tone === "cream") {
+    return active
+      ? "bg-[linear-gradient(145deg,#FEFFF9,#F1F2EC)] text-[#156240] ring-[#D6D5B2]/90 shadow-[0_10px_20px_rgba(21,98,64,0.12)]"
+      : "bg-[#FEFFF9]/74 text-[#1D1D1B]/68 ring-[#8E8383]/12";
+  }
+
+  return active
+    ? "bg-[linear-gradient(145deg,#FEFFF9,#DEEBFF)] text-[#156240] ring-[#8AB68E]/70 shadow-[0_10px_20px_rgba(21,98,64,0.13)]"
+    : "bg-[#DEEBFF]/58 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+}
+
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const { sectionOverride } = useMobileNavSection();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
   const items = useMemo(
     () => [
-      { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
-      { href: "/activities", label: t.nav.activities, icon: Compass },
       {
-        href: "/activities/new",
-        label: t.nav.newActivityShort,
-        icon: CalendarPlus,
-        isPrimary: true,
+        href: "/activities",
+        label: t.nav.activities,
+        icon: Compass,
+        tone: "blue",
       },
-      { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
-      { href: "/profile", label: t.nav.profileShort, icon: CircleUserRound },
+      {
+        href: "/lobby",
+        label: t.nav.lobbyShort,
+        icon: UsersRound,
+        tone: "rose",
+      },
+      {
+        href: "/mobile-home",
+        label: t.nav.hallShort,
+        icon: House,
+        isPrimary: true,
+        tone: "green",
+      },
+      {
+        href: "/messages",
+        label: t.nav.messagesShort,
+        icon: MessageCircle,
+        tone: "rose",
+      },
+      {
+        href: "/profile",
+        label: t.nav.profileShort,
+        icon: CircleUserRound,
+        tone: "cream",
+      },
     ],
     [
       t.nav.activities,
+      t.nav.hallShort,
       t.nav.lobbyShort,
       t.nav.messagesShort,
-      t.nav.newActivityShort,
       t.nav.profileShort,
     ],
   );
 
-  useEffect(() => {
-    setPendingHref(null);
-  }, [pathname]);
-
   function isItemActive(href: string) {
+    if (sectionOverride === "lobby") {
+      return href === "/lobby";
+    }
+
+    if (sectionOverride === "activities") {
+      return href === "/activities";
+    }
+
     const localizedHref = withLocale(currentLocale, href);
 
     if (href === "/") {
@@ -70,12 +113,14 @@ export function MobileNav({ locale }: MobileNavProps) {
       );
     }
 
-    return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
+    return (
+      pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
+    );
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d8cdbb] bg-paper pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_rgba(21,21,21,0.08)] md:hidden">
-      <div className="mx-auto grid h-[5.15rem] max-w-md grid-cols-5 gap-1 px-2.5 py-2.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
+      <div className="mx-auto grid h-[5.35rem] max-w-md grid-cols-[0.92fr_0.92fr_1.22fr_0.92fr_0.92fr] gap-1.5 px-3 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -87,50 +132,60 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               title={item.label}
-              onClick={() => {
-                if (!active) {
-                  setPendingHref(item.href);
-                }
-              }}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 pb-0.5 text-[11px] font-semibold leading-[1.18] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d88d72]/35",
+                "relative flex min-w-0 flex-col items-center justify-end gap-1 rounded-[1.35rem] px-1 pb-1.5 pt-1 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-2.5 h-[4.55rem] bg-[#c97d62] text-white shadow-[0_12px_24px_rgba(216,141,114,0.32)]"
-                    : "-mt-2.5 h-[4.55rem] bg-[#e6a189] text-white shadow-[0_10px_22px_rgba(216,141,114,0.22)] hover:bg-[#d88d72]"
+                    ? "-mt-6 h-[5.65rem] scale-[1.02] justify-center gap-1.5 bg-[linear-gradient(160deg,#156240_0%,#369758_56%,#8AB68E_135%)] text-white shadow-[0_20px_38px_rgba(21,98,64,0.42),0_0_0_5px_rgba(254,255,249,0.92)] ring-2 ring-[#D6D5B2]/85"
+                    : "-mt-4 h-[5.15rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#369758,#156240)] text-white shadow-[0_14px_28px_rgba(21,98,64,0.24)] ring-1 ring-[#FEFFF9]/70"
                   : active
-                    ? "bg-white text-ink shadow-sm"
-                    : "text-zinc-600 hover:bg-white/65 hover:text-ink",
-                pendingHref === item.href && "scale-[0.97] opacity-80",
+                    ? "-translate-y-1 bg-[#FEFFF9]/72 text-forest shadow-[0_10px_22px_rgba(21,98,64,0.11)] ring-1 ring-[#8E8383]/12"
+                    : "text-[#1D1D1B]/72",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-1.5 h-1 w-5 rounded-full transition",
-                  active ? "bg-[#d88d72]" : "bg-transparent",
+                  "absolute rounded-full transition duration-200",
+                  item.isPrimary
+                    ? "top-1.5 h-0 w-0 bg-transparent"
+                    : active
+                      ? "-top-1 h-1.5 w-5 bg-[#369758]"
+                      : "-top-0.5 h-1 w-0 bg-transparent",
                 )}
                 aria-hidden="true"
               />
-              <span className="relative inline-flex h-5 min-w-5 items-center justify-center">
-                {pendingHref === item.href ? (
-                  <LoaderCircle
-                    className={cn(
-                      "animate-spin",
-                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                    )}
-                  />
-                ) : (
-                  <Icon
-                    className={cn(
-                      "shrink-0",
-                      item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
-                      active ? "text-[#9b654f]" : "",
-                    )}
-                    strokeWidth={active ? 2.4 : 2}
-                  />
+              <span
+                className={cn(
+                  "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
+                  item.isPrimary
+                    ? active
+                      ? "h-11 w-11 bg-[#FEFFF9]/20 text-white ring-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_1px_rgba(21,98,64,0.1)]"
+                      : "h-10 w-10 bg-white/14 text-white ring-white/24"
+                    : getMobileNavToneClasses(item.tone, active),
                 )}
+              >
+                <Icon
+                  className={cn(
+                    "shrink-0",
+                    item.isPrimary ? "h-[22px] w-[22px]" : "h-[17px] w-[17px]",
+                  )}
+                  strokeWidth={active ? 2.4 : 2}
+                />
               </span>
-              <span className="max-w-full whitespace-nowrap">{item.label}</span>
+              <span
+                className={cn(
+                  "max-w-full whitespace-nowrap transition",
+                  item.isPrimary
+                    ? active
+                      ? "rounded-full bg-[#FEFFF9]/18 px-2 py-0.5 text-[11px] font-extrabold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]"
+                      : "text-[11px] font-extrabold"
+                    : active
+                      ? "rounded-full bg-[#FEFFF9]/72 px-1.5 py-0.5 font-extrabold text-forest shadow-[0_1px_0_rgba(255,255,255,0.7)]"
+                      : null,
+                )}
+              >
+                {item.label}
+              </span>
             </IntentPrefetchLink>
           );
         })}
