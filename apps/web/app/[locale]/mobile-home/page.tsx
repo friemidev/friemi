@@ -3,10 +3,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
-import { CalendarPlus, Compass, Search } from "lucide-react";
+import { ArrowRight, CalendarPlus, Search } from "lucide-react";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { brand } from "@/lib/brand";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -16,7 +17,6 @@ import {
   getGeneralPageShareDescription,
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
-import { cn } from "@/lib/utils";
 
 type MobileHomePageProps = {
   params: Promise<{
@@ -38,10 +38,22 @@ type MobileHomeCopy = {
     image: string;
     label: string;
   }[];
-  quickLinks: {
-    href: string;
+  createPlanLabel: string;
+  activityDescription: string;
+  activityEyebrow: string;
+  activityTitle: string;
+  activityCta: string;
+  carousel: {
+    ariaLabel: string;
+    emptyDescription: string;
+    emptyTitle: string;
+    next: string;
+    previous: string;
+    viewActivity: string;
+  };
+  tabletHighlights: {
     label: string;
-    tone: "coral" | "green";
+    text: string;
   }[];
 };
 
@@ -68,11 +80,11 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureBadge: "大厅",
     featureStatus: "今日入口",
     featureTitle: "今天先滑一张。",
-    featureDescription: "把正在发生的活动放在最前面，看到心动的再进入详情。",
+    featureDescription: "先翻一张今日灵感。心动就约，不来电就继续滑。",
     featureKicker: "Friemi Hall",
     searchPlaceholder: "搜索活动、组局或朋友",
     categoriesTitle: "按心情找活动",
-    categoriesDescription: "从饭局、展览、音乐到运动，用插画先找到今天的方向。",
+    categoriesDescription: "从饭局、展览、音乐到运动，找到今日份心动。",
     categories: [
       { category: "FOOD", image: "dining.png", label: "饭局" },
       { category: "WANDER", image: "wandering.png", label: "闲逛" },
@@ -84,9 +96,24 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
       { category: "MUSIC", image: "music.png", label: "音乐" },
       { category: "SPORTS", image: "sports.png", label: "运动" },
     ],
-    quickLinks: [
-      { href: "/activities", label: "发现活动", tone: "green" },
-      { href: "/activities/new", label: "发起组局", tone: "coral" },
+    createPlanLabel: "我要组局",
+    activityEyebrow: "Live from Friemi",
+    activityTitle: "从一次小局开始",
+    activityDescription:
+      "先看看大家正在约什么。卡片轻轻滑，今天的出门理由可能就在下一张。",
+    activityCta: "先看看活动",
+    carousel: {
+      ariaLabel: "大厅精选活动轮播",
+      emptyTitle: "近期活动正在整理中",
+      emptyDescription: "有新的未开始活动后会显示在这里。",
+      next: "下一组活动",
+      previous: "上一组活动",
+      viewActivity: "查看详情",
+    },
+    tabletHighlights: [
+      { label: "滑一张", text: "先看今天最有感觉的那一局。" },
+      { label: "按心情", text: "饭局、闲逛、视听，直接按状态选。" },
+      { label: "约起来", text: "看到合适的，就把人聚起来。" },
     ],
   },
   en: {
@@ -111,9 +138,24 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
       { category: "MUSIC", image: "music.png", label: "Music" },
       { category: "SPORTS", image: "sports.png", label: "Sports" },
     ],
-    quickLinks: [
-      { href: "/activities", label: "Activities", tone: "green" },
-      { href: "/activities/new", label: "Start a plan", tone: "coral" },
+    createPlanLabel: "Start",
+    activityEyebrow: "Live from Friemi",
+    activityTitle: "Start with one small plan",
+    activityDescription:
+      "Swipe through what people are already making. The next card might be your reason to go out.",
+    activityCta: "Browse activities",
+    carousel: {
+      ariaLabel: "Hall featured activities carousel",
+      emptyTitle: "Fresh activities are being arranged",
+      emptyDescription: "New upcoming activities will appear here.",
+      next: "Next activities",
+      previous: "Previous activities",
+      viewActivity: "View details",
+    },
+    tabletHighlights: [
+      { label: "Swipe", text: "Start from one plan that feels close." },
+      { label: "Mood", text: "Food, walks, screens, and small rituals." },
+      { label: "Gather", text: "When it clicks, bring people in." },
     ],
   },
   fr: {
@@ -138,9 +180,24 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
       { category: "MUSIC", image: "music.png", label: "Musique" },
       { category: "SPORTS", image: "sports.png", label: "Sport" },
     ],
-    quickLinks: [
-      { href: "/activities", label: "Activités", tone: "green" },
-      { href: "/activities/new", label: "Lancer", tone: "coral" },
+    createPlanLabel: "Lancer",
+    activityEyebrow: "Live from Friemi",
+    activityTitle: "Commencer par une petite sortie",
+    activityDescription:
+      "Faites défiler les idées déjà lancées. La prochaine carte peut devenir votre prétexte pour sortir.",
+    activityCta: "Voir les activités",
+    carousel: {
+      ariaLabel: "Carrousel des activités du hall",
+      emptyTitle: "Les prochaines activités arrivent",
+      emptyDescription: "Les nouvelles activités à venir apparaîtront ici.",
+      next: "Activités suivantes",
+      previous: "Activités précédentes",
+      viewActivity: "Voir le détail",
+    },
+    tabletHighlights: [
+      { label: "Swiper", text: "Commencez par une sortie qui donne envie." },
+      { label: "Envie", text: "Repas, balade, écran ou petit rituel." },
+      { label: "Réunir", text: "Si ça vous parle, lancez le groupe." },
     ],
   },
 };
@@ -193,7 +250,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
   return (
     <>
       <HomeLuxuryMotion />
-      <main className="overflow-hidden bg-[#FEFFF9] text-[#1D1D1B]">
+      <main className="overflow-x-hidden bg-[#FEFFF9] text-[#1D1D1B]">
         <MobileHomeExperience
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
@@ -210,146 +267,223 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <>
-      <div className="md:hidden">
-        <section className="relative isolate flex h-[calc(100svh-9.15rem-env(safe-area-inset-bottom))] min-h-[31rem] overflow-hidden bg-[linear-gradient(180deg,#FEFFF9_0%,rgba(241,242,227,0.34)_52%,#FEFFF9_100%)] px-4 py-3">
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[linear-gradient(180deg,#FEFFF9_0%,rgba(241,242,227,0.28)_52%,#FEFFF9_100%)] px-4 pb-3 pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
+      <div
+        className="absolute -right-24 top-0 z-0 h-[21rem] w-[15rem] rounded-[4rem] bg-[linear-gradient(180deg,rgba(54,151,88,0.18),rgba(222,235,255,0.18)_58%,rgba(254,255,249,0.1))] opacity-80 blur-2xl md:right-[6vw] md:top-10 md:h-[34rem] md:w-[24rem]"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -right-16 top-40 z-0 h-44 w-44 rounded-full bg-coral/10 blur-3xl md:right-[29vw] md:top-[42%] md:h-72 md:w-72"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -left-20 bottom-10 z-0 h-48 w-48 rounded-full bg-ice/55 blur-3xl md:left-[5vw] md:bottom-10 md:h-[30rem] md:w-[30rem]"
+        aria-hidden="true"
+      />
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
+        <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
-            className="absolute -right-24 top-0 z-0 h-[21rem] w-[15rem] rounded-[4rem] bg-[linear-gradient(180deg,rgba(54,151,88,0.18),rgba(222,235,255,0.18)_58%,rgba(254,255,249,0.1))] opacity-80 blur-2xl"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -right-16 top-40 z-0 h-44 w-44 rounded-full bg-coral/10 blur-3xl"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -left-20 bottom-10 z-0 h-48 w-48 rounded-full bg-ice/55 blur-3xl"
-            aria-hidden="true"
-          />
-          <div className="relative z-10 mx-auto flex h-full w-full max-w-md min-w-0 flex-col gap-2.5">
-            <section className="relative shrink-0" data-home-reveal="up">
-              <LazyLobbySwipeDiscovery
-                className="border-transparent bg-transparent p-0"
-                favoriteRedirectPath="/mobile-home"
-                initialActivities={swipeActivities}
-                isAuthenticated={false}
-                locale={locale}
-                variant="home"
-              />
-            </section>
+            className="hidden md:block"
+            data-home-reveal="up"
+            style={
+              {
+                "--home-reveal-delay": "40ms",
+              } as CSSProperties
+            }
+          >
+            <p className="text-xs font-extrabold uppercase tracking-[0.42em] text-forest">
+              {mobile.featureKicker}
+            </p>
+            <h1 className="mt-4 max-w-3xl font-serif text-[clamp(3.3rem,7vw,6.7rem)] leading-[0.9] text-[#0E2A66]">
+              {mobile.featureBadge}
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#156240] lg:text-lg">
+              {mobile.featureDescription}
+            </p>
+          </div>
 
-            <div
-              className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5"
-              data-home-reveal="up"
-              style={
-                {
-                  "--home-reveal-delay": "80ms",
-                } as CSSProperties
-              }
+          <div
+            className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:max-w-2xl lg:gap-3"
+            data-home-reveal="up"
+            style={
+              {
+                "--home-reveal-delay": "80ms",
+              } as CSSProperties
+            }
+          >
+            <Link
+              href={withLocale(locale, "/activities")}
+              className="mobile-home-search flex h-10 min-w-0 items-center gap-2 rounded-full px-3 text-xs font-semibold text-forest md:h-12 md:px-4 md:text-sm"
             >
-              <Link
-                href={withLocale(locale, "/activities")}
-                className="mobile-home-search flex h-10 min-w-0 items-center gap-2 rounded-full px-3 text-xs font-semibold text-forest"
-              >
-                <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 truncate">
-                  {mobile.searchPlaceholder}
-                </span>
-              </Link>
+              <Search
+                className="h-4 w-4 shrink-0 md:h-5 md:w-5"
+                aria-hidden="true"
+              />
+              <span className="min-w-0 truncate">
+                {mobile.searchPlaceholder}
+              </span>
+            </Link>
 
-              {mobile.quickLinks.map((item) => (
+            <Link
+              href={withLocale(locale, "/activities/new")}
+              className="mobile-home-quick-action inline-flex h-10 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-extrabold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] md:h-12 md:min-w-[7.2rem] md:px-4 md:text-sm"
+              title={mobile.createPlanLabel}
+            >
+              <CalendarPlus
+                className="h-4 w-4 shrink-0 md:h-5 md:w-5"
+                aria-hidden="true"
+              />
+              <span className="whitespace-nowrap">
+                {mobile.createPlanLabel}
+              </span>
+            </Link>
+          </div>
+
+          <section
+            className="min-h-[13.35rem] flex-1 px-0.5 pt-1.5 md:min-h-0 md:px-0 md:pt-0"
+            data-home-reveal="up"
+            style={
+              {
+                "--home-reveal-delay": "150ms",
+              } as CSSProperties
+            }
+          >
+            <div className="mobile-home-category-grid grid h-full min-h-[13.35rem] grid-cols-3 grid-rows-[repeat(3,minmax(0,max-content))] content-start gap-x-1.5 pt-[var(--mobile-home-category-offset)] md:min-h-0 md:grid-cols-3 md:gap-x-3 md:gap-y-3 md:pt-0 lg:grid-cols-5 lg:gap-4">
+              {mobile.categories.map((category, index) => (
                 <Link
-                  key={item.href}
-                  href={withLocale(locale, item.href)}
-                  className={cn(
-                    "mobile-home-quick-action inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-[11px] font-bold transition active:scale-[0.94]",
-                    item.tone === "coral"
-                      ? "bg-coral text-white"
-                      : "bg-ice text-forest",
+                  key={`${category.category}-${category.label}-${index}`}
+                  href={withLocale(
+                    locale,
+                    `/lobby?category=${category.category}`,
                   )}
-                  title={item.label}
+                  className="mobile-home-category group flex min-h-0 min-w-0 flex-col items-center justify-center text-center md:rounded-[1.45rem] md:bg-[#FEFFF9]/68 md:px-3 md:py-3 md:shadow-[0_16px_34px_rgba(21,98,64,0.08)] md:ring-1 md:ring-[#D6D5B2]/65 md:backdrop-blur-sm md:transition md:hover:-translate-y-1 md:hover:bg-white/88 md:hover:shadow-[0_22px_44px_rgba(21,98,64,0.13)]"
+                  style={
+                    {
+                      "--mobile-home-accent":
+                        mobileHomeCategoryAccents[index]?.glow ??
+                        "rgba(54, 151, 88, 0.18)",
+                      "--mobile-home-delay": `${150 + index * 42}ms`,
+                      "--mobile-home-tilt":
+                        mobileHomeCategoryAccents[index]?.tilt ?? "0deg",
+                    } as CSSProperties & {
+                      "--mobile-home-accent": string;
+                      "--mobile-home-delay": string;
+                      "--mobile-home-tilt": string;
+                    }
+                  }
                 >
-                  {item.tone === "coral" ? (
-                    <CalendarPlus className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Compass className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  <span className="sr-only">{item.label}</span>
+                  <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-center justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
+                    <Image
+                      src={`${mobileHomeIllustrationPath}/${category.image}`}
+                      alt=""
+                      width={96}
+                      height={96}
+                      className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
+                    />
+                  </span>
+                  <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#FEFFF9]/44 px-1.5 text-[10.5px] font-extrabold leading-tight text-forest drop-shadow-[0_1px_0_rgba(254,255,249,0.8)] md:mt-1.5 md:text-xs">
+                    {category.label}
+                  </span>
                 </Link>
               ))}
             </div>
+          </section>
 
-            <section
-              className="min-h-0 flex-1 px-1 pt-2.5"
-              data-home-reveal="up"
-              style={
-                {
-                  "--home-reveal-delay": "150ms",
-                } as CSSProperties
-              }
-            >
-              <div className="grid h-full min-h-0 grid-cols-3 grid-rows-3 gap-x-2 gap-y-0">
-                {mobile.categories.map((category, index) => (
-                  <Link
-                    key={`${category.category}-${category.label}-${index}`}
-                    href={withLocale(
-                      locale,
-                      `/lobby?category=${category.category}`,
-                    )}
-                    className="mobile-home-category group flex min-h-0 min-w-0 flex-col items-center justify-center text-center"
-                    style={
-                      {
-                        "--mobile-home-accent":
-                          mobileHomeCategoryAccents[index]?.glow ??
-                          "rgba(54, 151, 88, 0.18)",
-                        "--mobile-home-delay": `${150 + index * 42}ms`,
-                        "--mobile-home-tilt":
-                          mobileHomeCategoryAccents[index]?.tilt ?? "0deg",
-                      } as CSSProperties & {
-                        "--mobile-home-accent": string;
-                        "--mobile-home-delay": string;
-                        "--mobile-home-tilt": string;
-                      }
-                    }
-                  >
-                    <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[clamp(3.4rem,9.8svh,6.05rem)] max-h-full items-center justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-active:scale-90">
-                      <Image
-                        src={`${mobileHomeIllustrationPath}/${category.image}`}
-                        alt=""
-                        width={96}
-                        height={96}
-                        className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
-                      />
-                    </span>
-                    <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#FEFFF9]/44 px-1.5 text-[10.5px] font-extrabold leading-tight text-forest drop-shadow-[0_1px_0_rgba(254,255,249,0.8)]">
-                      {category.label}
-                    </span>
-                  </Link>
-                ))}
+          <div
+            className="mobile-home-tablet-highlights grid-cols-3 gap-2"
+            data-home-reveal="up"
+            style={
+              {
+                "--home-reveal-delay": "210ms",
+              } as CSSProperties
+            }
+          >
+            {mobile.tabletHighlights.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[1.25rem] border border-[#D6D5B2]/70 bg-[#FEFFF9]/72 px-3 py-3 shadow-[0_14px_28px_rgba(21,98,64,0.08)] backdrop-blur-sm"
+              >
+                <p className="text-xs font-extrabold text-[#156240]">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-[#156240]/78">
+                  {item.text}
+                </p>
               </div>
-            </section>
+            ))}
+          </div>
+        </div>
+
+        <section
+          className="relative order-first shrink-0 md:order-none md:col-start-2 md:self-start md:pt-6 lg:pt-7"
+          data-home-reveal="up"
+        >
+          <LazyLobbySwipeDiscovery
+            className="border-transparent bg-transparent p-0"
+            favoriteRedirectPath="/mobile-home"
+            initialActivities={swipeActivities}
+            isAuthenticated={false}
+            locale={locale}
+            variant="home"
+          />
+        </section>
+
+        <section
+          className="mobile-home-tall-tablet-fill md:col-span-2"
+          data-home-reveal="up"
+          style={
+            {
+              "--home-reveal-delay": "260ms",
+            } as CSSProperties
+          }
+        >
+          <div className="relative grid min-h-[clamp(18.5rem,34svh,29rem)] overflow-hidden rounded-[2rem] border border-[#D6D5B2]/72 bg-[#F1F2E3] p-5 shadow-[0_18px_46px_rgba(21,98,64,0.1)] backdrop-blur-sm md:grid-cols-[minmax(13rem,0.42fr)_minmax(0,1fr)] md:items-center md:gap-5">
+            <div
+              className="absolute inset-0 bg-[linear-gradient(90deg,rgba(254,255,249,0.82),rgba(254,255,249,0.42)_42%,rgba(214,213,178,0.32))]"
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-y-0 left-0 w-[45%] bg-[linear-gradient(90deg,rgba(254,255,249,0.92),rgba(254,255,249,0.22))]"
+              aria-hidden="true"
+            />
+            <div className="absolute inset-0 opacity-[0.13]" aria-hidden="true">
+              <Image
+                src="/home/v2_1/friemi-home-v21-events-mood.jpg"
+                alt=""
+                fill
+                sizes="100vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="relative min-w-0 self-center">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-[#156240]">
+                {mobile.activityEyebrow}
+              </p>
+              <h2 className="mt-3 max-w-[15rem] font-serif text-[clamp(2rem,4vw,3.2rem)] leading-[0.95] text-[#1D1D1B]">
+                {mobile.activityTitle}
+              </h2>
+              <p className="mt-4 max-w-[16rem] text-[12px] leading-6 text-[#156240]">
+                {mobile.activityDescription}
+              </p>
+              <Link
+                href={withLocale(locale, "/activities")}
+                className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FFF5E6]/82 px-3 text-xs font-semibold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40"
+              >
+                {mobile.activityCta}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="relative min-w-0 self-center">
+              <HomeActivityCarousel
+                activities={swipeActivities}
+                density="desktop"
+                labels={mobile.carousel}
+                locale={locale}
+              />
+            </div>
           </div>
         </section>
       </div>
-
-      <div className="hidden md:block">
-        <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col items-center justify-center px-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
-            Friemi Hall
-          </p>
-          <h1 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
-            {mobile.featureBadge}
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-[#156240]">
-            {mobile.featureDescription}
-          </p>
-          <Link
-            href={withLocale(locale, "/home")}
-            className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-semibold text-white transition hover:bg-[#369758]"
-          >
-            {brand.name}
-          </Link>
-        </section>
-      </div>
-    </>
+    </section>
   );
 }

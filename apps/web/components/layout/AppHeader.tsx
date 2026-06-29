@@ -34,14 +34,14 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#FFF5E6] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4 lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
           className="group flex shrink-0 items-center gap-2"
           prefetch={false}
         >
           <BrandLockup
-            className="transition duration-200 group-hover:scale-[1.02]"
+            className="transition duration-200 group-hover:scale-[1.02] max-[900px]:h-8 max-[900px]:w-[6.8rem]"
             priority
             size="md"
           />
@@ -49,7 +49,7 @@ export function AppHeader({
 
         <DesktopNav locale={locale} />
 
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-1 max-[900px]:gap-0.5 lg:gap-2">
           <GlobalSearchForm
             locale={locale}
             className="hidden min-[1480px]:flex"

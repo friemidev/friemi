@@ -177,7 +177,7 @@ export function getPublicEventCopy(locale: string) {
     viewEvent: "查看活动",
     viewTeams: "查看组局",
     jumpToTeams: "看已有组局",
-    teamUp: "发起组局",
+    teamUp: "我要组局",
     actionTitle: "想和别人一起去？",
     actionDescription:
       "先看看已有组局；没有合适的队伍，再发起自己的组局。",
@@ -192,13 +192,13 @@ export function getPublicEventCopy(locale: string) {
     noTeamsDescription: "发起一个组局，找到想一起去的人。",
     noTeamsEndedDescription: "这个活动已经结束，暂时没有历史组局。",
     noTeamsUnavailableDescription: "这个活动已不可用，暂时没有历史组局。",
-    noTeamsCta: "发起第一个组局",
+    noTeamsCta: "我要组第一个局",
     publicEventRuleTitle: "活动",
     publicEventRuleDescription:
       "这里展示的是活动本身。想和平台用户一起去，请加入下方组局，或发起自己的组局。",
     teamCount: (count: number) =>
       count === 0 ? "暂无组局" : `${count} 个组局`,
-    createTeamTitle: "发起组局",
+    createTeamTitle: "我要组局",
     createTeamDescription:
       "活动已预填，你只需要补充集合方式、人数和同行说明。",
     teamTitle: (title: string) => `一起去：${title}`,
@@ -213,10 +213,9 @@ export function getPublicEventCopy(locale: string) {
     linkedEventDescription: "这个组局是基于该活动发起的。",
     linkedEventCta: "查看活动",
     eventUnavailableError:
-      "活动不存在或已不可用，请返回活动详情页重新发起组局。",
-    eventEndedError: "这个活动已经结束，不能继续发起组局。",
-    eventCancelledError: "这个活动已被取消，不能继续发起组局。",
-    duplicateTeamError:
-      "你已经为这个活动发起过组局，可以直接编辑已有组局。",
+      "活动不存在或已不可用，请返回活动详情页重新选择。",
+    eventEndedError: "这个活动已经结束，不能继续组局。",
+    eventCancelledError: "这个活动已被取消，不能继续组局。",
+    duplicateTeamError: "你已经为这个活动创建过组局，可以直接编辑已有组局。",
   };
 }
