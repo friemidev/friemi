@@ -590,7 +590,7 @@ export function ActivitySwipeDiscovery({
         className={cn(
           "relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
           isHomeVariant
-            ? "mt-0 h-[clamp(12.6rem,31svh,14.4rem)] max-w-none md:mx-0"
+            ? "mt-0 h-[var(--home-swipe-height)] max-w-none md:mx-0"
             : null,
         )}
         onKeyDown={(event) => {
@@ -609,9 +609,13 @@ export function ActivitySwipeDiscovery({
         style={
           isHomeVariant
             ? ({
-                "--home-swipe-cover-height": "clamp(6.55rem,16.4svh,7.75rem)",
+                "--home-swipe-height":
+                  "var(--mobile-home-swipe-height, clamp(12.6rem, 31svh, 14.4rem))",
+                "--home-swipe-cover-height":
+                  "var(--mobile-home-swipe-cover-height, clamp(6.55rem, 16.4svh, 7.75rem))",
                 contain: "layout paint",
               } as CSSProperties & {
+                "--home-swipe-height": string;
                 "--home-swipe-cover-height": string;
               })
             : { contain: "layout paint" }
@@ -695,7 +699,9 @@ export function ActivitySwipeDiscovery({
                     <span
                       className={cn(
                         "rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70",
-                        isHomeVariant ? "px-2 py-0.5 text-[9px]" : null,
+                        isHomeVariant
+                          ? "px-2 py-0.5 text-[9px] md:px-2.5 md:py-1 md:text-[10px]"
+                          : null,
                       )}
                     >
                       {categoryLabel}
@@ -704,7 +710,7 @@ export function ActivitySwipeDiscovery({
                       className={cn(
                         "inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35",
                         isHomeVariant
-                          ? "min-h-[1.15rem] px-2 py-0.5 text-[9px]"
+                          ? "min-h-[1.15rem] px-2 py-0.5 text-[9px] md:min-h-[1.55rem] md:px-2.5 md:py-1 md:text-[10px]"
                           : null,
                       )}
                     >
@@ -741,7 +747,7 @@ export function ActivitySwipeDiscovery({
                   className={cn(
                     "grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5",
                     isHomeVariant
-                      ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-1.5 p-2.5"
+                      ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-1.5 p-2.5 md:gap-3 md:p-4"
                       : null,
                   )}
                 >
@@ -749,7 +755,9 @@ export function ActivitySwipeDiscovery({
                     <h3
                       className={cn(
                         "line-clamp-2 text-lg font-semibold leading-[1.12] text-ink",
-                        isHomeVariant ? "text-[15px] leading-[1.12]" : null,
+                        isHomeVariant
+                          ? "text-[15px] leading-[1.12] md:text-xl md:leading-[1.14]"
+                          : null,
                       )}
                     >
                       {activity.title}
@@ -758,7 +766,7 @@ export function ActivitySwipeDiscovery({
                       className={cn(
                         "mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600",
                         isHomeVariant
-                          ? "mt-1 grid-cols-1 text-[11px] leading-4"
+                          ? "mt-1 grid-cols-1 text-[11px] leading-4 md:mt-2 md:text-sm md:leading-6"
                           : null,
                       )}
                     >
@@ -781,7 +789,7 @@ export function ActivitySwipeDiscovery({
                         className={cn(
                           "inline-flex h-10 items-center justify-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800",
                           isHomeVariant
-                            ? "h-7 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758]"
+                            ? "h-7 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758] md:h-11 md:text-sm"
                             : null,
                         )}
                         href={href}
@@ -807,7 +815,7 @@ export function ActivitySwipeDiscovery({
                         className={cn(
                           "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
                           isHomeVariant
-                            ? "size-8 min-h-8 min-w-8 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70"
+                            ? "size-8 min-h-8 min-w-8 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70 md:size-11 md:min-h-11 md:min-w-11"
                             : null,
                         )}
                         favoriteCount={activity.favoriteCount}

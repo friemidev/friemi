@@ -63,7 +63,7 @@ function getProfileSpaceCopy(locale: string) {
   return {
     createdTitle: "发起",
     sectionCount: (count: number) => `${count}`,
-    createdAction: "发起组局",
+    createdAction: "我要组局",
     participationTitle: "参与",
     participationAction: "发现活动",
     favoriteTitle: "收藏",

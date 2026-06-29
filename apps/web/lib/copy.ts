@@ -602,7 +602,7 @@ const copy = {
       failedError: "审核报名失败，请稍后重试。",
     },
     newActivity: {
-      title: "发起组局",
+      title: "我要组局",
       description: "填写组局信息，约好时间地点，发布后就可以邀请大家加入。",
     },
     editActivity: {
@@ -644,13 +644,13 @@ const copy = {
       wechatLinkedCount: (count: number) => `已同步 ${count} 条游客报名记录`,
       close: "关闭",
       cancel: "取消",
-      createdCount: "发起组局",
+      createdCount: "我的组局",
       participationCount: "参加活动",
       errorTitle: "个人空间加载失败",
       errorDescription: "部分内容暂时无法加载，请稍后再试。",
       createdTitle: "发起的活动",
       createdDescription: "",
-      createdEmptyTitle: "暂无发起组局",
+      createdEmptyTitle: "暂无组局",
       createdEmptyDescription: "有活动后会显示在这里。",
       participationTitle: "参加的活动",
       participationDescription: "",
@@ -660,7 +660,7 @@ const copy = {
       favoriteEmptyTitle: "暂无收藏活动",
       favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
-        `当前显示最近 ${limit} 个发起组局，另有 ${count} 个更早的内容暂未展示。`,
+        `当前显示最近 ${limit} 个组局，另有 ${count} 个更早的内容暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
       hiddenFavorite: (limit: number, count: number) =>

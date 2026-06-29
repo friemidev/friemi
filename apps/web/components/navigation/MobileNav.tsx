@@ -136,7 +136,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 "relative flex min-w-0 flex-col items-center justify-end gap-1 rounded-[1.35rem] px-1 pb-1.5 pt-1 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-5 h-[5.35rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#156240_0%,#369758_62%,#8AB68E_140%)] text-white shadow-[0_18px_34px_rgba(21,98,64,0.38)] ring-2 ring-[#FEFFF9]/80"
+                    ? "-mt-6 h-[5.65rem] scale-[1.02] justify-center gap-1.5 bg-[linear-gradient(160deg,#156240_0%,#369758_56%,#8AB68E_135%)] text-white shadow-[0_20px_38px_rgba(21,98,64,0.42),0_0_0_5px_rgba(254,255,249,0.92)] ring-2 ring-[#D6D5B2]/85"
                     : "-mt-4 h-[5.15rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#369758,#156240)] text-white shadow-[0_14px_28px_rgba(21,98,64,0.24)] ring-1 ring-[#FEFFF9]/70"
                   : active
                     ? "-translate-y-1 bg-[#FEFFF9]/72 text-forest shadow-[0_10px_22px_rgba(21,98,64,0.11)] ring-1 ring-[#8E8383]/12"
@@ -147,9 +147,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 className={cn(
                   "absolute rounded-full transition duration-200",
                   item.isPrimary
-                    ? active
-                      ? "top-1.5 h-1.5 w-8 bg-white/92"
-                      : "top-1.5 h-1 w-0 bg-transparent"
+                    ? "top-1.5 h-0 w-0 bg-transparent"
                     : active
                       ? "-top-1 h-1.5 w-5 bg-[#369758]"
                       : "-top-0.5 h-1 w-0 bg-transparent",
@@ -161,7 +159,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
                   item.isPrimary
                     ? active
-                      ? "h-11 w-11 bg-white/18 text-white ring-white/34 shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]"
+                      ? "h-11 w-11 bg-[#FEFFF9]/20 text-white ring-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_1px_rgba(21,98,64,0.1)]"
                       : "h-10 w-10 bg-white/14 text-white ring-white/24"
                     : getMobileNavToneClasses(item.tone, active),
                 )}
@@ -178,7 +176,9 @@ export function MobileNav({ locale }: MobileNavProps) {
                 className={cn(
                   "max-w-full whitespace-nowrap transition",
                   item.isPrimary
-                    ? "text-[11px] font-extrabold"
+                    ? active
+                      ? "rounded-full bg-[#FEFFF9]/18 px-2 py-0.5 text-[11px] font-extrabold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]"
+                      : "text-[11px] font-extrabold"
                     : active
                       ? "rounded-full bg-[#FEFFF9]/72 px-1.5 py-0.5 font-extrabold text-forest shadow-[0_1px_0_rgba(255,255,255,0.7)]"
                       : null,
