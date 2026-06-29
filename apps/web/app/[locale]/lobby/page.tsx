@@ -71,23 +71,23 @@ export default async function ActivityLobbyPage({
   const profile = viewerState.profile;
 
   if (!profile) {
-    const previewActivities = await perf.measure(
-      "lobby.preview",
-      () => getActivityLobbyPreview(initialCategoryFilter ?? undefined).catch(
-        (error: unknown) => {
-          console.error("Failed to load public activity lobby preview", error);
+    const previewActivities = await perf.measure("lobby.preview", () =>
+      getActivityLobbyPreview().catch((error: unknown) => {
+        console.error("Failed to load public activity lobby preview", error);
 
-          return [];
-        },
-      ),
+        return [];
+      }),
     );
-    perf.finish({
-      hasViewer: false,
-      previewCount: previewActivities.length,
-    }, {
-      route: `/${locale}/lobby`,
-      routeKey: "lobby",
-    });
+    perf.finish(
+      {
+        hasViewer: false,
+        previewCount: previewActivities.length,
+      },
+      {
+        route: `/${locale}/lobby`,
+        routeKey: "lobby",
+      },
+    );
 
     return (
       <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
@@ -117,17 +117,20 @@ export default async function ActivityLobbyPage({
       };
     }),
   );
-  perf.finish({
-    createdCount: lobby.createdActivities.length,
-    deferredSections: true,
-    favoriteCount: lobby.favoriteActivities.length,
-    hasViewer: true,
-    joinedCount: lobby.joinedActivities.length,
-  }, {
-    route: `/${locale}/lobby`,
-    routeKey: "lobby",
-    userProfileId: profile.id,
-  });
+  perf.finish(
+    {
+      createdCount: lobby.createdActivities.length,
+      deferredSections: true,
+      favoriteCount: lobby.favoriteActivities.length,
+      hasViewer: true,
+      joinedCount: lobby.joinedActivities.length,
+    },
+    {
+      route: `/${locale}/lobby`,
+      routeKey: "lobby",
+      userProfileId: profile.id,
+    },
+  );
 
   return (
     <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
