@@ -63,7 +63,10 @@ export default async function LocaleLayout({
                 locale={locale}
                 showNotificationNav={Boolean(viewerProfile)}
                 showAdminNav={viewerState.showAdminNav}
+                viewerContactEmail={viewerProfile?.contactEmail ?? null}
+                viewerEmail={viewerProfile?.email ?? null}
                 viewerFriendCode={viewerProfile?.friendCode ?? null}
+                viewerPhone={viewerProfile?.phone ?? null}
                 viewerWechatId={viewerProfile?.wechatId ?? null}
                 viewerNickname={viewerProfile?.nickname ?? null}
                 incomingFriendRequests={[]}

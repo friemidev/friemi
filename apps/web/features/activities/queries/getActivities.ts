@@ -922,9 +922,9 @@ export function isLegacyActivityInfoSource(activity: {
 
   const sourcePayloadLooksPublic = Boolean(
     activity.sourcePayload &&
-      !isAddressPrivacyOnlySourcePayload(
-        activity.sourcePayload as Prisma.JsonValue,
-      ),
+    !isAddressPrivacyOnlySourcePayload(
+      activity.sourcePayload as Prisma.JsonValue,
+    ),
   );
 
   return Boolean(
@@ -1893,20 +1893,18 @@ async function getUpcomingHomeActivitiesUncached(
       getPublicEventTimeStateWhere("UPCOMING", publicEventNow),
     ],
   };
-  const [activities, publicEvents] = await Promise.all([
-    prisma.activity.findMany({
-      where: upcomingActivityWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: safeLimit,
-      select: homeActivityPreviewSelect,
-    }),
-    prisma.publicEvent.findMany({
-      where: upcomingPublicEventWhere,
-      orderBy: [{ startAt: "asc" }, { id: "asc" }],
-      take: safeLimit,
-      select: homePublicEventPreviewSelect,
-    }),
-  ]);
+  const activities = await prisma.activity.findMany({
+    where: upcomingActivityWhere,
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    take: safeLimit,
+    select: homeActivityPreviewSelect,
+  });
+  const publicEvents = await prisma.publicEvent.findMany({
+    where: upcomingPublicEventWhere,
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
+    take: safeLimit,
+    select: homePublicEventPreviewSelect,
+  });
   const rankedActivities = [
     ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
       getHomeActivityPreviewCardViewModel,

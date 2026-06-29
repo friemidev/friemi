@@ -16,7 +16,10 @@ type AppHeaderProps = {
   showNotificationNav?: boolean;
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
+  viewerContactEmail?: string | null;
+  viewerEmail?: string | null;
   viewerFriendCode?: string | null;
+  viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
@@ -27,7 +30,10 @@ export function AppHeader({
   showNotificationNav = false,
   showAdminNav = false,
   unreadNotificationCount = 0,
+  viewerContactEmail = null,
+  viewerEmail = null,
   viewerFriendCode = null,
+  viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
@@ -66,7 +72,10 @@ export function AppHeader({
           <UserMenu
             locale={locale}
             showAdminLink={showAdminNav}
+            viewerContactEmail={viewerContactEmail}
+            viewerEmail={viewerEmail}
             viewerFriendCode={viewerFriendCode}
+            viewerPhone={viewerPhone}
             viewerWechatId={viewerWechatId}
             viewerNickname={viewerNickname}
             incomingFriendRequests={incomingFriendRequests}

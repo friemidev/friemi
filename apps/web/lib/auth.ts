@@ -12,11 +12,15 @@ type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
 async function finalizeUserProfile<
   TProfile extends {
+    contactEmail?: string | null;
     email?: string | null;
     emailVerifiedAt?: Date | string | null;
     friendCode: string | null;
     id: string;
+    normalizedContactEmail?: string | null;
+    normalizedPhone?: string | null;
     normalizedWechatId?: string | null;
+    phone?: string | null;
     wechatId?: string | null;
   },
 >(
@@ -134,27 +138,29 @@ function getStoredEmailVerifiedAt({
 }
 
 function upsertLocalUserProfile(clerkUserId: string) {
-  return prisma.userProfile.upsert({
-    where: {
-      clerkUserId,
-    },
-    create: {
-      clerkUserId,
-      email: "local-dev@example.com",
-      emailVerifiedAt: new Date(),
-      nickname: "本地开发用户",
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-    update: {
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-  }).then((profile) =>
-    finalizeUserProfile(profile, {
-      verifiedEmail: profile.email,
-    }),
-  );
+  return prisma.userProfile
+    .upsert({
+      where: {
+        clerkUserId,
+      },
+      create: {
+        clerkUserId,
+        email: "local-dev@example.com",
+        emailVerifiedAt: new Date(),
+        nickname: "本地开发用户",
+        status: "ACTIVE",
+        syncedAt: new Date(),
+      },
+      update: {
+        status: "ACTIVE",
+        syncedAt: new Date(),
+      },
+    })
+    .then((profile) =>
+      finalizeUserProfile(profile, {
+        verifiedEmail: profile.email,
+      }),
+    );
 }
 
 async function upsertClerkUserProfile(user: ClerkCurrentUser) {
@@ -349,9 +355,12 @@ export async function getOptionalCurrentUserProfileSnapshot() {
 }
 
 type LayoutViewerProfile = {
+  contactEmail: string | null;
+  email: string | null;
   friendCode: string | null;
   id: string;
   nickname: string;
+  phone: string | null;
   wechatId: string | null;
 };
 
@@ -363,9 +372,12 @@ type LayoutViewerState = {
 
 function getLayoutViewerProfile(profile: LayoutViewerProfile) {
   return {
+    contactEmail: profile.contactEmail,
+    email: profile.email,
     friendCode: profile.friendCode,
     id: profile.id,
     nickname: profile.nickname,
+    phone: profile.phone,
     wechatId: profile.wechatId,
   };
 }
@@ -381,41 +393,93 @@ function isAdminUser(user: ClerkCurrentUser) {
 
 export const getOptionalLayoutViewerState = cache(
   async (): Promise<LayoutViewerState> => {
-  if (!hasClerkKeys()) {
-    const profile = await upsertLocalUserProfile("local-dev-user");
+    if (!hasClerkKeys()) {
+      const profile = await upsertLocalUserProfile("local-dev-user");
 
-    return {
-      initialUnreadNotificationCount: 0,
-      profile: getLayoutViewerProfile(profile),
-      showAdminNav: false,
-    };
-  }
+      return {
+        initialUnreadNotificationCount: 0,
+        profile: getLayoutViewerProfile(profile),
+        showAdminNav: false,
+      };
+    }
 
-  const { userId } = await auth();
+    const { userId } = await auth();
 
-  if (!userId) {
-    return {
-      initialUnreadNotificationCount: 0,
-      profile: null,
-      showAdminNav: false,
-    };
-  }
+    if (!userId) {
+      return {
+        initialUnreadNotificationCount: 0,
+        profile: null,
+        showAdminNav: false,
+      };
+    }
 
-  const profile = await prisma.userProfile.findUnique({
-    where: {
-      clerkUserId: userId,
-    },
-    select: {
-      friendCode: true,
-      id: true,
-      nickname: true,
-      role: true,
-      status: true,
-      wechatId: true,
-    },
-  });
+    const profile = await prisma.userProfile.findUnique({
+      where: {
+        clerkUserId: userId,
+      },
+      select: {
+        friendCode: true,
+        contactEmail: true,
+        email: true,
+        id: true,
+        nickname: true,
+        phone: true,
+        role: true,
+        status: true,
+        wechatId: true,
+      },
+    });
 
-  if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+    if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+      const unreadNotificationCount = await prisma.notification.count({
+        where: {
+          recipientId: profile.id,
+          readAt: null,
+        },
+      });
+
+      return {
+        initialUnreadNotificationCount: unreadNotificationCount,
+        profile: getLayoutViewerProfile(profile),
+        showAdminNav: true,
+      };
+    }
+
+    const user = await currentUser();
+
+    if (!user) {
+      const unreadNotificationCount = profile
+        ? await prisma.notification.count({
+            where: {
+              recipientId: profile.id,
+              readAt: null,
+            },
+          })
+        : 0;
+
+      return {
+        initialUnreadNotificationCount: unreadNotificationCount,
+        profile: profile ? getLayoutViewerProfile(profile) : null,
+        showAdminNav: false,
+      };
+    }
+
+    if (!profile) {
+      const createdProfile = await upsertClerkUserProfile(user);
+      const unreadNotificationCount = await prisma.notification.count({
+        where: {
+          recipientId: createdProfile.id,
+          readAt: null,
+        },
+      });
+
+      return {
+        initialUnreadNotificationCount: unreadNotificationCount,
+        profile: getLayoutViewerProfile(createdProfile),
+        showAdminNav: isAdminUser(user),
+      };
+    }
+
     const unreadNotificationCount = await prisma.notification.count({
       where: {
         recipientId: profile.id,
@@ -426,56 +490,7 @@ export const getOptionalLayoutViewerState = cache(
     return {
       initialUnreadNotificationCount: unreadNotificationCount,
       profile: getLayoutViewerProfile(profile),
-      showAdminNav: true,
-    };
-  }
-
-  const user = await currentUser();
-
-  if (!user) {
-    const unreadNotificationCount = profile
-      ? await prisma.notification.count({
-          where: {
-            recipientId: profile.id,
-            readAt: null,
-          },
-        })
-      : 0;
-
-    return {
-      initialUnreadNotificationCount: unreadNotificationCount,
-      profile: profile ? getLayoutViewerProfile(profile) : null,
-      showAdminNav: false,
-    };
-  }
-
-  if (!profile) {
-    const createdProfile = await upsertClerkUserProfile(user);
-    const unreadNotificationCount = await prisma.notification.count({
-      where: {
-        recipientId: createdProfile.id,
-        readAt: null,
-      },
-    });
-
-    return {
-      initialUnreadNotificationCount: unreadNotificationCount,
-      profile: getLayoutViewerProfile(createdProfile),
       showAdminNav: isAdminUser(user),
     };
-  }
-
-  const unreadNotificationCount = await prisma.notification.count({
-    where: {
-      recipientId: profile.id,
-      readAt: null,
-    },
-  });
-
-  return {
-    initialUnreadNotificationCount: unreadNotificationCount,
-    profile: getLayoutViewerProfile(profile),
-    showAdminNav: isAdminUser(user),
-  };
   },
 );

@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
@@ -15,6 +14,7 @@ import {
   LogOut,
   MessageCircle,
   Settings,
+  ShieldCheck,
   ShieldAlert,
   UserPlus,
   type LucideIcon,
@@ -23,7 +23,7 @@ import {
 import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
-import { ProfileWechatBindingDialog } from "@/features/profile/components/ProfileWechatBindingDialog";
+import { ProfileContactBindingDialog } from "@/features/profile/components/ProfileContactBindingDialog";
 import { useViewerProfile } from "@/features/profile/components/ViewerProfileProvider";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -42,7 +42,10 @@ type AccountMenuProps = {
   locale: string;
   showAdminLink?: boolean;
   unreadNotificationCount?: number;
+  viewerContactEmail?: string | null;
+  viewerEmail?: string | null;
   viewerFriendCode?: string | null;
+  viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
   incomingFriendRequests?: FriendRequestViewModel[];
@@ -52,7 +55,10 @@ export function AccountMenu({
   locale,
   showAdminLink = false,
   unreadNotificationCount = 0,
+  viewerContactEmail = null,
+  viewerEmail = null,
   viewerFriendCode = null,
+  viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
   incomingFriendRequests = [],
@@ -62,8 +68,12 @@ export function AccountMenu({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
-  const [wechatDialogOpen, setWechatDialogOpen] = useState(false);
-  const [wechatId, setWechatId] = useState(viewerWechatId);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactBindings, setContactBindings] = useState({
+    contactEmail: viewerContactEmail,
+    phone: viewerPhone,
+    wechatId: viewerWechatId,
+  });
   const [friendCodeCopied, setFriendCodeCopied] = useState(false);
   const [liveIncomingFriendRequests, setLiveIncomingFriendRequests] = useState(
     incomingFriendRequests,
@@ -92,15 +102,24 @@ export function AccountMenu({
   const reportOpsHref = withLocale(locale, "/admin/reports");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
-  const hasWechat = Boolean(wechatId?.trim());
+  const contactBindingCount = [
+    contactBindings.contactEmail,
+    contactBindings.phone,
+    contactBindings.wechatId,
+  ].filter((value) => Boolean(value?.trim())).length;
+  const hasContactBindings = contactBindingCount > 0;
 
   useEffect(() => {
     setLiveIncomingFriendRequests(incomingFriendRequests);
   }, [incomingFriendRequests]);
 
   useEffect(() => {
-    setWechatId(viewerWechatId);
-  }, [viewerWechatId]);
+    setContactBindings({
+      contactEmail: viewerContactEmail,
+      phone: viewerPhone,
+      wechatId: viewerWechatId,
+    });
+  }, [viewerContactEmail, viewerPhone, viewerWechatId]);
 
   useEffect(() => {
     if (!open || !user) {
@@ -173,9 +192,9 @@ export function AccountMenu({
     setAddFriendOpen(true);
   }
 
-  function openWechatDialog() {
+  function openContactDialog() {
     setOpen(false);
-    setWechatDialogOpen(true);
+    setContactDialogOpen(true);
   }
 
   async function copyFriendCode() {
@@ -266,28 +285,28 @@ export function AccountMenu({
                   type="button"
                   className={cn(
                     "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
-                    hasWechat
+                    hasContactBindings
                       ? "bg-white ring-1 ring-[#8AB68E] hover:bg-green-50/50"
                       : "bg-zinc-50 ring-1 ring-black/5 hover:bg-paper",
                   )}
                   aria-label={
-                    hasWechat ? profileCopy.wechatBound : profileCopy.wechatUnbound
+                    hasContactBindings
+                      ? profileCopy.contactBindingsBound
+                      : profileCopy.contactBindingsUnbound
                   }
                   title={
-                    hasWechat ? profileCopy.wechatBound : profileCopy.wechatUnbound
+                    hasContactBindings
+                      ? profileCopy.contactBindingsBound
+                      : profileCopy.contactBindingsUnbound
                   }
-                  onClick={openWechatDialog}
+                  onClick={openContactDialog}
                 >
-                  <Image
-                    alt=""
+                  <ShieldCheck
                     aria-hidden="true"
                     className={cn(
-                      "h-7 w-7 object-contain",
-                      !hasWechat && "grayscale opacity-35",
+                      "h-5 w-5",
+                      hasContactBindings ? "text-[#156240]" : "text-zinc-400",
                     )}
-                    height={28}
-                    src="/wechat/wechat-icon.png"
-                    width={28}
                   />
                 </button>
               </div>
@@ -308,10 +327,11 @@ export function AccountMenu({
               badgeCount={liveIncomingFriendRequests.length}
               onClick={openAddFriendDialog}
             />
-            <WechatMenuButton
-              active={hasWechat}
-              label={hasWechat ? profileCopy.editWechat : profileCopy.bindWechat}
-              onClick={openWechatDialog}
+            <ContactBindingsMenuButton
+              active={hasContactBindings}
+              badgeCount={contactBindingCount}
+              label={profileCopy.contactBindingsTitle}
+              onClick={openContactDialog}
             />
             <MenuLink
               href={messagesHref}
@@ -399,12 +419,15 @@ export function AccountMenu({
           returnTo="messages"
         />
       ) : null}
-      {wechatDialogOpen ? (
-        <ProfileWechatBindingDialog
-          initialWechatId={wechatId}
+      {contactDialogOpen ? (
+        <ProfileContactBindingDialog
+          initialContactEmail={contactBindings.contactEmail}
+          initialPhone={contactBindings.phone}
+          initialWechatId={contactBindings.wechatId}
+          loginEmail={viewerEmail}
           locale={locale}
-          onClose={() => setWechatDialogOpen(false)}
-          onSaved={setWechatId}
+          onClose={() => setContactDialogOpen(false)}
+          onSaved={setContactBindings}
         />
       ) : null}
     </div>
@@ -524,12 +547,14 @@ function MenuButton({
   );
 }
 
-function WechatMenuButton({
+function ContactBindingsMenuButton({
   active,
+  badgeCount,
   label,
   onClick,
 }: {
   active: boolean;
+  badgeCount: number;
   label: string;
   onClick: () => void;
 }) {
@@ -544,20 +569,23 @@ function WechatMenuButton({
         className={cn(
           "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
           active
-            ? "bg-white ring-1 ring-[#8AB68E]"
+            ? "bg-[#FEFFF9] text-[#156240] ring-1 ring-[#8AB68E]"
             : "bg-zinc-100 ring-1 ring-zinc-200",
         )}
         aria-hidden="true"
       >
-        <Image
-          alt=""
-          className={cn("h-4 w-4 object-contain", !active && "grayscale opacity-35")}
-          height={16}
-          src="/wechat/wechat-icon.png"
-          width={16}
+        <ShieldCheck
+          className={cn("h-3.5 w-3.5", !active && "text-zinc-400")}
         />
       </span>
-      <span className="font-medium">{label}</span>
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate font-medium">{label}</span>
+        {badgeCount > 0 ? (
+          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#156240] px-1.5 text-[11px] font-semibold text-white">
+            {badgeCount}
+          </span>
+        ) : null}
+      </span>
     </button>
   );
 }
