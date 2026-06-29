@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { PaginationControl } from "@/components/ui/PaginationControl";
+import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   isDetailSourceReturnPage,
@@ -106,6 +107,21 @@ const LOBBY_SWIPE_IDLE_DELAY_MS = 1200;
 const LOBBY_FEED_PREFETCH_IDLE_MS = 2200;
 const LOBBY_DEFERRED_SECTION_INITIAL_DELAY_MS = 2500;
 const LOBBY_DEFERRED_SECTION_STAGGER_MS = 700;
+const CATEGORY_FALLBACK_MIN_RESULTS = 4;
+const CATEGORY_FALLBACK_LIMIT = 4;
+
+const categoryFallbackMap = {
+  FOOD: ["WANDER", "BOARD_GAME", "OTHER"],
+  WANDER: ["TRAVEL", "ART", "FOOD"],
+  AUDIO_VISUAL: ["MUSIC", "ART", "OTHER"],
+  ART: ["AUDIO_VISUAL", "WANDER", "MUSIC"],
+  BOARD_GAME: ["FOOD", "GROWTH", "OTHER"],
+  GROWTH: ["WANDER", "OTHER", "ART"],
+  TRAVEL: ["WANDER", "FOOD", "ART"],
+  MUSIC: ["AUDIO_VISUAL", "ART", "FOOD"],
+  SPORTS: ["WANDER", "GROWTH", "TRAVEL"],
+  OTHER: ["WANDER", "FOOD", "ART"],
+} satisfies Record<ActivityCategory, ActivityCategory[]>;
 
 function scheduleIdleTask(callback: () => void, timeout = 900) {
   if (typeof window === "undefined") {
@@ -603,6 +619,125 @@ function filterLobbyActivitiesByType(
   }
 
   return activities.filter((activity) => activity.category === typeFilter);
+}
+
+function getCategoryFallbackActivities({
+  currentActivities,
+  limit = CATEGORY_FALLBACK_LIMIT,
+  sourceActivities,
+  statusFilter,
+  typeFilter,
+}: {
+  currentActivities: ActivityCardViewModel[];
+  limit?: number;
+  sourceActivities: ActivityCardViewModel[];
+  statusFilter: LobbyStatusFilterId;
+  typeFilter: LobbyTypeFilterId;
+}) {
+  if (typeFilter === "all" || currentActivities.length >= limit) {
+    return [];
+  }
+
+  const currentActivityKeys = new Set(
+    currentActivities.map(getLobbyActivityKey),
+  );
+  const adjacentCategories = categoryFallbackMap[typeFilter];
+  const adjacentCategorySet = new Set<ActivityCategory>(adjacentCategories);
+  const candidates = filterLobbyActivitiesByStatus(
+    dedupeLobbyActivities(sourceActivities),
+    statusFilter,
+  ).filter((activity) => {
+    if (activity.category === typeFilter) {
+      return false;
+    }
+
+    return !currentActivityKeys.has(getLobbyActivityKey(activity));
+  });
+  const adjacentActivities = candidates.filter((activity) =>
+    adjacentCategorySet.has(activity.category),
+  );
+  const broadActivities = candidates.filter(
+    (activity) => !adjacentCategorySet.has(activity.category),
+  );
+
+  return sortLobbyActivities([...adjacentActivities, ...broadActivities]).slice(
+    0,
+    limit,
+  );
+}
+
+function syncLobbyCategorySearchParam(typeFilter: LobbyTypeFilterId) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+
+  if (typeFilter === "all") {
+    url.searchParams.delete("category");
+  } else {
+    url.searchParams.set("category", typeFilter);
+  }
+
+  const nextHref = `${url.pathname}${url.search}${url.hash}`;
+  const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextHref !== currentHref) {
+    window.history.replaceState(window.history.state, "", nextHref);
+  }
+}
+
+function getCategoryFallbackCopy({
+  currentCount,
+  locale,
+  typeLabel,
+}: {
+  currentCount: number;
+  locale: string;
+  typeLabel: string;
+}) {
+  if (locale === "fr") {
+    return {
+      eyebrow: currentCount > 0 ? "Aussi dans le même élan" : "À explorer",
+      title:
+        currentCount > 0
+          ? `${typeLabel} est encore calme`
+          : `Pas encore de ${typeLabel}`,
+      description:
+        currentCount > 0
+          ? "On garde vos résultats en premier, puis on ajoute quelques idées proches pour continuer sans page vide."
+          : "Cette catégorie est encore rare. Voici des idées proches pour garder le fil.",
+      badge: "Suggestion proche",
+      resetLabel: "Voir tout le hall",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      eyebrow: currentCount > 0 ? "Nearby picks" : "Keep browsing",
+      title:
+        currentCount > 0
+          ? `${typeLabel} is still light`
+          : `No ${typeLabel} yet`,
+      description:
+        currentCount > 0
+          ? "Your selected category stays first. These nearby picks keep the page useful while this topic grows."
+          : "This topic is still quiet, so here are nearby picks instead of a blank stop.",
+      badge: "Nearby pick",
+      resetLabel: "View all lobby",
+    };
+  }
+
+  return {
+    eyebrow: currentCount > 0 ? "顺手看看" : "先别空着",
+    title: currentCount > 0 ? `${typeLabel} 还不多` : `暂时没有${typeLabel}`,
+    description:
+      currentCount > 0
+        ? "当前分类会排在前面，下面补几张相近主题，继续逛不掉线。"
+        : "这个分类还比较冷门，先给你补几张相近方向，避免停在空页面。",
+    badge: "相近推荐",
+    resetLabel: "查看全部大厅",
+  };
 }
 
 function getStatusFilterOptions(
@@ -1286,6 +1421,147 @@ export function LazyLobbySwipeDiscovery({
   );
 }
 
+function CategoryFallbackSection({
+  activities,
+  currentCount,
+  detailSourceKey,
+  detailSourceState,
+  favoriteRedirectPath,
+  isAuthenticated,
+  locale,
+  onViewAll,
+  selectedCategory,
+  titleId,
+}: {
+  activities: ActivityCardViewModel[];
+  currentCount: number;
+  detailSourceKey: "lobby";
+  detailSourceState?: Record<string, boolean | number | string>;
+  favoriteRedirectPath: string;
+  isAuthenticated: boolean;
+  locale: string;
+  onViewAll?: () => void;
+  selectedCategory: ActivityCategory;
+  titleId?: string;
+}) {
+  if (activities.length === 0) {
+    return null;
+  }
+
+  const selectedCategoryLabel = getCategoryLabel(selectedCategory, locale);
+  const copy = getCategoryFallbackCopy({
+    currentCount,
+    locale,
+    typeLabel: selectedCategoryLabel,
+  });
+  const fallbackCategoryLabels = Array.from(
+    new Set(
+      activities.map((activity) => getCategoryLabel(activity.category, locale)),
+    ),
+  ).slice(0, 3);
+
+  const trackFallbackClick = () => {
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: selectedCategory,
+        fallback_count: activities.length,
+        filter_count: 1,
+        filter_name: "category_fallback_click",
+        result_count: currentCount,
+      },
+    });
+  };
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-[linear-gradient(135deg,rgba(254,255,249,0.96),rgba(241,242,227,0.62)_58%,rgba(222,235,255,0.42))] p-4 shadow-[0_16px_36px_rgba(21,98,64,0.09)] sm:p-5"
+    >
+      <div
+        className="absolute -right-14 -top-16 h-36 w-36 rounded-full bg-coral/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#156240]">
+            {copy.eyebrow}
+          </p>
+          <h3
+            id={titleId}
+            className="mt-1 text-lg font-semibold leading-tight text-[#0E2A66] sm:text-xl"
+          >
+            {copy.title}
+          </h3>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#156240]/78">
+            {copy.description}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          <span className="inline-flex h-7 items-center rounded-full border border-[#8AB68E] bg-[#FEFFF9]/80 px-2.5 text-[11px] font-bold text-[#156240]">
+            {copy.badge}
+          </span>
+          {fallbackCategoryLabels.map((label) => (
+            <span
+              key={label}
+              className="inline-flex h-7 items-center rounded-full border border-[#D6D5B2] bg-white/64 px-2.5 text-[11px] font-semibold text-[#156240]/86"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="relative mt-4 grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-4"
+        onClickCapture={(event) => {
+          const target = event.target;
+
+          if (!(target instanceof HTMLElement)) {
+            return;
+          }
+
+          if (target.closest("a")) {
+            trackFallbackClick();
+          }
+        }}
+      >
+        {activities.map((activity) => (
+          <ActivityCard
+            key={`fallback:${selectedCategory}:${getLobbyActivityKey(activity)}`}
+            actionContext="lobby"
+            activity={activity}
+            detailSourceKey={detailSourceKey}
+            detailSourceState={{
+              ...detailSourceState,
+              fallbackFor: selectedCategory,
+            }}
+            favoriteRedirectPath={favoriteRedirectPath}
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            mobileDense
+            showFavoriteButton
+            showPrimaryAction
+            sourceSurface="activity_list"
+          />
+        ))}
+      </div>
+
+      {onViewAll ? (
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="relative mt-4 inline-flex h-9 items-center rounded-full border border-[#D6D5B2] bg-white/80 px-4 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+        >
+          {copy.resetLabel}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 export function ActivityLobbyPreviewView({
   activities,
   initialCategoryFilter = null,
@@ -1326,6 +1602,38 @@ export function ActivityLobbyPreviewView({
     () => getPagedLobbyActivities(dedupedActivities, page),
     [dedupedActivities, page],
   );
+  const fallbackActivities = useMemo(
+    () =>
+      getCategoryFallbackActivities({
+        currentActivities: dedupedActivities,
+        sourceActivities: activities,
+        statusFilter: "all",
+        typeFilter: activeTypeFilter,
+      }),
+    [activeTypeFilter, activities, dedupedActivities],
+  );
+  const shouldShowFallback =
+    activeTypeFilter !== "all" &&
+    dedupedActivities.length < CATEGORY_FALLBACK_MIN_RESULTS &&
+    fallbackActivities.length > 0;
+
+  useEffect(() => {
+    if (activeTypeFilter === "all") {
+      return;
+    }
+
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: activeTypeFilter,
+        fallback_count: fallbackActivities.length,
+        filter_count: 1,
+        filter_name: "lobby_preview_category",
+        result_count: dedupedActivities.length,
+      },
+    });
+  }, [activeTypeFilter, dedupedActivities.length, fallbackActivities.length]);
 
   useEffect(() => {
     setPage(1);
@@ -1336,6 +1644,10 @@ export function ActivityLobbyPreviewView({
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  useEffect(() => {
+    syncLobbyCategorySearchParam(activeTypeFilter);
+  }, [activeTypeFilter]);
 
   return (
     <div className="space-y-6">
@@ -1373,7 +1685,7 @@ export function ActivityLobbyPreviewView({
           </div>
         </div>
 
-        {dedupedActivities.length === 0 ? (
+        {dedupedActivities.length === 0 && !shouldShowFallback ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-paper/65 px-4 py-7 text-center">
             <p className="text-sm font-semibold text-zinc-700">
               {previewCopy.emptyTitle}
@@ -1384,31 +1696,59 @@ export function ActivityLobbyPreviewView({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleActivities.map((activity) => (
-                <ActivityCard
-                  key={getLobbyActivityKey(activity)}
-                  actionContext="lobby"
-                  activity={activity}
-                  favoriteRedirectPath="/lobby"
-                  isAuthenticated={false}
+            {dedupedActivities.length > 0 ? (
+              <>
+                <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                  {visibleActivities.map((activity) => (
+                    <ActivityCard
+                      key={getLobbyActivityKey(activity)}
+                      actionContext="lobby"
+                      activity={activity}
+                      favoriteRedirectPath="/lobby"
+                      isAuthenticated={false}
+                      locale={locale}
+                      mobileDense
+                      showFavoriteButton
+                      showPrimaryAction
+                      sourceSurface="activity_list"
+                      detailSourceKey="lobby"
+                      detailSourceState={{
+                        category:
+                          activeTypeFilter === "all" ? "all" : activeTypeFilter,
+                        page,
+                      }}
+                    />
+                  ))}
+                </div>
+                <LobbyPagination
                   locale={locale}
-                  mobileDense
-                  showFavoriteButton
-                  showPrimaryAction
-                  sourceSurface="activity_list"
-                  detailSourceKey="lobby"
-                  detailSourceState={{ page }}
+                  onPageChange={setPage}
+                  page={page}
+                  scrollTargetId="lobby-preview-results"
+                  totalItems={dedupedActivities.length}
                 />
-              ))}
-            </div>
-            <LobbyPagination
-              locale={locale}
-              onPageChange={setPage}
-              page={page}
-              scrollTargetId="lobby-preview-results"
-              totalItems={dedupedActivities.length}
-            />
+              </>
+            ) : null}
+
+            {shouldShowFallback ? (
+              <CategoryFallbackSection
+                activities={fallbackActivities}
+                currentCount={dedupedActivities.length}
+                detailSourceKey="lobby"
+                detailSourceState={{
+                  category: activeTypeFilter,
+                  fallback: true,
+                }}
+                favoriteRedirectPath="/lobby"
+                isAuthenticated={false}
+                locale={locale}
+                onViewAll={() => {
+                  setActiveTypeFilter("all");
+                }}
+                selectedCategory={activeTypeFilter}
+                titleId="lobby-preview-category-fallback"
+              />
+            ) : null}
           </>
         )}
       </section>
@@ -1458,6 +1798,7 @@ export function ActivityLobbyView({
   }));
   const feedCacheRef = useRef(feedCache);
   const inFlightFeedRefs = useRef(new Set<string>());
+  const categoryAnalyticsKeyRef = useRef<string | null>(null);
   const [loadingFeedKey, setLoadingFeedKey] = useState<string | null>(null);
   const [failedFeedKeys, setFailedFeedKeys] = useState<Record<string, boolean>>(
     {},
@@ -1504,6 +1845,7 @@ export function ActivityLobbyView({
 
     const filter = context.sourceState?.filter;
     const status = context.sourceState?.status;
+    const category = context.sourceState?.category;
     const restoredPage = Number(context.sourceState?.page);
 
     if (
@@ -1520,6 +1862,13 @@ export function ActivityLobbyView({
 
     if (status === "all" || status === "ongoing" || status === "ended") {
       setActiveStatusFilter(status);
+    }
+
+    if (
+      typeof category === "string" &&
+      activityCategoryOptions.includes(category as ActivityCategory)
+    ) {
+      setActiveTypeFilter(category as ActivityCategory);
     }
 
     if (Number.isInteger(restoredPage) && restoredPage > 0) {
@@ -1668,8 +2017,7 @@ export function ActivityLobbyView({
       ),
     [activeCategoryActivities, activeStatusFilter],
   );
-  const activeFeedPageSize =
-    activeAllFeedSummary?.pageSize || LOBBY_PAGE_SIZE;
+  const activeFeedPageSize = activeAllFeedSummary?.pageSize || LOBBY_PAGE_SIZE;
   const activeFeedStatusCount =
     activeFilter === "all"
       ? activeAllFeedSummary
@@ -1738,6 +2086,42 @@ export function ActivityLobbyView({
         : getPagedLobbyActivities(visibleActivities, page),
     [activeFilter, page, visibleActivities],
   );
+  const categoryFallbackSourceActivities = useMemo(
+    () =>
+      dedupeLobbyActivities([
+        ...allActivities,
+        ...allFeedSummary.activities,
+        ...openActivities,
+        ...starterActivities,
+        ...favoriteSectionActivities,
+        ...friendHostedSectionActivities,
+        ...friendJoinedSectionActivities,
+      ]),
+    [
+      allActivities,
+      allFeedSummary.activities,
+      favoriteSectionActivities,
+      friendHostedSectionActivities,
+      friendJoinedSectionActivities,
+      openActivities,
+      starterActivities,
+    ],
+  );
+  const categoryFallbackActivities = useMemo(
+    () =>
+      getCategoryFallbackActivities({
+        currentActivities: visibleActivities,
+        sourceActivities: categoryFallbackSourceActivities,
+        statusFilter: activeStatusFilter,
+        typeFilter: activeTypeFilter,
+      }),
+    [
+      activeStatusFilter,
+      activeTypeFilter,
+      categoryFallbackSourceActivities,
+      visibleActivities,
+    ],
+  );
   const filterOptions: FilterOption[] = categoryGroups.map((group) => ({
     id: group.id,
     count: group.isDeferred ? null : group.count,
@@ -1787,6 +2171,13 @@ export function ActivityLobbyView({
     (activeFeedLoading ||
       loadingFilter === activeFilter ||
       activeCategoryDeferred);
+  const shouldShowCategoryFallback =
+    activeFilter === "all" &&
+    activeTypeFilter !== "all" &&
+    !activeFilterLoading &&
+    !activeFilterFailed &&
+    activeFeedTotalItems < CATEGORY_FALLBACK_MIN_RESULTS &&
+    categoryFallbackActivities.length > 0;
   const emptyCategoryCopy = getEmptyCategoryCopy(locale);
   const emptyCategoryResetLabel = getEmptyCategoryResetLabel(locale);
   const moreActivitiesLabel = getMoreActivitiesLabel(locale);
@@ -1852,11 +2243,7 @@ export function ActivityLobbyView({
       } = {},
     ) => {
       const normalizedPage = Math.max(1, Math.floor(targetPage));
-      const cacheKey = getLobbyFeedCacheKey(
-        status,
-        normalizedPage,
-        typeFilter,
-      );
+      const cacheKey = getLobbyFeedCacheKey(status, normalizedPage, typeFilter);
 
       if (
         feedCacheRef.current[cacheKey] ||
@@ -2108,7 +2495,11 @@ export function ActivityLobbyView({
 
     return scheduleIdleTask(() => {
       for (const targetPage of pagesToPrefetch) {
-        void loadLobbyFeedPage(activeStatusFilter, targetPage, activeTypeFilter);
+        void loadLobbyFeedPage(
+          activeStatusFilter,
+          targetPage,
+          activeTypeFilter,
+        );
       }
     }, LOBBY_FEED_PREFETCH_IDLE_MS);
   }, [
@@ -2170,6 +2561,55 @@ export function ActivityLobbyView({
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    syncLobbyCategorySearchParam(activeTypeFilter);
+  }, [activeTypeFilter]);
+
+  useEffect(() => {
+    if (
+      activeFilter !== "all" ||
+      activeTypeFilter === "all" ||
+      activeFilterLoading ||
+      activeFilterFailed
+    ) {
+      return;
+    }
+
+    const analyticsKey = [
+      activeTypeFilter,
+      activeStatusFilter,
+      activeFeedTotalItems,
+      categoryFallbackActivities.length,
+    ].join(":");
+
+    if (categoryAnalyticsKeyRef.current === analyticsKey) {
+      return;
+    }
+
+    categoryAnalyticsKeyRef.current = analyticsKey;
+    trackClientAnalyticsEvent({
+      name: "filter_applied",
+      sourceSurface: "activity_list",
+      properties: {
+        category: activeTypeFilter,
+        fallback_count: categoryFallbackActivities.length,
+        filter_count: 1,
+        filter_name: "lobby_category",
+        is_empty: activeFeedTotalItems === 0,
+        result_count: activeFeedTotalItems,
+        status: activeStatusFilter,
+      },
+    });
+  }, [
+    activeFeedTotalItems,
+    activeFilter,
+    activeFilterFailed,
+    activeFilterLoading,
+    activeStatusFilter,
+    activeTypeFilter,
+    categoryFallbackActivities.length,
+  ]);
+
   return (
     <div className="space-y-3">
       <DetailSourceRestore sourceKey="lobby" />
@@ -2203,8 +2643,7 @@ export function ActivityLobbyView({
               </p>
             </div>
             <p className="text-[11px] font-medium leading-4 text-zinc-500 sm:text-xs">
-              {activeCategoryLabel} ·{" "}
-              {activeTypeLabel} ·{" "}
+              {activeCategoryLabel} · {activeTypeLabel} ·{" "}
               {getStatusFilterLabel(locale, activeStatusFilter)} ·{" "}
               {activeFeedTotalItems}
             </p>
@@ -2487,6 +2926,37 @@ export function ActivityLobbyView({
             </div>
           ) : null}
         </section>
+      ) : activeFeedTotalItems === 0 && shouldShowCategoryFallback ? (
+        <div className="space-y-3">
+          <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/86 px-4 py-4">
+            <p className="text-base font-semibold text-ink">
+              {emptyCategoryCopy.title}
+            </p>
+            <p className="mt-1.5 text-sm leading-6 text-zinc-500">
+              {emptyCategoryCopy.description}
+            </p>
+          </div>
+          <CategoryFallbackSection
+            activities={categoryFallbackActivities}
+            currentCount={activeFeedTotalItems}
+            detailSourceKey="lobby"
+            detailSourceState={{
+              category: activeTypeFilter,
+              fallback: true,
+              page,
+              status: activeStatusFilter,
+            }}
+            favoriteRedirectPath="/lobby"
+            isAuthenticated
+            locale={locale}
+            onViewAll={() => {
+              setActiveTypeFilter("all");
+              setActiveStatusFilter("all");
+            }}
+            selectedCategory={activeTypeFilter}
+            titleId="lobby-category-empty-fallback"
+          />
+        </div>
       ) : activeFeedTotalItems === 0 ? (
         <div className="rounded-[1.25rem] border border-dashed border-[#8AB68E] bg-[#FEFFF9]/85 px-4 py-5">
           <p className="text-base font-semibold text-ink">
@@ -2601,6 +3071,7 @@ export function ActivityLobbyView({
                   detailSourceKey="lobby"
                   detailSourceState={{
                     filter: activeFilter,
+                    category: activeTypeFilter,
                     page,
                     status: activeStatusFilter,
                   }}
@@ -2615,6 +3086,29 @@ export function ActivityLobbyView({
               totalItems={activeFeedTotalItems}
             />
           </section>
+
+          {shouldShowCategoryFallback ? (
+            <CategoryFallbackSection
+              activities={categoryFallbackActivities}
+              currentCount={activeFeedTotalItems}
+              detailSourceKey="lobby"
+              detailSourceState={{
+                category: activeTypeFilter,
+                fallback: true,
+                page,
+                status: activeStatusFilter,
+              }}
+              favoriteRedirectPath="/lobby"
+              isAuthenticated
+              locale={locale}
+              onViewAll={() => {
+                setActiveTypeFilter("all");
+                setActiveStatusFilter("all");
+              }}
+              selectedCategory={activeTypeFilter}
+              titleId="lobby-category-fallback"
+            />
+          ) : null}
         </>
       )}
     </div>

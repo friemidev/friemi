@@ -34,6 +34,7 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     name: brand.name,
+    orientation: "portrait",
     short_name: brand.name,
     start_url: "/zh-CN/home",
     theme_color: brandThemeColors.theme,
