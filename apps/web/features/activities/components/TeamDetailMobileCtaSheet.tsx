@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, X } from "lucide-react";
+import { ChevronUp, ClipboardList, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -9,37 +9,43 @@ import { cn } from "@/lib/utils";
 const RAISED_HAND_SIGNUP_ICON_SRC =
   "/brand/v2_1/team-detail-join-raised-hand.svg";
 
-function getTeamDetailMobileCtaCopy(locale: string) {
+function getTeamDetailMobileCtaCopy(
+  locale: string,
+  mode: TeamDetailMobileCtaMode,
+) {
   if (locale === "fr") {
     return {
       close: "Fermer",
-      eyebrow: "Action",
-      open: "Rejoindre",
-      title: "Rejoindre ce plan",
+      eyebrow: mode === "manage" ? "Gestion" : "Action",
+      open: mode === "manage" ? "Gérer" : "Rejoindre",
+      title: mode === "manage" ? "Gérer ce plan" : "Rejoindre ce plan",
     };
   }
 
   if (locale === "en") {
     return {
       close: "Close",
-      eyebrow: "Action",
-      open: "Join",
-      title: "Join this plan",
+      eyebrow: mode === "manage" ? "Manage" : "Action",
+      open: mode === "manage" ? "Manage" : "Join",
+      title: mode === "manage" ? "Manage this plan" : "Join this plan",
     };
   }
 
   return {
     close: "关闭",
-    eyebrow: "操作",
-    open: "报名",
-    title: "报名这个组局",
+    eyebrow: mode === "manage" ? "管理" : "操作",
+    open: mode === "manage" ? "管理" : "报名",
+    title: mode === "manage" ? "管理这个组局" : "报名这个组局",
   };
 }
+
+type TeamDetailMobileCtaMode = "join" | "manage";
 
 type TeamDetailMobileCtaSheetProps = {
   activityTitle: string;
   children: ReactNode;
   locale: string;
+  mode?: TeamDetailMobileCtaMode;
   participantLabel: string;
   statusLabel: string;
 };
@@ -48,6 +54,7 @@ export function TeamDetailMobileCtaSheet({
   activityTitle,
   children,
   locale,
+  mode = "join",
   participantLabel,
   statusLabel,
 }: TeamDetailMobileCtaSheetProps) {
@@ -55,7 +62,7 @@ export function TeamDetailMobileCtaSheet({
   const [open, setOpen] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [visible, setVisible] = useState(false);
-  const copy = getTeamDetailMobileCtaCopy(locale);
+  const copy = getTeamDetailMobileCtaCopy(locale, mode);
   const closeSheet = useCallback(() => {
     setOpen(false);
   }, []);
@@ -194,13 +201,20 @@ export function TeamDetailMobileCtaSheet({
             aria-hidden="true"
             className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-coral ring-2 ring-[#FEFFF9]"
           />
-          <img
-            alt=""
-            aria-hidden="true"
-            className="relative h-8 w-8 select-none"
-            draggable={false}
-            src={RAISED_HAND_SIGNUP_ICON_SRC}
-          />
+          {mode === "manage" ? (
+            <ClipboardList
+              className="relative h-6 w-6 text-[#156240]"
+              aria-hidden="true"
+            />
+          ) : (
+            <img
+              alt=""
+              aria-hidden="true"
+              className="relative h-8 w-8 select-none"
+              draggable={false}
+              src={RAISED_HAND_SIGNUP_ICON_SRC}
+            />
+          )}
         </span>
         <span className="grid min-w-0 text-left">
           <span className="text-sm font-extrabold leading-tight text-[#156240]">

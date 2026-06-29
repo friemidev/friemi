@@ -38,7 +38,6 @@ import { ActivityCoverImage } from "@/features/activities/components/ActivityCov
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
-import { OrganizerParticipationToggleForm } from "@/features/activities/components/OrganizerParticipationToggleForm";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
@@ -252,6 +251,48 @@ function getTeamDetailCtaTitle({
   }
 
   return requiresApproval ? t.submitApproval : ctaCopy.title;
+}
+
+function getTeamOwnerCtaCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      contactParticipants: "Contacter les inscrits",
+      contactParticipantsDescription:
+        "Ouvrir la liste pour retrouver les profils et reprendre contact.",
+      manage: "Gérer le plan",
+      manageDescription:
+        "Modifier les infos visibles, l'horaire, l'adresse ou les règles.",
+      review: "Voir les inscriptions",
+      reviewDescription:
+        "Consulter les personnes inscrites et les demandes en attente.",
+      title: "Espace organisateur",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      contactParticipants: "Contact participants",
+      contactParticipantsDescription:
+        "Open the list to find profiles and follow up with people.",
+      manage: "Manage plan",
+      manageDescription:
+        "Edit visible details, time, address, or participation rules.",
+      review: "View signups",
+      reviewDescription:
+        "Check joined people and requests waiting for review.",
+      title: "Organizer space",
+    };
+  }
+
+  return {
+    contactParticipants: "联系参与者",
+    contactParticipantsDescription: "打开名单，查看资料并继续联系参与者。",
+    manage: "管理组局",
+    manageDescription: "修改展示信息、时间地点或报名规则。",
+    review: "查看报名",
+    reviewDescription: "查看已报名成员和待审核申请。",
+    title: "发起人空间",
+  };
 }
 
 function getApprovalModeNoticeCopy(locale: string) {
@@ -897,16 +938,13 @@ export default async function ActivityDetailPage({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
+  const isTeamOperator = isOrganizer;
   const canManageCrewCover =
-    isOrganizer && !activity.isActivityInfo && activity.type !== "PUBLIC_EVENT";
-  const organizerIsParticipating =
-    !isOrganizer ||
-    !viewerParticipation ||
-    viewerParticipation.status === "JOINED" ||
-    viewerParticipation.status === "APPROVED" ||
-    viewerParticipation.status === "PENDING";
-  const canContactOrganizer = !isOrganizer;
-  const canEditActivity = isOrganizer && !isCancelled && !isEndedByTime;
+    isTeamOperator &&
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT";
+  const canContactOrganizer = !isTeamOperator;
+  const canEditActivity = isTeamOperator && !isCancelled && !isEndedByTime;
   const activityDetailPath = `/activities/${activity.id}`;
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
@@ -936,10 +974,11 @@ export default async function ActivityDetailPage({
       ? t.activityDetail.visibilityPrivate
       : t.activityDetail.visibilityPublic;
   const teamDetailCtaCopy = getTeamDetailCtaCopy(locale);
+  const teamOwnerCtaCopy = getTeamOwnerCtaCopy(locale);
   const teamDetailCtaTitle = getTeamDetailCtaTitle({
     isClosed,
     isFull,
-    isOrganizer,
+    isOrganizer: isTeamOperator,
     locale,
     requiresApproval: activity.requiresApproval,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
@@ -948,10 +987,10 @@ export default async function ActivityDetailPage({
     "activity.organizerData",
     () =>
       Promise.all([
-        isOrganizer && activity.requiresApproval && viewerProfile
+        isTeamOperator && activity.requiresApproval && viewerProfile
           ? getPendingParticipants(activity.id, viewerProfile.id)
           : Promise.resolve([]),
-        isOrganizer
+        isTeamOperator
           ? getActivityAnalyticsSummary(activity.id)
           : Promise.resolve(null),
       ]),
@@ -960,7 +999,7 @@ export default async function ActivityDetailPage({
     {
       commentCount: comments.length,
       hasViewer: Boolean(viewerProfile),
-      isOrganizer,
+      isOrganizer: isTeamOperator,
       itemKind: "team",
     },
     {
@@ -1294,12 +1333,7 @@ export default async function ActivityDetailPage({
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
-          <div
-            className={cn(
-              "order-1 rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2E3_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white",
-              !isOrganizer ? "hidden md:block" : null,
-            )}
-          >
+          <div className="order-1 hidden rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2E3_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white md:block">
             <div className="mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
                 {teamDetailCtaCopy.eyebrow}
@@ -1317,38 +1351,60 @@ export default async function ActivityDetailPage({
               </div>
               <ApprovalModeNotice
                 className="mt-3"
-                isOrganizer={isOrganizer}
+                isOrganizer={isTeamOperator}
                 locale={locale}
                 pendingCount={pendingParticipants.length}
                 requiresApproval={activity.requiresApproval}
               />
             </div>
 
-            {isOrganizer ? (
+            {isTeamOperator ? (
               <div className="grid gap-3">
-                <OrganizerParticipationToggleForm
-                  activityId={activity.id}
-                  isClosed={isClosed}
-                  isParticipatingByDefault={organizerIsParticipating}
-                  locale={locale}
-                />
-                <div className="grid gap-2 rounded-2xl border border-sand bg-white/80 p-3">
+                <div className="grid gap-2 rounded-2xl border border-[#8AB68E]/55 bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <ShieldAlert className="h-4 w-4 text-forest" />
-                    {t.activityOwner.title}
+                    {teamOwnerCtaCopy.title}
                   </p>
                   {canEditActivity ? (
                     <Link
-                      className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-zinc-950 ring-1 ring-sand transition hover:bg-paper"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758]"
                       href={withLocale(
                         locale,
                         `/activities/${activity.id}/edit`,
                       )}
                     >
                       <Pencil className="h-4 w-4" />
-                      {t.activityDetail.editActivity}
+                      {teamOwnerCtaCopy.manage}
                     </Link>
                   ) : null}
+                  {canEditActivity ? (
+                    <p className="px-1 text-xs leading-5 text-[#156240]/70">
+                      {teamOwnerCtaCopy.manageDescription}
+                    </p>
+                  ) : null}
+                  <a
+                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2E3]"
+                    href={
+                      activity.requiresApproval
+                        ? "#participation-approval"
+                        : "#activity-participants"
+                    }
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    {teamOwnerCtaCopy.review}
+                  </a>
+                  <a
+                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-white"
+                    href="#activity-participants"
+                  >
+                    <UsersRound className="h-4 w-4" />
+                    {teamOwnerCtaCopy.contactParticipants}
+                  </a>
+                  <p className="px-1 text-xs leading-5 text-zinc-500">
+                    {teamOwnerCtaCopy.reviewDescription}
+                  </p>
+                </div>
+                <div className="grid gap-2 rounded-2xl border border-sand bg-white/74 p-3">
                   {!isCancelled && !isEndedByTime ? (
                     <p className="text-xs leading-5 text-zinc-500">
                       {t.activityOwner.cancelDescription}
@@ -1403,7 +1459,10 @@ export default async function ActivityDetailPage({
             )}
           </div>
 
-          <div className="order-2 mt-3 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm">
+          <div
+            id="activity-participants"
+            className="order-2 mt-3 scroll-mt-24 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm"
+          >
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -1683,7 +1742,7 @@ export default async function ActivityDetailPage({
             />
           </div>
         </aside>
-        {!isOrganizer ? (
+        {!isTeamOperator ? (
           <TeamDetailMobileCtaSheet
             activityTitle={activity.title}
             locale={locale}
@@ -1720,6 +1779,64 @@ export default async function ActivityDetailPage({
                   organizerProfileId={activity.organizer.id}
                 />
               ) : null}
+            </div>
+          </TeamDetailMobileCtaSheet>
+        ) : null}
+        {isTeamOperator ? (
+          <TeamDetailMobileCtaSheet
+            activityTitle={activity.title}
+            locale={locale}
+            mode="manage"
+            participantLabel={activityParticipantLabel}
+            statusLabel={getActivitySeatLabel(activity, locale)}
+          >
+            <div className="grid gap-3">
+              <ApprovalModeNotice
+                isOrganizer
+                locale={locale}
+                pendingCount={pendingParticipants.length}
+                requiresApproval={activity.requiresApproval}
+              />
+              {canEditActivity ? (
+                <Link
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition active:scale-[0.98]"
+                  href={withLocale(locale, `/activities/${activity.id}/edit`)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  {teamOwnerCtaCopy.manage}
+                </Link>
+              ) : null}
+              <a
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
+                href={
+                  activity.requiresApproval
+                    ? "#participation-approval"
+                    : "#activity-participants"
+                }
+              >
+                <ClipboardList className="h-4 w-4" />
+                {teamOwnerCtaCopy.review}
+              </a>
+              <a
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
+                href="#activity-participants"
+              >
+                <UsersRound className="h-4 w-4" />
+                {teamOwnerCtaCopy.contactParticipants}
+              </a>
+              <div className="rounded-2xl border border-sand bg-white/76 p-3">
+                {!isCancelled && !isEndedByTime ? (
+                  <p className="mb-2 text-xs leading-5 text-zinc-500">
+                    {t.activityOwner.cancelDescription}
+                  </p>
+                ) : null}
+                <CancelActivityForm
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  disabled={isCancelled || isEndedByTime}
+                  locale={locale}
+                />
+              </div>
             </div>
           </TeamDetailMobileCtaSheet>
         ) : null}
