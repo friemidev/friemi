@@ -642,6 +642,30 @@ const copy = {
       wechatSaved: "微信号已保存",
       wechatError: "请输入有效微信号，或留空取消绑定。",
       wechatLinkedCount: (count: number) => `已同步 ${count} 条游客报名记录`,
+      contactBindingsTitle: "账号绑定",
+      contactBindingsBound: "身份字段已绑定",
+      contactBindingsUnbound: "身份字段未绑定",
+      contactBindingsEmpty: "还没有绑定联系身份",
+      contactBindingsCount: (count: number) => `已绑定 ${count} 项`,
+      contactBindingsDescription:
+        "邮箱、电话和微信号只用于找回游客报名、账号合并和必要联系。",
+      loginEmailLabel: "登录邮箱",
+      loginEmailHint: "登录邮箱来自 Clerk，不会在这里被修改。",
+      contactEmailLabel: "联系邮箱",
+      contactEmailPlaceholder: "填写用于找回报名的邮箱",
+      phoneLabel: "手机号",
+      phonePlaceholder: "建议包含国家区号，例如 +33 6...",
+      contactBindingsPrivacyHint:
+        "这些字段不会展示在公开主页、活动详情或参与人列表中。留空保存可以取消对应绑定。",
+      saveContactBindings: "保存绑定",
+      savingContactBindings: "保存中...",
+      contactBindingsSaved: "账号绑定已保存",
+      contactBindingEmailError: "请输入有效邮箱，或留空取消绑定。",
+      contactBindingPhoneError: "请输入有效手机号，或留空取消绑定。",
+      contactBindingWechatError: "请输入有效微信号，或留空取消绑定。",
+      contactBindingEmailTaken: "这个邮箱已被其他账号绑定。",
+      contactBindingPhoneTaken: "这个手机号已被其他账号绑定。",
+      contactBindingWechatTaken: "这个微信号已被其他账号绑定。",
       close: "关闭",
       cancel: "取消",
       createdCount: "我的组局",
@@ -828,7 +852,7 @@ const copy = {
       requiresApproval: "加入需要确认",
       requiresApprovalHint: "开启后，别人申请加入需要你确认。",
       copyTimeReminder:
-        "此为复制组局草稿，时间、地点、费用等信息可能需要重新调整，请务必检查并修改为新的行程。",
+        "此为复制组局草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
       create: "发布组局",
       saving: "保存中...",
@@ -1542,6 +1566,36 @@ const copy = {
       wechatError: "Enter a valid WeChat ID, or leave it empty to disconnect.",
       wechatLinkedCount: (count: number) =>
         `${count} guest signup records linked`,
+      contactBindingsTitle: "Account bindings",
+      contactBindingsBound: "Identity fields connected",
+      contactBindingsUnbound: "No identity fields connected",
+      contactBindingsEmpty: "No contact identity connected yet",
+      contactBindingsCount: (count: number) => `${count} connected`,
+      contactBindingsDescription:
+        "Email, phone, and WeChat are used for guest signup recovery, account merging, and essential contact only.",
+      loginEmailLabel: "Sign-in email",
+      loginEmailHint: "This comes from Clerk and is not changed here.",
+      contactEmailLabel: "Contact email",
+      contactEmailPlaceholder: "Email for recovering guest signups",
+      phoneLabel: "Phone",
+      phonePlaceholder: "Include country code, e.g. +33 6...",
+      contactBindingsPrivacyHint:
+        "These fields are not shown on public profiles, activity pages, or participant lists. Save an empty field to disconnect it.",
+      saveContactBindings: "Save bindings",
+      savingContactBindings: "Saving...",
+      contactBindingsSaved: "Account bindings saved",
+      contactBindingEmailError:
+        "Enter a valid email, or leave it empty to disconnect.",
+      contactBindingPhoneError:
+        "Enter a valid phone number, or leave it empty to disconnect.",
+      contactBindingWechatError:
+        "Enter a valid WeChat ID, or leave it empty to disconnect.",
+      contactBindingEmailTaken:
+        "This email is already connected to another account.",
+      contactBindingPhoneTaken:
+        "This phone number is already connected to another account.",
+      contactBindingWechatTaken:
+        "This WeChat ID is already connected to another account.",
       close: "Close",
       cancel: "Cancel",
       createdCount: "Created",
@@ -1748,7 +1802,7 @@ const copy = {
       requiresApprovalHint:
         "When enabled, you confirm each request before someone joins.",
       copyTimeReminder:
-        "This draft is prefilled from an existing crew. Please review and update times, location, cost, and other details for your new plan.",
+        "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
       create: "Publish plan",
       saving: "Saving...",
@@ -2485,6 +2539,33 @@ const copy = {
         "Saisissez un WeChat valide, ou laissez vide pour le délier.",
       wechatLinkedCount: (count: number) =>
         `${count} inscription(s) invité reliée(s)`,
+      contactBindingsTitle: "Identités liées",
+      contactBindingsBound: "Identités de contact liées",
+      contactBindingsUnbound: "Aucune identité de contact liée",
+      contactBindingsEmpty: "Aucune identité liée pour le moment",
+      contactBindingsCount: (count: number) => `${count} liée(s)`,
+      contactBindingsDescription:
+        "E-mail, téléphone et WeChat servent uniquement à retrouver des inscriptions invité, fusionner un compte et vous contacter si nécessaire.",
+      loginEmailLabel: "E-mail de connexion",
+      loginEmailHint: "Cet e-mail vient de Clerk et ne se modifie pas ici.",
+      contactEmailLabel: "E-mail de contact",
+      contactEmailPlaceholder: "E-mail pour retrouver vos inscriptions",
+      phoneLabel: "Téléphone",
+      phonePlaceholder: "Ajoutez l'indicatif, ex. +33 6...",
+      contactBindingsPrivacyHint:
+        "Ces champs ne sont pas affichés sur le profil public, les activités ni les listes de participants. Enregistrez un champ vide pour le délier.",
+      saveContactBindings: "Enregistrer",
+      savingContactBindings: "Enregistrement...",
+      contactBindingsSaved: "Identités liées enregistrées",
+      contactBindingEmailError:
+        "Saisissez un e-mail valide, ou laissez vide pour le délier.",
+      contactBindingPhoneError:
+        "Saisissez un téléphone valide, ou laissez vide pour le délier.",
+      contactBindingWechatError:
+        "Saisissez un WeChat valide, ou laissez vide pour le délier.",
+      contactBindingEmailTaken: "Cet e-mail est déjà lié à un autre compte.",
+      contactBindingPhoneTaken: "Ce téléphone est déjà lié à un autre compte.",
+      contactBindingWechatTaken: "Ce WeChat est déjà lié à un autre compte.",
       close: "Fermer",
       cancel: "Annuler",
       createdCount: "Créées",
@@ -2707,7 +2788,7 @@ const copy = {
       requiresApprovalHint:
         "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
       copyTimeReminder:
-        "Ce brouillon est prérempli à partir d'un groupe existant. Vérifiez et ajustez les horaires, le lieu, le coût et les autres détails pour votre nouveau plan.",
+        "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
       create: "Publier la sortie",
       saving: "Enregistrement...",
