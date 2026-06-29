@@ -3,7 +3,7 @@
   <desc id="desc">A visual style board for Friemi activity cards and team cards using the v2.1 forest, cream, ink and coral brand palette.</desc>
   <defs>
     <linearGradient id="pageBg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#F1F2E3"/>
+      <stop offset="0%" stop-color="#F1F2EC"/>
       <stop offset="48%" stop-color="#FFF5E6"/>
       <stop offset="100%" stop-color="#DEEBFF"/>
     </linearGradient>
@@ -63,7 +63,7 @@
 
   <g transform="translate(84 158)">
     <rect x="0" y="0" width="1432" height="800" rx="42" fill="#FEFFF9" opacity="0.78" stroke="#D6D5B2"/>
-    <path d="M40 96 C220 20 350 44 470 100 C610 165 730 124 880 56 C1030 -12 1220 4 1392 80 L1392 0 L40 0 Z" fill="#F1F2E3" opacity="0.55"/>
+    <path d="M40 96 C220 20 350 44 470 100 C610 165 730 124 880 56 C1030 -12 1220 4 1392 80 L1392 0 L40 0 Z" fill="#F1F2EC" opacity="0.55"/>
   </g>
 
   <g transform="translate(134 204)">
@@ -86,19 +86,19 @@
     <rect x="28" y="28" width="78" height="28" rx="14" fill="#DEEBFF" stroke="#8AB68E"/>
     <circle cx="43" cy="42" r="4" fill="#8AB68E"/>
     <text class="tiny" x="54" y="46" fill="#1D1D1B">活动</text>
-    <rect x="236" y="162" width="66" height="28" rx="14" fill="#F1F2E3"/>
+    <rect x="236" y="162" width="66" height="28" rx="14" fill="#F1F2EC"/>
     <text class="tiny" x="254" y="181" fill="#156240">进行中</text>
     <circle cx="282" cy="42" r="22" fill="#FEFFF9" stroke="#D6D5B2"/>
     <path d="M274 39 C274 33 282 32 286 37 C290 32 298 33 298 39 C298 49 286 55 286 55 C286 55 274 49 274 39 Z" fill="none" stroke="#1D1D1B" stroke-width="2.4" stroke-linejoin="round"/>
     <text class="cn-title" x="24" y="250" fill="#1D1D1B">周末艺术市集与夜间展览</text>
     <text class="cn-title" x="24" y="280" fill="#1D1D1B">沿河散步路线</text>
     <g transform="translate(24 314)">
-      <rect x="0" y="-13" width="22" height="22" rx="7" fill="#F1F2E3" stroke="#D6D5B2"/>
+      <rect x="0" y="-13" width="22" height="22" rx="7" fill="#F1F2EC" stroke="#D6D5B2"/>
       <path d="M6 -5 L16 -5 M8 -9 L8 -1 M14 -9 L14 -1 M6 1 L16 1" stroke="#156240" stroke-width="1.5" stroke-linecap="round"/>
       <text class="meta" x="32" y="3" fill="#156240">6月28日 17:00-19:00</text>
     </g>
     <g transform="translate(24 350)">
-      <circle cx="11" cy="-3" r="10" fill="#F1F2E3" stroke="#D6D5B2"/>
+      <circle cx="11" cy="-3" r="10" fill="#F1F2EC" stroke="#D6D5B2"/>
       <path d="M11 -9 C15 -9 18 -6 18 -2 C18 4 11 10 11 10 C11 10 4 4 4 -2 C4 -6 7 -9 11 -9 Z" fill="none" stroke="#156240" stroke-width="1.5"/>
       <circle cx="11" cy="-2" r="2" fill="#156240"/>
       <text class="meta" x="32" y="3" fill="#156240">Paris · Le Marais</text>
@@ -124,7 +124,7 @@
     <rect x="28" y="28" width="82" height="28" rx="14" fill="#DEAAB3" stroke="#DEAAB3"/>
     <circle cx="43" cy="42" r="4" fill="#369758"/>
     <text class="tiny" x="54" y="46" fill="#1D1D1B">组局</text>
-    <rect x="218" y="162" width="84" height="28" rx="14" fill="#F1F2E3"/>
+    <rect x="218" y="162" width="84" height="28" rx="14" fill="#F1F2EC"/>
     <text class="tiny" x="239" y="181" fill="#156240">开放局</text>
     <circle cx="282" cy="42" r="22" fill="#FEFFF9" stroke="#DEAAB3"/>
     <path d="M274 39 C274 33 282 32 286 37 C290 32 298 33 298 39 C298 49 286 55 286 55 C286 55 274 49 274 39 Z" fill="none" stroke="#1D1D1B" stroke-width="2.4" stroke-linejoin="round"/>
@@ -178,7 +178,7 @@
     <text class="tiny" x="40" y="34" fill="#1D1D1B">展览</text>
     <circle cx="160" cy="30" r="17" fill="#FEFFF9" stroke="#D6D5B2"/>
     <path d="M153 28 C153 24 158 23 160 26 C163 23 168 24 168 28 C168 35 160 39 160 39 C160 39 153 35 153 28 Z" fill="none" stroke="#1D1D1B" stroke-width="1.8"/>
-    <rect x="116" y="91" width="56" height="20" rx="10" fill="#F1F2E3"/>
+    <rect x="116" y="91" width="56" height="20" rx="10" fill="#F1F2EC"/>
     <text class="tiny" x="128" y="106" fill="#156240">进行中</text>
     <text class="cn-mobile" x="14" y="146" fill="#1D1D1B">市集夜场与沿河</text>
     <text class="cn-mobile" x="14" y="168" fill="#1D1D1B">散步路线</text>
@@ -186,7 +186,7 @@
     <path d="M17 188 L29 188 M19 184 L19 192 M27 184 L27 192 M17 196 L29 196" stroke="#8AB68E" stroke-width="1.4" stroke-linecap="round"/>
     <text class="mobile-meta" x="34" y="226" fill="#156240">Paris</text>
     <path d="M23 211 C28 211 31 215 31 219 C31 226 23 232 23 232 C23 232 15 226 15 219 C15 215 18 211 23 211 Z" fill="none" stroke="#8AB68E" stroke-width="1.4"/>
-    <rect x="14" y="272" width="106" height="34" rx="17" fill="#F1F2E3" stroke="#D6D5B2"/>
+    <rect x="14" y="272" width="106" height="34" rx="17" fill="#F1F2EC" stroke="#D6D5B2"/>
     <text class="small" x="35" y="294" fill="#156240">查看</text>
     <path d="M83 288 L97 288 M92 283 L97 288 L92 293" stroke="#156240" stroke-width="1.8" stroke-linecap="round"/>
   </g>
@@ -199,7 +199,7 @@
     <text class="tiny" x="40" y="34" fill="#1D1D1B">组局</text>
     <circle cx="160" cy="30" r="17" fill="#FEFFF9" stroke="#DEAAB3"/>
     <path d="M153 28 C153 24 158 23 160 26 C163 23 168 24 168 28 C168 35 160 39 160 39 C160 39 153 35 153 28 Z" fill="none" stroke="#1D1D1B" stroke-width="1.8"/>
-    <rect x="114" y="91" width="58" height="20" rx="10" fill="#F1F2E3"/>
+    <rect x="114" y="91" width="58" height="20" rx="10" fill="#F1F2EC"/>
     <text class="tiny" x="126" y="106" fill="#156240">开放局</text>
     <text class="cn-mobile" x="14" y="146" fill="#1D1D1B">看展后附近</text>
     <text class="cn-mobile" x="14" y="168" fill="#1D1D1B">一起小聚</text>

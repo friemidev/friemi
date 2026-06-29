@@ -39,7 +39,7 @@ export function AppHeader({
   incomingFriendRequests = [],
 }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#FFF5E6] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
+    <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
       <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4 lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}

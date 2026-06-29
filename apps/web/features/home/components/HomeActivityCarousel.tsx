@@ -234,7 +234,7 @@ export function HomeActivityCarousel({
                 : "ring-1 ring-black/5",
             )}
           >
-            <div className="home-carousel-card__media relative aspect-[16/10] overflow-hidden bg-[#F1F2E3] sm:aspect-[5/4]">
+            <div className="home-carousel-card__media relative aspect-[16/10] overflow-hidden bg-[#F1F2EC] sm:aspect-[5/4]">
               <ActivityCoverImage
                 alt={activity.title}
                 src={activity.coverImageUrl}

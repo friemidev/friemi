@@ -244,7 +244,7 @@ export function MobileLobbyActionSheet({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={copy.open}
-        className="relative mx-auto flex h-9 min-h-9 w-full cursor-pointer list-none items-center justify-center gap-2 overflow-hidden rounded-[1.15rem] border border-coral/45 bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_56%,#F1F2E3_100%)] px-2.5 text-forest shadow-[0_10px_20px_rgba(240,145,130,0.1),inset_0_1px_0_rgba(255,255,255,0.94)] transition duration-150 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="relative mx-auto flex h-9 min-h-9 w-full cursor-pointer list-none items-center justify-center gap-2 overflow-hidden rounded-[1.15rem] border border-coral/45 bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_56%,#F1F2EC_100%)] px-2.5 text-forest shadow-[0_10px_20px_rgba(240,145,130,0.1),inset_0_1px_0_rgba(255,255,255,0.94)] transition duration-150 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/35 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         type="button"
         onClick={() => {
           setOpen(true);

@@ -36,6 +36,7 @@ import {
   getActivityTimeState,
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
+import { ClaimAutoCreatedActivityCardAction } from "./ClaimAutoCreatedActivityCardAction";
 import { MobileLobbyActionSheet } from "./MobileLobbyActionSheet";
 
 type ActivityCardProps = {
@@ -625,6 +626,11 @@ export function ActivityCard({
   );
   const isInactiveCard =
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
+  const isClaimableTeamCard =
+    isTeamCard &&
+    !isOwnActivity &&
+    !isInactiveCard &&
+    Boolean(autoCreatedTeam?.isClaimable);
   const countdownLabel =
     isActivityInfo && timeState === "UPCOMING" && !isInactiveCard
       ? getCountdownLabel(activity, locale)
@@ -838,6 +844,25 @@ export function ActivityCard({
               </span>
             </span>
           ) : null}
+          {showCoverAutoCreatedBadge ? (
+            <span
+              className={cn(
+                "absolute left-3 top-[3.15rem] z-10 inline-flex max-w-[calc(100%-4.75rem)] items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-[0_10px_22px_rgba(29,29,27,0.14)] ring-1 ring-white/80 backdrop-blur sm:left-4 sm:top-[3.65rem] sm:max-w-[calc(100%-5.5rem)] sm:px-3 sm:py-1.5 sm:text-[11px]",
+                mobileDenseClass(
+                  "max-[639px]:left-2 max-[639px]:top-[2.35rem] max-[639px]:max-w-[calc(100%-4.25rem)] max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[9px]",
+                ),
+                autoCreatedTeam.isClaimable
+                  ? "border-coral/55 bg-cream/95 text-danger"
+                  : "border-[#D6D5B2] bg-[#F1F2EC]/95 text-forest",
+              )}
+            >
+              <span className="min-w-0 truncate">
+                {autoCreatedTeam.isClaimable
+                  ? autoCreatedBadgeCopy.claimable
+                  : autoCreatedBadgeCopy.recommended}
+              </span>
+            </span>
+          ) : null}
           {isOwnActivity ? (
             <span
               className={cn(
@@ -890,20 +915,6 @@ export function ActivityCard({
                   )}
                 >
                   {getCardVisibilityLabel(activity.visibility, locale)}
-                </span>
-              ) : null}
-              {showCoverAutoCreatedBadge ? (
-                <span
-                  className={cn(
-                    "rounded-md bg-[rgba(241,242,227,0.94)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
-                    mobileDenseClass(
-                      "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
-                    ),
-                  )}
-                >
-                  {autoCreatedTeam.isClaimable
-                    ? autoCreatedBadgeCopy.claimable
-                    : autoCreatedBadgeCopy.recommended}
                 </span>
               ) : null}
             </div>
@@ -1070,32 +1081,44 @@ export function ActivityCard({
             )}
           >
             {showPrimaryAction && !useCompactDualActions ? (
-              <AnalyticsLink
-                href={actionHref}
-                detailSource={
-                  actionHref === cardHref ? detailSource : undefined
-                }
-                event={{
-                  name: actionEventName,
-                  entityId: analyticsEntity.entityId,
-                  entityType: analyticsEntity.entityType,
-                  sourceSurface,
-                  properties: baseAnalyticsProperties,
-                }}
-                className="group min-w-0 rounded-full focus-visible:outline-none"
-              >
-                <span
-                  className={cn(
-                    "flex h-10 min-h-10 w-full min-w-0 items-center justify-center overflow-hidden rounded-full border-0 px-3 text-center text-[13px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-coral/45 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11",
-                    copyActivityHref
-                      ? "sm:px-2.5 sm:text-[13px]"
-                      : "sm:px-4 sm:text-base",
-                    actionToneClassName,
-                  )}
+              isClaimableTeamCard ? (
+                <ClaimAutoCreatedActivityCardAction
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  detailHref={cardHref}
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  redirectPath={`/activities/${activity.id}`}
+                  variant="single"
+                />
+              ) : (
+                <AnalyticsLink
+                  href={actionHref}
+                  detailSource={
+                    actionHref === cardHref ? detailSource : undefined
+                  }
+                  event={{
+                    name: actionEventName,
+                    entityId: analyticsEntity.entityId,
+                    entityType: analyticsEntity.entityType,
+                    sourceSurface,
+                    properties: baseAnalyticsProperties,
+                  }}
+                  className="group min-w-0 rounded-full focus-visible:outline-none"
                 >
-                  <span className="min-w-0 truncate">{buttonLabel}</span>
-                </span>
-              </AnalyticsLink>
+                  <span
+                    className={cn(
+                      "flex h-10 min-h-10 w-full min-w-0 items-center justify-center overflow-hidden rounded-full border-0 px-3 text-center text-[13px] font-semibold leading-none whitespace-nowrap transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-coral/45 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11",
+                      copyActivityHref
+                        ? "sm:px-2.5 sm:text-[13px]"
+                        : "sm:px-4 sm:text-base",
+                      actionToneClassName,
+                    )}
+                  >
+                    <span className="min-w-0 truncate">{buttonLabel}</span>
+                  </span>
+                </AnalyticsLink>
+              )
             ) : null}
             {copyActivityHref && !useCompactDualActions ? (
               <Link
@@ -1114,52 +1137,66 @@ export function ActivityCard({
               </Link>
             ) : null}
             {useCompactDualActions && copyActivityHref ? (
-              <>
-                <MobileLobbyActionSheet
+              isClaimableTeamCard ? (
+                <ClaimAutoCreatedActivityCardAction
+                  activityId={activity.id}
                   activityTitle={activity.title}
-                  primaryDetailSource={
-                    actionHref === cardHref ? detailSource : undefined
-                  }
-                  primaryEvent={{
-                    name: actionEventName,
-                    entityId: analyticsEntity.entityId,
-                    entityType: analyticsEntity.entityType,
-                    sourceSurface,
-                    properties: baseAnalyticsProperties,
-                  }}
-                  primaryHref={actionHref}
-                  primaryIconName={
-                    isOwnActivity
-                      ? "settings"
-                      : isActivityInfo
-                        ? "copyPlus"
-                        : "circlePlus"
-                  }
-                  primaryLabel={buttonLabel}
-                  primaryTone={resolvedActionConfig.tone}
-                  secondaryHref={copyActivityHref}
-                  secondaryLabel={getCopyTeamButtonLabel(locale)}
+                  detailHref={cardHref}
+                  isAuthenticated={isAuthenticated}
                   locale={locale}
-                />
-                <LobbySplitActionButton
-                  primaryDetailSource={
-                    actionHref === cardHref ? detailSource : undefined
-                  }
-                  primaryEvent={{
-                    name: actionEventName,
-                    entityId: analyticsEntity.entityId,
-                    entityType: analyticsEntity.entityType,
-                    sourceSurface,
-                    properties: baseAnalyticsProperties,
-                  }}
-                  primaryHref={actionHref}
-                  primaryIcon={PrimaryActionIcon}
-                  primaryLabel={buttonLabel}
-                  primaryTone={resolvedActionConfig.tone}
+                  redirectPath={`/activities/${activity.id}`}
                   secondaryHref={copyActivityHref}
                   secondaryLabel={getCopyTeamButtonLabel(locale)}
+                  variant="split"
                 />
-              </>
+              ) : (
+                <>
+                  <MobileLobbyActionSheet
+                    activityTitle={activity.title}
+                    primaryDetailSource={
+                      actionHref === cardHref ? detailSource : undefined
+                    }
+                    primaryEvent={{
+                      name: actionEventName,
+                      entityId: analyticsEntity.entityId,
+                      entityType: analyticsEntity.entityType,
+                      sourceSurface,
+                      properties: baseAnalyticsProperties,
+                    }}
+                    primaryHref={actionHref}
+                    primaryIconName={
+                      isOwnActivity
+                        ? "settings"
+                        : isActivityInfo
+                          ? "copyPlus"
+                          : "circlePlus"
+                    }
+                    primaryLabel={buttonLabel}
+                    primaryTone={resolvedActionConfig.tone}
+                    secondaryHref={copyActivityHref}
+                    secondaryLabel={getCopyTeamButtonLabel(locale)}
+                    locale={locale}
+                  />
+                  <LobbySplitActionButton
+                    primaryDetailSource={
+                      actionHref === cardHref ? detailSource : undefined
+                    }
+                    primaryEvent={{
+                      name: actionEventName,
+                      entityId: analyticsEntity.entityId,
+                      entityType: analyticsEntity.entityType,
+                      sourceSurface,
+                      properties: baseAnalyticsProperties,
+                    }}
+                    primaryHref={actionHref}
+                    primaryIcon={PrimaryActionIcon}
+                    primaryLabel={buttonLabel}
+                    primaryTone={resolvedActionConfig.tone}
+                    secondaryHref={copyActivityHref}
+                    secondaryLabel={getCopyTeamButtonLabel(locale)}
+                  />
+                </>
+              )
             ) : null}
           </div>
         </div>

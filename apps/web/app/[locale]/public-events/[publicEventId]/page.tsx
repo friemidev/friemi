@@ -194,7 +194,7 @@ export default async function PublicEventDetailPage({
         className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
         locale={locale}
       />
-      <div className="relative flex min-h-[13rem] items-end overflow-hidden rounded-[1.25rem] bg-[#F1F2E3] p-3 shadow-[0_18px_42px_rgba(29,29,27,0.14)] sm:min-h-64 sm:p-6 md:min-h-[26rem]">
+      <div className="relative flex min-h-[13rem] items-end overflow-hidden rounded-[1.25rem] bg-[#F1F2EC] p-3 shadow-[0_18px_42px_rgba(29,29,27,0.14)] sm:min-h-64 sm:p-6 md:min-h-[26rem]">
         <ActivityCoverImage
           src={publicEvent.coverImageUrl}
           overlayClassName="bg-gradient-to-t from-black/72 via-black/22 to-black/8"

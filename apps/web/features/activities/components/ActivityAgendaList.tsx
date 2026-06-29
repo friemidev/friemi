@@ -646,7 +646,7 @@ export function ActivityAgendaList({
             className={cn(
               "relative scroll-mt-24",
               activeGroupId === getGroupId(longRunningGroup) &&
-                "rounded-[1rem] bg-[#F1F2E3]/58",
+                "rounded-[1rem] bg-[#F1F2EC]/58",
             )}
             id={getGroupId(longRunningGroup)}
             ref={(element) => {
@@ -665,7 +665,7 @@ export function ActivityAgendaList({
                 className="absolute -left-[1.95rem] top-3 h-3.5 w-3.5 rounded-full border-2 border-[#369758] bg-[#FFF5E6] sm:-left-[2.45rem]"
               />
               <span
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2E3] text-[#B5301F] ring-1 ring-[#8AB68E]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#B5301F] ring-1 ring-[#8AB68E]"
                 aria-hidden="true"
               >
                 <Layers3 className="h-4 w-4" />

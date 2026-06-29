@@ -267,19 +267,7 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[linear-gradient(180deg,#FEFFF9_0%,rgba(241,242,227,0.28)_52%,#FEFFF9_100%)] px-4 pb-3 pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
-      <div
-        className="absolute -right-24 top-0 z-0 h-[21rem] w-[15rem] rounded-[4rem] bg-[linear-gradient(180deg,rgba(54,151,88,0.18),rgba(222,235,255,0.18)_58%,rgba(254,255,249,0.1))] opacity-80 blur-2xl md:right-[6vw] md:top-10 md:h-[34rem] md:w-[24rem]"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute -right-16 top-40 z-0 h-44 w-44 rounded-full bg-coral/10 blur-3xl md:right-[29vw] md:top-[42%] md:h-72 md:w-72"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute -left-20 bottom-10 z-0 h-48 w-48 rounded-full bg-ice/55 blur-3xl md:left-[5vw] md:bottom-10 md:h-[30rem] md:w-[30rem]"
-        aria-hidden="true"
-      />
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-4 pb-3 pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
         <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
@@ -437,7 +425,7 @@ function MobileHomeExperience({
             } as CSSProperties
           }
         >
-          <div className="relative grid min-h-[clamp(18.5rem,34svh,29rem)] overflow-hidden rounded-[2rem] border border-[#D6D5B2]/72 bg-[#F1F2E3] p-5 shadow-[0_18px_46px_rgba(21,98,64,0.1)] backdrop-blur-sm md:grid-cols-[minmax(13rem,0.42fr)_minmax(0,1fr)] md:items-center md:gap-5">
+          <div className="relative grid min-h-[clamp(18.5rem,34svh,29rem)] overflow-hidden rounded-[2rem] border border-[#D6D5B2]/72 bg-[#F1F2EC] p-5 shadow-[0_18px_46px_rgba(21,98,64,0.1)] backdrop-blur-sm md:grid-cols-[minmax(13rem,0.42fr)_minmax(0,1fr)] md:items-center md:gap-5">
             <div
               className="absolute inset-0 bg-[linear-gradient(90deg,rgba(254,255,249,0.82),rgba(254,255,249,0.42)_42%,rgba(214,213,178,0.32))]"
               aria-hidden="true"

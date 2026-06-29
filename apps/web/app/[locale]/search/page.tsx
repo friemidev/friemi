@@ -90,7 +90,7 @@ function SearchEndedFilterBar({
         aria-pressed={includeEnded}
         className={
           includeEnded
-            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#F1F2E3] px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F1F2E3]"
+            ? "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#F1F2EC] px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F1F2EC]"
             : "inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/85 px-3.5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-white"
         }
         event={{
@@ -144,10 +144,10 @@ function SearchEndedOnlyEmptyState({
   return (
     <div className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white/[0.76] p-6 text-center shadow-[0_14px_34px_rgba(21,98,64,0.06)] sm:p-8">
       <span
-        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2E3]/55 blur-2xl"
+        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2EC]/55 blur-2xl"
         aria-hidden="true"
       />
-      <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F2E3] p-2.5 ring-1 ring-[#D6D5B2]">
+      <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F2EC] p-2.5 ring-1 ring-[#D6D5B2]">
         <Image
           src={brand.emptyStateIconPath}
           alt=""

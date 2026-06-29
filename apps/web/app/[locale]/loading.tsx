@@ -5,7 +5,7 @@ function SkeletonBlock({
 }) {
   return (
     <div
-      className={`friemi-shimmer rounded-2xl border border-[#D6D5B2] bg-[#F1F2E3] ${className}`}
+      className={`friemi-shimmer rounded-2xl border border-[#D6D5B2] bg-[#F1F2EC] ${className}`}
     />
   );
 }

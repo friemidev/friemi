@@ -83,7 +83,7 @@ export function ActivityTimeStateFilter({
                 activityResultsFilterControlClass,
                 activityResultsFilterChipClass,
                 isSelected
-                  ? "bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E]"
+                  ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]"
                   : "text-[#156240] hover:bg-[#FEFFF9]",
                 isLocked ? "cursor-not-allowed opacity-95" : null,
               )}

@@ -93,10 +93,10 @@ export function DesktopNav({ locale }: DesktopNavProps) {
               item.isPrimary
                 ? active
                   ? "text-[#156240]"
-                  : "text-[#156240] hover:bg-[#F1F2E3] hover:text-[#156240]"
+                  : "text-[#156240] hover:bg-[#F1F2EC] hover:text-[#156240]"
                 : active
                   ? "text-[#1D1D1B]"
-                  : "text-zinc-700 hover:bg-[#F1F2E3] hover:text-[#1D1D1B]",
+                  : "text-zinc-700 hover:bg-[#F1F2EC] hover:text-[#1D1D1B]",
             )}
             href={withLocale(currentLocale, item.href)}
           >

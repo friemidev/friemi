@@ -224,7 +224,7 @@ export function ReportDialog({
                   />
                 </label>
 
-                <div className="rounded-2xl bg-[#F1F2E3] px-4 py-3 text-sm leading-6 text-moss">
+                <div className="rounded-2xl bg-[#F1F2EC] px-4 py-3 text-sm leading-6 text-moss">
                   <ShieldAlert className="mb-1 h-4 w-4" />
                   {t.descriptionHint}
                 </div>

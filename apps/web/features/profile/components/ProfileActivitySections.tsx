@@ -87,7 +87,7 @@ function CompactEmptyState({
   return (
     <div className="flex flex-col gap-3 rounded-[1.1rem] border border-dashed border-[#8AB68E] bg-white/[0.62] px-4 py-4 shadow-[0_10px_24px_rgba(21,98,64,0.04)] sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] p-2 ring-1 ring-[#D6D5B2]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] p-2 ring-1 ring-[#D6D5B2]">
           <Image
             src={brand.emptyStateIconPath}
             alt=""
@@ -279,7 +279,7 @@ export function ProfileActivitySections({
                 className={cn(
                   "inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-semibold leading-none ring-1 transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/45 focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:text-sm",
                   active
-                    ? "bg-[linear-gradient(135deg,#F1F2E3_0%,#FEFFF9_100%)] text-forest ring-meadow/60 shadow-[0_8px_18px_rgba(21,98,64,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+                    ? "bg-[linear-gradient(135deg,#F1F2EC_0%,#FEFFF9_100%)] text-forest ring-meadow/60 shadow-[0_8px_18px_rgba(21,98,64,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
                     : "bg-transparent text-ink/72 ring-transparent hover:bg-paper hover:text-forest hover:ring-event-border/45",
                 )}
                 onClick={() => onActiveSectionChange(tab.key)}

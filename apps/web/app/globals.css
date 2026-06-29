@@ -13,7 +13,7 @@
   --friemi-palette-outline: #8e8383;
   --friemi-palette-sand: #d6d5b2;
   --friemi-palette-danger: #b5301f;
-  --friemi-palette-fog: #f1f2e3;
+  --friemi-palette-fog: #f1f2ec;
   --friemi-palette-ink: #1d1d1b;
   --friemi-palette-coral: #f09182;
   --friemi-palette-cream: #fff5e6;
@@ -26,7 +26,7 @@
   --friemi-outline-rgb: 142 131 131;
   --friemi-sand-rgb: 214 213 178;
   --friemi-danger-rgb: 181 48 31;
-  --friemi-fog-rgb: 241 242 227;
+  --friemi-fog-rgb: 241 242 236;
   --friemi-ink-rgb: 29 29 27;
   --friemi-coral-rgb: 240 145 130;
   --friemi-cream-rgb: 255 245 230;
@@ -44,31 +44,14 @@
 
 html {
   min-height: 100%;
-  background: var(--friemi-palette-fog);
+  background: var(--friemi-palette-paper);
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100%;
   margin: 0;
-  background:
-    radial-gradient(
-      circle at 10% 0%,
-      rgb(var(--friemi-meadow-rgb) / 0.14),
-      transparent 24rem
-    ),
-    radial-gradient(
-      circle at 88% 4%,
-      rgb(var(--friemi-coral-rgb) / 0.12),
-      transparent 20rem
-    ),
-    linear-gradient(
-      180deg,
-      var(--friemi-palette-fog) 0%,
-      var(--friemi-palette-cream) 46%,
-      var(--friemi-palette-paper) 100%
-    ),
-    var(--friemi-palette-fog);
+  background: var(--friemi-palette-paper);
   color: var(--friemi-palette-ink);
 }
 
@@ -733,6 +716,50 @@ html[data-home-motion-ready="true"]
   transform: scale(1.045);
 }
 
+@keyframes friemi-claim-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(1.25rem) scale(0.94);
+  }
+
+  68% {
+    opacity: 1;
+    transform: translateY(-0.18rem) scale(1.018);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes friemi-claim-confetti {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.35);
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--claim-confetti-drift), 10.5rem, 0)
+      rotate(310deg)
+      scale(1);
+  }
+}
+
+.friemi-claim-pop {
+  animation: friemi-claim-pop 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.friemi-claim-confetti {
+  animation: friemi-claim-confetti 1180ms cubic-bezier(0.22, 1, 0.36, 1)
+    var(--claim-confetti-delay, 0ms) both;
+}
+
 .activity-card-grid-shell {
   container-type: inline-size;
 }
@@ -777,6 +804,8 @@ html[data-home-motion-ready="true"]
   .co-creator-benefit-row,
   .co-creator-flow-card,
   .co-creator-reveal,
+  .friemi-claim-confetti,
+  .friemi-claim-pop,
   .home-carousel-card,
   .home-carousel-card__media img,
   .home-luxury-hero-media,

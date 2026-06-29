@@ -110,7 +110,7 @@ export function WechatWebViewGuide({ locale }: WechatWebViewGuideProps) {
   }
 
   return (
-    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[linear-gradient(165deg,#FEFFF9_0%,#F1F2E3_52%,#FFF5E6_100%)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+    <section className="fixed inset-0 z-[100] overflow-y-auto bg-[linear-gradient(165deg,#FEFFF9_0%,#F1F2EC_52%,#FFF5E6_100%)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
       <BrandBackdrop
         className="-right-56 top-28 h-[29rem] w-[19rem] opacity-20"
         imageClassName="object-contain object-top"

@@ -146,7 +146,7 @@ export function ActivityWeatherWidget({
           <LoaderCircle className="h-4 w-4 animate-spin text-[#369758]" />
           {t.loading}
         </div>
-        <div className="mt-3 h-12 rounded-xl bg-gradient-to-r from-[#F1F2E3] via-white to-[#F1F2E3]" />
+        <div className="mt-3 h-12 rounded-xl bg-gradient-to-r from-[#F1F2EC] via-white to-[#F1F2EC]" />
       </section>
     );
   }

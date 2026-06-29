@@ -106,7 +106,7 @@ const formSectionTones: Record<
     accent: "bg-[#369758]",
     dot: "bg-[#369758]",
     header: "border-[#369758]/45",
-    section: "border-[#369758] bg-[#F1F2E3]",
+    section: "border-[#369758] bg-[#F1F2EC]",
   },
   rose: {
     accent: "bg-[#DEAAB3]",
@@ -610,7 +610,7 @@ function DateTimePickerField({
                   className={cn(
                     "grid h-7 place-items-center rounded-md text-sm font-semibold transition disabled:cursor-not-allowed sm:h-8 sm:text-base",
                     !isDisabled
-                      ? "text-zinc-800 hover:bg-[#F1F2E3]"
+                      ? "text-zinc-800 hover:bg-[#F1F2EC]"
                       : "text-zinc-300 opacity-45",
                     isSelected &&
                       !isDisabled &&
@@ -743,7 +743,7 @@ function TeamFormSectionSwitcher({
               className={cn(
                 "min-w-0 flex-1 rounded-full border px-1.5 py-1.5 text-center text-[0.72rem] font-semibold leading-4 transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 active
-                  ? "border-[#369758] bg-[#F1F2E3] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
               )}
             >
@@ -768,7 +768,7 @@ function TeamFormSectionSwitcher({
               className={cn(
                 "flex min-w-[6.4rem] shrink-0 items-center justify-center rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 active
-                  ? "border-[#369758] bg-[#F1F2E3] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
+                  ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-[#FFFCF8] text-zinc-600 hover:border-[#8AB68E] hover:bg-white",
               )}
             >
@@ -798,7 +798,7 @@ function SettingCheckbox({
   title: string;
 }) {
   return (
-    <label className="group grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border border-[#D6D5B2]/85 bg-white/72 p-3 text-base text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2E3] has-[:checked]:shadow-sm">
+    <label className="group grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border border-[#D6D5B2]/85 bg-white/72 p-3 text-base text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:shadow-sm">
       <input
         checked={checked}
         className="peer sr-only"
@@ -1296,7 +1296,7 @@ export function NewActivityForm({
                     className={cn(
                       "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border p-3 text-base transition",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] shadow-sm"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] shadow-sm"
                         : "border-[#D6D5B2] bg-white/84 hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >

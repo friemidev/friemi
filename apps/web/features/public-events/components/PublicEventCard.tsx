@@ -106,7 +106,7 @@ export function PublicEventCard({
         className="flex flex-1 flex-col"
         href={eventHref}
       >
-        <div className="relative flex h-40 items-end justify-between gap-2 overflow-hidden bg-[#F1F2E3] p-3 sm:h-44 sm:p-4">
+        <div className="relative flex h-40 items-end justify-between gap-2 overflow-hidden bg-[#F1F2EC] p-3 sm:h-44 sm:p-4">
           <ActivityCoverImage
             src={event.coverImageUrl}
             overlayClassName="bg-gradient-to-t from-black/48 via-black/12 to-black/5"

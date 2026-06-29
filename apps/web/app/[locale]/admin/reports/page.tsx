@@ -134,7 +134,7 @@ function AdminOperationsOverview({
     {
       icon: Clock3,
       label: analytics.averageReviewTime,
-      tone: "bg-[#F1F2E3] text-moss ring-[#8AB68E]",
+      tone: "bg-[#F1F2EC] text-moss ring-[#8AB68E]",
       value: formatAverageReviewTime(
         analytics,
         operations.reports.averageReviewHours,
@@ -264,7 +264,7 @@ function ReportCard({
       <div className="grid min-w-0 gap-3 border-b border-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-[#F1F2E3] px-2.5 py-1 text-xs font-semibold text-moss ring-1 ring-moss/15">
+            <span className="inline-flex items-center rounded-full bg-[#F1F2EC] px-2.5 py-1 text-xs font-semibold text-moss ring-1 ring-moss/15">
               {t.targetTypes[report.targetType]}
             </span>
             <span

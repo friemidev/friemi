@@ -1680,10 +1680,10 @@ function PlainEmptyState({
   return (
     <div className="relative overflow-hidden rounded-[1.15rem] border border-[#D6D5B2] bg-white/[0.68] px-4 py-5 shadow-[0_10px_26px_rgba(21,98,64,0.045)]">
       <span
-        className="pointer-events-none absolute right-4 top-0 h-16 w-24 rounded-full bg-[#F1F2E3]/60 blur-2xl"
+        className="pointer-events-none absolute right-4 top-0 h-16 w-24 rounded-full bg-[#F1F2EC]/60 blur-2xl"
         aria-hidden="true"
       />
-      <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F1F2E3] p-2 ring-1 ring-[#D6D5B2]">
+      <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F1F2EC] p-2 ring-1 ring-[#D6D5B2]">
         <Image
           src={brand.emptyStateIconPath}
           alt=""

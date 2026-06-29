@@ -518,7 +518,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate bg-[#F1F2E3] px-5 py-16 sm:px-6">
+      <section className="relative isolate bg-[#F1F2EC] px-5 py-16 sm:px-6">
         <BrandBackdrop
           className="inset-x-0 top-0 z-0 h-full opacity-45"
           imageClassName="object-cover"
@@ -806,7 +806,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
       </section>
 
-      <section className="relative isolate bg-[#F1F2E3] px-8 py-24">
+      <section className="relative isolate bg-[#F1F2EC] px-8 py-24">
         <BrandBackdrop
           className="inset-x-0 top-0 z-0 h-full opacity-50"
           imageClassName="object-cover"

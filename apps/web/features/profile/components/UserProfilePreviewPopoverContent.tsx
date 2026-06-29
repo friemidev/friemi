@@ -180,7 +180,7 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.alreadyFriends}
       </div>
@@ -194,7 +194,7 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.pendingFriendRequest}
       </div>
@@ -376,7 +376,7 @@ export function UserProfilePreviewPopoverContent({
   }, [isGuest, profileId]);
 
   return (
-    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2E3_62%,#FFF5E6_100%)] p-3.5 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur">
+    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-3.5 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur">
       <div className="space-y-3">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F09182] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.12)] ring-2 ring-[#FEFFF9]">
@@ -451,7 +451,7 @@ export function UserProfilePreviewPopoverContent({
         ) : null}
 
         {isSelf ? (
-          <p className="rounded-xl bg-[#F1F2E3]/82 px-3 py-2 text-center text-[10px] font-medium text-[#156240]/70 ring-1 ring-[#D6D5B2]/70">
+          <p className="rounded-xl bg-[#F1F2EC]/82 px-3 py-2 text-center text-[10px] font-medium text-[#156240]/70 ring-1 ring-[#D6D5B2]/70">
             {previewCopy.selfNotice}
           </p>
         ) : null}
@@ -467,7 +467,7 @@ export function UserProfilePreviewPopoverContent({
         {showActionButtons ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
             <FollowButton
-              buttonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-3 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2E3]"
+              buttonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-3 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2EC]"
               activeButtonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/65 bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#B5301F] hover:bg-white"
               activeLabel={followCopy.unfollow}
               fullWidth={false}

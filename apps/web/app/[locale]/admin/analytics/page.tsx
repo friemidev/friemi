@@ -613,7 +613,7 @@ function FocusList({ items, locale }: { items: FocusItem[]; locale: string }) {
           <>
             <span
               className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                item.severity === "good" ? "bg-[#F1F2E3]" : "bg-[#DEAAB3]"
+                item.severity === "good" ? "bg-[#F1F2EC]" : "bg-[#DEAAB3]"
               }`}
             >
               {icon}
@@ -845,7 +845,7 @@ function DashboardControls({
               key={section}
               className={`inline-flex h-9 min-w-0 items-center justify-center rounded-full px-3 text-sm font-medium ring-1 transition ${
                 section === activeSection
-                  ? "bg-[#F1F2E3] text-moss ring-[#8AB68E]"
+                  ? "bg-[#F1F2EC] text-moss ring-[#8AB68E]"
                   : "bg-paper text-zinc-600 ring-black/10 hover:bg-white"
               }`}
               href={buildAnalyticsHref({
@@ -1188,7 +1188,7 @@ function LatencyPanel({
                       <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-white px-2 text-xs font-medium text-zinc-600 ring-1 ring-black/10">
                         {getLatencyKindLabel(item.kind, t)}
                       </span>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#F1F2E3] px-2 text-xs font-medium text-moss ring-1 ring-[#8AB68E]">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#F1F2EC] px-2 text-xs font-medium text-moss ring-1 ring-[#8AB68E]">
                         {item.environment}
                       </span>
                       <p className="min-w-0 flex-1 break-words text-sm font-semibold text-ink">
@@ -1310,7 +1310,7 @@ export default async function AdminAnalyticsPage({
                 label={`${t.actionUsers} · ${t.intentWindow(
                   dashboard.intentWindowDays,
                 )}`}
-                tone="bg-[#F1F2E3] text-moss ring-[#8AB68E]"
+                tone="bg-[#F1F2EC] text-moss ring-[#8AB68E]"
                 value={dashboard.northStar.activeIntentUsers}
               />
               <MetricTile

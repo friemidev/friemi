@@ -141,7 +141,7 @@ export function TeamDetailMobileCtaSheet({
           visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
         )}
       >
-        <div className="bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_58%,#F1F2E3_100%)] px-4 pb-3 pt-3.5">
+        <div className="bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_58%,#F1F2EC_100%)] px-4 pb-3 pt-3.5">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-coral/40" />
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             <div className="min-w-0">
