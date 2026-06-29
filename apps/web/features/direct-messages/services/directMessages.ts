@@ -43,6 +43,7 @@ const directMessageSelect = {
   id: true,
   conversationId: true,
   senderId: true,
+  activityId: true,
   body: true,
   readAt: true,
   createdAt: true,
@@ -64,6 +65,27 @@ export class DirectMessageDomainError extends Error {
     this.name = "DirectMessageDomainError";
     this.code = code;
   }
+}
+
+async function createDirectMessageNotification(
+  db: DbClient,
+  input: {
+    activityId?: string | null;
+    actorId: string;
+    recipientId: string;
+  },
+) {
+  return db.notification.create({
+    data: {
+      type: "DIRECT_MESSAGE",
+      recipientId: input.recipientId,
+      actorId: input.actorId,
+      activityId: input.activityId ?? null,
+    },
+    select: {
+      id: true,
+    },
+  });
 }
 
 function assertDifferentUsers(userId: string, otherUserId: string) {
@@ -295,6 +317,7 @@ export async function getOrCreateActivityOrganizerConversation({
 }
 
 export async function sendDirectMessage({
+  activityId,
   currentUserProfileId,
   conversationId,
   body,
@@ -340,9 +363,16 @@ export async function sendDirectMessage({
       data: {
         conversationId: conversation.id,
         senderId: currentUserProfileId,
+        activityId: activityId ?? null,
         body: normalizedBody,
       },
       select: directMessageSelect,
+    });
+
+    await createDirectMessageNotification(tx, {
+      activityId: activityId ?? null,
+      actorId: currentUserProfileId,
+      recipientId: peerProfileId,
     });
 
     const updatedConversation = await tx.conversation.update({
@@ -395,6 +425,10 @@ export async function sendDirectMessageToFriend({
         body: normalizedBody,
       },
       select: directMessageSelect,
+    });
+    await createDirectMessageNotification(tx, {
+      actorId: currentUserProfileId,
+      recipientId: friendProfileId,
     });
     const updatedConversation = await tx.conversation.update({
       where: {

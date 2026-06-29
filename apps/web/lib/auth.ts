@@ -356,6 +356,7 @@ type LayoutViewerProfile = {
 };
 
 type LayoutViewerState = {
+  initialUnreadNotificationCount: number;
   profile: LayoutViewerProfile | null;
   showAdminNav: boolean;
 };
@@ -384,6 +385,7 @@ export const getOptionalLayoutViewerState = cache(
     const profile = await upsertLocalUserProfile("local-dev-user");
 
     return {
+      initialUnreadNotificationCount: 0,
       profile: getLayoutViewerProfile(profile),
       showAdminNav: false,
     };
@@ -393,6 +395,7 @@ export const getOptionalLayoutViewerState = cache(
 
   if (!userId) {
     return {
+      initialUnreadNotificationCount: 0,
       profile: null,
       showAdminNav: false,
     };
@@ -413,7 +416,15 @@ export const getOptionalLayoutViewerState = cache(
   });
 
   if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+    const unreadNotificationCount = await prisma.notification.count({
+      where: {
+        recipientId: profile.id,
+        readAt: null,
+      },
+    });
+
     return {
+      initialUnreadNotificationCount: unreadNotificationCount,
       profile: getLayoutViewerProfile(profile),
       showAdminNav: true,
     };
@@ -422,7 +433,17 @@ export const getOptionalLayoutViewerState = cache(
   const user = await currentUser();
 
   if (!user) {
+    const unreadNotificationCount = profile
+      ? await prisma.notification.count({
+          where: {
+            recipientId: profile.id,
+            readAt: null,
+          },
+        })
+      : 0;
+
     return {
+      initialUnreadNotificationCount: unreadNotificationCount,
       profile: profile ? getLayoutViewerProfile(profile) : null,
       showAdminNav: false,
     };
@@ -430,14 +451,29 @@ export const getOptionalLayoutViewerState = cache(
 
   if (!profile) {
     const createdProfile = await upsertClerkUserProfile(user);
+    const unreadNotificationCount = await prisma.notification.count({
+      where: {
+        recipientId: createdProfile.id,
+        readAt: null,
+      },
+    });
 
     return {
+      initialUnreadNotificationCount: unreadNotificationCount,
       profile: getLayoutViewerProfile(createdProfile),
       showAdminNav: isAdminUser(user),
     };
   }
 
+  const unreadNotificationCount = await prisma.notification.count({
+    where: {
+      recipientId: profile.id,
+      readAt: null,
+    },
+  });
+
   return {
+    initialUnreadNotificationCount: unreadNotificationCount,
     profile: getLayoutViewerProfile(profile),
     showAdminNav: isAdminUser(user),
   };

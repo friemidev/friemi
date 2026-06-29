@@ -51,7 +51,9 @@ export default async function LocaleLayout({
       <ViewerProfileProvider initialNickname={viewerProfile?.nickname ?? null}>
         <NotificationBadgeProvider
           enabled={Boolean(viewerProfile)}
-          initialUnreadNotificationCount={0}
+          initialUnreadNotificationCount={
+            viewerState.initialUnreadNotificationCount
+          }
         >
           <MobileNavSectionProvider>
             <div className="min-h-screen pb-24 md:pb-0">
@@ -64,7 +66,9 @@ export default async function LocaleLayout({
                 viewerWechatId={viewerProfile?.wechatId ?? null}
                 viewerNickname={viewerProfile?.nickname ?? null}
                 incomingFriendRequests={[]}
-                unreadNotificationCount={0}
+                unreadNotificationCount={
+                  viewerState.initialUnreadNotificationCount
+                }
               />
               <MobileScrollProgress />
               <IdleRoutePrefetcher
