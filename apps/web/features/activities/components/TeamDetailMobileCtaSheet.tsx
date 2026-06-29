@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { ChevronUp, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -178,28 +178,38 @@ export function TeamDetailMobileCtaSheet({
       <button
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={copy.open}
-        className="fixed right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-coral/55 bg-coral text-white shadow-[0_16px_34px_rgba(240,145,130,0.34)] ring-4 ring-cream/88 transition active:scale-95"
+        aria-label={copy.title}
+        className="group fixed right-3 z-50 flex min-h-14 max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-[1.15rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 px-2.5 py-2 text-[#156240] shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-1 ring-white/80 backdrop-blur-md transition hover:-translate-y-0.5 active:scale-[0.96]"
         style={{
           bottom: "calc(6rem + env(safe-area-inset-bottom))",
         }}
+        title={copy.title}
         type="button"
         onClick={() => {
           setOpen(true);
         }}
       >
-        <span
-          aria-hidden="true"
-          className="absolute inset-1 rounded-full border border-white/32"
-        />
-        <img
-          alt=""
-          aria-hidden="true"
-          className="relative h-11 w-11 -translate-y-0.5 select-none"
-          draggable={false}
-          src={RAISED_HAND_SIGNUP_ICON_SRC}
-        />
-        <span className="sr-only">{copy.open}</span>
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_10px_20px_rgba(21,98,64,0.14)] ring-1 ring-[#8AB68E]/70">
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-coral ring-2 ring-[#FEFFF9]"
+          />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="relative h-8 w-8 select-none"
+            draggable={false}
+            src={RAISED_HAND_SIGNUP_ICON_SRC}
+          />
+        </span>
+        <span className="grid min-w-0 text-left">
+          <span className="text-sm font-extrabold leading-tight text-[#156240]">
+            {copy.open}
+          </span>
+        </span>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]/65 transition group-hover:-translate-y-0.5">
+          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
       </button>
       {rendered && mounted ? createPortal(sheet, document.body) : null}
     </div>
