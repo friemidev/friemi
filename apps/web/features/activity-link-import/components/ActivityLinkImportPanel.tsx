@@ -151,7 +151,7 @@ function PreviewFieldRow({
   value: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[auto_6.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 border-b border-zinc-100 py-3 last:border-b-0 sm:grid-cols-[auto_8rem_minmax(0,1fr)]">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 border-b border-zinc-100 py-3 last:border-b-0 sm:grid-cols-[auto_8rem_minmax(0,1fr)]">
       <input
         checked={checked}
         className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-moss focus:ring-moss/30 disabled:opacity-60"
@@ -159,10 +159,12 @@ function PreviewFieldRow({
         onChange={(event) => onCheckedChange?.(event.target.checked)}
         type="checkbox"
       />
-      <span className="text-base font-semibold leading-6 text-zinc-600">
+      <span className="min-w-0 text-base font-semibold leading-6 text-zinc-600">
         {label}
       </span>
-      <div className="min-w-0 text-base leading-6 text-ink">{value}</div>
+      <div className="col-start-2 min-w-0 break-words text-base leading-6 text-ink sm:col-start-auto">
+        {value}
+      </div>
     </div>
   );
 }
@@ -346,8 +348,8 @@ export function ActivityLinkImportPanel({
   }
 
   return (
-    <section className="rounded-lg border border-black/10 bg-paper/70 p-3 sm:p-4">
-      <div className="flex items-start gap-3">
+    <section className="w-full min-w-0 overflow-hidden rounded-lg border border-black/10 bg-paper/70 p-3 sm:p-4">
+      <div className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-3">
         <input
           checked={isEnabled}
           className="mt-2 h-4 w-4 shrink-0 rounded border-zinc-300 text-moss focus:ring-moss/30"
@@ -359,9 +361,9 @@ export function ActivityLinkImportPanel({
           <LinkIcon className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             <label
-              className="cursor-pointer text-base font-semibold text-ink"
+              className="min-w-0 cursor-pointer text-base font-semibold leading-6 text-ink"
               htmlFor="activity-link-import-enabled"
             >
               {t.linkImportToggleLabel}
@@ -375,7 +377,7 @@ export function ActivityLinkImportPanel({
               <CircleHelp className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-1 text-base leading-7 text-zinc-600">
+          <p className="mt-1 text-sm leading-6 text-zinc-600 sm:text-base sm:leading-7">
             {t.linkImportDescription}
           </p>
         </div>
@@ -440,7 +442,7 @@ export function ActivityLinkImportPanel({
             >
               {t.linkImportUrlLabel}
             </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
               <Input
                 className="min-w-0 flex-1"
                 id="activity-link-url"
@@ -466,7 +468,7 @@ export function ActivityLinkImportPanel({
               </Button>
             </div>
           </div>
-          <p className="text-base leading-7 text-zinc-500">
+          <p className="break-words text-sm leading-6 text-zinc-500 sm:text-base sm:leading-7">
             {t.linkImportSupportedSiteExamples}
           </p>
         </>
