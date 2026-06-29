@@ -6,7 +6,6 @@ import {
   Newspaper,
   Sparkles,
 } from "lucide-react";
-import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdatesDescending } from "@/features/updates/versionUpdates";
 import { brand } from "@/lib/brand";
@@ -29,22 +28,11 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
 
   return (
     <main className="relative isolate overflow-hidden bg-[#FEFFF9]">
-      <BrandBackdrop
-        className="inset-x-0 top-0 z-0 h-[34rem] opacity-[0.42]"
-        imageClassName="object-cover"
-        priority
-        variant="desktop-band"
-      />
-      <div
-        className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(247,255,243,0.72),#FEFFF9_56%,#FFF5E6_100%)]"
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <header className="grid gap-7 rounded-[2rem] border border-[#D6D5B2] bg-white/[0.78] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] backdrop-blur sm:p-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div className="min-w-0">
             <BrandLockup size="sm" />
-            <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2E3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+            <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Product Notes
             </p>

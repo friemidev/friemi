@@ -31,6 +31,7 @@ import {
 } from "@/features/analytics/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
@@ -108,6 +109,7 @@ type ActivityDetailPageProps = {
   }>;
   searchParams: Promise<{
     access?: string;
+    claimed?: string;
   }>;
 };
 
@@ -501,7 +503,7 @@ export default async function ActivityDetailPage({
   searchParams,
 }: ActivityDetailPageProps) {
   const { locale, activityId } = await params;
-  const { access: accessToken } = await searchParams;
+  const { access: accessToken, claimed: claimedSuccess } = await searchParams;
   const perf = createPerformanceTracker({
     locale,
     route: "/activities/[activityId]",
@@ -946,6 +948,7 @@ export default async function ActivityDetailPage({
   const canContactOrganizer = !isTeamOperator;
   const canEditActivity = isTeamOperator && !isCancelled && !isEndedByTime;
   const activityDetailPath = `/activities/${activity.id}`;
+  const activityEditHref = withLocale(locale, `/activities/${activity.id}/edit`);
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
   const activityLocationLabel = getActivityLocationLabel(activity);
@@ -1015,6 +1018,11 @@ export default async function ActivityDetailPage({
   return (
     <PageContainer className="space-y-6">
       <DetailSourceRestore sourceKey="activity_detail" />
+      <ClaimAutoCreatedActivityCelebration
+        active={claimedSuccess === "1"}
+        editHref={activityEditHref}
+        locale={locale}
+      />
       <DetailSourceReturnLink
         className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
         locale={locale}
@@ -1333,7 +1341,7 @@ export default async function ActivityDetailPage({
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
-          <div className="order-1 hidden rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2E3_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white md:block">
+          <div className="order-1 hidden rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2EC_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white md:block">
             <div className="mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
                 {teamDetailCtaCopy.eyebrow}
@@ -1368,10 +1376,7 @@ export default async function ActivityDetailPage({
                   {canEditActivity ? (
                     <Link
                       className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758]"
-                      href={withLocale(
-                        locale,
-                        `/activities/${activity.id}/edit`,
-                      )}
+                      href={activityEditHref}
                     >
                       <Pencil className="h-4 w-4" />
                       {teamOwnerCtaCopy.manage}
@@ -1383,7 +1388,7 @@ export default async function ActivityDetailPage({
                     </p>
                   ) : null}
                   <a
-                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2E3]"
+                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2EC]"
                     href={
                       activity.requiresApproval
                         ? "#participation-approval"
@@ -1800,7 +1805,7 @@ export default async function ActivityDetailPage({
               {canEditActivity ? (
                 <Link
                   className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition active:scale-[0.98]"
-                  href={withLocale(locale, `/activities/${activity.id}/edit`)}
+                  href={activityEditHref}
                 >
                   <Pencil className="h-4 w-4" />
                   {teamOwnerCtaCopy.manage}

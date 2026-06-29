@@ -27,7 +27,7 @@ export function EmptyState({
       )}
     >
       <span
-        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2E3]/55 blur-2xl"
+        className="pointer-events-none absolute inset-x-8 -top-14 h-24 rounded-full bg-[#F1F2EC]/55 blur-2xl"
         aria-hidden="true"
       />
       <span className="relative mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-fog ring-1 ring-sand sm:h-14 sm:w-14">

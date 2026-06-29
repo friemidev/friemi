@@ -241,7 +241,7 @@ function ContactField({
     <label className="grid gap-2">
       <span className="text-sm font-medium text-[#1D1D1B]">{label}</span>
       <span className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-[#8AB68E]/35 bg-white px-3 shadow-sm transition-with-transform focus-within:border-[#369758] focus-within:ring-2 focus-within:ring-[#8AB68E]/20">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2E3] text-[#156240]">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240]">
           {icon}
         </span>
         <Input

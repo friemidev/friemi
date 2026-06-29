@@ -13,7 +13,6 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
-import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { HomeFooter } from "@/components/layout/HomeFooter";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -458,7 +457,7 @@ function BenefitRow({
       className="co-creator-benefit-row grid gap-3 border-b border-[#D6D5B2] p-3 last:border-b-0 sm:grid-cols-[2.5rem_minmax(7rem,0.42fr)_minmax(0,1fr)] sm:items-center"
       key={benefit.title}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">
@@ -483,7 +482,7 @@ function RecruitmentLine({
 }) {
   return (
     <div className="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white p-3 ring-1 ring-[#D6D5B2]">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2E3] text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-sm font-bold text-[#156240] ring-1 ring-[#8AB68E]">
         {getOneBasedIndex(index)}
       </span>
       <p className="self-center text-sm leading-6 text-zinc-700">{text}</p>
@@ -493,7 +492,7 @@ function RecruitmentLine({
 
 function KeywordPill({ label }: { label: string }) {
   return (
-    <span className="rounded-full bg-[#F1F2E3] px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
+    <span className="rounded-full bg-[#F1F2EC] px-3 py-2 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
       {label}
     </span>
   );
@@ -565,18 +564,6 @@ export default async function CoCreatorsPage({ params }: CoCreatorsPageProps) {
   return (
     <>
       <PageContainer className="co-creator-page relative isolate overflow-hidden pb-8 pt-4 md:pb-12 md:pt-7">
-        <BrandBackdrop
-          className="inset-x-0 top-0 z-0 hidden h-[34rem] opacity-45 md:block"
-          imageClassName="object-cover"
-          priority
-          variant="desktop-wide"
-        />
-        <BrandBackdrop
-          className="-right-28 top-8 z-0 h-[30rem] w-[18rem] opacity-35 md:hidden"
-          imageClassName="object-contain object-top"
-          priority
-          variant="mobile-frame"
-        />
         <section className="co-creator-reveal relative z-10 grid gap-5 border-b border-[#D6D5B2] pb-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-stretch lg:pb-8">
           <div className="flex min-w-0 flex-col justify-center gap-5">
             <div className="space-y-4">

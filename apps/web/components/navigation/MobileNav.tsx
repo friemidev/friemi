@@ -29,7 +29,7 @@ function getMobileNavToneClasses(tone: string, active: boolean) {
 
   if (tone === "cream") {
     return active
-      ? "bg-[linear-gradient(145deg,#FEFFF9,#F1F2E3)] text-[#156240] ring-[#D6D5B2]/90 shadow-[0_10px_20px_rgba(21,98,64,0.12)]"
+      ? "bg-[linear-gradient(145deg,#FEFFF9,#F1F2EC)] text-[#156240] ring-[#D6D5B2]/90 shadow-[0_10px_20px_rgba(21,98,64,0.12)]"
       : "bg-[#FEFFF9]/74 text-[#1D1D1B]/68 ring-[#8E8383]/12";
   }
 
@@ -119,7 +119,7 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#FFF5E6] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
       <div className="mx-auto grid h-[5.35rem] max-w-md grid-cols-[0.92fr_0.92fr_1.22fr_0.92fr_0.92fr] gap-1.5 px-3 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;

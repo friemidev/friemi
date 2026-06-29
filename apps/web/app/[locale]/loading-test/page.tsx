@@ -44,7 +44,7 @@ export default async function LoadingTestPage({ params }: LoadingTestPageProps) 
               <BrandLoader label={loadingLabel} size="sm" />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border border-[#8AB68E] bg-[#F1F2E3] px-6 py-5 shadow-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#8AB68E] bg-[#F1F2EC] px-6 py-5 shadow-sm">
               <div>
                 <p className="text-sm font-semibold text-zinc-950">绿色背景</p>
                 <p className="mt-1 text-sm text-zinc-500">检查透明帧是否干净。</p>

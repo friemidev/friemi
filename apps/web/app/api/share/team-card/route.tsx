@@ -108,7 +108,7 @@ function FallbackShareImage({
       style={{
         alignItems: "center",
         background:
-          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 48%, #F1F2E3 100%)",
+          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 48%, #F1F2EC 100%)",
         color: "#1D1D1B",
         display: "flex",
         height: "100%",
@@ -407,7 +407,7 @@ export async function GET(request: Request) {
     <div
       style={{
         background:
-          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 46%, #F1F2E3 100%)",
+          "linear-gradient(135deg, #FFF5E6 0%, #FFF5E6 46%, #F1F2EC 100%)",
         color: "#1D1D1B",
         display: "flex",
         height: "100%",
@@ -445,7 +445,7 @@ export async function GET(request: Request) {
             />
             <div
               style={{
-                background: "#F1F2E3",
+                background: "#F1F2EC",
                 border: "1px solid #D6D5B2",
                 borderRadius: 999,
                 color: "#B5301F",

@@ -572,7 +572,7 @@ export function ActivitySwipeDiscovery({
     >
       {!isHomeVariant ? (
         <div className="flex items-center gap-2 px-1">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
             <Compass className="h-4 w-4" />
           </span>
           <div className="min-w-0">

@@ -7,7 +7,6 @@ import {
   ListChecks,
   Sparkles,
 } from "lucide-react";
-import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdateBySlug } from "@/features/updates/versionUpdates";
 import { withLocale } from "@/lib/routes";
@@ -37,17 +36,6 @@ export default async function VersionUpdateDetailPage({
 
   return (
     <main className="relative isolate overflow-hidden bg-[#FEFFF9]">
-      <BrandBackdrop
-        className="inset-x-0 top-0 z-0 h-[34rem] opacity-[0.42]"
-        imageClassName="object-cover"
-        priority
-        variant="desktop-band"
-      />
-      <div
-        className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(180deg,rgba(247,255,243,0.72),#FEFFF9_58%,#FFF5E6_100%)]"
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <Link
           href={withLocale(locale, "/updates")}
@@ -71,7 +59,7 @@ export default async function VersionUpdateDetailPage({
           </div>
 
           <div className="mt-5 max-w-4xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2E3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Release Notes
             </p>

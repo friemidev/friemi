@@ -186,7 +186,7 @@ function drawPill(
 ) {
   context.font = "700 28px sans-serif";
   const width = context.measureText(label).width + 44;
-  context.fillStyle = "#F1F2E3";
+  context.fillStyle = "#F1F2EC";
   context.beginPath();
   context.roundRect(x, y, width, 52, 26);
   context.fill();
@@ -430,7 +430,7 @@ export function ActivityShareTools({
 
       context.fillStyle = "#FEFFF9";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#F1F2E3";
+      context.fillStyle = "#F1F2EC";
       context.fillRect(0, 0, canvas.width, 360);
       let hasCoverBackground = false;
 

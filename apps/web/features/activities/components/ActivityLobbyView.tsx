@@ -929,7 +929,7 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border px-3 text-left text-sm font-semibold transition",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
                         : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
@@ -940,7 +940,7 @@ function MobileLobbyFilterSheet({
                           "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
                           active
                             ? "bg-white/78 text-[#156240]"
-                            : "bg-[#F1F2E3] text-[#156240]",
+                            : "bg-[#F1F2EC] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -973,7 +973,7 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-10 min-w-0 items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_6px_16px_rgba(54,151,88,0.12)]"
                         : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
@@ -1003,7 +1003,7 @@ function MobileLobbyFilterSheet({
                     className={cn(
                       "flex h-11 min-w-0 flex-col items-center justify-center rounded-2xl border px-2 text-sm font-semibold transition",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
                         : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                     )}
                   >
@@ -1159,7 +1159,7 @@ function LobbySwipeLoadingShell({
   return (
     <section className={cn("overflow-visible px-0 py-1", className)}>
       <div className="flex items-center gap-2 px-1">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0">
@@ -1173,13 +1173,13 @@ function LobbySwipeLoadingShell({
       </div>
 
       <div className="relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.08)] ring-1 ring-[#D6D5B2]/85">
-        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#F1F2E3_0%,#FEFFF9_48%,#F1F2E3_100%)]" />
+        <div className="h-32 animate-pulse bg-[linear-gradient(90deg,#F1F2EC_0%,#FEFFF9_48%,#F1F2EC_100%)]" />
         <div className="space-y-3 p-3.5">
           <div className="h-5 w-4/5 animate-pulse rounded-full bg-fog" />
           <div className="h-5 w-2/3 animate-pulse rounded-full bg-fog" />
           <div className="mt-4 grid gap-2">
-            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#F1F2E3]" />
-            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#F1F2E3]" />
+            <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#F1F2EC]" />
+            <div className="h-4 w-1/2 animate-pulse rounded-full bg-[#F1F2EC]" />
           </div>
           <div className="pt-4">
             <div className="h-10 w-full animate-pulse rounded-full bg-[#D6D5B2]" />
@@ -1477,7 +1477,7 @@ function CategoryFallbackSection({
   return (
     <section
       aria-labelledby={titleId}
-      className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-[linear-gradient(135deg,rgba(254,255,249,0.96),rgba(241,242,227,0.62)_58%,rgba(222,235,255,0.42))] p-4 shadow-[0_16px_36px_rgba(21,98,64,0.09)] sm:p-5"
+      className="relative overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-[linear-gradient(135deg,rgba(254,255,249,0.96),rgba(241,242,236,0.62)_58%,rgba(222,235,255,0.42))] p-4 shadow-[0_16px_36px_rgba(21,98,64,0.09)] sm:p-5"
     >
       <div
         className="absolute -right-14 -top-16 h-36 w-36 rounded-full bg-coral/10 blur-3xl"
@@ -1673,7 +1673,7 @@ export function ActivityLobbyPreviewView({
                   className={cn(
                     "inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition",
                     active
-                      ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240]"
+                      ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
                       : "border-[#D6D5B2] bg-white/88 text-[#156240]",
                   )}
                   onClick={() => setActiveTypeFilter(option.id)}
@@ -2656,7 +2656,7 @@ export function ActivityLobbyView({
               className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#8AB68E] bg-[linear-gradient(135deg,rgba(255,250,242,0.98),rgba(247,255,243,0.94))] px-3 text-left shadow-[0_8px_20px_rgba(29,29,27,0.07)] transition active:scale-[0.99]"
               onClick={openMobileFilter}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2E3] text-[#156240] shadow-inner shadow-white/50 ring-1 ring-[#8AB68E]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] shadow-inner shadow-white/50 ring-1 ring-[#8AB68E]">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0">
@@ -2692,7 +2692,7 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
                         : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >
@@ -2703,7 +2703,7 @@ export function ActivityLobbyView({
                           "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                           active
                             ? "bg-white/78 text-[#156240]"
-                            : "bg-[#F1F2E3] text-[#156240]",
+                            : "bg-[#F1F2EC] text-[#156240]",
                         )}
                       >
                         {optionFailed
@@ -2731,7 +2731,7 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
                         : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
                     )}
                   >
@@ -2754,7 +2754,7 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2E3] text-[#156240]"
+                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
                         : "border-[#D6D5B2] bg-team-bg text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
@@ -2764,7 +2764,7 @@ export function ActivityLobbyView({
                         "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
                           ? "bg-white/70 text-[#156240]"
-                          : "bg-[#F1F2E3] text-[#156240]",
+                          : "bg-[#F1F2EC] text-[#156240]",
                       )}
                     >
                       {option.count ?? "..."}
@@ -2871,7 +2871,7 @@ export function ActivityLobbyView({
                       ? "bg-coral text-white hover:bg-coral-dark"
                       : action.tone === "secondary"
                         ? "bg-white/90 text-[#F09182] hover:bg-white"
-                        : "bg-[#F1F2E3] text-[#156240] hover:bg-white",
+                        : "bg-[#F1F2EC] text-[#156240] hover:bg-white",
                   )}
                 >
                   {action.label}

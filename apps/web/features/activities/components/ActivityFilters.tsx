@@ -595,7 +595,7 @@ export function ActivityFilters({
       <div className="relative z-[35] hidden overflow-visible rounded-[1.25rem] border border-[#D6D5B2] bg-white/60 shadow-[0_14px_34px_rgba(116,83,45,0.06)] backdrop-blur md:block">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E]">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]">
               <SlidersHorizontal className="h-4 w-4" />
             </span>
             <div className="min-w-0">
@@ -624,7 +624,7 @@ export function ActivityFilters({
         <details className="group relative z-[35] rounded-[1.35rem] border border-[#D6D5B2] bg-white/70 shadow-[0_14px_30px_rgba(116,83,45,0.07)] backdrop-blur">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             <span className="inline-flex min-w-0 items-center gap-2">
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E]">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]">
                 <SlidersHorizontal className="h-4 w-4 shrink-0" />
               </span>
               <span className="truncate">

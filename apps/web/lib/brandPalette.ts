@@ -2,7 +2,7 @@ export const friemiPalette = {
   cream: "#FFF5E6",
   coral: "#F09182",
   danger: "#B5301F",
-  fog: "#F1F2E3",
+  fog: "#F1F2EC",
   forest: "#156240",
   ice: "#DEEBFF",
   ink: "#1D1D1B",

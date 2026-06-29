@@ -301,7 +301,7 @@ function DesktopActivitySignals({
             className={cn(
               "inline-flex h-7 cursor-pointer list-none items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 [&::-webkit-details-marker]:hidden",
               isActive
-                ? "bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white"
+                ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white"
                 : "bg-team-bg text-moss ring-1 ring-sand hover:bg-white",
             )}
             aria-label={t.showMoreActivitiesLabel(remainingActivities.length)}
@@ -352,7 +352,7 @@ function DesktopActivitySignalRow({
       className={cn(
         "grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30",
         isActive
-          ? "bg-[#F1F2E3] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
+          ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
           : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
       href={withLocale(locale, `/activities/${activity.id}`)}

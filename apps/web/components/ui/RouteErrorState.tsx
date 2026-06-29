@@ -30,7 +30,7 @@ export function RouteErrorState({
         role="alert"
       >
         <span
-          className="pointer-events-none absolute inset-x-10 -top-16 h-28 rounded-full bg-[#F1F2E3]/55 blur-2xl"
+          className="pointer-events-none absolute inset-x-10 -top-16 h-28 rounded-full bg-[#F1F2EC]/55 blur-2xl"
           aria-hidden="true"
         />
         <span className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-fog ring-1 ring-sand">
