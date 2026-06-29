@@ -732,7 +732,7 @@ function TeamFormSectionSwitcher({
 }) {
   return (
     <div className="w-full min-w-0 rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
-      <div className="flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+      <div className="grid grid-cols-4 gap-1.5 lg:hidden">
         {sections.map((section, index) => {
           const active = activeSection === section.id;
 
@@ -743,13 +743,13 @@ function TeamFormSectionSwitcher({
               onClick={() => onSelect(section.id)}
               aria-pressed={active}
               className={cn(
-                "min-w-[7.25rem] flex-1 rounded-full border px-2 py-1.5 text-center text-sm font-semibold leading-5 transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "flex min-h-10 min-w-0 items-center justify-center rounded-full border px-1 py-1.5 text-center text-[0.66rem] font-semibold leading-[1.12] transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-1.5 sm:text-xs",
                 active
                   ? "border-[#369758] bg-[#F1F2E3] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
               )}
             >
-              <span className="block truncate">
+              <span className="block whitespace-normal break-words">
                 {index + 1}. {section.mobileTitle ?? section.title}
               </span>
             </button>
@@ -1119,19 +1119,19 @@ export function NewActivityForm({
     {
       description: t.form.sectionVisibilityDescription,
       id: "visibility",
-      mobileTitle: t.form.sectionVisibilityTitle,
+      mobileTitle: t.form.sectionVisibilityMobileTitle,
       title: t.form.sectionVisibilityTitle,
     },
     {
       description: t.form.sectionActivityContentDescription,
       id: "activity-content",
-      mobileTitle: t.form.sectionActivityContentTitle,
+      mobileTitle: t.form.sectionActivityContentMobileTitle,
       title: t.form.sectionActivityContentTitle,
     },
     {
       description: t.form.sectionTimeLocationDescription,
       id: "time-location",
-      mobileTitle: t.form.sectionTimeLocationTitle,
+      mobileTitle: t.form.sectionTimeLocationMobileTitle,
       title: t.form.sectionTimeLocationTitle,
     },
     {
