@@ -110,6 +110,14 @@ export default async function MessageThreadPage({
           />
         ) : (
           <DesktopFriendRosterPanel
+            activityContextQuery={
+              activityId
+                ? {
+                    accessToken,
+                    activityId,
+                  }
+                : null
+            }
             currentUserProfileId={profile.id}
             currentUserFriendCode={profile.friendCode}
             friends={friendRosterResult.friends}
