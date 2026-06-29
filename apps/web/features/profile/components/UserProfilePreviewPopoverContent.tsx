@@ -20,6 +20,7 @@ import { FollowButton } from "@/features/follow/components/FollowButton";
 import { getFollowCopy } from "@/features/follow/copy";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
+import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
 type UserPreviewPayload = {
   avatarUrl: string | null;
@@ -27,6 +28,7 @@ type UserPreviewPayload = {
   followerCount: number;
   followingCount: number;
   id: string;
+  isCoCreator: boolean;
   isSelf: boolean;
   nickname: string;
   relationship: {
@@ -166,7 +168,7 @@ function AddFriendQuickButton({
     return (
       <Link href={getSignInHref(locale, redirectPath)}>
         <Button
-          className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#F09182] bg-[#DEAAB3] !px-2 !text-[9px] font-semibold text-[#F09182] hover:bg-[#DEAAB3]"
+          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
           variant="secondary"
         >
           <UserPlus className="h-3 w-3 shrink-0" />
@@ -178,7 +180,7 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-2 text-[9px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]">
+      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.alreadyFriends}
       </div>
@@ -192,7 +194,7 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-5 w-[5.5rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-2 text-[9px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]">
+      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2E3] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.pendingFriendRequest}
       </div>
@@ -203,7 +205,7 @@ function AddFriendQuickButton({
     return (
       <Link href={withLocale(locale, "/friends")}>
         <Button
-          className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#DEAAB3] bg-[#DEAAB3] !px-2 !text-[9px] font-semibold text-[#8E8383] hover:bg-[#FFF5E6]"
+          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#156240] hover:bg-white"
           variant="secondary"
         >
           {previewCopy.requestReceived}
@@ -215,7 +217,7 @@ function AddFriendQuickButton({
   return (
     <form
       action={formAction}
-      className="inline-grid gap-1 justify-items-center"
+      className="inline-grid min-w-[6.6rem] gap-1 justify-items-center"
       onSubmit={() => {
         setIsOptimisticPending(true);
       }}
@@ -238,16 +240,16 @@ function FriendSubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#F09182] bg-[#DEAAB3] !px-2 !text-[9px] font-semibold text-[#F09182] hover:bg-[#DEAAB3]"
+      className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
       type="submit"
     >
       {pending ? (
-        <span className="inline-flex items-center gap-0.5 whitespace-nowrap leading-none">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
           <Loader2 className="h-3 w-3 animate-spin" />
           {previewCopy.sending}
         </span>
       ) : (
-        <span className="inline-flex items-center gap-0.5 whitespace-nowrap leading-none">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
           <UserPlus className="h-3 w-3 shrink-0" />
           {previewCopy.addFriend}
         </span>
@@ -275,6 +277,7 @@ export function UserProfilePreviewPopoverContent({
   const resolvedNickname = data?.nickname ?? nickname;
   const resolvedAvatarUrl = data?.avatarUrl ?? avatarUrl;
   const resolvedBio = data?.bio?.trim() || previewCopy.emptyBio;
+  const isCoCreator = Boolean(data?.isCoCreator);
   const isSelf = Boolean(data?.isSelf);
   const relationship = data?.relationship ?? fallbackRelationship;
   const showStats = !errorType;
@@ -373,10 +376,10 @@ export function UserProfilePreviewPopoverContent({
   }, [isGuest, profileId]);
 
   return (
-    <div className="w-full rounded-2xl border border-[#DEEBFF] bg-[linear-gradient(160deg,#FEFFF9_0%,#DEEBFF_52%,#DEEBFF_100%)] p-3 shadow-[0_18px_36px_rgba(57,73,96,0.16)] backdrop-blur">
-      <div className="space-y-2.5">
+    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2E3_62%,#FFF5E6_100%)] p-3.5 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur">
+      <div className="space-y-3">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#DEEBFF] text-sm font-semibold text-[#8E8383] ring-1 ring-[#DEEBFF]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F09182] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.12)] ring-2 ring-[#FEFFF9]">
             {resolvedAvatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -389,12 +392,17 @@ export function UserProfilePreviewPopoverContent({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#1D1D1B]">
-              {resolvedNickname}
-            </p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate text-sm font-semibold text-[#1D1D1B]">
+                {resolvedNickname}
+              </p>
+              {isCoCreator ? (
+                <CoCreatorIdentityBadge locale={locale} variant="icon" />
+              ) : null}
+            </div>
             {showStats ? (
               <div className="mt-1 flex min-h-6 flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#DEEBFF] px-2 py-1 text-[10px] font-semibold text-[#8E8383] ring-1 ring-[#DEEBFF]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
                   <Users className="h-3 w-3" />
                   {isLoading ? (
                     <span className="inline-flex items-center gap-1">
@@ -408,7 +416,7 @@ export function UserProfilePreviewPopoverContent({
                     <span>{followCopy.followers} --</span>
                   )}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#DEEBFF] px-2 py-1 text-[10px] font-semibold text-[#8E8383] ring-1 ring-[#DEEBFF]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
                   {isLoading ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -424,7 +432,7 @@ export function UserProfilePreviewPopoverContent({
               </div>
             ) : null}
             {showBio ? (
-              <p className="mt-2 text-[11px] leading-5 text-[#8E8383]">
+              <p className="mt-2 text-[11px] leading-5 text-[#156240]/70">
                 {resolvedBio}
               </p>
             ) : null}
@@ -433,7 +441,7 @@ export function UserProfilePreviewPopoverContent({
 
         {showProfileLink ? (
           <Link
-            className="inline-flex h-6 w-full items-center justify-center gap-1 rounded-full border border-[#DEEBFF] bg-white px-2 text-[10px] font-semibold text-[#8E8383] transition hover:bg-[#DEEBFF]"
+            className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
             href={withLocale(locale, `/profile/${profileId}`)}
             prefetch={false}
           >
@@ -443,13 +451,13 @@ export function UserProfilePreviewPopoverContent({
         ) : null}
 
         {isSelf ? (
-          <p className="rounded-xl bg-[#DEEBFF] px-3 py-2 text-center text-[10px] font-medium text-[#8E8383] ring-1 ring-[#DEEBFF]">
+          <p className="rounded-xl bg-[#F1F2E3]/82 px-3 py-2 text-center text-[10px] font-medium text-[#156240]/70 ring-1 ring-[#D6D5B2]/70">
             {previewCopy.selfNotice}
           </p>
         ) : null}
 
         {errorType ? (
-          <p className="rounded-xl bg-[#DEAAB3] px-3 py-2 text-center text-[10px] font-semibold text-[#B5301F] ring-1 ring-[#DEAAB3]">
+          <p className="rounded-xl bg-[#FFF5E6] px-3 py-2 text-center text-[10px] font-semibold text-[#B5301F] ring-1 ring-[#F09182]/40">
             {errorType === "not_found"
               ? previewCopy.guestNotice
               : previewCopy.failed}
@@ -459,8 +467,8 @@ export function UserProfilePreviewPopoverContent({
         {showActionButtons ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
             <FollowButton
-              buttonClassName="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#8AB68E] bg-[#F1F2E3] !px-2 !text-[9px] font-semibold text-[#156240] hover:bg-[#F1F2E3]"
-              activeButtonClassName="!h-5 !min-h-5 !w-[5.5rem] rounded-full border border-[#DEAAB3] bg-[#DEAAB3] !px-2 !text-[9px] font-semibold text-[#B5301F] hover:bg-[#DEAAB3]"
+              buttonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-3 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2E3]"
+              activeButtonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/65 bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#B5301F] hover:bg-white"
               activeLabel={followCopy.unfollow}
               fullWidth={false}
               icon={UserRoundPlus}

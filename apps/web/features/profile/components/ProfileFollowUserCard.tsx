@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@chill-club/ui";
 import { getProfileFollowCopy } from "../copy";
 import type { ProfileFollowUserViewModel } from "../queries/getProfileDashboard";
+import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
 type ProfileFollowUserCardProps = {
   locale: string;
@@ -29,7 +30,12 @@ export function ProfileFollowUserCard({
           </div>
         )}
         <div className="min-w-0">
-          <p className="truncate font-medium text-ink">{user.nickname}</p>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate font-medium text-ink">{user.nickname}</p>
+            {user.isCoCreator ? (
+              <CoCreatorIdentityBadge locale={locale} variant="icon" />
+            ) : null}
+          </div>
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-600">
             {user.bio ?? t.noBio}
           </p>
