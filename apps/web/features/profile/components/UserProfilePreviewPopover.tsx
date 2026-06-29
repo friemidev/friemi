@@ -26,6 +26,7 @@ const LazyUserProfilePreviewPopoverContent = dynamic(
     ssr: false,
   },
 );
+const userPreviewOpenEvent = "friemi:user-preview-open";
 
 function getCurrentRedirectPath(pathname: string, locale: string) {
   if (pathname === `/${locale}`) {
@@ -57,6 +58,7 @@ export function UserProfilePreviewPopover({
     top: number;
   } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const instanceIdRef = useRef<string | null>(null);
   const isPinnedOpenRef = useRef(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -64,6 +66,12 @@ export function UserProfilePreviewPopover({
     () => getCurrentRedirectPath(pathname, locale),
     [locale, pathname],
   );
+
+  if (!instanceIdRef.current) {
+    instanceIdRef.current = `user-preview-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+  }
 
   function isDesktopPointer() {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -82,6 +90,26 @@ export function UserProfilePreviewPopover({
     isPinnedOpenRef.current = false;
     setIsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function handlePeerOpen(event: Event) {
+      const detail = (event as CustomEvent<{ id?: string }>).detail;
+
+      if (detail?.id === instanceIdRef.current) {
+        return;
+      }
+
+      cancelScheduledClose();
+      isPinnedOpenRef.current = false;
+      setIsOpen(false);
+    }
+
+    window.addEventListener(userPreviewOpenEvent, handlePeerOpen);
+
+    return () => {
+      window.removeEventListener(userPreviewOpenEvent, handlePeerOpen);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -104,8 +132,8 @@ export function UserProfilePreviewPopover({
       const rect = rootRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportPadding = 8;
-      const desktopWidth = 228;
-      const mobileWidth = Math.min(228, viewportWidth - viewportPadding * 2);
+      const desktopWidth = 258;
+      const mobileWidth = Math.min(250, viewportWidth - viewportPadding * 2);
       const width = isDesktopPointer() ? desktopWidth : mobileWidth;
       const preferredLeft = isDesktopPointer()
         ? rect.left
@@ -175,6 +203,13 @@ export function UserProfilePreviewPopover({
   function openPopover(pin = false) {
     cancelScheduledClose();
     isPinnedOpenRef.current = pin;
+    window.dispatchEvent(
+      new CustomEvent(userPreviewOpenEvent, {
+        detail: {
+          id: instanceIdRef.current,
+        },
+      }),
+    );
     setIsOpen(true);
   }
 
@@ -191,7 +226,7 @@ export function UserProfilePreviewPopover({
       if (!isPinnedOpenRef.current) {
         setIsOpen(false);
       }
-    }, 180);
+    }, 70);
   }
 
   return (
@@ -230,7 +265,7 @@ export function UserProfilePreviewPopover({
         ? createPortal(
             <div
               ref={popoverRef}
-              className="fixed z-[120] max-sm:w-[min(14.25rem,calc(100vw-1rem))] sm:w-[228px]"
+              className="fixed z-[120] max-sm:w-[min(15.625rem,calc(100vw-1rem))] sm:w-[258px]"
               style={popoverStyle}
               onMouseEnter={() => {
                 if (isDesktopPointer()) {

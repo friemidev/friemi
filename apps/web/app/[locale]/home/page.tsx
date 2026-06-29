@@ -14,6 +14,7 @@ import {
 import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
 import { HomeFooter } from "@/components/layout/HomeFooter";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
+import { HomeHeroMedia } from "@/features/home/components/HomeHeroMedia";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
@@ -675,16 +676,10 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
   return (
     <div className="hidden md:block">
       <section className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#1D1D1B] text-white">
-        <video
-          className="home-luxury-hero-media absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-        >
-          <source src={homeMedia.heroVideo} type="video/mp4" />
-        </video>
+        <HomeHeroMedia
+          imageSrc={homeMedia.heroMobile}
+          videoSrc={homeMedia.heroVideo}
+        />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(29,29,27,0.76),rgba(29,29,27,0.38)_45%,rgba(29,29,27,0.12)),linear-gradient(180deg,rgba(29,29,27,0.2),rgba(29,29,27,0.72))]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1D1D1B] to-transparent" />
 

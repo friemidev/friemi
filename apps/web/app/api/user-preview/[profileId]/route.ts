@@ -41,6 +41,7 @@ export async function GET(
       friendCode: true,
       avatarUrl: true,
       bio: true,
+      isCoCreator: true,
       _count: {
         select: {
           followers: true,
@@ -68,6 +69,7 @@ export async function GET(
       followingCount: profile._count.following,
       id: profile.id,
       isSelf: Boolean(viewerProfile?.id === profile.id),
+      isCoCreator: profile.isCoCreator,
       nickname: displayProfile.nickname,
       avatarUrl: displayProfile.avatarUrl,
       relationship: {
@@ -128,6 +130,7 @@ export async function GET(
     followingCount: profile._count.following,
     id: profile.id,
     isSelf: false,
+    isCoCreator: profile.isCoCreator,
     nickname: displayProfile.nickname,
     avatarUrl: displayProfile.avatarUrl,
     relationship: {

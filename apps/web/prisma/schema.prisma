@@ -146,6 +146,7 @@ model UserProfile {
   interests              String[]                   @default([])
   status                 UserProfileStatus          @default(ACTIVE)
   role                   UserRole                   @default(USER)
+  isCoCreator            Boolean                    @default(false)
   lastSignInAt           DateTime?
   clerkCreatedAt         DateTime?
   clerkUpdatedAt         DateTime?
@@ -177,6 +178,7 @@ model UserProfile {
   @@index([normalizedContactEmail])
   @@index([normalizedPhone])
   @@index([normalizedWechatId])
+  @@index([isCoCreator, status])
   @@index([role, status])
 }
 

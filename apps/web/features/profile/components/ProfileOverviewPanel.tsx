@@ -18,6 +18,7 @@ import type {
   ProfileFollowUserViewModel,
   ProfileFriendUserViewModel,
 } from "../queries/getProfileDashboard";
+import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import type { ProfileSectionKey } from "./ProfileActivitySections";
 
 type ProfileOverviewPanelProps = {
@@ -117,9 +118,14 @@ function CompactUserRow({
         </div>
       )}
       <Link className="min-w-0 flex-1" href={profileHref}>
-        <p className="truncate text-sm font-semibold text-ink">
-          {user.nickname}
-        </p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-sm font-semibold text-ink">
+            {user.nickname}
+          </p>
+          {user.isCoCreator ? (
+            <CoCreatorIdentityBadge locale={locale} variant="icon" />
+          ) : null}
+        </div>
         <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
           {user.bio ?? t.noBio}
         </p>

@@ -30,6 +30,7 @@ const publicProfileSelect = {
   friendCode: true,
   avatarUrl: true,
   bio: true,
+  isCoCreator: true,
   status: true,
 } satisfies Prisma.UserProfileSelect;
 
@@ -100,6 +101,7 @@ export type PublicProfileViewModel = {
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  isCoCreator: boolean;
 };
 
 export type ProfileFollowUserViewModel = {
@@ -107,6 +109,7 @@ export type ProfileFollowUserViewModel = {
   nickname: string;
   bio: string | null;
   avatarUrl: string | null;
+  isCoCreator: boolean;
 };
 
 export type ProfileFriendUserViewModel = ProfileFollowUserViewModel;
@@ -124,6 +127,7 @@ function mapPublicProfile(profile: {
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  isCoCreator: boolean;
 }): PublicProfileViewModel {
   const hasPublicNickname = profile.nickname.trim().length > 0;
 
@@ -137,6 +141,7 @@ function mapPublicProfile(profile: {
     friendCode: profile.friendCode,
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
+    isCoCreator: profile.isCoCreator,
   };
 }
 
@@ -188,12 +193,14 @@ function mapFollowUser(user: {
   nickname: string;
   bio: string | null;
   avatarUrl: string | null;
+  isCoCreator: boolean;
 }): ProfileFollowUserViewModel {
   return {
     id: user.id,
     nickname: user.nickname,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
+    isCoCreator: user.isCoCreator,
   };
 }
 
@@ -441,6 +448,7 @@ export async function getProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
         userB: {
@@ -449,6 +457,7 @@ export async function getProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
@@ -466,6 +475,7 @@ export async function getProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
@@ -483,6 +493,7 @@ export async function getProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
@@ -607,6 +618,7 @@ export async function getPublicProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
         userB: {
@@ -615,6 +627,7 @@ export async function getPublicProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
@@ -632,6 +645,7 @@ export async function getPublicProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
@@ -649,6 +663,7 @@ export async function getPublicProfileDashboard(
             nickname: true,
             bio: true,
             avatarUrl: true,
+            isCoCreator: true,
           },
         },
       },
