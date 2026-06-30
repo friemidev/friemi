@@ -166,9 +166,9 @@ function AddFriendQuickButton({
 
   if (!isAuthenticated) {
     return (
-      <Link href={getSignInHref(locale, redirectPath)}>
+      <Link className="w-full" href={getSignInHref(locale, redirectPath)}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+          className="!h-8 !min-h-8 !w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-1.5 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
           variant="secondary"
         >
           <UserPlus className="h-3 w-3 shrink-0" />
@@ -180,9 +180,11 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-1.5 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
-        {previewCopy.alreadyFriends}
+        <span className="min-w-0 whitespace-nowrap">
+          {previewCopy.alreadyFriends}
+        </span>
       </div>
     );
   }
@@ -194,18 +196,20 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-1.5 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
-        {previewCopy.pendingFriendRequest}
+        <span className="min-w-0 whitespace-nowrap">
+          {previewCopy.pendingFriendRequest}
+        </span>
       </div>
     );
   }
 
   if (relationship.pendingFriendRequest === "received") {
     return (
-      <Link href={withLocale(locale, "/friends")}>
+      <Link className="w-full" href={withLocale(locale, "/friends")}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#156240] hover:bg-white"
+          className="!h-8 !min-h-8 !w-full min-w-0 rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-1.5 !text-[11px] font-semibold text-[#156240] hover:bg-white"
           variant="secondary"
         >
           {previewCopy.requestReceived}
@@ -217,7 +221,7 @@ function AddFriendQuickButton({
   return (
     <form
       action={formAction}
-      className="inline-grid min-w-[6.6rem] gap-1 justify-items-center"
+      className="inline-grid w-full min-w-0 gap-1 justify-items-center"
       onSubmit={() => {
         setIsOptimisticPending(true);
       }}
@@ -240,18 +244,22 @@ function FriendSubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+      className="!h-8 !min-h-8 !w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-1.5 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
       type="submit"
     >
       {pending ? (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
+        <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap leading-none">
           <Loader2 className="h-3 w-3 animate-spin" />
-          {previewCopy.sending}
+          <span className="min-w-0 whitespace-nowrap">
+            {previewCopy.sending}
+          </span>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
+        <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap leading-none">
           <UserPlus className="h-3 w-3 shrink-0" />
-          {previewCopy.addFriend}
+          <span className="min-w-0 whitespace-nowrap">
+            {previewCopy.addFriend}
+          </span>
         </span>
       )}
     </Button>
@@ -269,9 +277,9 @@ export function UserProfilePreviewPopoverContent({
 }: UserProfilePreviewPopoverContentProps) {
   const [data, setData] = useState<UserPreviewPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorType, setErrorType] = useState<"load_failed" | "not_found" | null>(
-    null,
-  );
+  const [errorType, setErrorType] = useState<
+    "load_failed" | "not_found" | null
+  >(null);
   const previewCopy = getPreviewCopy(locale);
   const followCopy = getFollowCopy(locale);
   const resolvedNickname = data?.nickname ?? nickname;
@@ -284,8 +292,7 @@ export function UserProfilePreviewPopoverContent({
   const showBio = errorType !== "not_found";
   const showProfileLink =
     !isLoading && Boolean(profileId) && !isGuest && errorType !== "not_found";
-  const showActionButtons =
-    !isLoading && !isSelf && errorType !== "not_found";
+  const showActionButtons = !isLoading && !isSelf && errorType !== "not_found";
 
   function handleFollowStateChange(nextIsFollowing: boolean) {
     setData((current) => {
@@ -376,10 +383,10 @@ export function UserProfilePreviewPopoverContent({
   }, [isGuest, profileId]);
 
   return (
-    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-3.5 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur">
-      <div className="space-y-3">
+    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-4 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur sm:p-3.5">
+      <div className="space-y-4 sm:space-y-3">
         <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F09182] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.12)] ring-2 ring-[#FEFFF9]">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F09182] text-xl font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.12)] ring-2 ring-[#FEFFF9] sm:h-11 sm:w-11 sm:text-sm">
             {resolvedAvatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -391,9 +398,9 @@ export function UserProfilePreviewPopoverContent({
               getInitial(resolvedNickname)
             )}
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pt-1 sm:pt-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate text-sm font-semibold text-[#1D1D1B]">
+              <p className="truncate text-lg font-semibold text-[#1D1D1B] sm:text-sm">
                 {resolvedNickname}
               </p>
               {isCoCreator ? (
@@ -401,8 +408,8 @@ export function UserProfilePreviewPopoverContent({
               ) : null}
             </div>
             {showStats ? (
-              <div className="mt-1 flex min-h-6 flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
+              <div className="mt-2 flex min-h-6 flex-wrap items-center gap-1.5 sm:mt-1">
+                <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2.5 py-1.5 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80 sm:px-2 sm:py-1 sm:text-[10px]">
                   <Users className="h-3 w-3" />
                   {isLoading ? (
                     <span className="inline-flex items-center gap-1">
@@ -416,7 +423,7 @@ export function UserProfilePreviewPopoverContent({
                     <span>{followCopy.followers} --</span>
                   )}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
+                <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2.5 py-1.5 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80 sm:px-2 sm:py-1 sm:text-[10px]">
                   {isLoading ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -432,7 +439,7 @@ export function UserProfilePreviewPopoverContent({
               </div>
             ) : null}
             {showBio ? (
-              <p className="mt-2 text-[11px] leading-5 text-[#156240]/70">
+              <p className="mt-3 break-words text-sm leading-6 text-[#156240]/70 sm:mt-2 sm:text-[11px] sm:leading-5">
                 {resolvedBio}
               </p>
             ) : null}
@@ -441,7 +448,7 @@ export function UserProfilePreviewPopoverContent({
 
         {showProfileLink ? (
           <Link
-            className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
+            className="inline-flex h-10 w-full items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#FFF5E6] sm:h-7 sm:px-2 sm:text-[11px]"
             href={withLocale(locale, `/profile/${profileId}`)}
             prefetch={false}
           >
@@ -465,12 +472,12 @@ export function UserProfilePreviewPopoverContent({
         ) : null}
 
         {showActionButtons ? (
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center gap-1.5">
             <FollowButton
-              buttonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-3 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2EC]"
-              activeButtonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/65 bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#B5301F] hover:bg-white"
+              buttonClassName="!h-8 !min-h-8 !w-full min-w-0 rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-1.5 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2EC]"
+              activeButtonClassName="!h-8 !min-h-8 !w-full min-w-0 rounded-full border border-[#F09182]/65 bg-[#FFF5E6] !px-1.5 !text-[11px] font-semibold text-[#B5301F] hover:bg-white"
               activeLabel={followCopy.unfollow}
-              fullWidth={false}
+              fullWidth
               icon={UserRoundPlus}
               isAuthenticated={isAuthenticated}
               isFollowing={relationship.isFollowing}
