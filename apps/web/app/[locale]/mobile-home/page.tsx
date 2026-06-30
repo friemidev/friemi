@@ -272,7 +272,7 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-3.5 pb-3 pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-3.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-1.5 min-[390px]:gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
         <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
@@ -327,7 +327,7 @@ function MobileHomeExperience({
           </div>
 
           <section
-            className="order-1 min-h-[var(--mobile-home-category-area-height)] flex-1 px-0 pb-0 pt-0 min-[390px]:px-0.5 min-[390px]:pb-0.5 min-[390px]:pt-0.5 md:order-none md:min-h-0 md:px-0 md:pb-0 md:pt-0"
+            className="order-3 min-h-[var(--mobile-home-category-area-height)] flex-1 px-0 pb-0 pt-0 min-[390px]:px-0.5 min-[390px]:pb-0.5 min-[390px]:pt-0.5 md:order-none md:min-h-0 md:px-0 md:pb-0 md:pt-0"
             data-home-reveal="up"
             style={
               {
@@ -367,9 +367,9 @@ function MobileHomeExperience({
                       height={96}
                       className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
                     />
-                    <span className="mobile-home-category__label">
-                      {category.label}
-                    </span>
+                  </span>
+                  <span className="mobile-home-category__label">
+                    {category.label}
                   </span>
                 </Link>
               ))}
@@ -402,7 +402,7 @@ function MobileHomeExperience({
         </div>
 
         <section
-          className="relative order-3 shrink-0 pt-1 md:order-none md:col-start-2 md:self-start md:pt-6 lg:pt-7"
+          className="mobile-home-recommendation relative order-1 shrink-0 pt-1 md:order-none md:col-start-2 md:self-start md:pt-6 lg:pt-7"
           data-home-reveal="up"
         >
           <LazyLobbySwipeDiscovery

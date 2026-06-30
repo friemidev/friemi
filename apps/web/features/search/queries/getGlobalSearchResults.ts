@@ -10,6 +10,7 @@ import {
   getVisibleActivityWhere,
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import { getActivityFloatingNow } from "@/features/activities/utils/activityDisplay";
 import {
   getPublicEventCardViewModel,
   getUpcomingPublicEventWhere,
@@ -217,6 +218,21 @@ function sortSearchActivityCards(
   left: ActivityCardViewModel,
   right: ActivityCardViewModel,
 ) {
+  const now = new Date();
+  const leftSort = getSearchActivityNearNowSortKey(left, now);
+  const rightSort = getSearchActivityNearNowSortKey(right, now);
+  const groupDiff = leftSort.group - rightSort.group;
+
+  if (groupDiff !== 0) {
+    return groupDiff;
+  }
+
+  const distanceDiff = leftSort.distanceMs - rightSort.distanceMs;
+
+  if (distanceDiff !== 0) {
+    return distanceDiff;
+  }
+
   const leftTime = new Date(left.startAt).getTime();
   const rightTime = new Date(right.startAt).getTime();
   const leftEnded = isSearchActivityEnded(left);
@@ -232,14 +248,65 @@ function sortSearchActivityCards(
   );
 }
 
+function getSearchActivityReferenceNow(
+  activity: ActivityCardViewModel,
+  referenceNow: Date,
+) {
+  return activity.type === "PUBLIC_EVENT"
+    ? referenceNow
+    : getActivityFloatingNow(referenceNow);
+}
+
+function getSearchActivityNearNowSortKey(
+  activity: ActivityCardViewModel,
+  referenceNow: Date,
+) {
+  const comparisonNow = getSearchActivityReferenceNow(activity, referenceNow);
+  const nowTime = comparisonNow.getTime();
+  const startTime = new Date(activity.startAt).getTime();
+  const endTime = activity.endAt ? new Date(activity.endAt).getTime() : startTime;
+  const isEnded = isSearchActivityEndedAt(activity, comparisonNow);
+
+  return {
+    distanceMs: getNearestSearchTimeRangeDistanceMs(startTime, endTime, nowTime),
+    group: isEnded ? 1 : 0,
+  };
+}
+
+function getNearestSearchTimeRangeDistanceMs(
+  startTime: number,
+  endTime: number,
+  nowTime: number,
+) {
+  const normalizedEndTime = Math.max(startTime, endTime);
+
+  if (nowTime >= startTime && nowTime <= normalizedEndTime) {
+    return Math.min(nowTime - startTime, normalizedEndTime - nowTime);
+  }
+
+  return Math.min(
+    Math.abs(startTime - nowTime),
+    Math.abs(normalizedEndTime - nowTime),
+  );
+}
+
 function isSearchActivityEnded(activity: ActivityCardViewModel) {
+  const comparisonNow = getSearchActivityReferenceNow(activity, new Date());
+
+  return isSearchActivityEndedAt(activity, comparisonNow);
+}
+
+function isSearchActivityEndedAt(
+  activity: ActivityCardViewModel,
+  comparisonNow: Date,
+) {
   if (activity.status === "ENDED" || activity.status === "CANCELLED") {
     return true;
   }
 
   const endBoundary = new Date(activity.endAt ?? activity.startAt).getTime();
 
-  return Number.isFinite(endBoundary) && endBoundary <= Date.now();
+  return Number.isFinite(endBoundary) && endBoundary <= comparisonNow.getTime();
 }
 
 function getSearchActivityMatchScore(

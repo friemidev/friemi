@@ -534,11 +534,11 @@ a {
     9.3rem
   );
   --mobile-home-category-art-size: clamp(
-    4.65rem,
-    calc(13.8svh - 1.35rem),
-    6.4rem
+    5.35rem,
+    calc(14.4svh - 0.9rem),
+    7.1rem
   );
-  --mobile-home-category-gap: clamp(0.22rem, calc(0.95svh - 0.26rem), 0.62rem);
+  --mobile-home-category-gap: clamp(0.34rem, calc(1.05svh - 0.2rem), 0.76rem);
   --mobile-home-category-offset: clamp(0.1rem, calc(1.7svh - 0.65rem), 0.62rem);
   --mobile-home-category-area-height: clamp(19rem, 44svh, 21.5rem);
 }
@@ -549,24 +549,43 @@ a {
 
 @media (max-width: 389.98px) {
   .mobile-home-viewport {
-    --mobile-home-swipe-height: clamp(12.25rem, 29svh, 14.5rem);
-    --mobile-home-swipe-cover-height: clamp(6.35rem, 15.4svh, 7.55rem);
-    --mobile-home-category-art-size: clamp(5.7rem, 19.4vw, 6.25rem);
-    --mobile-home-category-gap: clamp(0rem, 0.2svh, 0.12rem);
+    --mobile-home-swipe-height: clamp(15.7rem, 43svh, 16.7rem);
+    --mobile-home-swipe-cover-height: clamp(7.7rem, 21svh, 8.65rem);
+    --mobile-home-category-art-size: clamp(6rem, 21vw, 6.75rem);
+    --mobile-home-category-gap: clamp(0.18rem, 0.42svh, 0.34rem);
     --mobile-home-category-offset: 0rem;
-    --mobile-home-category-area-height: clamp(18.35rem, 43.4svh, 20.1rem);
+    --mobile-home-category-area-height: clamp(20rem, 47svh, 22rem);
+  }
+}
+
+@media (max-width: 389.98px) and (max-height: 620px) {
+  .mobile-home-viewport {
+    --mobile-home-swipe-height: clamp(14.25rem, 39.8svh, 14.65rem);
+    --mobile-home-swipe-cover-height: clamp(6.9rem, 18.6svh, 7.45rem);
+    --mobile-home-category-art-size: clamp(5.15rem, 18.8vw, 5.75rem);
+    --mobile-home-category-gap: clamp(0.14rem, 0.34svh, 0.26rem);
   }
 }
 
 @media (min-width: 390px) and (max-width: 767.98px) {
   .mobile-home-viewport {
-    --mobile-home-category-art-size: clamp(
-      5.65rem,
-      calc(13.4svh - 0.7rem),
-      6.65rem
+    --mobile-home-swipe-height: clamp(
+      16.65rem,
+      calc(38svh - 0.25rem),
+      18.1rem
     );
-    --mobile-home-category-gap: clamp(0.08rem, 0.36svh, 0.28rem);
-    --mobile-home-category-area-height: clamp(18.5rem, 40.2svh, 20.7rem);
+    --mobile-home-swipe-cover-height: clamp(
+      8.05rem,
+      calc(19.5svh - 0.25rem),
+      9.45rem
+    );
+    --mobile-home-category-art-size: clamp(
+      6.25rem,
+      calc(14.4svh - 0.3rem),
+      7.25rem
+    );
+    --mobile-home-category-gap: clamp(0.2rem, 0.46svh, 0.42rem);
+    --mobile-home-category-area-height: clamp(21rem, 44.4svh, 23.7rem);
   }
 }
 
@@ -635,43 +654,43 @@ a {
 }
 
 .mobile-home-category__label {
-  position: absolute;
-  right: 0.36rem;
-  bottom: 0.22rem;
+  position: relative;
   z-index: 20;
-  max-width: calc(100% - 0.72rem);
+  display: block;
+  max-width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(138, 182, 142, 0.42);
-  border-radius: 999px;
-  background: rgba(254, 255, 249, 0.88);
-  box-shadow:
-    0 7px 14px rgba(21, 98, 64, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   color: #156240;
-  font-size: clamp(0.68rem, 2.95vw, 0.82rem);
-  font-weight: 900;
+  font-size: clamp(0.84rem, 3.28vw, 1.03rem);
+  font-weight: 950;
   letter-spacing: 0;
-  line-height: 1;
-  padding: 0.24rem 0.46rem 0.28rem;
+  line-height: 1.12;
+  margin-top: -0.18rem;
+  padding: 0;
+  text-shadow:
+    0 1px 0 #fefff9,
+    0 2px 6px rgba(254, 255, 249, 0.92),
+    0 8px 15px rgba(21, 98, 64, 0.18);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 @media (min-width: 768px) {
   .mobile-home-category__label {
-    bottom: 0.3rem;
-    right: 0.4rem;
-    font-size: 0.75rem;
-    padding: 0.28rem 0.52rem 0.31rem;
+    font-size: 0.9rem;
+    margin-top: 0.1rem;
+    padding: 0;
   }
 }
 
 @media (max-width: 389.98px) {
   .mobile-home-category__label {
-    bottom: 0.14rem;
-    right: 0.22rem;
-    font-size: clamp(0.64rem, 2.9vw, 0.74rem);
-    padding: 0.22rem 0.43rem 0.26rem;
+    font-size: clamp(0.82rem, 3.45vw, 0.94rem);
+    line-height: 1.16;
+    margin-top: -0.08rem;
+    padding: 0;
   }
 }
 
