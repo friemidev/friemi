@@ -6,6 +6,7 @@ import {
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
 import { getActivityAddressPrivacy } from "../utils/activityAddressPrivacy";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 const editableActivitySelect = {
   id: true,
@@ -97,7 +98,7 @@ function getEditableActivityValues(
 
 export async function getEditableActivityById(
   activityId: string,
-  organizerId: string,
+  viewerProfileId: string,
 ): Promise<EditableActivityResult> {
   const activity = await prisma.activity.findUnique({
     where: {
@@ -112,7 +113,9 @@ export async function getEditableActivityById(
     };
   }
 
-  if (activity.organizerId !== organizerId) {
+  const permission = await assertCanManageActivity(activity.id, viewerProfileId);
+
+  if (!permission.ok) {
     return {
       status: "forbidden",
     };
