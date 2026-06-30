@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ensureCurrentUserProfile } from "@/lib/auth";
+import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/findFriendRequestTarget";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import {
@@ -17,7 +18,10 @@ const coManagerActionSchema = z.object({
 });
 
 const addCoManagerSchema = coManagerActionSchema.extend({
-  managerProfileId: z.string().min(1),
+  managerFriendCode: z.string().trim().optional(),
+  managerProfileId: z.string().trim().optional(),
+}).refine((data) => data.managerProfileId || data.managerFriendCode, {
+  path: ["managerProfileId"],
 });
 
 const removeCoManagerSchema = coManagerActionSchema.extend({
@@ -33,6 +37,8 @@ type Copy = {
   alreadyManager: string;
   addFailed: string;
   addSuccess: string;
+  friendCodeInvalid: string;
+  friendCodeNotFound: string;
   friendshipRequired: string;
   limitReached: string;
   missing: string;
@@ -49,6 +55,8 @@ function getCopy(locale: string): Copy {
       alreadyManager: "Cette personne est déjà gestionnaire.",
       addFailed: "Impossible d'ajouter ce gestionnaire. Réessayez plus tard.",
       addSuccess: "Gestionnaire ajouté.",
+      friendCodeInvalid: "Entrez un code ami à 6 chiffres.",
+      friendCodeNotFound: "Aucun ami actif trouvé avec ce code.",
       friendshipRequired:
         "Vous ne pouvez choisir qu'une personne déjà dans vos amis.",
       limitReached: "Chaque plan peut avoir au maximum 3 gestionnaires.",
@@ -66,6 +74,8 @@ function getCopy(locale: string): Copy {
       alreadyManager: "This person is already a manager.",
       addFailed: "Could not add this manager. Try again later.",
       addSuccess: "Manager added.",
+      friendCodeInvalid: "Enter a 6-digit friend code.",
+      friendCodeNotFound: "No active friend found with that code.",
       friendshipRequired: "You can only choose one of your friends.",
       limitReached: "Each plan can have up to 3 managers.",
       missing: "This plan no longer exists.",
@@ -81,6 +91,8 @@ function getCopy(locale: string): Copy {
     alreadyManager: "这个好友已经是管理人了。",
     addFailed: "添加管理人失败，请稍后重试。",
     addSuccess: "管理人已添加。",
+    friendCodeInvalid: "请输入 6 位好友号。",
+    friendCodeNotFound: "没有找到这个好友号对应的活跃好友。",
     friendshipRequired: "只能从你的好友中选择管理人。",
     limitReached: "每个组局最多只能设置 3 位管理人。",
     missing: "组局不存在或已更新。",
@@ -121,6 +133,7 @@ export async function addActivityCoManagerAction(
   const rawInput = {
     activityId: getString(formData, "activityId"),
     locale: getString(formData, "locale") || "zh-CN",
+    managerFriendCode: getString(formData, "managerFriendCode"),
     managerProfileId: getString(formData, "managerProfileId"),
   };
   const copy = getCopy(rawInput.locale);
@@ -137,9 +150,15 @@ export async function addActivityCoManagerAction(
     `/activities/${result.data.activityId}`,
   );
 
-  if (result.data.managerProfileId === profile.id) {
+  const requestedManagerId = result.data.managerProfileId?.trim() ?? "";
+  const rawFriendCode = result.data.managerFriendCode?.trim() ?? "";
+  const normalizedFriendCode = requestedManagerId
+    ? null
+    : normalizeFriendRequestSearchTerm(rawFriendCode).friendCode;
+
+  if (!requestedManagerId && rawFriendCode && !normalizedFriendCode) {
     return {
-      formError: copy.selfError,
+      formError: copy.friendCodeInvalid,
     };
   }
 
@@ -175,18 +194,6 @@ export async function addActivityCoManagerAction(
           };
         }
 
-        if (
-          activity.coManagers.some(
-            (coManager) =>
-              coManager.managerProfileId === result.data.managerProfileId,
-          )
-        ) {
-          return {
-            ok: false,
-            error: copy.alreadyManager,
-          };
-        }
-
         if (activity.coManagers.length >= maxActivityCoManagers) {
           return {
             ok: false,
@@ -196,7 +203,9 @@ export async function addActivityCoManagerAction(
 
         const manager = await tx.userProfile.findFirst({
           where: {
-            id: result.data.managerProfileId,
+            ...(requestedManagerId
+              ? { id: requestedManagerId }
+              : { friendCode: normalizedFriendCode ?? "" }),
             status: "ACTIVE",
           },
           select: {
@@ -207,7 +216,25 @@ export async function addActivityCoManagerAction(
         if (!manager) {
           return {
             ok: false,
-            error: copy.missing,
+            error: requestedManagerId ? copy.missing : copy.friendCodeNotFound,
+          };
+        }
+
+        if (manager.id === profile.id) {
+          return {
+            ok: false,
+            error: copy.selfError,
+          };
+        }
+
+        if (
+          activity.coManagers.some(
+            (coManager) => coManager.managerProfileId === manager.id,
+          )
+        ) {
+          return {
+            ok: false,
+            error: copy.alreadyManager,
           };
         }
 

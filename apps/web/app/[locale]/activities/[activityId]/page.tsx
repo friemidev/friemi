@@ -150,8 +150,6 @@ function getParticipantInitial(nickname: string) {
 function getAutoCreatedTeamCopy(locale: string) {
   if (locale === "fr") {
     return {
-      badge: "Sélection du jour",
-      claimableBadge: "À réclamer",
       claimHint:
         "Cette équipe a été créée à partir d'une activité populaire. Réclamez-la pour modifier l'heure et le lieu.",
       deadlinePrefix: "Réclamation ouverte jusqu'au",
@@ -160,8 +158,6 @@ function getAutoCreatedTeamCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      badge: "Daily pick",
-      claimableBadge: "Claimable",
       claimHint:
         "This team was created from a popular activity. Claim it to edit the time, location, and plan details.",
       deadlinePrefix: "Claim window ends at",
@@ -169,8 +165,6 @@ function getAutoCreatedTeamCopy(locale: string) {
   }
 
   return {
-    badge: "系统推荐",
-    claimableBadge: "可认领",
     claimHint:
       "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
     deadlinePrefix: "认领截止",
@@ -1231,13 +1225,6 @@ export default async function ActivityDetailPage({
               {activityCategoryLabel}
             </span>
             <ActivityStatusBadge status={displayStatus} locale={locale} />
-            {autoCreatedTeam ? (
-              <span className="rounded-md bg-fog px-2.5 py-1 text-xs font-semibold text-forest shadow-sm">
-                {autoCreatedTeam.isClaimable
-                  ? autoCreatedTeamCopy.claimableBadge
-                  : autoCreatedTeamCopy.badge}
-              </span>
-            ) : null}
           </div>
           <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
             {activity.title}
@@ -1897,21 +1884,14 @@ export default async function ActivityDetailPage({
               </Link>
             ) : null}
 
-            {autoCreatedTeam && !isTeamOperator ? (
+            {autoCreatedTeam?.isClaimable && !isTeamOperator ? (
               <div className="mt-3 rounded-2xl border border-[#8AB68E] bg-[#FEFFF9] p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-fog px-2.5 py-1 text-[11px] font-semibold text-forest">
-                    {autoCreatedTeam.isClaimable
-                      ? autoCreatedTeamCopy.claimableBadge
-                      : autoCreatedTeamCopy.badge}
-                  </span>
-                  {autoCreatedClaimDeadline && autoCreatedTeam.isClaimable ? (
-                    <span className="text-[11px] font-medium text-[#156240]">
-                      {autoCreatedTeamCopy.deadlinePrefix}{" "}
-                      {autoCreatedClaimDeadline}
-                    </span>
-                  ) : null}
-                </div>
+                {autoCreatedClaimDeadline ? (
+                  <p className="text-[11px] font-semibold text-[#156240]">
+                    {autoCreatedTeamCopy.deadlinePrefix}{" "}
+                    {autoCreatedClaimDeadline}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-xs leading-5 text-[#156240]">
                   {autoCreatedTeamCopy.claimHint}
                 </p>
