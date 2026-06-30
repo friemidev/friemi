@@ -1525,18 +1525,20 @@ export default async function ActivityDetailPage({
 
             {isTeamOperator ? (
               <div className="grid gap-3">
-                <div className="grid gap-2 rounded-2xl border border-[#8AB68E]/55 bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <ShieldAlert className="h-4 w-4 text-forest" />
+                <div className="grid min-w-0 max-w-full gap-2 overflow-hidden rounded-2xl border border-[#8AB68E]/55 bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+                    <ShieldAlert className="h-4 w-4 shrink-0 text-forest" />
                     {teamOperatorSpaceTitle}
                   </p>
                   {canEditActivity ? (
                     <Link
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758]"
+                      className="inline-flex min-h-11 w-full min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-center text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758]"
                       href={activityEditHref}
                     >
-                      <Pencil className="h-4 w-4" />
-                      {teamOwnerCtaCopy.manage}
+                      <Pencil className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 break-words">
+                        {teamOwnerCtaCopy.manage}
+                      </span>
                     </Link>
                   ) : null}
                   {canEditActivity ? (
@@ -1545,15 +1547,17 @@ export default async function ActivityDetailPage({
                     </p>
                   ) : null}
                   <a
-                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2EC]"
+                    className="inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-center text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2EC]"
                     href={
                       activity.requiresApproval
                         ? "#participation-approval"
                         : "#activity-participants"
                     }
                   >
-                    <ClipboardList className="h-4 w-4" />
-                    {teamOwnerCtaCopy.review}
+                    <ClipboardList className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 break-words">
+                      {teamOwnerCtaCopy.review}
+                    </span>
                   </a>
                   <ActivityParticipantContactDialog
                     activityId={activity.id}
@@ -2163,11 +2167,13 @@ function ActivityAnnouncementsSection({
   const copy = getAnnouncementSectionCopy(locale);
 
   return (
-    <section className="rounded-[1.35rem] border border-sand bg-white/72 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.06)] ring-1 ring-white/70">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-[#156240]" />
-          <h2 className="text-lg font-semibold text-ink">{copy.title}</h2>
+    <section className="min-w-0 overflow-hidden rounded-[1.35rem] border border-sand bg-white/72 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.06)] ring-1 ring-white/70">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Bell className="h-4 w-4 shrink-0 text-[#156240]" />
+          <h2 className="min-w-0 text-lg font-semibold leading-tight text-ink">
+            {copy.title}
+          </h2>
         </div>
 
         {isOrganizer && canView ? (

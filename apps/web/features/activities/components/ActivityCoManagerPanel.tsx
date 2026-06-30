@@ -139,7 +139,13 @@ function getInitial(name: string) {
   return name.trim().slice(0, 1).toUpperCase() || "N";
 }
 
-function SubmitAddButton({ label, locale }: { label?: string; locale: string }) {
+function SubmitAddButton({
+  label,
+  locale,
+}: {
+  label?: string;
+  locale: string;
+}) {
   const { pending } = useFormStatus();
   const copy = getCopy(locale);
 
@@ -191,7 +197,10 @@ function RemoveCoManagerForm({
       <input name="locale" type="hidden" value={locale} />
       <RemoveButton locale={locale} />
       {state.formError ? (
-        <p className="text-xs font-medium leading-5 text-[#B5301F]" role="alert">
+        <p
+          className="text-xs font-medium leading-5 text-[#B5301F]"
+          role="alert"
+        >
           {state.formError}
         </p>
       ) : null}
@@ -281,14 +290,14 @@ export function ActivityCoManagerPanel({
   }, [state.successMessage]);
 
   return (
-    <section className="rounded-[1.25rem] border border-[#8AB68E]/55 bg-[#FEFFF9]/86 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.08)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-[1.25rem] border border-[#8AB68E]/55 bg-[#FEFFF9]/86 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.08)]">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-extrabold text-[#156240]">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E8F2E8] text-[#156240] ring-1 ring-[#8AB68E]/60">
+          <p className="flex min-w-0 items-center gap-2 text-sm font-extrabold text-[#156240]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8F2E8] text-[#156240] ring-1 ring-[#8AB68E]/60">
               <UserCog className="h-4 w-4" aria-hidden="true" />
             </span>
-            {copy.title}
+            <span className="min-w-0 break-words">{copy.title}</span>
           </p>
           <p className="mt-1 text-xs font-medium leading-5 text-[#156240]/72">
             {dashboard.role === "CO_MANAGER"
@@ -296,9 +305,11 @@ export function ActivityCoManagerPanel({
               : copy.availableHint}
           </p>
         </div>
-        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55">
+        <span className="inline-flex h-8 max-w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          {copy.maxLabel(dashboard.coManagers.length)}
+          <span className="min-w-0 truncate">
+            {copy.maxLabel(dashboard.coManagers.length)}
+          </span>
         </span>
       </div>
 
@@ -370,11 +381,17 @@ export function ActivityCoManagerPanel({
             </p>
           ) : null}
           {state.formError ? (
-            <p className="text-xs font-medium leading-5 text-[#B5301F]" role="alert">
+            <p
+              className="text-xs font-medium leading-5 text-[#B5301F]"
+              role="alert"
+            >
               {state.formError}
             </p>
           ) : state.successMessage ? (
-            <p className="text-xs font-medium leading-5 text-[#156240]" role="status">
+            <p
+              className="text-xs font-medium leading-5 text-[#156240]"
+              role="status"
+            >
               {state.successMessage}
             </p>
           ) : null}
@@ -437,7 +454,9 @@ export function ActivityCoManagerPanel({
                       <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <input
                         className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-[#156240]/42"
-                        onChange={(event) => setFriendSearch(event.target.value)}
+                        onChange={(event) =>
+                          setFriendSearch(event.target.value)
+                        }
                         placeholder={copy.searchPlaceholder}
                         type="search"
                         value={friendSearch}
@@ -483,7 +502,10 @@ export function ActivityCoManagerPanel({
                                 </span>
                               </span>
                               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8F2E8] text-[#156240] ring-1 ring-[#8AB68E]/50 transition group-hover:bg-[#156240] group-hover:text-white">
-                                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                                <UserPlus
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
                               </span>
                             </button>
                           </form>
@@ -499,7 +521,11 @@ export function ActivityCoManagerPanel({
                     <p className="mt-1 text-xs font-medium leading-5 text-[#156240]/68">
                       {copy.friendCodeHint}
                     </p>
-                    <form action={formAction} className="mt-3 grid gap-3" noValidate>
+                    <form
+                      action={formAction}
+                      className="mt-3 grid gap-3"
+                      noValidate
+                    >
                       <input
                         name="activityId"
                         type="hidden"

@@ -121,20 +121,21 @@ export function ActivityAnnouncementComposer({
   return (
     <>
       {compact ? (
-        <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+        <div className="flex max-w-full min-w-0 flex-col items-end gap-2">
           <Button
             type="button"
-            className="ml-auto h-9 gap-1.5 rounded-full bg-[#156240] px-3.5 text-sm text-white hover:bg-[#156240] sm:h-10 sm:gap-2 sm:px-4 sm:text-base"
+            className="min-h-7 w-fit max-w-[8.75rem] gap-1 rounded-full bg-[#156240] px-2.5 py-1 text-[11px] leading-tight text-white hover:bg-[#156240] sm:max-w-[9.5rem] sm:gap-1.5 sm:px-3 sm:text-xs"
             onClick={() => setIsOpen(true)}
+            title={t.open}
           >
-            <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            {t.open}
+            <Send className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 truncate">{t.open}</span>
           </Button>
 
           {state.ok ? (
-            <div className="inline-flex max-w-[11.5rem] items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1.5 text-right text-xs font-semibold text-[#156240] shadow-sm sm:max-w-none">
+            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-3 py-1.5 text-left text-xs font-semibold text-[#156240] shadow-sm">
               <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-[#369758]" />
-              <span>{t.success}</span>
+              <span className="min-w-0 truncate">{t.success}</span>
             </div>
           ) : null}
         </div>
@@ -248,16 +249,8 @@ export function ActivityAnnouncementComposer({
                 </p>
               ) : null}
 
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="grid gap-2">
                 <SubmitButton locale={locale} />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="h-11 rounded-full px-5"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {t.close}
-                </Button>
               </div>
             </form>
           </div>

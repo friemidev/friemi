@@ -74,7 +74,10 @@ export function UserProfilePreviewPopover({
   }
 
   function isDesktopPointer() {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return false;
     }
 
@@ -131,9 +134,9 @@ export function UserProfilePreviewPopover({
 
       const rect = rootRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const viewportPadding = 8;
-      const desktopWidth = 258;
-      const mobileWidth = Math.min(250, viewportWidth - viewportPadding * 2);
+      const viewportPadding = 12;
+      const desktopWidth = 320;
+      const mobileWidth = Math.min(360, viewportWidth - viewportPadding * 2);
       const width = isDesktopPointer() ? desktopWidth : mobileWidth;
       const preferredLeft = isDesktopPointer()
         ? rect.left
@@ -265,7 +268,7 @@ export function UserProfilePreviewPopover({
         ? createPortal(
             <div
               ref={popoverRef}
-              className="fixed z-[120] max-sm:w-[min(15.625rem,calc(100vw-1rem))] sm:w-[258px]"
+              className="fixed z-[120] max-sm:w-[min(22.5rem,calc(100vw-1.5rem))] sm:w-[320px]"
               style={popoverStyle}
               onMouseEnter={() => {
                 if (isDesktopPointer()) {
