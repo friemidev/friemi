@@ -592,7 +592,7 @@ const copy = {
       cancelledHint: "组局已取消，用户无法继续报名。",
       endedHint: "活动已结束，不能再取消。",
       refreshError: "请稍后再试。",
-      permissionError: "只有活动发起人可以取消这个活动。",
+      permissionError: "只有活动发起人或管理人可以取消这个活动。",
       statusError: "当前活动状态不能取消。",
       endedError: "活动已结束，不能再取消。",
       conflictError: "活动状态已更新，请稍后再试。",
@@ -610,7 +610,7 @@ const copy = {
       reviewing: "处理中...",
       refreshError: "请稍后再试。",
       missingError: "报名记录不存在或已更新。",
-      permissionError: "只有活动发起人可以审核报名。",
+      permissionError: "只有活动发起人或管理人可以审核报名。",
       statusError: "当前报名状态不能审核。",
       closedError: "活动已结束或已取消，不能继续审核。",
       fullError: "活动名额已满，不能继续通过报名。",
@@ -625,7 +625,7 @@ const copy = {
       title: "编辑活动",
       description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
-      forbiddenDescription: "只有活动发起人可以编辑这个活动。",
+      forbiddenDescription: "只有活动发起人或管理人可以编辑这个活动。",
       lockedTitle: "活动不可编辑",
       lockedDescription: "已结束或已取消的活动不能继续编辑。",
     },
@@ -1540,7 +1540,7 @@ const copy = {
       cancelledHint: "This crew is cancelled. Users can no longer join.",
       endedHint: "This activity has ended and can no longer be cancelled.",
       refreshError: "Try again later.",
-      permissionError: "Only the organizer can cancel this activity.",
+      permissionError: "Only the organizer or a manager can cancel this activity.",
       statusError: "This activity status cannot be cancelled.",
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status changed. Try again later.",
@@ -1560,7 +1560,8 @@ const copy = {
       reviewing: "Reviewing...",
       refreshError: "Try again later.",
       missingError: "This request no longer exists or was updated.",
-      permissionError: "Only the organizer can review participation requests.",
+      permissionError:
+        "Only the organizer or a manager can review participation requests.",
       statusError: "This request status cannot be reviewed.",
       closedError:
         "This activity has ended or been cancelled, so requests cannot be reviewed.",
@@ -1576,9 +1577,9 @@ const copy = {
     editActivity: {
       title: "Edit plan",
       description:
-        "Only the organizer can update this plan. You will return to the detail page after saving.",
+        "Only the organizer or a manager can update this plan. You will return to the detail page after saving.",
       forbiddenTitle: "No edit access",
-      forbiddenDescription: "Only the organizer can edit this plan.",
+      forbiddenDescription: "Only the organizer or a manager can edit this plan.",
       lockedTitle: "Plan cannot be edited",
       lockedDescription: "Ended or cancelled plans can no longer be edited.",
     },
@@ -2538,7 +2539,8 @@ const copy = {
         "Cette équipe est annulée. Les utilisateurs ne peuvent plus la rejoindre.",
       endedHint: "Cette activité est terminée et ne peut plus être annulée.",
       refreshError: "Réessayez plus tard.",
-      permissionError: "Seul l'organisateur peut annuler cette activité.",
+      permissionError:
+        "Seul l'organisateur ou un gestionnaire peut annuler cette activité.",
       statusError: "Ce statut d'activité ne peut pas être annulé.",
       endedError: "Cette activité est terminée et ne peut plus être annulée.",
       conflictError: "Le statut de l'activité a changé. Réessayez plus tard.",
@@ -2559,7 +2561,7 @@ const copy = {
       refreshError: "Réessayez plus tard.",
       missingError: "Cette demande n'existe plus ou a été modifiée.",
       permissionError:
-        "Seul l'organisateur peut valider les demandes d'inscription.",
+        "Seul l'organisateur ou un gestionnaire peut valider les demandes d'inscription.",
       statusError: "Ce statut d'inscription ne peut pas être validé.",
       closedError:
         "Cette activité est terminée ou annulée, les demandes ne peuvent plus être validées.",
@@ -2576,9 +2578,10 @@ const copy = {
     editActivity: {
       title: "Modifier le plan",
       description:
-        "Seul l'organisateur peut modifier ce plan. Après enregistrement, vous reviendrez au détail.",
+        "Seul l'organisateur ou un gestionnaire peut modifier ce plan. Après enregistrement, vous reviendrez au détail.",
       forbiddenTitle: "Accès refusé",
-      forbiddenDescription: "Seul l'organisateur peut modifier ce plan.",
+      forbiddenDescription:
+        "Seul l'organisateur ou un gestionnaire peut modifier ce plan.",
       lockedTitle: "Plan non modifiable",
       lockedDescription:
         "Les plans terminés ou annulés ne peuvent plus être modifiés.",

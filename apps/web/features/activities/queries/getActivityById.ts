@@ -317,6 +317,7 @@ function getShareMetadataParticipantPreview(
 function getActivityDetailViewModel(
   activity: ActivityDetailQueryResult,
   viewerProfileId?: string | null,
+  viewerCanManage = false,
 ): ActivityDetailViewModel {
   const isActivityInfo = isLegacyActivityInfoSource(activity);
   const autoCreatedTeamMetadata = getAutoCreatedTeamMetadata(
@@ -371,7 +372,7 @@ function getActivityDetailViewModel(
     isViewerParticipant,
     organizerId: activity.organizerId,
     sourcePayload: activity.sourcePayload,
-    viewerProfileId,
+    viewerProfileId: viewerCanManage ? activity.organizerId : viewerProfileId,
   });
 
   return {
@@ -480,6 +481,13 @@ export async function getActivityById(
             organizerId: viewerProfileId,
           },
           {
+            coManagers: {
+              some: {
+                managerProfileId: viewerProfileId,
+              },
+            },
+          },
+          {
             participants: {
               some: {
                 userProfileId: viewerProfileId,
@@ -533,9 +541,22 @@ export async function getActivityById(
       status: true,
     },
   });
+  const viewerCanManage =
+    Boolean(viewerProfileId) &&
+    (activity.organizerId === viewerProfileId ||
+      (await prisma.activityCoManager.findFirst({
+        where: {
+          activityId: activity.id,
+          managerProfileId: viewerProfileId ?? "",
+        },
+        select: {
+          id: true,
+        },
+      })) !== null);
   const activityViewModel = getActivityDetailViewModel(
     activity,
     viewerProfileId,
+    viewerCanManage,
   );
 
   if (!activityViewModel.isActivityInfo && !organizerParticipation) {

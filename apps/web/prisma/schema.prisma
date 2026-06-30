@@ -154,6 +154,9 @@ model UserProfile {
   clerkDeletedAt         DateTime?
   syncedAt               DateTime?
   activities             Activity[]                 @relation("ActivityOrganizer")
+  managedActivities      ActivityCoManager[]        @relation("ActivityCoManagerProfile")
+  addedCoManagers        ActivityCoManager[]        @relation("ActivityCoManagerAddedBy")
+  activityManagementLogs ActivityManagementLog[]    @relation("ActivityManagementLogActor")
   participations         ActivityParticipant[]
   guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
   comments               Comment[]
@@ -229,6 +232,8 @@ model Activity {
   notifications     Notification[]
   sourceLinks       ActivitySourceLink[]
   favorites         ActivityFavorite[]
+  coManagers        ActivityCoManager[]
+  managementLogs    ActivityManagementLog[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
   createdAt         DateTime                   @default(now())
@@ -244,6 +249,35 @@ model Activity {
   @@index([externalUrl])
   @@index([ticketUrl])
   @@index([importedAt])
+}
+
+model ActivityCoManager {
+  id               String       @id @default(cuid())
+  activityId       String
+  managerProfileId String
+  addedByProfileId String?
+  activity         Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  manager          UserProfile  @relation("ActivityCoManagerProfile", fields: [managerProfileId], references: [id], onDelete: Cascade)
+  addedBy          UserProfile? @relation("ActivityCoManagerAddedBy", fields: [addedByProfileId], references: [id], onDelete: SetNull)
+  createdAt        DateTime     @default(now())
+
+  @@unique([activityId, managerProfileId])
+  @@index([managerProfileId])
+  @@index([addedByProfileId])
+}
+
+model ActivityManagementLog {
+  id         String       @id @default(cuid())
+  activityId String
+  actorId    String?
+  action     String
+  metadata   Json?
+  activity   Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  actor      UserProfile? @relation("ActivityManagementLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime     @default(now())
+
+  @@index([activityId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model PublicEvent {
@@ -447,19 +481,19 @@ model ContentTranslation {
 }
 
 model Notification {
-  id                    String                @id @default(cuid())
-  type                  NotificationType
-  recipientId           String
-  recipient             UserProfile           @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actorId               String?
-  actor                 UserProfile?          @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  activityId            String?
-  activity              Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  id                     String                @id @default(cuid())
+  type                   NotificationType
+  recipientId            String
+  recipient              UserProfile           @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId                String?
+  actor                  UserProfile?          @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  activityId             String?
+  activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
-  activityAnnouncement  ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
-  readAt                DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  readAt                 DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
@@ -468,14 +502,14 @@ model Notification {
 
 model ActivityAnnouncement {
   id            String         @id @default(cuid())
-  activityId     String
-  authorId       String
-  content        String
-  activity       Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  author         UserProfile    @relation("ActivityAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  notifications  Notification[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  activityId    String
+  authorId      String
+  content       String
+  activity      Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author        UserProfile    @relation("ActivityAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([activityId, createdAt])
   @@index([authorId, createdAt])

@@ -15,6 +15,7 @@ const notificationSelect = {
   activity: {
     select: {
       id: true,
+      organizerId: true,
       title: true,
     },
   },
@@ -37,6 +38,7 @@ export type NotificationViewModel = {
   readAt: string | null;
   createdAt: string;
   friendRequestId: string | null;
+  actorActivityRole: "ORGANIZER" | "CO_MANAGER" | null;
   actor: {
     id: string;
     nickname: string;
@@ -55,6 +57,7 @@ export type NotificationViewModel = {
 function mapNotification(
   notification: NotificationQueryResult,
   friendRequestId: string | null,
+  actorActivityRole: NotificationViewModel["actorActivityRole"],
 ): NotificationViewModel {
   return {
     id: notification.id,
@@ -62,8 +65,14 @@ function mapNotification(
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),
     friendRequestId,
+    actorActivityRole,
     actor: notification.actor,
-    activity: notification.activity,
+    activity: notification.activity
+      ? {
+          id: notification.activity.id,
+          title: notification.activity.title,
+        }
+      : null,
     activityAnnouncement: notification.activityAnnouncement
       ? {
           id: notification.activityAnnouncement.id,
@@ -127,16 +136,62 @@ export async function getNotificationCenter(profileId: string) {
   const pendingFriendRequestIdByRequesterId = new Map(
     pendingFriendRequests.map((request) => [request.requesterId, request.id]),
   );
+  const notificationActorActivityPairs = notifications
+    .filter(
+      (notification) => notification.actor?.id && notification.activity?.id,
+    )
+    .map((notification) => ({
+      activityId: notification.activity!.id,
+      actorId: notification.actor!.id,
+    }));
+  const coManagerRoles =
+    notificationActorActivityPairs.length > 0
+      ? await prisma.activityCoManager.findMany({
+          where: {
+            activityId: {
+              in: Array.from(
+                new Set(
+                  notificationActorActivityPairs.map((pair) => pair.activityId),
+                ),
+              ),
+            },
+            managerProfileId: {
+              in: Array.from(
+                new Set(notificationActorActivityPairs.map((pair) => pair.actorId)),
+              ),
+            },
+          },
+          select: {
+            activityId: true,
+            managerProfileId: true,
+          },
+        })
+      : [];
+  const coManagerRoleKeys = new Set(
+    coManagerRoles.map(
+      (role) => `${role.activityId}:${role.managerProfileId}`,
+    ),
+  );
 
   return {
-    notifications: notifications.map((notification) =>
-      mapNotification(
+    notifications: notifications.map((notification) => {
+      const actorId = notification.actor?.id ?? null;
+      const activityId = notification.activity?.id ?? null;
+      const actorActivityRole =
+        actorId && activityId && notification.activity?.organizerId === actorId
+          ? "ORGANIZER"
+          : actorId && activityId && coManagerRoleKeys.has(`${activityId}:${actorId}`)
+            ? "CO_MANAGER"
+            : null;
+
+      return mapNotification(
         notification,
         notification.type === "FRIEND_REQUEST" && notification.actor?.id
           ? pendingFriendRequestIdByRequesterId.get(notification.actor.id) ?? null
           : null,
-      ),
-    ),
+        actorActivityRole,
+      );
+    }),
     unreadCount,
   };
 }

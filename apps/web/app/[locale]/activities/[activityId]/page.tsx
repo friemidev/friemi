@@ -35,6 +35,7 @@ import { ActivityStatusBadge } from "@/features/activities/components/ActivitySt
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
+import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
@@ -51,6 +52,7 @@ import {
   getActivityShareMetadataById,
 } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
+import { getActivityCoManagerDashboard } from "@/features/activities/queries/getActivityCoManagerDashboard";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
@@ -147,8 +149,6 @@ function getParticipantInitial(nickname: string) {
 function getAutoCreatedTeamCopy(locale: string) {
   if (locale === "fr") {
     return {
-      badge: "Sélection du jour",
-      claimableBadge: "À réclamer",
       claimHint:
         "Cette équipe a été créée à partir d'une activité populaire. Réclamez-la pour modifier l'heure et le lieu.",
       deadlinePrefix: "Réclamation ouverte jusqu'au",
@@ -157,8 +157,6 @@ function getAutoCreatedTeamCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      badge: "Daily pick",
-      claimableBadge: "Claimable",
       claimHint:
         "This team was created from a popular activity. Claim it to edit the time, location, and plan details.",
       deadlinePrefix: "Claim window ends at",
@@ -166,8 +164,6 @@ function getAutoCreatedTeamCopy(locale: string) {
   }
 
   return {
-    badge: "系统推荐",
-    claimableBadge: "可认领",
     claimHint:
       "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
     deadlinePrefix: "认领截止",
@@ -324,6 +320,7 @@ function getTeamOwnerCtaCopy(locale: string) {
       manage: "Gérer le plan",
       manageDescription:
         "Modifier les infos visibles, l'horaire, l'adresse ou les règles.",
+      managerTitle: "Espace gestionnaire",
       review: "Voir les inscriptions",
       reviewDescription:
         "Consulter les personnes inscrites et les demandes en attente.",
@@ -339,6 +336,7 @@ function getTeamOwnerCtaCopy(locale: string) {
       manage: "Manage plan",
       manageDescription:
         "Edit visible details, time, address, or participation rules.",
+      managerTitle: "Manager space",
       review: "View signups",
       reviewDescription: "Check joined people and requests waiting for review.",
       title: "Organizer space",
@@ -350,6 +348,7 @@ function getTeamOwnerCtaCopy(locale: string) {
     contactParticipantsDescription: "打开名单，查看资料并继续联系参与者。",
     manage: "管理组局",
     manageDescription: "修改展示信息、时间地点或报名规则。",
+    managerTitle: "管理人空间",
     review: "查看报名",
     reviewDescription: "查看已报名成员和待审核申请。",
     title: "发起人空间",
@@ -1039,23 +1038,25 @@ export default async function ActivityDetailPage({
     );
   }
 
-  const [viewerParticipation, isFollowingOrganizer, comments, friendSignal] =
-    await perf.measure("activity.viewerData", () =>
-      Promise.all([
-        getActivityViewerParticipation(activity.id, viewerProfile?.id),
-        getViewerFollowState(viewerProfile?.id, activity.organizer.id),
-        getActivityComments(
-          activity.id,
-          viewerProfile?.id ?? null,
-          viewerFriendIds,
-        ),
-        getActivityFriendSignal(
-          activity.id,
-          viewerProfile?.id,
-          viewerFriendIds,
-        ),
-      ]),
-    );
+  const [
+    viewerParticipation,
+    isFollowingOrganizer,
+    comments,
+    friendSignal,
+    coManagerDashboard,
+  ] = await perf.measure("activity.viewerData", () =>
+    Promise.all([
+      getActivityViewerParticipation(activity.id, viewerProfile?.id),
+      getViewerFollowState(viewerProfile?.id, activity.organizer.id),
+      getActivityComments(
+        activity.id,
+        viewerProfile?.id ?? null,
+        viewerFriendIds,
+      ),
+      getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
+      getActivityCoManagerDashboard(activity.id, viewerProfile?.id),
+    ]),
+  );
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const itineraryItems = getActivityItineraryItems(activity);
@@ -1067,7 +1068,8 @@ export default async function ActivityDetailPage({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
-  const isTeamOperator = isOrganizer;
+  const isCoManager = coManagerDashboard?.role === "CO_MANAGER";
+  const isTeamOperator = isOrganizer || isCoManager;
   const canManageCrewCover =
     isTeamOperator &&
     !activity.isActivityInfo &&
@@ -1136,6 +1138,9 @@ export default async function ActivityDetailPage({
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
+  const teamOperatorSpaceTitle = isCoManager
+    ? teamOwnerCtaCopy.managerTitle
+    : teamOwnerCtaCopy.title;
   const [pendingParticipants, analyticsSummary] = await perf.measure(
     "activity.organizerData",
     () =>
@@ -1183,7 +1188,7 @@ export default async function ActivityDetailPage({
           overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
         />
         <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
-          {!isOrganizer ? (
+          {!isTeamOperator ? (
             <ActivityFavoriteButton
               activityId={activity.id}
               favoriteCount={activity.favoriteCount}
@@ -1220,13 +1225,6 @@ export default async function ActivityDetailPage({
               {activityCategoryLabel}
             </span>
             <ActivityStatusBadge status={displayStatus} locale={locale} />
-            {autoCreatedTeam ? (
-              <span className="rounded-md bg-fog px-2.5 py-1 text-xs font-semibold text-forest shadow-sm">
-                {autoCreatedTeam.isClaimable
-                  ? autoCreatedTeamCopy.claimableBadge
-                  : autoCreatedTeamCopy.badge}
-              </span>
-            ) : null}
           </div>
           <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
             {activity.title}
@@ -1375,7 +1373,7 @@ export default async function ActivityDetailPage({
             </div>
           ) : null}
 
-          {isOrganizer && activity.requiresApproval ? (
+          {isTeamOperator && activity.requiresApproval ? (
             <ParticipationApprovalPanel
               activityId={activity.id}
               locale={locale}
@@ -1530,7 +1528,7 @@ export default async function ActivityDetailPage({
                 <div className="grid gap-2 rounded-2xl border border-[#8AB68E]/55 bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <ShieldAlert className="h-4 w-4 text-forest" />
-                    {teamOwnerCtaCopy.title}
+                    {teamOperatorSpaceTitle}
                   </p>
                   {canEditActivity ? (
                     <Link
@@ -1567,6 +1565,12 @@ export default async function ActivityDetailPage({
                     {teamOwnerCtaCopy.reviewDescription}
                   </p>
                 </div>
+                {coManagerDashboard ? (
+                  <ActivityCoManagerPanel
+                    dashboard={coManagerDashboard}
+                    locale={locale}
+                  />
+                ) : null}
                 <div className="grid gap-2 rounded-2xl border border-sand bg-white/74 p-3">
                   {!isCancelled && !isEndedByTime ? (
                     <p className="text-xs leading-5 text-zinc-500">
@@ -1879,21 +1883,14 @@ export default async function ActivityDetailPage({
               </Link>
             ) : null}
 
-            {autoCreatedTeam && !isOrganizer ? (
+            {autoCreatedTeam?.isClaimable && !isTeamOperator ? (
               <div className="mt-3 rounded-2xl border border-[#8AB68E] bg-[#FEFFF9] p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-fog px-2.5 py-1 text-[11px] font-semibold text-forest">
-                    {autoCreatedTeam.isClaimable
-                      ? autoCreatedTeamCopy.claimableBadge
-                      : autoCreatedTeamCopy.badge}
-                  </span>
-                  {autoCreatedClaimDeadline && autoCreatedTeam.isClaimable ? (
-                    <span className="text-[11px] font-medium text-[#156240]">
-                      {autoCreatedTeamCopy.deadlinePrefix}{" "}
-                      {autoCreatedClaimDeadline}
-                    </span>
-                  ) : null}
-                </div>
+                {autoCreatedClaimDeadline ? (
+                  <p className="text-[11px] font-semibold text-[#156240]">
+                    {autoCreatedTeamCopy.deadlinePrefix}{" "}
+                    {autoCreatedClaimDeadline}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-xs leading-5 text-[#156240]">
                   {autoCreatedTeamCopy.claimHint}
                 </p>
@@ -2042,6 +2039,12 @@ export default async function ActivityDetailPage({
                 locale={locale}
                 participants={contactableParticipants}
               />
+              {coManagerDashboard ? (
+                <ActivityCoManagerPanel
+                  dashboard={coManagerDashboard}
+                  locale={locale}
+                />
+              ) : null}
               <div className="rounded-2xl border border-sand bg-white/76 p-3">
                 {!isCancelled && !isEndedByTime ? (
                   <p className="mb-2 text-xs leading-5 text-zinc-500">

@@ -112,27 +112,6 @@ function getCardVisibilityLabel(
   return "开放局";
 }
 
-function getAutoCreatedTeamBadgeCopy(locale: string) {
-  if (locale === "fr") {
-    return {
-      claimable: "À réclamer",
-      recommended: "Sélection du jour",
-    };
-  }
-
-  if (locale === "en") {
-    return {
-      claimable: "Claimable",
-      recommended: "Daily pick",
-    };
-  }
-
-  return {
-    claimable: "可认领",
-    recommended: "系统推荐",
-  };
-}
-
 function getCardFavoriteLabels(locale: string) {
   if (locale === "fr") {
     return {
@@ -613,8 +592,6 @@ export function ActivityCard({
   const autoCreatedTeam = activity.autoCreatedTeam;
   const showCoverKindBadge = !isProfileOwnCard;
   const showCoverVisibilityBadge = !isProfileCard && !isActivityInfo;
-  const showCoverAutoCreatedBadge =
-    autoCreatedTeam !== null && !isProfileOwnCard;
   const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
   const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
   const participantPreview = isTeamCard
@@ -636,7 +613,6 @@ export function ActivityCard({
       ? getCountdownLabel(activity, locale)
       : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
-  const autoCreatedBadgeCopy = getAutoCreatedTeamBadgeCopy(locale);
   const actionEventName: AnalyticsEventName =
     canCreateTeam && !isOwnActivity
       ? "team_create_started"
@@ -841,25 +817,6 @@ export function ActivityCard({
               />
               <span className="min-w-0 truncate">
                 {getCardKindLabel(isActivityInfo, locale)}
-              </span>
-            </span>
-          ) : null}
-          {showCoverAutoCreatedBadge ? (
-            <span
-              className={cn(
-                "absolute left-3 top-[3.15rem] z-10 inline-flex max-w-[calc(100%-4.75rem)] items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none shadow-[0_10px_22px_rgba(29,29,27,0.14)] ring-1 ring-white/80 backdrop-blur sm:left-4 sm:top-[3.65rem] sm:max-w-[calc(100%-5.5rem)] sm:px-3 sm:py-1.5 sm:text-[11px]",
-                mobileDenseClass(
-                  "max-[639px]:left-2 max-[639px]:top-[2.35rem] max-[639px]:max-w-[calc(100%-4.25rem)] max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[9px]",
-                ),
-                autoCreatedTeam.isClaimable
-                  ? "border-coral/55 bg-cream/95 text-danger"
-                  : "border-[#D6D5B2] bg-[#F1F2EC]/95 text-forest",
-              )}
-            >
-              <span className="min-w-0 truncate">
-                {autoCreatedTeam.isClaimable
-                  ? autoCreatedBadgeCopy.claimable
-                  : autoCreatedBadgeCopy.recommended}
               </span>
             </span>
           ) : null}

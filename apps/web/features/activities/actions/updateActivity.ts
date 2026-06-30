@@ -20,6 +20,7 @@ import { validateActivitySchedule } from "@/features/activities/utils/validateAc
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -58,10 +59,9 @@ export async function updateActivityAction(
     locale,
     `/activities/${activityId}/edit`,
   );
-  const editableActivity = await prisma.activity.findFirst({
+  const editableActivity = await prisma.activity.findUnique({
     where: {
       id: activityId,
-      organizerId: profile.id,
     },
     select: {
       address: true,
@@ -105,6 +105,16 @@ export async function updateActivityAction(
   });
 
   if (!editableActivity) {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      "你没有权限编辑这个活动。",
+    );
+  }
+
+  const permission = await assertCanManageActivity(activityId, profile.id);
+
+  if (!permission.ok) {
     return buildActivityErrorState(
       previousState,
       rawInput,
@@ -247,6 +257,18 @@ export async function updateActivityAction(
             result.data.visibility === "PRIVATE"
               ? (editableActivity.shareToken ?? generateActivityShareToken())
               : null,
+        },
+      });
+
+      await tx.activityManagementLog.create({
+        data: {
+          activityId,
+          actorId: profile.id,
+          action: "ACTIVITY_UPDATED",
+          metadata: {
+            keyFieldsChanged,
+            role: permission.role,
+          },
         },
       });
 
