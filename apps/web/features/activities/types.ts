@@ -26,6 +26,12 @@ export type ActivityParticipantPreviewViewModel = {
   kind?: "user" | "guest";
 };
 
+export type ActivityContactableParticipantViewModel = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+};
+
 export type ActivityCardViewModel = ActivitySummary & {
   autoCreatedTeam: {
     autoCreatedAt: string | null;
@@ -53,6 +59,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   publicEventId?: string | null;
   organizerId?: string | null;
   participantPreview?: ActivityParticipantPreviewViewModel[];
+  contactableParticipants?: ActivityContactableParticipantViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
   viewerParticipationStatus?:

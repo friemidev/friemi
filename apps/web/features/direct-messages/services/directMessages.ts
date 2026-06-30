@@ -122,7 +122,11 @@ async function assertFriendshipExists(
   }
 }
 
-async function findFriendship(db: DbClient, userId: string, otherUserId: string) {
+async function findFriendship(
+  db: DbClient,
+  userId: string,
+  otherUserId: string,
+) {
   const pair = getConversationPair(userId, otherUserId);
 
   return db.friendship.findUnique({
@@ -183,6 +187,43 @@ async function findOrganizerMessageActivity(
   });
 }
 
+async function findOrganizerParticipantMessageActivity(
+  db: DbClient,
+  organizerProfileId: string,
+  participantProfileId: string,
+  activityId: string,
+) {
+  return db.activity.findFirst({
+    where: {
+      id: activityId,
+      organizerId: organizerProfileId,
+      type: {
+        not: "PUBLIC_EVENT",
+      },
+      status: {
+        in: organizerMessageActivityStatuses,
+      },
+      organizer: {
+        status: "ACTIVE",
+      },
+      participants: {
+        some: {
+          userProfileId: participantProfileId,
+          status: {
+            in: ["JOINED", "APPROVED", "PENDING"],
+          },
+          userProfile: {
+            status: "ACTIVE",
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
 async function findExistingConversation(
   db: DbClient,
   userId: string,
@@ -207,11 +248,12 @@ async function assertDirectMessageSendAccess(
 ) {
   assertDifferentUsers(userId, otherUserId);
 
-  const [friendship, organizerActivity, existingConversation] = await Promise.all([
-    findFriendship(db, userId, otherUserId),
-    findOrganizerMessageActivity(db, userId, otherUserId, []),
-    findExistingConversation(db, userId, otherUserId),
-  ]);
+  const [friendship, organizerActivity, existingConversation] =
+    await Promise.all([
+      findFriendship(db, userId, otherUserId),
+      findOrganizerMessageActivity(db, userId, otherUserId, []),
+      findExistingConversation(db, userId, otherUserId),
+    ]);
 
   if (!friendship && !organizerActivity && !existingConversation) {
     throw new DirectMessageDomainError("NOT_FRIENDS");
@@ -316,6 +358,40 @@ export async function getOrCreateActivityOrganizerConversation({
   });
 }
 
+export async function getOrCreateActivityParticipantConversation({
+  activityId,
+  currentUserProfileId,
+  participantProfileId,
+}: {
+  activityId: string;
+  currentUserProfileId: string;
+  participantProfileId: string;
+}): Promise<DirectConversationViewModel> {
+  assertDifferentUsers(currentUserProfileId, participantProfileId);
+
+  const activity = await findOrganizerParticipantMessageActivity(
+    prisma,
+    currentUserProfileId,
+    participantProfileId,
+    activityId,
+  );
+
+  if (!activity) {
+    throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
+  }
+
+  const pair = getConversationPair(currentUserProfileId, participantProfileId);
+
+  return prisma.conversation.upsert({
+    where: {
+      userAId_userBId: pair,
+    },
+    create: pair,
+    update: {},
+    select: directConversationSelect,
+  });
+}
+
 export async function sendDirectMessage({
   activityId,
   currentUserProfileId,
@@ -357,7 +433,11 @@ export async function sendDirectMessage({
       currentUserProfileId,
     );
 
-    await assertDirectMessageSendAccess(tx, currentUserProfileId, peerProfileId);
+    await assertDirectMessageSendAccess(
+      tx,
+      currentUserProfileId,
+      peerProfileId,
+    );
 
     const message = await tx.directMessage.create({
       data: {
