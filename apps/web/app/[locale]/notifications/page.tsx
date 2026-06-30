@@ -113,7 +113,7 @@ function getNotificationText(
 ) {
   const t = getCopy(locale).notifications;
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
-  const actorName = notification.actor?.nickname;
+  const actorName = getNotificationActorName(notification, locale);
 
   if (notification.type === "FRIEND_REQUEST") {
     const copy = t.types.FRIEND_REQUEST;
@@ -198,6 +198,34 @@ function getNotificationText(
     title: copy.title,
     body: copy.body(activityTitle),
   };
+}
+
+function getNotificationActorName(
+  notification: NotificationViewModel,
+  locale: string,
+) {
+  const actorName = notification.actor?.nickname;
+
+  if (!actorName || !notification.actorActivityRole) {
+    return actorName;
+  }
+
+  const roleLabel =
+    locale === "fr"
+      ? notification.actorActivityRole === "ORGANIZER"
+        ? "organisateur"
+        : "gestionnaire"
+      : locale === "en"
+        ? notification.actorActivityRole === "ORGANIZER"
+          ? "organizer"
+          : "manager"
+        : notification.actorActivityRole === "ORGANIZER"
+          ? "发起人"
+          : "管理人";
+
+  return locale === "zh-CN"
+    ? `${actorName}（${roleLabel}）`
+    : `${actorName} (${roleLabel})`;
 }
 
 function getNotificationActionLabel(

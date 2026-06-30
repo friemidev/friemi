@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 export type PendingParticipantViewModel = {
   id: string;
@@ -27,12 +28,11 @@ function getPublicParticipantName(user: {
 
 export async function getPendingParticipants(
   activityId: string,
-  organizerId: string,
+  viewerProfileId: string,
 ): Promise<PendingParticipantViewModel[]> {
   const activity = await prisma.activity.findFirst({
     where: {
       id: activityId,
-      organizerId,
     },
     select: {
       id: true,
@@ -40,6 +40,12 @@ export async function getPendingParticipants(
   });
 
   if (!activity) {
+    return [];
+  }
+
+  const permission = await assertCanManageActivity(activity.id, viewerProfileId);
+
+  if (!permission.ok) {
     return [];
   }
 
