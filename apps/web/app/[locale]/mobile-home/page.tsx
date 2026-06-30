@@ -63,7 +63,11 @@ type MobileHomeExperienceProps = {
   swipeActivities: ActivityCardViewModel[];
 };
 
-const mobileHomeIllustrationPath = "/illustrations/png";
+const mobileHomeIllustrationPath = "/illustrations/vector";
+
+function getMobileHomeIllustrationSrc(image: string) {
+  return `${mobileHomeIllustrationPath}/${image.replace(/\.png$/u, ".svg")}`;
+}
 const mobileHomeCategoryAccents = [
   { glow: "rgba(245, 133, 118, 0.2)", tilt: "-2.5deg" },
   { glow: "rgba(54, 151, 88, 0.18)", tilt: "1.5deg" },
@@ -268,8 +272,8 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-4 pb-3 pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
-      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-3.5 pb-3 pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-1.5 min-[390px]:gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
         <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
             className="hidden md:block"
@@ -292,7 +296,7 @@ function MobileHomeExperience({
           </div>
 
           <div
-            className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:max-w-2xl lg:gap-3"
+            className="order-2 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:order-none md:max-w-2xl lg:gap-3"
             data-home-reveal="up"
             style={
               {
@@ -323,7 +327,7 @@ function MobileHomeExperience({
           </div>
 
           <section
-            className="min-h-[13.35rem] flex-1 px-0.5 pt-1.5 md:min-h-0 md:px-0 md:pt-0"
+            className="order-1 min-h-[var(--mobile-home-category-area-height)] flex-1 px-0 pb-0 pt-0 min-[390px]:px-0.5 min-[390px]:pb-0.5 min-[390px]:pt-0.5 md:order-none md:min-h-0 md:px-0 md:pb-0 md:pt-0"
             data-home-reveal="up"
             style={
               {
@@ -331,7 +335,7 @@ function MobileHomeExperience({
               } as CSSProperties
             }
           >
-            <div className="mobile-home-category-grid grid h-full min-h-[13.35rem] grid-cols-3 grid-rows-[repeat(3,minmax(0,max-content))] content-start gap-x-1.5 pt-[var(--mobile-home-category-offset)] md:min-h-0 md:grid-cols-3 md:gap-x-3 md:gap-y-3 md:pt-0 lg:grid-cols-5 lg:gap-4">
+            <div className="mobile-home-category-grid grid h-full min-h-[var(--mobile-home-category-area-height)] grid-cols-3 grid-rows-[repeat(3,minmax(0,max-content))] content-start gap-x-0 pt-[var(--mobile-home-category-offset)] min-[390px]:gap-x-1 md:min-h-0 md:grid-cols-3 md:gap-x-3 md:gap-y-3 md:pt-0 lg:grid-cols-5 lg:gap-4">
               {mobile.categories.map((category, index) => (
                 <Link
                   key={`${category.category}-${category.label}-${index}`}
@@ -357,15 +361,15 @@ function MobileHomeExperience({
                 >
                   <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-center justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
                     <Image
-                      src={`${mobileHomeIllustrationPath}/${category.image}`}
+                      src={getMobileHomeIllustrationSrc(category.image)}
                       alt=""
                       width={96}
                       height={96}
                       className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
                     />
-                  </span>
-                  <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#FEFFF9]/44 px-1.5 text-[10.5px] font-extrabold leading-tight text-forest drop-shadow-[0_1px_0_rgba(254,255,249,0.8)] md:mt-1.5 md:text-xs">
-                    {category.label}
+                    <span className="mobile-home-category__label">
+                      {category.label}
+                    </span>
                   </span>
                 </Link>
               ))}
@@ -398,7 +402,7 @@ function MobileHomeExperience({
         </div>
 
         <section
-          className="relative order-first shrink-0 md:order-none md:col-start-2 md:self-start md:pt-6 lg:pt-7"
+          className="relative order-3 shrink-0 pt-1 md:order-none md:col-start-2 md:self-start md:pt-6 lg:pt-7"
           data-home-reveal="up"
         >
           <LazyLobbySwipeDiscovery
