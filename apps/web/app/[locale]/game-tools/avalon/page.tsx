@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonAssistantClient } from "@/features/game-tools/components/AvalonAssistantClient";
+import { AvalonCreateRoomPanel } from "@/features/game-tools/components/AvalonCreateRoomPanel";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import {
@@ -59,7 +60,8 @@ export default async function AvalonToolPage({ params }: AvalonToolPageProps) {
   const { locale } = await params;
 
   return (
-    <PageContainer className="max-w-[96rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer className="max-w-[96rem] space-y-5 pb-28 pt-4 sm:pb-12 sm:pt-7">
+      <AvalonCreateRoomPanel locale={locale} />
       <AvalonAssistantClient locale={locale} />
     </PageContainer>
   );
