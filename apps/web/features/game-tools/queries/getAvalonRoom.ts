@@ -1,5 +1,10 @@
 import { cache } from "react";
 import { getAvalonRoleLabel } from "@/features/game-tools/avalonConfig";
+import {
+  getAvalonMissionFailureThresholdFromState,
+  getAvalonQuestTeamSize,
+  normalizeAvalonRoomState,
+} from "@/features/game-tools/avalonRoomState";
 import { prisma } from "@/lib/prisma";
 
 type ViewerProfile = {
@@ -35,10 +40,16 @@ export const getAvalonRoomById = cache(
       include: {
         events: {
           orderBy: { createdAt: "desc" },
-          take: 8,
+          take: 10,
           select: {
+            actor: {
+              select: {
+                nickname: true,
+              },
+            },
             createdAt: true,
             id: true,
+            payload: true,
             type: true,
           },
         },
@@ -71,6 +82,21 @@ export const getAvalonRoomById = cache(
             seatNumber: true,
           },
         },
+        submissions: {
+          orderBy: { submittedAt: "asc" },
+          select: {
+            id: true,
+            kind: true,
+            roundIndex: true,
+            seat: {
+              select: {
+                seatNumber: true,
+              },
+            },
+            seatId: true,
+            value: true,
+          },
+        },
       },
     });
 
@@ -81,6 +107,17 @@ export const getAvalonRoomById = cache(
     const isHost = viewerProfile?.id === room.hostId;
     const viewerSeat =
       viewerProfile && room.seats.find((seat) => seat.profileId === viewerProfile.id);
+    const gameState = normalizeAvalonRoomState(room.state);
+    const currentRoundSubmissions = room.submissions.filter(
+      (submission) => submission.roundIndex === gameState.roundIndex,
+    );
+    const teamVoteSubmissions = currentRoundSubmissions.filter(
+      (submission) => submission.kind === "TEAM_VOTE",
+    );
+    const missionCardSubmissions = currentRoundSubmissions.filter(
+      (submission) => submission.kind === "MISSION_CARD",
+    );
+    const proposedTeamSet = new Set(gameState.proposedTeamSeatNumbers);
 
     return {
       code: room.code,
@@ -93,6 +130,18 @@ export const getAvalonRoomById = cache(
       locale: room.locale,
       mode: room.mode,
       playerCount: room.playerCount,
+      progress: {
+        failureThreshold: getAvalonMissionFailureThresholdFromState({
+          playerCount: room.playerCount,
+          roundIndex: gameState.roundIndex,
+        }),
+        missionCardSubmissionCount: missionCardSubmissions.length,
+        requiredTeamSize: getAvalonQuestTeamSize({
+          playerCount: room.playerCount,
+          roundIndex: gameState.roundIndex,
+        }),
+        teamVoteSubmissionCount: teamVoteSubmissions.length,
+      },
       seats: room.seats.map((seat) => {
         const roleLabel =
           room.status === "IN_PROGRESS" && (isHost || viewerSeat?.id === seat.id)
@@ -106,6 +155,7 @@ export const getAvalonRoomById = cache(
           id: seat.id,
           isClaimed: isSeatClaimed(seat),
           isHostSeat: seat.profileId === room.hostId,
+          isOnProposedTeam: proposedTeamSet.has(seat.seatNumber),
           isViewerSeat: viewerSeat?.id === seat.id,
           joinedAt: seat.joinedAt,
           privateToken: isHost || viewerSeat?.id === seat.id ? seat.privateToken : null,
@@ -119,6 +169,7 @@ export const getAvalonRoomById = cache(
         };
       }),
       startedAt: room.startedAt,
+      state: gameState,
       status: room.status,
       title: room.title,
       updatedAt: room.updatedAt,
@@ -164,10 +215,20 @@ export const getAvalonSeatByToken = cache(
             seats: {
               orderBy: { seatNumber: "asc" },
               select: {
+                id: true,
                 displayName: true,
                 roleAlignment: true,
                 roleKey: true,
                 seatNumber: true,
+              },
+            },
+            submissions: {
+              orderBy: { submittedAt: "asc" },
+              select: {
+                kind: true,
+                roundIndex: true,
+                seatId: true,
+                value: true,
               },
             },
           },

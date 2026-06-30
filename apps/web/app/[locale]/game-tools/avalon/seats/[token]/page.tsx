@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { AvalonPrivateRoleCard } from "@/features/game-tools/components/AvalonPrivateRoleCard";
 import type { AvalonPrivatePayload } from "@/features/game-tools/avalonConfig";
 import { getAvalonSeatByToken } from "@/features/game-tools/queries/getAvalonRoom";
+import { normalizeAvalonRoomState } from "@/features/game-tools/avalonRoomState";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import {
@@ -82,11 +84,17 @@ export default async function AvalonSeatPage({ params }: AvalonSeatPageProps) {
 
   return (
     <PageContainer className="max-w-2xl pb-28 pt-4 sm:pb-12 sm:pt-7">
+      <AvalonLiveRefresh enabled={seat.room.status !== "FINISHED"} />
       <AvalonPrivateRoleCard
         locale={locale}
         payload={parsePrivatePayload(seat.privatePayload)}
+        privateToken={seat.privateToken}
         roleKey={seat.roleKey}
+        roomSeats={seat.room.seats}
+        roomState={normalizeAvalonRoomState(seat.room.state)}
         roomStatus={seat.room.status}
+        roomSubmissions={seat.room.submissions}
+        seatId={seat.id}
         seatDisplayName={seat.displayName}
         seatNumber={seat.seatNumber}
       />

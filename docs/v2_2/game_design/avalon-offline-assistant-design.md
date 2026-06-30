@@ -85,13 +85,101 @@ v0.2 已覆盖：
 v0.2 仍不包含：
 
 - [ ] WebSocket / 实时同步，当前依赖页面刷新和 server action revalidate
-- [ ] 队长提名、全员投票和匿名任务提交
+- [x] 队长提名、全员投票和匿名任务提交
 - [ ] 房主撤销身份、重新发牌、踢出座位和强制换座
 - [ ] 二维码生成与扫码加入的完整体验
 - [ ] 公共屏模式
 - [ ] 赛后复盘导出
 
 结论：v0.2 是“能在线下开一个持久化数字身份房间”的基础版本，适合验证扫码 / 私密身份 / 房主开局体验；完整局内自动化应进入 v0.3。
+
+## 0.2 v0.3 落地状态
+
+当前分支已继续补齐 v0.3 局内回合闭环。
+
+v0.3 已覆盖：
+
+- [x] 房主 / 主持人在房间页选择本轮任务队伍
+- [x] 系统校验每轮任务所需人数
+- [x] 玩家在私密身份页提交队伍赞成 / 反对票
+- [x] 全员投票完成后自动判断队伍是否通过
+- [x] 队伍未通过时推进否决计数，五次连续否决自动判暗潮方获胜
+- [x] 队伍通过后，任务成员在私密身份页提交任务牌
+- [x] 圆桌阵营不能提交失败牌，暗潮阵营可提交成功或失败
+- [x] 系统按失败牌数量和 7 人及以上第四轮双失败规则结算任务
+- [x] 三次任务失败自动判暗潮方获胜
+- [x] 三次任务成功进入刺杀阶段
+- [x] 刺客在私密身份页选择刺杀目标
+- [x] 刺中星眼智者判暗潮方胜利，未刺中判圆桌方胜利
+- [x] 房间页任务板展示五轮任务 token、当前队伍、投票 / 任务提交进度和胜负图形
+- [x] 私密页动作使用投票牌、任务 token 和座位 token，减少说明文字
+- [x] v0.3 图形化精修：房间页更像任务台，私密页更像玩家手牌；投票、任务和刺杀动作都以大图卡作为主要交互
+
+v0.3 仍不包含：
+
+- [ ] WebSocket / 实时同步，当前仍依赖提交后刷新页面
+- [ ] 队长玩家本人操作权限绑定，当前由房主 / 主持人在公共房间页提名队伍
+- [ ] 任务提交洗牌动画和延迟揭晓
+- [ ] 房主撤销 / 修正某轮结果
+- [ ] 二维码生成与扫码加入
+- [ ] 公共屏观战模式
+
+结论：v0.3 已经具备“线下数字身份 + 私密投票 / 任务 + 自动胜负结算”的可试玩闭环。下一步应优先补实时同步、二维码和房主修正能力。
+
+## 0.3 v0.4 落地状态
+
+当前分支继续补齐 v0.4 现场使用能力，重点是降低线下操作摩擦，而不是新增规则复杂度。
+
+新增访问路径：
+
+```text
+/{locale}/game-tools/avalon/rooms/{roomId}/screen
+```
+
+v0.4 已覆盖：
+
+- [x] 房间页展示扫码入座二维码，玩家无需手动输入房号
+- [x] 公共屏页面展示房号、二维码、座位、任务 token、投票进度、任务牌进度和胜负图形
+- [x] 公共屏不展示全部身份、私密链接或角色信息，只展示可公开信息
+- [x] 房间页、公共屏和私密身份页接入轻量自动刷新，线下玩家提交后其他设备可更快看到状态变化
+- [x] 公共屏视觉以大号任务 token、座位 token 和阶段图片为主，适合投屏或平板摆桌面
+- [x] v0.4 图形化精修：公共屏统计改成图标数字牌，当前阶段改成中央大牌，私密页可见信息改成角色 / 座位 token 网格
+
+v0.4 仍不包含：
+
+- [ ] WebSocket / Supabase Realtime 级别的真正实时同步
+- [ ] 房主撤销 / 修正某轮结果
+- [ ] 任务提交洗牌动画和延迟揭晓
+- [ ] 复盘图片导出
+- [ ] 音效、倒计时和主持语音提示
+
+结论：v0.4 已经适合小范围线下试玩：玩家扫码入座，用私密页操作，桌面或投屏打开公共屏看进度。后续应优先补房主修正能力和真正实时通道。
+
+## 0.4 v0.5 落地状态
+
+当前分支继续补齐 v0.5 主持人修正和现场反馈能力。
+
+v0.5 已覆盖：
+
+- [x] 房主修正面板：支持重置当前轮，清理当前轮投票 / 任务提交，并回到提队阶段
+- [x] 房主撤回上一轮任务结果：清理上一轮任务提交，撤回胜负推进，回到该轮提队阶段
+- [x] 修正动作写入 `GameToolEvent`，作为轻量审计日志
+- [x] 房间页增加事件 token 轨道，展示最近关键事件
+- [x] 公共屏增加事件 token 轨道，让投屏可以快速看到刚发生的节点
+- [x] 任务成功 / 失败 token 增加轻量揭晓动效，增强线下反馈
+- [x] v0.5 图形化精修：修正按钮改成大图牌，事件 token 增加回合角标和座位点，降低现场阅读成本
+- [x] v0.5 素材补强：补充扫码加入、公共屏、实时同步、重置回合、撤回任务、开始 / 组队 / 修正事件节点等原创 SVG token，并接入房间页和公共屏
+- [x] v0.5 UI 舒适度优化：房间页增加当前阶段提示牌，控制面板标题随阶段变化，任务板、事件轨道、私密操作页和公共屏阶段牌进一步图形化
+
+v0.5 仍不包含：
+
+- [ ] 逐条恢复 / 回滚任意历史节点
+- [ ] 更细的主持人审计筛选和导出
+- [ ] 复盘图片导出
+- [ ] 真正实时通道，当前仍是轻量定时刷新
+- [ ] 音效和任务牌洗牌延迟揭晓
+
+结论：v0.5 让线下试玩更可控：主持人误点或玩家误交后，可以快速把局面拉回可继续玩的状态，并让所有人通过公共屏看到修正发生。
 
 ---
 
@@ -791,6 +879,11 @@ P0 MVP
 | `apps/web/public/game-tools/avalon/states/team-leader-marker.svg` | 当前队长标记，小旗 / 指针 | 座位圈、队长提示 | SVG，40x40 |
 | `apps/web/public/game-tools/avalon/states/reject-track-dot.svg` | 否决计数点 | 连续否决计数条 | SVG，24x24 |
 | `apps/web/public/game-tools/avalon/states/reject-track-danger.svg` | 第 5 次否决危险提示图标 | 规则提醒和胜负结算 | SVG，48x48 |
+| `apps/web/public/game-tools/avalon/states/scan-join-token.svg` | 扫码加入 token，手机、二维码点阵和扫描角标 | 房间页房号卡、二维码卡片 | SVG，96x96 |
+| `apps/web/public/game-tools/avalon/states/public-screen-token.svg` | 公共屏 token，显示器和公开座位点 | 公共屏入口、投屏提示 | SVG，96x96 |
+| `apps/web/public/game-tools/avalon/states/live-sync-token.svg` | 实时同步 token，双向箭头与中心脉冲 | 自动刷新状态 | SVG，96x96 |
+| `apps/web/public/game-tools/avalon/states/round-reset-token.svg` | 重置当前轮 token，双向回环和中心轮点 | 房主修正面板 | SVG，96x96 |
+| `apps/web/public/game-tools/avalon/states/undo-mission-token.svg` | 撤回任务结果 token，卡片与回退箭头 | 房主修正面板 | SVG，96x96 |
 | `apps/web/public/game-tools/avalon/states/assassination-phase.svg` | 刺杀阶段插画：聚光灯、问号人影、暗色星点，不血腥 | 刺杀梅林流程页 | SVG，640x360 |
 | `apps/web/public/game-tools/avalon/states/good-victory.svg` | 好人胜利结算插画：晨光圆桌 | 结算页 | SVG，或 900x600 WebP |
 | `apps/web/public/game-tools/avalon/states/evil-victory.svg` | 邪恶方胜利结算插画：夜色圆桌 | 结算页 | SVG，或 900x600 WebP |
@@ -807,6 +900,9 @@ P0 MVP
 | `apps/web/public/game-tools/avalon/share/timeline-node-fail.svg` | 时间线失败节点 | 复盘时间线 | SVG，32x32 |
 | `apps/web/public/game-tools/avalon/share/timeline-node-vote.svg` | 时间线投票节点 | 复盘时间线 | SVG，32x32 |
 | `apps/web/public/game-tools/avalon/share/timeline-node-assassin.svg` | 时间线刺杀节点 | 复盘时间线 | SVG，32x32 |
+| `apps/web/public/game-tools/avalon/share/timeline-node-start.svg` | 时间线开局节点 | 复盘时间线 | SVG，48x48 |
+| `apps/web/public/game-tools/avalon/share/timeline-node-team.svg` | 时间线提队节点 | 复盘时间线 | SVG，48x48 |
+| `apps/web/public/game-tools/avalon/share/timeline-node-correction.svg` | 时间线修正节点 | 复盘时间线 | SVG，48x48 |
 
 ### 19.7 可选音效素材
 

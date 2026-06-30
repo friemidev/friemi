@@ -46,6 +46,11 @@ All listed files are original SVG assets created for Friemi in `feature/v2-board
 | `apps/web/public/game-tools/avalon/states/team-leader-marker.svg` | SVG | Original Friemi vector | Current leader marker |
 | `apps/web/public/game-tools/avalon/states/reject-track-dot.svg` | SVG | Original Friemi vector | Rejection counter |
 | `apps/web/public/game-tools/avalon/states/reject-track-danger.svg` | SVG | Original Friemi vector | Rejection danger token |
+| `apps/web/public/game-tools/avalon/states/scan-join-token.svg` | SVG | Original Friemi vector | Scan-to-join token |
+| `apps/web/public/game-tools/avalon/states/public-screen-token.svg` | SVG | Original Friemi vector | Public screen entry token |
+| `apps/web/public/game-tools/avalon/states/live-sync-token.svg` | SVG | Original Friemi vector | Live refresh token |
+| `apps/web/public/game-tools/avalon/states/round-reset-token.svg` | SVG | Original Friemi vector | Host round reset token |
+| `apps/web/public/game-tools/avalon/states/undo-mission-token.svg` | SVG | Original Friemi vector | Host undo mission token |
 | `apps/web/public/game-tools/avalon/states/assassination-phase.svg` | SVG | Original Friemi vector | Final assassination stage |
 | `apps/web/public/game-tools/avalon/states/good-victory.svg` | SVG | Original Friemi vector | Good-side victory scene |
 | `apps/web/public/game-tools/avalon/states/evil-victory.svg` | SVG | Original Friemi vector | Evil-side victory scene |
@@ -55,6 +60,9 @@ All listed files are original SVG assets created for Friemi in `feature/v2-board
 | `apps/web/public/game-tools/avalon/share/timeline-node-fail.svg` | SVG | Original Friemi vector | Recap fail node |
 | `apps/web/public/game-tools/avalon/share/timeline-node-vote.svg` | SVG | Original Friemi vector | Recap vote node |
 | `apps/web/public/game-tools/avalon/share/timeline-node-assassin.svg` | SVG | Original Friemi vector | Recap assassination node |
+| `apps/web/public/game-tools/avalon/share/timeline-node-start.svg` | SVG | Original Friemi vector | Recap room start node |
+| `apps/web/public/game-tools/avalon/share/timeline-node-team.svg` | SVG | Original Friemi vector | Recap team proposal node |
+| `apps/web/public/game-tools/avalon/share/timeline-node-correction.svg` | SVG | Original Friemi vector | Recap correction node |
 
 ## Deferred Assets
 

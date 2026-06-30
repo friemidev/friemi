@@ -3,9 +3,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
-import { AvalonRoomLobby } from "@/features/game-tools/components/AvalonRoomLobby";
+import { AvalonPublicScreen } from "@/features/game-tools/components/AvalonPublicScreen";
 import { getAvalonRoomById } from "@/features/game-tools/queries/getAvalonRoom";
-import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import {
@@ -13,7 +12,7 @@ import {
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 
-type AvalonRoomPageProps = {
+type AvalonPublicScreenPageProps = {
   params: Promise<{
     locale: string;
     roomId: string;
@@ -22,74 +21,64 @@ type AvalonRoomPageProps = {
 
 export async function generateMetadata({
   params,
-}: AvalonRoomPageProps): Promise<Metadata> {
+}: AvalonPublicScreenPageProps): Promise<Metadata> {
   const { locale, roomId } = await params;
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders);
 
   return buildPageShareMetadata({
     baseUrl,
-    description: "Friemi Avalon table room.",
-    path: withLocale(locale, `/game-tools/avalon/rooms/${roomId}`),
-    title: `Avalon Room · ${brand.name}`,
+    description: "Friemi Avalon public table screen.",
+    path: withLocale(locale, `/game-tools/avalon/rooms/${roomId}/screen`),
+    title: `Avalon Screen · ${brand.name}`,
   });
 }
 
-export default async function AvalonRoomPage({ params }: AvalonRoomPageProps) {
+export default async function AvalonPublicScreenPage({
+  params,
+}: AvalonPublicScreenPageProps) {
   const { locale, roomId } = await params;
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders).replace(/\/$/, "");
-  const viewerProfile = await getOptionalCurrentUserProfile();
   const room = await getAvalonRoomById({
     locale,
     roomId,
-    viewerProfile,
+    viewerProfile: null,
   });
 
   if (!room) {
     notFound();
   }
 
+  const joinUrl = `${baseUrl}/${locale}/game-tools/avalon/join/${room.code}`;
   const roomForClient = {
     code: room.code,
     events: room.events.map((event) => ({
-      actorName: event.actor?.nickname ?? null,
       createdAt: event.createdAt.toISOString(),
       id: event.id,
       payload: event.payload,
       type: event.type,
     })),
-    id: room.id,
-    isHost: room.isHost,
-    mode: room.mode,
     playerCount: room.playerCount,
+    progress: room.progress,
     seats: room.seats.map((seat) => ({
       avatarLabel: seat.avatarLabel,
       displayName: seat.displayName,
-      guestName: seat.guestName,
       id: seat.id,
       isClaimed: seat.isClaimed,
       isHostSeat: seat.isHostSeat,
       isOnProposedTeam: seat.isOnProposedTeam,
-      isViewerSeat: seat.isViewerSeat,
-      privateToken: seat.privateToken,
-      profileId: seat.profileId,
-      roleAlignment: seat.roleAlignment,
-      roleKey: seat.roleKey,
-      roleLabel: seat.roleLabel,
       seatNumber: seat.seatNumber,
     })),
-    progress: room.progress,
     state: room.state,
     status: room.status,
     title: room.title,
-    viewerSeatId: room.viewerSeatId,
   };
 
   return (
-    <PageContainer className="max-w-[92rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <AvalonLiveRefresh enabled={room.status !== "FINISHED"} />
-      <AvalonRoomLobby baseUrl={baseUrl} locale={locale} room={roomForClient} />
+    <PageContainer className="max-w-[110rem] pb-6 pt-4 sm:pt-6">
+      <AvalonLiveRefresh enabled={room.status !== "FINISHED"} intervalMs={3500} />
+      <AvalonPublicScreen joinUrl={joinUrl} locale={locale} room={roomForClient} />
     </PageContainer>
   );
 }

@@ -34,8 +34,16 @@
     "voteApprove": "/game-tools/avalon/states/vote-approve-card.svg",
     "voteReject": "/game-tools/avalon/states/vote-reject-card.svg",
     "teamLeader": "/game-tools/avalon/states/team-leader-marker.svg",
+    "scanJoin": "/game-tools/avalon/states/scan-join-token.svg",
+    "publicScreen": "/game-tools/avalon/states/public-screen-token.svg",
+    "liveSync": "/game-tools/avalon/states/live-sync-token.svg",
+    "roundReset": "/game-tools/avalon/states/round-reset-token.svg",
+    "undoMission": "/game-tools/avalon/states/undo-mission-token.svg",
     "assassinationPhase": "/game-tools/avalon/states/assassination-phase.svg",
     "goodVictory": "/game-tools/avalon/states/good-victory.svg",
-    "evilVictory": "/game-tools/avalon/states/evil-victory.svg"
+    "evilVictory": "/game-tools/avalon/states/evil-victory.svg",
+    "timelineStart": "/game-tools/avalon/share/timeline-node-start.svg",
+    "timelineTeam": "/game-tools/avalon/share/timeline-node-team.svg",
+    "timelineCorrection": "/game-tools/avalon/share/timeline-node-correction.svg"
   }
 }
