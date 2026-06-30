@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { brand } from "@/lib/brand";
+import { getCanonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getCanonicalSiteUrl()),
   title: brand.name,
   description: brand.description,
   icons: {

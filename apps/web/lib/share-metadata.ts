@@ -11,6 +11,7 @@ import {
 import { getActivityCoverDisplayUrl } from "./activity-cover-display";
 import { brand } from "./brand";
 import { getPriceTypeLabel } from "./copy";
+import { getCanonicalSiteUrl } from "./site-url";
 
 const defaultSiteName = brand.name;
 const defaultShareImagePath = brand.shareImagePath;
@@ -100,7 +101,7 @@ export function getRequestBaseUrl(headersList?: HeaderGetter | null) {
     }
   }
 
-  return "https://friemi.vercel.app";
+  return getCanonicalSiteUrl();
 }
 
 export function resolveAbsoluteUrl(
