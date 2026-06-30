@@ -747,17 +747,17 @@ export function ActivitySwipeDiscovery({
                   className={cn(
                     "grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5",
                     isHomeVariant
-                      ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-1.5 p-2.5 md:gap-3 md:p-4"
+                      ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-2 p-3 md:gap-3 md:p-4"
                       : null,
                   )}
                 >
                   <div className="min-w-0">
                     <h3
                       className={cn(
-                        "line-clamp-2 text-lg font-semibold leading-[1.12] text-ink",
+                        "text-lg font-semibold leading-[1.12] text-ink",
                         isHomeVariant
-                          ? "text-[15px] leading-[1.12] md:text-xl md:leading-[1.14]"
-                          : null,
+                          ? "line-clamp-3 text-[15px] leading-[1.13] md:line-clamp-2 md:text-xl md:leading-[1.14]"
+                          : "line-clamp-2",
                       )}
                     >
                       {activity.title}
@@ -766,7 +766,7 @@ export function ActivitySwipeDiscovery({
                       className={cn(
                         "mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600",
                         isHomeVariant
-                          ? "mt-1 grid-cols-1 text-[11px] leading-4 md:mt-2 md:text-sm md:leading-6"
+                          ? "mt-1.5 grid-cols-1 text-[11px] leading-4 md:mt-2 md:text-sm md:leading-6"
                           : null,
                       )}
                     >
@@ -789,7 +789,7 @@ export function ActivitySwipeDiscovery({
                         className={cn(
                           "inline-flex h-10 items-center justify-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800",
                           isHomeVariant
-                            ? "h-7 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758] md:h-11 md:text-sm"
+                            ? "h-8 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758] md:h-11 md:text-sm"
                             : null,
                         )}
                         href={href}
@@ -815,7 +815,7 @@ export function ActivitySwipeDiscovery({
                         className={cn(
                           "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
                           isHomeVariant
-                            ? "size-8 min-h-8 min-w-8 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70 md:size-11 md:min-h-11 md:min-w-11"
+                            ? "size-9 min-h-9 min-w-9 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70 md:size-11 md:min-h-11 md:min-w-11"
                             : null,
                         )}
                         favoriteCount={activity.favoriteCount}
@@ -830,7 +830,7 @@ export function ActivitySwipeDiscovery({
                     </div>
                   ) : (
                     <div
-                      className={cn("h-10", isHomeVariant ? "h-7" : null)}
+                      className={cn("h-10", isHomeVariant ? "h-8" : null)}
                       aria-hidden
                     />
                   )}

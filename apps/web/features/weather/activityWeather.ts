@@ -42,9 +42,20 @@ export function getWeatherDateKey(
 function getLocationQuery(source: WeatherWidgetSource) {
   const parts = [source.address, source.city]
     .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value));
+    .filter((value): value is string => Boolean(value))
+    .filter((value) => !isLikelyUrlText(value));
 
   return parts.length > 0 ? [...new Set(parts)].join(", ") : null;
+}
+
+function isLikelyUrlText(value: string) {
+  const trimmedValue = value.trim();
+
+  return (
+    /^https?:\/\//i.test(trimmedValue) ||
+    /^www\./i.test(trimmedValue) ||
+    /^[^\s]+\.[^\s]{2,}(?:\/\S*)?$/i.test(trimmedValue)
+  );
 }
 
 function isFiniteCoordinate(value: number | null | undefined): value is number {
@@ -55,6 +66,10 @@ export function getActivityWeatherWidgetInput(
   source: WeatherWidgetSource,
   now = new Date(),
 ): ActivityWeatherWidgetInput | null {
+  if (source.address?.trim() && isLikelyUrlText(source.address)) {
+    return null;
+  }
+
   const startAt = new Date(source.startAt);
 
   if (Number.isNaN(startAt.getTime())) {

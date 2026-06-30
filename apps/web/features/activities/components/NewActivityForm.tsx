@@ -350,6 +350,20 @@ function getTodayDateKey() {
   return getDateKey(new Date());
 }
 
+function getDateFromFormField(form: HTMLFormElement | null, name?: string) {
+  if (!form || !name) {
+    return "";
+  }
+
+  const field = form.elements.namedItem(name);
+
+  if (!(field instanceof HTMLInputElement)) {
+    return "";
+  }
+
+  return getDateTimeParts(field.value).date;
+}
+
 function isDateBeforeToday(dateKey: string) {
   return dateKey < getTodayDateKey();
 }
@@ -437,10 +451,12 @@ function normalizeTimeValue(time: string) {
 
 function DateTimePickerField({
   defaultValue,
+  fallbackDateFieldName,
   locale,
   name,
 }: {
   defaultValue?: string;
+  fallbackDateFieldName?: string;
   locale: string;
   name: string;
 }) {
@@ -469,6 +485,25 @@ function DateTimePickerField({
   }).format(monthDate);
   const weekdayLabels = getWeekdayLabels(locale);
   const [selectedHour = "", selectedMinute = ""] = time.split(":");
+
+  function openPicker() {
+    if (!dateKey) {
+      const fallbackDate =
+        getDateFromFormField(
+          pickerRef.current?.closest("form") ?? null,
+          fallbackDateFieldName,
+        ) || getTodayDateKey();
+      const fallbackMonthDate = new Date(`${fallbackDate}T12:00:00`);
+
+      setDateKey(fallbackDate);
+
+      if (!Number.isNaN(fallbackMonthDate.getTime())) {
+        setMonthDate(fallbackMonthDate);
+      }
+    }
+
+    setIsOpen(true);
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -554,7 +589,14 @@ function DateTimePickerField({
         type="button"
         className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-3 text-left text-base font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((currentValue) => !currentValue)}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+            return;
+          }
+
+          openPicker();
+        }}
       >
         <span className={cn(!value && "text-zinc-400")}>{displayValue}</span>
         <CalendarDays className="h-5 w-5 shrink-0 text-[#156240]" aria-hidden />
@@ -1540,6 +1582,7 @@ export function NewActivityForm({
                 {t.form.endAt}
                 <DateTimePickerField
                   defaultValue={values?.endAt}
+                  fallbackDateFieldName="startAt"
                   locale={locale}
                   name="endAt"
                 />

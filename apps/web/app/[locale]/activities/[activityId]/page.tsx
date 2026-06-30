@@ -187,6 +187,59 @@ function formatClaimDeadline(locale: string, value: string | null) {
   }).format(date);
 }
 
+function isLikelyExternalUrl(value: string | null | undefined) {
+  const trimmedValue = value?.trim() ?? "";
+
+  return (
+    /^https?:\/\//i.test(trimmedValue) ||
+    /^www\./i.test(trimmedValue) ||
+    /^[^\s]+\.[^\s]{2,}(?:\/\S*)?$/i.test(trimmedValue)
+  );
+}
+
+function normalizeExternalUrl(value: string | null | undefined) {
+  const trimmedValue = value?.trim() ?? "";
+
+  if (!isLikelyExternalUrl(trimmedValue)) {
+    return null;
+  }
+
+  return /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+}
+
+function shouldTreatProtectedLocationAsOnline(activity: {
+  address: string;
+  city: string;
+}) {
+  const label = `${activity.city} ${activity.address}`.toLowerCase();
+
+  return (
+    isLikelyExternalUrl(activity.address) ||
+    /网址|链接|线上|online|url|link|lien|en ligne|site web/.test(label)
+  );
+}
+
+function getProtectedAccessNoticeCopy(locale: string, requiresApproval: boolean) {
+  const detailCopy = getCopy(locale).activityDetail;
+
+  return requiresApproval
+    ? detailCopy.hiddenAddressApprovalNotice
+    : detailCopy.hiddenAddressNotice;
+}
+
+function getProtectedOnlineLinkNoticeCopy(
+  locale: string,
+  requiresApproval: boolean,
+) {
+  const detailCopy = getCopy(locale).activityDetail;
+
+  return requiresApproval
+    ? detailCopy.hiddenOnlineLinkApprovalNotice
+    : detailCopy.hiddenOnlineLinkNotice;
+}
+
 function getTeamDetailCtaCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -421,6 +474,25 @@ function ApprovalModeNotice({
   );
 }
 
+function ProtectedDetailNotice({
+  icon = "address",
+  label,
+}: {
+  icon?: "address" | "link";
+  label: string;
+}) {
+  const Icon = icon === "link" ? ExternalLink : ShieldAlert;
+
+  return (
+    <div className="rounded-[1rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2.5 text-sm font-semibold leading-6 text-[#156240] shadow-sm">
+      <span className="flex min-w-0 items-start gap-2">
+        <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 break-words">{label}</span>
+      </span>
+    </div>
+  );
+}
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -591,6 +663,10 @@ export default async function ActivityDetailPage({
     const activityCategoryLabel = getCategoryLabel(activity.category, locale);
     const activityDateLabel = getActivityDateLabel(activity, locale);
     const activityLocationLabel = getActivityLocationLabel(activity);
+    const activityAddressUrl = normalizeExternalUrl(activity.address);
+    const activityShareLocationLabel = activityAddressUrl
+      ? t.activityDetail.onlineLink
+      : activityLocationLabel;
     const activityPriceLabel = getActivityPriceLabel(activity, locale);
     const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
     const isCancelled = activity.status === "CANCELLED";
@@ -714,9 +790,10 @@ export default async function ActivityDetailPage({
               />
             </div>
 
-            {activity.latitude !== null ||
-            activity.longitude !== null ||
-            activityLocationLabel.trim() ? (
+            {!activityAddressUrl &&
+            (activity.latitude !== null ||
+              activity.longitude !== null ||
+              activityLocationLabel.trim()) ? (
               <>
                 <ActivityMapPreview
                   address={activityLocationLabel}
@@ -757,7 +834,7 @@ export default async function ActivityDetailPage({
                 coverImageUrl={activity.coverImageUrl}
                 dateLabel={activityDateLabel}
                 description={activity.description}
-                locationLabel={activityLocationLabel}
+                locationLabel={activityShareLocationLabel}
                 locale={locale}
                 priceLabel={activityPriceLabel}
                 shareKind="activity"
@@ -795,27 +872,71 @@ export default async function ActivityDetailPage({
                   value={activityDateLabel}
                 />
               </p>
-              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="min-w-0 break-words">
-                  {activityLocationLabel}
-                </span>
-                <ActivityCopyButton
-                  analyticsEvent={{
-                    name: "field_copied",
-                    entityId: detailAnalyticsEntity.entityId,
-                    entityType: detailAnalyticsEntity.entityType,
-                    sourceSurface: "public_event_detail",
-                    properties: {
-                      field_name: "location",
-                    },
-                  }}
-                  failedLabel={t.activityShare.copyFailed}
-                  label={t.activityShare.copyLocation}
-                  successLabel={t.activityShare.copied}
-                  value={activityLocationLabel}
-                />
-              </p>
+              {activityAddressUrl ? (
+                <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
+                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-[#156240]">
+                      {t.activityDetail.onlineLink}
+                    </span>
+                    <span className="block break-all text-zinc-600">
+                      {activityAddressUrl}
+                    </span>
+                  </span>
+                  <AnalyticsExternalLink
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9]"
+                    event={{
+                      name: "ticket_link_clicked",
+                      entityId: detailAnalyticsEntity.entityId,
+                      entityType: detailAnalyticsEntity.entityType,
+                      sourceSurface: "public_event_detail",
+                      properties: {
+                        item_kind: detailAnalyticsEntity.itemKind,
+                      },
+                    }}
+                    href={activityAddressUrl}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </AnalyticsExternalLink>
+                  <ActivityCopyButton
+                    analyticsEvent={{
+                      name: "field_copied",
+                      entityId: detailAnalyticsEntity.entityId,
+                      entityType: detailAnalyticsEntity.entityType,
+                      sourceSurface: "public_event_detail",
+                      properties: {
+                        field_name: "online_link",
+                      },
+                    }}
+                    failedLabel={t.activityShare.copyFailed}
+                    label={t.activityShare.copyLink}
+                    successLabel={t.activityShare.copied}
+                    value={activityAddressUrl}
+                  />
+                </p>
+              ) : (
+                <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="min-w-0 break-words">
+                    {activityLocationLabel}
+                  </span>
+                  <ActivityCopyButton
+                    analyticsEvent={{
+                      name: "field_copied",
+                      entityId: detailAnalyticsEntity.entityId,
+                      entityType: detailAnalyticsEntity.entityType,
+                      sourceSurface: "public_event_detail",
+                      properties: {
+                        field_name: "location",
+                      },
+                    }}
+                    failedLabel={t.activityShare.copyFailed}
+                    label={t.activityShare.copyLocation}
+                    successLabel={t.activityShare.copied}
+                    value={activityLocationLabel}
+                  />
+                </p>
+              )}
               <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
                 <WalletCards className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="min-w-0 break-words">
@@ -952,6 +1073,20 @@ export default async function ActivityDetailPage({
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
   const activityLocationLabel = getActivityLocationLabel(activity);
+  const activityAddressUrl = activity.isAddressHiddenFromViewer
+    ? null
+    : normalizeExternalUrl(activity.address);
+  const activityShareLocationLabel = activityAddressUrl
+    ? t.activityDetail.onlineLink
+    : activityLocationLabel;
+  const protectedLocationIsOnline =
+    activity.isAddressHiddenFromViewer &&
+    shouldTreatProtectedLocationAsOnline(activity);
+  const protectedLocationNotice = activity.isAddressHiddenFromViewer
+    ? protectedLocationIsOnline
+      ? getProtectedOnlineLinkNoticeCopy(locale, activity.requiresApproval)
+      : getProtectedAccessNoticeCopy(locale, activity.requiresApproval)
+    : null;
   const autoCreatedTeam = activity.autoCreatedTeam;
   const autoCreatedTeamCopy = getAutoCreatedTeamCopy(locale);
   const autoCreatedClaimDeadline = formatClaimDeadline(
@@ -1164,10 +1299,16 @@ export default async function ActivityDetailPage({
             )}
           </div>
 
-          {activity.latitude !== null ||
-          activity.longitude !== null ||
-          activityLocationLabel.trim() ? (
-            <>
+          {protectedLocationNotice ? (
+            <ProtectedDetailNotice
+              icon={protectedLocationIsOnline ? "link" : "address"}
+              label={protectedLocationNotice}
+            />
+          ) : !activityAddressUrl &&
+            (activity.latitude !== null ||
+              activity.longitude !== null ||
+              activityLocationLabel.trim()) ? (
+            <div>
               <ActivityMapPreview
                 address={activityLocationLabel}
                 city={activity.city}
@@ -1177,12 +1318,7 @@ export default async function ActivityDetailPage({
                 queryAddress={activity.address}
                 title={t.activityDetail.locationMapTitle}
               />
-              {activity.isAddressHiddenFromViewer ? (
-                <p className="-mt-3 rounded-md border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 text-sm font-medium text-[#156240]">
-                  {t.activityDetail.hiddenAddressNotice}
-                </p>
-              ) : null}
-            </>
+            </div>
           ) : null}
 
           {activity.publicEvent ? (
@@ -1541,7 +1677,7 @@ export default async function ActivityDetailPage({
               coverImageUrl={activity.coverImageUrl}
               dateLabel={activityDateLabel}
               description={activity.description}
-              locationLabel={activityLocationLabel}
+              locationLabel={activityShareLocationLabel}
               locale={locale}
               priceLabel={activityPriceLabel}
               shareKind="team"
@@ -1580,27 +1716,82 @@ export default async function ActivityDetailPage({
                 value={activityDateLabel}
               />
             </p>
-            <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">
-                {activityLocationLabel}
-              </span>
-              <ActivityCopyButton
-                analyticsEvent={{
-                  name: "field_copied",
-                  entityId: detailAnalyticsEntity.entityId,
-                  entityType: detailAnalyticsEntity.entityType,
-                  sourceSurface: "activity_detail",
-                  properties: {
-                    field_name: "location",
-                  },
-                }}
-                failedLabel={t.activityShare.copyFailed}
-                label={t.activityShare.copyLocation}
-                successLabel={t.activityShare.copied}
-                value={activityLocationLabel}
-              />
-            </p>
+            {protectedLocationNotice ? (
+              <p className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 text-[#156240]">
+                {protectedLocationIsOnline ? (
+                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                ) : (
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                )}
+                <span className="min-w-0 break-words font-semibold">
+                  {protectedLocationNotice}
+                </span>
+              </p>
+            ) : activityAddressUrl ? (
+              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-2">
+                <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-[#156240]">
+                    {t.activityDetail.onlineLink}
+                  </span>
+                  <span className="block break-all text-zinc-600">
+                    {activityAddressUrl}
+                  </span>
+                </span>
+                <AnalyticsExternalLink
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9]"
+                  event={{
+                    name: "ticket_link_clicked",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "activity_detail",
+                    properties: {
+                      item_kind: detailAnalyticsEntity.itemKind,
+                    },
+                  }}
+                  href={activityAddressUrl}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </AnalyticsExternalLink>
+                <ActivityCopyButton
+                  analyticsEvent={{
+                    name: "field_copied",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "activity_detail",
+                    properties: {
+                      field_name: "online_link",
+                    },
+                  }}
+                  failedLabel={t.activityShare.copyFailed}
+                  label={t.activityShare.copyLink}
+                  successLabel={t.activityShare.copied}
+                  value={activityAddressUrl}
+                />
+              </p>
+            ) : (
+              <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">
+                  {activityLocationLabel}
+                </span>
+                <ActivityCopyButton
+                  analyticsEvent={{
+                    name: "field_copied",
+                    entityId: detailAnalyticsEntity.entityId,
+                    entityType: detailAnalyticsEntity.entityType,
+                    sourceSurface: "activity_detail",
+                    properties: {
+                      field_name: "location",
+                    },
+                  }}
+                  failedLabel={t.activityShare.copyFailed}
+                  label={t.activityShare.copyLocation}
+                  successLabel={t.activityShare.copied}
+                  value={activityLocationLabel}
+                />
+              </p>
+            )}
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <WalletCards className="h-4 w-4 shrink-0" />
