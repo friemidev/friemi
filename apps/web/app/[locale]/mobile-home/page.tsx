@@ -3,12 +3,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
-import { ArrowRight, CalendarPlus, Search } from "lucide-react";
+import { ArrowRight, CalendarPlus } from "lucide-react";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
+import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { brand } from "@/lib/brand";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -299,18 +300,12 @@ function MobileHomeExperience({
               } as CSSProperties
             }
           >
-            <Link
-              href={withLocale(locale, "/activities")}
-              className="mobile-home-search flex h-10 min-w-0 items-center gap-2 rounded-full px-3 text-xs font-semibold text-forest md:h-12 md:px-4 md:text-sm"
-            >
-              <Search
-                className="h-4 w-4 shrink-0 md:h-5 md:w-5"
-                aria-hidden="true"
-              />
-              <span className="min-w-0 truncate">
-                {mobile.searchPlaceholder}
-              </span>
-            </Link>
+            <GlobalSearchForm
+              inputId="mobile-home-global-search"
+              locale={locale}
+              variant="header"
+              className="w-full [&_button]:right-1 [&_input]:h-10 [&_input]:border-[#D6D5B2] [&_input]:bg-[#FEFFF9]/90 [&_input]:text-xs [&_input]:font-semibold [&_input]:text-forest [&_input]:shadow-[0_12px_28px_rgba(21,98,64,0.1)] [&_input]:placeholder:text-[#156240]/80 md:[&_input]:h-12 md:[&_input]:text-sm"
+            />
 
             <Link
               href={withLocale(locale, "/activities/new")}
