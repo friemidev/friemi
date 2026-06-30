@@ -48,7 +48,7 @@ function SubmitButton({
   locale: string;
 }) {
   const t = getFollowCopy(locale);
-  const label = isFollowing ? activeLabel ?? t.unfollow : t.follow;
+  const label = isFollowing ? (activeLabel ?? t.unfollow) : t.follow;
 
   return (
     <Button
@@ -62,9 +62,9 @@ function SubmitButton({
       variant={isFollowing ? "secondary" : "primary"}
       disabled={isDisabled}
     >
-      <span className="inline-flex items-center gap-0.5 whitespace-nowrap leading-none">
-        {Icon ? <Icon className="h-3 w-3" /> : null}
-        {label}
+      <span className="inline-flex min-w-0 max-w-full items-center justify-center gap-0.5 whitespace-nowrap leading-none">
+        {Icon ? <Icon className="h-3 w-3 shrink-0" /> : null}
+        <span className="min-w-0">{label}</span>
       </span>
     </Button>
   );
@@ -89,7 +89,8 @@ export function FollowButton({
   );
   const t = getFollowCopy(locale);
   const Icon = icon;
-  const [optimisticIsFollowing, setOptimisticIsFollowing] = useState(isFollowing);
+  const [optimisticIsFollowing, setOptimisticIsFollowing] =
+    useState(isFollowing);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const effectiveIsFollowing = state.isFollowing ?? optimisticIsFollowing;
 
@@ -113,7 +114,13 @@ export function FollowButton({
     if (state.ok) {
       setIsSubmitting(false);
     }
-  }, [isFollowing, onStateChange, state.formError, state.isFollowing, state.ok]);
+  }, [
+    isFollowing,
+    onStateChange,
+    state.formError,
+    state.isFollowing,
+    state.ok,
+  ]);
 
   if (!isAuthenticated) {
     return (
@@ -134,7 +141,10 @@ export function FollowButton({
   return (
     <form
       action={formAction}
-      className="inline-grid gap-1 justify-items-center"
+      className={cn(
+        "inline-grid gap-1 justify-items-center",
+        fullWidth ? "w-full" : "",
+      )}
       onSubmit={() => {
         setOptimisticIsFollowing((current) => !current);
         setIsSubmitting(true);

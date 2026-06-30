@@ -120,13 +120,13 @@ export function ActivityParticipantContactDialog({
       <button
         type="button"
         className={cn(
-          "inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-white",
+          "inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-center text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-white",
           buttonClassName,
         )}
         onClick={() => setIsOpen(true)}
       >
-        <UsersRound className="h-4 w-4" />
-        {buttonLabel}
+        <UsersRound className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 break-words">{buttonLabel}</span>
       </button>
 
       {isOpen ? (
