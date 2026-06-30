@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import {
-  formatActivityDate,
-} from "@chill-club/shared";
+import { formatActivityDate } from "@chill-club/shared";
 import {
   Bell,
   CalendarDays,
@@ -77,6 +75,7 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
+import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
@@ -226,7 +225,10 @@ function shouldTreatProtectedLocationAsOnline(activity: {
   );
 }
 
-function getProtectedAccessNoticeCopy(locale: string, requiresApproval: boolean) {
+function getProtectedAccessNoticeCopy(
+  locale: string,
+  requiresApproval: boolean,
+) {
   const detailCopy = getCopy(locale).activityDetail;
 
   return requiresApproval
@@ -338,8 +340,7 @@ function getTeamOwnerCtaCopy(locale: string) {
       manageDescription:
         "Edit visible details, time, address, or participation rules.",
       review: "View signups",
-      reviewDescription:
-        "Check joined people and requests waiting for review.",
+      reviewDescription: "Check joined people and requests waiting for review.",
       title: "Organizer space",
     };
   }
@@ -1074,7 +1075,10 @@ export default async function ActivityDetailPage({
   const canContactOrganizer = !isTeamOperator;
   const canEditActivity = isTeamOperator && !isCancelled && !isEndedByTime;
   const activityDetailPath = `/activities/${activity.id}`;
-  const activityEditHref = withLocale(locale, `/activities/${activity.id}/edit`);
+  const activityEditHref = withLocale(
+    locale,
+    `/activities/${activity.id}/edit`,
+  );
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
   const activityLocationLabel = getActivityLocationLabel(activity);
@@ -1103,6 +1107,7 @@ export default async function ActivityDetailPage({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const participantPreview = activity.participantPreview ?? [];
+  const contactableParticipants = activity.contactableParticipants ?? [];
   const ticketUrl =
     activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
   const ticketLabel = getTicketCtaLabel(
@@ -1552,13 +1557,12 @@ export default async function ActivityDetailPage({
                     <ClipboardList className="h-4 w-4" />
                     {teamOwnerCtaCopy.review}
                   </a>
-                  <a
-                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-white"
-                    href="#activity-participants"
-                  >
-                    <UsersRound className="h-4 w-4" />
-                    {teamOwnerCtaCopy.contactParticipants}
-                  </a>
+                  <ActivityParticipantContactDialog
+                    activityId={activity.id}
+                    buttonLabel={teamOwnerCtaCopy.contactParticipants}
+                    locale={locale}
+                    participants={contactableParticipants}
+                  />
                   <p className="px-1 text-xs leading-5 text-zinc-500">
                     {teamOwnerCtaCopy.reviewDescription}
                   </p>
@@ -2031,13 +2035,13 @@ export default async function ActivityDetailPage({
                 <ClipboardList className="h-4 w-4" />
                 {teamOwnerCtaCopy.review}
               </a>
-              <a
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FFF5E6]/82 px-4 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
-                href="#activity-participants"
-              >
-                <UsersRound className="h-4 w-4" />
-                {teamOwnerCtaCopy.contactParticipants}
-              </a>
+              <ActivityParticipantContactDialog
+                activityId={activity.id}
+                buttonClassName="min-h-11 transition active:scale-[0.98]"
+                buttonLabel={teamOwnerCtaCopy.contactParticipants}
+                locale={locale}
+                participants={contactableParticipants}
+              />
               <div className="rounded-2xl border border-sand bg-white/76 p-3">
                 {!isCancelled && !isEndedByTime ? (
                   <p className="mb-2 text-xs leading-5 text-zinc-500">
@@ -2199,7 +2203,9 @@ function ActivityAnnouncementsSection({
                     {copy.latestLabel}
                   </span>
                 ) : null}
-                <span>{formatActivityDate(announcement.createdAt, locale)}</span>
+                <span>
+                  {formatActivityDate(announcement.createdAt, locale)}
+                </span>
               </div>
               <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink">
                 {announcement.content}

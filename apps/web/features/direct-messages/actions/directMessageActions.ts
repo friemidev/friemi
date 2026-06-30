@@ -11,6 +11,7 @@ import { getDirectMessagesCopy } from "../copy";
 import {
   DirectMessageDomainError,
   directMessageBodyMaxLength,
+  getOrCreateActivityParticipantConversation,
   getOrCreateActivityOrganizerConversation,
   getOrCreateDirectConversation,
   sendDirectMessage,
@@ -42,6 +43,12 @@ const createActivityOrganizerConversationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   activityId: z.string().min(1),
   organizerProfileId: z.string().min(1),
+});
+
+const createActivityParticipantConversationSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  activityId: z.string().min(1),
+  participantProfileId: z.string().min(1),
 });
 
 const sendDirectMessageSchema = z.object({
@@ -342,6 +349,77 @@ export async function openActivityOrganizerConversationFormAction(
   if (result.data.accessToken) {
     searchParams.set("access", result.data.accessToken);
   }
+
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/messages/${conversationId}?${searchParams.toString()}`,
+    ),
+  );
+}
+
+export async function openActivityParticipantConversationAction(
+  formData: FormData,
+): Promise<void> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    activityId: getString(formData, "activityId"),
+    participantProfileId: getString(formData, "participantProfileId"),
+  };
+  const result =
+    createActivityParticipantConversationSchema.safeParse(rawInput);
+
+  if (!result.success) {
+    redirect(withLocale(rawInput.locale, "/activities"));
+  }
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/activities/${result.data.activityId}`,
+  );
+  let conversationId: string;
+
+  try {
+    const conversation = await getOrCreateActivityParticipantConversation({
+      activityId: result.data.activityId,
+      currentUserProfileId: profile.id,
+      participantProfileId: result.data.participantProfileId,
+    });
+
+    conversationId = conversation.id;
+    queueAnalyticsEvent(
+      {
+        locale: normalizeAnalyticsLocale(result.data.locale),
+        name: "organizer_contact_clicked",
+        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        entityId: result.data.activityId,
+        entityType: "team",
+        sourceSurface: "activity_detail",
+        properties: {
+          contact_target: "participant",
+        },
+      },
+      {
+        userProfileId: profile.id,
+      },
+    );
+    trackConversationOpened({
+      conversationId,
+      locale: result.data.locale,
+      sourceSurface: "activity_detail",
+      userProfileId: profile.id,
+    });
+    refreshConversation(result.data.locale, conversation.id);
+  } catch (error) {
+    console.error("Failed to open activity participant conversation", error);
+    redirect(
+      withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+    );
+  }
+
+  const searchParams = new URLSearchParams({
+    activityId: result.data.activityId,
+  });
 
   redirect(
     withLocale(
