@@ -14,6 +14,7 @@ import {
 type GlobalSearchFormProps = {
   className?: string;
   defaultQuery?: string;
+  inputId?: string;
   locale: string;
   variant?: "header" | "page";
 };
@@ -65,11 +66,13 @@ function SearchSubmitButton({
 export function GlobalSearchForm({
   className,
   defaultQuery = "",
+  inputId,
   locale,
   variant = "header",
 }: GlobalSearchFormProps) {
   const t = getCopy(locale).globalSearch;
   const isPage = variant === "page";
+  const searchInputId = inputId ?? `global-search-${variant}`;
 
   return (
     <form
@@ -81,7 +84,7 @@ export function GlobalSearchForm({
       )}
       role="search"
     >
-      <label className="sr-only" htmlFor={`global-search-${variant}`}>
+      <label className="sr-only" htmlFor={searchInputId}>
         {t.inputLabel}
       </label>
       <Search
@@ -92,7 +95,7 @@ export function GlobalSearchForm({
         )}
       />
       <input
-        id={`global-search-${variant}`}
+        id={searchInputId}
         name="q"
         type="search"
         defaultValue={normalizeGlobalSearchQuery(defaultQuery)}
