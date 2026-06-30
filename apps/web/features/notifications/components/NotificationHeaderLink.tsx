@@ -35,6 +35,8 @@ export function NotificationHeaderLink({
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 shadow-sm ring-1 ring-black/10 transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
+        hasUnreadNotifications &&
+          "text-[#156240] ring-[#8AB68E]/70 shadow-[0_8px_18px_rgba(21,98,64,0.16)]",
         active &&
           "bg-white text-ink ring-[#8AB68E] before:absolute before:bottom-1 before:h-0.5 before:w-4 before:rounded-full before:bg-[#369758]",
       )}
@@ -42,14 +44,17 @@ export function NotificationHeaderLink({
       title={label}
     >
       <Bell
-        className={cn("h-5 w-5", active ? "text-[#156240]" : "")}
-        strokeWidth={active ? 2.4 : 2}
+        className={cn(
+          "h-5 w-5",
+          active || hasUnreadNotifications ? "text-[#156240]" : "",
+        )}
+        strokeWidth={active || hasUnreadNotifications ? 2.45 : 2}
         aria-hidden="true"
       />
       {hasUnreadNotifications ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-clay px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-paper"
+          className="pointer-events-none absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#F09182] px-1 text-[10px] font-extrabold leading-none text-white shadow-[0_6px_12px_rgba(176,49,31,0.24)] ring-2 ring-[#FEFFF9] outline outline-1 outline-[#156240]/25"
         >
           {unreadBadgeText}
         </span>

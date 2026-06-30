@@ -1620,6 +1620,23 @@ function compareRankedActivitiesByStartAt(
   right: RankedActivityCard,
   direction: "asc" | "desc",
 ) {
+  if (direction === "asc") {
+    const referenceNow = new Date();
+    const leftSort = getRankedActivityNearNowSortKey(left, referenceNow);
+    const rightSort = getRankedActivityNearNowSortKey(right, referenceNow);
+    const groupDiff = leftSort.group - rightSort.group;
+
+    if (groupDiff !== 0) {
+      return groupDiff;
+    }
+
+    const distanceDiff = leftSort.distanceMs - rightSort.distanceMs;
+
+    if (distanceDiff !== 0) {
+      return distanceDiff;
+    }
+  }
+
   const leftStartAt = new Date(left.card.startAt).getTime();
   const rightStartAt = new Date(right.card.startAt).getTime();
   const timeDiff =
@@ -1628,6 +1645,52 @@ function compareRankedActivitiesByStartAt(
       : rightStartAt - leftStartAt;
 
   return timeDiff || left.card.id.localeCompare(right.card.id);
+}
+
+function getRankedActivityReferenceNow(
+  card: RankedActivityCard["card"],
+  referenceNow: Date,
+) {
+  return card.type === "PUBLIC_EVENT"
+    ? referenceNow
+    : getActivityFloatingNow(referenceNow);
+}
+
+function getRankedActivityNearNowSortKey(
+  rankedActivity: RankedActivityCard,
+  referenceNow: Date,
+) {
+  const card = rankedActivity.card;
+  const comparisonNow = getRankedActivityReferenceNow(card, referenceNow);
+  const nowTime = comparisonNow.getTime();
+  const startTime = new Date(card.startAt).getTime();
+  const endTime = card.endAt ? new Date(card.endAt).getTime() : startTime;
+  const isEnded =
+    card.status === "ENDED" ||
+    card.status === "CANCELLED" ||
+    endTime <= nowTime;
+
+  return {
+    distanceMs: getNearestTimeRangeDistanceMs(startTime, endTime, nowTime),
+    group: isEnded ? 1 : 0,
+  };
+}
+
+function getNearestTimeRangeDistanceMs(
+  startTime: number,
+  endTime: number,
+  nowTime: number,
+) {
+  const normalizedEndTime = Math.max(startTime, endTime);
+
+  if (nowTime >= startTime && nowTime <= normalizedEndTime) {
+    return Math.min(nowTime - startTime, normalizedEndTime - nowTime);
+  }
+
+  return Math.min(
+    Math.abs(startTime - nowTime),
+    Math.abs(normalizedEndTime - nowTime),
+  );
 }
 
 function getActivityDurationMs(card: RankedActivityCard["card"]) {
@@ -1772,6 +1835,24 @@ function compareAgendaIndexItems(
     isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
       ? "desc"
       : "asc";
+
+  if (direction === "asc") {
+    const referenceNow = new Date();
+    const leftSort = getAgendaIndexNearNowSortKey(left, referenceNow);
+    const rightSort = getAgendaIndexNearNowSortKey(right, referenceNow);
+    const groupDiff = leftSort.group - rightSort.group;
+
+    if (groupDiff !== 0) {
+      return groupDiff;
+    }
+
+    const distanceDiff = leftSort.distanceMs - rightSort.distanceMs;
+
+    if (distanceDiff !== 0) {
+      return distanceDiff;
+    }
+  }
+
   const startDiff =
     direction === "asc"
       ? left.startAt.getTime() - right.startAt.getTime()
@@ -1781,6 +1862,27 @@ function compareAgendaIndexItems(
     startDiff ||
     getAgendaIndexItemKey(left).localeCompare(getAgendaIndexItemKey(right))
   );
+}
+
+function getAgendaIndexReferenceNow(item: AgendaIndexItem, referenceNow: Date) {
+  return item.kind === "activity"
+    ? getActivityFloatingNow(referenceNow)
+    : referenceNow;
+}
+
+function getAgendaIndexNearNowSortKey(
+  item: AgendaIndexItem,
+  referenceNow: Date,
+) {
+  const comparisonNow = getAgendaIndexReferenceNow(item, referenceNow);
+  const nowTime = comparisonNow.getTime();
+  const startTime = item.startAt.getTime();
+  const endTime = (item.endAt ?? item.startAt).getTime();
+
+  return {
+    distanceMs: getNearestTimeRangeDistanceMs(startTime, endTime, nowTime),
+    group: endTime <= nowTime ? 1 : 0,
+  };
 }
 
 function getAgendaDateSortDirection(
@@ -1961,6 +2063,13 @@ function getPublicEventListOrderBy(
   }
 
   return [{ startAt: "asc" }, { id: "asc" }];
+}
+
+function shouldReadFullNearNowActivityCandidates(filters: ActivityFilters) {
+  return (
+    filters.sort === "soonest" &&
+    !isEndedOnlyActivityTimeStatesFilter(filters.timeStates)
+  );
 }
 
 function hasExplicitActivityListFilters(filters: ActivityFilters) {
@@ -2280,7 +2389,9 @@ async function getOrderedActivityList(
   const totalCount = activityTotalCount + publicEventTotalCount;
   const totalPages = getActivityTotalPages(totalCount, pageSize);
   const page = getActivityPage(filters.page, totalPages);
-  const readLimit = page * pageSize;
+  const readLimit = shouldReadFullNearNowActivityCandidates(filters)
+    ? totalCount
+    : page * pageSize;
   const [activities, publicEvents] = await Promise.all([
     prisma.activity.findMany({
       where,
@@ -2532,7 +2643,9 @@ async function getPublicInfoOnlyActivityList(
     };
   }
 
-  const readLimit = page * pageSize + 1;
+  const readLimit = shouldReadFullNearNowActivityCandidates(publicInfoFilters)
+    ? totalCount
+    : page * pageSize + 1;
   const [activities, publicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
