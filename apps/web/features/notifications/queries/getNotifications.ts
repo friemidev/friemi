@@ -18,6 +18,13 @@ const notificationSelect = {
       title: true,
     },
   },
+  activityAnnouncement: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+    },
+  },
 } satisfies Prisma.NotificationSelect;
 
 type NotificationQueryResult = Prisma.NotificationGetPayload<{
@@ -38,6 +45,11 @@ export type NotificationViewModel = {
     id: string;
     title: string;
   } | null;
+  activityAnnouncement: {
+    id: string;
+    content: string;
+    createdAt: string;
+  } | null;
 };
 
 function mapNotification(
@@ -52,6 +64,13 @@ function mapNotification(
     friendRequestId,
     actor: notification.actor,
     activity: notification.activity,
+    activityAnnouncement: notification.activityAnnouncement
+      ? {
+          id: notification.activityAnnouncement.id,
+          content: notification.activityAnnouncement.content,
+          createdAt: notification.activityAnnouncement.createdAt.toISOString(),
+        }
+      : null,
   };
 }
 

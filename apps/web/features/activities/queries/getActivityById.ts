@@ -68,6 +68,21 @@ const activityDetailSelect = {
       },
     },
   },
+  announcements: {
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 5,
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      authorId: true,
+      author: {
+        select: {
+          nickname: true,
+        },
+      },
+    },
+  },
   participants: {
     where: {
       status: {
@@ -402,6 +417,15 @@ function getActivityDetailViewModel(
       followerCount: activity.organizer._count.followers,
       followingCount: activity.organizer._count.following,
     },
+    announcements: activity.announcements
+      .map((announcement) => ({
+        id: announcement.id,
+        authorId: announcement.authorId,
+        authorName: announcement.author.nickname,
+        content: announcement.content,
+        createdAt: toIsoString(announcement.createdAt) ?? new Date().toISOString(),
+        isByOrganizer: announcement.authorId === activity.organizerId,
+      })),
     publicEvent: activity.publicEvent
       ? {
           id: activity.publicEvent.id,

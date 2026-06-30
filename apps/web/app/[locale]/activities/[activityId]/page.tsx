@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
+  formatActivityDate,
+} from "@chill-club/shared";
+import {
+  Bell,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
@@ -34,6 +38,7 @@ import { CancelActivityForm } from "@/features/activities/components/CancelActiv
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
+import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
@@ -1121,6 +1126,11 @@ export default async function ActivityDetailPage({
     requiresApproval: activity.requiresApproval,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
   });
+  const canViewAnnouncements =
+    isTeamOperator ||
+    viewerParticipation?.status === "JOINED" ||
+    viewerParticipation?.status === "APPROVED" ||
+    viewerParticipation?.status === "PENDING";
   const [pendingParticipants, analyticsSummary] = await perf.measure(
     "activity.organizerData",
     () =>
@@ -1465,6 +1475,14 @@ export default async function ActivityDetailPage({
               </div>
             ) : null}
           </div>
+
+          <ActivityAnnouncementsSection
+            activityId={activity.id}
+            announcements={activity.announcements}
+            canView={canViewAnnouncements}
+            isOrganizer={isTeamOperator}
+            locale={locale}
+          />
 
           <ActivityCommentsSection
             activityId={activity.id}
@@ -2072,5 +2090,130 @@ function ContactOrganizerForm({
       organizerNickname={organizerNickname}
       organizerProfileId={organizerProfileId}
     />
+  );
+}
+
+function getAnnouncementSectionCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      title: "Annonces du groupe",
+      empty: "Aucune annonce pour le moment.",
+      organizerEmpty:
+        "Utilisez cet espace pour prévenir tout le monde d'un changement d'heure, d'un point de rendez-vous ou d'un rappel utile.",
+      participantEmpty:
+        "Les nouvelles annonces de l'organisateur apparaîtront ici.",
+      locked:
+        "Rejoignez cette activité pour voir les annonces du groupe et les mises à jour de l'organisateur.",
+      organizerLabel: "Organisateur",
+      latestLabel: "Nouveau",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      title: "Group announcements",
+      empty: "No announcements yet.",
+      organizerEmpty:
+        "Use this space to notify everyone about time changes, meeting points, or quick reminders.",
+      participantEmpty: "New organizer announcements will appear here.",
+      locked:
+        "Join this activity to view group announcements and organizer updates.",
+      organizerLabel: "Organizer",
+      latestLabel: "Latest",
+    };
+  }
+
+  return {
+    title: "群公告",
+    empty: "暂时还没有公告。",
+    organizerEmpty: "这里可以统一通知时间变化、集合点、注意事项等。",
+    participantEmpty: "发起人的新公告会显示在这里。",
+    locked: "报名后可见群公告和发起人的最新通知。",
+    organizerLabel: "发起人",
+    latestLabel: "最新",
+  };
+}
+
+function ActivityAnnouncementsSection({
+  activityId,
+  announcements,
+  canView,
+  isOrganizer,
+  locale,
+}: {
+  activityId: string;
+  announcements: {
+    id: string;
+    authorName: string;
+    content: string;
+    createdAt: string;
+    isByOrganizer: boolean;
+  }[];
+  canView: boolean;
+  isOrganizer: boolean;
+  locale: string;
+}) {
+  const copy = getAnnouncementSectionCopy(locale);
+
+  return (
+    <section className="rounded-[1.35rem] border border-sand bg-white/72 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.06)] ring-1 ring-white/70">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-[#156240]" />
+          <h2 className="text-lg font-semibold text-ink">{copy.title}</h2>
+        </div>
+
+        {isOrganizer && canView ? (
+          <ActivityAnnouncementComposer
+            activityId={activityId}
+            locale={locale}
+            compact
+          />
+        ) : null}
+      </div>
+
+      {!canView ? (
+        <p className="mt-4 rounded-[1rem] border border-dashed border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm leading-6 text-[#156240]">
+          {copy.locked}
+        </p>
+      ) : null}
+
+      {canView && announcements.length > 0 ? (
+        <div className="mt-4 grid gap-2.5">
+          {announcements.map((announcement) => (
+            <article
+              key={announcement.id}
+              className={cn(
+                "rounded-[1rem] border bg-[#FEFFF9] px-4 py-3 shadow-sm",
+                announcement.id === announcements[0]?.id
+                  ? "border-[#8AB68E] ring-1 ring-[#8AB68E]/35"
+                  : "border-[#D6D5B2]",
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[#8E8383]">
+                <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#156240] ring-1 ring-[#8AB68E]/45">
+                  {announcement.authorName || copy.organizerLabel}
+                </span>
+                {announcement.id === announcements[0]?.id ? (
+                  <span className="rounded-full bg-[#156240] px-2.5 py-1 font-semibold text-white">
+                    {copy.latestLabel}
+                  </span>
+                ) : null}
+                <span>{formatActivityDate(announcement.createdAt, locale)}</span>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink">
+                {announcement.content}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : canView ? (
+        <div className="mt-4 rounded-[1rem] border border-dashed border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3">
+          <p className="text-sm leading-6 text-[#156240]">
+            {isOrganizer ? copy.organizerEmpty : copy.participantEmpty}
+          </p>
+        </div>
+      ) : null}
+    </section>
   );
 }

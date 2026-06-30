@@ -5,6 +5,7 @@ type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
 type CreateNotificationInput = {
   actorId?: string | null;
   activityId?: string | null;
+  activityAnnouncementId?: string | null;
   dedupe?: boolean;
   recipientId: string;
   type: NotificationType;
@@ -14,6 +15,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
   return {
     actorId: input.actorId ?? null,
     activityId: input.activityId ?? null,
+    activityAnnouncementId: input.activityAnnouncementId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };

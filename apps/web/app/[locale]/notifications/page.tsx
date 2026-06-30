@@ -60,7 +60,7 @@ const notificationCategoryStyles: Record<NotificationCategory, string> = {
 };
 
 function getNotificationCategory(
-  type: NotificationType,
+  type: NotificationType | string,
 ): NotificationCategory {
   if (
     type === "PARTICIPATION_PENDING" ||
@@ -78,6 +78,10 @@ function getNotificationCategory(
 
   if (type === "DIRECT_MESSAGE") {
     return "message";
+  }
+
+  if (type === "ACTIVITY_ANNOUNCEMENT") {
+    return "activity";
   }
 
   if (type === "ACTIVITY_COMMENTED" || type === "COMMENT_REPLY") {
@@ -163,6 +167,22 @@ function getNotificationText(
     };
   }
 
+  if ((notification.type as string) === "ACTIVITY_ANNOUNCEMENT") {
+    const copy = (t.types as Record<string, { title: string; body: (...args: string[]) => string }>).ACTIVITY_ANNOUNCEMENT;
+    const announcementPreview = notification.activityAnnouncement?.content.trim();
+
+    return {
+      title: copy.title,
+        body: copy.body(
+          activityTitle,
+          actorName ?? "",
+          announcementPreview && announcementPreview.length > 120
+            ? `${announcementPreview.slice(0, 117)}...`
+            : announcementPreview ?? "",
+      ),
+    };
+  }
+
   if (notification.type === "REPORT_CREATED") {
     const copy = t.types.REPORT_CREATED;
 
@@ -237,7 +257,7 @@ function getNotificationSummaryLabels(locale: string) {
 }
 
 function getNotificationVisual(
-  type: NotificationType,
+  type: NotificationType | string,
   isUnread: boolean,
 ): {
   icon: LucideIcon;
@@ -288,6 +308,18 @@ function getNotificationVisual(
         : "bg-fog text-outline",
       cardClassName: isUnread
         ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
+
+  if (type === "ACTIVITY_ANNOUNCEMENT") {
+    return {
+      icon: Bell,
+      iconClassName: isUnread
+        ? "bg-cream text-danger"
+        : "bg-fog text-outline",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
         : "border-sand bg-paper/62",
     };
   }
