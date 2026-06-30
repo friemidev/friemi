@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mirror star role icon</title>
+  <desc id="desc">An original mirror star role icon.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="24" fill="#FFF5E6" stroke="#F09182" stroke-width="4"/>
+  <path d="M31 25h34l9 15-26 34-26-34 9-15Z" fill="#1D1D1B"/>
+  <path d="M48 25v49" stroke="#FEFFF9" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="m47 35 4 9 10 1-8 6 3 10-9-5-9 5 3-10-8-6 10-1 4-9Z" fill="#F09182"/>
+  <path d="M31 40h34" stroke="#D6D5B2" stroke-width="4" stroke-linecap="round"/>
+</svg>

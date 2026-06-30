@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Assassin role icon</title>
+  <desc id="desc">A non-graphic shadow dagger role icon.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="24" fill="#FFF5E6" stroke="#F09182" stroke-width="4"/>
+  <path d="M60 18 42 55l-13 13 7 7 13-13 37-18L60 18Z" fill="#1D1D1B"/>
+  <path d="m35 62 7 7" stroke="#F09182" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="29" cy="72" r="5" fill="#156240"/>
+  <path d="M53 31 73 51" stroke="#FEFFF9" stroke-width="4" stroke-linecap="round"/>
+</svg>

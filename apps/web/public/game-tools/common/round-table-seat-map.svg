@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Round table seat map</title>
+  <desc id="desc">A neutral round table layout with ten seat markers.</desc>
+  <defs>
+    <radialGradient id="tableGlow" cx="50%" cy="46%" r="58%">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".58" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#D6D5B2"/>
+    </radialGradient>
+    <filter id="seatShadow" x="0" y="0" width="1024" height="1024" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#156240" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <circle cx="512" cy="512" r="324" fill="url(#tableGlow)" stroke="#8AB68E" stroke-width="8"/>
+  <circle cx="512" cy="512" r="236" fill="#FEFFF9" stroke="#D6D5B2" stroke-width="5"/>
+  <circle cx="512" cy="512" r="88" fill="#156240" opacity=".08"/>
+  <g stroke="#8AB68E" stroke-linecap="round" stroke-width="4" opacity=".55">
+    <path d="M512 188v108"/>
+    <path d="M512 728v108"/>
+    <path d="M188 512h108"/>
+    <path d="M728 512h108"/>
+    <path d="m283 283 76 76"/>
+    <path d="m665 665 76 76"/>
+    <path d="m741 283-76 76"/>
+    <path d="m359 665-76 76"/>
+  </g>
+  <g filter="url(#seatShadow)" fill="#FEFFF9" stroke="#156240" stroke-width="6">
+    <circle cx="512" cy="122" r="46"/>
+    <circle cx="741" cy="196" r="46"/>
+    <circle cx="882" cy="392" r="46"/>
+    <circle cx="882" cy="632" r="46"/>
+    <circle cx="741" cy="828" r="46"/>
+    <circle cx="512" cy="902" r="46"/>
+    <circle cx="283" cy="828" r="46"/>
+    <circle cx="142" cy="632" r="46"/>
+    <circle cx="142" cy="392" r="46"/>
+    <circle cx="283" cy="196" r="46"/>
+  </g>
+  <g fill="#8AB68E">
+    <circle cx="512" cy="122" r="14"/>
+    <circle cx="741" cy="196" r="14"/>
+    <circle cx="882" cy="392" r="14"/>
+    <circle cx="882" cy="632" r="14"/>
+    <circle cx="741" cy="828" r="14"/>
+    <circle cx="512" cy="902" r="14"/>
+    <circle cx="283" cy="828" r="14"/>
+    <circle cx="142" cy="632" r="14"/>
+    <circle cx="142" cy="392" r="14"/>
+    <circle cx="283" cy="196" r="14"/>
+  </g>
+</svg>

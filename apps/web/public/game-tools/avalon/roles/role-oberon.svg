@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Lone star role icon</title>
+  <desc id="desc">An original lone star and broken line role icon.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="24" fill="#FFF5E6" stroke="#F09182" stroke-width="4"/>
+  <circle cx="48" cy="48" r="25" fill="#1D1D1B"/>
+  <path d="m48 27 5 13 14 1-11 9 4 14-12-8-12 8 4-14-11-9 14-1 5-13Z" fill="#F09182"/>
+  <path d="M21 76h13m11 0h6m11 0h13" stroke="#156240" stroke-width="4" stroke-linecap="round"/>
+</svg>

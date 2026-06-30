@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Fail timeline node</title>
+  <desc id="desc">A fail node for recap timelines.</desc>
+  <circle cx="16" cy="16" r="14" fill="#FFF5E6" stroke="#F09182" stroke-width="2"/>
+  <path d="m11 11 10 10m0-10L11 21" stroke="#B5301F" stroke-width="3" stroke-linecap="round"/>
+</svg>

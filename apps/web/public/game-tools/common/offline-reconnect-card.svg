@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Offline reconnect</title>
+  <desc id="desc">A phone reconnecting to a round table.</desc>
+  <defs>
+    <linearGradient id="reconnectBg" x1="52" y1="40" x2="588" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".52" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+  </defs>
+  <rect x="36" y="32" width="568" height="296" rx="44" fill="url(#reconnectBg)" stroke="#8AB68E" stroke-width="5"/>
+  <rect x="96" y="74" width="138" height="214" rx="28" fill="#FEFFF9" stroke="#156240" stroke-width="6"/>
+  <circle cx="165" cy="248" r="8" fill="#8AB68E"/>
+  <ellipse cx="424" cy="182" rx="122" ry="72" fill="#EAF7EF" stroke="#156240" stroke-width="6"/>
+  <path d="M330 182h-62" stroke="#D6D5B2" stroke-width="8" stroke-linecap="round" stroke-dasharray="1 18"/>
+  <path d="M374 182c25 22 75 22 100 0" stroke="#156240" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="384" cy="156" r="12" fill="#F09182"/>
+  <circle cx="464" cy="156" r="12" fill="#FFF5E6" stroke="#156240" stroke-width="5"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Evil faction mark</title>
+  <desc id="desc">A dark crescent shield faction mark.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="24" fill="#FFF5E6" stroke="#F09182" stroke-width="4"/>
+  <path d="M48 22c10 5 20 6 25 7v16c0 16-9 27-25 34-16-7-25-18-25-34V29c5-1 15-2 25-7Z" fill="#1D1D1B"/>
+  <path d="M56 35c-9 3-14 10-14 19 0 7 4 13 10 16-13 0-23-10-23-23 0-12 9-22 21-23-1 4 1 8 6 11Z" fill="#F09182"/>
+  <path d="m59 56-7 5 3-8-6-5h8l3-8 3 8h8l-6 5 3 8-9-5Z" fill="#FFF5E6"/>
+</svg>

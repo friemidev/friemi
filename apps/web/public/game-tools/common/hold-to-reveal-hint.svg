@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Hold to reveal hint</title>
+  <desc id="desc">A fingertip pressing a hidden card.</desc>
+  <rect x="10" y="8" width="44" height="48" rx="14" fill="#FEFFF9" stroke="#8AB68E" stroke-width="3"/>
+  <path d="M24 36V19a5 5 0 0 1 10 0v13" stroke="#156240" stroke-width="4" stroke-linecap="round"/>
+  <path d="M33 31c8-1 14 4 14 13v7H27c-8-5-10-13-7-18 1-2 4-2 6 1l3 4" fill="#FFF5E6"/>
+  <path d="M33 31c8-1 14 4 14 13v7H27c-8-5-10-13-7-18 1-2 4-2 6 1l3 4" stroke="#156240" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M18 12c-5 4-7 10-5 16m33-16c5 4 7 10 5 16" stroke="#F09182" stroke-width="3" stroke-linecap="round"/>
+</svg>

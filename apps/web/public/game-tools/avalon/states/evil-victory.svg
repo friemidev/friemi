@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Evil victory scene</title>
+  <desc id="desc">A soft night round table victory scene.</desc>
+  <defs>
+    <linearGradient id="evilWinBg" x1="80" y1="70" x2="820" y2="530" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D1D1B"/>
+      <stop offset=".56" stop-color="#156240"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+  </defs>
+  <rect x="54" y="48" width="792" height="504" rx="64" fill="url(#evilWinBg)" stroke="#F09182" stroke-width="8"/>
+  <path d="M510 156c-58 14-98 65-98 126 0 52 31 97 75 118-92 1-166-73-166-165 0-88 69-160 156-165-9 33 4 65 33 86Z" fill="#F09182"/>
+  <ellipse cx="450" cy="396" rx="230" ry="70" fill="#FEFFF9" fill-opacity=".92" stroke="#F09182" stroke-width="8"/>
+  <path d="M340 396c56 46 164 46 220 0" stroke="#1D1D1B" stroke-width="16" stroke-linecap="round"/>
+</svg>

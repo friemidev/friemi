@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Empty Avalon room</title>
+  <desc id="desc">A soft empty round table illustration.</desc>
+  <defs>
+    <linearGradient id="emptyBg" x1="48" y1="42" x2="592" y2="378" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".65" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <filter id="emptyShadow" x="0" y="0" width="640" height="420" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#156240" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect x="36" y="34" width="568" height="352" rx="44" fill="url(#emptyBg)" filter="url(#emptyShadow)"/>
+  <ellipse cx="320" cy="218" rx="166" ry="96" fill="#FEFFF9" stroke="#8AB68E" stroke-width="5"/>
+  <ellipse cx="320" cy="218" rx="86" ry="48" fill="#EAF7EF" stroke="#D6D5B2" stroke-width="3"/>
+  <g fill="#FEFFF9" stroke="#8AB68E" stroke-width="4">
+    <circle cx="190" cy="118" r="30"/>
+    <circle cx="450" cy="118" r="30"/>
+    <circle cx="172" cy="288" r="30"/>
+    <circle cx="468" cy="288" r="30"/>
+  </g>
+  <circle cx="320" cy="126" r="36" fill="#156240"/>
+  <path d="M304 135V97m0 2h43l-10 14 10 14h-43" fill="#8AB68E" stroke="#FEFFF9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M267 218h106" stroke="#D6D5B2" stroke-width="4" stroke-linecap="round"/>
+</svg>

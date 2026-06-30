@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Vote timeline node</title>
+  <desc id="desc">A vote node for recap timelines.</desc>
+  <circle cx="16" cy="16" r="14" fill="#FEFFF9" stroke="#8AB68E" stroke-width="2"/>
+  <path d="M10 12h12l-3 8H7l3-8Z" fill="#D6D5B2" stroke="#156240" stroke-width="2" stroke-linejoin="round"/>
+  <path d="m15 14 2 2 4-5" stroke="#156240" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
