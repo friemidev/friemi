@@ -539,6 +539,17 @@ const copy = {
           body: (activityTitle: string, actorName = "发起人") =>
             `${actorName}更新了「${activityTitle}」的时间或地点。`,
         },
+        ACTIVITY_ANNOUNCEMENT: {
+          title: "群公告",
+          body: (
+            activityTitle: string,
+            actorName = "发起人",
+            content = "",
+          ) =>
+            content
+              ? `${actorName}在「${activityTitle}」发布了群公告：${content}`
+              : `${actorName}在「${activityTitle}」发布了群公告。`,
+        },
         FRIEND_REQUEST: {
           title: "新的好友申请",
           body: (_activityTitle: string, actorName = "有人") =>
@@ -1474,6 +1485,17 @@ const copy = {
           title: "Activity updated",
           body: (activityTitle: string, actorName = "The organizer") =>
             `${actorName} updated the time or location for "${activityTitle}".`,
+        },
+                ACTIVITY_ANNOUNCEMENT: {
+          title: "New group announcement",
+          body: (
+            activityTitle: string,
+            actorName = "The organizer",
+            content = "",
+          ) =>
+            content
+              ? `${actorName} posted an update in "${activityTitle}": ${content}`
+              : `${actorName} posted an update in "${activityTitle}".`,
         },
         FRIEND_REQUEST: {
           title: "New friend request",
@@ -2459,6 +2481,17 @@ const copy = {
           title: "Activité mise à jour",
           body: (activityTitle: string, actorName = "L'organisateur") =>
             `${actorName} a modifié l'heure ou le lieu de « ${activityTitle} ».`,
+        },
+                ACTIVITY_ANNOUNCEMENT: {
+          title: "Nouvelle annonce du groupe",
+          body: (
+            activityTitle: string,
+            actorName = "L'organisateur",
+            content = "",
+          ) =>
+            content
+              ? `${actorName} a publie une annonce pour ? ${activityTitle} ? : ${content}`
+              : `${actorName} a publie une annonce pour ? ${activityTitle} ?.`,
         },
         FRIEND_REQUEST: {
           title: "Nouvelle demande d'ami",

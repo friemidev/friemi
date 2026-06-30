@@ -95,6 +95,7 @@ enum NotificationType {
   PARTICIPATION_REJECTED
   ACTIVITY_UPDATED
   ACTIVITY_CANCELLED
+  ACTIVITY_ANNOUNCEMENT
   FRIEND_REQUEST
   ACTIVITY_COMMENTED
   COMMENT_REPLY
@@ -168,6 +169,7 @@ model UserProfile {
   conversationsAsUserA   Conversation[]             @relation("ConversationUserA")
   conversationsAsUserB   Conversation[]             @relation("ConversationUserB")
   sentDirectMessages     DirectMessage[]            @relation("DirectMessageSender")
+  authoredAnnouncements  ActivityAnnouncement[]     @relation("ActivityAnnouncementAuthor")
   submittedReports       Report[]                   @relation("ReportReporter")
   reviewedReports        Report[]                   @relation("ReportReviewer")
   createdAt              DateTime                   @default(now())
@@ -228,6 +230,7 @@ model Activity {
   sourceLinks       ActivitySourceLink[]
   favorites         ActivityFavorite[]
   directMessages    DirectMessage[]
+  announcements     ActivityAnnouncement[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -444,20 +447,38 @@ model ContentTranslation {
 }
 
 model Notification {
-  id          String           @id @default(cuid())
-  type        NotificationType
-  recipientId String
-  recipient   UserProfile      @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actorId     String?
-  actor       UserProfile?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  activityId  String?
-  activity    Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  readAt      DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                    String                @id @default(cuid())
+  type                  NotificationType
+  recipientId           String
+  recipient             UserProfile           @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId               String?
+  actor                 UserProfile?          @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  activityId            String?
+  activity              Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  activityAnnouncementId String?
+  activityAnnouncement  ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  readAt                DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
+  @@index([activityAnnouncementId])
+}
+
+model ActivityAnnouncement {
+  id            String         @id @default(cuid())
+  activityId     String
+  authorId       String
+  content        String
+  activity       Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author         UserProfile    @relation("ActivityAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  notifications  Notification[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([activityId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 model Report {
