@@ -1,7 +1,6 @@
 "use server";
 
-import { randomBytes, randomInt } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { randomInt } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -26,6 +25,12 @@ import {
 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import {
+  createGameToolPrivateToken,
+  createUniqueGameToolRoomCode,
+  getDefaultGameToolSeatName,
+  revalidateGameToolRoom,
+} from "@/features/game-tools/gameToolRooms";
 
 export type AvalonRoomActionState = {
   fieldErrors?: Record<string, string[]>;
@@ -88,30 +93,6 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-function createPrivateToken() {
-  return randomBytes(16).toString("hex");
-}
-
-function createCandidateRoomCode() {
-  return randomBytes(4).toString("hex").slice(0, 6).toUpperCase();
-}
-
-async function createUniqueRoomCode() {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const code = createCandidateRoomCode();
-    const existing = await prisma.gameToolRoom.findUnique({
-      where: { code },
-      select: { id: true },
-    });
-
-    if (!existing) {
-      return code;
-    }
-  }
-
-  return randomBytes(5).toString("hex").slice(0, 8).toUpperCase();
-}
-
 function getDefaultRoomTitle(locale: string) {
   if (locale === "fr") {
     return "Table Avalon Friemi";
@@ -122,18 +103,6 @@ function getDefaultRoomTitle(locale: string) {
   }
 
   return "Friemi 阿瓦隆小局";
-}
-
-function getDefaultSeatName(locale: string, seatNumber: number) {
-  if (locale === "fr") {
-    return `Place ${seatNumber}`;
-  }
-
-  if (locale === "en") {
-    return `Seat ${seatNumber}`;
-  }
-
-  return `座位 ${seatNumber}`;
 }
 
 function getActionCopy(locale: string) {
@@ -211,9 +180,11 @@ function getClaimedDisplayName({
 }
 
 function revalidateAvalonRoom(locale: string, roomId: string) {
-  revalidatePath(withLocale(locale, "/game-tools/avalon"));
-  revalidatePath(withLocale(locale, `/game-tools/avalon/rooms/${roomId}`));
-  revalidatePath(withLocale(locale, `/game-tools/avalon/rooms/${roomId}/screen`));
+  revalidateGameToolRoom({
+    locale,
+    roomId,
+    toolPath: "/game-tools/avalon",
+  });
 }
 
 function dedupeSeatNumbers(seatNumbers: number[]) {
@@ -267,7 +238,7 @@ export async function createAvalonRoomAction(
   try {
     const room = await prisma.gameToolRoom.create({
       data: {
-        code: await createUniqueRoomCode(),
+        code: await createUniqueGameToolRoomCode(),
         config: {
           roleDeck: getAvalonRoleDeck(result.data.playerCount),
         },
@@ -282,6 +253,7 @@ export async function createAvalonRoomAction(
           },
         },
         hostId: host.id,
+        kind: "AVALON",
         locale: result.data.locale,
         mode: result.data.mode,
         playerCount: result.data.playerCount,
@@ -295,8 +267,11 @@ export async function createAvalonRoomAction(
               return {
                 displayName: isHostSeat
                   ? host.nickname
-                  : getDefaultSeatName(result.data.locale, seatNumber),
-                privateToken: createPrivateToken(),
+                  : getDefaultGameToolSeatName(
+                      result.data.locale,
+                      seatNumber,
+                    ),
+                privateToken: createGameToolPrivateToken(),
                 profileId: isHostSeat ? host.id : undefined,
                 readyAt: isHostSeat ? new Date() : undefined,
                 seatNumber,
@@ -346,8 +321,8 @@ export async function joinAvalonRoomAction(
   let shouldRedirectToRoom = false;
 
   try {
-    const room = await prisma.gameToolRoom.findUnique({
-      where: { id: result.data.roomId },
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
       include: {
         seats: {
           orderBy: { seatNumber: "asc" },
@@ -390,7 +365,10 @@ export async function joinAvalonRoomAction(
 
       const displayName = getClaimedDisplayName({
         displayName: profile?.nickname ?? result.data.displayName,
-        fallback: getDefaultSeatName(room.locale, result.data.seatNumber),
+        fallback: getDefaultGameToolSeatName(
+          room.locale,
+          result.data.seatNumber,
+        ),
       });
 
       await prisma.gameToolSeat.update({
@@ -459,8 +437,8 @@ export async function startAvalonRoomAction(
   );
 
   try {
-    const room = await prisma.gameToolRoom.findUnique({
-      where: { id: result.data.roomId },
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
       include: {
         seats: {
           orderBy: { seatNumber: "asc" },
@@ -596,8 +574,8 @@ export async function proposeAvalonTeamAction(
   );
 
   try {
-    const room = await prisma.gameToolRoom.findUnique({
-      where: { id: result.data.roomId },
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
       include: {
         seats: {
           select: {
@@ -711,7 +689,11 @@ export async function submitAvalonTeamVoteAction(
       },
     });
 
-    if (!seat || seat.room.status !== "IN_PROGRESS") {
+    if (
+      !seat ||
+      seat.room.kind !== "AVALON" ||
+      seat.room.status !== "IN_PROGRESS"
+    ) {
       return { formError: t.submitFailed };
     }
 
@@ -862,7 +844,11 @@ export async function submitAvalonMissionCardAction(
       },
     });
 
-    if (!seat || seat.room.status !== "IN_PROGRESS") {
+    if (
+      !seat ||
+      seat.room.kind !== "AVALON" ||
+      seat.room.status !== "IN_PROGRESS"
+    ) {
       return { formError: t.submitFailed };
     }
 
@@ -1036,6 +1022,7 @@ export async function submitAvalonAssassinationAction(
     if (
       !seat ||
       seat.roleKey !== "assassin" ||
+      seat.room.kind !== "AVALON" ||
       seat.room.status !== "IN_PROGRESS"
     ) {
       return { formError: t.submitFailed };
@@ -1137,8 +1124,8 @@ export async function correctAvalonRoomAction(
   );
 
   try {
-    const room = await prisma.gameToolRoom.findUnique({
-      where: { id: result.data.roomId },
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
       select: {
         hostId: true,
         id: true,

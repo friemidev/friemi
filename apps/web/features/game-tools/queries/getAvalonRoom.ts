@@ -100,7 +100,7 @@ export const getAvalonRoomById = cache(
       },
     });
 
-    if (!room) {
+    if (!room || room.kind !== "AVALON") {
       return null;
     }
 
@@ -190,10 +190,10 @@ export const getAvalonRoomByCode = cache(
   }) => {
     const room = await prisma.gameToolRoom.findUnique({
       where: { code: code.trim().toUpperCase() },
-      select: { id: true },
+      select: { id: true, kind: true },
     });
 
-    if (!room) {
+    if (!room || room.kind !== "AVALON") {
       return null;
     }
 
@@ -236,7 +236,7 @@ export const getAvalonSeatByToken = cache(
       },
     });
 
-    if (!seat) {
+    if (!seat || seat.room.kind !== "AVALON") {
       return null;
     }
 
