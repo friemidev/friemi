@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Good faction mark</title>
+  <desc id="desc">A light shield and sunrise faction mark.</desc>
+  <rect x="12" y="12" width="72" height="72" rx="24" fill="#EAF7EF" stroke="#8AB68E" stroke-width="4"/>
+  <path d="M48 22c10 5 20 6 25 7v16c0 16-9 27-25 34-16-7-25-18-25-34V29c5-1 15-2 25-7Z" fill="#FEFFF9" stroke="#156240" stroke-width="4"/>
+  <path d="M31 55a17 17 0 0 1 34 0" fill="#D6D5B2"/>
+  <path d="M31 55a17 17 0 0 1 34 0" stroke="#156240" stroke-width="4" stroke-linecap="round"/>
+  <path d="M48 33v10m-15 2 8 4m22-4-8 4" stroke="#F09182" stroke-width="4" stroke-linecap="round"/>
+</svg>

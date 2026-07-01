@@ -46,6 +46,7 @@ import { ActivityRichDescription } from "@/features/activities/components/Activi
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
+import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
 import { TeamDetailMobileCtaSheet } from "@/features/activities/components/TeamDetailMobileCtaSheet";
 import {
   getActivityById,
@@ -309,6 +310,43 @@ function getTeamDetailCtaTitle({
   }
 
   return requiresApproval ? t.submitApproval : ctaCopy.title;
+}
+
+function getTeamDetailMobileJoinOpenLabel({
+  locale,
+  viewerParticipationStatus,
+}: {
+  locale: string;
+  viewerParticipationStatus: DetailViewerParticipationStatus;
+}) {
+  if (
+    viewerParticipationStatus === "JOINED" ||
+    viewerParticipationStatus === "APPROVED"
+  ) {
+    if (locale === "fr") {
+      return "Inscrit";
+    }
+
+    if (locale === "en") {
+      return "Joined";
+    }
+
+    return "已报名";
+  }
+
+  if (viewerParticipationStatus === "PENDING") {
+    if (locale === "fr") {
+      return "En attente";
+    }
+
+    if (locale === "en") {
+      return "Pending";
+    }
+
+    return "待审核";
+  }
+
+  return undefined;
 }
 
 function getTeamOwnerCtaCopy(locale: string) {
@@ -1133,11 +1171,22 @@ export default async function ActivityDetailPage({
     requiresApproval: activity.requiresApproval,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
   });
+  const mobileJoinCtaOpenLabel = getTeamDetailMobileJoinOpenLabel({
+    locale,
+    viewerParticipationStatus: viewerParticipation?.status ?? null,
+  });
   const canViewAnnouncements =
     isTeamOperator ||
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
+  const canUseBoardGameTools =
+    !activity.isActivityInfo &&
+    activity.category === "BOARD_GAME" &&
+    (isTeamOperator ||
+      viewerParticipation?.status === "JOINED" ||
+      viewerParticipation?.status === "APPROVED");
+  const boardGameToolHref = withLocale(locale, "/game-tools/avalon");
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
@@ -1961,6 +2010,7 @@ export default async function ActivityDetailPage({
           <TeamDetailMobileCtaSheet
             activityTitle={activity.title}
             locale={locale}
+            openLabel={mobileJoinCtaOpenLabel}
             participantLabel={activityParticipantLabel}
             statusLabel={getActivitySeatLabel(activity, locale)}
           >
@@ -2060,6 +2110,12 @@ export default async function ActivityDetailPage({
               </div>
             </div>
           </TeamDetailMobileCtaSheet>
+        ) : null}
+        {canUseBoardGameTools ? (
+          <BoardGameToolFloatingEntry
+            avalonHref={boardGameToolHref}
+            locale={locale}
+          />
         ) : null}
       </section>
     </PageContainer>

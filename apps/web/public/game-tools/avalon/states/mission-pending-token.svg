@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mission pending token</title>
+  <desc id="desc">A neutral pending mission token.</desc>
+  <circle cx="24" cy="24" r="21" fill="#FEFFF9" stroke="#D6D5B2" stroke-width="3"/>
+  <circle cx="24" cy="24" r="7" fill="#8AB68E"/>
+  <path d="M24 8v6m0 20v6m16-16h-6M14 24H8" stroke="#D6D5B2" stroke-width="3" stroke-linecap="round"/>
+</svg>

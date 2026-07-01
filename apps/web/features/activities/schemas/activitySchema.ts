@@ -15,6 +15,13 @@ const priceTypeValues = Object.keys(priceTypes) as [
   keyof typeof priceTypes,
   ...(keyof typeof priceTypes)[],
 ];
+const activityCategorySchema = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.enum(activityCategoryValues, {
+    invalid_type_error: "请选择组局主题",
+    required_error: "请选择组局主题",
+  }),
+);
 
 const optionalText = z
   .string()
@@ -82,7 +89,7 @@ export const createActivitySchema = z
     itinerary: optionalText,
     coverImageUrl: optionalImageUrl,
     type: z.enum(createActivityTypes),
-    category: z.enum(activityCategoryValues),
+    category: activityCategorySchema,
     visibility: z.enum(activityVisibilityValues).default("PUBLIC"),
     otherCategoryText: optionalShortText,
     city: nonEmptyString.default("Paris"),

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Timer ring</title>
+  <desc id="desc">A neutral countdown ring with ticks.</desc>
+  <circle cx="80" cy="80" r="68" fill="#FEFFF9" stroke="#D6D5B2" stroke-width="8"/>
+  <circle cx="80" cy="80" r="68" stroke="#156240" stroke-width="8" stroke-linecap="round" stroke-dasharray="300 128"/>
+  <g stroke="#8AB68E" stroke-width="4" stroke-linecap="round">
+    <path d="M80 18v12"/>
+    <path d="M80 130v12"/>
+    <path d="M18 80h12"/>
+    <path d="M130 80h12"/>
+    <path d="m36 36 8 8"/>
+    <path d="m116 116 8 8"/>
+    <path d="m124 36-8 8"/>
+    <path d="m44 116-8 8"/>
+  </g>
+  <circle cx="80" cy="80" r="34" fill="#EAF7EF"/>
+  <path d="M80 58v24l18 12" stroke="#156240" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

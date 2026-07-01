@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Vote matrix export frame</title>
+  <desc id="desc">A light frame for exported vote matrix images.</desc>
+  <defs>
+    <linearGradient id="matrixBg" x1="72" y1="72" x2="1128" y2="728" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".62" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+  </defs>
+  <rect x="42" y="42" width="1116" height="716" rx="58" fill="url(#matrixBg)" stroke="#8AB68E" stroke-width="6"/>
+  <rect x="92" y="118" width="1016" height="560" rx="34" fill="#FEFFF9" stroke="#D6D5B2" stroke-width="4"/>
+  <path d="M92 198h1016M92 278h1016M92 358h1016M92 438h1016M92 518h1016M92 598h1016" stroke="#D6D5B2" stroke-width="3" opacity=".7"/>
+  <path d="M220 118v560M348 118v560M476 118v560M604 118v560M732 118v560M860 118v560M988 118v560" stroke="#D6D5B2" stroke-width="3" opacity=".7"/>
+  <circle cx="96" cy="78" r="12" fill="#F09182"/>
+  <circle cx="134" cy="78" r="12" fill="#8AB68E"/>
+  <circle cx="172" cy="78" r="12" fill="#D6D5B2"/>
+</svg>
