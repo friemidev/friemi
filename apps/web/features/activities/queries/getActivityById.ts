@@ -86,7 +86,7 @@ const activityDetailSelect = {
   participants: {
     where: {
       status: {
-        in: countedDetailParticipationStatuses,
+        in: visibleDetailParticipationStatuses,
       },
     },
     orderBy: {
@@ -94,6 +94,7 @@ const activityDetailSelect = {
     },
     select: {
       id: true,
+      status: true,
       userProfile: {
         select: {
           id: true,
@@ -330,12 +331,16 @@ function getActivityDetailViewModel(
   const participantPreview = isActivityInfo
     ? []
     : [
-        ...(activity.participants ?? []).map((participant) => ({
-          id: participant.userProfile.id,
-          nickname: participant.userProfile.nickname,
-          avatarUrl: participant.userProfile.avatarUrl,
-          kind: "user" as const,
-        })),
+        ...(activity.participants ?? [])
+          .filter((participant) =>
+            countedDetailParticipationStatuses.includes(participant.status),
+          )
+          .map((participant) => ({
+            id: participant.userProfile.id,
+            nickname: participant.userProfile.nickname,
+            avatarUrl: participant.userProfile.avatarUrl,
+            kind: "user" as const,
+          })),
         ...(activity.guestParticipants ?? []).map((participant) => ({
           id: `guest:${participant.id}`,
           nickname: participant.displayName,
@@ -343,11 +348,24 @@ function getActivityDetailViewModel(
           kind: "guest" as const,
         })),
       ];
+  const contactableParticipants = isActivityInfo
+    ? []
+    : (activity.participants ?? [])
+        .filter(
+          (participant) => participant.userProfile.id !== activity.organizerId,
+        )
+        .map((participant) => ({
+          id: participant.userProfile.id,
+          nickname: participant.userProfile.nickname,
+          avatarUrl: participant.userProfile.avatarUrl,
+        }));
   const isViewerParticipant = Boolean(
     viewerProfileId &&
-      activity.participants?.some(
-        (participant) => participant.userProfile.id === viewerProfileId,
-      ),
+    activity.participants?.some(
+      (participant) =>
+        participant.userProfile.id === viewerProfileId &&
+        countedDetailParticipationStatuses.includes(participant.status),
+    ),
   );
   const isAddressHiddenFromViewer = shouldHideActivityAddressFromViewer({
     isActivityInfo,
@@ -401,6 +419,7 @@ function getActivityDetailViewModel(
     shareEnabled: activity.shareEnabled,
     shareToken: activity.shareToken,
     participantPreview,
+    contactableParticipants,
     merchant: activity.merchant
       ? {
           id: activity.merchant.id,
@@ -418,15 +437,15 @@ function getActivityDetailViewModel(
       followerCount: activity.organizer._count.followers,
       followingCount: activity.organizer._count.following,
     },
-    announcements: activity.announcements
-      .map((announcement) => ({
-        id: announcement.id,
-        authorId: announcement.authorId,
-        authorName: announcement.author.nickname,
-        content: announcement.content,
-        createdAt: toIsoString(announcement.createdAt) ?? new Date().toISOString(),
-        isByOrganizer: announcement.authorId === activity.organizerId,
-      })),
+    announcements: activity.announcements.map((announcement) => ({
+      id: announcement.id,
+      authorId: announcement.authorId,
+      authorName: announcement.author.nickname,
+      content: announcement.content,
+      createdAt:
+        toIsoString(announcement.createdAt) ?? new Date().toISOString(),
+      isByOrganizer: announcement.authorId === activity.organizerId,
+    })),
     publicEvent: activity.publicEvent
       ? {
           id: activity.publicEvent.id,
