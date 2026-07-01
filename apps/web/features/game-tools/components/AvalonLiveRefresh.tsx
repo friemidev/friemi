@@ -116,7 +116,15 @@ export function AvalonLiveRefresh({
         src="/game-tools/avalon/states/live-sync-token.svg"
         width={28}
       />
-      <span className={variant === "floating" ? "hidden sm:inline" : "hidden lg:inline"}>
+      <span
+        className={
+          variant === "floating"
+            ? "hidden sm:inline"
+            : online
+              ? "hidden lg:inline"
+              : "inline"
+        }
+      >
         {label}
       </span>
       <span

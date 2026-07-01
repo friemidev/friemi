@@ -25,6 +25,7 @@ import {
   correctAvalonRoomAction,
   joinAvalonRoomAction,
   manageAvalonLobbySeatAction,
+  manageAvalonRoomLifecycleAction,
   proposeAvalonTeamAction,
   startAvalonRoomAction,
   type AvalonRoomActionState,
@@ -86,6 +87,8 @@ type Copy = {
   claim: string;
   claimSeat: string;
   code: string;
+  confirmRedeal: string;
+  confirmRestart: string;
   copied: string;
   copy: string;
   current: string;
@@ -99,6 +102,7 @@ type Copy = {
   leader: string;
   lobby: string;
   log: string;
+  lifecycle: string;
   mission: string;
   missionCards: string;
   myIdentity: string;
@@ -118,10 +122,14 @@ type Copy = {
   screen: string;
   scanToJoin: string;
   ready: string;
+  redealHint: string;
+  redealRoles: string;
   releaseSeat: string;
   renewPrivateLink: string;
   renameSeat: string;
   repair: string;
+  restartHint: string;
+  restartLobby: string;
   roleHidden: string;
   roleRevealed: string;
   seat: string;
@@ -145,6 +153,8 @@ const copies: Record<string, Copy> = {
     claim: "认领",
     claimSeat: "认领座位",
     code: "房号",
+    confirmRedeal: "确定重新发牌吗？当前身份、提交和进度会被清空。",
+    confirmRestart: "确定回到候场吗？当前身份、提交和进度会被清空。",
     copied: "已复制",
     copy: "复制",
     current: "当前步骤",
@@ -159,6 +169,7 @@ const copies: Record<string, Copy> = {
     leader: "队长",
     lobby: "候场",
     log: "记录",
+    lifecycle: "重开",
     mission: "任务",
     missionCards: "任务牌",
     myIdentity: "我的身份",
@@ -179,11 +190,15 @@ const copies: Record<string, Copy> = {
     scanToJoin: "扫码入座",
     screen: "公共屏",
     ready: "已入座",
+    redealHint: "保留座位，洗新身份并从第 1 轮开始。",
+    redealRoles: "重新发牌",
     releaseSeat: "释放",
     renewPrivateLink: "刷新链接",
     renameSeat: "改名",
     roleHidden: "身份未公开",
     roleRevealed: "已发身份",
+    restartHint: "保留玩家座位，回到候场重新开局。",
+    restartLobby: "回候场",
     seat: "座位",
     selectTeam: "选择本轮队伍",
     start: "开始发身份",
@@ -202,6 +217,8 @@ const copies: Record<string, Copy> = {
     claim: "Claim",
     claimSeat: "Claim seat",
     code: "Code",
+    confirmRedeal: "Redeal roles? Current roles, submissions, and progress will be cleared.",
+    confirmRestart: "Return to lobby? Current roles, submissions, and progress will be cleared.",
     copied: "Copied",
     copy: "Copy",
     current: "Now",
@@ -217,6 +234,7 @@ const copies: Record<string, Copy> = {
     leader: "Leader",
     lobby: "Lobby",
     log: "Log",
+    lifecycle: "Restart",
     mission: "Quest",
     missionCards: "Quest cards",
     myIdentity: "My identity",
@@ -238,11 +256,15 @@ const copies: Record<string, Copy> = {
     scanToJoin: "Scan to join",
     screen: "Public screen",
     ready: "Seated",
+    redealHint: "Keep seats, shuffle new roles, and restart from round 1.",
+    redealRoles: "Redeal",
     releaseSeat: "Release",
     renewPrivateLink: "Renew link",
     renameSeat: "Rename",
     roleHidden: "Role hidden",
     roleRevealed: "Role dealt",
+    restartHint: "Keep players seated and return to lobby.",
+    restartLobby: "Lobby",
     seat: "Seat",
     selectTeam: "Pick this quest team",
     start: "Deal roles",
@@ -262,6 +284,8 @@ const copies: Record<string, Copy> = {
     claim: "Prendre",
     claimSeat: "Prendre la place",
     code: "Code",
+    confirmRedeal: "Redistribuer les rôles ? Les rôles, choix et progrès actuels seront effacés.",
+    confirmRestart: "Revenir à l'accueil ? Les rôles, choix et progrès actuels seront effacés.",
     copied: "Copié",
     copy: "Copier",
     current: "Maintenant",
@@ -277,6 +301,7 @@ const copies: Record<string, Copy> = {
     leader: "Chef",
     lobby: "Accueil",
     log: "Journal",
+    lifecycle: "Relancer",
     mission: "Quête",
     missionCards: "Cartes",
     myIdentity: "Mon identité",
@@ -298,11 +323,15 @@ const copies: Record<string, Copy> = {
     scanToJoin: "Scanner",
     screen: "Écran public",
     ready: "Assis",
+    redealHint: "Garde les places, mélange les rôles et repart du tour 1.",
+    redealRoles: "Redistribuer",
     releaseSeat: "Libérer",
     renewPrivateLink: "Nouveau lien",
     renameSeat: "Renommer",
     roleHidden: "Rôle caché",
     roleRevealed: "Rôle distribué",
+    restartHint: "Garde les joueurs assis et revient à l'accueil.",
+    restartLobby: "Accueil",
     seat: "Place",
     selectTeam: "Choisir l'équipe",
     start: "Distribuer",
@@ -451,6 +480,10 @@ export function AvalonRoomLobby({
 
         {room.isHost && room.status !== "LOBBY" ? (
           <HostCorrectionPanel locale={locale} room={room} t={t} />
+        ) : null}
+
+        {room.isHost && room.status !== "LOBBY" ? (
+          <HostLifecyclePanel locale={locale} room={room} t={t} />
         ) : null}
 
         {room.isHost && room.status === "LOBBY" ? (
@@ -900,6 +933,14 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-start.svg";
   }
 
+  if (type === "room_redealt") {
+    return "/game-tools/avalon/avalon-tool-icon.svg";
+  }
+
+  if (type === "room_reopened") {
+    return "/game-tools/avalon/states/round-reset-token.svg";
+  }
+
   if (type === "assassination_resolved") {
     return "/game-tools/avalon/share/timeline-node-assassin.svg";
   }
@@ -938,6 +979,14 @@ function getEventLabel(type: string, t: Copy) {
 
   if (type === "room_started") {
     return t.started;
+  }
+
+  if (type === "room_redealt") {
+    return t.redealRoles;
+  }
+
+  if (type === "room_reopened") {
+    return t.restartLobby;
   }
 
   return t.log;
@@ -1298,6 +1347,122 @@ function CorrectionSubmitButton({
       />
       <span className="rounded-full bg-[#FEFFF9] px-2 py-0.5 shadow-sm">
         {label}
+      </span>
+    </button>
+  );
+}
+
+function HostLifecyclePanel({
+  locale,
+  room,
+  t,
+}: {
+  locale: string;
+  room: AvalonRoomView;
+  t: Copy;
+}) {
+  const [state, formAction] = useActionState(
+    manageAvalonRoomLifecycleAction,
+    initialState,
+  );
+
+  return (
+    <section className="overflow-hidden rounded-[2rem] border border-[#F09182]/45 bg-[#FEFFF9] p-4 shadow-xl shadow-[#F09182]/10 sm:p-5">
+      <div className="mb-3 flex items-center gap-3">
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FFF0EC] text-[#B5301F] shadow-inner">
+          <RefreshCcw className="h-5 w-5" />
+        </span>
+        <div>
+          <h2 className="text-base font-black text-[#1D1D1B]">{t.lifecycle}</h2>
+          <p className="text-xs font-semibold leading-5 text-[#B5301F]/70">
+            {t.confirmRedeal}
+          </p>
+        </div>
+      </div>
+      <form action={formAction} className="grid gap-2">
+        <input name="locale" type="hidden" value={locale} />
+        <input name="roomId" type="hidden" value={room.id} />
+        <LifecycleSubmitButton
+          confirmMessage={t.confirmRedeal}
+          image="/game-tools/avalon/avalon-tool-icon.svg"
+          label={t.redealRoles}
+          operation="redeal_roles"
+          tone="forest"
+        >
+          {t.redealHint}
+        </LifecycleSubmitButton>
+        <LifecycleSubmitButton
+          confirmMessage={t.confirmRestart}
+          image="/game-tools/avalon/states/round-reset-token.svg"
+          label={t.restartLobby}
+          operation="restart_lobby"
+          tone="coral"
+        >
+          {t.restartHint}
+        </LifecycleSubmitButton>
+      </form>
+      {state.formError ? (
+        <p className="mt-3 rounded-2xl bg-[#F09182]/12 px-3 py-2 text-xs font-semibold text-[#B5301F]">
+          {state.formError}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function LifecycleSubmitButton({
+  children,
+  confirmMessage,
+  image,
+  label,
+  operation,
+  tone,
+}: {
+  children: ReactNode;
+  confirmMessage: string;
+  image: string;
+  label: string;
+  operation: "redeal_roles" | "restart_lobby";
+  tone: "coral" | "forest";
+}) {
+  const { pending } = useFormStatus();
+  const toneClass =
+    tone === "forest"
+      ? "border-[#8AB68E] hover:shadow-[#156240]/14"
+      : "border-[#F09182]/65 hover:shadow-[#F09182]/18";
+
+  return (
+    <button
+      className={cn(
+        "group grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-3 rounded-[1.35rem] border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-wait disabled:opacity-60",
+        toneClass,
+      )}
+      disabled={pending}
+      name="operation"
+      onClick={(event) => {
+        if (!window.confirm(confirmMessage)) {
+          event.preventDefault();
+        }
+      }}
+      type="submit"
+      value={operation}
+    >
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#F1F2EC] shadow-inner">
+        <Image
+          alt=""
+          className="h-9 w-9 object-contain drop-shadow-sm transition group-hover:scale-105"
+          height={42}
+          src={image}
+          width={42}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black text-[#0E2A5A]">
+          {pending ? "..." : label}
+        </span>
+        <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#156240]/68">
+          {children}
+        </span>
       </span>
     </button>
   );

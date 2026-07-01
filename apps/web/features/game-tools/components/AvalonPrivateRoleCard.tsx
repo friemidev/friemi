@@ -84,6 +84,8 @@ type Copy = {
   approve: string;
   backToHall: string;
   backToRoom: string;
+  currentAction: string;
+  currentRound: string;
   day: string;
   fail: string;
   help: string;
@@ -92,6 +94,7 @@ type Copy = {
   hideRole: string;
   hidden: string;
   history: string;
+  identityPocket: string;
   mission: string;
   missionResult: string;
   noRole: string;
@@ -122,6 +125,8 @@ const copies: Record<string, Copy> = {
     approve: "赞成",
     backToHall: "工具大厅",
     backToRoom: "返回房间",
+    currentAction: "当前操作",
+    currentRound: "本轮",
     day: "天",
     fail: "失败",
     help: "玩法提示",
@@ -131,6 +136,7 @@ const copies: Record<string, Copy> = {
     hideRole: "重新盖上",
     hidden: "先确认周围没人偷看，再揭开身份。",
     history: "回看",
+    identityPocket: "身份口袋",
     mission: "任务牌",
     missionResult: "任务结果",
     noRole: "房主还没有开始发身份。",
@@ -159,6 +165,8 @@ const copies: Record<string, Copy> = {
     approve: "Approve",
     backToHall: "Tools",
     backToRoom: "Room",
+    currentAction: "Action",
+    currentRound: "Now",
     day: "Day",
     fail: "Fail",
     help: "Tip",
@@ -168,6 +176,7 @@ const copies: Record<string, Copy> = {
     hideRole: "Hide role",
     hidden: "Check the room before revealing your identity.",
     history: "History",
+    identityPocket: "Identity",
     mission: "Quest card",
     missionResult: "Quest result",
     noRole: "The host has not dealt roles yet.",
@@ -196,6 +205,8 @@ const copies: Record<string, Copy> = {
     approve: "Oui",
     backToHall: "Outils",
     backToRoom: "Salle",
+    currentAction: "Action",
+    currentRound: "Tour",
     day: "Jour",
     fail: "Échec",
     help: "Astuce",
@@ -205,6 +216,7 @@ const copies: Record<string, Copy> = {
     hideRole: "Masquer",
     hidden: "Vérifie autour de toi avant de révéler ton identité.",
     history: "Historique",
+    identityPocket: "Rôle",
     mission: "Carte quête",
     missionResult: "Résultat",
     noRole: "L'hôte n'a pas encore distribué les rôles.",
@@ -231,6 +243,107 @@ const copies: Record<string, Copy> = {
   },
 };
 const initialState: AvalonRoomActionState = {};
+const playerConsoleToken = "/game-tools/avalon/states/player-console-token.svg";
+
+function isEvilRole(roleKey: string | null) {
+  return (
+    roleKey === "assassin" ||
+    roleKey === "minion" ||
+    roleKey === "mordred" ||
+    roleKey === "morgana" ||
+    roleKey === "oberon"
+  );
+}
+
+function getPlayerStage({
+  roleKey,
+  roomState,
+  roomStatus,
+  seatNumber,
+  selectedRoundIndex,
+  t,
+}: {
+  roleKey: string | null;
+  roomState: AvalonRoomState;
+  roomStatus: string;
+  seatNumber: number;
+  selectedRoundIndex: number;
+  t: Copy;
+}) {
+  if (roomStatus !== "IN_PROGRESS") {
+    return {
+      detail: t.noRole,
+      icon: playerConsoleToken,
+      title: t.identityPocket,
+      tone: "paper" as const,
+    };
+  }
+
+  if (selectedRoundIndex !== roomState.roundIndex) {
+    return {
+      detail: `${t.day} ${selectedRoundIndex + 1}`,
+      icon: "/game-tools/avalon/share/timeline-node-vote.svg",
+      title: t.history,
+      tone: "paper" as const,
+    };
+  }
+
+  if (roomState.phase === "team_building") {
+    const isLeader = roomState.currentLeaderSeatNumber === seatNumber;
+
+    return {
+      detail: isLeader ? t.selectExactly : t.noAction,
+      icon: isLeader
+        ? "/game-tools/avalon/states/team-leader-marker.svg"
+        : playerConsoleToken,
+      title: isLeader ? t.pickTeam : t.phaseTeam,
+      tone: isLeader ? ("forest" as const) : ("paper" as const),
+    };
+  }
+
+  if (roomState.phase === "team_vote") {
+    return {
+      detail: `${t.approve} / ${t.reject}`,
+      icon: "/game-tools/avalon/states/vote-approve-card.svg",
+      title: t.vote,
+      tone: "forest" as const,
+    };
+  }
+
+  if (roomState.phase === "mission") {
+    const isOnMissionTeam = roomState.proposedTeamSeatNumbers.includes(seatNumber);
+
+    return {
+      detail: isOnMissionTeam
+        ? isEvilRole(roleKey)
+          ? `${t.success} / ${t.fail}`
+          : t.success
+        : t.notOnTeam,
+      icon: "/game-tools/avalon/states/mission-pending-token.svg",
+      title: t.mission,
+      tone: isOnMissionTeam ? ("forest" as const) : ("paper" as const),
+    };
+  }
+
+  if (roomState.phase === "assassination") {
+    return {
+      detail: roleKey === "assassin" ? t.target : t.noAction,
+      icon: "/game-tools/avalon/states/assassination-phase.svg",
+      title: t.phaseAssassination,
+      tone: "coral" as const,
+    };
+  }
+
+  return {
+    detail: roomState.winner === "good" ? t.success : t.fail,
+    icon:
+      roomState.winner === "good"
+        ? "/game-tools/avalon/states/good-victory.svg"
+        : "/game-tools/avalon/states/evil-victory.svg",
+    title: t.missionResult,
+    tone: "paper" as const,
+  };
+}
 
 export function AvalonPrivateRoleCard({
   locale,
@@ -252,7 +365,15 @@ export function AvalonPrivateRoleCard({
   const [helpOpen, setHelpOpen] = useState(false);
   const [selectedRoundIndex, setSelectedRoundIndex] = useState(roomState.roundIndex);
   const t = copies[locale] ?? copies.en;
-  const canReveal = roomStatus === "IN_PROGRESS" && payload;
+  const canReveal = roomStatus === "IN_PROGRESS" && Boolean(payload);
+  const stage = getPlayerStage({
+    roleKey,
+    roomState,
+    roomStatus,
+    seatNumber,
+    selectedRoundIndex,
+    t,
+  });
   const roundTabs = useMemo(
     () =>
       roomState.missionResults.map((result, index) => ({
@@ -269,13 +390,13 @@ export function AvalonPrivateRoleCard({
   }, [roomState.roundIndex, roomState.phase]);
 
   return (
-    <section className="relative isolate min-h-[calc(100svh-7rem)] overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-3 shadow-2xl shadow-[#156240]/15 sm:p-6">
-      <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#F09182]/18 blur-3xl" />
-      <div className="absolute -bottom-20 left-0 h-56 w-56 rounded-full bg-[#8AB68E]/24 blur-3xl" />
-      <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(241,242,236,0.98),rgba(254,255,249,0))]" />
+    <section className="relative isolate min-h-[calc(100svh-7rem)] overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-2.5 shadow-2xl shadow-[#156240]/15 sm:p-6">
+      <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#F09182]/14 blur-3xl" />
+      <div className="absolute -bottom-20 left-0 h-56 w-56 rounded-full bg-[#8AB68E]/22 blur-3xl" />
+      <div className="absolute inset-x-0 top-0 h-28 bg-[linear-gradient(180deg,rgba(241,242,236,0.98),rgba(254,255,249,0))]" />
 
-      <div className="relative grid gap-3 sm:gap-5">
-        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-[1.55rem] border border-[#D6D5B2] bg-white/78 px-3 py-3 shadow-sm backdrop-blur">
+      <div className="relative grid gap-2.5 sm:gap-5">
+        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-[1.45rem] border border-[#D6D5B2] bg-white/82 px-2.5 py-2.5 shadow-sm backdrop-blur sm:gap-3 sm:px-3 sm:py-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[1.1rem] bg-[#156240] text-white shadow-lg shadow-[#156240]/18">
               <Image
@@ -329,6 +450,13 @@ export function AvalonPrivateRoleCard({
           </div>
         </header>
 
+        <PlayerStageCard
+          currentRoundIndex={roomState.roundIndex}
+          selectedRoundIndex={selectedRoundIndex}
+          stage={stage}
+          t={t}
+        />
+
         <RoundSwitcher
           currentRoundIndex={roomState.roundIndex}
           onSelect={setSelectedRoundIndex}
@@ -351,127 +479,15 @@ export function AvalonPrivateRoleCard({
           t={t}
         />
 
-        <section
-          className={cn(
-            "rounded-[1.65rem] border p-2.5 transition sm:p-4",
-            revealed
-              ? "border-[#8AB68E]/45 bg-white/78"
-              : "border-[#1D1D1B]/10 bg-[#1D1D1B]",
-          )}
-        >
-          {!canReveal ? (
-            <div className="grid min-h-28 place-items-center rounded-[1.35rem] border border-dashed border-[#D6D5B2] bg-white/75 p-4 text-center">
-              <ShieldAlert className="h-8 w-8 text-[#F09182]" />
-              <p className="mt-2 text-sm font-bold text-[#1D1D1B]">{t.noRole}</p>
-            </div>
-          ) : revealed ? (
-            <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center">
-              <div className="flex justify-end sm:col-span-2">
-                <button
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-xs font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-                  onClick={() => setRevealed(false)}
-                  type="button"
-                >
-                  <EyeOff className="h-4 w-4" />
-                  {t.hideRole}
-                </button>
-              </div>
-              <div className="relative mx-auto grid h-32 w-28 place-items-center rounded-[1.45rem] border border-[#D6D5B2] bg-[linear-gradient(145deg,#FEFFF9,#F1F2EC)] shadow-xl shadow-[#156240]/10">
-                <Image
-                  alt=""
-                  className="h-20 w-20 object-contain drop-shadow-md"
-                  height={96}
-                  src={getRoleIconPath(roleKey)}
-                  width={96}
-                />
-                <span className="absolute -bottom-2 rounded-full bg-[#156240] px-3 py-1 text-[0.68rem] font-black text-white shadow-lg">
-                  {payload.alignmentLabel}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#156240]/70">
-                  <Eye className="h-3.5 w-3.5" />
-                  {t.role}
-                </p>
-                <h2 className="mt-1 text-2xl font-black leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
-                  {payload.roleLabel}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#1D1D1B]/72">
-                  {payload.roleDescription}
-                </p>
-              </div>
-
-              <div className="grid gap-2 sm:col-span-2">
-                <p className="inline-flex items-center gap-2 text-sm font-black text-[#156240]">
-                  <Users className="h-4 w-4" />
-                  {t.visible}
-                </p>
-                {payload.visibleHints.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {payload.visibleHints.map((hint) => (
-                      <div
-                        className="relative grid min-h-28 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-white px-2 py-3 text-center shadow-sm"
-                        key={`${hint.seatNumber}-${hint.label}`}
-                      >
-                        <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[#156240] text-[0.7rem] font-black text-white shadow-sm">
-                          {hint.seatNumber}
-                        </span>
-                        <Image
-                          alt=""
-                          className="h-14 w-14 object-contain drop-shadow-md"
-                          height={64}
-                          src={getRoleIconPath(hint.roleKey ?? null)}
-                          width={64}
-                        />
-                        <div className="min-w-0">
-                          <p className="line-clamp-1 text-xs font-black text-[#0E2A5A]">
-                            {hint.displayName}
-                          </p>
-                          <p className="mt-0.5 line-clamp-1 text-[0.66rem] font-black text-[#156240]/70">
-                            {hint.label}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid min-h-20 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-white shadow-sm">
-                    <Image
-                      alt=""
-                      className="h-14 w-14 opacity-70"
-                      height={64}
-                      src="/game-tools/avalon/roles/role-unknown.svg"
-                      width={64}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="grid min-h-48 place-items-center rounded-[1.35rem] border border-white/10 bg-[radial-gradient(circle_at_25%_25%,rgba(240,145,130,0.22),transparent_38%),radial-gradient(circle_at_70%_65%,rgba(138,182,142,0.28),transparent_34%)] p-5 text-center text-white">
-              <div>
-                <Image
-                  alt=""
-                  className="mx-auto h-28 w-20 drop-shadow-2xl"
-                  height={148}
-                  src="/game-tools/avalon/roles/private-card-back.svg"
-                  width={104}
-                />
-                <p className="mt-3 max-w-xs text-sm font-semibold leading-6 text-white/80">
-                  {t.hidden}
-                </p>
-                <button
-                  className="mt-4 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-[#156240] shadow-lg shadow-black/20 transition hover:-translate-y-0.5"
-                  onClick={() => setRevealed(true)}
-                  type="button"
-                >
-                  <Eye className="h-4 w-4" />
-                  {t.reveal}
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
+        <RolePocket
+          canReveal={canReveal}
+          onHide={() => setRevealed(false)}
+          onReveal={() => setRevealed(true)}
+          payload={payload}
+          revealed={revealed}
+          roleKey={roleKey}
+          t={t}
+        />
       </div>
 
       {helpOpen ? <HelpDialog onClose={() => setHelpOpen(false)} t={t} /> : null}
@@ -565,6 +581,242 @@ function RoundSwitcher({
         })}
       </div>
     </nav>
+  );
+}
+
+function PlayerStageCard({
+  currentRoundIndex,
+  selectedRoundIndex,
+  stage,
+  t,
+}: {
+  currentRoundIndex: number;
+  selectedRoundIndex: number;
+  stage: ReturnType<typeof getPlayerStage>;
+  t: Copy;
+}) {
+  const toneClass =
+    stage.tone === "forest"
+      ? "border-[#8AB68E] bg-[#156240] text-white shadow-[#156240]/18"
+      : stage.tone === "coral"
+        ? "border-[#F09182] bg-[#FFF5E6] text-[#B5301F] shadow-[#F09182]/18"
+        : "border-[#D6D5B2] bg-white/84 text-[#156240] shadow-[#156240]/10";
+
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[1.65rem] border p-3 shadow-xl backdrop-blur",
+        toneClass,
+      )}
+    >
+      <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/18 blur-2xl" />
+      <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <span className="grid h-16 w-16 place-items-center rounded-[1.25rem] bg-white/92 shadow-lg shadow-[#1D1D1B]/8">
+          <Image
+            alt=""
+            className="h-12 w-12 object-contain drop-shadow-sm"
+            height={56}
+            src={stage.icon}
+            width={56}
+          />
+        </span>
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "text-[0.66rem] font-black uppercase tracking-[0.16em]",
+              stage.tone === "forest" ? "text-white/78" : "text-[#156240]/70",
+            )}
+          >
+            {t.currentAction}
+          </p>
+          <h2
+            className={cn(
+              "line-clamp-2 text-xl font-black leading-tight tracking-normal",
+              stage.tone === "forest" ? "text-white" : "text-[#0E2A5A]",
+            )}
+          >
+            {stage.title}
+          </h2>
+          <p
+            className={cn(
+              "mt-1 line-clamp-2 text-xs font-bold leading-5",
+              stage.tone === "forest" ? "text-white/82" : "text-[#1D1D1B]/66",
+            )}
+          >
+            {stage.detail}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "grid min-h-12 min-w-12 place-items-center rounded-full px-2 text-center text-[0.68rem] font-black shadow-sm",
+            stage.tone === "forest"
+              ? "bg-white text-[#156240]"
+              : "border border-[#8AB68E]/55 bg-[#FEFFF9] text-[#156240]",
+          )}
+        >
+          {selectedRoundIndex === currentRoundIndex
+            ? t.currentRound
+            : `${t.day} ${selectedRoundIndex + 1}`}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function RolePocket({
+  canReveal,
+  onHide,
+  onReveal,
+  payload,
+  revealed,
+  roleKey,
+  t,
+}: {
+  canReveal: boolean;
+  onHide: () => void;
+  onReveal: () => void;
+  payload: AvalonPrivatePayload | null;
+  revealed: boolean;
+  roleKey: string | null;
+  t: Copy;
+}) {
+  if (!canReveal || !payload) {
+    return (
+      <section className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-[1.55rem] border border-dashed border-[#8AB68E]/70 bg-white/70 p-3 shadow-sm">
+        <span className="grid h-14 w-14 place-items-center rounded-[1.15rem] bg-[#F1F2EC] shadow-inner">
+          <Image
+            alt=""
+            className="h-10 w-10 object-contain"
+            height={48}
+            src={playerConsoleToken}
+            width={48}
+          />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+            {t.identityPocket}
+          </p>
+          <p className="text-sm font-black leading-5 text-[#0E2A5A]">{t.noRole}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!revealed) {
+    return (
+      <section className="relative overflow-hidden rounded-[1.65rem] border border-[#1D1D1B]/20 bg-[#1D1D1B] p-3 text-white shadow-xl shadow-[#1D1D1B]/18">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_0%,rgba(240,145,130,0.22),transparent_34%),radial-gradient(circle_at_88%_70%,rgba(138,182,142,0.22),transparent_36%)]" />
+        <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+          <Image
+            alt=""
+            className="h-20 w-20 rounded-[1.25rem] object-contain shadow-xl shadow-black/20"
+            height={88}
+            src="/game-tools/avalon/roles/private-card-back.svg"
+            width={88}
+          />
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/58">
+              {t.identityPocket}
+            </p>
+            <p className="mt-1 text-sm font-bold leading-5 text-white/82">
+              {t.hidden}
+            </p>
+            <button
+              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] shadow-lg shadow-black/20 transition active:scale-[0.98] hover:-translate-y-0.5"
+              onClick={onReveal}
+              type="button"
+            >
+              <Eye className="h-4 w-4" />
+              {t.reveal}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={cn(
+        "relative overflow-hidden rounded-[1.65rem] border p-3 shadow-xl",
+        payload.alignmentLabel.includes("暗") ||
+          payload.alignmentLabel.toLowerCase().includes("shadow") ||
+          payload.alignmentLabel.toLowerCase().includes("ombre")
+          ? "border-[#F09182] bg-[#FFF5E6] shadow-[#F09182]/14"
+          : "border-[#8AB68E] bg-white/86 shadow-[#156240]/12",
+      )}
+    >
+      <div className="absolute -right-10 top-0 h-32 w-32 rounded-full bg-[#8AB68E]/16 blur-2xl" />
+      <div className="relative grid gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <span className="grid h-20 w-20 place-items-center rounded-[1.35rem] bg-[#FEFFF9] shadow-lg shadow-[#156240]/12">
+            <Image
+              alt=""
+              className="h-16 w-16 object-contain drop-shadow-sm"
+              height={72}
+              src={getRoleIconPath(roleKey)}
+              width={72}
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[#156240]/70">
+              {t.role}
+            </p>
+            <h2 className="line-clamp-1 text-2xl font-black leading-tight text-[#0E2A5A]">
+              {payload.roleLabel}
+            </h2>
+            <span className="mt-1 inline-flex rounded-full border border-[#8AB68E]/60 bg-[#FEFFF9] px-2.5 py-0.5 text-xs font-black text-[#156240]">
+              {payload.alignmentLabel}
+            </span>
+          </div>
+          <button
+            aria-label={t.hideRole}
+            className="grid h-11 w-11 place-items-center rounded-full border border-[#D6D5B2] bg-white text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5"
+            onClick={onHide}
+            type="button"
+          >
+            <EyeOff className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="rounded-[1.15rem] bg-[#F1F2EC]/82 px-3 py-2 text-sm font-semibold leading-6 text-[#1D1D1B]/75">
+          {payload.roleDescription}
+        </p>
+
+        {payload.visibleHints.length > 0 ? (
+          <div className="grid gap-2">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+              {t.visible}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {payload.visibleHints.map((hint) => (
+                <div
+                  className="grid min-h-24 place-items-center rounded-[1.2rem] border border-[#D6D5B2] bg-[#FEFFF9] px-2 py-2 text-center shadow-sm"
+                  key={`${hint.seatNumber}-${hint.label}-${hint.displayName}`}
+                >
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-[#156240] text-sm font-black text-white shadow-sm">
+                    {hint.seatNumber}
+                  </span>
+                  <Image
+                    alt=""
+                    className="my-1 h-10 w-10 object-contain drop-shadow-sm"
+                    height={44}
+                    src={getRoleIconPath(hint.roleKey ?? null)}
+                    width={44}
+                  />
+                  <span className="line-clamp-1 text-[0.68rem] font-black text-[#0E2A5A]">
+                    {hint.displayName}
+                  </span>
+                  <span className="line-clamp-1 text-[0.62rem] font-black text-[#156240]/75">
+                    {hint.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -709,13 +961,7 @@ function PrivateActionPanel({
       <RecordedState t={t} />
     ) : (
       <MissionCardPanel
-        canFail={
-          roleKey === "assassin" ||
-          roleKey === "minion" ||
-          roleKey === "mordred" ||
-          roleKey === "morgana" ||
-          roleKey === "oberon"
-        }
+        canFail={isEvilRole(roleKey)}
         locale={locale}
         privateToken={privateToken}
         t={t}
@@ -1009,7 +1255,7 @@ function PassiveRoundPanel({
             title: t.phaseAssassination,
           }
         : {
-            icon: "/game-tools/avalon/states/live-sync-token.svg",
+            icon: playerConsoleToken,
             label: t.noAction,
             title: t.phaseTeam,
           };
@@ -1055,13 +1301,13 @@ function TeamVotePanel({
         title={t.vote}
       />
       <div className="grid grid-cols-2 gap-3">
-      <PrivateImageAction
-        action={formAction}
-        image="/game-tools/avalon/states/vote-approve-card.svg"
-        label={t.approve}
-        locale={locale}
-        privateToken={privateToken}
-        value="approve"
+        <PrivateImageAction
+          action={formAction}
+          image="/game-tools/avalon/states/vote-approve-card.svg"
+          label={t.approve}
+          locale={locale}
+          privateToken={privateToken}
+          value="approve"
         />
         <PrivateImageAction
           action={formAction}
@@ -1072,7 +1318,7 @@ function TeamVotePanel({
           value="reject"
         />
       </div>
-      <ActionError error={state.formError} />
+      <ActionFeedback state={state} />
     </div>
   );
 }
@@ -1120,7 +1366,7 @@ function MissionCardPanel({
           />
         ) : null}
       </div>
-      <ActionError error={state.formError} />
+      <ActionFeedback state={state} />
     </div>
   );
 }
@@ -1171,7 +1417,7 @@ function AssassinationPanel({
         ))}
       </div>
       <PrivateSubmitButton label={t.submit} />
-      <ActionError error={state.formError} />
+      <ActionFeedback state={state} />
     </form>
   );
 }
@@ -1213,23 +1459,41 @@ function PrivateImageAction({
       <input name="locale" type="hidden" value={locale} />
       <input name="privateToken" type="hidden" value={privateToken} />
       <input name="value" type="hidden" value={value} />
-      <button
-        className="group relative grid min-h-36 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-black text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 sm:min-h-40"
-        type="submit"
-      >
-        <span className="absolute inset-x-3 top-3 h-12 rounded-full bg-[#F1F2EC]/70 blur-xl transition group-hover:bg-[#8AB68E]/25" />
-        <Image
-          alt=""
-          className="relative h-24 w-24 drop-shadow-xl transition group-hover:scale-105"
-          height={112}
-          src={image}
-          width={112}
-        />
-        <span className="relative rounded-full bg-white/90 px-3 py-1 text-xs shadow-sm">
-          {label}
-        </span>
-      </button>
+      <PrivateImageActionButton image={image} label={label} />
     </form>
+  );
+}
+
+function PrivateImageActionButton({
+  image,
+  label,
+}: {
+  image: string;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="group relative grid min-h-32 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-black text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-40"
+      disabled={pending}
+      type="submit"
+    >
+      <span className="absolute inset-x-3 top-3 h-12 rounded-full bg-[#F1F2EC]/70 blur-xl transition group-hover:bg-[#8AB68E]/25" />
+      <Image
+        alt=""
+        className={cn(
+          "relative h-24 w-24 drop-shadow-xl transition group-hover:scale-105",
+          pending && "scale-95 animate-pulse",
+        )}
+        height={112}
+        src={image}
+        width={112}
+      />
+      <span className="relative rounded-full bg-white/90 px-3 py-1 text-xs shadow-sm">
+        {label}
+      </span>
+    </button>
   );
 }
 
@@ -1242,7 +1506,7 @@ function PrivateSubmitButton({ label }: { label: string }) {
       disabled={pending}
       type="submit"
     >
-      {label}
+      {pending ? "..." : label}
     </button>
   );
 }
@@ -1258,7 +1522,7 @@ function TeamProposalSeatSubmitButton({ label }: { label: string }) {
     >
       <span className="absolute inset-x-6 top-0 h-8 rounded-full bg-white/16 blur-xl" />
       <Flag className="relative h-4 w-4" />
-      <span className="relative">{label}</span>
+      <span className="relative">{pending ? "..." : label}</span>
     </button>
   );
 }
@@ -1284,6 +1548,18 @@ function ActionError({ error }: { error?: string }) {
   return error ? (
     <p className="rounded-2xl bg-[#F09182]/12 px-3 py-2 text-sm font-semibold text-[#B5301F]">
       {error}
+    </p>
+  ) : null;
+}
+
+function ActionFeedback({ state }: { state: AvalonRoomActionState }) {
+  if (state.formError) {
+    return <ActionError error={state.formError} />;
+  }
+
+  return state.formNotice ? (
+    <p className="rounded-2xl bg-[#8AB68E]/14 px-3 py-2 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E]/35">
+      {state.formNotice}
     </p>
   ) : null;
 }

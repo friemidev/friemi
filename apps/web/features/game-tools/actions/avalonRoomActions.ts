@@ -36,6 +36,7 @@ import {
 export type AvalonRoomActionState = {
   fieldErrors?: Record<string, string[]>;
   formError?: string;
+  formNotice?: string;
 };
 
 const roomTitleMaxLength = 80;
@@ -56,6 +57,12 @@ const joinRoomSchema = z.object({
 
 const startRoomSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
+  roomId: z.string().min(1),
+});
+
+const roomLifecycleSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  operation: z.enum(["redeal_roles", "restart_lobby"]),
   roomId: z.string().min(1),
 });
 
@@ -226,6 +233,76 @@ function getRoleAlignment(roleKey: AvalonRoleKey) {
     roleKey === "oberon"
     ? "evil"
     : "good";
+}
+
+function createInitialAvalonRoomState() {
+  return {
+    currentLeaderSeatNumber: 1,
+    missionResults: [null, null, null, null, null],
+    phase: "team_building",
+    proposedTeamSeatNumbers: [],
+    roundIndex: 0,
+    teamVoteRejectCount: 0,
+    voteResult: null,
+    winner: null,
+    winnerReason: null,
+  };
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
+function assignAvalonRoles({
+  locale,
+  playerCount,
+  seats,
+}: {
+  locale: string;
+  playerCount: AvalonPlayerCount;
+  seats: Array<{
+    displayName: string;
+    id: string;
+    seatNumber: number;
+  }>;
+}) {
+  const shuffledRoles = shuffleRoles(getAvalonRoleDeck(playerCount));
+  const assignedSeats: AvalonAssignedSeat[] = seats.map((seat, index) => {
+    const roleKey = shuffledRoles[index];
+
+    return {
+      displayName: seat.displayName,
+      roleAlignment: getRoleAlignment(roleKey),
+      roleKey,
+      seatNumber: seat.seatNumber,
+    };
+  });
+
+  return seats.map((seat) => {
+    const assignedSeat = assignedSeats.find(
+      (candidate) => candidate.seatNumber === seat.seatNumber,
+    );
+
+    if (!assignedSeat) {
+      throw new Error("Missing assigned Avalon seat");
+    }
+
+    return prisma.gameToolSeat.update({
+      where: { id: seat.id },
+      data: {
+        privatePayload: createAvalonPrivatePayload({
+          assignedSeats,
+          locale,
+          seat: assignedSeat,
+        }),
+        roleAlignment: assignedSeat.roleAlignment,
+        roleKey: assignedSeat.roleKey,
+      },
+    });
+  });
 }
 
 async function applyAvalonTeamProposal({
@@ -736,56 +813,17 @@ export async function startAvalonRoomAction(
       return { formError: t.roomFull };
     }
 
-    const shuffledRoles = shuffleRoles(getAvalonRoleDeck(room.playerCount));
-    const assignedSeats: AvalonAssignedSeat[] = room.seats.map((seat, index) => {
-      const roleKey = shuffledRoles[index];
-
-      return {
-        displayName: seat.displayName,
-        roleAlignment: getRoleAlignment(roleKey),
-        roleKey,
-        seatNumber: seat.seatNumber,
-      };
-    });
-
     await prisma.$transaction([
-      ...room.seats.map((seat) => {
-        const assignedSeat = assignedSeats.find(
-          (candidate) => candidate.seatNumber === seat.seatNumber,
-        );
-
-        if (!assignedSeat) {
-          throw new Error("Missing assigned Avalon seat");
-        }
-
-        return prisma.gameToolSeat.update({
-          where: { id: seat.id },
-          data: {
-            privatePayload: createAvalonPrivatePayload({
-              assignedSeats,
-              locale: room.locale,
-              seat: assignedSeat,
-            }),
-            roleAlignment: assignedSeat.roleAlignment,
-            roleKey: assignedSeat.roleKey,
-          },
-        });
+      ...assignAvalonRoles({
+        locale: room.locale,
+        playerCount: room.playerCount,
+        seats: room.seats,
       }),
       prisma.gameToolRoom.update({
         where: { id: room.id },
         data: {
           startedAt: new Date(),
-          state: {
-            currentLeaderSeatNumber: 1,
-            missionResults: [null, null, null, null, null],
-            phase: "team_building",
-            proposedTeamSeatNumbers: [],
-            roundIndex: 0,
-            teamVoteRejectCount: 0,
-            voteResult: null,
-            winner: null,
-            winnerReason: null,
-          },
+          state: createInitialAvalonRoomState(),
           status: "IN_PROGRESS",
         },
       }),
@@ -809,6 +847,132 @@ export async function startAvalonRoomAction(
     return {
       formError: t.startFailed,
     };
+  }
+
+  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+}
+
+export async function manageAvalonRoomLifecycleAction(
+  _previousState: AvalonRoomActionState,
+  formData: FormData,
+): Promise<AvalonRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    operation: getString(formData, "operation"),
+    roomId: getString(formData, "roomId"),
+  };
+  const result = roomLifecycleSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/game-tools/avalon/rooms/${result.data.roomId}`,
+  );
+
+  try {
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
+      include: {
+        seats: {
+          orderBy: { seatNumber: "asc" },
+          select: {
+            displayName: true,
+            id: true,
+            seatNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!room || room.hostId !== profile.id) {
+      return { formError: t.submitFailed };
+    }
+
+    if (result.data.operation === "restart_lobby") {
+      await prisma.$transaction([
+        prisma.gameToolSubmission.deleteMany({
+          where: { roomId: room.id },
+        }),
+        prisma.gameToolSeat.updateMany({
+          where: { roomId: room.id },
+          data: {
+            privatePayload: Prisma.JsonNull,
+            roleAlignment: null,
+            roleKey: null,
+          },
+        }),
+        prisma.gameToolRoom.update({
+          where: { id: room.id },
+          data: {
+            cancelledAt: null,
+            finishedAt: null,
+            startedAt: null,
+            state: Prisma.JsonNull,
+            status: "LOBBY",
+          },
+        }),
+        prisma.gameToolEvent.create({
+          data: {
+            actorId: profile.id,
+            payload: {
+              operation: result.data.operation,
+            },
+            roomId: room.id,
+            type: "room_reopened",
+          },
+        }),
+      ]);
+    } else {
+      if (!isAvalonPlayerCount(room.playerCount)) {
+        return { formError: t.startFailed };
+      }
+
+      if (room.seats.length < room.playerCount) {
+        return { formError: t.roomFull };
+      }
+
+      await prisma.$transaction([
+        prisma.gameToolSubmission.deleteMany({
+          where: { roomId: room.id },
+        }),
+        ...assignAvalonRoles({
+          locale: room.locale,
+          playerCount: room.playerCount,
+          seats: room.seats,
+        }),
+        prisma.gameToolRoom.update({
+          where: { id: room.id },
+          data: {
+            cancelledAt: null,
+            finishedAt: null,
+            startedAt: new Date(),
+            state: createInitialAvalonRoomState(),
+            status: "IN_PROGRESS",
+          },
+        }),
+        prisma.gameToolEvent.create({
+          data: {
+            actorId: profile.id,
+            payload: {
+              operation: result.data.operation,
+              playerCount: room.playerCount,
+            },
+            roomId: room.id,
+            type: "room_redealt",
+          },
+        }),
+      ]);
+    }
+
+    revalidateAvalonRoom(result.data.locale, room.id);
+  } catch (error) {
+    console.error("Failed to manage Avalon room lifecycle", error);
+
+    return { formError: t.submitFailed };
   }
 
   redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
@@ -977,7 +1141,7 @@ export async function submitAvalonTeamVoteAction(
     });
 
     if (existingVote) {
-      return { formError: t.voteAlreadyDone };
+      return { formNotice: t.voteAlreadyDone };
     }
 
     await prisma.gameToolSubmission.create({
@@ -1062,6 +1226,10 @@ export async function submitAvalonTeamVoteAction(
 
     revalidateAvalonRoom(result.data.locale, seat.roomId);
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { formNotice: t.voteAlreadyDone };
+    }
+
     console.error("Failed to submit Avalon team vote", error);
 
     return { formError: t.submitFailed };
@@ -1138,7 +1306,7 @@ export async function submitAvalonMissionCardAction(
     });
 
     if (existingCard) {
-      return { formError: t.voteAlreadyDone };
+      return { formNotice: t.voteAlreadyDone };
     }
 
     await prisma.gameToolSubmission.create({
@@ -1237,6 +1405,10 @@ export async function submitAvalonMissionCardAction(
 
     revalidateAvalonRoom(result.data.locale, seat.roomId);
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { formNotice: t.voteAlreadyDone };
+    }
+
     console.error("Failed to submit Avalon mission card", error);
 
     return { formError: t.submitFailed };
@@ -1304,6 +1476,20 @@ export async function submitAvalonAssassinationAction(
       return { formError: t.submitFailed };
     }
 
+    const existingTarget = await prisma.gameToolSubmission.findFirst({
+      where: {
+        kind: "ASSASSINATION_TARGET",
+        roomId: seat.roomId,
+        roundIndex: currentState.roundIndex,
+        seatId: seat.id,
+      },
+      select: { id: true },
+    });
+
+    if (existingTarget) {
+      return { formNotice: t.voteAlreadyDone };
+    }
+
     const winner = targetSeat.roleKey === "merlin" ? "evil" : "good";
     const winnerReason =
       targetSeat.roleKey === "merlin"
@@ -1354,6 +1540,10 @@ export async function submitAvalonAssassinationAction(
 
     revalidateAvalonRoom(result.data.locale, seat.roomId);
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { formNotice: t.voteAlreadyDone };
+    }
+
     console.error("Failed to submit Avalon assassination", error);
 
     return { formError: t.submitFailed };
