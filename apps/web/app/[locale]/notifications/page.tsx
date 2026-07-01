@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Flag,
   MessageCircle,
+  Trash2,
   UserMinus,
   UserPlus,
   XCircle,
@@ -19,6 +20,8 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FriendRequestActionButtons } from "@/features/friends/components/FriendsDashboard";
 import {
+  deleteReadNotificationsAction,
+  deleteNotificationAction,
   markAllNotificationsReadAction,
   markNotificationReadAction,
   openNotificationActivityAction,
@@ -28,6 +31,8 @@ import {
   type NotificationViewModel,
 } from "@/features/notifications/queries/getNotifications";
 import { NotificationCountHydrator } from "@/features/notifications/components/NotificationCountHydrator";
+import { NotificationsCenterClient } from "@/features/notifications/components/NotificationsCenterClient";
+import { NotificationSwipeCard } from "@/features/notifications/components/NotificationSwipeCard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -126,6 +131,7 @@ function getNotificationText(
 
   if (
     notification.type === "PARTICIPATION_PENDING" ||
+    notification.type === "PARTICIPATION_CONFIRMED" ||
     notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
     notification.type === "ACTIVITY_COMMENTED" ||
@@ -284,6 +290,27 @@ function getNotificationSummaryLabels(locale: string) {
   };
 }
 
+function getNotificationDeleteCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      clearRead: "Supprimer les lues",
+      delete: "Supprimer",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      clearRead: "Delete read",
+      delete: "Delete",
+    };
+  }
+
+  return {
+    clearRead: "批量删除已读",
+    delete: "删除",
+  };
+}
+
 function getNotificationVisual(
   type: NotificationType | string,
   isUnread: boolean,
@@ -419,6 +446,7 @@ function NotificationCard({
   notification: NotificationViewModel;
 }) {
   const t = getCopy(locale).notifications;
+  const deleteCopy = getNotificationDeleteCopy(locale);
   const text = getNotificationText(notification, locale);
   const isUnread = notification.readAt === null;
   const visual = getNotificationVisual(notification.type, isUnread);
@@ -433,106 +461,159 @@ function NotificationCard({
   const canInlineResolveFriendRequest =
     notification.type === "FRIEND_REQUEST" &&
     Boolean(notification.friendRequestId);
+  const mobileDeleteAction = (
+    <form action={deleteNotificationAction} className="w-full">
+      <input name="locale" type="hidden" value={locale} />
+      <input name="notificationId" type="hidden" value={notification.id} />
+      <button
+        className="flex min-h-[calc(100%-0.5rem)] w-full flex-col items-center justify-center gap-1 rounded-[1rem] bg-danger px-3 py-4 text-center text-xs font-semibold text-paper transition hover:bg-[#8c261d] focus:outline-none focus-visible:ring-2 focus-visible:ring-paper/80"
+        data-no-swipe
+        type="submit"
+      >
+        <Trash2 className="h-4 w-4" />
+        {deleteCopy.delete}
+      </button>
+    </form>
+  );
 
   return (
-    <article
-      className={cn(
-        "group relative overflow-hidden rounded-[1.2rem] border p-3.5 shadow-[0_12px_30px_rgba(21,98,64,0.055)] transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(21,98,64,0.09)] sm:p-4",
-        visual.cardClassName,
-      )}
-    >
-      <span
-        aria-hidden="true"
+    <NotificationSwipeCard mobileDeleteAction={mobileDeleteAction}>
+      <article
         className={cn(
-          "absolute inset-y-4 left-0 w-1 rounded-r-full transition",
-          isUnread ? "bg-coral" : "bg-sand/70",
+          "group relative overflow-hidden rounded-[1.2rem] border p-3.5 shadow-[0_12px_30px_rgba(21,98,64,0.055)] transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(21,98,64,0.09)] sm:p-4",
+          visual.cardClassName,
         )}
-      />
-      {isUnread ? (
+      >
         <span
-          aria-label={t.unread}
-          className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.45)]"
-        />
-      ) : null}
-
-      <div className="flex gap-3 pl-1">
-        <span
+          aria-hidden="true"
           className={cn(
-            "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-[0_8px_20px_rgba(29,29,27,0.08)] ring-1 ring-paper/75 sm:h-9 sm:w-9",
-            visual.iconClassName,
+            "absolute inset-y-4 left-0 w-1 rounded-r-full transition",
+            isUnread ? "bg-coral" : "bg-sand/70",
           )}
-        >
-          <NotificationIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </span>
+        />
+        {isUnread ? (
+          <span
+            aria-label={t.unread}
+            className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.45)]"
+          />
+        ) : null}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-1 pr-5 sm:flex-row sm:items-start sm:justify-between sm:pr-0">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={cn(
-                    "inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold leading-none ring-1 sm:text-[11px]",
-                    notificationCategoryStyles[category],
-                  )}
-                >
-                  {t.categoryLabels[category]}
-                </span>
-                {isUnread ? (
-                  <span className="inline-flex h-5 items-center rounded-full bg-rose px-2 text-[10px] font-semibold leading-none text-danger ring-1 ring-coral/35 sm:text-[11px]">
-                    {t.unread}
+        <div className="flex gap-3 pl-1">
+          <span
+            className={cn(
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-[0_8px_20px_rgba(29,29,27,0.08)] ring-1 ring-paper/75 sm:h-9 sm:w-9",
+              visual.iconClassName,
+            )}
+          >
+            <NotificationIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col gap-1 pr-5 sm:flex-row sm:items-start sm:justify-between sm:pr-0">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold leading-none ring-1 sm:text-[11px]",
+                      notificationCategoryStyles[category],
+                    )}
+                  >
+                    {t.categoryLabels[category]}
                   </span>
-                ) : null}
+                  {isUnread ? (
+                    <span className="inline-flex h-5 items-center rounded-full bg-rose px-2 text-[10px] font-semibold leading-none text-danger ring-1 ring-coral/35 sm:text-[11px]">
+                      {t.unread}
+                    </span>
+                  ) : null}
+                </div>
+
+                <h2 className="mt-2 text-[15px] font-semibold leading-5 text-ink sm:text-base">
+                  {text.title}
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-forest/70">
+                  {text.body}
+                </p>
               </div>
 
-              <h2 className="mt-2 text-[15px] font-semibold leading-5 text-ink sm:text-base">
-                {text.title}
-              </h2>
-              <p className="mt-1 text-sm leading-5 text-forest/70">
-                {text.body}
-              </p>
+              <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
+                {formatActivityDate(notification.createdAt, locale)}
+              </span>
             </div>
 
-            <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
-              {formatActivityDate(notification.createdAt, locale)}
-            </span>
-          </div>
+            {notification.actor || notification.activity ? (
+              <dl className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-outline sm:text-xs">
+                {notification.actor ? (
+                  <Link
+                    className="inline-flex max-w-full items-center gap-1 rounded-full bg-cream/72 px-2 py-0.5 ring-1 ring-sand transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                    href={withLocale(locale, `/profile/${notification.actor.id}`)}
+                  >
+                    <dt className="shrink-0 text-outline">{t.actorLabel}</dt>
+                    <dd className="truncate font-medium text-ink">
+                      {notification.actor.nickname}
+                    </dd>
+                  </Link>
+                ) : null}
+                {notification.activity ? (
+                  <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-fog/82 px-2 py-0.5 ring-1 ring-sand">
+                    <dt className="shrink-0 text-outline">{t.activityLabel}</dt>
+                    <dd className="truncate font-medium text-ink">
+                      {notification.activity.title}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
 
-          {notification.actor || notification.activity ? (
-            <dl className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-outline sm:text-xs">
-              {notification.actor ? (
-                <Link
-                  className="inline-flex max-w-full items-center gap-1 rounded-full bg-cream/72 px-2 py-0.5 ring-1 ring-sand transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
-                  href={withLocale(locale, `/profile/${notification.actor.id}`)}
-                >
-                  <dt className="shrink-0 text-outline">{t.actorLabel}</dt>
-                  <dd className="truncate font-medium text-ink">
-                    {notification.actor.nickname}
-                  </dd>
-                </Link>
-              ) : null}
-              {notification.activity ? (
-                <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-fog/82 px-2 py-0.5 ring-1 ring-sand">
-                  <dt className="shrink-0 text-outline">{t.activityLabel}</dt>
-                  <dd className="truncate font-medium text-ink">
-                    {notification.activity.title}
-                  </dd>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {canInlineResolveFriendRequest && notification.friendRequestId ? (
+                <div className="w-full sm:max-w-xs">
+                  <FriendRequestActionButtons
+                    locale={locale}
+                    redirectPath="/notifications"
+                    requestId={notification.friendRequestId}
+                  />
                 </div>
               ) : null}
-            </dl>
-          ) : null}
-
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            {canInlineResolveFriendRequest && notification.friendRequestId ? (
-              <div className="w-full sm:max-w-xs">
-                <FriendRequestActionButtons
-                  locale={locale}
-                  redirectPath="/notifications"
-                  requestId={notification.friendRequestId}
-                />
-              </div>
-            ) : null}
-            {hasAction ? (
-              <form action={openNotificationActivityAction}>
+              {hasAction ? (
+                <form action={openNotificationActivityAction}>
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="notificationId"
+                    type="hidden"
+                    value={notification.id}
+                  />
+                  <button
+                    className={cn(
+                      "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
+                      isUnread
+                        ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
+                        : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
+                    )}
+                    type="submit"
+                  >
+                    {getNotificationActionLabel(notification, locale)}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </form>
+              ) : null}
+              {isUnread ? (
+                <form action={markNotificationReadAction}>
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="notificationId"
+                    type="hidden"
+                    value={notification.id}
+                  />
+                  <button
+                    className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 text-xs font-semibold text-forest/70 ring-1 ring-sand transition hover:bg-fog hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                    type="submit"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    {t.markOneRead}
+                  </button>
+                </form>
+              ) : null}
+              <form action={deleteNotificationAction} className="hidden sm:block">
                 <input name="locale" type="hidden" value={locale} />
                 <input
                   name="notificationId"
@@ -540,40 +621,18 @@ function NotificationCard({
                   value={notification.id}
                 />
                 <button
-                  className={cn(
-                    "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
-                    isUnread
-                      ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
-                      : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
-                  )}
+                  className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-danger px-3 text-xs font-semibold text-paper shadow-[0_10px_22px_rgba(181,48,31,0.18)] transition hover:bg-[#8c261d] focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/25"
                   type="submit"
                 >
-                  {getNotificationActionLabel(notification, locale)}
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleteCopy.delete}
                 </button>
               </form>
-            ) : null}
-            {isUnread ? (
-              <form action={markNotificationReadAction}>
-                <input name="locale" type="hidden" value={locale} />
-                <input
-                  name="notificationId"
-                  type="hidden"
-                  value={notification.id}
-                />
-                <button
-                  className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 text-xs font-semibold text-forest/70 ring-1 ring-sand transition hover:bg-fog hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
-                  type="submit"
-                >
-                  <CheckCheck className="h-3.5 w-3.5" />
-                  {t.markOneRead}
-                </button>
-              </form>
-            ) : null}
+            </div>
           </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </NotificationSwipeCard>
   );
 }
 
@@ -609,158 +668,14 @@ export default async function NotificationsPage({
     sourceSurface: "notification",
     userProfileId: profile.id,
   });
-  const summaryLabels = getNotificationSummaryLabels(locale);
-  const summaryItems = [
-    {
-      icon: Bell,
-      label: summaryLabels.unread,
-      tone: "bg-ice text-forest ring-sage/60",
-      value: unreadCount,
-    },
-    {
-      icon: Clock3,
-      label: summaryLabels.actionRequired,
-      tone:
-        actionRequiredCount > 0
-          ? "bg-rose text-danger ring-coral/35"
-          : "bg-fog text-forest ring-sage/45",
-      value: actionRequiredCount,
-    },
-    {
-      icon: CheckCheck,
-      label: summaryLabels.total,
-      tone: "bg-cream text-ink ring-sand",
-      value: notifications.length,
-    },
-  ];
-
   return (
     <PageContainer className="space-y-5 pb-24">
       <NotificationCountHydrator unreadCount={unreadCount} />
-      <section className="relative overflow-hidden rounded-[1.65rem] border border-sand bg-paper/82 p-4 shadow-[0_20px_56px_rgba(21,98,64,0.075)] ring-1 ring-paper/70 sm:p-5">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 h-36 w-36 rounded-full bg-rose/34 blur-3xl"
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-10 bottom-0 h-28 w-40 rounded-full bg-fog/90 blur-3xl"
-        />
-        <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full bg-fog px-3 py-1 text-xs font-semibold text-forest ring-1 ring-sage/50 sm:text-sm">
-              <Bell className="h-4 w-4" />
-              {actionRequiredCount > 0
-                ? t.actionRequiredCount(actionRequiredCount)
-                : unreadCount > 0
-                  ? t.unreadCount(unreadCount)
-                  : t.allRead}
-            </p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
-              {t.title}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-forest/72">
-              {t.description}
-              <span className="sm:hidden"> {t.mobileDescription}</span>
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end lg:min-w-[26rem]">
-            <div className="grid grid-cols-3 gap-2">
-              {summaryItems.map((item) => {
-                const SummaryIcon = item.icon;
-
-                return (
-                  <div
-                    className={cn(
-                      "min-w-0 rounded-[1rem] px-3 py-2 ring-1",
-                      item.tone,
-                    )}
-                    key={item.label}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <SummaryIcon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="text-base font-semibold leading-none">
-                        {item.value}
-                      </span>
-                    </div>
-                    <p className="mt-1 truncate text-[11px] font-semibold leading-4 opacity-80">
-                      {item.label}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-            <form action={markAllNotificationsReadAction}>
-              <input name="locale" type="hidden" value={locale} />
-              <Button
-                className="w-full gap-2 whitespace-nowrap border border-sand bg-paper/90 text-forest ring-0 hover:bg-fog sm:w-auto"
-                disabled={unreadCount === 0}
-                type="submit"
-                variant="secondary"
-              >
-                <CheckCheck className="h-4 w-4" />
-                {t.markAllRead}
-              </Button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      {notifications.length === 0 ? (
-        <EmptyState
-          actionHref={withLocale(locale, "/activities")}
-          actionLabel={t.emptyAction}
-          title={t.emptyTitle}
-          description={t.emptyDescription}
-        />
-      ) : (
-        <div className="space-y-4">
-          {unreadNotifications.length > 0 ? (
-            <section className="space-y-2.5">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <span className="h-2 w-2 rounded-full bg-coral" />
-                {t.sections.unread}
-              </h2>
-              <div className="grid gap-3">
-                {unreadNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    locale={locale}
-                    notification={notification}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : (
-            <section className="rounded-[1.2rem] border border-dashed border-sage bg-paper/62 p-4 shadow-[0_12px_30px_rgba(21,98,64,0.045)]">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <CheckCheck className="h-4 w-4 text-forest" />
-                {t.sections.clearTitle}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-forest/68">
-                {t.sections.clearDescription}
-              </p>
-            </section>
-          )}
-
-          {readNotifications.length > 0 ? (
-            <section className="space-y-2.5">
-              <h2 className="text-sm font-semibold text-forest/68">
-                {t.sections.read}
-              </h2>
-              <div className="grid gap-3">
-                {readNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    locale={locale}
-                    notification={notification}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </div>
-      )}
+      <NotificationsCenterClient
+        initialNotifications={notifications}
+        initialUnreadCount={unreadCount}
+        locale={locale}
+      />
     </PageContainer>
   );
 }
