@@ -46,6 +46,7 @@ import { ActivityRichDescription } from "@/features/activities/components/Activi
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
+import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
 import { TeamDetailMobileCtaSheet } from "@/features/activities/components/TeamDetailMobileCtaSheet";
 import {
   getActivityById,
@@ -1138,6 +1139,13 @@ export default async function ActivityDetailPage({
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
+  const canUseBoardGameTools =
+    !activity.isActivityInfo &&
+    activity.category === "BOARD_GAME" &&
+    (isTeamOperator ||
+      viewerParticipation?.status === "JOINED" ||
+      viewerParticipation?.status === "APPROVED");
+  const boardGameToolHref = withLocale(locale, "/game-tools/avalon");
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
@@ -2060,6 +2068,12 @@ export default async function ActivityDetailPage({
               </div>
             </div>
           </TeamDetailMobileCtaSheet>
+        ) : null}
+        {canUseBoardGameTools ? (
+          <BoardGameToolFloatingEntry
+            avalonHref={boardGameToolHref}
+            locale={locale}
+          />
         ) : null}
       </section>
     </PageContainer>
