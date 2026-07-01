@@ -14,6 +14,7 @@ import {
   LockKeyhole,
   Pencil,
   RefreshCcw,
+  ScrollText,
   Shield,
   Sparkles,
   UserMinus,
@@ -115,6 +116,7 @@ type Copy = {
   privateLinksHint: string;
   proposeTeam: string;
   progress: string;
+  recapPage: string;
   rejectTrack: string;
   resetRound: string;
   round: string;
@@ -182,6 +184,7 @@ const copies: Record<string, Copy> = {
     privateLinksHint: "只把对应座位链接发给本人。游戏开始后链接里会显示身份和可见信息。",
     proposeTeam: "提交队伍",
     progress: "进度",
+    recapPage: "复盘页",
     rejectTrack: "否决",
     repair: "修正",
     resetRound: "重置本轮",
@@ -248,6 +251,7 @@ const copies: Record<string, Copy> = {
       "Send each link only to the matching player. Roles and private vision appear after the game starts.",
     proposeTeam: "Submit team",
     progress: "Progress",
+    recapPage: "Recap",
     rejectTrack: "Rejects",
     repair: "Repair",
     resetRound: "Reset round",
@@ -315,6 +319,7 @@ const copies: Record<string, Copy> = {
       "Envoie chaque lien uniquement à la personne concernée. Les rôles s'affichent après le lancement.",
     proposeTeam: "Valider",
     progress: "Progression",
+    recapPage: "Récap",
     rejectTrack: "Refus",
     repair: "Corriger",
     resetRound: "Reprendre",
@@ -360,6 +365,7 @@ export function AvalonRoomLobby({
   const roomUrl = `${baseUrl}/${locale}/game-tools/avalon/rooms/${room.id}`;
   const joinUrl = `${baseUrl}/${locale}/game-tools/avalon/join/${room.code}`;
   const screenUrl = `${baseUrl}/${locale}/game-tools/avalon/rooms/${room.id}/screen`;
+  const recapUrl = `${baseUrl}/${locale}/game-tools/avalon/rooms/${room.id}/recap`;
   const claimedCount = room.seats.filter((seat) => seat.isClaimed).length;
   const statusLabel =
     room.status === "FINISHED"
@@ -507,6 +513,15 @@ export function AvalonRoomLobby({
                 width={32}
               />
               {t.screen}
+            </a>
+            <a
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5"
+              href={recapUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ScrollText className="h-4 w-4" />
+              {t.recapPage}
             </a>
           </div>
         </section>

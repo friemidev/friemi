@@ -25,18 +25,18 @@ const metadataCopy: Record<
 > = {
   "zh-CN": {
     description:
-      "Friemi 阿瓦隆线下辅助工具，支持快速配置人数、预览身份、记录任务与复盘时间线。",
-    title: "阿瓦隆线下助手",
+      "阿瓦隆是一款 5-10 人隐藏身份桌游。Friemi 帮你开房、发身份、记投票和任务，让线下组局更顺。",
+    title: "Avalon 阿瓦隆",
   },
   en: {
     description:
-      "A Friemi offline Avalon-style assistant for quick setup, role preview, quest tracking, and table recap.",
-    title: "Avalon Offline Assistant",
+      "Avalon is a 5-10 player hidden-role table game. Friemi helps with rooms, private roles, votes, quests, and recap.",
+    title: "Avalon",
   },
   fr: {
     description:
-      "Un assistant Friemi hors ligne pour configurer une partie Avalon, prévisualiser les rôles, suivre les quêtes et revoir la partie.",
-    title: "Assistant Avalon hors ligne",
+      "Avalon est un jeu à rôles cachés pour 5 à 10 joueurs. Friemi aide à ouvrir une table, distribuer les rôles, suivre votes, quêtes et récap.",
+    title: "Avalon",
   },
 };
 

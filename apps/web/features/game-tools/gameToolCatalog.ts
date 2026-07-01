@@ -22,9 +22,9 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     accent: "#F09182",
     availability: "available",
     description: {
-      "zh-CN": "扫码入座、私密身份、任务投票、公共屏和主持人修正，适合线下快速开局。",
-      en: "Seats, private roles, quest votes, public screen, and host corrections for in-person play.",
-      fr: "Places, rôles privés, votes de quête, écran public et corrections pour jouer autour de la table.",
+      "zh-CN": "5-10 人隐藏身份桌游。开房、入座、发身份、选队伍和记任务都能在 Friemi 里完成。",
+      en: "A 5-10 player hidden-role table game. Open a room, claim seats, deal roles, pick teams, and track quests.",
+      fr: "Un jeu à rôles cachés pour 5 à 10 joueurs. Ouvrez une table, prenez les places, distribuez les rôles et suivez les quêtes.",
     },
     href: "/game-tools/avalon",
     icon: Dice5,

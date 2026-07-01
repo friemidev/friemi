@@ -244,6 +244,8 @@ const copies: Record<string, Copy> = {
 };
 const initialState: AvalonRoomActionState = {};
 const playerConsoleToken = "/game-tools/avalon/states/player-console-token.svg";
+const submissionRecordedToken =
+  "/game-tools/avalon/states/submission-recorded-token.svg";
 
 function isEvilRole(roleKey: string | null) {
   return (
@@ -607,6 +609,7 @@ function PlayerStageCard({
       className={cn(
         "relative overflow-hidden rounded-[1.65rem] border p-3 shadow-xl backdrop-blur",
         toneClass,
+        stage.tone !== "paper" && "avalon-player-focus",
       )}
     >
       <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/18 blur-2xl" />
@@ -1475,7 +1478,7 @@ function PrivateImageActionButton({
 
   return (
     <button
-      className="group relative grid min-h-32 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-black text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-40"
+      className="avalon-action-shine group relative grid min-h-32 w-full place-items-center overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 text-sm font-black text-[#156240] shadow-sm transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-[#8AB68E] hover:shadow-xl hover:shadow-[#156240]/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-40"
       disabled={pending}
       type="submit"
     >
@@ -1529,17 +1532,19 @@ function TeamProposalSeatSubmitButton({ label }: { label: string }) {
 
 function RecordedState({ t }: { t: Copy }) {
   return (
-    <div className="grid place-items-center rounded-[1.5rem] border border-[#D6D5B2] bg-[#F1F2EC] px-4 py-5 text-center shadow-inner">
-      <div className="relative h-16 w-16">
+    <div className="grid place-items-center overflow-hidden rounded-[1.6rem] border border-[#8AB68E]/60 bg-[radial-gradient(circle_at_50%_0%,rgba(138,182,142,0.18),rgba(241,242,236,0.88))] px-4 py-5 text-center shadow-inner">
+      <div className="avalon-recorded-pop relative h-20 w-20">
         <Image
           alt=""
-          className="h-16 w-16 drop-shadow-md"
-          height={72}
-          src="/game-tools/avalon/states/mission-pending-token.svg"
-          width={72}
+          className="h-20 w-20 drop-shadow-lg"
+          height={88}
+          src={submissionRecordedToken}
+          width={88}
         />
       </div>
-      <p className="mt-2 text-sm font-black text-[#156240]">{t.wait}</p>
+      <p className="mt-2 max-w-64 text-sm font-black leading-6 text-[#156240]">
+        {t.wait}
+      </p>
     </div>
   );
 }

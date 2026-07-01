@@ -39,7 +39,7 @@ export const getAvalonRoomById = cache(
       include: {
         events: {
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: 50,
           select: {
             actor: {
               select: {

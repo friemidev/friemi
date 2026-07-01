@@ -9,3 +9,5 @@ Runtime code should reference assets through `asset-manifest.json` or a centrali
 Large raster hero images and audio cues are intentionally deferred until the first UI implementation pass. The current pack focuses on SVGs that are small, themeable, and safe for MVP development.
 
 v0.5 also includes dedicated SVG tokens for scan-to-join, public screen, live sync, host correction, round reset, mission undo, and recap timeline events. These keep the live-room UI more visual and reduce dependency on long explanatory labels during offline play.
+
+v1.0-rc+ adds a submission-recorded token for private player consoles. It is used after a player has submitted a vote, quest card, or assassination target, so the waiting state feels resolved instead of looking like another pending quest card.

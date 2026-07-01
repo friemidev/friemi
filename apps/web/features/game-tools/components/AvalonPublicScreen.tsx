@@ -1,8 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { AvalonQrCode } from "@/features/game-tools/components/AvalonQrCode";
-import type { AvalonRoomState } from "@/features/game-tools/avalonRoomState";
+import {
+  getAvalonQuestTeamSize,
+  type AvalonRoomState,
+} from "@/features/game-tools/avalonRoomState";
 import { cn } from "@/lib/utils";
 
 type PublicSeat = {
@@ -45,40 +49,52 @@ const copy = {
     current: "当前",
     fail: "失败",
     join: "扫码入座",
+    latestReveal: "刚刚揭晓",
     mission: "任务",
+    missionReveal: "任务揭晓",
     players: "玩家",
     questCards: "任务牌",
     rejects: "否决",
+    round: "第",
     success: "成功",
     team: "队伍",
     target: "刺杀",
     votes: "投票",
+    waitingCards: "等待任务牌",
   },
   en: {
     current: "Now",
     fail: "Fail",
     join: "Scan to join",
+    latestReveal: "Latest reveal",
     mission: "Quest",
+    missionReveal: "Quest reveal",
     players: "Players",
     questCards: "Quest cards",
     rejects: "Rejects",
+    round: "Round",
     success: "Success",
     team: "Team",
     target: "Target",
     votes: "Votes",
+    waitingCards: "Waiting for cards",
   },
   fr: {
     current: "Maintenant",
     fail: "Échec",
     join: "Scanner",
+    latestReveal: "Révélation",
     mission: "Quête",
+    missionReveal: "Cartes révélées",
     players: "Joueurs",
     questCards: "Cartes",
     rejects: "Refus",
+    round: "Tour",
     success: "Succès",
     team: "Équipe",
     target: "Cible",
     votes: "Votes",
+    waitingCards: "En attente",
   },
 };
 
@@ -194,6 +210,36 @@ function getEventSeatNumbers(event: AvalonPublicScreenProps["room"]["events"][nu
     : [];
 }
 
+function getLatestMissionEvent(events: AvalonPublicScreenProps["room"]["events"]) {
+  return (
+    events.find(
+      (event) => event.type === "mission_succeeded" || event.type === "mission_failed",
+    ) ?? null
+  );
+}
+
+function getMissionEventDetails(
+  event: AvalonPublicScreenProps["room"]["events"][number] | null,
+) {
+  if (!event || !isEventPayloadRecord(event.payload)) {
+    return null;
+  }
+
+  const failCount = Number(event.payload.failCount);
+  const roundIndex = Number(event.payload.roundIndex);
+  const missionResult = event.payload.missionResult;
+
+  if (!Number.isInteger(roundIndex) || roundIndex < 0 || roundIndex > 4) {
+    return null;
+  }
+
+  return {
+    failCount: Number.isInteger(failCount) && failCount >= 0 ? failCount : 0,
+    missionResult: missionResult === "fail" ? ("fail" as const) : ("success" as const),
+    roundIndex,
+  };
+}
+
 export function AvalonPublicScreen({
   joinUrl,
   locale,
@@ -202,6 +248,8 @@ export function AvalonPublicScreen({
   const t = copy[locale as keyof typeof copy] ?? copy.en;
   const phaseIcon = getPhaseIcon(room.state);
   const phaseTitle = getPhaseTitle(room.state.phase, t);
+  const latestMissionEvent = getLatestMissionEvent(room.events);
+  const latestMission = getMissionEventDetails(latestMissionEvent);
   const successCount = room.state.missionResults.filter(
     (result) => result === "success",
   ).length;
@@ -382,6 +430,13 @@ export function AvalonPublicScreen({
                   width={240}
                 />
               </div>
+              <MissionRevealDeck
+                latestMission={latestMission}
+                playerCount={room.playerCount}
+                progress={room.progress}
+                state={room.state}
+                t={t}
+              />
               <div className="grid grid-cols-2 gap-2 p-4">
                 <PublicStat
                   image="/game-tools/avalon/states/vote-approve-card.svg"
@@ -439,6 +494,122 @@ export function AvalonPublicScreen({
         </aside>
       </div>
     </section>
+  );
+}
+
+function MissionRevealDeck({
+  latestMission,
+  playerCount,
+  progress,
+  state,
+  t,
+}: {
+  latestMission: ReturnType<typeof getMissionEventDetails>;
+  playerCount: number;
+  progress: AvalonPublicScreenProps["room"]["progress"];
+  state: AvalonRoomState;
+  t: (typeof copy)[keyof typeof copy];
+}) {
+  const isWaitingForCards = state.phase === "mission";
+  const roundIndex = latestMission?.roundIndex ?? state.roundIndex;
+  const teamSize =
+    latestMission || roundIndex !== state.roundIndex
+      ? getAvalonQuestTeamSize({ playerCount, roundIndex })
+      : state.proposedTeamSeatNumbers.length || progress.requiredTeamSize || 0;
+  const visibleCards = Math.max(1, Math.min(teamSize || 1, 5));
+  const failCount = latestMission?.failCount ?? 0;
+
+  return (
+    <div className="border-t border-[#D6D5B2] bg-[#FEFFF9] px-4 py-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.66rem] font-black uppercase tracking-[0.18em] text-[#156240]/65">
+            {latestMission ? t.latestReveal : t.missionReveal}
+          </p>
+          <h3 className="text-lg font-black text-[#0E2A5A]">
+            {t.round} {roundIndex + 1}
+          </h3>
+        </div>
+        <span
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-black shadow-sm",
+            latestMission?.missionResult === "fail"
+              ? "bg-[#FFF0EC] text-[#B5301F] ring-1 ring-[#F09182]/45"
+              : latestMission
+                ? "bg-[#EAF6E7] text-[#156240] ring-1 ring-[#8AB68E]/45"
+                : "bg-[#F1F2EC] text-[#156240]",
+          )}
+        >
+          {latestMission
+            ? latestMission.missionResult === "fail"
+              ? t.fail
+              : t.success
+            : `${progress.missionCardSubmissionCount}/${teamSize || progress.requiredTeamSize}`}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="flex min-w-0 justify-center gap-2 overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white/75 px-3 py-3 shadow-inner">
+          {Array.from({ length: visibleCards }, (_, index) => {
+            const isFailCard = latestMission ? index < failCount : false;
+            const src = latestMission
+              ? isFailCard
+                ? "/game-tools/avalon/states/mission-fail-token.svg"
+                : "/game-tools/avalon/states/mission-success-token.svg"
+              : "/game-tools/avalon/roles/private-card-back.svg";
+
+            return (
+              <span
+                className={cn(
+                  "avalon-mission-card grid h-16 w-12 shrink-0 place-items-center rounded-[0.95rem] border bg-[#FEFFF9] shadow-lg",
+                  isFailCard ? "border-[#F09182]" : "border-[#8AB68E]/55",
+                )}
+                key={index}
+                style={
+                  {
+                    "--shuffle-rotate": `${(index - visibleCards / 2) * 4}deg`,
+                    "--shuffle-x": `${(index - visibleCards / 2) * 0.42}rem`,
+                    animationDelay: `${index * 70}ms`,
+                  } as CSSProperties
+                }
+              >
+                <Image
+                  alt=""
+                  className="h-9 w-9 object-contain"
+                  height={44}
+                  src={src}
+                  width={44}
+                />
+              </span>
+            );
+          })}
+        </div>
+        <div
+          className={cn(
+            "avalon-result-pulse grid h-16 w-16 place-items-center rounded-[1.25rem] border bg-white shadow-xl",
+            latestMission?.missionResult === "fail"
+              ? "border-[#F09182]"
+              : "border-[#8AB68E]/70",
+          )}
+        >
+          <Image
+            alt=""
+            className="h-12 w-12 object-contain"
+            height={56}
+            src={
+              latestMission?.missionResult === "fail"
+                ? "/game-tools/avalon/states/mission-fail-token.svg"
+                : latestMission?.missionResult === "success"
+                  ? "/game-tools/avalon/states/mission-success-token.svg"
+                  : isWaitingForCards
+                    ? "/game-tools/avalon/states/mission-pending-token.svg"
+                    : "/game-tools/avalon/states/public-screen-token.svg"
+            }
+            width={56}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -87,6 +87,10 @@ type AvalonCopy = {
   reset: string;
   reveal: string;
   roleMix: string;
+  rules: Array<{
+    body: string;
+    label: string;
+  }>;
   roundLabel: string;
   roundSuffix: string;
   seatLabel: string;
@@ -116,12 +120,12 @@ const copies: Record<string, AvalonCopy> = {
   "zh-CN": {
     addFail: "增加失败",
     approveTeam: "队伍通过",
-    assistantTitle: "阿瓦隆离线助手",
+    assistantTitle: "Avalon 阿瓦隆",
     countLabel: "人局",
     currentLeader: "当前队长",
     currentRound: "当前任务",
     currentTeam: "本轮队伍",
-    desktopHint: "适合桌面、平板或投屏。玩家仍然面对面发言，手机只负责防错和记录。",
+    desktopHint: "适合朋友线下面对面玩。手机负责发身份、记投票和任务，聊天、观察和演戏还是留给桌上。",
     evilWins: "邪恶方获胜",
     evilSide: "邪恶方",
     failMission: "失败",
@@ -131,29 +135,43 @@ const copies: Record<string, AvalonCopy> = {
     goodWins: "好人方获胜",
     goodSide: "好人方",
     heroBody:
-      "给线下桌游局一个轻量主持台：快速配身份、看座位、记投票、算任务结果，结束后还能直接复盘。",
+      "阿瓦隆是隐藏身份推理游戏：好人想完成任务，坏人混在队伍里让任务失败，最后还可能靠一次刺杀翻盘。",
     heroEyebrow: "Friemi Table Lab",
-    identityHint: "点击座位查看对应身份。真实多人版会改成每位玩家只能看自己的身份。",
+    identityHint: "点座位可以看身份示例。正式开局时，让每位玩家只打开自己的身份链接。",
     identityPanel: "身份预览",
-    localOnly: "本地演示",
+    localOnly: "试玩桌",
     missionBoard: "任务板",
     missionRequirement: "本轮需要",
     modeFull: "全数字操作",
     modeIdentity: "数字身份",
     modePublic: "公共辅助",
-    modeNoteFull: "身份、投票、任务都走手机，适合无实体牌的临时局。",
-    modeNoteIdentity: "系统发身份，桌面记录投票和任务，是当前推荐试玩方式。",
-    modeNotePublic: "使用实体牌，Friemi 只记录座位、投票、任务和复盘。",
+    modeNoteFull: "没有实体牌也能玩：身份、投票和任务都在手机上完成。",
+    modeNoteIdentity: "推荐：手机只负责发身份，其他照常围桌讨论和操作。",
+    modeNotePublic: "有实体牌时使用：手机只帮你记座位、投票、任务和复盘。",
     nextLeader: "队长顺移",
     pending: "待定",
     playerCount: "玩家人数",
-    quickRoom: "快速开局",
+    quickRoom: "开一桌",
     recap: "复盘时间线",
     rejectTeam: "队伍未过",
     resolveMission: "记录任务结果",
     reset: "重置本局",
     reveal: "查看身份",
     roleMix: "身份配置",
+    rules: [
+      {
+        body: "每轮队长选几个人去做任务，全桌先投票决定这支队伍能不能出发。",
+        label: "怎么玩",
+      },
+      {
+        body: "好人做成 3 次任务就接近胜利；坏人让 3 次任务失败，或最后刺中关键好人。",
+        label: "怎么赢",
+      },
+      {
+        body: "5-10 人最合适。先选房主、定座位、发身份，然后就靠发言和投票互相试探。",
+        label: "怎么组",
+      },
+    ],
     roundLabel: "第",
     roundSuffix: "轮",
     seatLabel: "座位",
@@ -166,8 +184,8 @@ const copies: Record<string, AvalonCopy> = {
     successMission: "成功",
     teamPassed: "队伍通过，进入任务提交。",
     teamRejected: "队伍被否决。",
-    title: "线下玩得更顺，不抢走桌上的热闹。",
-    v01: "v0.1 原型",
+    title: "好人想做成任务，坏人混在人群里捣乱。",
+    v01: "5-10 人",
     victoryAssassinated: "刺杀命中梅林。",
     victoryFailedAssassination: "刺杀未命中梅林。",
     voteReady: "记录投票",
@@ -197,7 +215,7 @@ const copies: Record<string, AvalonCopy> = {
       servant: "圆桌伙伴",
     },
     roleDescriptions: {
-      assassin: "负责最终刺杀关键好人，图标为抽象匕首，不使用官方牌面。",
+      assassin: "如果好人做成 3 次任务，你要猜出关键好人并完成最后一击。",
       merlin: "能看见大多数邪恶方，但需要隐藏自己。",
       minion: "邪恶阵营成员，通常互相知晓。",
       mordred: "隐藏得更深的邪恶方身份。",
@@ -210,13 +228,13 @@ const copies: Record<string, AvalonCopy> = {
   en: {
     addFail: "Add fail",
     approveTeam: "Approve team",
-    assistantTitle: "Avalon Offline Assistant",
+    assistantTitle: "Avalon",
     countLabel: "players",
     currentLeader: "Leader",
     currentRound: "Current quest",
     currentTeam: "Team",
     desktopHint:
-      "Built for table, tablet, or shared screen. Players keep talking face to face; Friemi handles the bookkeeping.",
+      "Built for in-person play. Friemi handles private roles, votes, quests, and recap; the table keeps the talking.",
     evilWins: "Evil wins",
     evilSide: "Evil",
     failMission: "Fail",
@@ -226,30 +244,44 @@ const copies: Record<string, AvalonCopy> = {
     goodWins: "Good wins",
     goodSide: "Good",
     heroBody:
-      "A lightweight table console for offline social deduction nights: assign roles, seat players, track teams, resolve quests, and recap the game.",
+      "Avalon is a hidden-role deduction game: good players try to complete quests, evil players sneak onto teams and make them fail.",
     heroEyebrow: "Friemi Table Lab",
     identityHint:
-      "Tap a seat to preview a role. A real multiplayer room will only reveal each player's own identity.",
+      "Tap a seat to preview a role. In a real room, each player should open only their own private link.",
     identityPanel: "Identity preview",
-    localOnly: "Local demo",
+    localOnly: "Test table",
     missionBoard: "Quest board",
     missionRequirement: "Needs",
     modeFull: "Full digital",
     modeIdentity: "Digital roles",
     modePublic: "Public assist",
-    modeNoteFull: "Roles, votes, and quest cards all happen on phones.",
-    modeNoteIdentity: "Recommended for this prototype: digital roles, table-side tracking.",
+    modeNoteFull: "No physical cards needed: roles, votes, and quest cards all happen on phones.",
+    modeNoteIdentity: "Recommended: phones deal roles, the table still runs the discussion.",
     modeNotePublic: "Use physical cards; Friemi only tracks seats, votes, quests, and recap.",
     nextLeader: "Next leader",
     pending: "Pending",
     playerCount: "Players",
-    quickRoom: "Quick room",
+    quickRoom: "Open table",
     recap: "Recap timeline",
     rejectTeam: "Reject team",
     resolveMission: "Record quest result",
     reset: "Reset",
     reveal: "Reveal",
     roleMix: "Role mix",
+    rules: [
+      {
+        body: "Each round, the leader chooses a quest team. The table votes before that team goes out.",
+        label: "How it plays",
+      },
+      {
+        body: "Good needs 3 successful quests. Evil wins through 3 failed quests, or by hitting the key good role at the end.",
+        label: "How to win",
+      },
+      {
+        body: "Best with 5-10 friends. Pick a host, claim seats, deal roles, then read the room.",
+        label: "How to gather",
+      },
+    ],
     roundLabel: "Quest",
     roundSuffix: "",
     seatLabel: "Seat",
@@ -262,8 +294,8 @@ const copies: Record<string, AvalonCopy> = {
     successMission: "Success",
     teamPassed: "Team approved. Resolve the quest.",
     teamRejected: "Team rejected.",
-    title: "Keep the night moving without stealing the table.",
-    v01: "v0.1 prototype",
+    title: "Good wants quests to pass. Evil wants to blend in.",
+    v01: "5-10 players",
     victoryAssassinated: "Assassination hit the hidden good role.",
     victoryFailedAssassination: "Assassination missed the hidden good role.",
     voteReady: "Record vote",
@@ -293,7 +325,7 @@ const copies: Record<string, AvalonCopy> = {
       servant: "Table Ally",
     },
     roleDescriptions: {
-      assassin: "Makes the final strike. This is an original generic icon, not official card art.",
+      assassin: "If good completes three quests, you guess the key good role for the final strike.",
       merlin: "Sees most evil players but must stay hidden.",
       minion: "An evil-side teammate, usually aware of allies.",
       mordred: "A deeper hidden evil role.",
@@ -306,13 +338,13 @@ const copies: Record<string, AvalonCopy> = {
   fr: {
     addFail: "Ajouter échec",
     approveTeam: "Valider l'équipe",
-    assistantTitle: "Assistant Avalon hors ligne",
+    assistantTitle: "Avalon",
     countLabel: "joueurs",
     currentLeader: "Chef d'équipe",
     currentRound: "Quête en cours",
     currentTeam: "Équipe",
     desktopHint:
-      "Pensé pour table, tablette ou écran partagé. Les joueurs parlent toujours en face à face; Friemi garde le fil.",
+      "Pensé pour jouer ensemble autour d'une table. Friemi garde les rôles, les votes, les quêtes et le récap; la discussion reste aux joueurs.",
     evilWins: "Le camp sombre gagne",
     evilSide: "Camp sombre",
     failMission: "Échec",
@@ -322,30 +354,44 @@ const copies: Record<string, AvalonCopy> = {
     goodWins: "Le camp clair gagne",
     goodSide: "Camp clair",
     heroBody:
-      "Une console légère pour les soirées jeu de rôle caché: distribuer les rôles, placer les joueurs, suivre les équipes, résoudre les quêtes et revoir la partie.",
+      "Avalon est un jeu à rôles cachés : le camp clair veut réussir des quêtes, le camp sombre se glisse dans les équipes pour les faire échouer.",
     heroEyebrow: "Friemi Table Lab",
     identityHint:
-      "Touchez une place pour prévisualiser un rôle. La vraie salle multijoueur ne montrera que l'identité du joueur concerné.",
+      "Touchez une place pour voir un exemple. En vraie partie, chaque joueur ouvre seulement son lien privé.",
     identityPanel: "Aperçu des identités",
-    localOnly: "Démo locale",
+    localOnly: "Table test",
     missionBoard: "Plateau des quêtes",
     missionRequirement: "Besoin de",
     modeFull: "Tout numérique",
     modeIdentity: "Rôles numériques",
     modePublic: "Aide publique",
-    modeNoteFull: "Rôles, votes et cartes de quête passent par les téléphones.",
-    modeNoteIdentity: "Recommandé ici: rôles numériques et suivi autour de la table.",
+    modeNoteFull: "Sans cartes physiques : rôles, votes et quêtes passent par les téléphones.",
+    modeNoteIdentity: "Recommandé : le téléphone distribue les rôles, la discussion reste autour de la table.",
     modeNotePublic: "Utilisez les cartes physiques; Friemi suit seulement la table et le fil.",
     nextLeader: "Chef suivant",
     pending: "À venir",
     playerCount: "Joueurs",
-    quickRoom: "Partie rapide",
+    quickRoom: "Ouvrir une table",
     recap: "Fil de partie",
     rejectTeam: "Refuser l'équipe",
     resolveMission: "Noter le résultat",
     reset: "Réinitialiser",
     reveal: "Révéler",
     roleMix: "Composition",
+    rules: [
+      {
+        body: "À chaque tour, un chef propose une équipe de quête. Toute la table vote avant le départ.",
+        label: "Comment jouer",
+      },
+      {
+        body: "Le camp clair veut réussir 3 quêtes. Le camp sombre gagne avec 3 échecs, ou en trouvant le rôle clé à la fin.",
+        label: "Comment gagner",
+      },
+      {
+        body: "Idéal à 5-10 amis. Choisissez l'hôte, prenez les places, distribuez les rôles, puis lisez la table.",
+        label: "Comment réunir",
+      },
+    ],
     roundLabel: "Quête",
     roundSuffix: "",
     seatLabel: "Place",
@@ -358,8 +404,8 @@ const copies: Record<string, AvalonCopy> = {
     successMission: "Succès",
     teamPassed: "Équipe validée, passez à la quête.",
     teamRejected: "Équipe refusée.",
-    title: "Fluidifier la partie sans voler la soirée.",
-    v01: "Prototype v0.1",
+    title: "Le camp clair veut réussir les quêtes. Le camp sombre veut se fondre dans la table.",
+    v01: "5-10 joueurs",
     victoryAssassinated: "L'assassinat touche le rôle caché clé.",
     victoryFailedAssassination: "L'assassinat manque le rôle caché clé.",
     voteReady: "Noter le vote",
@@ -389,7 +435,7 @@ const copies: Record<string, AvalonCopy> = {
       servant: "Allié de table",
     },
     roleDescriptions: {
-      assassin: "Porte le coup final. Icône originale générique, sans visuel officiel.",
+      assassin: "Si le camp clair réussit trois quêtes, tu dois trouver le rôle clé pour le coup final.",
       merlin: "Voit la plupart des joueurs sombres mais doit rester caché.",
       minion: "Membre du camp sombre, souvent au courant de ses alliés.",
       mordred: "Rôle sombre plus difficile à lire.",
@@ -509,104 +555,105 @@ type AvalonFlowCopy = {
 const flowCopies: Record<string, AvalonFlowCopy> = {
   "zh-CN": {
     activeStep: "当前步骤",
-    assassinationBody: "好人方已经完成 3 次任务。现在让刺客指出他认为的关键好人身份。",
-    assassinationTitle: "最后一步：刺杀",
+    assassinationBody: "好人已经做成 3 次任务，坏人还有最后一次翻盘机会。让刺客安静地选出他认为的关键好人。",
+    assassinationTitle: "最后一猜：刺杀",
     backToTeam: "返回选队伍",
     continueToIdentity: "开始发身份",
     gameOver: "本局结束",
     identityDone: "身份确认完毕",
-    identityBody: "让玩家按座位逐个查看自己的身份。主持人可以用这个步骤确认座位和身份没有错。",
-    identityTitle: "发身份，不要急着开聊",
-    missionBody: "根据任务过程选择失败牌数量。系统会自动判断本轮成功或失败，并进入下一轮。",
-    missionTitle: "记录本轮任务结果",
+    identityBody: "每个人只看自己的身份。看完先别急着报信息，阿瓦隆好玩的地方就在于大家都要藏一点、猜一点。",
+    identityTitle: "先看身份，再开始演",
+    missionBody: "队伍出发后，只需要记录这轮有几张失败牌。成功还是失败，系统会自动帮你算。",
+    missionTitle: "这轮任务成了吗？",
     missionReady: "队伍已选好",
-    missionTeamHint: "这一步只记录任务结果，不再修改队伍。",
+    missionTeamHint: "如果队伍临时改了，先回到上一步重新选人。",
     nextUp: "下一步",
-    noEvents: "还没有记录，开始第一轮后这里会自动生成复盘。",
-    recapBody: "这里保留队伍投票、任务成功/失败和刺杀结果，方便结束后复盘。",
+    noEvents: "还没开始记录。第一轮开始后，这里会留下每次投票和任务结果。",
+    recapBody: "想复盘谁总是投反对、哪轮任务突然失败，可以从这里慢慢看。",
     recapTitle: "复盘和结算",
-    roleWarning: "这是本地原型，真实多人房间需要每位玩家只看到自己的身份。",
-    setupBody: "先选择人数和玩法模式。默认配置适合快速试玩，也可以重新洗牌。",
-    setupTitle: "先把这一局搭起来",
+    roleWarning: "正式玩的时候，不要把身份页给别人看。每个人只打开自己的链接。",
+    setupBody: "选好人数，决定要不要用手机发身份。第一次玩建议 7 人左右，节奏比较舒服。",
+    setupTitle: "先定人数和玩法",
     stepAssassination: "刺杀",
     stepIdentity: "发身份",
     stepMission: "任务结果",
     stepRecap: "复盘",
     stepSetup: "开局",
     stepTeam: "选队伍",
-    tableGuide: "跟着步骤走就行。主持人不用一次看完所有面板。",
-    teamBody: "队长提出本轮队伍。点选对应座位，人数够了以后可以记录投票结果。",
+    tableGuide: "一局的节奏很简单：发身份、队长选人、全桌投票、任务出结果。说服别人相信你，才是重点。",
+    teamBody: "轮到队长时，选几个人去做任务。大家可以争论这支队伍可不可信，然后一起投票。",
     teamReady: "进入任务结果",
-    teamTitle: "队长选本轮队伍",
+    teamTitle: "队长提队伍",
   },
   en: {
     activeStep: "Current step",
     assassinationBody:
-      "Good has completed three quests. The assassin now chooses the hidden key role.",
-    assassinationTitle: "Final step: assassination",
+      "Good has completed three quests. Evil still gets one last guess: the assassin chooses the key good role.",
+    assassinationTitle: "Final guess: assassination",
     backToTeam: "Back to team",
     continueToIdentity: "Deal identities",
     gameOver: "Game over",
     identityDone: "Identities checked",
     identityBody:
-      "Let players check their role by seat. The host can make sure seats and roles are correct.",
-    identityTitle: "Deal roles before the table talks",
+      "Each player checks only their own role. After that, keep a little hidden and start reading the table.",
+    identityTitle: "Check roles, then start acting",
     missionBody:
-      "Choose how many fail cards appeared. Friemi resolves this quest and moves the table forward.",
-    missionTitle: "Record this quest result",
+      "After the team goes out, record how many fail cards appeared. Friemi resolves the quest for you.",
+    missionTitle: "Did this quest pass?",
     missionReady: "Team ready",
     missionTeamHint: "This step only records the quest result. Go back if the team changed.",
     nextUp: "Next",
-    noEvents: "No records yet. The recap will build itself once the table starts.",
+    noEvents: "No records yet. Votes and quest results will appear here once the table starts.",
     recapBody:
       "Votes, quest results, and assassination outcome stay here for the after-game recap.",
     recapTitle: "Recap and result",
     roleWarning:
-      "This is a local prototype. A real multiplayer room must only reveal each player's own role.",
+      "During a real game, do not show this role screen to others. Each player opens only their own link.",
     setupBody:
-      "Choose player count and mode first. The default role mix is ready for a quick test.",
-    setupTitle: "Set up the table",
+      "Choose player count and how much you want phones to handle. Around 7 players is a comfortable first table.",
+    setupTitle: "Choose players and mode",
     stepAssassination: "Assassinate",
     stepIdentity: "Roles",
     stepMission: "Quest result",
     stepRecap: "Recap",
     stepSetup: "Setup",
     stepTeam: "Team",
-    tableGuide: "Follow the steps. The host never needs to read every panel at once.",
+    tableGuide:
+      "The rhythm is simple: deal roles, pick a team, vote, resolve the quest. Convincing the table is the real game.",
     teamBody:
-      "The leader proposes a team. Select seats, then record whether the table approved it.",
+      "The leader proposes a quest team. The table argues, reads faces, then votes.",
     teamReady: "Go to quest result",
-    teamTitle: "Leader selects the team",
+    teamTitle: "Leader proposes a team",
   },
   fr: {
     activeStep: "Étape actuelle",
     assassinationBody:
-      "Le camp clair a réussi trois quêtes. L'assassin choisit maintenant le rôle clé caché.",
-    assassinationTitle: "Dernière étape: assassinat",
+      "Le camp clair a réussi trois quêtes. Le camp sombre a une dernière chance : l'assassin choisit le rôle clé.",
+    assassinationTitle: "Dernier pari : assassinat",
     backToTeam: "Retour équipe",
     continueToIdentity: "Distribuer les rôles",
     gameOver: "Partie terminée",
     identityDone: "Identités vérifiées",
     identityBody:
-      "Chaque joueur regarde son rôle selon sa place. L'hôte vérifie que la table est prête.",
-    identityTitle: "Distribuer les rôles avant de parler",
+      "Chaque joueur regarde seulement son rôle. Ensuite, chacun cache un peu son jeu et lit la table.",
+    identityTitle: "Voir son rôle, puis jouer son personnage",
     missionBody:
-      "Indiquez le nombre de cartes échec. Friemi résout la quête et avance la partie.",
-    missionTitle: "Noter le résultat de quête",
+      "Après le départ de l'équipe, notez seulement le nombre d'échecs. Friemi calcule le résultat.",
+    missionTitle: "La quête passe ou échoue ?",
     missionReady: "Équipe prête",
     missionTeamHint:
       "Cette étape note seulement le résultat. Revenez en arrière si l'équipe change.",
     nextUp: "Suite",
     noEvents:
-      "Aucune trace pour l'instant. Le fil se remplira quand la partie commencera.",
+      "Aucune trace pour l'instant. Votes et quêtes apparaîtront ici dès le début.",
     recapBody:
       "Votes, résultats de quête et assassinat restent ici pour revoir la partie.",
     recapTitle: "Récapitulatif",
     roleWarning:
-      "Prototype local: une vraie salle multijoueur devra cacher les rôles aux autres joueurs.",
+      "En vraie partie, ne montrez pas votre écran de rôle aux autres. Chaque joueur ouvre son lien privé.",
     setupBody:
-      "Choisissez le nombre de joueurs et le mode. La composition par défaut permet de tester vite.",
-    setupTitle: "Préparer la table",
+      "Choisissez le nombre de joueurs et le niveau d'aide du téléphone. À 7, la partie est souvent plus fluide pour commencer.",
+    setupTitle: "Choisir joueurs et mode",
     stepAssassination: "Assassinat",
     stepIdentity: "Rôles",
     stepMission: "Résultat",
@@ -614,11 +661,11 @@ const flowCopies: Record<string, AvalonFlowCopy> = {
     stepSetup: "Départ",
     stepTeam: "Équipe",
     tableGuide:
-      "Suivez les étapes. L'hôte n'a pas besoin de tout lire en même temps.",
+      "Le rythme est simple : rôles, équipe, vote, quête. Le vrai jeu, c'est de convaincre la table.",
     teamBody:
-      "Le chef propose une équipe. Sélectionnez les places, puis notez le vote de table.",
+      "Le chef propose une équipe. La table discute, observe, puis vote.",
     teamReady: "Résultat de quête",
-    teamTitle: "Le chef choisit l'équipe",
+    teamTitle: "Le chef propose une équipe",
   },
 };
 
@@ -932,6 +979,22 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
             <p className="mt-3 text-sm font-medium leading-6 text-forest/75 sm:mt-4 sm:leading-7">
               {flow.tableGuide}
             </p>
+
+            <div className="mt-4 grid gap-2">
+              {copy.rules.map((rule) => (
+                <div
+                  className="rounded-[1.1rem] border border-sage/25 bg-white/62 px-3 py-2.5 shadow-sm"
+                  key={rule.label}
+                >
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-forest/70">
+                    {rule.label}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-ink/72">
+                    {rule.body}
+                  </p>
+                </div>
+              ))}
+            </div>
 
             <div className="mt-5 hidden gap-2 rounded-[1.35rem] border border-sage/30 bg-white/60 p-2 sm:grid">
               <MiniStat label={copy.currentRound} value={currentStageLabel} />

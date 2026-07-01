@@ -38,6 +38,7 @@
     "publicScreen": "/game-tools/avalon/states/public-screen-token.svg",
     "liveSync": "/game-tools/avalon/states/live-sync-token.svg",
     "playerConsole": "/game-tools/avalon/states/player-console-token.svg",
+    "submissionRecorded": "/game-tools/avalon/states/submission-recorded-token.svg",
     "roundReset": "/game-tools/avalon/states/round-reset-token.svg",
     "undoMission": "/game-tools/avalon/states/undo-mission-token.svg",
     "assassinationPhase": "/game-tools/avalon/states/assassination-phase.svg",
