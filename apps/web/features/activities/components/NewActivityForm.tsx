@@ -8,7 +8,7 @@ import type {
   SelectHTMLAttributes,
 } from "react";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { flushSync, useFormStatus } from "react-dom";
 import {
   CalendarDays,
   Check,
@@ -79,6 +79,18 @@ const compactInputClassName =
 const compactTextareaClassName =
   "min-h-24 rounded-lg border-[#D6D5B2] bg-white/95 px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
+
+function getCategoryPlaceholder(locale: string) {
+  if (locale === "fr") {
+    return "Choisir un thème";
+  }
+
+  if (locale === "en") {
+    return "Choose a theme";
+  }
+
+  return "选择组局主题";
+}
 
 type FormSectionTone = "cream" | "mint" | "rose" | "sky";
 type TeamFormSectionId =
@@ -1132,11 +1144,11 @@ export function NewActivityForm({
   const [prefillVersion, setPrefillVersion] = useState(0);
   const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
-  const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [category, setCategory] = useState(values?.category ?? "");
   const [visibility, setVisibility] = useState(
     values?.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
   );
-  const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
+  const [priceType, setPriceType] = useState(values?.priceType ?? "FREE");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const skipLongDurationConfirmRef = useRef(false);
@@ -1237,11 +1249,17 @@ export function NewActivityForm({
   }
 
   function confirmLongDurationSubmit() {
+    const form = formRef.current;
     skipLongDurationConfirmRef.current = true;
-    setLongDurationConfirmation(null);
-    window.requestAnimationFrame(() => {
-      formRef.current?.requestSubmit();
+    flushSync(() => {
+      setLongDurationConfirmation(null);
     });
+    window.setTimeout(() => {
+      form?.requestSubmit();
+      window.setTimeout(() => {
+        skipLongDurationConfirmRef.current = false;
+      }, 0);
+    }, 0);
   }
 
   function goToNextSection() {
@@ -1465,6 +1483,9 @@ export function NewActivityForm({
                     required
                     value={category}
                   >
+                    <option value="" disabled>
+                      {getCategoryPlaceholder(locale)}
+                    </option>
                     {categoryOptions.map((value) => (
                       <option key={value} value={value}>
                         {getCategoryLabel(value, locale)}

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useActionState, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
-import { ArrowRight, Check, Dice5, Sparkles, Users, X } from "lucide-react";
+import { ArrowRight, Check, Dice5, Shield, Sparkles, Users, X } from "lucide-react";
 import {
   createAvalonRoomAction,
   type AvalonRoomActionState,
@@ -20,6 +20,15 @@ type Copy = {
   close: string;
   create: string;
   eyebrow: string;
+  advancedRules: string;
+  assassinationClassic: string;
+  assassinationClassicHint: string;
+  assassinationDisabled: string;
+  assassinationDisabledHint: string;
+  failureClassic: string;
+  failureClassicHint: string;
+  failureSingle: string;
+  failureSingleHint: string;
   helper: string;
   modeLabel: string;
   modeFull: string;
@@ -41,6 +50,15 @@ const copies: Record<string, Copy> = {
     close: "关闭",
     create: "开局建房",
     eyebrow: "5-10 人 · 约 30 分钟",
+    advancedRules: "高阶房规",
+    assassinationClassic: "经典刺杀",
+    assassinationClassicHint: "三次任务成功后进入刺杀",
+    assassinationDisabled: "不刺杀",
+    assassinationDisabledHint: "三次任务成功后直接结算",
+    failureClassic: "经典失败牌",
+    failureClassicHint: "7 人以上第 4 轮需要两张失败",
+    failureSingle: "一张即失败",
+    failureSingleHint: "所有任务一张失败牌就失败",
     helper: "开好房间后，朋友扫码入座；每个人只看自己的身份，后面按轮次选队伍、投票、做任务。",
     modeLabel: "玩法模式",
     modeFull: "手机全流程",
@@ -60,6 +78,15 @@ const copies: Record<string, Copy> = {
     close: "Close",
     create: "Create room",
     eyebrow: "5-10 players · about 30 min",
+    advancedRules: "Advanced rules",
+    assassinationClassic: "Classic assassin",
+    assassinationClassicHint: "Three quests lead to Merlin hunt",
+    assassinationDisabled: "No assassination",
+    assassinationDisabledHint: "Three quests wins immediately",
+    failureClassic: "Classic fails",
+    failureClassicHint: "7+ player quest 4 needs two fails",
+    failureSingle: "One fail",
+    failureSingleHint: "Every quest fails on one fail card",
     helper:
       "Open a table, let friends join by code, then deal private roles and move through teams, votes, and quests.",
     modeLabel: "Mode",
@@ -80,6 +107,15 @@ const copies: Record<string, Copy> = {
     close: "Fermer",
     create: "Créer une table",
     eyebrow: "5-10 joueurs · environ 30 min",
+    advancedRules: "Règles avancées",
+    assassinationClassic: "Assassin classique",
+    assassinationClassicHint: "Trois quêtes puis chasse de Merlin",
+    assassinationDisabled: "Sans assassinat",
+    assassinationDisabledHint: "Trois quêtes gagnent directement",
+    failureClassic: "Échecs classiques",
+    failureClassicHint: "À 7+, la quête 4 demande deux échecs",
+    failureSingle: "Un échec",
+    failureSingleHint: "Une carte échec suffit toujours",
     helper:
       "Ouvre une table, laisse les amis entrer par code, puis distribue les rôles privés et suis équipes, votes et quêtes.",
     modeLabel: "Mode",
@@ -106,6 +142,8 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
   );
   const [playerCount, setPlayerCount] = useState(7);
   const [mode, setMode] = useState<"full" | "identity" | "public">("identity");
+  const [assassinationRule, setAssassinationRule] = useState<"classic" | "disabled">("classic");
+  const [failureRule, setFailureRule] = useState<"classic" | "single_fail">("classic");
   const [openPicker, setOpenPicker] = useState<"mode" | "players" | null>(null);
   const t = copies[locale] ?? copies.en;
   const modeOptions = useMemo(
@@ -134,56 +172,41 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
   const selectedMode = modeOptions.find((option) => option.value === mode) ?? modeOptions[0];
 
   return (
-    <section className="relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-6 lg:p-7">
-      <div className="absolute -right-16 -top-20 h-44 w-44 rounded-full bg-[#F09182]/20 blur-3xl" />
-      <div className="absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-[#8AB68E]/20 blur-3xl" />
+    <section className="relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-3 shadow-xl shadow-[#156240]/10 sm:p-5 lg:p-6">
+      <div className="absolute -right-16 -top-20 h-44 w-44 rounded-full bg-[#F09182]/16 blur-3xl" />
+      <div className="absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-[#8AB68E]/18 blur-3xl" />
 
-      <div className="relative grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
-        <div className="min-w-0 space-y-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/45 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#156240]">
-            <Sparkles className="h-3.5 w-3.5" />
-            {t.eyebrow}
-          </span>
-          <div className="grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
-            <div className="relative grid h-24 w-24 place-items-center rounded-[2rem] border border-[#8AB68E]/40 bg-white shadow-xl shadow-[#156240]/10">
-              <Image
-                alt=""
-                className="h-16 w-16"
-                height={72}
-                src="/game-tools/avalon/avalon-tool-icon.svg"
-                width={72}
-              />
-              <span className="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-[#F09182] text-xs font-black text-white shadow-lg">
-                v2
-              </span>
-            </div>
-            <div className="min-w-0">
-              <h2 className="max-w-xl break-words text-2xl font-semibold leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
+      <div className="relative grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-end">
+        <div className="min-w-0 overflow-hidden rounded-[1.7rem] bg-[#F1F2EC] shadow-[0_20px_48px_rgba(21,98,64,0.12)] ring-1 ring-[#8AB68E]/38">
+          <div className="relative h-48 overflow-hidden sm:h-64 lg:h-[20rem]">
+            <Image
+              alt=""
+              className="h-full w-full object-cover object-top"
+              height={600}
+              priority={false}
+              src="/game-tools/avalon/avalon.jpeg"
+              width={450}
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(21,98,64,0.02),rgba(21,98,64,0.18)_58%,rgba(14,42,90,0.46))]" />
+            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/65 bg-[#FEFFF9]/95 px-3 py-1.5 text-xs font-black tracking-[0.12em] text-[#156240] shadow-[0_12px_26px_rgba(21,98,64,0.16)] backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" />
+              {t.eyebrow}
+            </span>
+            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+              <h2 className="max-w-xl break-words text-2xl font-black leading-tight tracking-normal text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.36)] sm:text-3xl">
                 {t.title}
               </h2>
-              <div className="mt-3 flex items-center gap-2">
-                {[
-                  "/game-tools/avalon/roles/role-merlin.svg",
-                  "/game-tools/avalon/roles/role-assassin.svg",
-                  "/game-tools/avalon/states/mission-success-token.svg",
-                ].map((src) => (
-                  <span
-                    className="grid h-10 w-10 place-items-center rounded-2xl border border-[#D6D5B2] bg-white shadow-sm"
-                    key={src}
-                  >
-                    <Image alt="" height={30} src={src} width={30} />
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
         </div>
 
         <form
           action={formAction}
-          className="relative grid min-w-0 gap-3 rounded-[1.5rem] border border-[#D6D5B2] bg-white/80 p-3 shadow-lg shadow-[#156240]/5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-4"
+          className="relative grid min-w-0 gap-3 rounded-[1.5rem] bg-white/74 p-3 shadow-lg shadow-[#156240]/5 ring-1 ring-[#D6D5B2]/75 backdrop-blur sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-4"
         >
           <input name="locale" type="hidden" value={locale} />
+          <input name="assassinationRule" type="hidden" value={assassinationRule} />
+          <input name="failureRule" type="hidden" value={failureRule} />
           <input name="mode" type="hidden" value={mode} />
           <input name="playerCount" type="hidden" value={playerCount} />
           <label className="grid gap-1.5 sm:col-span-2">
@@ -222,6 +245,39 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
                 label={t.modeLabel}
                 onClick={() => setOpenPicker("mode")}
                 value={selectedMode.label}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:col-span-2">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#156240]">
+              <Shield className="h-3.5 w-3.5" />
+              {t.advancedRules}
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <RuleToggle
+                active={assassinationRule === "classic"}
+                hint={t.assassinationClassicHint}
+                label={t.assassinationClassic}
+                onClick={() => setAssassinationRule("classic")}
+              />
+              <RuleToggle
+                active={assassinationRule === "disabled"}
+                hint={t.assassinationDisabledHint}
+                label={t.assassinationDisabled}
+                onClick={() => setAssassinationRule("disabled")}
+              />
+              <RuleToggle
+                active={failureRule === "classic"}
+                hint={t.failureClassicHint}
+                label={t.failureClassic}
+                onClick={() => setFailureRule("classic")}
+              />
+              <RuleToggle
+                active={failureRule === "single_fail"}
+                hint={t.failureSingleHint}
+                label={t.failureSingle}
+                onClick={() => setFailureRule("single_fail")}
               />
             </div>
           </div>
@@ -339,6 +395,46 @@ function PickerButton({
       </span>
       <span className="truncate text-sm font-black text-[#0E2A5A]">{value}</span>
       <ArrowRight className="h-3.5 w-3.5 text-[#156240]/55 transition group-hover:text-[#156240]" />
+    </button>
+  );
+}
+
+function RuleToggle({
+  active,
+  hint,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  hint: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={
+        active
+          ? "grid min-h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[1.25rem] border border-[#156240] bg-[#EAF6E7] px-3 py-2 text-left shadow-sm"
+          : "grid min-h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[1.25rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#8AB68E] hover:bg-white"
+      }
+      onClick={onClick}
+      type="button"
+    >
+      <span
+        className={
+          active
+            ? "grid h-8 w-8 place-items-center rounded-xl bg-[#156240] text-white shadow-md"
+            : "grid h-8 w-8 place-items-center rounded-xl bg-[#F1F2EC] text-[#156240] shadow-inner"
+        }
+      >
+        <Check className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs font-black text-[#0E2A5A]">{label}</span>
+        <span className="mt-0.5 block text-[0.68rem] font-semibold leading-4 text-[#156240]/68">
+          {hint}
+        </span>
+      </span>
     </button>
   );
 }

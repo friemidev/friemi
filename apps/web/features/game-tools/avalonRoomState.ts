@@ -14,6 +14,13 @@ export type AvalonGamePhase =
 
 export type AvalonMissionResult = "fail" | "success" | null;
 export type AvalonWinner = "evil" | "good" | null;
+export type AvalonAssassinationRule = "classic" | "disabled";
+export type AvalonFailureRule = "classic" | "single_fail";
+
+export type AvalonAdvancedRules = {
+  assassination: AvalonAssassinationRule;
+  failure: AvalonFailureRule;
+};
 
 export type AvalonVoteResult = {
   approve: number;
@@ -27,11 +34,17 @@ export type AvalonRoomState = {
   missionResults: AvalonMissionResult[];
   phase: AvalonGamePhase;
   proposedTeamSeatNumbers: number[];
+  rules: AvalonAdvancedRules;
   roundIndex: number;
   teamVoteRejectCount: number;
   voteResult?: AvalonVoteResult | null;
   winner?: AvalonWinner;
   winnerReason?: string | null;
+};
+
+export const defaultAvalonAdvancedRules: AvalonAdvancedRules = {
+  assassination: "classic",
+  failure: "classic",
 };
 
 const defaultMissionResults: AvalonMissionResult[] = [
@@ -96,6 +109,18 @@ function getVoteResult(value: unknown): AvalonVoteResult | null {
   };
 }
 
+export function normalizeAvalonAdvancedRules(value: unknown): AvalonAdvancedRules {
+  if (!isRecord(value)) {
+    return defaultAvalonAdvancedRules;
+  }
+
+  return {
+    assassination:
+      value.assassination === "disabled" ? "disabled" : "classic",
+    failure: value.failure === "single_fail" ? "single_fail" : "classic",
+  };
+}
+
 export function normalizeAvalonRoomState(value: unknown): AvalonRoomState {
   const state = isRecord(value) ? value : {};
 
@@ -108,6 +133,7 @@ export function normalizeAvalonRoomState(value: unknown): AvalonRoomState {
     missionResults: getMissionResults(state.missionResults),
     phase: getPhase(state.phase),
     proposedTeamSeatNumbers: getSeatNumbers(state.proposedTeamSeatNumbers),
+    rules: normalizeAvalonAdvancedRules(state.rules),
     roundIndex: Math.min(Math.max(getNumber(state.roundIndex, 0), 0), 4),
     teamVoteRejectCount: Math.min(
       Math.max(getNumber(state.teamVoteRejectCount, 0), 0),
@@ -137,11 +163,21 @@ export function getAvalonQuestTeamSize({
 export function getAvalonMissionFailureThresholdFromState({
   playerCount,
   roundIndex,
+  rules = defaultAvalonAdvancedRules,
 }: {
   playerCount: number;
   roundIndex: number;
+  rules?: AvalonAdvancedRules;
 }) {
+  if (rules.failure === "single_fail") {
+    return 1;
+  }
+
   return getAvalonFailureThreshold(playerCount, roundIndex);
+}
+
+export function shouldSkipAvalonAssassination(rules: AvalonAdvancedRules) {
+  return rules.assassination === "disabled";
 }
 
 export function getNextAvalonLeaderSeatNumber({

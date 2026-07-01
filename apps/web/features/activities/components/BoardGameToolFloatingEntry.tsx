@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { ArrowRight, ChevronUp, X } from "lucide-react";
+import { ChevronUp, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -14,11 +14,14 @@ type BoardGameToolFloatingEntryProps = {
 
 type BoardGameToolCopy = {
   action: string;
-  avalonDescription: string;
   avalonTitle: string;
+  avalonSubtitle: string;
+  botcTitle: string;
   close: string;
+  comingSoon: string;
   description: string;
   eyebrow: string;
+  mafiaTitle: string;
   open: string;
   title: string;
 };
@@ -27,11 +30,14 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
   if (locale === "fr") {
     return {
       action: "Ouvrir",
-      avalonDescription: "Places, rôles, quêtes et récap.",
-      avalonTitle: "Avalon",
+      avalonTitle: "The Resistance: Avalon",
+      avalonSubtitle: "Disponible",
+      botcTitle: "Blood on the Clocktower",
       close: "Fermer",
-      description: "Des aides légères pour jouer autour de la table.",
+      comingSoon: "Bientôt",
+      description: "Choisis l'outil qui accompagne la partie autour de la table.",
       eyebrow: "Débloqué",
+      mafiaTitle: "Loup-garou",
       open: "Outils jeu",
       title: "Outils de table",
     };
@@ -40,11 +46,14 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
   if (locale === "en") {
     return {
       action: "Open",
-      avalonDescription: "Seats, roles, quests, and recap.",
-      avalonTitle: "Avalon",
+      avalonTitle: "The Resistance: Avalon",
+      avalonSubtitle: "Ready",
+      botcTitle: "Blood on the Clocktower",
       close: "Close",
-      description: "Light tools for running the game at the table.",
+      comingSoon: "Coming soon",
+      description: "Pick a table tool for the game you are running.",
       eyebrow: "Unlocked",
+      mafiaTitle: "Werewolf",
       open: "Game tools",
       title: "Table tools",
     };
@@ -52,13 +61,16 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
 
   return {
     action: "打开",
-    avalonDescription: "扫码入座、发身份、记录任务和复盘。",
-    avalonTitle: "Avalon 阿瓦隆",
+    avalonTitle: "阿瓦隆",
+    avalonSubtitle: "已开放",
+    botcTitle: "血染钟楼",
     close: "关闭",
-    description: "报名后可用的现场辅助工具，开局和记录更轻松。",
+    comingSoon: "敬请期待",
+    description: "选择Friemi 桌游应用，开启你的桌游世界。",
     eyebrow: "已解锁",
+    mafiaTitle: "狼人杀",
     open: "桌游工具",
-    title: "桌游工具",
+    title: "桌游",
   };
 }
 
@@ -69,6 +81,27 @@ export function BoardGameToolFloatingEntry({
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
   const copy = getBoardGameToolCopy(locale);
+  const tools = [
+    {
+      href: avalonHref,
+      icon: "/game-tools/avalon/avalon.jpeg",
+      key: "avalon",
+      status: copy.avalonSubtitle,
+      title: copy.avalonTitle,
+    },
+    {
+      icon: "/game-tools/mafia/mafia.jpeg",
+      key: "mafia",
+      status: copy.comingSoon,
+      title: copy.mafiaTitle,
+    },
+    {
+      icon: "/game-tools/blood_on_the_clockTower/blood_on_the_clockTower.jpeg",
+      key: "botc",
+      status: copy.comingSoon,
+      title: copy.botcTitle,
+    },
+  ];
 
   useEffect(() => {
     if (!isOpen) {
@@ -90,37 +123,37 @@ export function BoardGameToolFloatingEntry({
       {isOpen ? (
         <button
           aria-label={copy.close}
-          className="pointer-events-auto absolute inset-0 cursor-default bg-transparent"
+          className="pointer-events-auto absolute inset-0 cursor-default bg-[#1D1D1B]/12 backdrop-blur-[1.5px] md:bg-transparent md:backdrop-blur-none"
           type="button"
           onClick={() => setIsOpen(false)}
         />
       ) : null}
 
-      <div className="pointer-events-auto absolute bottom-[calc(10.65rem+env(safe-area-inset-bottom))] right-3 flex flex-col items-end gap-2 sm:right-5 md:bottom-8 md:right-8">
+      <div className="pointer-events-auto absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] left-3 flex flex-col items-start gap-2 sm:left-5 md:bottom-8 md:left-auto md:right-8 md:items-end">
         <div
           id={panelId}
           role="dialog"
           aria-label={copy.title}
           aria-hidden={!isOpen}
           className={cn(
-            "w-[min(calc(100vw-1.5rem),22rem)] origin-bottom-right overflow-hidden rounded-[1.6rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/96 shadow-[0_26px_68px_rgba(21,98,64,0.24)] backdrop-blur-xl transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "fixed inset-x-3 bottom-[calc(5.85rem+env(safe-area-inset-bottom))] top-[calc(4.8rem+env(safe-area-inset-top))] origin-bottom-left overflow-hidden rounded-[2rem] border border-[#8AB68E]/70 bg-[#FEFFF9]/98 shadow-[0_26px_68px_rgba(21,98,64,0.24)] backdrop-blur-xl transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none md:absolute md:inset-auto md:bottom-[4.25rem] md:right-0 md:top-auto md:w-[28rem] md:origin-bottom-right md:rounded-[1.8rem]",
             isOpen
               ? "translate-y-0 scale-100 opacity-100"
               : "pointer-events-none translate-y-3 scale-95 opacity-0",
           )}
         >
-          <div className="relative overflow-hidden p-4">
-            <div className="absolute -right-16 -top-20 h-40 w-40 rounded-full bg-[#F09182]/26 blur-2xl" />
-            <div className="absolute -bottom-20 -left-14 h-36 w-36 rounded-full bg-[#8AB68E]/28 blur-2xl" />
-            <div className="relative flex items-start justify-between gap-3">
+          <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+            <div className="absolute -right-16 -top-20 h-40 w-40 rounded-full bg-[#F09182]/18 blur-2xl" />
+            <div className="absolute -bottom-20 -left-14 h-36 w-36 rounded-full bg-[#8AB68E]/22 blur-2xl" />
+            <div className="relative flex items-start justify-between gap-3 border-b border-[#D6D5B2]/70 px-5 pb-4 pt-5">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#156240]/72">
                   {copy.eyebrow}
                 </p>
-                <h2 className="mt-1 text-base font-extrabold text-[#0E2A5C]">
+                <h2 className="mt-1 text-2xl font-black leading-tight text-[#0E2A5C] md:text-xl">
                   {copy.title}
                 </h2>
-                <p className="mt-1 max-w-[15rem] text-xs font-semibold leading-5 text-[#156240]/70">
+                <p className="mt-2 max-w-[20rem] text-sm font-semibold leading-6 text-[#156240]/70 md:text-xs md:leading-5">
                   {copy.description}
                 </p>
               </div>
@@ -135,33 +168,65 @@ export function BoardGameToolFloatingEntry({
               </button>
             </div>
 
-            <Link
-              className="group relative mt-4 flex items-center gap-3 overflow-hidden rounded-[1.25rem] border border-[#D6D5B2] bg-white/88 p-3 shadow-[0_14px_34px_rgba(21,98,64,0.1)] transition hover:-translate-y-0.5 hover:border-[#8AB68E] hover:bg-[#FEFFF9]"
-              href={avalonHref}
-              tabIndex={isOpen ? undefined : -1}
-            >
-              <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.1rem] bg-[radial-gradient(circle_at_32%_24%,#FEFFF9_0%,#F1F2EC_38%,#8AB68E_100%)] ring-1 ring-[#8AB68E]/65">
-                <Image
-                  alt=""
-                  src="/game-tools/avalon/avalon-tool-icon.svg"
-                  width={54}
-                  height={54}
-                  className="h-12 w-12 drop-shadow-[0_6px_12px_rgba(21,98,64,0.18)]"
-                />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-extrabold text-[#0E2A5C]">
-                  {copy.avalonTitle}
-                </span>
-                <span className="mt-1 line-clamp-2 block text-xs font-semibold leading-5 text-[#156240]/68">
-                  {copy.avalonDescription}
-                </span>
-              </span>
-              <span className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-extrabold text-white shadow-[0_10px_22px_rgba(21,98,64,0.2)] transition group-hover:bg-[#369758]">
-                {copy.action}
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-              </span>
-            </Link>
+            <div className="relative grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-5 pb-6 pt-7 md:gap-5 md:py-5">
+              <div className="grid grid-cols-3 items-start gap-3 md:gap-3">
+                {tools.map((tool) =>
+                  tool.href ? (
+                    <Link
+                      className="group grid min-w-0 justify-items-center gap-2.5 rounded-[1.35rem] px-1 py-2 text-center transition hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-[#8AB68E]/55"
+                      href={tool.href}
+                      key={tool.key}
+                      tabIndex={isOpen ? undefined : -1}
+                    >
+                      <span className="relative grid h-[clamp(5.6rem,25vw,7rem)] w-[clamp(4.2rem,18vw,5.25rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_18px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#D6D5B2] transition group-hover:shadow-[0_22px_46px_rgba(21,98,64,0.22)] md:h-24 md:w-[4.6rem]">
+                        <Image
+                          alt=""
+                          className="h-full w-full rounded-[1.1rem] object-contain"
+                          height={112}
+                          src={tool.icon}
+                          width={112}
+                        />
+                      </span>
+                      <span className="grid min-w-0 max-w-[6.25rem] gap-1">
+                        <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
+                          {tool.title}
+                        </span>
+                        <span className="text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#156240]/64">
+                          {tool.status}
+                        </span>
+                      </span>
+                    </Link>
+                  ) : (
+                    <button
+                      aria-disabled="true"
+                      className="grid min-w-0 cursor-not-allowed justify-items-center gap-2.5 rounded-[1.35rem] px-1 py-2 text-center opacity-65"
+                      disabled
+                      key={tool.key}
+                      tabIndex={isOpen ? undefined : -1}
+                      type="button"
+                    >
+                      <span className="grid h-[clamp(5.6rem,25vw,7rem)] w-[clamp(4.2rem,18vw,5.25rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.12)] ring-1 ring-[#D6D5B2] md:h-24 md:w-[4.6rem]">
+                        <Image
+                          alt=""
+                          className="h-full w-full rounded-[1.1rem] object-contain grayscale-[0.18]"
+                          height={112}
+                          src={tool.icon}
+                          width={112}
+                        />
+                      </span>
+                      <span className="grid min-w-0 max-w-[6.25rem] gap-1">
+                        <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
+                          {tool.title}
+                        </span>
+                        <span className="text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#B5301F]/72">
+                          {tool.status}
+                        </span>
+                      </span>
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -177,13 +242,13 @@ export function BoardGameToolFloatingEntry({
           onClick={() => setIsOpen((value) => !value)}
         >
           <span className="absolute -inset-1 -z-10 rounded-full bg-[#F09182]/28 opacity-0 blur-md transition group-hover:opacity-100" />
-          <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[#156240] shadow-inner shadow-white/20 ring-4 ring-[#D6D5B2]/55">
+          <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white shadow-inner shadow-white/20 ring-4 ring-[#D6D5B2]/55">
             <Image
               alt=""
-              src="/game-tools/avalon/states/mission-board-bg.svg"
+              src="/illustrations/png/board-games.png"
               width={34}
               height={34}
-              className="h-8 w-8 rounded-full"
+              className="h-9 w-9 object-cover"
             />
           </span>
           <span className="max-w-[5.5rem] truncate text-sm font-extrabold">

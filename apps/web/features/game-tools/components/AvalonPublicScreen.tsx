@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AvalonQrCode } from "@/features/game-tools/components/AvalonQrCode";
 import {
   getAvalonQuestTeamSize,
@@ -57,6 +58,8 @@ const copy = {
     rejects: "否决",
     round: "第",
     success: "成功",
+    soundOff: "静音",
+    soundOn: "音效",
     team: "队伍",
     target: "刺杀",
     votes: "投票",
@@ -74,6 +77,8 @@ const copy = {
     rejects: "Rejects",
     round: "Round",
     success: "Success",
+    soundOff: "Muted",
+    soundOn: "Sound",
     team: "Team",
     target: "Target",
     votes: "Votes",
@@ -91,6 +96,8 @@ const copy = {
     rejects: "Refus",
     round: "Tour",
     success: "Succès",
+    soundOff: "Muet",
+    soundOn: "Son",
     team: "Équipe",
     target: "Cible",
     votes: "Votes",
@@ -117,7 +124,7 @@ function getPhaseIcon(state: AvalonRoomState) {
       : "/game-tools/avalon/states/good-victory.svg";
   }
 
-  return "/game-tools/avalon/avalon-tool-icon.svg";
+  return "/game-tools/avalon/avalon.jpeg";
 }
 
 function getPhaseTitle(
@@ -156,6 +163,10 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-correction.svg";
   }
 
+  if (type === "room_rolled_back") {
+    return "/game-tools/avalon/states/undo-mission-token.svg";
+  }
+
   if (type === "team_proposed") {
     return "/game-tools/avalon/share/timeline-node-team.svg";
   }
@@ -172,7 +183,7 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-vote.svg";
   }
 
-  return "/game-tools/avalon/avalon-tool-icon.svg";
+  return "/game-tools/avalon/avalon.jpeg";
 }
 
 function isEventPayloadRecord(value: unknown): value is Record<string, unknown> {
@@ -255,6 +266,13 @@ export function AvalonPublicScreen({
   ).length;
   const failCount = room.state.missionResults.filter((result) => result === "fail").length;
   const claimedCount = room.seats.filter((seat) => seat.isClaimed).length;
+  const soundCue = useMemo(
+    () =>
+      latestMission
+        ? `${latestMission.roundIndex}-${latestMission.missionResult}-${failCount}-${successCount}`
+        : `${room.state.phase}-${room.state.winner ?? "none"}`,
+    [failCount, latestMission, room.state.phase, room.state.winner, successCount],
+  );
 
   return (
     <section className="min-h-[calc(100svh-6rem)] overflow-hidden rounded-[2.5rem] border border-[#8AB68E]/35 bg-[#FEFFF9] shadow-2xl shadow-[#156240]/15">
@@ -296,6 +314,15 @@ export function AvalonPublicScreen({
               />
             </div>
           </header>
+
+          <AvalonSoundToggle
+            cue={soundCue}
+            enabledLabel={t.soundOn}
+            latestMission={latestMission}
+            phase={room.state.phase}
+            winner={room.state.winner}
+            mutedLabel={t.soundOff}
+          />
 
           <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.72fr)] xl:items-center">
             <div className="grid gap-5">
@@ -494,6 +521,114 @@ export function AvalonPublicScreen({
         </aside>
       </div>
     </section>
+  );
+}
+
+function playAvalonCue({
+  missionResult,
+  phase,
+  winner,
+}: {
+  missionResult?: "fail" | "success";
+  phase: AvalonRoomState["phase"];
+  winner: AvalonRoomState["winner"];
+}) {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+
+  if (!AudioContextClass) {
+    return;
+  }
+
+  const context = new AudioContextClass();
+  const gain = context.createGain();
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.48);
+  gain.connect(context.destination);
+
+  const notes =
+    winner === "good" || missionResult === "success"
+      ? [523.25, 659.25, 783.99]
+      : winner === "evil" || missionResult === "fail"
+        ? [392, 311.13, 246.94]
+        : phase === "team_vote"
+          ? [440, 554.37]
+          : [349.23, 440];
+
+  notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, context.currentTime + index * 0.09);
+    oscillator.connect(gain);
+    oscillator.start(context.currentTime + index * 0.09);
+    oscillator.stop(context.currentTime + index * 0.09 + 0.18);
+  });
+
+  window.setTimeout(() => void context.close(), 720);
+}
+
+function AvalonSoundToggle({
+  cue,
+  enabledLabel,
+  latestMission,
+  mutedLabel,
+  phase,
+  winner,
+}: {
+  cue: string;
+  enabledLabel: string;
+  latestMission: ReturnType<typeof getMissionEventDetails>;
+  mutedLabel: string;
+  phase: AvalonRoomState["phase"];
+  winner: AvalonRoomState["winner"];
+}) {
+  const [enabled, setEnabled] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+    setEnabled(window.localStorage.getItem("friemi-avalon-sound") === "on");
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || !enabled) {
+      return;
+    }
+
+    playAvalonCue({
+      missionResult: latestMission?.missionResult,
+      phase,
+      winner,
+    });
+  }, [cue, enabled, hydrated, latestMission?.missionResult, phase, winner]);
+
+  return (
+    <button
+      className={cn(
+        "relative z-10 -mt-4 ml-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border px-3 text-xs font-black shadow-lg transition hover:-translate-y-0.5",
+        enabled
+          ? "border-[#8AB68E] bg-[#156240] text-white shadow-[#156240]/18"
+          : "border-[#D6D5B2] bg-white/82 text-[#156240]",
+      )}
+      onClick={() => {
+        const nextEnabled = !enabled;
+        setEnabled(nextEnabled);
+        window.localStorage.setItem("friemi-avalon-sound", nextEnabled ? "on" : "off");
+
+        if (nextEnabled) {
+          playAvalonCue({ phase, winner });
+        }
+      }}
+      type="button"
+    >
+      <span className="grid h-5 w-5 place-items-center rounded-full bg-white/20">
+        {enabled ? "♪" : "×"}
+      </span>
+      {enabled ? enabledLabel : mutedLabel}
+    </button>
   );
 }
 

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonAssistantClient } from "@/features/game-tools/components/AvalonAssistantClient";
 import { AvalonCreateRoomPanel } from "@/features/game-tools/components/AvalonCreateRoomPanel";
+import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import {
@@ -26,7 +27,7 @@ const metadataCopy: Record<
   "zh-CN": {
     description:
       "阿瓦隆是一款 5-10 人隐藏身份桌游。Friemi 帮你开房、发身份、记投票和任务，让线下组局更顺。",
-    title: "Avalon 阿瓦隆",
+    title: "阿瓦隆",
   },
   en: {
     description:
@@ -61,6 +62,10 @@ export default async function AvalonToolPage({ params }: AvalonToolPageProps) {
 
   return (
     <PageContainer className="max-w-[96rem] space-y-5 overflow-x-hidden pb-28 pt-4 sm:pb-12 sm:pt-7">
+      <GameToolBackButton
+        fallbackHref={withLocale(locale, "/game-tools")}
+        locale={locale}
+      />
       <AvalonCreateRoomPanel locale={locale} />
       <AvalonAssistantClient locale={locale} />
     </PageContainer>

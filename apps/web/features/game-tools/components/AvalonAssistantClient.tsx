@@ -120,7 +120,7 @@ const copies: Record<string, AvalonCopy> = {
   "zh-CN": {
     addFail: "增加失败",
     approveTeam: "队伍通过",
-    assistantTitle: "Avalon 阿瓦隆",
+    assistantTitle: "阿瓦隆",
     countLabel: "人局",
     currentLeader: "当前队长",
     currentRound: "当前任务",
@@ -554,7 +554,7 @@ type AvalonFlowCopy = {
 
 const flowCopies: Record<string, AvalonFlowCopy> = {
   "zh-CN": {
-    activeStep: "当前步骤",
+    activeStep: "教程",
     assassinationBody: "好人已经做成 3 次任务，坏人还有最后一次翻盘机会。让刺客安静地选出他认为的关键好人。",
     assassinationTitle: "最后一猜：刺杀",
     backToTeam: "返回选队伍",
@@ -956,9 +956,9 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <img
-                  src="/game-tools/avalon/avalon-tool-icon.svg"
+                  src="/game-tools/avalon/avalon.jpeg"
                   alt=""
-                  className="h-12 w-12 shrink-0 sm:h-14 sm:w-14"
+                  className="h-14 w-11 shrink-0 rounded-[0.9rem] object-contain shadow-sm sm:h-16 sm:w-12"
                 />
                 <div className="min-w-0">
                   <p className="text-[0.66rem] font-black uppercase tracking-[0.26em] text-forest">

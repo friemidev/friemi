@@ -35,6 +35,7 @@ type AvalonRecapViewProps = {
     status: string;
     title: string;
   };
+  posterHref: string;
   roomHref: string;
   screenHref: string;
 };
@@ -51,6 +52,7 @@ const copy = {
     noEvents: "还没有可复盘的记录。",
     player: "玩家",
     players: "座位",
+    poster: "长图",
     publicScreen: "公共屏",
     recap: "复盘",
     redeal: "重新发牌",
@@ -77,6 +79,7 @@ const copy = {
     noEvents: "No recap events yet.",
     player: "Player",
     players: "Seats",
+    poster: "Poster",
     publicScreen: "Screen",
     recap: "Recap",
     redeal: "Redeal",
@@ -103,6 +106,7 @@ const copy = {
     noEvents: "Aucun événement à revoir.",
     player: "Joueur",
     players: "Places",
+    poster: "Affiche",
     publicScreen: "Écran",
     recap: "Récap",
     redeal: "Redistribuer",
@@ -188,12 +192,16 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-correction.svg";
   }
 
+  if (type === "room_rolled_back") {
+    return "/game-tools/avalon/states/undo-mission-token.svg";
+  }
+
   if (type === "team_proposed") {
     return "/game-tools/avalon/share/timeline-node-team.svg";
   }
 
   if (type === "room_redealt") {
-    return "/game-tools/avalon/avalon-tool-icon.svg";
+    return "/game-tools/avalon/avalon.jpeg";
   }
 
   if (type === "room_reopened") {
@@ -225,6 +233,10 @@ function getEventLabel(type: string, t: (typeof copy)[keyof typeof copy]) {
   }
 
   if (type === "round_corrected") {
+    return t.repair;
+  }
+
+  if (type === "room_rolled_back") {
     return t.repair;
   }
 
@@ -291,6 +303,7 @@ function getWinnerMeta(
 
 export function AvalonRecapView({
   locale,
+  posterHref,
   room,
   roomHref,
   screenHref,
@@ -332,6 +345,13 @@ export function AvalonRecapView({
                 target="_blank"
               >
                 {t.publicScreen}
+              </Link>
+              <Link
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#8AB68E] bg-[#EAF6E7] px-4 text-sm font-black text-[#156240] transition hover:-translate-y-0.5"
+                href={posterHref}
+                target="_blank"
+              >
+                {t.poster}
               </Link>
             </div>
           </div>

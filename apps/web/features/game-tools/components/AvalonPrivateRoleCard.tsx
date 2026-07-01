@@ -403,10 +403,10 @@ export function AvalonPrivateRoleCard({
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[1.1rem] bg-[#156240] text-white shadow-lg shadow-[#156240]/18">
               <Image
                 alt=""
-                className="h-8 w-8"
-                height={36}
-                src="/game-tools/avalon/avalon-tool-icon.svg"
-                width={36}
+                className="h-10 w-8 rounded-[0.75rem] object-contain"
+                height={300}
+                src="/game-tools/avalon/avalon.jpeg"
+                width={225}
               />
             </span>
             <div className="min-w-0">

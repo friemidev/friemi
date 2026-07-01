@@ -312,6 +312,43 @@ function getTeamDetailCtaTitle({
   return requiresApproval ? t.submitApproval : ctaCopy.title;
 }
 
+function getTeamDetailMobileJoinOpenLabel({
+  locale,
+  viewerParticipationStatus,
+}: {
+  locale: string;
+  viewerParticipationStatus: DetailViewerParticipationStatus;
+}) {
+  if (
+    viewerParticipationStatus === "JOINED" ||
+    viewerParticipationStatus === "APPROVED"
+  ) {
+    if (locale === "fr") {
+      return "Inscrit";
+    }
+
+    if (locale === "en") {
+      return "Joined";
+    }
+
+    return "已报名";
+  }
+
+  if (viewerParticipationStatus === "PENDING") {
+    if (locale === "fr") {
+      return "En attente";
+    }
+
+    if (locale === "en") {
+      return "Pending";
+    }
+
+    return "待审核";
+  }
+
+  return undefined;
+}
+
 function getTeamOwnerCtaCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -1132,6 +1169,10 @@ export default async function ActivityDetailPage({
     isOrganizer: isTeamOperator,
     locale,
     requiresApproval: activity.requiresApproval,
+    viewerParticipationStatus: viewerParticipation?.status ?? null,
+  });
+  const mobileJoinCtaOpenLabel = getTeamDetailMobileJoinOpenLabel({
+    locale,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
   });
   const canViewAnnouncements =
@@ -1969,6 +2010,7 @@ export default async function ActivityDetailPage({
           <TeamDetailMobileCtaSheet
             activityTitle={activity.title}
             locale={locale}
+            openLabel={mobileJoinCtaOpenLabel}
             participantLabel={activityParticipantLabel}
             statusLabel={getActivitySeatLabel(activity, locale)}
           >

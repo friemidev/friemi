@@ -15,10 +15,14 @@ import {
 } from "@/features/game-tools/avalonConfig";
 import {
   countAvalonMissionResults,
+  defaultAvalonAdvancedRules,
   getAvalonMissionFailureThresholdFromState,
   getAvalonQuestTeamSize,
   getNextAvalonLeaderSeatNumber,
+  normalizeAvalonAdvancedRules,
   normalizeAvalonRoomState,
+  shouldSkipAvalonAssassination,
+  type AvalonAdvancedRules,
 } from "@/features/game-tools/avalonRoomState";
 import {
   ensureCurrentUserProfile,
@@ -42,6 +46,8 @@ export type AvalonRoomActionState = {
 const roomTitleMaxLength = 80;
 
 const createRoomSchema = z.object({
+  assassinationRule: z.enum(["classic", "disabled"]).default("classic"),
+  failureRule: z.enum(["classic", "single_fail"]).default("classic"),
   locale: z.string().min(1).default("zh-CN"),
   mode: z.enum(["public", "identity", "full"]).default("identity"),
   playerCount: z.coerce.number().int().min(5).max(10),
@@ -107,6 +113,12 @@ const correctRoomSchema = z.object({
   correction: z.enum(["reset_current_round", "undo_last_mission"]),
   locale: z.string().min(1).default("zh-CN"),
   roomId: z.string().min(1),
+});
+
+const rollbackRoomSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  roomId: z.string().min(1),
+  roundIndex: z.coerce.number().int().min(0).max(4),
 });
 
 function getString(formData: FormData, key: string) {
@@ -235,18 +247,33 @@ function getRoleAlignment(roleKey: AvalonRoleKey) {
     : "good";
 }
 
-function createInitialAvalonRoomState() {
+function createInitialAvalonRoomState({
+  rules = defaultAvalonAdvancedRules,
+}: {
+  rules?: AvalonAdvancedRules;
+} = {}) {
   return {
     currentLeaderSeatNumber: 1,
     missionResults: [null, null, null, null, null],
     phase: "team_building",
     proposedTeamSeatNumbers: [],
+    rules,
     roundIndex: 0,
     teamVoteRejectCount: 0,
     voteResult: null,
     winner: null,
     winnerReason: null,
   };
+}
+
+function getAvalonRoomConfigRules(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return defaultAvalonAdvancedRules;
+  }
+
+  return normalizeAvalonAdvancedRules(
+    (config as Record<string, unknown>).rules,
+  );
 }
 
 function isUniqueConstraintError(error: unknown) {
@@ -411,6 +438,14 @@ export async function createAvalonRoomAction(
   formData: FormData,
 ): Promise<AvalonRoomActionState> {
   const rawInput = {
+    assassinationRule:
+      getString(formData, "assassinationRule") === "disabled"
+        ? "disabled"
+        : "classic",
+    failureRule:
+      getString(formData, "failureRule") === "single_fail"
+        ? "single_fail"
+        : "classic",
     locale: getString(formData, "locale") || "zh-CN",
     mode: normalizeAvalonMode(getString(formData, "mode")),
     playerCount: getString(formData, "playerCount"),
@@ -438,6 +473,10 @@ export async function createAvalonRoomAction(
   );
   const roomTitle =
     result.data.title?.trim() || getDefaultRoomTitle(result.data.locale);
+  const rules = normalizeAvalonAdvancedRules({
+    assassination: result.data.assassinationRule,
+    failure: result.data.failureRule,
+  });
   let roomId: string;
 
   try {
@@ -445,6 +484,7 @@ export async function createAvalonRoomAction(
       data: {
         code: await createUniqueGameToolRoomCode(),
         config: {
+          rules,
           roleDeck: getAvalonRoleDeck(result.data.playerCount),
         },
         events: {
@@ -454,6 +494,7 @@ export async function createAvalonRoomAction(
             payload: {
               mode: result.data.mode,
               playerCount: result.data.playerCount,
+              rules,
             },
           },
         },
@@ -462,6 +503,7 @@ export async function createAvalonRoomAction(
         locale: result.data.locale,
         mode: result.data.mode,
         playerCount: result.data.playerCount,
+        state: createInitialAvalonRoomState({ rules }),
         seats: {
           create: Array.from(
             { length: result.data.playerCount },
@@ -813,6 +855,8 @@ export async function startAvalonRoomAction(
       return { formError: t.roomFull };
     }
 
+    const rules = getAvalonRoomConfigRules(room.config);
+
     await prisma.$transaction([
       ...assignAvalonRoles({
         locale: room.locale,
@@ -823,7 +867,7 @@ export async function startAvalonRoomAction(
         where: { id: room.id },
         data: {
           startedAt: new Date(),
-          state: createInitialAvalonRoomState(),
+          state: createInitialAvalonRoomState({ rules }),
           status: "IN_PROGRESS",
         },
       }),
@@ -833,6 +877,7 @@ export async function startAvalonRoomAction(
           payload: {
             mode: room.mode,
             playerCount: room.playerCount,
+            rules,
           },
           roomId: room.id,
           type: "room_started",
@@ -935,6 +980,8 @@ export async function manageAvalonRoomLifecycleAction(
         return { formError: t.roomFull };
       }
 
+      const rules = getAvalonRoomConfigRules(room.config);
+
       await prisma.$transaction([
         prisma.gameToolSubmission.deleteMany({
           where: { roomId: room.id },
@@ -950,17 +997,18 @@ export async function manageAvalonRoomLifecycleAction(
             cancelledAt: null,
             finishedAt: null,
             startedAt: new Date(),
-            state: createInitialAvalonRoomState(),
+            state: createInitialAvalonRoomState({ rules }),
             status: "IN_PROGRESS",
           },
         }),
         prisma.gameToolEvent.create({
           data: {
             actorId: profile.id,
-            payload: {
-              operation: result.data.operation,
-              playerCount: room.playerCount,
-            },
+          payload: {
+            operation: result.data.operation,
+            playerCount: room.playerCount,
+            rules,
+          },
             roomId: room.id,
             type: "room_redealt",
           },
@@ -1334,6 +1382,7 @@ export async function submitAvalonMissionCardAction(
       const failureThreshold = getAvalonMissionFailureThresholdFromState({
         playerCount: seat.room.playerCount,
         roundIndex: currentState.roundIndex,
+        rules: currentState.rules,
       });
       const missionResult = failCount >= failureThreshold ? "fail" : "success";
       const missionResults = [...currentState.missionResults];
@@ -1355,14 +1404,23 @@ export async function submitAvalonMissionCardAction(
               winnerReason: "three_failed_missions",
             }
           : resultCount.success >= 3
-            ? {
-                ...currentState,
-                missionFailureCount: failCount,
-                missionResults,
-                phase: "assassination" as const,
-                winner: null,
-                winnerReason: null,
-              }
+            ? shouldSkipAvalonAssassination(currentState.rules)
+              ? {
+                  ...currentState,
+                  missionFailureCount: failCount,
+                  missionResults,
+                  phase: "finished" as const,
+                  winner: "good" as const,
+                  winnerReason: "three_successful_missions",
+                }
+              : {
+                  ...currentState,
+                  missionFailureCount: failCount,
+                  missionResults,
+                  phase: "assassination" as const,
+                  winner: null,
+                  winnerReason: null,
+                }
             : {
                 ...currentState,
                 currentLeaderSeatNumber: nextLeaderSeatNumber,
@@ -1680,6 +1738,106 @@ export async function correctAvalonRoomAction(
     revalidateAvalonRoom(result.data.locale, room.id);
   } catch (error) {
     console.error("Failed to correct Avalon room", error);
+
+    return { formError: t.submitFailed };
+  }
+
+  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+}
+
+export async function rollbackAvalonRoomAction(
+  _previousState: AvalonRoomActionState,
+  formData: FormData,
+): Promise<AvalonRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    roomId: getString(formData, "roomId"),
+    roundIndex: getString(formData, "roundIndex"),
+  };
+  const result = rollbackRoomSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return { formError: t.invalidRequest };
+  }
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/game-tools/avalon/rooms/${result.data.roomId}`,
+  );
+
+  try {
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
+      select: {
+        hostId: true,
+        id: true,
+        playerCount: true,
+        state: true,
+        status: true,
+      },
+    });
+
+    if (
+      !room ||
+      room.hostId !== profile.id ||
+      (room.status !== "IN_PROGRESS" && room.status !== "FINISHED")
+    ) {
+      return { formError: t.submitFailed };
+    }
+
+    const currentState = normalizeAvalonRoomState(room.state);
+    const keepMissionResults = currentState.missionResults.map((missionResult, index) =>
+      index < result.data.roundIndex ? missionResult : null,
+    );
+    const nextLeaderSeatNumber =
+      ((result.data.roundIndex % Math.max(room.playerCount, 1)) + 1);
+    const nextState = {
+      ...currentState,
+      currentLeaderSeatNumber: nextLeaderSeatNumber,
+      missionFailureCount: null,
+      missionResults: keepMissionResults,
+      phase: "team_building" as const,
+      proposedTeamSeatNumbers: [],
+      roundIndex: result.data.roundIndex,
+      teamVoteRejectCount: 0,
+      voteResult: null,
+      winner: null,
+      winnerReason: null,
+    };
+
+    await prisma.$transaction([
+      prisma.gameToolSubmission.deleteMany({
+        where: {
+          kind: { in: ["ASSASSINATION_TARGET", "MISSION_CARD", "TEAM_VOTE"] },
+          roomId: room.id,
+          roundIndex: { gte: result.data.roundIndex },
+        },
+      }),
+      prisma.gameToolRoom.update({
+        where: { id: room.id },
+        data: {
+          finishedAt: null,
+          state: nextState,
+          status: "IN_PROGRESS",
+        },
+      }),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: profile.id,
+          payload: {
+            fromRoundIndex: currentState.roundIndex,
+            roundIndex: result.data.roundIndex,
+          },
+          roomId: room.id,
+          type: "room_rolled_back",
+        },
+      }),
+    ]);
+
+    revalidateAvalonRoom(result.data.locale, room.id);
+  } catch (error) {
+    console.error("Failed to rollback Avalon room", error);
 
     return { formError: t.submitFailed };
   }

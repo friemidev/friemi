@@ -28,6 +28,7 @@ import {
   manageAvalonLobbySeatAction,
   manageAvalonRoomLifecycleAction,
   proposeAvalonTeamAction,
+  rollbackAvalonRoomAction,
   startAvalonRoomAction,
   type AvalonRoomActionState,
 } from "@/features/game-tools/actions/avalonRoomActions";
@@ -130,6 +131,11 @@ type Copy = {
   renewPrivateLink: string;
   renameSeat: string;
   repair: string;
+  rollback: string;
+  rollbackHint: string;
+  rollbackToRound: string;
+  noAssassinationRule: string;
+  singleFailRule: string;
   restartHint: string;
   restartLobby: string;
   roleHidden: string;
@@ -187,6 +193,11 @@ const copies: Record<string, Copy> = {
     recapPage: "复盘页",
     rejectTrack: "否决",
     repair: "修正",
+    rollback: "回滚",
+    rollbackHint: "回到某一轮开始前，清掉该轮及之后的记录。",
+    rollbackToRound: "回到第",
+    noAssassinationRule: "无刺杀",
+    singleFailRule: "一张失败",
     resetRound: "重置本轮",
     round: "第",
     roomLink: "房间链接",
@@ -254,6 +265,11 @@ const copies: Record<string, Copy> = {
     recapPage: "Recap",
     rejectTrack: "Rejects",
     repair: "Repair",
+    rollback: "Rollback",
+    rollbackHint: "Return to the start of a round and clear later records.",
+    rollbackToRound: "Back to round",
+    noAssassinationRule: "No assassin",
+    singleFailRule: "One fail",
     resetRound: "Reset round",
     round: "Round",
     roomLink: "Room link",
@@ -322,6 +338,11 @@ const copies: Record<string, Copy> = {
     recapPage: "Récap",
     rejectTrack: "Refus",
     repair: "Corriger",
+    rollback: "Retour",
+    rollbackHint: "Revenir au début d'un tour et effacer la suite.",
+    rollbackToRound: "Retour au tour",
+    noAssassinationRule: "Sans assassinat",
+    singleFailRule: "Un échec",
     resetRound: "Reprendre",
     round: "Tour",
     roomLink: "Lien de table",
@@ -630,6 +651,21 @@ function MissionBoard({
           <h2 className="text-lg font-black text-[#0E2A5A]">
             {t.mission} {state.roundIndex + 1}
           </h2>
+          {state.rules.assassination === "disabled" ||
+          state.rules.failure === "single_fail" ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {state.rules.assassination === "disabled" ? (
+                <span className="rounded-full bg-[#FFF0EC] px-2 py-0.5 text-[0.62rem] font-black text-[#B5301F]">
+                  {t.noAssassinationRule}
+                </span>
+              ) : null}
+              {state.rules.failure === "single_fail" ? (
+                <span className="rounded-full bg-[#EAF6E7] px-2 py-0.5 text-[0.62rem] font-black text-[#156240]">
+                  {t.singleFailRule}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <span className="rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-1 text-xs font-black text-[#156240] shadow-sm">
           {t.team} {progress.requiredTeamSize}
@@ -867,7 +903,7 @@ function getControlCardHeader(room: AvalonRoomView, t: Copy) {
   if (room.status === "LOBBY") {
     return {
       description: t.startHint,
-      icon: "/game-tools/avalon/avalon-tool-icon.svg",
+      icon: "/game-tools/avalon/avalon.jpeg",
       title: t.start,
     };
   }
@@ -940,6 +976,10 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-correction.svg";
   }
 
+  if (type === "room_rolled_back") {
+    return "/game-tools/avalon/states/undo-mission-token.svg";
+  }
+
   if (type === "team_proposed") {
     return "/game-tools/avalon/share/timeline-node-team.svg";
   }
@@ -949,7 +989,7 @@ function getEventIcon(type: string) {
   }
 
   if (type === "room_redealt") {
-    return "/game-tools/avalon/avalon-tool-icon.svg";
+    return "/game-tools/avalon/avalon.jpeg";
   }
 
   if (type === "room_reopened") {
@@ -964,7 +1004,7 @@ function getEventIcon(type: string) {
     return "/game-tools/avalon/share/timeline-node-vote.svg";
   }
 
-  return "/game-tools/avalon/avalon-tool-icon.svg";
+  return "/game-tools/avalon/avalon.jpeg";
 }
 
 function getEventLabel(type: string, t: Copy) {
@@ -978,6 +1018,10 @@ function getEventLabel(type: string, t: Copy) {
 
   if (type === "round_corrected") {
     return t.repair;
+  }
+
+  if (type === "room_rolled_back") {
+    return t.rollback;
   }
 
   if (type === "team_proposed") {
@@ -1284,9 +1328,15 @@ function HostCorrectionPanel({
     correctAvalonRoomAction,
     initialState,
   );
+  const [rollbackState, rollbackFormAction] = useActionState(
+    rollbackAvalonRoomAction,
+    initialState,
+  );
   const canResetCurrentRound =
     room.status === "IN_PROGRESS" && room.state.phase !== "team_building";
   const canUndoMission = room.state.missionResults.some(Boolean);
+  const canRollback =
+    room.status === "IN_PROGRESS" || room.status === "FINISHED";
 
   return (
     <section className="rounded-[2rem] border border-[#D6D5B2] bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-5">
@@ -1319,7 +1369,85 @@ function HostCorrectionPanel({
           {state.formError}
         </p>
       ) : null}
+      <form
+        action={rollbackFormAction}
+        className="mt-4 rounded-[1.5rem] border border-[#D6D5B2] bg-white/76 p-3 shadow-inner"
+      >
+        <input name="locale" type="hidden" value={locale} />
+        <input name="roomId" type="hidden" value={room.id} />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-black text-[#0E2A5A]">{t.rollback}</p>
+            <p className="mt-0.5 text-xs font-semibold leading-5 text-[#156240]/68">
+              {t.rollbackHint}
+            </p>
+          </div>
+          <ScrollText className="h-5 w-5 shrink-0 text-[#156240]" />
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {room.state.missionResults.map((result, index) => {
+            const canUseRound = canRollback && index <= room.state.roundIndex;
+            const src =
+              result === "success"
+                ? "/game-tools/avalon/states/mission-success-token.svg"
+                : result === "fail"
+                  ? "/game-tools/avalon/states/mission-fail-token.svg"
+                  : "/game-tools/avalon/states/mission-pending-token.svg";
+
+            return (
+              <RollbackSubmitButton
+                disabled={!canUseRound}
+                image={src}
+                key={index}
+                label={`${t.rollbackToRound} ${index + 1}`}
+                value={index}
+              />
+            );
+          })}
+        </div>
+      </form>
+      {rollbackState.formError ? (
+        <p className="mt-3 rounded-2xl bg-[#F09182]/12 px-3 py-2 text-xs font-semibold text-[#B5301F]">
+          {rollbackState.formError}
+        </p>
+      ) : null}
     </section>
+  );
+}
+
+function RollbackSubmitButton({
+  disabled,
+  image,
+  label,
+  value,
+}: {
+  disabled: boolean;
+  image: string;
+  label: string;
+  value: number;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      aria-label={label}
+      className="group relative grid min-h-20 place-items-center rounded-[1.1rem] border border-[#D6D5B2] bg-[#FEFFF9] p-2 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-[#8AB68E] hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+      disabled={disabled || pending}
+      name="roundIndex"
+      type="submit"
+      value={value}
+    >
+      <Image
+        alt=""
+        className="h-10 w-10 object-contain drop-shadow-md transition group-hover:scale-105"
+        height={44}
+        src={image}
+        width={44}
+      />
+      <span className="mt-1 text-[0.58rem] font-black text-[#156240]">
+        {value + 1}
+      </span>
+    </button>
   );
 }
 
@@ -1399,7 +1527,7 @@ function HostLifecyclePanel({
         <input name="roomId" type="hidden" value={room.id} />
         <LifecycleSubmitButton
           confirmMessage={t.confirmRedeal}
-          image="/game-tools/avalon/avalon-tool-icon.svg"
+          image="/game-tools/avalon/avalon.jpeg"
           label={t.redealRoles}
           operation="redeal_roles"
           tone="forest"
@@ -1689,10 +1817,10 @@ function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
       <div className="absolute inset-[31%] grid place-items-center rounded-full border border-[#8AB68E]/40 bg-[#FEFFF9]/90 text-center shadow-inner">
         <Image
           alt=""
-          className="h-14 w-14"
+          className="h-16 w-12 rounded-[0.9rem] object-contain"
           height={64}
-          src="/game-tools/avalon/avalon-tool-icon.svg"
-          width={64}
+          src="/game-tools/avalon/avalon.jpeg"
+          width={48}
         />
         <span className="sr-only">{t.table}</span>
       </div>
@@ -1939,10 +2067,10 @@ function StartRoomSubmitButton({ label }: { label: string }) {
     >
       <Image
         alt=""
-        className="h-6 w-6 object-contain"
-        height={28}
-        src="/game-tools/avalon/avalon-tool-icon.svg"
-        width={28}
+        className="h-7 w-5 rounded-[0.45rem] object-contain"
+        height={300}
+        src="/game-tools/avalon/avalon.jpeg"
+        width={225}
       />
       {label}
       <ArrowRight className="h-4 w-4" />

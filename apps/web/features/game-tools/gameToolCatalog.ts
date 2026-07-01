@@ -28,7 +28,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     },
     href: "/game-tools/avalon",
     icon: Dice5,
-    imageSrc: "/game-tools/avalon/avalon-tool-icon.svg",
+    imageSrc: "/game-tools/avalon/avalon.jpeg",
     kind: "AVALON",
     maxPlayers: 10,
     minPlayers: 5,
@@ -38,9 +38,9 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       fr: "Jouable",
     },
     title: {
-      "zh-CN": "Avalon 阿瓦隆",
-      en: "Avalon",
-      fr: "Avalon",
+      "zh-CN": "阿瓦隆",
+      en: "The Resistance: Avalon",
+      fr: "The Resistance: Avalon",
     },
   },
   {

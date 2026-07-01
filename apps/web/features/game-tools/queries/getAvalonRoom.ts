@@ -133,6 +133,7 @@ export const getAvalonRoomById = cache(
         failureThreshold: getAvalonMissionFailureThresholdFromState({
           playerCount: room.playerCount,
           roundIndex: gameState.roundIndex,
+          rules: gameState.rules,
         }),
         missionCardSubmissionCount: missionCardSubmissions.length,
         requiredTeamSize: getAvalonQuestTeamSize({

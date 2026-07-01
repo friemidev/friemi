@@ -54,4 +54,5 @@ export function revalidateGameToolRoom({
   revalidatePath(withLocale(locale, `${toolPath}/rooms/${roomId}`));
   revalidatePath(withLocale(locale, `${toolPath}/rooms/${roomId}/screen`));
   revalidatePath(withLocale(locale, `${toolPath}/rooms/${roomId}/recap`));
+  revalidatePath(withLocale(locale, `${toolPath}/rooms/${roomId}/recap/poster`));
 }

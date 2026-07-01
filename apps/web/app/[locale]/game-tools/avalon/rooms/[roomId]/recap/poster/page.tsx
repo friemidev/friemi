@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { AvalonRecapView } from "@/features/game-tools/components/AvalonRecapView";
+import { AvalonRecapPosterView } from "@/features/game-tools/components/AvalonRecapPosterView";
 import { getAvalonRoomById } from "@/features/game-tools/queries/getAvalonRoom";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -11,7 +11,7 @@ import {
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
 
-type AvalonRecapPageProps = {
+type AvalonRecapPosterPageProps = {
   params: Promise<{
     locale: string;
     roomId: string;
@@ -20,20 +20,22 @@ type AvalonRecapPageProps = {
 
 export async function generateMetadata({
   params,
-}: AvalonRecapPageProps): Promise<Metadata> {
+}: AvalonRecapPosterPageProps): Promise<Metadata> {
   const { locale, roomId } = await params;
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders);
 
   return buildPageShareMetadata({
     baseUrl,
-    description: "Friemi Avalon game recap.",
-    path: withLocale(locale, `/game-tools/avalon/rooms/${roomId}/recap`),
-    title: `Avalon Recap · ${brand.name}`,
+    description: "Friemi Avalon recap poster.",
+    path: withLocale(locale, `/game-tools/avalon/rooms/${roomId}/recap/poster`),
+    title: `Avalon Recap Poster · ${brand.name}`,
   });
 }
 
-export default async function AvalonRecapPage({ params }: AvalonRecapPageProps) {
+export default async function AvalonRecapPosterPage({
+  params,
+}: AvalonRecapPosterPageProps) {
   const { locale, roomId } = await params;
   const room = await getAvalonRoomById({
     locale,
@@ -69,13 +71,11 @@ export default async function AvalonRecapPage({ params }: AvalonRecapPageProps) 
   };
 
   return (
-    <PageContainer className="max-w-[96rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <AvalonRecapView
+    <PageContainer className="max-w-[44rem] pb-28 pt-4 sm:pb-12 sm:pt-7 print:max-w-none print:p-0">
+      <AvalonRecapPosterView
         locale={locale}
-        posterHref={withLocale(locale, `/game-tools/avalon/rooms/${room.id}/recap/poster`)}
         room={roomForClient}
         roomHref={withLocale(locale, `/game-tools/avalon/rooms/${room.id}`)}
-        screenHref={withLocale(locale, `/game-tools/avalon/rooms/${room.id}/screen`)}
       />
     </PageContainer>
   );
