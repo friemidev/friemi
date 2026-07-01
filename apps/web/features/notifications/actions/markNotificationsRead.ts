@@ -92,6 +92,136 @@ export async function markNotificationReadAction(formData: FormData) {
   redirect(withLocale(locale, "/notifications"));
 }
 
+export async function deleteNotificationAction(formData: FormData) {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const notificationId = getString(formData, "notificationId");
+  const profile = await ensureCurrentUserProfile(locale, "/notifications");
+
+  if (notificationId) {
+    await prisma.notification.deleteMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+      },
+    });
+  }
+
+  revalidatePath(withLocale(locale, "/notifications"));
+  redirect(withLocale(locale, "/notifications"));
+}
+
+export async function deleteNotificationClientAction(
+  locale: string,
+  notificationId: string,
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+
+  if (notificationId) {
+    await prisma.notification.deleteMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+      },
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function markNotificationReadClientAction(
+  locale: string,
+  notificationId: string,
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+
+  if (notificationId) {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function markAllNotificationsReadClientAction(locale: string) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+
+  await prisma.notification.updateMany({
+    where: {
+      recipientId: profile.id,
+      readAt: null,
+    },
+    data: {
+      readAt: new Date(),
+    },
+  });
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function deleteReadNotificationsAction(formData: FormData) {
+  const locale = getString(formData, "locale") || "zh-CN";
+  const profile = await ensureCurrentUserProfile(locale, "/notifications");
+
+  await prisma.notification.deleteMany({
+    where: {
+      recipientId: profile.id,
+      readAt: {
+        not: null,
+      },
+    },
+  });
+
+  revalidatePath(withLocale(locale, "/notifications"));
+  redirect(withLocale(locale, "/notifications"));
+}
+
+export async function deleteReadNotificationsClientAction(locale: string) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+
+  await prisma.notification.deleteMany({
+    where: {
+      recipientId: profile.id,
+      readAt: {
+        not: null,
+      },
+    },
+  });
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
 export async function openNotificationActivityAction(formData: FormData) {
   const locale = getString(formData, "locale") || "zh-CN";
   const notificationId = getString(formData, "notificationId");
