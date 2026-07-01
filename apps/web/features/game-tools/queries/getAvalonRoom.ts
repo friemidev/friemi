@@ -1,5 +1,4 @@
 import { cache } from "react";
-import { getAvalonRoleLabel } from "@/features/game-tools/avalonConfig";
 import {
   getAvalonMissionFailureThresholdFromState,
   getAvalonQuestTeamSize,
@@ -27,7 +26,7 @@ function getSeatAvatarLabel(displayName: string, seatNumber: number) {
 
 export const getAvalonRoomById = cache(
   async ({
-    locale,
+    locale: _locale,
     roomId,
     viewerProfile,
   }: {
@@ -143,10 +142,8 @@ export const getAvalonRoomById = cache(
         teamVoteSubmissionCount: teamVoteSubmissions.length,
       },
       seats: room.seats.map((seat) => {
-        const roleLabel =
-          room.status === "IN_PROGRESS" && (isHost || viewerSeat?.id === seat.id)
-            ? getAvalonRoleLabel(locale, seat.roleKey)
-            : null;
+        const canReadPrivateLink =
+          viewerSeat?.id === seat.id || (isHost && room.status === "LOBBY");
 
         return {
           avatarLabel: getSeatAvatarLabel(seat.displayName, seat.seatNumber),
@@ -158,13 +155,13 @@ export const getAvalonRoomById = cache(
           isOnProposedTeam: proposedTeamSet.has(seat.seatNumber),
           isViewerSeat: viewerSeat?.id === seat.id,
           joinedAt: seat.joinedAt,
-          privateToken: isHost || viewerSeat?.id === seat.id ? seat.privateToken : null,
+          privateToken: canReadPrivateLink ? seat.privateToken : null,
           profile: seat.profile,
           profileId: seat.profileId,
           readyAt: seat.readyAt,
-          roleAlignment: seat.roleAlignment,
-          roleKey: seat.roleKey,
-          roleLabel,
+          roleAlignment: null,
+          roleKey: null,
+          roleLabel: null,
           seatNumber: seat.seatNumber,
         };
       }),

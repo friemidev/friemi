@@ -1,13 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  ArrowLeft,
   CircleHelp,
+  Crown,
   Eye,
+  EyeOff,
   Flag,
+  Home,
   History,
   ShieldAlert,
   Swords,
@@ -16,13 +21,18 @@ import {
   X,
 } from "lucide-react";
 import {
+  proposeAvalonTeamFromSeatAction,
   submitAvalonAssassinationAction,
   submitAvalonMissionCardAction,
   submitAvalonTeamVoteAction,
   type AvalonRoomActionState,
 } from "@/features/game-tools/actions/avalonRoomActions";
 import type { AvalonPrivatePayload } from "@/features/game-tools/avalonConfig";
-import type { AvalonRoomState } from "@/features/game-tools/avalonRoomState";
+import {
+  getAvalonQuestTeamSize,
+  type AvalonRoomState,
+} from "@/features/game-tools/avalonRoomState";
+import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { cn } from "@/lib/utils";
 
 type AvalonPrivateRoleCardProps = {
@@ -30,6 +40,7 @@ type AvalonPrivateRoleCardProps = {
   payload: AvalonPrivatePayload | null;
   privateToken: string;
   roleKey: string | null;
+  roomHref: string;
   roomSeats: Array<{
     displayName: string;
     id: string;
@@ -48,6 +59,8 @@ type AvalonPrivateRoleCardProps = {
   seatId: string;
   seatDisplayName: string;
   seatNumber: number;
+  showLiveRefresh?: boolean;
+  toolHref: string;
 };
 
 const roleIconPaths: Record<string, string> = {
@@ -69,11 +82,14 @@ function getRoleIconPath(roleKey: string | null) {
 
 type Copy = {
   approve: string;
+  backToHall: string;
+  backToRoom: string;
   day: string;
   fail: string;
   help: string;
   helpBody: string;
   helpClose: string;
+  hideRole: string;
   hidden: string;
   history: string;
   mission: string;
@@ -82,11 +98,14 @@ type Copy = {
   noAction: string;
   noRecord: string;
   notOnTeam: string;
+  pickTeam: string;
   phaseAssassination: string;
   phaseMission: string;
   phaseTeam: string;
+  proposeTeam: string;
   reject: string;
   reveal: string;
+  selectExactly: string;
   role: string;
   seat: string;
   submit: string;
@@ -101,12 +120,15 @@ type Copy = {
 const copies: Record<string, Copy> = {
   "zh-CN": {
     approve: "赞成",
+    backToHall: "工具大厅",
+    backToRoom: "返回房间",
     day: "天",
     fail: "失败",
     help: "玩法提示",
     helpBody:
       "默认停在当前天。点击上方圆点回看过往投票和任务记录；只有亮起的大按钮需要你现在操作。",
     helpClose: "知道了",
+    hideRole: "重新盖上",
     hidden: "先确认周围没人偷看，再揭开身份。",
     history: "回看",
     mission: "任务牌",
@@ -115,11 +137,14 @@ const copies: Record<string, Copy> = {
     noAction: "这一步先听桌面讨论。",
     noRecord: "暂无记录",
     notOnTeam: "本轮你不在任务队伍。",
+    pickTeam: "你是队长，选本轮队伍",
     phaseAssassination: "刺杀",
     phaseMission: "任务",
     phaseTeam: "投票",
+    proposeTeam: "提交队伍",
     reject: "反对",
     reveal: "揭开身份",
+    selectExactly: "选择正确人数后提交。",
     role: "身份",
     seat: "座位",
     submit: "提交",
@@ -132,12 +157,15 @@ const copies: Record<string, Copy> = {
   },
   en: {
     approve: "Approve",
+    backToHall: "Tools",
+    backToRoom: "Room",
     day: "Day",
     fail: "Fail",
     help: "Tip",
     helpBody:
       "This opens on the current day. Tap earlier dots to review past votes and quest records; only bright action buttons need your input.",
     helpClose: "Got it",
+    hideRole: "Hide role",
     hidden: "Check the room before revealing your identity.",
     history: "History",
     mission: "Quest card",
@@ -146,11 +174,14 @@ const copies: Record<string, Copy> = {
     noAction: "Listen to the table for this step.",
     noRecord: "No record yet",
     notOnTeam: "You are not on this quest team.",
+    pickTeam: "You lead this quest",
     phaseAssassination: "Assassinate",
     phaseMission: "Quest",
     phaseTeam: "Vote",
+    proposeTeam: "Submit team",
     reject: "Reject",
     reveal: "Reveal role",
+    selectExactly: "Pick the exact team size.",
     role: "Role",
     seat: "Seat",
     submit: "Submit",
@@ -163,12 +194,15 @@ const copies: Record<string, Copy> = {
   },
   fr: {
     approve: "Oui",
+    backToHall: "Outils",
+    backToRoom: "Salle",
     day: "Jour",
     fail: "Échec",
     help: "Astuce",
     helpBody:
       "La page s'ouvre sur le jour actuel. Touche les anciens points pour revoir votes et quêtes; seuls les gros boutons lumineux demandent une action.",
     helpClose: "Compris",
+    hideRole: "Masquer",
     hidden: "Vérifie autour de toi avant de révéler ton identité.",
     history: "Historique",
     mission: "Carte quête",
@@ -177,11 +211,14 @@ const copies: Record<string, Copy> = {
     noAction: "Écoute la table pour cette étape.",
     noRecord: "Aucun enregistrement",
     notOnTeam: "Tu n'es pas dans cette équipe.",
+    pickTeam: "Tu choisis l'équipe",
     phaseAssassination: "Cible",
     phaseMission: "Quête",
     phaseTeam: "Vote",
+    proposeTeam: "Valider",
     reject: "Refuser",
     reveal: "Révéler",
+    selectExactly: "Choisis le bon nombre.",
     role: "Rôle",
     seat: "Place",
     submit: "Valider",
@@ -200,6 +237,7 @@ export function AvalonPrivateRoleCard({
   payload,
   privateToken,
   roleKey,
+  roomHref,
   roomSeats,
   roomState,
   roomStatus,
@@ -207,6 +245,8 @@ export function AvalonPrivateRoleCard({
   seatId,
   seatDisplayName,
   seatNumber,
+  showLiveRefresh = false,
+  toolHref,
 }: AvalonPrivateRoleCardProps) {
   const [revealed, setRevealed] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -235,7 +275,7 @@ export function AvalonPrivateRoleCard({
       <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(241,242,236,0.98),rgba(254,255,249,0))]" />
 
       <div className="relative grid gap-3 sm:gap-5">
-        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[1.55rem] border border-[#D6D5B2] bg-white/78 px-3 py-3 shadow-sm backdrop-blur">
+        <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-[1.55rem] border border-[#D6D5B2] bg-white/78 px-3 py-3 shadow-sm backdrop-blur">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[1.1rem] bg-[#156240] text-white shadow-lg shadow-[#156240]/18">
               <Image
@@ -256,16 +296,37 @@ export function AvalonPrivateRoleCard({
               <p className="text-xs font-black text-[#156240]/75">
                 {t.seat} {seatNumber}
               </p>
+              <nav className="mt-2 flex flex-wrap gap-1.5">
+                <Link
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/70 bg-[#FEFFF9] px-2.5 text-[0.68rem] font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  href={roomHref}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  {t.backToRoom}
+                </Link>
+                <Link
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-2.5 text-[0.68rem] font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  href={toolHref}
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  {t.backToHall}
+                </Link>
+              </nav>
             </div>
           </div>
-          <button
-            aria-label={t.help}
-            className="grid h-11 w-11 place-items-center rounded-full border border-[#8AB68E] bg-[#FEFFF9] text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-            onClick={() => setHelpOpen(true)}
-            type="button"
-          >
-            <CircleHelp className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {showLiveRefresh ? (
+              <AvalonLiveRefresh enabled locale={locale} variant="inline" />
+            ) : null}
+            <button
+              aria-label={t.help}
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#8AB68E] bg-[#FEFFF9] text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white sm:h-11 sm:w-11"
+              onClick={() => setHelpOpen(true)}
+              type="button"
+            >
+              <CircleHelp className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         <RoundSwitcher
@@ -305,6 +366,16 @@ export function AvalonPrivateRoleCard({
             </div>
           ) : revealed ? (
             <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center">
+              <div className="flex justify-end sm:col-span-2">
+                <button
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-xs font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                  onClick={() => setRevealed(false)}
+                  type="button"
+                >
+                  <EyeOff className="h-4 w-4" />
+                  {t.hideRole}
+                </button>
+              </div>
               <div className="relative mx-auto grid h-32 w-28 place-items-center rounded-[1.45rem] border border-[#D6D5B2] bg-[linear-gradient(145deg,#FEFFF9,#F1F2EC)] shadow-xl shadow-[#156240]/10">
                 <Image
                   alt=""
@@ -499,9 +570,9 @@ function RoundSwitcher({
 
 function HelpDialog({ onClose, t }: { onClose: () => void; t: Copy }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-[#1D1D1B]/28 p-3 backdrop-blur-sm sm:place-items-center">
-      <div className="w-full max-w-md overflow-hidden rounded-[1.7rem] border border-[#8AB68E] bg-[#FEFFF9] shadow-2xl shadow-[#1D1D1B]/18">
-        <div className="flex items-center justify-between gap-3 border-b border-[#D6D5B2] bg-[#F1F2EC] px-4 py-3">
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)_+_5.85rem)] top-[calc(env(safe-area-inset-top)_+_5.25rem)] z-50 grid place-items-stretch bg-[#1D1D1B]/28 p-3 backdrop-blur-sm sm:inset-0 sm:place-items-center sm:p-4">
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-[1.7rem] border border-[#8AB68E] bg-[#FEFFF9] shadow-2xl shadow-[#1D1D1B]/18 sm:h-auto sm:max-h-[calc(100vh-3rem)] sm:max-w-md">
+        <div className="shrink-0 flex items-center justify-between gap-3 border-b border-[#D6D5B2] bg-[#F1F2EC] px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#156240] shadow-sm">
               <CircleHelp className="h-5 w-5" />
@@ -517,7 +588,7 @@ function HelpDialog({ onClose, t }: { onClose: () => void; t: Copy }) {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="grid gap-4 p-4">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4">
           <div className="grid grid-cols-3 gap-2">
             <MiniHintCard icon={<Vote className="h-5 w-5" />} label={t.vote} />
             <MiniHintCard icon={<Flag className="h-5 w-5" />} label={t.mission} />
@@ -606,6 +677,25 @@ function PrivateActionPanel({
   );
   const isOnMissionTeam = roomState.proposedTeamSeatNumbers.includes(seatNumber);
 
+  if (roomState.phase === "team_building") {
+    if (roomState.currentLeaderSeatNumber === seatNumber) {
+      return (
+        <LeaderTeamProposalPanel
+          locale={locale}
+          privateToken={privateToken}
+          requiredTeamSize={getAvalonQuestTeamSize({
+            playerCount: roomSeats.length,
+            roundIndex: roomState.roundIndex,
+          })}
+          roomSeats={roomSeats}
+          t={t}
+        />
+      );
+    }
+
+    return <PassiveRoundPanel phase={roomState.phase} t={t} />;
+  }
+
   if (roomState.phase === "team_vote") {
     return hasVoted ? (
       <RecordedState t={t} />
@@ -647,6 +737,82 @@ function PrivateActionPanel({
   }
 
   return <PassiveRoundPanel phase={roomState.phase} t={t} />;
+}
+
+function LeaderTeamProposalPanel({
+  locale,
+  privateToken,
+  requiredTeamSize,
+  roomSeats,
+  t,
+}: {
+  locale: string;
+  privateToken: string;
+  requiredTeamSize: number;
+  roomSeats: AvalonPrivateRoleCardProps["roomSeats"];
+  t: Copy;
+}) {
+  const [state, formAction] = useActionState(
+    proposeAvalonTeamFromSeatAction,
+    initialState,
+  );
+
+  return (
+    <form
+      action={formAction}
+      className="relative grid gap-3 overflow-hidden rounded-[1.75rem] border border-[#8AB68E] bg-white/90 p-3 shadow-xl shadow-[#156240]/12"
+    >
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#8AB68E]/20 blur-2xl" />
+      <input name="locale" type="hidden" value={locale} />
+      <input name="privateToken" type="hidden" value={privateToken} />
+      <div className="relative flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#156240] text-white shadow-lg shadow-[#156240]/20">
+            <Crown className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
+              {t.phaseTeam}
+            </p>
+            <h2 className="text-lg font-black text-[#0E2A5A]">{t.pickTeam}</h2>
+          </div>
+        </div>
+        <span className="grid h-10 min-w-10 place-items-center rounded-full bg-[#F1F2EC] px-2 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E]">
+          {requiredTeamSize}
+        </span>
+      </div>
+
+      <div className="relative grid grid-cols-5 gap-2">
+        {roomSeats.map((seat) => (
+          <label className="group cursor-pointer" key={seat.id} title={seat.displayName}>
+            <input
+              className="peer sr-only"
+              name="teamSeatNumbers"
+              type="checkbox"
+              value={seat.seatNumber}
+            />
+            <span className="relative grid min-h-16 place-items-center rounded-[1.2rem] border border-[#D6D5B2] bg-[#FEFFF9] px-1 py-2 text-center shadow-sm transition active:scale-[0.98] peer-checked:-translate-y-0.5 peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#156240]/20">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-xs font-black text-[#156240] shadow-sm">
+                {seat.seatNumber}
+              </span>
+              <span className="mt-1 line-clamp-1 max-w-full text-[0.62rem] font-black">
+                {seat.displayName}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+
+      <div className="relative flex items-center justify-between gap-2 rounded-2xl bg-[#F1F2EC] px-3 py-2 text-xs font-black text-[#156240] shadow-inner">
+        <span>{t.selectExactly}</span>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[#0E2A5A]">
+          {requiredTeamSize}
+        </span>
+      </div>
+      <TeamProposalSeatSubmitButton label={t.proposeTeam} />
+      {state.formError ? <ActionError error={state.formError} /> : null}
+    </form>
+  );
 }
 
 function RoundHistoryPanel({
@@ -1077,6 +1243,22 @@ function PrivateSubmitButton({ label }: { label: string }) {
       type="submit"
     >
       {label}
+    </button>
+  );
+}
+
+function TeamProposalSeatSubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#156240] px-5 text-sm font-black text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5 disabled:opacity-70"
+      disabled={pending}
+      type="submit"
+    >
+      <span className="absolute inset-x-6 top-0 h-8 rounded-full bg-white/16 blur-xl" />
+      <Flag className="relative h-4 w-4" />
+      <span className="relative">{label}</span>
     </button>
   );
 }

@@ -78,17 +78,17 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
   const t = copies[locale] ?? copies.en;
 
   return (
-    <section className="relative isolate overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-6 lg:p-7">
+    <section className="relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-6 lg:p-7">
       <div className="absolute -right-16 -top-20 h-44 w-44 rounded-full bg-[#F09182]/20 blur-3xl" />
       <div className="absolute -bottom-20 left-10 h-40 w-40 rounded-full bg-[#8AB68E]/20 blur-3xl" />
 
-      <div className="relative grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
-        <div className="space-y-3">
+      <div className="relative grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
+        <div className="min-w-0 space-y-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/45 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#156240]">
             <Sparkles className="h-3.5 w-3.5" />
             {t.eyebrow}
           </span>
-          <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
             <div className="relative grid h-24 w-24 place-items-center rounded-[2rem] border border-[#8AB68E]/40 bg-white shadow-xl shadow-[#156240]/10">
               <Image
                 alt=""
@@ -101,8 +101,8 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
                 v2
               </span>
             </div>
-            <div>
-              <h2 className="max-w-xl text-2xl font-semibold leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
+            <div className="min-w-0">
+              <h2 className="max-w-xl break-words text-2xl font-semibold leading-tight tracking-normal text-[#0E2A5A] sm:text-3xl">
                 {t.title}
               </h2>
               <div className="mt-3 flex items-center gap-2">
@@ -125,7 +125,7 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
 
         <form
           action={formAction}
-          className="relative grid gap-3 rounded-[1.5rem] border border-[#D6D5B2] bg-white/80 p-3 shadow-lg shadow-[#156240]/5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-4"
+          className="relative grid min-w-0 gap-3 rounded-[1.5rem] border border-[#D6D5B2] bg-white/80 p-3 shadow-lg shadow-[#156240]/5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-4"
         >
           <input name="locale" type="hidden" value={locale} />
           <label className="grid gap-1.5 sm:col-span-2">
@@ -133,21 +133,21 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
               {t.titleLabel}
             </span>
             <input
-              className="h-11 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-semibold text-[#1D1D1B] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
+              className="h-11 min-w-0 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-semibold text-[#1D1D1B] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
               maxLength={80}
               name="title"
               placeholder={t.titlePlaceholder}
             />
           </label>
 
-          <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2">
+          <div className="grid min-w-0 grid-cols-2 gap-2">
             <label className="grid gap-1.5">
               <span className="inline-flex items-center gap-1 text-xs font-bold text-[#156240]">
                 <Users className="h-3.5 w-3.5" />
                 {t.players}
               </span>
               <select
-                className="h-11 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-sm font-bold text-[#0E2A5A] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
+                className="h-11 min-w-0 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-sm font-bold text-[#0E2A5A] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
                 defaultValue="7"
                 name="playerCount"
               >
@@ -165,7 +165,7 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
                 Mode
               </span>
               <select
-                className="h-11 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-sm font-bold text-[#0E2A5A] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
+                className="h-11 min-w-0 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-sm font-bold text-[#0E2A5A] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
                 defaultValue="identity"
                 name="mode"
               >

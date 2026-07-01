@@ -901,9 +901,9 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
   }
 
   return (
-    <div className="avalon-tool relative isolate overflow-hidden rounded-[2rem] border border-sage/45 bg-paper text-ink shadow-[0_24px_80px_rgb(var(--friemi-forest-rgb)/0.12)]">
+    <div className="avalon-tool relative isolate min-w-0 max-w-full overflow-hidden rounded-[2rem] border border-sage/45 bg-paper text-ink shadow-[0_24px_80px_rgb(var(--friemi-forest-rgb)/0.12)]">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_9%_11%,rgb(var(--friemi-sage-rgb)/0.22),transparent_18rem),radial-gradient(circle_at_93%_2%,rgb(var(--friemi-coral-rgb)/0.18),transparent_20rem),linear-gradient(135deg,rgb(var(--friemi-paper-rgb)),rgb(var(--friemi-fog-rgb))_52%,rgb(var(--friemi-cream-rgb)))]" />
-      <section className="grid gap-4 p-3 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(18rem,0.42fr)_minmax(0,1fr)] lg:gap-6 lg:p-8">
+      <section className="grid min-w-0 gap-4 p-3 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] lg:gap-6 lg:p-8">
         <aside className="min-w-0 space-y-4">
           <div className="avalon-rise min-w-0 overflow-hidden rounded-[1.5rem] border border-sage/45 bg-paper/88 p-4 shadow-[0_18px_50px_rgb(var(--friemi-forest-rgb)/0.12)] backdrop-blur sm:rounded-[1.75rem] sm:p-5">
             <div className="flex items-start justify-between gap-3">
@@ -922,7 +922,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                   </h1>
                 </div>
               </div>
-              <span className="rounded-full border border-coral/35 bg-cream px-3 py-1 text-xs font-black text-danger">
+              <span className="shrink-0 rounded-full border border-coral/35 bg-cream px-3 py-1 text-xs font-black text-danger">
                 {copy.v01}
               </span>
             </div>
@@ -971,7 +971,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
           </nav>
         </aside>
 
-        <main className="avalon-rise min-w-0 overflow-hidden rounded-[1.5rem] border border-sage/45 bg-white/78 p-4 shadow-[0_18px_60px_rgb(var(--friemi-forest-rgb)/0.1)] [animation-delay:120ms] sm:rounded-[1.9rem] sm:p-5 lg:min-h-[38rem] lg:p-6">
+        <main className="avalon-rise min-w-0 max-w-full overflow-hidden rounded-[1.5rem] border border-sage/45 bg-white/78 p-4 shadow-[0_18px_60px_rgb(var(--friemi-forest-rgb)/0.1)] [animation-delay:120ms] sm:rounded-[1.9rem] sm:p-5 lg:min-h-[38rem] lg:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-forest">
@@ -1165,7 +1165,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
           {displayStep === "identity" ? (
             <div className="mt-6 grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
               <section className="rounded-[1.5rem] border border-sage/35 bg-paper/72 p-4">
-                <div className="relative mx-auto aspect-square max-w-[24rem]">
+                <div className="relative mx-auto aspect-square w-[min(100%,18rem)] max-w-[18rem] sm:max-w-[24rem]">
                   <img
                     src="/game-tools/common/round-table-seat-map.svg"
                     alt=""
@@ -1182,7 +1182,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                         type="button"
                         onClick={() => setRevealedSeat(index)}
                         className={cn(
-                          "absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 text-xs font-black shadow-[0_10px_22px_rgb(var(--friemi-forest-rgb)/0.16)] transition hover:scale-105",
+                          "absolute grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 text-xs font-black shadow-[0_10px_22px_rgb(var(--friemi-forest-rgb)/0.16)] transition hover:scale-105 sm:h-12 sm:w-12",
                           isRevealed
                             ? assignment.alignment === "good"
                               ? "border-forest bg-forest text-white"
@@ -1218,11 +1218,11 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                 </div>
                 <div className="mt-4 rounded-[1.35rem] border border-sage/35 bg-white/58 p-4">
                   {revealedAssignment ? (
-                    <div className="flex gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row">
                       <img
                         src={roleAssets[revealedAssignment.role]}
                         alt=""
-                        className="h-24 w-24 shrink-0"
+                        className="h-20 w-20 shrink-0 sm:h-24 sm:w-24"
                       />
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1238,7 +1238,7 @@ export function AvalonAssistantClient({ locale }: AvalonAssistantClientProps) {
                               ? copy.goodSide
                               : copy.evilSide}
                           </span>
-                          <span className="text-base font-black text-ink">
+                          <span className="min-w-0 break-words text-base font-black text-ink">
                             {copy.roleLabels[revealedAssignment.role]}
                           </span>
                         </div>

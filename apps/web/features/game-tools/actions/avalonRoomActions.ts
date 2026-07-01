@@ -1,6 +1,7 @@
 "use server";
 
 import { randomInt } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -64,6 +65,20 @@ const proposeTeamSchema = z.object({
   teamSeatNumbers: z.array(z.coerce.number().int().min(1).max(10)).min(1),
 });
 
+const proposeTeamFromSeatSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  privateToken: z.string().min(16).max(40),
+  teamSeatNumbers: z.array(z.coerce.number().int().min(1).max(10)).min(1),
+});
+
+const manageLobbySeatSchema = z.object({
+  displayName: z.string().trim().max(40).optional(),
+  locale: z.string().min(1).default("zh-CN"),
+  operation: z.enum(["release_seat", "renew_private_link", "rename_seat"]),
+  roomId: z.string().min(1),
+  seatId: z.string().min(1),
+});
+
 const privateSeatActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   privateToken: z.string().min(16).max(40),
@@ -118,7 +133,11 @@ function getActionCopy(locale: string) {
       startHostOnly: "Seul l'hôte peut démarrer la partie.",
       startNotLobby: "Cette partie ne peut plus être démarrée.",
       submitFailed: "Action impossible pour le moment.",
+      seatManageFailed: "Impossible de modifier cette place.",
+      seatManageHostOnly: "Seul l'hôte peut modifier les places.",
+      seatManageLobbyOnly: "Les places ne peuvent être modifiées qu'avant le lancement.",
       teamInvalid: "Choisis le bon nombre de joueurs.",
+      teamLeaderOnly: "Seul le chef actuel peut choisir l'équipe.",
       voteAlreadyDone: "Ton choix est déjà enregistré.",
     };
   }
@@ -135,7 +154,11 @@ function getActionCopy(locale: string) {
       startHostOnly: "Only the host can start the game.",
       startNotLobby: "This game can no longer be started.",
       submitFailed: "This action is not available right now.",
+      seatManageFailed: "Could not update this seat.",
+      seatManageHostOnly: "Only the host can manage seats.",
+      seatManageLobbyOnly: "Seats can only be changed before the game starts.",
       teamInvalid: "Pick the required number of players.",
+      teamLeaderOnly: "Only the current leader can pick the team.",
       voteAlreadyDone: "Your choice is already recorded.",
     };
   }
@@ -151,7 +174,11 @@ function getActionCopy(locale: string) {
     startHostOnly: "只有房主可以开始本局。",
     startNotLobby: "本局已经不能开始。",
     submitFailed: "当前不能执行这个动作。",
+    seatManageFailed: "无法修改这个座位。",
+    seatManageHostOnly: "只有房主可以管理座位。",
+    seatManageLobbyOnly: "座位只能在开局前调整。",
     teamInvalid: "请选择正确人数的队伍。",
+    teamLeaderOnly: "只有当前队长可以选择队伍。",
     voteAlreadyDone: "你的选择已经记录。",
   };
 }
@@ -199,6 +226,107 @@ function getRoleAlignment(roleKey: AvalonRoleKey) {
     roleKey === "oberon"
     ? "evil"
     : "good";
+}
+
+async function applyAvalonTeamProposal({
+  actorId,
+  locale,
+  requireHost,
+  requiredLeaderSeatNumber,
+  roomId,
+  teamSeatNumbers,
+}: {
+  actorId: string | null;
+  locale: string;
+  requireHost?: boolean;
+  requiredLeaderSeatNumber?: number;
+  roomId: string;
+  teamSeatNumbers: number[];
+}) {
+  const t = getActionCopy(locale);
+  const room = await prisma.gameToolRoom.findFirst({
+    where: { id: roomId, kind: "AVALON" },
+    include: {
+      seats: {
+        select: {
+          id: true,
+          seatNumber: true,
+        },
+      },
+    },
+  });
+
+  if (!room || room.status !== "IN_PROGRESS") {
+    return { formError: t.submitFailed };
+  }
+
+  if (requireHost && room.hostId !== actorId) {
+    return { formError: t.submitFailed };
+  }
+
+  const currentState = normalizeAvalonRoomState(room.state);
+
+  if (currentState.phase !== "team_building") {
+    return { formError: t.submitFailed };
+  }
+
+  if (
+    typeof requiredLeaderSeatNumber === "number" &&
+    currentState.currentLeaderSeatNumber !== requiredLeaderSeatNumber
+  ) {
+    return { formError: t.teamLeaderOnly };
+  }
+
+  const requiredTeamSize = getAvalonQuestTeamSize({
+    playerCount: room.playerCount,
+    roundIndex: currentState.roundIndex,
+  });
+  const dedupedTeamSeatNumbers = dedupeSeatNumbers(teamSeatNumbers);
+  const validSeatNumbers = new Set(room.seats.map((seat) => seat.seatNumber));
+
+  if (
+    dedupedTeamSeatNumbers.length !== requiredTeamSize ||
+    dedupedTeamSeatNumbers.some((seatNumber) => !validSeatNumbers.has(seatNumber))
+  ) {
+    return { formError: t.teamInvalid };
+  }
+
+  await prisma.$transaction([
+    prisma.gameToolSubmission.deleteMany({
+      where: {
+        kind: { in: ["TEAM_VOTE", "MISSION_CARD"] },
+        roomId: room.id,
+        roundIndex: currentState.roundIndex,
+      },
+    }),
+    prisma.gameToolRoom.update({
+      where: { id: room.id },
+      data: {
+        state: {
+          ...currentState,
+          missionFailureCount: null,
+          phase: "team_vote",
+          proposedTeamSeatNumbers: dedupedTeamSeatNumbers,
+          voteResult: null,
+        },
+      },
+    }),
+    prisma.gameToolEvent.create({
+      data: {
+        actorId,
+        payload: {
+          roundIndex: currentState.roundIndex,
+          teamSeatNumbers: dedupedTeamSeatNumbers,
+        },
+        roomId: room.id,
+        type: "team_proposed",
+      },
+    }),
+  ]);
+
+  revalidateAvalonRoom(locale, room.id);
+
+  return { roomId: room.id };
 }
 
 export async function createAvalonRoomAction(
@@ -318,7 +446,7 @@ export async function joinAvalonRoomAction(
   }
 
   const profile = await getOptionalCurrentUserProfile();
-  let shouldRedirectToRoom = false;
+  let privateToken: string | null = null;
 
   try {
     const room = await prisma.gameToolRoom.findFirst({
@@ -329,6 +457,7 @@ export async function joinAvalonRoomAction(
           select: {
             guestName: true,
             id: true,
+            privateToken: true,
             profileId: true,
             seatNumber: true,
           },
@@ -348,8 +477,9 @@ export async function joinAvalonRoomAction(
       profile &&
       room.seats.some((seat) => seat.profileId && seat.profileId === profile.id)
     ) {
+      privateToken =
+        room.seats.find((seat) => seat.profileId === profile.id)?.privateToken ?? null;
       revalidateAvalonRoom(result.data.locale, room.id);
-      shouldRedirectToRoom = true;
     } else {
       const targetSeat = room.seats.find(
         (seat) => seat.seatNumber === result.data.seatNumber,
@@ -362,6 +492,8 @@ export async function joinAvalonRoomAction(
       if (targetSeat.profileId || targetSeat.guestName) {
         return { formError: t.noSeat };
       }
+
+      privateToken = targetSeat.privateToken;
 
       const displayName = getClaimedDisplayName({
         displayName: profile?.nickname ?? result.data.displayName,
@@ -402,10 +534,143 @@ export async function joinAvalonRoomAction(
     };
   }
 
-  if (shouldRedirectToRoom) {
+  if (privateToken) {
     redirect(
-      withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+      withLocale(result.data.locale, `/game-tools/avalon/seats/${privateToken}`),
     );
+  }
+
+  redirect(
+    withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+  );
+}
+
+export async function manageAvalonLobbySeatAction(
+  _previousState: AvalonRoomActionState,
+  formData: FormData,
+): Promise<AvalonRoomActionState> {
+  const rawInput = {
+    displayName: getString(formData, "displayName"),
+    locale: getString(formData, "locale") || "zh-CN",
+    operation: getString(formData, "operation"),
+    roomId: getString(formData, "roomId"),
+    seatId: getString(formData, "seatId"),
+  };
+  const result = manageLobbySeatSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await ensureCurrentUserProfile(
+    result.data.locale,
+    `/game-tools/avalon/rooms/${result.data.roomId}`,
+  );
+
+  try {
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "AVALON" },
+      select: {
+        hostId: true,
+        id: true,
+        locale: true,
+        status: true,
+      },
+    });
+
+    if (!room) {
+      return { formError: t.seatManageFailed };
+    }
+
+    if (room.hostId !== profile.id) {
+      return { formError: t.seatManageHostOnly };
+    }
+
+    if (room.status !== "LOBBY") {
+      return { formError: t.seatManageLobbyOnly };
+    }
+
+    const seat = await prisma.gameToolSeat.findFirst({
+      where: { id: result.data.seatId, roomId: room.id },
+      select: {
+        displayName: true,
+        guestName: true,
+        id: true,
+        profileId: true,
+        seatNumber: true,
+      },
+    });
+
+    if (!seat) {
+      return { formError: t.seatManageFailed };
+    }
+
+    const nextPrivateToken =
+      result.data.operation === "renew_private_link" ||
+      result.data.operation === "release_seat"
+        ? createGameToolPrivateToken()
+        : undefined;
+    const defaultSeatName = getDefaultGameToolSeatName(
+      room.locale,
+      seat.seatNumber,
+    );
+    const displayName =
+      result.data.displayName?.trim() ||
+      (result.data.operation === "release_seat" ? defaultSeatName : seat.displayName);
+
+    if (
+      result.data.operation === "release_seat" &&
+      seat.profileId === room.hostId
+    ) {
+      return { formError: t.seatManageFailed };
+    }
+
+    await prisma.$transaction([
+      prisma.gameToolSeat.update({
+        where: { id: seat.id },
+        data:
+          result.data.operation === "release_seat"
+            ? {
+                displayName,
+                guestName: null,
+                privatePayload: Prisma.JsonNull,
+                privateToken: nextPrivateToken,
+                profileId: null,
+                readyAt: null,
+                roleAlignment: null,
+                roleKey: null,
+              }
+            : result.data.operation === "renew_private_link"
+              ? {
+                  privateToken: nextPrivateToken,
+                }
+              : {
+                  displayName,
+                  guestName: seat.profileId ? seat.guestName : displayName,
+                },
+      }),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: profile.id,
+          payload: {
+            operation: result.data.operation,
+            seatNumber: seat.seatNumber,
+          },
+          roomId: room.id,
+          type: "seat_managed",
+        },
+      }),
+    ]);
+
+    revalidateAvalonRoom(result.data.locale, room.id);
+  } catch (error) {
+    console.error("Failed to manage Avalon lobby seat", error);
+
+    return { formError: t.seatManageFailed };
   }
 
   redirect(
@@ -574,76 +839,17 @@ export async function proposeAvalonTeamAction(
   );
 
   try {
-    const room = await prisma.gameToolRoom.findFirst({
-      where: { id: result.data.roomId, kind: "AVALON" },
-      include: {
-        seats: {
-          select: {
-            id: true,
-            seatNumber: true,
-          },
-        },
-      },
+    const proposal = await applyAvalonTeamProposal({
+      actorId: profile.id,
+      locale: result.data.locale,
+      requireHost: true,
+      roomId: result.data.roomId,
+      teamSeatNumbers: result.data.teamSeatNumbers,
     });
 
-    if (!room || room.status !== "IN_PROGRESS" || room.hostId !== profile.id) {
-      return { formError: t.submitFailed };
+    if (proposal.formError) {
+      return { formError: proposal.formError };
     }
-
-    const currentState = normalizeAvalonRoomState(room.state);
-
-    if (currentState.phase !== "team_building") {
-      return { formError: t.submitFailed };
-    }
-
-    const requiredTeamSize = getAvalonQuestTeamSize({
-      playerCount: room.playerCount,
-      roundIndex: currentState.roundIndex,
-    });
-    const teamSeatNumbers = dedupeSeatNumbers(result.data.teamSeatNumbers);
-    const validSeatNumbers = new Set(room.seats.map((seat) => seat.seatNumber));
-
-    if (
-      teamSeatNumbers.length !== requiredTeamSize ||
-      teamSeatNumbers.some((seatNumber) => !validSeatNumbers.has(seatNumber))
-    ) {
-      return { formError: t.teamInvalid };
-    }
-
-    await prisma.$transaction([
-      prisma.gameToolSubmission.deleteMany({
-        where: {
-          kind: { in: ["TEAM_VOTE", "MISSION_CARD"] },
-          roomId: room.id,
-          roundIndex: currentState.roundIndex,
-        },
-      }),
-      prisma.gameToolRoom.update({
-        where: { id: room.id },
-        data: {
-          state: {
-            ...currentState,
-            missionFailureCount: null,
-            phase: "team_vote",
-            proposedTeamSeatNumbers: teamSeatNumbers,
-            voteResult: null,
-          },
-        },
-      }),
-      prisma.gameToolEvent.create({
-        data: {
-          actorId: profile.id,
-          payload: {
-            roundIndex: currentState.roundIndex,
-            teamSeatNumbers,
-          },
-          roomId: room.id,
-          type: "team_proposed",
-        },
-      }),
-    ]);
-
-    revalidateAvalonRoom(result.data.locale, room.id);
   } catch (error) {
     console.error("Failed to propose Avalon team", error);
 
@@ -652,6 +858,62 @@ export async function proposeAvalonTeamAction(
 
   redirect(
     withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+  );
+}
+
+export async function proposeAvalonTeamFromSeatAction(
+  _previousState: AvalonRoomActionState,
+  formData: FormData,
+): Promise<AvalonRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    privateToken: getString(formData, "privateToken"),
+    teamSeatNumbers: formData.getAll("teamSeatNumbers"),
+  };
+  const result = proposeTeamFromSeatSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.teamInvalid,
+    };
+  }
+
+  try {
+    const seat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      select: {
+        id: true,
+        profileId: true,
+        roomId: true,
+        seatNumber: true,
+      },
+    });
+
+    if (!seat) {
+      return { formError: t.submitFailed };
+    }
+
+    const proposal = await applyAvalonTeamProposal({
+      actorId: seat.profileId,
+      locale: result.data.locale,
+      requiredLeaderSeatNumber: seat.seatNumber,
+      roomId: seat.roomId,
+      teamSeatNumbers: result.data.teamSeatNumbers,
+    });
+
+    if (proposal.formError) {
+      return { formError: proposal.formError };
+    }
+  } catch (error) {
+    console.error("Failed to propose Avalon team from seat", error);
+
+    return { formError: t.submitFailed };
+  }
+
+  redirect(
+    withLocale(result.data.locale, `/game-tools/avalon/seats/${result.data.privateToken}`),
   );
 }
 

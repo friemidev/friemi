@@ -88,7 +88,7 @@ export default async function AvalonRoomPage({ params }: AvalonRoomPageProps) {
 
   return (
     <PageContainer className="max-w-[92rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <AvalonLiveRefresh enabled={room.status !== "FINISHED"} />
+      <AvalonLiveRefresh enabled={room.status !== "FINISHED"} locale={locale} />
       <AvalonRoomLobby baseUrl={baseUrl} locale={locale} room={roomForClient} />
     </PageContainer>
   );

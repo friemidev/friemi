@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useActionState, useState } from "react";
+import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import {
   ArrowRight,
@@ -11,8 +12,11 @@ import {
   Eye,
   Link2,
   LockKeyhole,
+  Pencil,
+  RefreshCcw,
   Shield,
   Sparkles,
+  UserMinus,
   UserRoundPlus,
   Users,
   Wrench,
@@ -20,6 +24,7 @@ import {
 import {
   correctAvalonRoomAction,
   joinAvalonRoomAction,
+  manageAvalonLobbySeatAction,
   proposeAvalonTeamAction,
   startAvalonRoomAction,
   type AvalonRoomActionState,
@@ -96,7 +101,9 @@ type Copy = {
   log: string;
   mission: string;
   missionCards: string;
+  myIdentity: string;
   namePlaceholder: string;
+  manageSeats: string;
   pickTeam: string;
   players: string;
   privateLink: string;
@@ -111,6 +118,9 @@ type Copy = {
   screen: string;
   scanToJoin: string;
   ready: string;
+  releaseSeat: string;
+  renewPrivateLink: string;
+  renameSeat: string;
   repair: string;
   roleHidden: string;
   roleRevealed: string;
@@ -151,7 +161,9 @@ const copies: Record<string, Copy> = {
     log: "记录",
     mission: "任务",
     missionCards: "任务牌",
+    myIdentity: "我的身份",
     namePlaceholder: "你的桌上昵称",
+    manageSeats: "座位管理",
     pickTeam: "选队",
     players: "玩家",
     privateLink: "身份链接",
@@ -167,6 +179,9 @@ const copies: Record<string, Copy> = {
     scanToJoin: "扫码入座",
     screen: "公共屏",
     ready: "已入座",
+    releaseSeat: "释放",
+    renewPrivateLink: "刷新链接",
+    renameSeat: "改名",
     roleHidden: "身份未公开",
     roleRevealed: "已发身份",
     seat: "座位",
@@ -204,7 +219,9 @@ const copies: Record<string, Copy> = {
     log: "Log",
     mission: "Quest",
     missionCards: "Quest cards",
+    myIdentity: "My identity",
     namePlaceholder: "Your table name",
+    manageSeats: "Seat tools",
     pickTeam: "Pick team",
     players: "Players",
     privateLink: "Identity link",
@@ -221,6 +238,9 @@ const copies: Record<string, Copy> = {
     scanToJoin: "Scan to join",
     screen: "Public screen",
     ready: "Seated",
+    releaseSeat: "Release",
+    renewPrivateLink: "Renew link",
+    renameSeat: "Rename",
     roleHidden: "Role hidden",
     roleRevealed: "Role dealt",
     seat: "Seat",
@@ -259,7 +279,9 @@ const copies: Record<string, Copy> = {
     log: "Journal",
     mission: "Quête",
     missionCards: "Cartes",
+    myIdentity: "Mon identité",
     namePlaceholder: "Ton nom à table",
+    manageSeats: "Places",
     pickTeam: "Équipe",
     players: "Joueurs",
     privateLink: "Lien d'identité",
@@ -276,6 +298,9 @@ const copies: Record<string, Copy> = {
     scanToJoin: "Scanner",
     screen: "Écran public",
     ready: "Assis",
+    releaseSeat: "Libérer",
+    renewPrivateLink: "Nouveau lien",
+    renameSeat: "Renommer",
     roleHidden: "Rôle caché",
     roleRevealed: "Rôle distribué",
     seat: "Place",
@@ -296,20 +321,6 @@ const copies: Record<string, Copy> = {
 };
 
 const initialState: AvalonRoomActionState = {};
-const roleIconPaths: Record<string, string> = {
-  assassin: "/game-tools/avalon/roles/role-assassin.svg",
-  merlin: "/game-tools/avalon/roles/role-merlin.svg",
-  minion: "/game-tools/avalon/roles/role-minion.svg",
-  mordred: "/game-tools/avalon/roles/role-mordred.svg",
-  morgana: "/game-tools/avalon/roles/role-morgana.svg",
-  oberon: "/game-tools/avalon/roles/role-oberon.svg",
-  percival: "/game-tools/avalon/roles/role-percival.svg",
-  servant: "/game-tools/avalon/roles/role-servant.svg",
-};
-
-function getRoleIconPath(roleKey: string | null) {
-  return roleKey ? (roleIconPaths[roleKey] ?? "/game-tools/avalon/roles/role-unknown.svg") : "/game-tools/avalon/roles/role-unknown.svg";
-}
 
 export function AvalonRoomLobby({
   baseUrl,
@@ -330,12 +341,12 @@ export function AvalonRoomLobby({
   const controlCard = getControlCardHeader(room, t);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_25rem]">
-      <section className="relative overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-6">
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.08fr)_25rem]">
+      <section className="relative min-w-0 overflow-hidden rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-6">
         <div className="absolute -right-20 top-0 h-48 w-48 rounded-full bg-[#8AB68E]/20 blur-3xl" />
         <div className="absolute -left-16 bottom-10 h-40 w-40 rounded-full bg-[#F09182]/12 blur-3xl" />
 
-        <div className="relative grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1fr)] xl:items-center">
+        <div className="relative grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1fr)] xl:items-center">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#156240] px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-[#156240]/15">
@@ -410,7 +421,7 @@ export function AvalonRoomLobby({
         </div>
       </section>
 
-      <aside className="space-y-5">
+      <aside className="min-w-0 space-y-5">
         <section className="rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-5">
           <div className="flex items-start gap-3">
             <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-inner">
@@ -440,6 +451,10 @@ export function AvalonRoomLobby({
 
         {room.isHost && room.status !== "LOBBY" ? (
           <HostCorrectionPanel locale={locale} room={room} t={t} />
+        ) : null}
+
+        {room.isHost && room.status === "LOBBY" ? (
+          <LobbySeatManagementPanel locale={locale} room={room} t={t} />
         ) : null}
 
         <section className="rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-5">
@@ -1024,6 +1039,174 @@ function AvalonEventRail({
   );
 }
 
+function LobbySeatManagementPanel({
+  locale,
+  room,
+  t,
+}: {
+  locale: string;
+  room: AvalonRoomView;
+  t: Copy;
+}) {
+  return (
+    <section className="rounded-[2rem] border border-[#8AB68E]/35 bg-[#FEFFF9] p-4 shadow-xl shadow-[#156240]/10 sm:p-5">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-inner">
+            <Users className="h-5 w-5" />
+          </span>
+          <h2 className="text-base font-black text-[#1D1D1B]">
+            {t.manageSeats}
+          </h2>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+          {room.seats.filter((seat) => seat.isClaimed).length}/{room.playerCount}
+        </span>
+      </div>
+      <div className="grid gap-2">
+        {room.seats.map((seat) => (
+          <LobbySeatManagementRow
+            key={seat.id}
+            locale={locale}
+            roomId={room.id}
+            seat={seat}
+            t={t}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LobbySeatManagementRow({
+  locale,
+  roomId,
+  seat,
+  t,
+}: {
+  locale: string;
+  roomId: string;
+  seat: AvalonRoomSeat;
+  t: Copy;
+}) {
+  const [state, formAction] = useActionState(
+    manageAvalonLobbySeatAction,
+    initialState,
+  );
+
+  return (
+    <div className="rounded-[1.25rem] border border-[#D6D5B2] bg-white/82 p-2.5 shadow-sm">
+      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#F1F2EC] text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+          {seat.seatNumber}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-[#0E2A5A]">
+            {seat.displayName}
+          </p>
+          <p className="text-[0.68rem] font-black text-[#156240]/65">
+            {seat.isClaimed ? t.ready : t.emptySeat}
+          </p>
+        </div>
+        {seat.isHostSeat ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF5E6] px-2 py-1 text-[0.62rem] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+            <Crown className="h-3 w-3" />
+            {t.host}
+          </span>
+        ) : null}
+      </div>
+
+      <form action={formAction} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <input name="locale" type="hidden" value={locale} />
+        <input name="roomId" type="hidden" value={roomId} />
+        <input name="seatId" type="hidden" value={seat.id} />
+        <input
+          className="h-9 min-w-0 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-3 text-xs font-semibold text-[#1D1D1B] outline-none transition focus:border-[#369758] focus:ring-2 focus:ring-[#8AB68E]/20"
+          defaultValue={seat.displayName}
+          maxLength={40}
+          name="displayName"
+        />
+        <SeatManageSubmit
+          icon={<Pencil className="h-3.5 w-3.5" />}
+          label={t.renameSeat}
+          operation="rename_seat"
+        />
+      </form>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <form action={formAction}>
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={roomId} />
+          <input name="seatId" type="hidden" value={seat.id} />
+          <SeatManageSubmit
+            full
+            icon={<RefreshCcw className="h-3.5 w-3.5" />}
+            label={t.renewPrivateLink}
+            operation="renew_private_link"
+          />
+        </form>
+        <form action={formAction}>
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={roomId} />
+          <input name="seatId" type="hidden" value={seat.id} />
+          <SeatManageSubmit
+            disabled={seat.isHostSeat || !seat.isClaimed}
+            full
+            icon={<UserMinus className="h-3.5 w-3.5" />}
+            label={t.releaseSeat}
+            operation="release_seat"
+            tone="coral"
+          />
+        </form>
+      </div>
+      {state.formError ? (
+        <p className="mt-2 rounded-2xl bg-[#F09182]/12 px-3 py-2 text-xs font-semibold text-[#B5301F]">
+          {state.formError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SeatManageSubmit({
+  disabled,
+  full,
+  icon,
+  label,
+  operation,
+  tone = "forest",
+}: {
+  disabled?: boolean;
+  full?: boolean;
+  icon: ReactNode;
+  label: string;
+  operation: "release_seat" | "renew_private_link" | "rename_seat";
+  tone?: "coral" | "forest";
+}) {
+  const { pending } = useFormStatus();
+  const toneClass =
+    tone === "coral"
+      ? "border-[#F09182] text-[#B5301F] hover:bg-[#FFF0EC]"
+      : "border-[#8AB68E] text-[#156240] hover:bg-[#F1F2EC]";
+
+  return (
+    <button
+      className={cn(
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl border bg-white px-3 text-xs font-black shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45",
+        toneClass,
+        full && "w-full",
+      )}
+      disabled={disabled || pending}
+      name="operation"
+      type="submit"
+      value={operation}
+    >
+      {icon}
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
 function HostCorrectionPanel({
   locale,
   room,
@@ -1321,7 +1504,7 @@ function TeamProposalSubmitButton({ label }: { label: string }) {
 
 function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[26rem]">
+    <div className="relative mx-auto aspect-square w-[min(100%,19rem)] max-w-[19rem] sm:w-full sm:max-w-[26rem]">
       <div className="absolute inset-[13%] rounded-full border border-[#D6D5B2] bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.95),rgba(241,242,236,0.92)_58%,rgba(138,182,142,0.18))] shadow-2xl shadow-[#156240]/10" />
       <div className="absolute inset-[31%] grid place-items-center rounded-full border border-[#8AB68E]/40 bg-[#FEFFF9]/90 text-center shadow-inner">
         <Image
@@ -1352,7 +1535,7 @@ function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
           >
             <div
               className={cn(
-                "group relative grid h-16 w-16 place-items-center rounded-[1.35rem] border bg-white shadow-lg transition hover:-translate-y-1 sm:h-[4.5rem] sm:w-[4.5rem]",
+                "group relative grid h-12 w-12 place-items-center rounded-[1rem] border bg-white shadow-lg transition hover:-translate-y-1 sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-[1.35rem]",
                 seat.isViewerSeat
                   ? "border-[#369758] shadow-[#156240]/25 ring-4 ring-[#8AB68E]/20"
                   : seat.isOnProposedTeam
@@ -1373,12 +1556,12 @@ function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
               ) : null}
               <Image
                 alt=""
-                className="h-8 w-8 sm:h-10 sm:w-10"
+                className="h-6 w-6 sm:h-10 sm:w-10"
                 height={48}
-                src={room.status === "IN_PROGRESS" ? getRoleIconPath(seat.roleKey) : "/game-tools/avalon/player-ready-token.svg"}
+                src="/game-tools/avalon/player-ready-token.svg"
                 width={48}
               />
-              <span className="absolute bottom-1 rounded-full bg-white/90 px-1.5 text-[0.65rem] font-black text-[#156240] shadow-sm">
+              <span className="absolute bottom-0.5 rounded-full bg-white/90 px-1.5 text-[0.58rem] font-black text-[#156240] shadow-sm sm:bottom-1 sm:text-[0.65rem]">
                 {seat.seatNumber}
               </span>
             </div>
@@ -1440,7 +1623,7 @@ function SeatCard({
             alt=""
             className="h-10 w-10"
             height={44}
-            src={roomStatus === "IN_PROGRESS" ? getRoleIconPath(seat.roleKey) : "/game-tools/avalon/player-ready-token.svg"}
+            src="/game-tools/avalon/player-ready-token.svg"
             width={44}
           />
         </span>
@@ -1468,6 +1651,15 @@ function SeatCard({
           <p className="mt-2 rounded-full bg-[#F1F2EC] px-3 py-1 text-xs font-bold text-[#156240]">
             {seat.roleLabel ?? t.roleHidden}
           </p>
+          {seat.privateToken ? (
+            <a
+              className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#156240] px-3 text-xs font-black text-white shadow-lg shadow-[#156240]/15 transition hover:-translate-y-0.5"
+              href={`/${locale}/game-tools/avalon/seats/${seat.privateToken}`}
+            >
+              <LockKeyhole className="h-3.5 w-3.5" />
+              {t.myIdentity}
+            </a>
+          ) : null}
         </div>
       </div>
 

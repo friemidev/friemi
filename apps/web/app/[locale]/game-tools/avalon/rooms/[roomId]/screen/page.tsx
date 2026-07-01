@@ -77,7 +77,11 @@ export default async function AvalonPublicScreenPage({
 
   return (
     <PageContainer className="max-w-[110rem] pb-6 pt-4 sm:pt-6">
-      <AvalonLiveRefresh enabled={room.status !== "FINISHED"} intervalMs={3500} />
+      <AvalonLiveRefresh
+        enabled={room.status !== "FINISHED"}
+        intervalMs={3500}
+        locale={locale}
+      />
       <AvalonPublicScreen joinUrl={joinUrl} locale={locale} room={roomForClient} />
     </PageContainer>
   );

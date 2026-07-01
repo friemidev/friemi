@@ -60,7 +60,7 @@ export default async function AvalonToolPage({ params }: AvalonToolPageProps) {
   const { locale } = await params;
 
   return (
-    <PageContainer className="max-w-[96rem] space-y-5 pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer className="max-w-[96rem] space-y-5 overflow-x-hidden pb-28 pt-4 sm:pb-12 sm:pt-7">
       <AvalonCreateRoomPanel locale={locale} />
       <AvalonAssistantClient locale={locale} />
     </PageContainer>

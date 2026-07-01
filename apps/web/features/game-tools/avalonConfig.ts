@@ -254,7 +254,6 @@ export function createAvalonPrivatePayload({
         .map((candidate) => ({
           displayName: candidate.displayName,
           label: copy.visibleLabels.merlinSees,
-          roleKey: candidate.roleKey,
           seatNumber: candidate.seatNumber,
         })),
     );
@@ -283,7 +282,6 @@ export function createAvalonPrivatePayload({
         .map((candidate) => ({
           displayName: candidate.displayName,
           label: copy.visibleLabels.evilAlly,
-          roleKey: candidate.roleKey,
           seatNumber: candidate.seatNumber,
         })),
     );
