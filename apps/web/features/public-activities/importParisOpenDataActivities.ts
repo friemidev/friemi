@@ -7,8 +7,17 @@ const parisOpenDataDataset = "que-faire-a-paris-";
 export const parisOpenDataSource = "paris-opendata:que-faire-a-paris";
 const defaultImportLimit = 50;
 const maxImportLimit = 200;
+const maxParisOpenDataFetchLimit = 100;
+const candidateFetchMultiplier = 4;
 const requestTimeoutMs = 10_000;
 const dayMs = 24 * 60 * 60 * 1000;
+const parisTimeZone = "Europe/Paris";
+
+export type PublicActivityDurationBucket =
+  | "single_day"
+  | "short_span"
+  | "medium_span"
+  | "long_span";
 
 type ImportPoolConfig = {
   key: string;
@@ -31,6 +40,7 @@ type ImportTimeWindowConfig = {
 
 type ImportTimeWindow = ImportTimeWindowConfig & {
   endAt: Date;
+  fetchLimit: number;
   limit: number;
   poolKey: string;
   poolLabel: string;
@@ -86,22 +96,45 @@ type ParisOpenDataRecord = {
 export type PublicActivityImportSummary = {
   source: typeof parisOpenDataSource;
   limit: number;
+  balancedOutCandidates: number;
+  candidateFetched: number;
+  duplicateCandidates: number;
   fetched: number;
   timeWindows: Array<{
+    balancedOut: number;
+    duplicateCandidates: number;
+    durationBuckets: Array<{
+      fetched: number;
+      key: PublicActivityDurationBucket;
+      label: string;
+      selected: number;
+    }>;
     endAt: string;
     fetched: number;
+    fetchLimit: number;
     key: string;
     label: string;
     limit: number;
     poolKey: string;
     poolLabel: string;
+    selected: number;
     startAt: string;
+    uniqueCandidates: number;
   }>;
   pools: Array<{
+    balancedOut: number;
     fetched: number;
     key: string;
     label: string;
     limit: number;
+    selected: number;
+    uniqueCandidates: number;
+  }>;
+  durationMix: Array<{
+    fetched: number;
+    key: PublicActivityDurationBucket;
+    label: string;
+    selected: number;
   }>;
   created: number;
   updated: number;
@@ -250,26 +283,59 @@ const importPoolConfigs: ImportPoolConfig[] = [
 
 const importTimeWindowConfigs: ImportTimeWindowConfig[] = [
   {
-    key: "0-2d",
-    label: "0-2 天",
+    key: "0-7d",
+    label: "0-7 天",
     startOffsetDays: 0,
-    endOffsetDays: 3,
-    weight: 0.2,
+    endOffsetDays: 8,
+    weight: 0.45,
   },
   {
-    key: "3-14d",
-    label: "3-14 天",
-    startOffsetDays: 3,
-    endOffsetDays: 15,
-    weight: 0.6,
+    key: "8-30d",
+    label: "8-30 天",
+    startOffsetDays: 8,
+    endOffsetDays: 31,
+    weight: 0.4,
   },
   {
-    key: "15-45d",
-    label: "15-45 天",
-    startOffsetDays: 15,
-    endOffsetDays: 46,
-    weight: 0.2,
+    key: "31-90d",
+    label: "31-90 天",
+    startOffsetDays: 31,
+    endOffsetDays: 91,
+    weight: 0.15,
   },
+];
+
+const durationBucketConfigs: Array<{
+  key: PublicActivityDurationBucket;
+  label: string;
+  weight: number;
+}> = [
+  {
+    key: "single_day",
+    label: "单日活动",
+    weight: 0.62,
+  },
+  {
+    key: "short_span",
+    label: "短周期活动",
+    weight: 0.24,
+  },
+  {
+    key: "medium_span",
+    label: "中周期活动",
+    weight: 0.1,
+  },
+  {
+    key: "long_span",
+    label: "长期活动",
+    weight: 0.04,
+  },
+];
+const durationFallbackOrder: PublicActivityDurationBucket[] = [
+  "single_day",
+  "short_span",
+  "medium_span",
+  "long_span",
 ];
 
 function allocateWeightedLimits<T extends { key: string; weight: number }>(
@@ -329,7 +395,7 @@ function buildImportTimeWindows(limit: number, now = new Date()) {
     const windowLimits = allocateWeightedLimits(
       importTimeWindowConfigs,
       pool.limit,
-      "3-14d",
+      "0-7d",
     );
 
     for (const [index, config] of importTimeWindowConfigs.entries()) {
@@ -341,10 +407,15 @@ function buildImportTimeWindows(limit: number, now = new Date()) {
 
       const startAt = new Date(now.getTime() + config.startOffsetDays * dayMs);
       const endAt = new Date(now.getTime() + config.endOffsetDays * dayMs);
+      const fetchLimit = Math.min(
+        maxParisOpenDataFetchLimit,
+        Math.max(windowLimit + 10, windowLimit * candidateFetchMultiplier),
+      );
 
       windows.push({
         ...config,
         endAt,
+        fetchLimit,
         limit: windowLimit,
         poolKey: pool.key,
         poolLabel: pool.label,
@@ -376,6 +447,223 @@ function truncateText(value: string, maxLength: number) {
 
 function normalizeText(value: string | number | null | undefined) {
   return String(value ?? "").trim();
+}
+
+function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+function getParisDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: parisTimeZone,
+    year: "numeric",
+  }).formatToParts(date);
+
+  return `${getDatePart(parts, "year")}-${getDatePart(
+    parts,
+    "month",
+  )}-${getDatePart(parts, "day")}`;
+}
+
+function parseRecordDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function classifyParisOpenDataRecordDuration(
+  record: Pick<ParisOpenDataRecord, "date_end" | "date_start">,
+): PublicActivityDurationBucket {
+  const startAt = parseRecordDate(record.date_start);
+  const endAt = parseRecordDate(record.date_end);
+
+  if (!startAt || !endAt || endAt <= startAt) {
+    return "single_day";
+  }
+
+  if (getParisDateKey(startAt) === getParisDateKey(endAt)) {
+    return "single_day";
+  }
+
+  const durationDays = (endAt.getTime() - startAt.getTime()) / dayMs;
+
+  if (durationDays <= 3) {
+    return "short_span";
+  }
+
+  if (durationDays <= 14) {
+    return "medium_span";
+  }
+
+  return "long_span";
+}
+
+function sortImportCandidates(
+  left: ParisOpenDataRecord,
+  right: ParisOpenDataRecord,
+) {
+  const leftStart = parseRecordDate(left.date_start)?.getTime() ?? 0;
+  const rightStart = parseRecordDate(right.date_start)?.getTime() ?? 0;
+  const leftEnd = parseRecordDate(left.date_end)?.getTime() ?? leftStart;
+  const rightEnd = parseRecordDate(right.date_end)?.getTime() ?? rightStart;
+  const leftDuration = Math.max(0, leftEnd - leftStart);
+  const rightDuration = Math.max(0, rightEnd - rightStart);
+
+  return leftStart - rightStart || leftDuration - rightDuration;
+}
+
+function createEmptyDurationBucketSummary() {
+  return durationBucketConfigs.map((bucket) => ({
+    fetched: 0,
+    key: bucket.key,
+    label: bucket.label,
+    selected: 0,
+  }));
+}
+
+function summarizeDurationBuckets(records: ParisOpenDataRecord[]) {
+  const summaries = createEmptyDurationBucketSummary();
+
+  for (const record of records) {
+    const bucketKey = classifyParisOpenDataRecordDuration(record);
+    const summary = summaries.find((bucket) => bucket.key === bucketKey);
+
+    if (summary) {
+      summary.fetched += 1;
+    }
+  }
+
+  return summaries;
+}
+
+function aggregateDurationMix(
+  timeWindows: PublicActivityImportSummary["timeWindows"],
+) {
+  return createEmptyDurationBucketSummary().map((bucket) => {
+    const totals = timeWindows.reduce(
+      (sum, window) => {
+        const windowBucket = window.durationBuckets.find(
+          (item) => item.key === bucket.key,
+        );
+
+        return {
+          fetched: sum.fetched + (windowBucket?.fetched ?? 0),
+          selected: sum.selected + (windowBucket?.selected ?? 0),
+        };
+      },
+      {
+        fetched: 0,
+        selected: 0,
+      },
+    );
+
+    return {
+      ...bucket,
+      ...totals,
+    };
+  });
+}
+
+function getDurationMixForRecords(records: ParisOpenDataRecord[]) {
+  const selectedByBucket = new Map<PublicActivityDurationBucket, number>();
+
+  for (const record of records) {
+    const bucketKey = classifyParisOpenDataRecordDuration(record);
+    selectedByBucket.set(bucketKey, (selectedByBucket.get(bucketKey) ?? 0) + 1);
+  }
+
+  return summarizeDurationBuckets(records).map((bucket) => ({
+    ...bucket,
+    selected: selectedByBucket.get(bucket.key) ?? 0,
+  }));
+}
+
+export function selectBalancedParisOpenDataRecords(
+  records: ParisOpenDataRecord[],
+  limit: number,
+) {
+  if (limit <= 0 || records.length === 0) {
+    return {
+      durationBuckets: createEmptyDurationBucketSummary(),
+      records: [] as ParisOpenDataRecord[],
+    };
+  }
+
+  const sortedRecords = [...records].sort(sortImportCandidates);
+  const recordsByBucket = new Map<
+    PublicActivityDurationBucket,
+    ParisOpenDataRecord[]
+  >();
+  const durationBuckets = summarizeDurationBuckets(sortedRecords);
+
+  for (const record of sortedRecords) {
+    const bucketKey = classifyParisOpenDataRecordDuration(record);
+    const bucketRecords = recordsByBucket.get(bucketKey) ?? [];
+
+    bucketRecords.push(record);
+    recordsByBucket.set(bucketKey, bucketRecords);
+  }
+
+  const targetLimits = allocateWeightedLimits(
+    durationBucketConfigs,
+    Math.min(limit, sortedRecords.length),
+    "single_day",
+  );
+  const selected: ParisOpenDataRecord[] = [];
+  const selectedKeys = new Set<ParisOpenDataRecord>();
+
+  for (const [index, bucketConfig] of durationBucketConfigs.entries()) {
+    const bucketRecords = recordsByBucket.get(bucketConfig.key) ?? [];
+    const targetLimit = targetLimits[index] ?? 0;
+
+    for (const record of bucketRecords.slice(0, targetLimit)) {
+      selected.push(record);
+      selectedKeys.add(record);
+    }
+  }
+
+  if (selected.length < limit) {
+    for (const bucketKey of durationFallbackOrder) {
+      const bucketRecords = recordsByBucket.get(bucketKey) ?? [];
+
+      for (const record of bucketRecords) {
+        if (selected.length >= limit) {
+          break;
+        }
+
+        if (selectedKeys.has(record)) {
+          continue;
+        }
+
+        selected.push(record);
+        selectedKeys.add(record);
+      }
+
+      if (selected.length >= limit) {
+        break;
+      }
+    }
+  }
+
+  return {
+    durationBuckets: getDurationMixForRecords(selected).map((bucket) => {
+      const fetchedBucket = durationBuckets.find(
+        (item) => item.key === bucket.key,
+      );
+
+      return {
+        ...bucket,
+        fetched: fetchedBucket?.fetched ?? 0,
+      };
+    }),
+    records: selected.sort(sortImportCandidates),
+  };
 }
 
 function normalizeExternalImageUrl(value: string | null | undefined) {
@@ -580,7 +868,7 @@ function buildParisOpenDataUrl(window: ImportTimeWindow) {
 
   url.searchParams.set("where", whereParts.join(" AND "));
   url.searchParams.set("order_by", "date_start asc");
-  url.searchParams.set("limit", String(window.limit));
+  url.searchParams.set("limit", String(window.fetchLimit));
 
   return url;
 }
@@ -726,12 +1014,18 @@ function getRecordDedupeKey(record: ParisOpenDataRecord) {
 async function fetchDistributedParisOpenDataEvents(limit: number) {
   const windows = buildImportTimeWindows(limit);
   const records: ParisOpenDataRecord[] = [];
+  let balancedOutCandidates = 0;
+  let candidateFetched = 0;
+  let duplicateCandidates = 0;
   const seenRecordKeys = new Set<string>();
   const poolSummaries = buildImportPools(limit).map((pool) => ({
+    balancedOut: 0,
     fetched: 0,
     key: pool.key,
     label: pool.label,
     limit: pool.limit,
+    selected: 0,
+    uniqueCandidates: 0,
   }));
   const timeWindows: PublicActivityImportSummary["timeWindows"] = [];
 
@@ -740,29 +1034,22 @@ async function fetchDistributedParisOpenDataEvents(limit: number) {
     const filteredWindowRecords = window.poolWhere
       ? windowRecords.filter(isChineseRelatedRecord)
       : windowRecords;
+    const uniqueWindowRecords: ParisOpenDataRecord[] = [];
     const poolSummary = poolSummaries.find(
       (summary) => summary.key === window.poolKey,
     );
+
+    candidateFetched += filteredWindowRecords.length;
 
     if (poolSummary) {
       poolSummary.fetched += filteredWindowRecords.length;
     }
 
-    timeWindows.push({
-      endAt: window.endAt.toISOString(),
-      fetched: filteredWindowRecords.length,
-      key: window.key,
-      label: window.label,
-      limit: window.limit,
-      poolKey: window.poolKey,
-      poolLabel: window.poolLabel,
-      startAt: window.startAt.toISOString(),
-    });
-
     for (const record of filteredWindowRecords) {
       const dedupeKey = getRecordDedupeKey(record);
 
       if (dedupeKey && seenRecordKeys.has(dedupeKey)) {
+        duplicateCandidates += 1;
         continue;
       }
 
@@ -770,11 +1057,51 @@ async function fetchDistributedParisOpenDataEvents(limit: number) {
         seenRecordKeys.add(dedupeKey);
       }
 
-      records.push(record);
+      uniqueWindowRecords.push(record);
     }
+
+    const selection = selectBalancedParisOpenDataRecords(
+      uniqueWindowRecords,
+      window.limit,
+    );
+    const windowBalancedOut = Math.max(
+      uniqueWindowRecords.length - selection.records.length,
+      0,
+    );
+
+    if (poolSummary) {
+      poolSummary.balancedOut += windowBalancedOut;
+      poolSummary.selected += selection.records.length;
+      poolSummary.uniqueCandidates += uniqueWindowRecords.length;
+    }
+
+    balancedOutCandidates += windowBalancedOut;
+
+    timeWindows.push({
+      balancedOut: windowBalancedOut,
+      duplicateCandidates:
+        filteredWindowRecords.length - uniqueWindowRecords.length,
+      durationBuckets: selection.durationBuckets,
+      endAt: window.endAt.toISOString(),
+      fetched: filteredWindowRecords.length,
+      fetchLimit: window.fetchLimit,
+      key: window.key,
+      label: window.label,
+      limit: window.limit,
+      poolKey: window.poolKey,
+      poolLabel: window.poolLabel,
+      selected: selection.records.length,
+      startAt: window.startAt.toISOString(),
+      uniqueCandidates: uniqueWindowRecords.length,
+    });
+
+    records.push(...selection.records);
   }
 
   return {
+    balancedOutCandidates,
+    candidateFetched,
+    duplicateCandidates,
     pools: poolSummaries,
     records,
     timeWindows,
@@ -790,14 +1117,24 @@ export async function importParisOpenDataActivities(
   const limit = normalizeImportLimit(options.limit);
   const dryRun = Boolean(options.dryRun);
   const startedAt = new Date();
-  const { pools, records, timeWindows } =
-    await fetchDistributedParisOpenDataEvents(limit);
+  const {
+    balancedOutCandidates,
+    candidateFetched,
+    duplicateCandidates,
+    pools,
+    records,
+    timeWindows,
+  } = await fetchDistributedParisOpenDataEvents(limit);
   const summary: PublicActivityImportSummary = {
     source: parisOpenDataSource,
     limit,
+    balancedOutCandidates,
+    candidateFetched,
+    duplicateCandidates,
     fetched: records.length,
     timeWindows,
     pools,
+    durationMix: aggregateDurationMix(timeWindows),
     created: 0,
     updated: 0,
     skipped: 0,
