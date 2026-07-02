@@ -1,21 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getFollowCopy } from "@/features/follow/copy";
-import {
-  toggleFollowUserAction,
-  type ToggleFollowState,
-} from "@/features/follow/actions/toggleFollowUser";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { getProfileFollowCopy } from "../copy";
 import type {
-  ProfileFollowUserViewModel,
   ProfileFriendUserViewModel,
 } from "../queries/getProfileDashboard";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
@@ -26,22 +19,16 @@ type ProfileOverviewPanelProps = {
   createdCount: number;
   joinedCount: number;
   friendCount: number;
-  followersCount: number;
-  followingCount: number;
   friends: ProfileFriendUserViewModel[];
-  followers: ProfileFollowUserViewModel[];
-  following: ProfileFollowUserViewModel[];
   locale: string;
   createdLabel: string;
   joinedLabel: string;
   onActivitySectionChange?: (section: ProfileSectionKey) => void;
-  redirectPath: string;
   showFriendCount?: boolean;
   showJoinedCount?: boolean;
 };
 
-type SocialPanelKey = "friends" | "followers" | "following" | null;
-const unfollowInitialState: ToggleFollowState = {};
+type SocialPanelKey = "friends" | null;
 
 function InteractiveStatCard({
   active,
@@ -87,22 +74,14 @@ function InteractiveStatCard({
 
 function CompactUserRow({
   locale,
-  redirectPath,
   user,
-  canUnfollow = false,
 }: {
   locale: string;
-  redirectPath: string;
-  user: ProfileFollowUserViewModel;
-  canUnfollow?: boolean;
+  user: ProfileFriendUserViewModel;
 }) {
   const t = getProfileFollowCopy(locale);
   const userInitial = user.nickname.trim().slice(0, 1) || "N";
   const profileHref = withLocale(locale, `/profile/${user.id}`);
-  const [state, formAction] = useActionState(
-    toggleFollowUserAction,
-    unfollowInitialState,
-  );
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white/88 px-3 py-3 shadow-sm">
@@ -130,36 +109,7 @@ function CompactUserRow({
           {user.bio ?? t.noBio}
         </p>
       </Link>
-      {canUnfollow ? (
-        <form action={formAction} className="ml-auto shrink-0">
-          <input name="locale" type="hidden" value={locale} />
-          <input name="targetUserProfileId" type="hidden" value={user.id} />
-          <input name="redirectPath" type="hidden" value={redirectPath} />
-          <UnfollowButton locale={locale} />
-          {state.formError ? (
-            <p className="mt-1 max-w-40 text-right text-[11px] text-red-600">
-              {state.formError}
-            </p>
-          ) : null}
-        </form>
-      ) : null}
     </div>
-  );
-}
-
-function UnfollowButton({ locale }: { locale: string }) {
-  const { pending } = useFormStatus();
-  const t = getFollowCopy(locale);
-
-  return (
-    <Button
-      className="h-8 rounded-full px-3 text-xs"
-      type="submit"
-      variant="ghost"
-      disabled={pending}
-    >
-      {pending ? t.unfollowing : t.unfollow}
-    </Button>
   );
 }
 
@@ -168,16 +118,11 @@ export function ProfileOverviewPanel({
   createdCount,
   joinedCount,
   friendCount,
-  followersCount,
-  followingCount,
   friends,
-  followers,
-  following,
   locale,
   createdLabel,
   joinedLabel,
   onActivitySectionChange,
-  redirectPath,
   showFriendCount = true,
   showJoinedCount = true,
 }: ProfileOverviewPanelProps) {
@@ -185,50 +130,18 @@ export function ProfileOverviewPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const t = getProfileFollowCopy(locale);
   const statCount =
-    1 + (showJoinedCount ? 1 : 0) + 2 + (showFriendCount ? 1 : 0);
+    1 + (showJoinedCount ? 1 : 0) + (showFriendCount ? 1 : 0);
   const statsGridClass =
-    statCount === 5
-      ? "grid w-full grid-cols-5 gap-2"
-      : statCount === 4
-        ? "grid w-full grid-cols-4 gap-2"
-        : "grid w-full grid-cols-3 gap-2";
+    statCount === 3
+      ? "grid w-full grid-cols-3 gap-2"
+      : "grid w-full grid-cols-2 gap-2";
 
-  const activeList =
-    activePanel === "friends"
-      ? friends
-      : activePanel === "followers"
-        ? followers
-        : following;
-  const activeCount =
-    activePanel === "friends"
-      ? friendCount
-      : activePanel === "followers"
-        ? followersCount
-        : followingCount;
-  const activeTitle =
-    activePanel === "friends"
-      ? t.friendsTitle
-      : activePanel === "followers"
-        ? t.followersTitle
-        : t.followingTitle;
-  const activeDescription =
-    activePanel === "friends"
-      ? t.friendsDescription
-      : activePanel === "followers"
-        ? t.followersDescription
-        : t.followingDescription;
-  const emptyTitle =
-    activePanel === "friends"
-      ? t.friendsEmptyTitle
-      : activePanel === "followers"
-        ? t.followersEmptyTitle
-        : t.followingEmptyTitle;
-  const emptyDescription =
-    activePanel === "friends"
-      ? t.friendsEmptyDescription
-      : activePanel === "followers"
-        ? t.followersEmptyDescription
-        : t.followingEmptyDescription;
+  const activeList = friends;
+  const activeCount = friendCount;
+  const activeTitle = t.friendsTitle;
+  const activeDescription = t.friendsDescription;
+  const emptyTitle = t.friendsEmptyTitle;
+  const emptyDescription = t.friendsEmptyDescription;
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredList = normalizedQuery
     ? activeList.filter((user) =>
@@ -268,18 +181,6 @@ export function ProfileOverviewPanel({
             value={joinedCount}
           />
         ) : null}
-        <InteractiveStatCard
-          active={activePanel === "following"}
-          label={t.followingCount}
-          onClick={() => openPanel("following")}
-          value={followingCount}
-        />
-        <InteractiveStatCard
-          active={activePanel === "followers"}
-          label={t.followersCount}
-          onClick={() => openPanel("followers")}
-          value={followersCount}
-        />
         {showFriendCount ? (
           <InteractiveStatCard
             active={activePanel === "friends"}
@@ -367,10 +268,8 @@ export function ProfileOverviewPanel({
                 <div className="grid gap-3">
                   {filteredList.map((user) => (
                     <CompactUserRow
-                      canUnfollow={activePanel === "following"}
                       key={user.id}
                       locale={locale}
-                      redirectPath={redirectPath}
                       user={user}
                     />
                   ))}

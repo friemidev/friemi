@@ -66,9 +66,6 @@ import {
   getActivityPriceLabel,
   getActivitySeatLabel,
 } from "@/features/activities/utils/activityDisplay";
-import { FollowButton } from "@/features/follow/components/FollowButton";
-import { getFollowCopy } from "@/features/follow/copy";
-import { getViewerFollowState } from "@/features/follow/queries/getViewerFollowState";
 import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
@@ -626,7 +623,6 @@ export default async function ActivityDetailPage({
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
-  const followLabels = getFollowCopy(locale);
   const viewerProfile = await perf.measure("activity.viewerProfile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
@@ -1078,14 +1074,12 @@ export default async function ActivityDetailPage({
 
   const [
     viewerParticipation,
-    isFollowingOrganizer,
     comments,
     friendSignal,
     coManagerDashboard,
   ] = await perf.measure("activity.viewerData", () =>
     Promise.all([
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
-      getViewerFollowState(viewerProfile?.id, activity.organizer.id),
       getActivityComments(
         activity.id,
         viewerProfile?.id ?? null,
@@ -1499,33 +1493,11 @@ export default async function ActivityDetailPage({
                 <p className="font-medium text-ink">
                   {activity.organizer.nickname}
                 </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                  <span>
-                    {followLabels.followers} {activity.organizer.followerCount}
-                  </span>
-                  <span>
-                    {followLabels.followingCount}{" "}
-                    {activity.organizer.followingCount}
-                  </span>
-                </div>
                 <p className="mt-1 text-sm leading-6 text-zinc-600">
                   {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
                 </p>
               </div>
             </div>
-            {!isOrganizer ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <FollowButton
-                  buttonClassName="h-10 rounded-full border border-[#8AB68E] bg-[#FEFFF9] px-5 text-[#156240] shadow-none hover:bg-white"
-                  fullWidth={false}
-                  isAuthenticated={Boolean(viewerProfile)}
-                  isFollowing={isFollowingOrganizer}
-                  locale={locale}
-                  redirectPath={`/activities/${activity.id}`}
-                  targetUserProfileId={activity.organizer.id}
-                />
-              </div>
-            ) : null}
           </div>
 
           <ActivityAnnouncementsSection

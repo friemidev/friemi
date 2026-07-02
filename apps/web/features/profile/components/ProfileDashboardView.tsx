@@ -139,10 +139,6 @@ export function ProfileDashboardView({
               joinedCount={dashboard.participationCount}
               friendCount={dashboard.friendCount}
               friends={dashboard.friends}
-              followers={dashboard.followers}
-              followersCount={dashboard.followersCount}
-              following={dashboard.following}
-              followingCount={dashboard.followingCount}
               locale={locale}
               createdLabel={
                 isSelf ? selfMetricLabels.created : t.profile.createdCount
@@ -151,7 +147,6 @@ export function ProfileDashboardView({
                 isSelf ? selfMetricLabels.joined : t.profile.participationCount
               }
               onActivitySectionChange={setActiveProfileSection}
-              redirectPath={isSelf ? "/profile" : `/profile/${profile.id}`}
               showFriendCount={isSelf}
               showJoinedCount={showPrivateParticipation}
             />
