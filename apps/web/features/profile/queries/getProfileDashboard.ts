@@ -23,6 +23,10 @@ import {
 
 export const profileActivityListLimit = 12;
 export const profileFollowListLimit = 12;
+const publicPastParticipationStatuses: ParticipantStatus[] = [
+  "JOINED",
+  "APPROVED",
+];
 
 const publicProfileSelect = {
   id: true,
@@ -256,6 +260,66 @@ function getCreatedActivitiesWhere({
       },
       isSelf ? getOwnTeamActivityWhere() : getTeamActivityWhere(),
     ],
+  };
+}
+
+function getPublicPastParticipationsWhere({
+  isFriend,
+  now,
+  profileId,
+}: {
+  isFriend: boolean;
+  now: Date;
+  profileId: string;
+}): Prisma.ActivityParticipantWhereInput {
+  const visibilityValues: ActivityVisibility[] = isFriend
+    ? ["PUBLIC", "PRIVATE"]
+    : ["PUBLIC"];
+
+  return {
+    userProfileId: profileId,
+    status: {
+      in: publicPastParticipationStatuses,
+    },
+    activity: {
+      AND: [
+        getTeamActivityWhere(),
+        {
+          visibility: {
+            in: visibilityValues,
+          },
+        },
+        {
+          status: {
+            not: "CANCELLED",
+          },
+        },
+        {
+          OR: [
+            {
+              status: "ENDED",
+            },
+            {
+              endAt: {
+                lt: now,
+              },
+            },
+            {
+              AND: [
+                {
+                  endAt: null,
+                },
+                {
+                  startAt: {
+                    lt: now,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   };
 }
 
@@ -560,6 +624,7 @@ export async function getPublicProfileDashboard(
   profileId: string,
   viewerProfileId?: string | null,
 ): Promise<ProfileDashboardViewModel> {
+  const now = new Date();
   const relationship = await getProfileViewerRelationship(
     profileId,
     viewerProfileId,
@@ -569,18 +634,28 @@ export async function getPublicProfileDashboard(
     isSelf: viewerProfileId === profileId,
     profileId,
   });
+  const pastParticipationWhere = getPublicPastParticipationsWhere({
+    isFriend: relationship.isFriend,
+    now,
+    profileId,
+  });
   const [
     createdActivityCount,
+    participationCount,
     friendCount,
     followersCount,
     followingCount,
     createdActivities,
+    participations,
     friendships,
     followers,
     following,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
+    }),
+    prisma.activityParticipant.count({
+      where: pastParticipationWhere,
     }),
     prisma.friendship.count({
       where: {
@@ -602,6 +677,12 @@ export async function getPublicProfileDashboard(
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: profileActivityListLimit,
       select: activityCardSelect,
+    }),
+    prisma.activityParticipant.findMany({
+      where: pastParticipationWhere,
+      orderBy: [{ joinedAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileParticipationSelect,
     }),
     prisma.friendship.findMany({
       where: {
@@ -673,16 +754,27 @@ export async function getPublicProfileDashboard(
   const createdActivityCards = await applyOrganizerParticipationDefaults(
     createdActivities.map(getActivityCardViewModel),
   );
+  const participationActivityCards = await applyOrganizerParticipationDefaults(
+    participations.map((participation) =>
+      getActivityCardViewModel(participation.activity),
+    ),
+  );
 
   return {
     createdActivityCount,
-    participationCount: 0,
+    participationCount,
     favoriteActivityCount: 0,
     friendCount,
     followersCount,
     followingCount,
     createdActivities: createdActivityCards,
-    participations: [],
+    participations: participations.map((participation, index) => ({
+      id: participation.id,
+      status: participation.status,
+      joinedAt: participation.joinedAt.toISOString(),
+      cancelledAt: participation.cancelledAt?.toISOString() ?? null,
+      activity: participationActivityCards[index],
+    })),
     favoriteActivities: [],
     friends: friendships.map((friendship) =>
       mapFriendUser(friendship, profileId),

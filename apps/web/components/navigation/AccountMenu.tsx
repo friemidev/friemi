@@ -218,9 +218,7 @@ export function AccountMenu({
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#369758] text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-[#156240] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
-          profileActive &&
-            "ring-2 ring-[#8AB68E] ring-offset-2 ring-offset-paper after:absolute after:inset-[3px] after:rounded-full after:ring-2 after:ring-white/85",
+          "relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#369758] text-sm font-semibold text-white shadow-sm ring-1 ring-black/10 transition hover:bg-[#156240] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35 max-[420px]:h-9 max-[420px]:w-9",
         )}
       >
         <AvatarCircle

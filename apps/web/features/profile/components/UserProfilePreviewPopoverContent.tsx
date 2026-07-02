@@ -144,9 +144,9 @@ function AddFriendQuickButton({
 
   if (!isAuthenticated) {
     return (
-      <Link href={getSignInHref(locale, redirectPath)}>
+      <Link className="block min-w-0" href={getSignInHref(locale, redirectPath)}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
           variant="secondary"
         >
           <UserPlus className="h-3 w-3 shrink-0" />
@@ -158,7 +158,7 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.alreadyFriends}
       </div>
@@ -172,7 +172,7 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.pendingFriendRequest}
       </div>
@@ -181,9 +181,9 @@ function AddFriendQuickButton({
 
   if (relationship.pendingFriendRequest === "received") {
     return (
-      <Link href={withLocale(locale, "/friends")}>
+      <Link className="block min-w-0" href={withLocale(locale, "/friends")}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#156240] hover:bg-white"
+          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-2 !text-[11px] font-semibold text-[#156240] hover:bg-white"
           variant="secondary"
         >
           {previewCopy.requestReceived}
@@ -195,7 +195,7 @@ function AddFriendQuickButton({
   return (
     <form
       action={formAction}
-      className="inline-grid min-w-[6.6rem] gap-1 justify-items-center"
+      className="inline-grid w-full min-w-0 gap-1 justify-items-center"
       onSubmit={() => {
         setIsOptimisticPending(true);
       }}
@@ -218,7 +218,7 @@ function FriendSubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+      className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
       type="submit"
     >
       {pending ? (
@@ -342,10 +342,10 @@ export function UserProfilePreviewPopoverContent({
               <p className="truncate text-sm font-semibold text-[#1D1D1B]">
                 {resolvedNickname}
               </p>
-            {isCoCreator ? (
-              <CoCreatorIdentityBadge locale={locale} variant="icon" />
-            ) : null}
-          </div>
+              {isCoCreator ? (
+                <CoCreatorIdentityBadge locale={locale} variant="icon" />
+              ) : null}
+            </div>
             {showBio ? (
               <p className="mt-2 text-[11px] leading-5 text-[#156240]/70">
                 {resolvedBio}
@@ -354,15 +354,34 @@ export function UserProfilePreviewPopoverContent({
           </div>
         </div>
 
-        {showProfileLink ? (
-          <Link
-            className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
-            href={withLocale(locale, `/profile/${profileId}`)}
-            prefetch={false}
+        {showProfileLink || showActionButtons ? (
+          <div
+            className={
+              showProfileLink && showActionButtons
+                ? "grid grid-cols-2 gap-2"
+                : "grid gap-2"
+            }
           >
-            <ExternalLink className="h-3 w-3" />
-            {previewCopy.openProfile}
-          </Link>
+            {showProfileLink ? (
+              <Link
+                className="inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
+                href={withLocale(locale, `/profile/${profileId}`)}
+                prefetch={false}
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="truncate">{previewCopy.openProfile}</span>
+              </Link>
+            ) : null}
+            {showActionButtons ? (
+              <AddFriendQuickButton
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                profileId={profileId}
+                redirectPath={redirectPath}
+                relationship={relationship}
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {isSelf ? (
@@ -379,17 +398,6 @@ export function UserProfilePreviewPopoverContent({
           </p>
         ) : null}
 
-        {showActionButtons ? (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <AddFriendQuickButton
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              profileId={profileId}
-              redirectPath={redirectPath}
-              relationship={relationship}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   );

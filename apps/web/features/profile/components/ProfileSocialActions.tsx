@@ -226,7 +226,7 @@ export function ProfileSocialActions({
   const redirectPath = `/profile/${profileId}`;
 
   return (
-    <div className="grid w-full gap-2 sm:w-[280px]">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
       <div className="grid gap-2">
         <FriendAction
           isAuthenticated={isAuthenticated}
@@ -236,13 +236,13 @@ export function ProfileSocialActions({
         />
       </div>
       <ReportDialog
-        className="h-9 w-full bg-transparent text-xs"
+        className="h-10 bg-white/65 px-3 text-xs text-zinc-600 ring-[#D6D5B2] hover:bg-white"
         isAuthenticated={isAuthenticated}
         locale={locale}
         redirectPath={redirectPath}
         targetId={profileId}
         targetType="USER_PROFILE"
-        variant="link"
+        variant="button"
       />
     </div>
   );

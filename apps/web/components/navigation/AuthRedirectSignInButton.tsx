@@ -36,7 +36,12 @@ export function AuthRedirectSignInButton({
 
   return (
     <Link href={getSignInHref(locale, redirectTarget)}>
-      <Button variant="secondary">{label}</Button>
+      <Button
+        className="max-[420px]:h-10 max-[420px]:min-h-10 max-[420px]:px-3 max-[420px]:text-xs"
+        variant="secondary"
+      >
+        {label}
+      </Button>
     </Link>
   );
 }
