@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 
 type AndroidAuthCompleteRedirectProps = {
   locale: string;
@@ -20,7 +21,7 @@ export function AndroidAuthCompleteRedirect({
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       window.location.replace(appHref);
-    }, 120);
+    }, 180);
 
     return () => window.clearTimeout(timeout);
   }, [appHref]);
@@ -50,9 +51,7 @@ export function AndroidAuthCompleteRedirect({
   return (
     <main className="flex min-h-[100svh] items-center justify-center bg-[#FEFFF9] px-5 py-8">
       <section className="w-full max-w-sm rounded-[2rem] border border-[#D6D5B2] bg-white/85 p-6 text-center shadow-[0_24px_70px_rgba(21,98,64,0.14)]">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#156240] text-xl font-black text-white">
-          F
-        </div>
+        <BrandLoader label={copy.title} size="sm" />
         <h1 className="mt-5 text-xl font-black text-[#0B2B66]">
           {copy.title}
         </h1>

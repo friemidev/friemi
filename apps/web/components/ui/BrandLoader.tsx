@@ -47,7 +47,7 @@ export function BrandLoader({
             srcSet={brand.logoFullBackgroundPath}
             media="(prefers-reduced-motion: reduce)"
           />
-          <img src={brand.loadingImagePath} alt="" />
+          <img src={brand.loadingImagePath} alt="" decoding="async" />
         </picture>
       </span>
       {showLabel ? (
