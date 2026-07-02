@@ -3,6 +3,8 @@ import { withLocale } from "./routes";
 
 export const authRedirectParamName = "redirect_url";
 export const androidAuthCompleteTargetParamName = "target";
+export const androidAuthReturnParamName = "__friemi_android_auth_return";
+export const androidAuthRetryParamName = "__friemi_android_auth_retry";
 
 const authRedirectFallbackPath = "/home";
 const appOrigin = "https://friemi.local";

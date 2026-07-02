@@ -163,6 +163,12 @@ adb shell dumpsys activity activities | rg "ResumedActivity|com.friemi|com.andro
 adb shell pm list packages | rg -i "friemi|webapk|chrome"
 ```
 
+
+安装:
+```bash
+adb install -r /home/ubuntu23/Bureau/friemi/apps/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
 测试原生壳时，建议从 `Friemi Dev` 图标或下面命令启动：
 
 ```bash

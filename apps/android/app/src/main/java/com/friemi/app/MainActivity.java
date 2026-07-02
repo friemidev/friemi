@@ -56,6 +56,8 @@ public final class MainActivity extends Activity {
     private static final long AUTH_BROWSER_AUTO_RETRY_MIN_MS = 3500L;
     private static final long AUTH_BROWSER_AUTO_RETRY_MAX_MS = 180000L;
     private static final String AUTH_COMPLETE_HOST = "auth-complete";
+    private static final String ANDROID_AUTH_RETURN_PARAM = "__friemi_android_auth_return";
+    private static final String ANDROID_AUTH_TS_PARAM = "__friemi_android_auth_ts";
     private static final String[] CLERK_AUTH_HOST_PARTS = {
         "clerk",
         "accounts.dev"
@@ -397,10 +399,26 @@ public final class MainActivity extends Activity {
 
     private String buildUrlFromAuthCompleteTarget(String target) {
         String route = normalizeAuthCompleteTarget(target);
+        String url;
         if (getLocaleFromPath(route) != null) {
-            return getBaseUrl() + route;
+            url = getBaseUrl() + route;
+        } else {
+            url = getBaseUrl() + "/" + resolveLocale(null) + route;
         }
-        return getBaseUrl() + "/" + resolveLocale(null) + route;
+        return appendAndroidAuthReturnMarker(url);
+    }
+
+    private String appendAndroidAuthReturnMarker(String url) {
+        try {
+            return Uri.parse(url)
+                .buildUpon()
+                .appendQueryParameter(ANDROID_AUTH_RETURN_PARAM, "1")
+                .appendQueryParameter(ANDROID_AUTH_TS_PARAM, String.valueOf(System.currentTimeMillis()))
+                .build()
+                .toString();
+        } catch (Exception ignored) {
+            return url;
+        }
     }
 
     private String normalizeAuthCompleteTarget(String target) {
@@ -549,13 +567,32 @@ public final class MainActivity extends Activity {
     private void showLoading() {
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setProgress(10);
+        loadingOverlay.animate().cancel();
+        loadingOverlay.setAlpha(0f);
         loadingOverlay.setVisibility(View.VISIBLE);
+        loadingOverlay.animate().alpha(1f).setDuration(160L).start();
         errorOverlay.setVisibility(View.GONE);
     }
 
     private void hideLoading() {
         progressBar.setVisibility(View.GONE);
-        loadingOverlay.setVisibility(View.GONE);
+        loadingOverlay.animate().cancel();
+        if (loadingOverlay.getVisibility() != View.VISIBLE) {
+            loadingOverlay.setVisibility(View.GONE);
+            loadingOverlay.setAlpha(1f);
+            return;
+        }
+
+        loadingOverlay.animate()
+            .alpha(0f)
+            .setDuration(220L)
+            .withEndAction(() -> {
+                if (loadingOverlay.getAlpha() <= 0.05f) {
+                    loadingOverlay.setVisibility(View.GONE);
+                    loadingOverlay.setAlpha(1f);
+                }
+            })
+            .start();
     }
 
     private void showError(String message) {
