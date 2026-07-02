@@ -1,5 +1,6 @@
 package com.friemi.app;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DownloadManager;
@@ -9,6 +10,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -53,8 +55,10 @@ import java.util.Locale;
 @SuppressWarnings("deprecation")
 public final class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 4821;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4822;
     private static final String PREFS_NAME = "friemi_android";
     private static final String PREF_LOCALE = "friemi_locale";
+    private static final String PREF_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested";
     private static final String LOCALE_ZH = "zh-CN";
     private static final String LOCALE_EN = "en";
     private static final String LOCALE_FR = "fr";
@@ -764,7 +768,7 @@ public final class MainActivity extends Activity {
             payload.put("packageName", BuildConfig.APPLICATION_ID);
             payload.put("baseUrl", getBaseUrl());
             payload.put("locale", resolveLocale(null));
-            payload.put("pushSupported", false);
+            payload.put("pushSupported", true);
         } catch (JSONException ignored) {
             return "{}";
         }
@@ -808,16 +812,62 @@ public final class MainActivity extends Activity {
         });
     }
 
-    String registerPushTokenPlaceholder() {
+    String registerPushTokenFromBridge() {
+        mainHandler.post(() -> {
+            maybeRequestNotificationPermission();
+            FriemiPushTokenProvider.requestToken(
+                this,
+                resolveLocale(null),
+                this::dispatchPushTokenResult
+            );
+        });
+
         JSONObject payload = new JSONObject();
         try {
-            payload.put("ok", false);
-            payload.put("supported", false);
-            payload.put("reason", "FCM_NOT_CONNECTED");
+            payload.put("ok", true);
+            payload.put("supported", true);
+            payload.put("status", "REQUESTED");
         } catch (JSONException ignored) {
             return "{\"ok\":false}";
         }
         return payload.toString();
+    }
+
+    String getStoredPushTokenFromBridge() {
+        return FriemiPushTokenProvider.getStoredTokenPayload(this, resolveLocale(null));
+    }
+
+    private void dispatchPushTokenResult(String payloadJson) {
+        if (webView == null || payloadJson == null) {
+            return;
+        }
+
+        mainHandler.post(() -> webView.evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('friemi:android-push-token',{detail:"
+                + JSONObject.quote(payloadJson)
+                + "}))",
+            null
+        ));
+    }
+
+    private void maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) {
+            return;
+        }
+
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        if (preferences.getBoolean(PREF_NOTIFICATION_PERMISSION_REQUESTED, false)) {
+            return;
+        }
+
+        preferences.edit().putBoolean(PREF_NOTIFICATION_PERMISSION_REQUESTED, true).apply();
+        requestPermissions(
+            new String[] { Manifest.permission.POST_NOTIFICATIONS },
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        );
     }
 
     void updateBackBehaviorFromBridge(String behaviorJson) {

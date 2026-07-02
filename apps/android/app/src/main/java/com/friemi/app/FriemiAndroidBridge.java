@@ -46,7 +46,12 @@ final class FriemiAndroidBridge {
 
     @JavascriptInterface
     public String registerPushToken() {
-        return activity.registerPushTokenPlaceholder();
+        return activity.registerPushTokenFromBridge();
+    }
+
+    @JavascriptInterface
+    public String getStoredPushToken() {
+        return activity.getStoredPushTokenFromBridge();
     }
 
     @JavascriptInterface

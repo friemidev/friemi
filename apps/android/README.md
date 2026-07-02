@@ -17,9 +17,10 @@ Current branch scope:
 - Provide a small `window.FriemiAndroid` JavaScript bridge
 - Support image file picking from WebView forms
 - Show native loading and error states
+- Request and forward Firebase Cloud Messaging tokens when Firebase is configured
 - Lock orientation to portrait
 
-This branch does not connect Firebase Cloud Messaging yet. `FriemiAndroid.registerPushToken()` currently returns a structured placeholder.
+FCM requires an Android Firebase config file. Without `google-services.json`, `FriemiAndroid.registerPushToken()` returns a structured `FIREBASE_NOT_CONFIGURED` result and the app keeps working without push.
 
 ## Open In Android Studio
 
@@ -124,10 +125,27 @@ window.FriemiAndroid?.copyText(text)
 window.FriemiAndroid?.downloadFile(url)
 window.FriemiAndroid?.share(JSON.stringify({ title, text, url }))
 window.FriemiAndroid?.registerPushToken()
+window.FriemiAndroid?.getStoredPushToken()
 window.FriemiAndroid?.setBackBehavior(JSON.stringify({ hasModal: true }))
 ```
 
 `getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status. The web app also reports modal / sheet state through `setBackBehavior`, so Android back closes open UI first before navigating away.
+
+`registerPushToken()` is asynchronous. The native shell requests the FCM token and dispatches a `friemi:android-push-token` browser event; the web bridge then posts the token to `/api/mobile/devices/register` using the current WebView login session.
+
+## Firebase Cloud Messaging
+
+To enable Android push notifications:
+
+- Add the Firebase Android app for `com.friemi.app`.
+- Put the Firebase config file at `apps/android/app/google-services.json`.
+- Configure web runtime env vars:
+  - `FIREBASE_PROJECT_ID`
+  - `FIREBASE_CLIENT_EMAIL`
+  - `FIREBASE_PRIVATE_KEY`
+- Run the Prisma migration that creates `MobileDevice`.
+
+New native Android push work should be written in Kotlin. The existing Java WebView shell remains in place for now.
 
 ## App Links
 

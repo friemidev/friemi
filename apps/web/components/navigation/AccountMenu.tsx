@@ -51,6 +51,62 @@ type AccountMenuProps = {
   incomingFriendRequests?: FriendRequestViewModel[];
 };
 
+type AndroidPushTokenPayload = {
+  deviceId?: string;
+  fcmToken?: string;
+  ok?: boolean;
+};
+
+function isFriemiAndroidApp() {
+  return (
+    typeof window !== "undefined" &&
+    /FriemiAndroid\//i.test(window.navigator.userAgent)
+  );
+}
+
+function parseAndroidPushTokenPayload(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as AndroidPushTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+async function unregisterAndroidPushToken() {
+  if (!isFriemiAndroidApp()) {
+    return;
+  }
+
+  const payload = parseAndroidPushTokenPayload(
+    window.FriemiAndroid?.getStoredPushToken?.(),
+  );
+
+  if (!payload?.ok || (!payload.fcmToken && !payload.deviceId)) {
+    return;
+  }
+
+  try {
+    await fetch("/api/mobile/devices/unregister", {
+      body: JSON.stringify({
+        deviceId: payload.deviceId,
+        fcmToken: payload.fcmToken,
+        platform: "ANDROID",
+      }),
+      credentials: "same-origin",
+      headers: {
+        "content-type": "application/json",
+      },
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Failed to unregister Android push token", error);
+  }
+}
+
 export function AccountMenu({
   locale,
   showAdminLink = false,
@@ -398,7 +454,9 @@ export function AccountMenu({
               role="menuitem"
               onClick={() => {
                 closeMenu();
-                void signOut({ redirectUrl: withLocale(locale, "/") });
+                void unregisterAndroidPushToken().finally(() => {
+                  void signOut({ redirectUrl: withLocale(locale, "/") });
+                });
               }}
               className="flex w-full items-center gap-3 border-t border-black/5 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
             >

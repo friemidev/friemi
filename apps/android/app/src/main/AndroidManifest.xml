@@ -11,6 +11,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Friemi"
         android:usesCleartextTraffic="${friemiUsesCleartextTraffic}">
+        <service
+            android:name=".FriemiFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
