@@ -504,9 +504,23 @@ public final class MainActivity extends Activity {
         if (host == null) {
             return false;
         }
+        if (shouldLoadClerkHandshakeInWebView(uri)) {
+            return false;
+        }
 
         String lowerHost = host.toLowerCase(Locale.ROOT);
         return isGoogleOAuthHost(lowerHost) || isClerkAuthHost(lowerHost);
+    }
+
+    private boolean shouldLoadClerkHandshakeInWebView(Uri uri) {
+        String host = uri.getHost();
+        String path = uri.getPath();
+        if (host == null || path == null) {
+            return false;
+        }
+        String lowerHost = host.toLowerCase(Locale.ROOT);
+        String lowerPath = path.toLowerCase(Locale.ROOT);
+        return isClerkAuthHost(lowerHost) && lowerPath.contains("/v1/client/handshake");
     }
 
     private boolean isGoogleOAuthHost(String lowerHost) {
@@ -819,6 +833,10 @@ public final class MainActivity extends Activity {
                 return true;
             }
 
+            if (shouldLoadClerkHandshakeInWebView(uri)) {
+                return false;
+            }
+
             if (!shouldStayInWebView(uri)) {
                 openExternal(uri.toString());
                 return true;
@@ -941,6 +959,12 @@ public final class MainActivity extends Activity {
 
                     if (shouldOpenInAuthBrowser(uri)) {
                         openAuthBrowser(uri.toString());
+                        popupView.destroy();
+                        return true;
+                    }
+
+                    if (shouldLoadClerkHandshakeInWebView(uri)) {
+                        webView.loadUrl(uri.toString());
                         popupView.destroy();
                         return true;
                     }

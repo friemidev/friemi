@@ -13,6 +13,7 @@ import { NotificationHeaderLink } from "@/features/notifications/components/Noti
 
 type AppHeaderProps = {
   locale: string;
+  isAuthenticated?: boolean;
   showNotificationNav?: boolean;
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
@@ -27,6 +28,7 @@ type AppHeaderProps = {
 
 export function AppHeader({
   locale,
+  isAuthenticated = false,
   showNotificationNav = false,
   showAdminNav = false,
   unreadNotificationCount = 0,
@@ -71,6 +73,7 @@ export function AppHeader({
           ) : null}
           <UserMenu
             locale={locale}
+            isAuthenticated={isAuthenticated}
             showAdminLink={showAdminNav}
             viewerContactEmail={viewerContactEmail}
             viewerEmail={viewerEmail}
