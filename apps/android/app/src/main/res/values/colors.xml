@@ -1,0 +1,9 @@
+<resources>
+    <color name="friemi_paper">#FEFFF9</color>
+    <color name="friemi_mist">#F1F2EC</color>
+    <color name="friemi_ink">#0B2B66</color>
+    <color name="friemi_green">#156240</color>
+    <color name="friemi_green_soft">#8AB68E</color>
+    <color name="friemi_coral">#F09182</color>
+    <color name="friemi_sand">#D6D5B2</color>
+</resources>
