@@ -171,7 +171,7 @@ P2 候选：
 - 发布节奏：先内部测试 APK，再考虑 Play Store
 - Google Play Console 和签名密钥：已有账号和密钥管理条件
 - 测试机型：继续覆盖小屏 Android、大屏 Android、平板和低性能机型；虽然网页端已经测过，APP 壳仍需要单独测登录、推送、Deep Link、相册、扫码和返回键
-- 隐私政策和权限声明：待补。至少需要围绕账号登录、通知、相册 / 图片上传、相机 / 扫码、位置 / 地图、聊天消息和数据删除路径准备说明
+- 隐私政策和权限声明：已拆到 `apps/android/docs/privacy-permissions.md`。内测 APK / AAB、签名和 Play Console 流程记录在 `apps/android/docs/internal-testing-release.md`
 
 ## 当前建议
 
@@ -284,8 +284,9 @@ en* -> en
 
 ### M4：发布准备
 
-- 隐私政策
-- 权限说明
-- 内测包
+- 隐私政策：`apps/android/docs/privacy-permissions.md`
+- 权限说明：`apps/android/docs/privacy-permissions.md`
+- 内测包：`apps/android/docs/internal-testing-release.md`
+- Release signing：Gradle 读取本机参数或环境变量，不提交密钥
 - Play Store 素材
 - 设备兼容测试

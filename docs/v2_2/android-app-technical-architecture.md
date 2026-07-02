@@ -534,9 +534,9 @@ window.FriemiAndroid = {
 
 任务：
 
-- 生成内部测试 APK / AAB
+- 生成内部测试 APK / AAB，流程见 `apps/android/docs/internal-testing-release.md`
 - 准备 Play Store 素材
-- 补隐私政策和权限声明
+- 补隐私政策和权限声明，草案见 `apps/android/docs/privacy-permissions.md`
 - 小屏、大屏、平板、低性能设备测试
 - 收集崩溃和反馈
 

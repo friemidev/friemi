@@ -63,6 +63,18 @@ Release 发布前加固检查见：
 apps/android/docs/release-hardening.md
 ```
 
+内测 APK / AAB、签名和 Play Console 准备见：
+
+```text
+apps/android/docs/internal-testing-release.md
+```
+
+隐私政策和权限说明草案见：
+
+```text
+apps/android/docs/privacy-permissions.md
+```
+
 By default, debug builds load production:
 
 ```text
