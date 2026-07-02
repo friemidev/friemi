@@ -25,6 +25,21 @@ final class FriemiAndroidBridge {
     }
 
     @JavascriptInterface
+    public void openMap(String url) {
+        activity.openExternalFromBridge(url);
+    }
+
+    @JavascriptInterface
+    public void copyText(String text) {
+        activity.copyTextFromBridge(text);
+    }
+
+    @JavascriptInterface
+    public void downloadFile(String url) {
+        activity.downloadFileFromBridge(url);
+    }
+
+    @JavascriptInterface
     public void share(String payloadJson) {
         activity.shareFromBridge(payloadJson);
     }

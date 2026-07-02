@@ -55,6 +55,15 @@ body {
   color: var(--friemi-palette-ink);
 }
 
+html[data-friemi-android-app="true"],
+html[data-friemi-android-app="true"] body {
+  overscroll-behavior-y: contain;
+}
+
+html[data-friemi-android-app="true"] * {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .app-orientation-lock {
   display: none;
 }

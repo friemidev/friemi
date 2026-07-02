@@ -5,7 +5,7 @@
 当前建议采用：
 
 ```text
-Android Studio WebView 壳 + 原生桥接 + 现有移动 Web 页面复用
+Android Studio WebView 壳 + Kotlin 原生模块 + 原生桥接 + 现有移动 Web 页面复用
 ```
 
 这个方案适合 Friemi 当前阶段，因为移动端网页、微信 WebView、Android / iOS 浏览器适配已经投入较多，直接完全原生重写会导致开发成本和维护成本明显上升。Android APP 首发应优先把“安装、登录、推送、Deep Link、返回键、分享、扫码、上传”等 APP 体验补齐，而不是重写所有页面。
@@ -16,8 +16,27 @@ Android Studio WebView 壳 + 原生桥接 + 现有移动 Web 页面复用
 Android 壳工程
   -> 加载 Friemi 移动端 Web
   -> 原生桥接处理 APP 特有能力
-  -> 必要时逐步原生化高频页面
+  -> 用 Kotlin 逐步原生化高频页面和系统能力
 ```
+
+## Android 语言策略
+
+后续 Android 产品化开发采用 **Kotlin 优先**。现有 Java WebView 壳可以继续保留和维护，但不再把 Java 作为新增原生能力的默认语言。
+
+约定：
+
+- 现有 `MainActivity.java`、`FriemiAndroidBridge.java` 等 Java 壳代码可以在短期内继续维护，避免为了语言迁移影响当前可用壳工程。
+- 新增原生模块默认使用 Kotlin，包括 FCM 推送、扫码签到、原生通知中心、原生聊天、图片选择 / 上传增强、桌游工具原生化和后续高频原生页面。
+- 新增 Android 业务逻辑优先拆成 Kotlin 类 / module，不继续把复杂逻辑堆进 Java `MainActivity`。
+- 只有在修补现有 Java 壳的小 bug 时，才继续直接改 Java。
+- 当 Kotlin 模块稳定后，再单独评估是否把 `MainActivity.java` 迁移为 Kotlin；迁移不阻塞当前 WebView 壳使用。
+
+原因：
+
+- 扫码签到需要 CameraX / ML Kit、权限流和生命周期处理，Kotlin 更适合。
+- 原生通知中心、FCM、Deep Link 和后台状态同步会有较多异步逻辑，Kotlin coroutine / Flow 更清晰。
+- 原生聊天、图片上传、进度反馈和缓存更适合 Kotlin 的现代 Android 生态。
+- 桌游工具如果继续向原生化、图形化和动效化推进，Kotlin + Jetpack Compose 会比 Java + XML 更适合长期维护。
 
 ## 技术边界
 
@@ -48,7 +67,7 @@ feature/v2-android-webview-shell
 建议技术：
 
 - Android Studio
-- Kotlin 优先，Java 也可接受
+- Kotlin 优先；Java 仅用于维护既有壳代码
 - AndroidX
 - Firebase Cloud Messaging
 - WebView + WebViewClient + WebChromeClient

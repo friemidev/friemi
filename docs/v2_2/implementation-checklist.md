@@ -494,6 +494,7 @@ docs/v2_2/android-app-technical-architecture.md
 - [x] 记录后续需要讨论的产品、技术和发布问题
 - [x] 拆分 WebView 壳、登录回跳、Deep Link、FCM、接口补充、权限声明和里程碑
 - [x] 明确 Android APP 语言策略：中文系统走 `zh-CN`，英语系统走 `en`，其他语言走 `fr`
+- [x] 明确 Android 长期技术语言策略：现有 Java WebView 壳可维护，新原生模块统一使用 Kotlin
 - [x] 记录 Android icon、启动图、通知图标、商店图和截图等素材需求
 - [x] 暂不进行工程基础建设，等路线确认后再拆独立分支实施
 
@@ -502,6 +503,7 @@ docs/v2_2/android-app-technical-architecture.md
 - [x] v2.2 checklist 中能看到 Android APP 规划入口和建议分支
 - [x] Android APP 独立规划文档存在，且后续可以继续追加讨论结论
 - [x] Android APP 技术架构文档存在，且能作为后续工程分支实施依据
+- [x] 文档中明确扫码签到、原生通知、原生聊天和桌游工具等后续能力不继续用 Java 扩展
 - [x] 当前分支不引入 Android 工程、依赖或生产配置变更
 
 ### 15. Android WebView 壳工程 A0 / A1
@@ -548,6 +550,41 @@ feature/v2-android-webview-shell
 - [x] 当前分支不修改现有 Web 业务逻辑、不新增数据库迁移
 - [ ] 真机能完成登录、返回、图片上传和基础外链跳转
 - [ ] 真实 App Links 和 FCM 在后续分支完成
+
+### 16. Android App 基础体验稳定化
+
+建议切换分支：
+
+```text
+feature/v2-android-app-foundation-polish
+```
+
+需求理解：
+
+登录链路打通后，Android App 下一步需要把“像一个 App”的基础体验补齐。重点不是引入 FCM 或重写原生页面，而是让启动、回到前台、Deep Link、返回键、慢网、文件能力和未登录报名策略都稳定，避免用户感觉只是一个卡顿的网页壳。
+
+小功能：
+
+- [x] 原生 Splash / loading 与 Friemi 视觉统一，WebView 背景避免冷启动闪白
+- [x] 冷启动、回到前台、登录回跳时加载态有淡入淡出，不生硬闪回
+- [x] 网络慢时展示 App 级慢网提示和重试入口
+- [x] Deep Link 支持活动详情、组局详情、消息页、通知页、大厅和常用 `friemi://` 别名
+- [x] 未登录进入受保护路径时继续走登录，并在登录后回到原页面
+- [x] Android 返回键优先关闭 Web 弹窗 / action sheet，再返回上一页，首页二次确认退出
+- [x] Web 端增加 Android bridge 协调器，同步语言、弹窗状态和返回键行为
+- [x] 状态栏、系统导航栏、WebView 背景使用统一品牌色，减少安全区错位感
+- [x] 文件上传、下载保存、复制文本、打开地图 / 外链等基础桥接能力补齐或确认
+- [x] App 内未登录报名默认引导登录，游客报名继续留给网页 / 微信 WebView
+- [x] 记录 Android 后续开发约定：Java 壳短期保留，新原生能力从 FCM / 扫码 / 聊天 / 桌游工具开始使用 Kotlin
+
+验收标准：
+
+- [ ] 真机冷启动不出现明显白屏或浏览器感突兀跳转
+- [ ] 断网 / 慢网有明确反馈，用户可以重试
+- [ ] 从外部链接打开活动、组局、消息、通知和大厅能落到正确页面
+- [ ] Android 返回键不会直接退出打开的弹窗或报名浮层
+- [ ] App 内未登录报名不会优先展示游客报名路径
+- [ ] Debug APK 可以指向生产、预览或本地环境验证
 
 ## 发布验收总清单
 

@@ -69,6 +69,8 @@ function getGuestJoinCopy(locale: string) {
       loginJoin: "S'inscrire avec un compte",
       guestJoinApproval: "Demande invité",
       guestJoin: "Continuer en invité",
+      appLoginHint:
+        "Dans l'app Friemi, l'inscription passe par un compte pour garder vos sorties, notifications et messages au même endroit.",
       signIn: "Se connecter",
       successTitle: "Inscription reçue",
       successDescription:
@@ -101,6 +103,8 @@ function getGuestJoinCopy(locale: string) {
       loginJoin: "Sign in to join",
       guestJoinApproval: "Guest request",
       guestJoin: "Guest signup",
+      appLoginHint:
+        "In the Friemi app, joining uses your account so your plans, messages, and notifications stay together.",
       signIn: "Sign in instead",
       successTitle: "Signup received",
       successDescription:
@@ -131,6 +135,8 @@ function getGuestJoinCopy(locale: string) {
     loginJoin: "登录报名",
     guestJoinApproval: "游客申请加入",
     guestJoin: "游客报名",
+    appLoginHint:
+      "Friemi App 内报名需要登录账号，方便保留组局、消息和通知记录。",
     signIn: "已有账号，去登录",
     successTitle: "报名已提交",
     successDescription:
@@ -138,6 +144,16 @@ function getGuestJoinCopy(locale: string) {
     successDescriptionApproval:
       "申请已提交给发起人，通过后会计入报名人数。以后使用相同邮箱或微信绑定账号，也会自动关联。",
   };
+}
+
+function useIsAndroidApp() {
+  const [isAndroidApp, setIsAndroidApp] = useState(false);
+
+  useEffect(() => {
+    setIsAndroidApp(/FriemiAndroid\//i.test(window.navigator.userAgent));
+  }, []);
+
+  return isAndroidApp;
 }
 
 function SubmitButton({
@@ -491,7 +507,24 @@ function GuestJoinEntry({
   const loginJoinLabel = requiresApproval ? t.loginJoinApproval : t.loginJoin;
   const guestJoinLabel = requiresApproval ? t.guestJoinApproval : t.guestJoin;
   const [showGuestForm, setShowGuestForm] = useState(false);
+  const isAndroidApp = useIsAndroidApp();
   const guestFormId = `guest-join-form-${activityId}${formInstanceId ? `-${formInstanceId}` : ""}`;
+
+  if (isAndroidApp) {
+    return (
+      <div className="grid gap-2.5">
+        <Link
+          className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
+          href={getSignInHref(locale, `/activities/${activityId}`)}
+        >
+          <span className="min-w-0 leading-tight">{loginJoinLabel}</span>
+        </Link>
+        <p className="rounded-2xl border border-[#D6D5B2]/75 bg-[#FEFFF9] px-3 py-2 text-xs font-medium leading-5 text-[#156240]/75">
+          {t.appLoginHint}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-3">

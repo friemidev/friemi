@@ -2,7 +2,11 @@ package com.friemi.app;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -11,6 +15,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -28,6 +33,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.URLUtil;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -53,6 +59,7 @@ public final class MainActivity extends Activity {
     private static final String LOCALE_EN = "en";
     private static final String LOCALE_FR = "fr";
     private static final long EXIT_CONFIRM_MS = 1800L;
+    private static final long SLOW_LOAD_NOTICE_MS = 8500L;
     private static final long AUTH_BROWSER_AUTO_RETRY_MIN_MS = 3500L;
     private static final long AUTH_BROWSER_AUTO_RETRY_MAX_MS = 180000L;
     private static final String AUTH_COMPLETE_HOST = "auth-complete";
@@ -68,6 +75,8 @@ public final class MainActivity extends Activity {
     private WebView webView;
     private ProgressBar progressBar;
     private LinearLayout loadingOverlay;
+    private TextView loadingSubtitle;
+    private Button loadingRetryButton;
     private LinearLayout errorOverlay;
     private TextView errorBody;
     private SharedPreferences preferences;
@@ -77,7 +86,15 @@ public final class MainActivity extends Activity {
     private long pendingAuthStartedAt;
     private boolean pendingAuthAutoRetryUsed;
     private boolean webBackRequested;
+    private boolean pageLoading;
     private long lastBackPressedAt;
+    private final Runnable slowLoadNoticeRunnable = () -> {
+        if (!pageLoading || loadingOverlay.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        loadingSubtitle.setText(getString(R.string.loading_slow_network));
+        loadingRetryButton.setVisibility(View.VISIBLE);
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +117,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        configureWindow();
         maybeResumePendingAuthBrowser();
     }
 
@@ -120,6 +138,7 @@ public final class MainActivity extends Activity {
 
         webView = new WebView(this);
         webView.setId(View.generateViewId());
+        webView.setBackgroundColor(getColorCompat(R.color.friemi_paper));
         root.addView(
             webView,
             new FrameLayout.LayoutParams(
@@ -187,17 +206,25 @@ public final class MainActivity extends Activity {
         titleParams.topMargin = dp(12);
         overlay.addView(title, titleParams);
 
-        TextView subtitle = new TextView(this);
-        subtitle.setText(getString(R.string.loading_friemi));
-        subtitle.setTextColor(getColorCompat(R.color.friemi_green));
-        subtitle.setTextSize(14);
-        subtitle.setGravity(Gravity.CENTER);
+        loadingSubtitle = new TextView(this);
+        loadingSubtitle.setText(getString(R.string.loading_friemi));
+        loadingSubtitle.setTextColor(getColorCompat(R.color.friemi_green));
+        loadingSubtitle.setTextSize(14);
+        loadingSubtitle.setGravity(Gravity.CENTER);
+        loadingSubtitle.setLineSpacing(0, 1.12f);
         LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         );
         subtitleParams.topMargin = dp(4);
-        overlay.addView(subtitle, subtitleParams);
+        overlay.addView(loadingSubtitle, subtitleParams);
+
+        loadingRetryButton = makeButton(getString(R.string.retry), true);
+        loadingRetryButton.setVisibility(View.GONE);
+        loadingRetryButton.setOnClickListener(view -> loadUrl(currentUrl != null ? currentUrl : buildDefaultHomeUrl()));
+        LinearLayout.LayoutParams retryParams = new LinearLayout.LayoutParams(dp(168), dp(46));
+        retryParams.topMargin = dp(18);
+        overlay.addView(loadingRetryButton, retryParams);
 
         return overlay;
     }
@@ -331,7 +358,8 @@ public final class MainActivity extends Activity {
     }
 
     private DownloadListener buildDownloadListener() {
-        return (url, userAgent, contentDisposition, mimeType, contentLength) -> openExternal(url);
+        return (url, userAgent, contentDisposition, mimeType, contentLength) ->
+            downloadFile(url, contentDisposition, mimeType);
     }
 
     private void loadUrl(String url) {
@@ -387,7 +415,27 @@ public final class MainActivity extends Activity {
         if (route.length() == 0 || "/home".contentEquals(route)) {
             return BuildConfig.FRIEMI_DEFAULT_PATH;
         }
-        return normalizePath(route.toString());
+        return normalizeCustomSchemeRoute(route.toString());
+    }
+
+    private String normalizeCustomSchemeRoute(String route) {
+        String normalized = normalizePath(route);
+        if (normalized.startsWith("/activity/")) {
+            return "/activities/" + normalized.substring("/activity/".length());
+        }
+        if (normalized.startsWith("/team/")) {
+            return "/activities/" + normalized.substring("/team/".length());
+        }
+        if (normalized.equals("/hall")) {
+            return BuildConfig.FRIEMI_DEFAULT_PATH;
+        }
+        if (normalized.equals("/lobby")) {
+            return "/lobby";
+        }
+        if (normalized.equals("/messages") || normalized.equals("/notifications")) {
+            return normalized;
+        }
+        return normalized;
     }
 
     private String normalizePath(String path) {
@@ -565,16 +613,23 @@ public final class MainActivity extends Activity {
     }
 
     private void showLoading() {
+        pageLoading = true;
+        mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setProgress(10);
+        loadingSubtitle.setText(getString(R.string.loading_friemi));
+        loadingRetryButton.setVisibility(View.GONE);
         loadingOverlay.animate().cancel();
         loadingOverlay.setAlpha(0f);
         loadingOverlay.setVisibility(View.VISIBLE);
         loadingOverlay.animate().alpha(1f).setDuration(160L).start();
         errorOverlay.setVisibility(View.GONE);
+        mainHandler.postDelayed(slowLoadNoticeRunnable, SLOW_LOAD_NOTICE_MS);
     }
 
     private void hideLoading() {
+        pageLoading = false;
+        mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         progressBar.setVisibility(View.GONE);
         loadingOverlay.animate().cancel();
         if (loadingOverlay.getVisibility() != View.VISIBLE) {
@@ -596,6 +651,8 @@ public final class MainActivity extends Activity {
     }
 
     private void showError(String message) {
+        pageLoading = false;
+        mainHandler.removeCallbacks(slowLoadNoticeRunnable);
         hideLoading();
         if (!isBlank(message)) {
             errorBody.setText(message);
@@ -611,6 +668,11 @@ public final class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (errorOverlay.getVisibility() == View.VISIBLE) {
+            hideError();
+            return;
+        }
+
         if (webBackRequested) {
             webView.evaluateJavascript(
                 "window.dispatchEvent(new CustomEvent('friemi:android-back'))",
@@ -647,7 +709,10 @@ public final class MainActivity extends Activity {
         if (path == null) {
             return true;
         }
-        return path.endsWith("/mobile-home") || path.endsWith("/mobile-home/");
+        return path.endsWith("/mobile-home")
+            || path.endsWith("/mobile-home/")
+            || path.endsWith("/home")
+            || path.endsWith("/home/");
     }
 
     private boolean isAuthRoute(String url) {
@@ -717,6 +782,14 @@ public final class MainActivity extends Activity {
         mainHandler.post(() -> openExternal(url));
     }
 
+    void copyTextFromBridge(String text) {
+        mainHandler.post(() -> copyText(text));
+    }
+
+    void downloadFileFromBridge(String url) {
+        mainHandler.post(() -> downloadFile(url, null, null));
+    }
+
     void shareFromBridge(String payloadJson) {
         mainHandler.post(() -> {
             try {
@@ -772,6 +845,46 @@ public final class MainActivity extends Activity {
             startActivity(intent);
         } catch (ActivityNotFoundException ignored) {
             Toast.makeText(this, url, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void copyText(String text) {
+        if (isBlank(text)) {
+            return;
+        }
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("Friemi", text));
+            Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void downloadFile(String url, String contentDisposition, String mimeType) {
+        if (isBlank(url)) {
+            return;
+        }
+
+        try {
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            );
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(true);
+            if (!isBlank(mimeType)) {
+                request.setMimeType(mimeType);
+            }
+            String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            if (manager == null) {
+                openExternal(url);
+                return;
+            }
+            manager.enqueue(request);
+            Toast.makeText(this, R.string.download_started, Toast.LENGTH_SHORT).show();
+        } catch (Exception error) {
+            openExternal(url);
         }
     }
 

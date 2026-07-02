@@ -37,6 +37,17 @@ The project uses:
 - Min SDK: `26`
 - Java: `17`
 
+## Android Language Strategy
+
+The current WebView shell is written in Java and can stay that way while it remains stable. Future product-grade native work should use Kotlin by default.
+
+Rules:
+
+- Keep small fixes to the existing Java shell in Java when that is the smallest safe change.
+- Add new native modules in Kotlin, including FCM, native notification center, QR check-in, native chat, image / emoji flows, and board game tools.
+- Do not keep growing `MainActivity.java` with complex product logic; move new native behavior into Kotlin classes or modules.
+- Consider migrating the shell itself to Kotlin later, after the Kotlin modules are stable.
+
 ## Debug Base URL
 
 常用生产 / 预览 / 本地构建命令见：
@@ -108,12 +119,15 @@ The native shell exposes:
 window.FriemiAndroid?.getAppInfo()
 window.FriemiAndroid?.saveLocale("zh-CN" | "en" | "fr")
 window.FriemiAndroid?.openExternal(url)
+window.FriemiAndroid?.openMap(url)
+window.FriemiAndroid?.copyText(text)
+window.FriemiAndroid?.downloadFile(url)
 window.FriemiAndroid?.share(JSON.stringify({ title, text, url }))
 window.FriemiAndroid?.registerPushToken()
 window.FriemiAndroid?.setBackBehavior(JSON.stringify({ hasModal: true }))
 ```
 
-`getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status.
+`getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status. The web app also reports modal / sheet state through `setBackBehavior`, so Android back closes open UI first before navigating away.
 
 ## App Links
 

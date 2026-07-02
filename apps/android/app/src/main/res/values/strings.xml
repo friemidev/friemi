@@ -1,9 +1,12 @@
 <resources>
     <string name="app_name">Friemi</string>
     <string name="loading_friemi">Friemi is loading</string>
+    <string name="loading_slow_network">Still opening Friemi. You can keep waiting or try again.</string>
     <string name="web_error_title">Cannot open Friemi</string>
     <string name="web_error_body">Check your connection and try again.</string>
     <string name="retry">Retry</string>
     <string name="open_in_browser">Open in browser</string>
     <string name="exit_hint">Tap again to leave Friemi</string>
+    <string name="copied">Copied</string>
+    <string name="download_started">Download started</string>
 </resources>
