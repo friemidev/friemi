@@ -186,15 +186,16 @@ en* -> en
 
 ### 当前判断
 
-你之前做过的 WebView APP 可以在 APP 内完成 Google / Clerk 登录，这说明“实际可用”的可能性较高。但这不能直接等同于当前 Friemi 生产 APP 一定稳定，因为 Google 和 Clerk 对 OAuth in WebView 的限制仍然存在。
+实机验证后，Google 登录在 WebView 内触发 `403: disallowed_useragent`。这不是普通配置错误，而是 Google 对 embedded WebView OAuth 的限制；Clerk 使用 Google OAuth 时同样会受到影响。
 
-因此首发策略应该是：
+因此首发策略调整为：
 
 ```text
-优先尝试 APP 内登录
-  -> 实机验证 Google / Clerk 登录链路
-  -> 如果被限制，自动切到 Chrome Custom Tabs / 外部浏览器登录
-  -> 登录成功后用 Android App Link 回到 APP
+Friemi 页面保留在 WebView
+  -> Clerk / Google OAuth 主流程使用 Chrome Custom Tabs
+  -> 登录成功后通过 Android App Link / Deep Link 回到 APP
+  -> 如果 App Link 未接管，用户回到 APP 后自动续跑一次 pending auth URL
+  -> 如果 WebView 没有拿到 session，再补 Web 侧 session handoff
 ```
 
 ### 必测场景
@@ -204,7 +205,7 @@ en* -> en
 - Clerk session 是否在 WebView 内保持
 - 登录后刷新 APP 是否仍登录
 - 退出登录后 Cookie 是否清理
-- Google 登录是否出现 `disallowed_useragent` 或“不支持的浏览器”
+- Google 登录是否稳定打开 Chrome Custom Tabs，不再出现 `disallowed_useragent`
 - 关闭 APP 再打开是否保持登录
 - 从推送点击进入详情页时是否保留登录态
 
@@ -226,6 +227,13 @@ friemi://activities/:activityId
 ```
 
 建议优先 App Links，因为未安装 APP 时可以自然落回网页。
+
+注意：
+
+- 不通过修改 WebView user-agent 绕过 Google 限制
+- 不把 Google / Clerk OAuth 主流程留在 WebView
+- 自动续跑 pending auth URL 只作为 App Links 不完整时的过渡兜底，并且必须限制次数，避免取消登录后反复弹出认证页
+- Chrome Custom Tabs 与 WebView 的 Cookie 存储可能不同；如果登录成功后 WebView 仍未登录，需要补专门的 session handoff，而不是退回 WebView OAuth
 
 ## Deep Link / App Links
 

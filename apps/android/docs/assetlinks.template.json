@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.friemi.app",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_RELEASE_SHA256_FINGERPRINT"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.friemi.app.debug",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_DEBUG_SHA256_FINGERPRINT"
+      ]
+    }
+  }
+]

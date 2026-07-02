@@ -2,6 +2,7 @@ import { locales } from "@chill-club/shared";
 import { withLocale } from "./routes";
 
 export const authRedirectParamName = "redirect_url";
+export const androidAuthCompleteTargetParamName = "target";
 
 const authRedirectFallbackPath = "/home";
 const appOrigin = "https://friemi.local";
@@ -93,6 +94,18 @@ export function getSignUpHref(
   const query = new URLSearchParams({ [authRedirectParamName]: target });
 
   return withLocale(locale, `/sign-up?${query.toString()}`);
+}
+
+export function getAndroidAuthCompleteHref(
+  locale: string,
+  redirectTarget?: string | string[] | null,
+) {
+  const target = normalizeAuthRedirectTarget(locale, redirectTarget);
+  const query = new URLSearchParams({
+    [androidAuthCompleteTargetParamName]: target,
+  });
+
+  return withLocale(locale, `/android-auth-complete?${query.toString()}`);
 }
 
 export function getRequestRedirectTarget({

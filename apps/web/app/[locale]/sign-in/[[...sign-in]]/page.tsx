@@ -4,6 +4,7 @@ import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGu
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
 import {
   authRedirectParamName,
+  getAndroidAuthCompleteHref,
   getAuthRedirectFallback,
   getSignUpHref,
   normalizeAuthRedirectTarget,
@@ -26,6 +27,10 @@ function isWechatWebView(userAgent: string | null) {
   return /MicroMessenger/i.test(userAgent ?? "");
 }
 
+function isFriemiAndroidApp(userAgent: string | null) {
+  return /FriemiAndroid\//i.test(userAgent ?? "");
+}
+
 export default async function SignInPage({
   params,
   searchParams,
@@ -39,8 +44,12 @@ export default async function SignInPage({
   const fallbackRedirectUrl = getAuthRedirectFallback(locale);
   const t = getCopy(locale);
   const requestHeaders = await headers();
+  const userAgent = requestHeaders.get("user-agent");
+  const forceRedirectUrl = isFriemiAndroidApp(userAgent)
+    ? getAndroidAuthCompleteHref(locale, redirectTarget)
+    : redirectTarget;
 
-  if (isWechatWebView(requestHeaders.get("user-agent"))) {
+  if (isWechatWebView(userAgent)) {
     return (
       <PageContainer className="flex min-h-[calc(100svh-8rem)] items-start justify-center py-4">
         <WechatWebViewGuide locale={locale} />
@@ -67,7 +76,7 @@ export default async function SignInPage({
     <PageContainer className="flex min-h-[70vh] items-center justify-center">
       <ClerkAuthMountGuard
         fallbackRedirectUrl={fallbackRedirectUrl}
-        forceRedirectUrl={redirectTarget}
+        forceRedirectUrl={forceRedirectUrl}
         locale={locale}
         mode="sign-in"
         path={`/${locale}/sign-in`}

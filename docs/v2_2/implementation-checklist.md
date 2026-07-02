@@ -504,6 +504,51 @@ docs/v2_2/android-app-technical-architecture.md
 - [x] Android APP 技术架构文档存在，且能作为后续工程分支实施依据
 - [x] 当前分支不引入 Android 工程、依赖或生产配置变更
 
+### 15. Android WebView 壳工程 A0 / A1
+
+建议切换分支：
+
+```text
+feature/v2-android-webview-shell
+```
+
+需求理解：
+
+在 Android 规划和技术架构明确后，先实现一个可用的 Android Studio WebView 壳工程。这个分支只覆盖 A0 / A1：能打开 Friemi 移动端大厅、能处理语言、Deep Link、返回键、加载 / 错误态、基础 JS bridge 和图片选择；FCM 真正推送、device token 数据库、扫码签到和上架配置继续拆后续分支。
+
+小功能：
+
+- [x] 新建 `apps/android` Android Studio 工程，包名 `com.friemi.app`
+- [x] 默认加载 `https://www.friemi.com/{locale}/mobile-home`
+- [x] Debug 支持通过 `-PfriemiBaseUrl=` 指向 Vercel Preview 或局域网本地服务
+- [x] 实现 Android 系统语言映射：`zh* -> zh-CN`、`en* -> en`、其他 -> `fr`
+- [x] 支持用户语言通过 JS bridge 保存到原生 SharedPreferences
+- [x] WebView 启用 JavaScript、DOM storage、Cookie、第三方 Cookie、图片上传选择器
+- [x] 非 Friemi 外部链接打开系统浏览器，Clerk / Google OAuth 链路使用 Chrome Custom Tabs，避免 Google `disallowed_useragent`
+- [x] 支持 HTTPS App Links 和 `friemi://` 调试 scheme
+- [x] App Link host 跟随 `friemiBaseUrl` / `friemiAppLinkHost`，方便生产和预览域名分别构建测试
+- [x] 增加原生加载态、错误态、重试和外部浏览器打开
+- [x] 返回键支持 WebView 历史、`/mobile-home` 二次确认退出和 Web 弹窗拦截占位
+- [x] 增加基础 `window.FriemiAndroid` bridge：app info、保存语言、外部打开、系统分享、返回行为、推送占位
+- [x] 增加 App Links `assetlinks.json` 模板，等待真实签名 SHA-256
+- [x] 接入 Chrome Custom Tabs / 外部浏览器回跳兜底，WebView 不直接承载 Google OAuth
+- [x] WebView user-agent 标记 `FriemiAndroid/<version>`，Web 登录成功后走 `/{locale}/android-auth-complete` 再打开 `friemi://auth-complete`
+- [x] Custom Tabs 回到 APP 但仍停留登录页时，自动续跑一次待完成的认证 URL，减少手动再点一次登录
+- [ ] 实机验证 Clerk / Google 登录能通过 Custom Tabs 回跳到 APP
+- [ ] 若 Custom Tabs 登录成功但 WebView session 未同步，补 Web 侧 session handoff 路由
+- [ ] 接入 Firebase Cloud Messaging、`MobileDevice` 表和 device token 注册接口
+- [ ] 用真实 release SHA-256 发布 `/.well-known/assetlinks.json`
+
+验收标准：
+
+- [x] Android Studio 可以打开 `apps/android`
+- [x] Debug 构建可以配置生产、预览或本地 Web 服务地址
+- [x] APP 首屏进入大厅，Logo 仍可在 Web 内进入 `/home`
+- [x] 语言映射规则和规划文档一致
+- [x] 当前分支不修改现有 Web 业务逻辑、不新增数据库迁移
+- [ ] 真机能完成登录、返回、图片上传和基础外链跳转
+- [ ] 真实 App Links 和 FCM 在后续分支完成
+
 ## 发布验收总清单
 
 - [ ] 新增数据库结构都有 migration，并补充生产迁移说明
