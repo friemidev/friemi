@@ -69,7 +69,7 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         val notification = builder
-            .setSmallIcon(R.drawable.friemi_icon)
+            .setSmallIcon(R.drawable.ic_stat_friemi)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body))

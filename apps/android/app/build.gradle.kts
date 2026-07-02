@@ -14,6 +14,15 @@ val friemiBaseUrl = providers
     .orElse("https://www.friemi.com")
     .get()
     .trimEnd('/')
+val friemiVersionCode = providers
+    .gradleProperty("friemiVersionCode")
+    .map { it.toInt() }
+    .orElse(1)
+    .get()
+val friemiVersionName = providers
+    .gradleProperty("friemiVersionName")
+    .orElse("0.1.0")
+    .get()
 val friemiAppLinkHost = providers
     .gradleProperty("friemiAppLinkHost")
     .orElse(
@@ -32,8 +41,8 @@ android {
         applicationId = "com.friemi.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = friemiVersionCode
+        versionName = friemiVersionName
 
         buildConfigField("String", "FRIEMI_BASE_URL", "\"$friemiBaseUrl\"")
         buildConfigField("String", "FRIEMI_DEFAULT_PATH", "\"/mobile-home\"")
@@ -49,7 +58,8 @@ android {
         }
 
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             manifestPlaceholders["friemiUsesCleartextTraffic"] = "false"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

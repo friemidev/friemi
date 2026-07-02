@@ -332,10 +332,15 @@ public final class MainActivity extends Activity {
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void setupWebView() {
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(false);
+        settings.setAllowUniversalAccessFromFileURLs(false);
         settings.setLoadWithOverviewMode(false);
         settings.setUseWideViewPort(false);
         settings.setTextZoom(100);
@@ -344,6 +349,7 @@ public final class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setSafeBrowsingEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(true);
         settings.setUserAgentString(settings.getUserAgentString() + " FriemiAndroid/" + BuildConfig.VERSION_NAME);

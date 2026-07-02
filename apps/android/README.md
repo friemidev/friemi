@@ -57,6 +57,12 @@ Rules:
 apps/android/docs/build-targets.md
 ```
 
+Release 发布前加固检查见：
+
+```text
+apps/android/docs/release-hardening.md
+```
+
 By default, debug builds load production:
 
 ```text
@@ -139,6 +145,7 @@ To enable Android push notifications:
 
 - Add the Firebase Android app for `com.friemi.app`.
 - Put the Firebase config file at `apps/android/app/google-services.json`.
+- Do not commit `google-services.json`; it is ignored by `apps/android/.gitignore`.
 - Configure web runtime env vars:
   - `FIREBASE_PROJECT_ID`
   - `FIREBASE_CLIENT_EMAIL`

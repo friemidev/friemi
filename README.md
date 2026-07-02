@@ -65,9 +65,7 @@ Friemi 的核心人群：
         <li>时间、地点、费用、天气、地图和订票信息集中展示</li>
       </ul>
     </td>
-    <td width="46%">
-      <img src="./apps/web/public/brand/v2_1/friemi-card-style-board.png" alt="Friemi activity card style" width="100%" />
-    </td>
+   
   </tr>
 </table>
 

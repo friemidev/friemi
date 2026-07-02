@@ -25,7 +25,19 @@ Debug APK：
 Release APK：
 
 ```bash
-./gradlew clean :app:assembleRelease -PfriemiBaseUrl=https://www.friemi.com
+./gradlew clean :app:assembleRelease \
+  -PfriemiBaseUrl=https://www.friemi.com \
+  -PfriemiVersionCode=1 \
+  -PfriemiVersionName=0.1.0
+```
+
+Release AAB：
+
+```bash
+./gradlew clean :app:bundleRelease \
+  -PfriemiBaseUrl=https://www.friemi.com \
+  -PfriemiVersionCode=1 \
+  -PfriemiVersionName=0.1.0
 ```
 
 注意：
@@ -127,6 +139,7 @@ Release：
 
 ```text
 apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
+apps/android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 ## 登录测试建议
