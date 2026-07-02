@@ -33,6 +33,37 @@ val friemiAppLinkHost = providers
     )
     .get()
 
+fun releaseStringProperty(gradleName: String, envName: String): String? =
+    providers
+        .gradleProperty(gradleName)
+        .orElse(providers.environmentVariable(envName))
+        .orNull
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+val friemiReleaseStoreFile = releaseStringProperty(
+    "friemiReleaseStoreFile",
+    "FRIEMI_RELEASE_STORE_FILE",
+)
+val friemiReleaseStorePassword = releaseStringProperty(
+    "friemiReleaseStorePassword",
+    "FRIEMI_RELEASE_STORE_PASSWORD",
+)
+val friemiReleaseKeyAlias = releaseStringProperty(
+    "friemiReleaseKeyAlias",
+    "FRIEMI_RELEASE_KEY_ALIAS",
+)
+val friemiReleaseKeyPassword = releaseStringProperty(
+    "friemiReleaseKeyPassword",
+    "FRIEMI_RELEASE_KEY_PASSWORD",
+) ?: friemiReleaseStorePassword
+val hasFriemiReleaseSigning = listOf(
+    friemiReleaseStoreFile,
+    friemiReleaseStorePassword,
+    friemiReleaseKeyAlias,
+    friemiReleaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.friemi.app"
     compileSdk = 36
@@ -50,6 +81,17 @@ android {
         manifestPlaceholders["friemiUsesCleartextTraffic"] = "false"
     }
 
+    signingConfigs {
+        if (hasFriemiReleaseSigning) {
+            create("release") {
+                storeFile = file(friemiReleaseStoreFile!!)
+                storePassword = friemiReleaseStorePassword
+                keyAlias = friemiReleaseKeyAlias
+                keyPassword = friemiReleaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -61,6 +103,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             manifestPlaceholders["friemiUsesCleartextTraffic"] = "false"
+            if (hasFriemiReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

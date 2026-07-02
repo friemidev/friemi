@@ -1,6 +1,6 @@
 # Friemi Android 发布加固清单
 
-这个文档记录 `feature/v2-android-release-hardening` 后 Android release 构建的固定检查项。签名、隐私政策和 Play Console 内测属于下一步，不放在这个分支里完成。
+这个文档记录 `feature/v2-android-release-hardening` 后 Android release 构建的固定检查项。签名、隐私政策和 Play Console 内测见 `apps/android/docs/internal-testing-release.md` 与 `apps/android/docs/privacy-permissions.md`。
 
 ## Release 构建目标
 
@@ -46,6 +46,12 @@ Release AAB：
 ```text
 apps/android/app/build/outputs/apk/release/app-release-unsigned.apk
 apps/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+如果已经配置 release signing 参数，APK 输出会变成：
+
+```text
+apps/android/app/build/outputs/apk/release/app-release.apk
 ```
 
 ## 版本号规则

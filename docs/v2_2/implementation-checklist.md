@@ -648,11 +648,43 @@ FCM 基础链路之后，需要把 Android 壳从“能跑 debug APK”推进到
 验收标准：
 
 - [ ] Debug APK 仍可指向预览 / 本地环境
-- [ ] 未配置 Firebase 时 release 构建仍能通过
-- [ ] Release APK / AAB 可以生成
+- [x] 未配置 Firebase 时 release 构建仍能通过
+- [x] Release APK / AAB 可以生成
 - [ ] Release 包只使用 `https://www.friemi.com` 作为正式 base url
 - [ ] WebView release 调试不可用
 - [ ] 发布前检查文档能覆盖 App Links、版本号、Firebase 和基本真机验证
+
+### 19. Android 内测 APK / 签名 / 隐私政策 / 权限说明
+
+建议切换分支：
+
+```text
+feature/v2-android-internal-testing-release
+```
+
+需求理解：
+
+Release hardening 之后，需要把 Android App 推进到可以交给内部测试用户安装的阶段。这个分支重点是把签名、AAB / APK 构建、Play Console Internal testing、隐私政策和权限说明整理成可执行流程。密钥、Firebase 配置和 Google Play 后台信息不能提交到仓库，只记录安全使用方式。
+
+小功能：
+
+- [x] Release signing 支持从 Gradle 参数或环境变量读取 keystore，不把密钥写入仓库
+- [x] 签名参数缺失时仍能生成 unsigned release，方便本地和 CI 做构建检查
+- [x] Android gitignore 补充 `*.p12`、`*.pem` 和 `keystore.properties`
+- [x] 新增内测 APK / AAB 发布说明，包含 upload key、SHA-256、AAB、APK、Play Console 和 App Links 检查
+- [x] 新增隐私政策与权限说明草案，覆盖通知、相机、图片、位置、账号、消息和数据删除路径
+- [x] Android README 链接内测发布、签名和权限隐私文档
+- [x] Android 规划文档同步第 4 项交付位置
+
+验收标准：
+
+- [x] 配置本机 release signing 后可以生成 signed release APK
+- [x] 配置本机 release signing 后可以生成可上传 Play Console 的 AAB
+- [x] 不配置 signing 参数时构建不会因为缺密钥失败
+- [x] `apksigner verify` 可以验证 signed APK
+- [ ] 内测发布文档能让后续快速找到生产 / 预览 / 本地构建和签名入口
+- [ ] 权限说明与当前 Manifest 一致，不提前声明未上线权限
+- [ ] 隐私政策草案可以作为 Play Console Data safety 和官网隐私页的基础
 
 ## 发布验收总清单
 
