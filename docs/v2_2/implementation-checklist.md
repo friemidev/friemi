@@ -586,6 +586,42 @@ feature/v2-android-app-foundation-polish
 - [ ] App 内未登录报名不会优先展示游客报名路径
 - [ ] Debug APK 可以指向生产、预览或本地环境验证
 
+### 17. Android FCM 推送
+
+建议切换分支：
+
+```text
+feature/v2-android-fcm-push
+```
+
+需求理解：
+
+Android App 已经有 WebView 壳、登录回跳和基础 bridge，下一步接入 Firebase Cloud Messaging。目标是让 App 能获取 FCM registration token，并用当前 WebView 登录态绑定到 `UserProfile`，后端在创建站内通知时可以尝试发送原生推送。Firebase 配置未完成时，App 和 Web 业务不能崩溃，只是跳过原生推送。
+
+小功能：
+
+- [x] 新增 `MobileDevice` 数据模型，记录 `UserProfile`、平台、FCM token、device id、App 版本、语言、时区、最后活跃时间和停用状态
+- [x] 新增 device token 注册接口 `/api/mobile/devices/register`，使用当前登录用户绑定，不让客户端传用户 id
+- [x] 新增 device token 解绑接口 `/api/mobile/devices/unregister`
+- [x] Android 工程引入 Kotlin，后续原生模块从 FCM 开始使用 Kotlin
+- [x] Android 端接入 Firebase Messaging 依赖，`google-services.json` 存在时才启用 Google Services 插件
+- [x] Android 端新增 Kotlin FCM token provider，未配置 Firebase 时返回 `FIREBASE_NOT_CONFIGURED`
+- [x] Android 端新增 FCM service，支持 token refresh 和基础通知点击回到对应 Friemi 路径
+- [x] Web `AndroidAppBridge` 监听原生 token 事件，并用当前登录 session 注册设备
+- [x] 服务端新增 Firebase HTTP v1 推送工具，只有配置 `FIREBASE_PROJECT_ID`、`FIREBASE_CLIENT_EMAIL`、`FIREBASE_PRIVATE_KEY` 时才发送
+- [x] 站内通知创建后尝试派发移动端推送；没有 Firebase 配置或没有绑定设备时静默跳过
+- [x] `.env.example`、Android README 和 v2.2 文档记录 Firebase 配置入口
+
+验收标准：
+
+- [ ] 未放 `google-services.json` 时 Android debug build 仍能通过，App 不崩溃
+- [ ] 放入 Firebase 配置后，真机可以拿到 FCM token
+- [ ] 登录状态下 token 能写入 `MobileDevice`
+- [ ] 登出 / 换号后不会把 token 绑定到错误账号
+- [ ] 创建报名、好友、消息或活动更新通知时，已绑定 Android 设备能收到系统推送
+- [ ] 点击推送能回到活动详情、消息、通知中心或大厅
+- [ ] Firebase 环境变量缺失时，站内通知不受影响
+
 ## 发布验收总清单
 
 - [ ] 新增数据库结构都有 migration，并补充生产迁移说明

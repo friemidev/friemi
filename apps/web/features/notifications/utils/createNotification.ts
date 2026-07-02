@@ -1,4 +1,5 @@
 import type { NotificationType, Prisma } from "@prisma/client";
+import { sendMobilePushForNotification } from "@/features/mobile/push/sendMobilePush";
 
 type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
 
@@ -44,9 +45,17 @@ export async function createNotification(
     }
   }
 
-  return tx.notification.create({
+  const notification = await tx.notification.create({
     data: identity,
   });
+
+  setTimeout(() => {
+    void sendMobilePushForNotification(notification.id).catch((error) => {
+      console.error("Failed to dispatch mobile push notification", error);
+    });
+  }, 750);
+
+  return notification;
 }
 
 export async function createNotifications(
