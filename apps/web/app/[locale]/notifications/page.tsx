@@ -448,13 +448,6 @@ function NotificationCard({
           isUnread ? "bg-coral" : "bg-sand/70",
         )}
       />
-      {isUnread ? (
-        <span
-          aria-label={t.unread}
-          className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.45)]"
-        />
-      ) : null}
-
       <div className="flex gap-3 pl-1">
         <span
           className={cn(
@@ -466,7 +459,7 @@ function NotificationCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-1 pr-5 sm:flex-row sm:items-start sm:justify-between sm:pr-0">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
@@ -492,7 +485,13 @@ function NotificationCard({
               </p>
             </div>
 
-            <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
+            <span className="mt-0.5 inline-flex shrink-0 items-center gap-2 self-start whitespace-nowrap rounded-full bg-paper/68 px-2 py-1 text-[11px] font-medium leading-none text-outline ring-1 ring-sand/70 sm:mt-0 sm:text-xs">
+              {isUnread ? (
+                <span
+                  aria-label={t.unread}
+                  className="h-2 w-2 rounded-full bg-coral shadow-[0_0_0_3px_rgba(222,170,179,0.34)]"
+                />
+              ) : null}
               {formatActivityDate(notification.createdAt, locale)}
             </span>
           </div>
