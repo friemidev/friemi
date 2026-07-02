@@ -61,6 +61,7 @@ export default async function LocaleLayout({
               <RouteProgress />
               <AppHeader
                 locale={locale}
+                isAuthenticated={Boolean(viewerProfile)}
                 showNotificationNav={Boolean(viewerProfile)}
                 showAdminNav={viewerState.showAdminNav}
                 viewerContactEmail={viewerProfile?.contactEmail ?? null}

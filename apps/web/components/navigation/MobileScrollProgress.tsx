@@ -117,7 +117,7 @@ export function MobileScrollProgress() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-x-0 top-16 z-[45] h-[3px] bg-[#D6D5B2] md:hidden"
+      className="pointer-events-none fixed inset-x-0 top-14 z-[45] h-[3px] bg-[#D6D5B2] sm:top-16 md:hidden"
     >
       <div
         className="h-full origin-left bg-[#369758] shadow-[0_1px_4px_rgba(54,151,88,0.32)] transition-transform duration-100 ease-out"
