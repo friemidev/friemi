@@ -34,6 +34,7 @@ v2.2 不建议把组局权限、聊天图片、签到和成就系统放在同一
 - 公共活动 API 导入比例和 Swiper 展示组件可以先分开做；如果只做前端展示，不碰导入策略，可合并到 `feature/v2-discovery-swiper-components`
 - 隐藏关注 / 粉丝展示和 README 重写都相对独立，不建议和数据库迁移、聊天媒体或签到混在一起
 - 组局发布缺字段引导属于发布页核心体验，建议单独 PR，避免和表单业务字段改动互相影响
+- Android 移动端 APP 先做规划文档，不在同一分支直接引入移动端工程基础设施
 
 ## P0：协作权限与核心体验
 
@@ -463,6 +464,45 @@ docs/v2-readme-product-introduction
 - [ ] 新读者打开 GitHub 能先理解 Friemi 是什么
 - [ ] 开发者仍能找到本地启动和部署相关说明
 - [ ] README 不暴露敏感配置、内部账号或过时旧品牌
+
+### 14. Android 移动端 APP 开发规划
+
+建议切换分支：
+
+```text
+feature/v2-android-mobile-app-planning
+```
+
+需求理解：
+
+v2.2 开始记录 Android 移动端 APP 的开发方向。当前阶段先明确产品范围、技术路线、首发能力、素材需求和发布准备，不直接创建 Android / React Native / Expo / Capacitor 工程，避免还没确定路线就增加维护成本。
+
+规划文档：
+
+```text
+docs/v2_2/android-mobile-app-development-plan.md
+docs/v2_2/android-app-technical-architecture.md
+```
+
+小功能：
+
+- [x] 新建 Android 移动端 APP 开发记录文档
+- [x] 新建 Android APP 技术架构方案文档
+- [x] 梳理 APP 的当前定位、第一阶段目标和当前分支边界
+- [x] 对比 PWA / TWA、React Native / Expo、原生 Kotlin 等候选技术路线
+- [x] 拆分首发能力候选：大厅、活动发现、组局详情、我要组局、通知、登录
+- [x] 记录后续需要讨论的产品、技术和发布问题
+- [x] 拆分 WebView 壳、登录回跳、Deep Link、FCM、接口补充、权限声明和里程碑
+- [x] 明确 Android APP 语言策略：中文系统走 `zh-CN`，英语系统走 `en`，其他语言走 `fr`
+- [x] 记录 Android icon、启动图、通知图标、商店图和截图等素材需求
+- [x] 暂不进行工程基础建设，等路线确认后再拆独立分支实施
+
+验收标准：
+
+- [x] v2.2 checklist 中能看到 Android APP 规划入口和建议分支
+- [x] Android APP 独立规划文档存在，且后续可以继续追加讨论结论
+- [x] Android APP 技术架构文档存在，且能作为后续工程分支实施依据
+- [x] 当前分支不引入 Android 工程、依赖或生产配置变更
 
 ## 发布验收总清单
 
