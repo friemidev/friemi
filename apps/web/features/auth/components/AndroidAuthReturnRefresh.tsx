@@ -136,9 +136,7 @@ export function AndroidAuthReturnRefresh({
       const elapsed = Date.now() - (activatedAtRef.current ?? Date.now());
       const delay = Math.max(260, 900 - elapsed);
       const finishTimer = window.setTimeout(() => {
-        window.history.replaceState(null, "", cleanTarget);
-        router.refresh();
-        window.setTimeout(() => setVisible(false), 420);
+        window.location.replace(cleanTarget);
       }, delay);
 
       return () => {
