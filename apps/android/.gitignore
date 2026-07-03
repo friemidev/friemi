@@ -10,4 +10,5 @@ app/google-services.json
 keystore.properties
 build/
 app/build/
+app/release/
 captures/

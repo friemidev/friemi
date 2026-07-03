@@ -378,6 +378,23 @@ public final class MainActivity extends Activity {
         webView.loadUrl(url);
     }
 
+    private boolean loadInternalUrlIfPossible(String url) {
+        if (isBlank(url)) {
+            return false;
+        }
+        try {
+            Uri uri = Uri.parse(url);
+            if ("friemi".equalsIgnoreCase(uri.getScheme())
+                || (isHttp(uri) && isFriemiHost(uri.getHost()))) {
+                loadUrl(normalizeIncomingUri(uri));
+                return true;
+            }
+        } catch (Exception ignored) {
+            return false;
+        }
+        return false;
+    }
+
     private String buildLaunchUrl(Intent intent) {
         Uri data = intent != null ? intent.getData() : null;
         if (data == null) {
@@ -789,7 +806,11 @@ public final class MainActivity extends Activity {
     }
 
     void openExternalFromBridge(String url) {
-        mainHandler.post(() -> openExternal(url));
+        mainHandler.post(() -> {
+            if (!loadInternalUrlIfPossible(url)) {
+                openExternal(url);
+            }
+        });
     }
 
     void copyTextFromBridge(String text) {
@@ -894,6 +915,9 @@ public final class MainActivity extends Activity {
 
     private void openExternal(String url) {
         if (isBlank(url)) {
+            return;
+        }
+        if (loadInternalUrlIfPossible(url)) {
             return;
         }
         try {
@@ -1029,6 +1053,11 @@ public final class MainActivity extends Activity {
                 return false;
             }
 
+            if ("friemi".equalsIgnoreCase(uri.getScheme())) {
+                loadUrl(normalizeIncomingUri(uri));
+                return true;
+            }
+
             if (!isHttp(uri)) {
                 openExternal(uri.toString());
                 return true;
@@ -1157,6 +1186,12 @@ public final class MainActivity extends Activity {
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView popupView, WebResourceRequest request) {
                     Uri uri = request.getUrl();
+                    if ("friemi".equalsIgnoreCase(uri.getScheme())) {
+                        webView.loadUrl(normalizeIncomingUri(uri));
+                        popupView.destroy();
+                        return true;
+                    }
+
                     if (!isHttp(uri)) {
                         openExternal(uri.toString());
                         popupView.destroy();
@@ -1176,7 +1211,7 @@ public final class MainActivity extends Activity {
                     }
 
                     if (shouldStayInWebView(uri)) {
-                        webView.loadUrl(uri.toString());
+                        webView.loadUrl(normalizeIncomingUri(uri));
                     } else {
                         openExternal(uri.toString());
                     }
