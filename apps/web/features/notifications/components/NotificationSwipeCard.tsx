@@ -99,7 +99,7 @@ export function NotificationSwipeCard({
           transform: `translateX(${actionOffset}px)`,
         }}
       >
-        <div className="flex w-full items-center justify-center rounded-[1.2rem] bg-danger px-3 shadow-[inset_0_0_0_1px_rgba(140,38,29,0.15)]">
+        <div className="flex w-full items-center justify-center rounded-[1.2rem] bg-rose/70 px-3 shadow-[inset_0_0_0_1px_rgba(181,48,31,0.16)]">
           {mobileDeleteAction}
         </div>
       </div>

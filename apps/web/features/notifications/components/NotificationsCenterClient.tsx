@@ -352,7 +352,7 @@ function NotificationCard({
 
   const mobileDeleteAction = (
     <button
-      className="flex min-h-[calc(100%-0.5rem)] w-full flex-col items-center justify-center gap-1 rounded-[1rem] bg-danger px-3 py-4 text-center text-xs font-semibold text-paper transition hover:bg-[#8c261d] focus:outline-none focus-visible:ring-2 focus-visible:ring-paper/80"
+      className="flex min-h-[calc(100%-0.5rem)] w-full flex-col items-center justify-center gap-1 rounded-[1rem] bg-paper/88 px-3 py-4 text-center text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/55"
       data-no-swipe
       disabled={pending}
       onClick={() => onDelete(notification.id)}
@@ -496,7 +496,7 @@ function NotificationCard({
                 </button>
               ) : null}
               <button
-                className="hidden min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-danger px-3 text-xs font-semibold text-paper shadow-[0_10px_22px_rgba(181,48,31,0.18)] transition hover:bg-[#8c261d] focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/25 sm:inline-flex"
+                className="hidden min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-rose/58 px-3 text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/78 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:inline-flex"
                 disabled={pending}
                 onClick={() => onDelete(notification.id)}
                 type="button"
