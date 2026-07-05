@@ -64,6 +64,25 @@ html[data-friemi-android-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
 
+html[data-friemi-ios-app="true"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
+    ui-sans-serif, system-ui, sans-serif;
+  overscroll-behavior-y: contain;
+}
+
+html[data-friemi-ios-app="true"] body {
+  font-family: var(--font-sans);
+}
+
+html[data-friemi-ios-app="true"] * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-friemi-ios-app="true"] .app-layout-shell > header {
+  padding-top: env(safe-area-inset-top);
+}
+
 .app-orientation-lock {
   display: none;
 }
