@@ -43,8 +43,14 @@ class AppViewController: CAPBridgeViewController {
             hostname === "localhost" ||
             hostname === "127.0.0.1";
 
+          const isPreviewHost = (hostname) =>
+            hostname.endsWith(".vercel.app");
+
           const shouldKeepInApp = (hostname) =>
-            isFriemiHost(hostname) || isClerkHost(hostname) || isLocalHost(hostname);
+            isFriemiHost(hostname) ||
+            isClerkHost(hostname) ||
+            isLocalHost(hostname) ||
+            isPreviewHost(hostname);
 
           const shouldStayInWebView = (value) => {
             try {
@@ -119,7 +125,8 @@ class AppViewController: CAPBridgeViewController {
             normalizedHost.hasSuffix(".accounts.dev") ||
             normalizedHost == "clerk.shared.lcl.dev" ||
             normalizedHost == "localhost" ||
-            normalizedHost == "127.0.0.1"
+            normalizedHost == "127.0.0.1" ||
+            normalizedHost.hasSuffix(".vercel.app")
     }
 }
 

@@ -7,14 +7,20 @@ const iosAllowNavigation = [
   ...baseAllowNavigation,
   "localhost",
   "127.0.0.1",
+  "*.vercel.app",
   "clerk.com",
   "*.clerk.com",
   "accounts.dev",
   "*.accounts.dev",
   "clerk.shared.lcl.dev",
 ];
+const iosPreviewHost = "";
+const iosPreviewPath = "/fr/home";
 const iosServerUrl =
-  process.env.FRIEMI_IOS_SERVER_URL ?? "https://www.friemi.com/zh-CN/mobile-home";
+  process.env.FRIEMI_IOS_SERVER_URL ??
+  (iosPreviewHost
+    ? `https://${iosPreviewHost}${iosPreviewPath}`
+    : "https://www.friemi.com/zh-CN/mobile-home");
 
 const config: CapacitorConfig = {
   appId: "com.friemi.app",
