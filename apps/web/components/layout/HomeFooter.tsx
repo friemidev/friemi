@@ -67,7 +67,10 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             className="flex min-w-0 items-center gap-2 text-sm text-white/75 transition hover:text-white"
             href={`mailto:${t.contactEmail}`}
           >
-            <Mail className="h-4 w-4 shrink-0 text-[#F09182]" aria-hidden="true" />
+            <Mail
+              className="h-4 w-4 shrink-0 text-[#F09182]"
+              aria-hidden="true"
+            />
             <span className="min-w-0 break-all">{t.contactEmail}</span>
           </a>
         </div>
@@ -80,9 +83,9 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             {t.versionLabel}{" "}
             <Link
               className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-              href={withLocale(locale, "/updates/v2_1")}
+              href={withLocale(locale, "/updates/v2_2")}
             >
-              v2.1
+              v2.2
             </Link>
           </p>
           <p className="inline-flex items-center gap-2 text-xs text-white/45 md:justify-end">
