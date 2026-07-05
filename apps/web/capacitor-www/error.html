@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Friemi</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --forest: #156240;
+        --meadow: #369758;
+        --paper: #fefff9;
+        --fog: #f1f2ec;
+        --sand: #d6d5b2;
+        --coral: #f09182;
+        --ink: #1d1d1b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% 8%, rgb(54 151 88 / 0.18), transparent 15rem),
+          radial-gradient(circle at 88% 18%, rgb(240 145 130 / 0.18), transparent 14rem),
+          var(--paper);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+          "Hiragino Sans GB", "Noto Sans SC", ui-sans-serif, system-ui,
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        min-height: 100svh;
+        place-items: center;
+        padding:
+          max(1.25rem, env(safe-area-inset-top))
+          max(1.25rem, env(safe-area-inset-right))
+          max(1.5rem, env(safe-area-inset-bottom))
+          max(1.25rem, env(safe-area-inset-left));
+      }
+
+      section {
+        width: min(100%, 24rem);
+        border: 1px solid rgb(214 213 178 / 0.95);
+        border-radius: 1.4rem;
+        background: rgb(254 255 249 / 0.92);
+        padding: 1.25rem;
+        text-align: center;
+        box-shadow: 0 22px 56px rgb(21 98 64 / 0.14);
+      }
+
+      h1 {
+        margin: 1rem 0 0;
+        color: var(--forest);
+        font-size: 1.35rem;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0.7rem 0 0;
+        color: rgb(21 98 64 / 0.76);
+        font-size: 0.95rem;
+        line-height: 1.65;
+      }
+
+      button {
+        display: inline-flex;
+        min-height: 2.85rem;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1.15rem;
+        border: 0;
+        border-radius: 999px;
+        background: var(--forest);
+        color: var(--paper);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        padding: 0 1.35rem;
+        box-shadow: 0 14px 28px rgb(21 98 64 / 0.22);
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      .hint {
+        color: rgb(29 29 27 / 0.5);
+        font-size: 0.78rem;
+      }
+
+      .mark {
+        display: inline-grid;
+        height: 3.25rem;
+        width: 3.25rem;
+        place-items: center;
+        border-radius: 0.95rem;
+        background: var(--meadow);
+        color: var(--paper);
+        font-size: 1.5rem;
+        font-weight: 900;
+        box-shadow:
+          inset 0 0 0 1px rgb(255 255 255 / 0.18),
+          0 12px 24px rgb(21 98 64 / 0.16);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <div aria-label="Friemi" class="mark">F</div>
+        <h1>Page unavailable</h1>
+        <p>Check your connection and try again.</p>
+        <button type="button" onclick="window.location.href='https://www.friemi.com/zh-CN/mobile-home'">
+          Retry
+        </button>
+        <p class="hint">Friemi</p>
+      </section>
+    </main>
+  </body>
+</html>
