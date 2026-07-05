@@ -1,4 +1,5 @@
 import Capacitor
+import UIKit
 import WebKit
 
 @objc(FriemiNavigationPlugin)
@@ -34,7 +35,10 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
             return false
         }
 
-        CAPLog.print("Friemi iOS navigation blocked external handoff: \(url.absoluteString), type: \(navigationType)")
+        if UIApplication.shared.applicationState == .active {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
+        CAPLog.print("Friemi iOS navigation opened externally: \(url.absoluteString), type: \(navigationType)")
         return true
     }
 
@@ -46,7 +50,12 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
         return normalizedHost == "friemi.com" ||
             normalizedHost == "www.friemi.com" ||
             normalizedHost.hasSuffix(".friemi.com") ||
-            normalizedHost == "clerk.accounts.dev" ||
-            normalizedHost.hasSuffix(".clerk.accounts.dev")
+            normalizedHost == "clerk.com" ||
+            normalizedHost.hasSuffix(".clerk.com") ||
+            normalizedHost == "accounts.dev" ||
+            normalizedHost.hasSuffix(".accounts.dev") ||
+            normalizedHost == "clerk.shared.lcl.dev" ||
+            normalizedHost == "localhost" ||
+            normalizedHost == "127.0.0.1"
     }
 }
