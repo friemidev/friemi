@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { brand } from "@/lib/brand";
 import { getCanonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
@@ -30,6 +30,10 @@ export const metadata: Metadata = {
     siteName: brand.name,
     title: brand.name,
   },
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

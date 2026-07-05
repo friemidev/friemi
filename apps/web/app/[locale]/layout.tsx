@@ -13,6 +13,7 @@ import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
+import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
@@ -63,6 +64,7 @@ export default async function LocaleLayout({
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
               <RouteProgress />
               <AndroidAppBridge locale={locale} />
+              <IOSAppBridge />
               <AppHeader
                 locale={locale}
                 isAuthenticated={Boolean(viewerProfile)}
