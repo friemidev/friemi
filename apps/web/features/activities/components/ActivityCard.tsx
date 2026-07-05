@@ -112,6 +112,49 @@ function getCardVisibilityLabel(
   return "开放局";
 }
 
+function getTeamParticipantLabels({
+  capacity,
+  count,
+  locale,
+}: {
+  capacity: number;
+  count: number;
+  locale: string;
+}) {
+  if (capacity > 0) {
+    const full =
+      locale === "fr"
+        ? `${count}/${capacity} inscrits`
+        : locale === "en"
+          ? `${count}/${capacity} joined`
+          : `${count}/${capacity} 已报名`;
+
+    return {
+      compact: `${count}/${capacity}`,
+      full,
+    };
+  }
+
+  if (locale === "fr") {
+    return {
+      compact: `${count}`,
+      full: `${count} inscrit${count > 1 ? "s" : ""}`,
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      compact: `${count}`,
+      full: `${count} joined`,
+    };
+  }
+
+  return {
+    compact: `${count}人`,
+    full: `已有 ${count} 人报名`,
+  };
+}
+
 function getCardFavoriteLabels(locale: string) {
   if (locale === "fr") {
     return {
@@ -592,8 +635,12 @@ export function ActivityCard({
   const autoCreatedTeam = activity.autoCreatedTeam;
   const showCoverKindBadge = !isProfileOwnCard;
   const showCoverVisibilityBadge = !isProfileCard && !isActivityInfo;
-  const shouldShowParticipantCount = !isActivityInfo && activity.capacity > 0;
-  const participantLabel = `${activity.participantCount}/${activity.capacity} ${t.activityDetail.participants}`;
+  const shouldShowParticipantCount = !isActivityInfo;
+  const participantLabels = getTeamParticipantLabels({
+    capacity: activity.capacity,
+    count: activity.participantCount,
+    locale,
+  });
   const participantPreview = isTeamCard
     ? (activity.participantPreview ?? [])
     : [];
@@ -833,7 +880,9 @@ export function ActivityCard({
               )}
             >
               <Crown className="h-3.5 w-3.5 shrink-0" />
-              <span className="min-w-0 truncate">{ownActivityLabels.badge}</span>
+              <span className="min-w-0 truncate">
+                {ownActivityLabels.badge}
+              </span>
             </span>
           ) : null}
           <div
@@ -875,19 +924,21 @@ export function ActivityCard({
                 </span>
               ) : null}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <span
-                className={cn(
-                  "rounded-full bg-[rgba(255,245,230,0.96)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.15)]",
-                  mobileDenseClass(
-                    "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
-                  ),
-                  isProfileOwnCard ? "px-2 py-0.5 text-[10px]" : null,
-                )}
-              >
-                {t.activityLabels.timeStates[timeState]}
-              </span>
-            </div>
+            {!isTeamCard ? (
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <span
+                  className={cn(
+                    "rounded-full bg-[rgba(255,245,230,0.96)] px-2.5 py-1 text-[11px] font-semibold leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.15)]",
+                    mobileDenseClass(
+                      "max-[639px]:px-2 max-[639px]:py-0.5 max-[639px]:text-[10px]",
+                    ),
+                    isProfileOwnCard ? "px-2 py-0.5 text-[10px]" : null,
+                  )}
+                >
+                  {t.activityLabels.timeStates[timeState]}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -900,7 +951,9 @@ export function ActivityCard({
           <CardTitle
             className={cn(
               "line-clamp-2 text-base font-extrabold leading-snug tracking-normal sm:text-[1.08rem]",
-              mobileDenseClass("max-[639px]:text-[0.86rem] max-[639px]:leading-snug"),
+              mobileDenseClass(
+                "max-[639px]:text-[0.86rem] max-[639px]:leading-snug",
+              ),
               isInactiveCard ? "text-zinc-600" : null,
               !isInactiveCard && isTeamCard ? "text-ink" : null,
               !isInactiveCard && !isTeamCard ? "text-ink" : null,
@@ -921,7 +974,9 @@ export function ActivityCard({
           <div
             className={cn(
               "grid gap-2 text-sm font-medium text-forest/75",
-              mobileDenseClass("max-[639px]:gap-1.5 max-[639px]:text-[0.72rem]"),
+              mobileDenseClass(
+                "max-[639px]:gap-1.5 max-[639px]:text-[0.72rem]",
+              ),
               isInactiveCard ? "text-zinc-500" : null,
             )}
           >
@@ -973,12 +1028,14 @@ export function ActivityCard({
                     mobileDenseClass("max-[639px]:truncate"),
                   )}
                 >
-                  <span className={cn(mobileDense ? "max-[639px]:hidden" : null)}>
-                    {participantLabel}
+                  <span
+                    className={cn(mobileDense ? "max-[639px]:hidden" : null)}
+                  >
+                    {participantLabels.full}
                   </span>
                   {mobileDense ? (
                     <span className="hidden max-[639px]:inline">
-                      {activity.participantCount}/{activity.capacity}
+                      {participantLabels.compact}
                     </span>
                   ) : null}
                 </span>
@@ -1033,8 +1090,8 @@ export function ActivityCard({
               useCompactDualActions
                 ? "grid-cols-1 justify-center sm:flex sm:grid-cols-none sm:justify-center sm:gap-6"
                 : copyActivityHref
-                ? "grid-cols-1 sm:grid-cols-[minmax(4.75rem,0.84fr)_minmax(5.75rem,1fr)]"
-                : "grid-cols-1",
+                  ? "grid-cols-1 sm:grid-cols-[minmax(4.75rem,0.84fr)_minmax(5.75rem,1fr)]"
+                  : "grid-cols-1",
             )}
           >
             {showPrimaryAction && !useCompactDualActions ? (
