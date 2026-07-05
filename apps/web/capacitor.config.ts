@@ -29,6 +29,7 @@ const config: CapacitorConfig = {
   ...(isIOSCommand
     ? {
         ios: {
+          path: "../ios",
           appendUserAgent: "FriemiIOS/1",
         },
       }
