@@ -93,6 +93,7 @@ export default async function WerewolfSeatPage({
         locale={locale}
         payload={parsePrivatePayload(seat.privatePayload)}
         privateToken={seat.privateToken}
+        roleAlignment={seat.roleAlignment}
         roomHref={withLocale(
           locale,
           `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,

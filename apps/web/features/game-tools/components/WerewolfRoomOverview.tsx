@@ -21,6 +21,7 @@ import {
   leaveWerewolfSeatAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
+import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
@@ -115,10 +116,13 @@ function getCopy(locale: string) {
       noMembers: "Aucun joueur en attente.",
       openSeat: "Page privée",
       playerSeats: "Places joueurs",
+      publicScreen: "Écran public",
       ready: "Prêt",
       alive: "Vivant",
+      recap: "Récap",
       seatedAt: "Place",
       selectSeat: "Choisir",
+      scanJoin: "Scanner pour entrer",
       share: "Lien de partage",
       status: "Statut",
       unready: "Pas prêt",
@@ -154,10 +158,13 @@ function getCopy(locale: string) {
       noMembers: "No one is waiting.",
       openSeat: "Private page",
       playerSeats: "Player seats",
+      publicScreen: "Public screen",
       ready: "Ready",
       alive: "Alive",
+      recap: "Recap",
       seatedAt: "Seat",
       selectSeat: "Choose",
+      scanJoin: "Scan to join",
       share: "Share link",
       status: "Status",
       unready: "Not ready",
@@ -192,10 +199,13 @@ function getCopy(locale: string) {
     noMembers: "暂无等待落座成员。",
     openSeat: "进入私密座位页",
     playerSeats: "玩家座位",
+    publicScreen: "公共屏",
     ready: "已准备",
     alive: "存活",
+    recap: "复盘",
     seatedAt: "已落座",
     selectSeat: "选择此座",
+    scanJoin: "扫码进入房间",
     share: "分享链接",
     status: "状态",
     unready: "未准备",
@@ -235,11 +245,13 @@ function SubmitButton({
 function getStatusLabel({
   isClaimed,
   isDead,
+  isLocked,
   isReady,
   t,
 }: {
   isClaimed: boolean;
   isDead: boolean;
+  isLocked: boolean;
   isReady: boolean;
   t: ReturnType<typeof getCopy>;
 }) {
@@ -249,6 +261,10 @@ function getStatusLabel({
 
   if (isDead) {
     return t.dead;
+  }
+
+  if (isLocked) {
+    return t.alive;
   }
 
   return isReady ? t.ready : t.unready;
@@ -276,6 +292,18 @@ export function WerewolfRoomOverview({
     locale,
     `/game-tools/werewolf/rooms/${room.id}`,
   )}`;
+  const joinUrl = `${baseUrl}${withLocale(
+    locale,
+    `/game-tools/werewolf/join/${room.code}`,
+  )}`;
+  const recapHref = withLocale(
+    locale,
+    `/game-tools/werewolf/rooms/${room.id}/recap`,
+  );
+  const screenHref = withLocale(
+    locale,
+    `/game-tools/werewolf/rooms/${room.id}/screen`,
+  );
   const isLobby = room.status === "LOBBY";
   const playerSeats = room.seats.filter((seat) => seat.isPlayerSeat);
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
@@ -405,6 +433,11 @@ export function WerewolfRoomOverview({
                     <p className="mt-2 w-full truncate text-sm font-black text-[#1E1718]">
                       {seat.isClaimed ? seat.displayName : t.empty}
                     </p>
+                    {room.status === "FINISHED" && seat.roleLabel ? (
+                      <p className="mt-1 max-w-full truncate rounded-full bg-white px-2 py-1 text-[11px] font-black text-[#7A1F2B]">
+                        {seat.roleLabel}
+                      </p>
+                    ) : null}
                     <p className="inline-flex items-center justify-center gap-1 text-xs font-bold text-[#7A1F2B]/68">
                       {seat.isDead ? (
                         <Skull className="h-3.5 w-3.5" />
@@ -414,6 +447,7 @@ export function WerewolfRoomOverview({
                       {getStatusLabel({
                         isClaimed: seat.isClaimed,
                         isDead: seat.isDead,
+                        isLocked: room.status !== "LOBBY",
                         isReady: Boolean(seat.readyAt),
                         t,
                       })}
@@ -485,6 +519,25 @@ export function WerewolfRoomOverview({
         </div>
 
         <aside className="space-y-4">
+          <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
+            <WerewolfQrCode label={t.scanJoin} value={joinUrl} />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link
+                className="inline-flex h-10 items-center justify-center rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
+                href={screenHref}
+                target="_blank"
+              >
+                {t.publicScreen}
+              </Link>
+              <Link
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#D9C7B4] bg-[#FFFDF7] px-3 text-xs font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1]"
+                href={recapHref}
+              >
+                {t.recap}
+              </Link>
+            </div>
+          </div>
+
           <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white shadow-sm">
             <span className="inline-flex items-center gap-2 text-sm font-black">
               <Crown className="h-4 w-4 text-[#F0C36A]" />

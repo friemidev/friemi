@@ -126,7 +126,7 @@ MVP 不做：
 /{locale}/game-tools/werewolf/rooms/{roomId}/recap
 ```
 
-MVP 阶段可以先不做公共屏和复盘页。
+v0.6 已加入公共屏和复盘页；公共屏用于现场大屏展示公开状态，复盘页用于结束后回看结果。
 
 ## 4. 整体流程
 
@@ -342,8 +342,8 @@ Checklist：
 - [x] 重复点击不会泄露其他身份
 - [x] 未翻牌时角色、阵营和角色说明都保持隐藏，翻牌时才渲染正面内容
 - [x] 角色说明为 Friemi 原创简短文案，不复制外部说明书
-- [ ] 被标记死亡后展示死亡动画
-- [ ] 死亡动画后卡牌变灰并显示「你已出局」
+- [x] 被标记死亡后展示死亡动画
+- [x] 死亡动画后卡牌变灰并显示「你已出局」
 
 ### 5.8 法官页面
 
@@ -431,7 +431,7 @@ Checklist：
 - [x] 结束游戏需要二次确认
 - [x] 法官必须选择获胜阵营
 - [x] 系统计算每位玩家胜负
-- [ ] 法官不计入胜负阵营，但记录为担任法官
+- [x] 法官不计入胜负阵营，但记录为担任法官
 - [x] 房间状态进入 `FINISHED`
 - [x] 游戏结束事件写入日志
 - [x] 已结束房间不能继续修改座位或重新发牌，除非后续新增重开能力
@@ -454,12 +454,12 @@ Checklist：
 
 Checklist：
 
-- [ ] 玩家私密页在房间结束后展示结算动画
-- [ ] 胜利玩家和失败玩家动画视觉不同
-- [ ] 结算页展示角色、阵营和结果
-- [ ] 动画结束后可返回房间
-- [ ] 房间页展示最终座位、角色和存活状态
-- [ ] 结算页移动端不会因为长角色说明撑破布局
+- [x] 玩家私密页在房间结束后展示结算动画
+- [x] 胜利玩家和失败玩家动画视觉不同
+- [x] 结算页展示角色、阵营和结果
+- [x] 动画结束后可返回房间
+- [x] 房间页展示最终座位、角色和存活状态
+- [x] 结算页移动端不会因为长角色说明撑破布局
 
 ### 5.12 个人记录
 
@@ -486,13 +486,14 @@ Checklist：
 
 Checklist：
 
-- [ ] 设计玩家游戏记录数据模型
-- [ ] 游戏结束时为登录玩家写入记录
-- [ ] 游客玩家记录可先只留在房间，不进入个人主页
-- [ ] 个人主页新增狼人杀统计模块
-- [ ] 统计区分玩家局数和担任法官次数
-- [ ] 胜率计算不包含法官局
-- [ ] 记录写入具备幂等性，重复结束请求不能写入重复战绩
+- [x] 设计玩家游戏记录数据模型
+- [x] 游戏结束时为登录玩家写入记录
+- [x] 游客玩家记录可先只留在房间，不进入个人主页
+- [x] 个人主页新增狼人杀统计模块
+- [x] 统计区分玩家局数和担任法官次数
+- [x] 胜率计算不包含法官局
+- [x] 记录写入具备幂等性，重复结束请求不能写入重复战绩
+- [x] 结束游戏使用房间状态条件更新，避免并发请求重复写入结束事件
 
 ## 6. 推荐数据模型
 
@@ -588,18 +589,23 @@ model GameToolPlayerRecord {
   roomId        String
   profileId     String
   kind          GameToolKind
-  variantKey    String
+  variantKey    String?
+  variantName   String?
   seatNumber    Int?
   roleKey       String?
-  alignment     String?
-  result        String       // WIN / LOSE / JUDGE
-  wasJudge      Boolean      @default(false)
-  playedAt      DateTime
+  roleAlignment String?
+  result        String?      // WIN / LOSE；法官不计入胜负，记录为 null
+  isJudge       Boolean      @default(false)
+  playedAt      DateTime     @default(now())
+  metadata      Json?
+  room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profile       UserProfile  @relation("GameToolPlayerRecordProfile", fields: [profileId], references: [id], onDelete: Cascade)
   createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@unique([roomId, profileId])
-  @@index([profileId, playedAt])
-  @@index([kind, variantKey, playedAt])
+  @@index([profileId, kind, playedAt])
+  @@index([roomId])
 }
 ```
 
@@ -710,6 +716,8 @@ feature/v2-3-werewolf-mvp-tool
 
 - [x] `/game-tools/werewolf` 版型选择页
 - [x] `/game-tools/werewolf/rooms/{roomId}` 房间页
+- [x] `/game-tools/werewolf/rooms/{roomId}/screen` 公共屏
+- [x] `/game-tools/werewolf/rooms/{roomId}/recap` 复盘页
 - [x] `/game-tools/werewolf/join/{code}` 加入页
 - [x] `/game-tools/werewolf/seats/{privateToken}` 玩家私密身份页
 - [x] 桌游工具大厅展示狼人杀入口
@@ -717,8 +725,8 @@ feature/v2-3-werewolf-mvp-tool
 
 房间与座位：
 
-- [x] 创建 10 人预女猎局房间
-- [x] 自动创建 9 个玩家座位和 1 个法官位
+- [x] 创建 7 / 8 / 9 / 10 / 12 人狼人杀房间
+- [x] 按版型自动创建玩家座位和法官位
 - [x] 房间分享链接可直接进入
 - [x] 用户进入后成为房间成员
 - [x] 未选座成员显示在成员区
@@ -731,7 +739,7 @@ feature/v2-3-werewolf-mvp-tool
 - [x] 所有人落座后可准备
 - [x] 所有人准备后房间进入可开始状态
 - [x] 只有法官可开始游戏
-- [x] 开始游戏后随机发牌
+- [x] 开始游戏后按当前版型随机发牌
 - [x] 法官不参与发牌
 - [x] 发牌写入玩家私密 payload
 
@@ -743,7 +751,7 @@ feature/v2-3-werewolf-mvp-tool
 - [x] 2 秒后自动翻回
 - [x] 显示当前版型、角色、阵营和简短说明
 - [x] 未翻牌前不在 UI / 可访问树中展示角色、阵营或角色说明
-- [ ] 死亡后展示死亡动画和灰态
+- [x] 死亡后展示死亡动画和灰态
 
 法官端：
 
@@ -756,9 +764,9 @@ feature/v2-3-werewolf-mvp-tool
 
 记录：
 
-- [ ] 游戏结束时为每位登录玩家写入记录
-- [ ] 记录座位、角色、阵营、胜负、是否法官
-- [ ] 个人主页展示基础狼人杀统计
+- [x] 游戏结束时为每位登录玩家写入记录
+- [x] 记录座位、角色、阵营、胜负、是否法官
+- [x] 个人主页展示基础狼人杀统计
 
 安全与隐私：
 
@@ -770,13 +778,13 @@ feature/v2-3-werewolf-mvp-tool
 
 ### P1：MVP 后建议做
 
-- [ ] 支持 7 / 8 / 9 人局
-- [ ] 支持 12 人预女猎白痴局
-- [ ] 公共屏页面
-- [ ] 房间二维码加入
+- [x] 支持 7 / 8 / 9 人局
+- [x] 支持 12 人预女猎白痴局
+- [x] 公共屏页面
+- [x] 房间二维码加入
 - [ ] 法官主持词可折叠流程卡
 - [ ] 房间事件轨道
-- [ ] 已结束房间复盘页
+- [x] 已结束房间复盘页
 - [ ] 结果分享图
 - [ ] 断线重连和同步状态提示
 - [ ] 页面聚焦 / 手动刷新状态，不做实时对局同步
@@ -802,7 +810,9 @@ MVP 通过标准：
 
 - [x] 用户能从桌游工具大厅进入狼人杀
 - [x] 用户能创建 10 人预女猎局
+- [x] 用户能创建 7 / 8 / 9 / 12 人扩展版型
 - [x] 房间能展示 1-9 号玩家座位和法官位
+- [x] 扩展版型能展示对应人数的玩家座位和法官位
 - [x] 用户能通过分享链接进入同一房间
 - [x] 未落座用户能出现在成员区
 - [x] 用户能选择空座位，且同一座位不能被重复占用
@@ -815,8 +825,11 @@ MVP 通过标准：
 - [x] 法官能标记死亡和取消死亡
 - [x] 死亡玩家私密页出现死亡动画和灰态
 - [x] 法官能手动结束游戏并选择获胜阵营
-- [ ] 玩家能看到胜利 / 失败结算动画
-- [ ] 登录玩家的个人记录能写入并统计
+- [x] 玩家能看到胜利 / 失败结算动画
+- [x] 登录玩家的个人记录能写入并统计
+- [x] 房间页提供扫码加入、公共屏和复盘入口
+- [x] 公共屏进行中不泄露身份，结束后可展示公开结果
+- [x] 复盘页可查看最终座位、身份、阵营胜负和事件时间线
 - [x] 普通玩家不能通过直接请求看到全部身份或修改死亡状态
 - [ ] 移动浏览器和 Android WebView 下核心流程可用
 

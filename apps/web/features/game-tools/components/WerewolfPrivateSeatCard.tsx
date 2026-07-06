@@ -37,6 +37,7 @@ type WerewolfPrivateSeatCardProps = {
   locale: string;
   payload: WerewolfPrivatePayload | null;
   privateToken: string;
+  roleAlignment: string | null;
   roomHref: string;
   roomState: WerewolfRoomState;
   roomStatus: string;
@@ -82,6 +83,12 @@ type Copy = {
   notReady: string;
   ready: string;
   reveal: string;
+  resultDefeat: string;
+  resultJudgeBody: string;
+  resultOutcome: string;
+  resultRole: string;
+  resultTeam: string;
+  resultVictory: string;
   revive: string;
   role: string;
   roleHidden: string;
@@ -135,6 +142,12 @@ const copies: Record<string, Copy> = {
     notReady: "等待所有座位准备。",
     ready: "我准备好了",
     reveal: "查看我的角色",
+    resultDefeat: "失败",
+    resultJudgeBody: "法官不参与阵营胜负，本局会记录为担任法官。",
+    resultOutcome: "本局结果",
+    resultRole: "本局角色",
+    resultTeam: "所属阵营",
+    resultVictory: "胜利",
     revive: "取消死亡",
     role: "角色",
     roleHidden: "角色、阵营和说明将在翻牌时短暂显示。",
@@ -189,6 +202,13 @@ const copies: Record<string, Copy> = {
     notReady: "Waiting for every seat to be ready.",
     ready: "I'm ready",
     reveal: "Reveal my role",
+    resultDefeat: "Defeat",
+    resultJudgeBody:
+      "The judge is not part of team victory and is recorded as judge.",
+    resultOutcome: "Result",
+    resultRole: "Role",
+    resultTeam: "Team",
+    resultVictory: "Victory",
     revive: "Revive",
     role: "Role",
     roleHidden: "Role, team, and notes appear only during the reveal window.",
@@ -246,6 +266,13 @@ const copies: Record<string, Copy> = {
     notReady: "En attente de toutes les places.",
     ready: "Je suis prêt",
     reveal: "Voir mon rôle",
+    resultDefeat: "Défaite",
+    resultJudgeBody:
+      "Le maître ne participe pas à la victoire des camps et sera enregistré comme maître.",
+    resultOutcome: "Résultat",
+    resultRole: "Rôle",
+    resultTeam: "Camp",
+    resultVictory: "Victoire",
     revive: "Réanimer",
     role: "Rôle",
     roleHidden:
@@ -311,6 +338,7 @@ export function WerewolfPrivateSeatCard({
   locale,
   payload,
   privateToken,
+  roleAlignment,
   roomHref,
   roomState,
   roomStatus,
@@ -343,6 +371,7 @@ export function WerewolfPrivateSeatCard({
   const [revealSecondsLeft, setRevealSecondsLeft] = useState(0);
   const [showDealIntro, setShowDealIntro] = useState(false);
   const [showDeathIntro, setShowDeathIntro] = useState(false);
+  const [showResultIntro, setShowResultIntro] = useState(false);
   const t = copies[locale] ?? copies.en;
   const canStart = isJudgeSeat && roomStatus === "LOBBY" && allReady;
   const winnerLabel =
@@ -351,6 +380,13 @@ export function WerewolfPrivateSeatCard({
       : roomState.winner === "WEREWOLF"
         ? t.winnerWerewolf
         : null;
+  const resultKind =
+    !isJudgeSeat && roomStatus === "FINISHED" && roomState.winner && roleAlignment
+      ? (roomState.winner === "WEREWOLF" && roleAlignment === "werewolf") ||
+        (roomState.winner === "GOOD" && roleAlignment === "good")
+        ? "WIN"
+        : "LOSE"
+      : null;
   const readySeats = useMemo(
     () => seats.filter((seat) => Boolean(seat.readyAt)).length,
     [seats],
@@ -416,6 +452,33 @@ export function WerewolfPrivateSeatCard({
     return () => window.clearTimeout(timer);
   }, [isDead, isJudgeSeat, privateToken, roomState.deadSeatNumbers]);
 
+  useEffect(() => {
+    if (isJudgeSeat || roomStatus !== "FINISHED" || !resultKind) {
+      return;
+    }
+
+    const storageKey = `friemi:werewolf:result-intro:${privateToken}:${roomState.finishedAt ?? roomState.winner ?? "finished"}`;
+
+    if (window.sessionStorage.getItem(storageKey)) {
+      return;
+    }
+
+    window.sessionStorage.setItem(storageKey, "1");
+    setShowResultIntro(true);
+    const timer = window.setTimeout(() => {
+      setShowResultIntro(false);
+    }, 1700);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isJudgeSeat,
+    privateToken,
+    resultKind,
+    roomState.finishedAt,
+    roomState.winner,
+    roomStatus,
+  ]);
+
   return (
     <div className="relative space-y-5">
       {showDealIntro ? (
@@ -445,6 +508,36 @@ export function WerewolfPrivateSeatCard({
             <p className="mt-2 text-sm font-bold leading-6 text-[#7A1F2B]/72">
               {t.deathBody}
             </p>
+          </div>
+        </div>
+      ) : null}
+      {showResultIntro ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#1E1718]/82 px-6 backdrop-blur-sm">
+          <div className="grid w-full max-w-xs place-items-center overflow-hidden rounded-[1.25rem] border border-white/14 bg-[#FFFDF7] text-center shadow-[0_24px_90px_rgba(0,0,0,0.42)]">
+            <div
+              className={`grid w-full place-items-center px-6 py-7 text-white ${
+                resultKind === "WIN" ? "bg-[#36624A]" : "bg-[#7A1F2B]"
+              }`}
+            >
+              <span className="grid h-14 w-14 place-items-center rounded-full bg-white text-[#1E1718] shadow-[0_16px_34px_rgba(30,23,24,0.24)]">
+                {resultKind === "WIN" ? (
+                  <Crown className="h-7 w-7" />
+                ) : (
+                  <Skull className="h-7 w-7" />
+                )}
+              </span>
+              <p className="mt-4 text-2xl font-black">
+                {resultKind === "WIN" ? t.resultVictory : t.resultDefeat}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-sm font-black text-[#1E1718]">
+                {payload?.roleLabel ?? "-"}
+              </p>
+              <p className="mt-1 text-xs font-bold text-[#7A1F2B]/72">
+                {winnerLabel ?? t.finished}
+              </p>
+            </div>
           </div>
         </div>
       ) : null}
@@ -488,13 +581,102 @@ export function WerewolfPrivateSeatCard({
 
         <div className="grid gap-4 p-4 sm:p-5">
           {roomStatus === "FINISHED" ? (
-            <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white">
-              <p className="text-sm font-black">{t.finished}</p>
-              {winnerLabel ? (
-                <p className="mt-1 text-lg font-black text-[#F0C36A]">
-                  {winnerLabel}
-                </p>
-              ) : null}
+            <div
+              className={`overflow-hidden rounded-[1.2rem] border p-4 ${
+                resultKind === "WIN"
+                  ? "border-[#8AB68E] bg-[#F4FFF2]"
+                  : resultKind === "LOSE"
+                    ? "border-[#D8A1A8] bg-[#FFF6F4]"
+                    : "border-[#D9C7B4] bg-[#1E1718] text-white"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p
+                    className={`text-xs font-black uppercase tracking-[0.14em] ${
+                      resultKind ? "text-[#7A1F2B]/70" : "text-white/62"
+                    }`}
+                  >
+                    {t.finished}
+                  </p>
+                  <p
+                    className={`mt-1 text-2xl font-black ${
+                      resultKind === "WIN"
+                        ? "text-[#36624A]"
+                        : resultKind === "LOSE"
+                          ? "text-[#7A1F2B]"
+                          : "text-[#F0C36A]"
+                    }`}
+                  >
+                    {resultKind === "WIN"
+                      ? t.resultVictory
+                      : resultKind === "LOSE"
+                        ? t.resultDefeat
+                        : (winnerLabel ?? t.finished)}
+                  </p>
+                </div>
+                <span
+                  className={`grid h-12 w-12 place-items-center rounded-full ${
+                    resultKind === "WIN"
+                      ? "bg-[#36624A] text-white"
+                      : resultKind === "LOSE"
+                        ? "bg-[#7A1F2B] text-white"
+                        : "bg-white text-[#1E1718]"
+                  }`}
+                >
+                  {resultKind === "WIN" ? (
+                    <Crown className="h-6 w-6" />
+                  ) : resultKind === "LOSE" ? (
+                    <Skull className="h-6 w-6" />
+                  ) : (
+                    <Flag className="h-6 w-6" />
+                  )}
+                </span>
+              </div>
+              <div
+                className={`mt-4 grid gap-2 rounded-[1rem] p-3 text-sm font-bold ${
+                  resultKind ? "bg-white text-[#1E1718]" : "bg-white/10 text-white"
+                }`}
+              >
+                {winnerLabel ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className={resultKind ? "text-[#7A1F2B]" : "text-white/70"}
+                    >
+                      {t.resultOutcome}
+                    </span>
+                    <span className="text-right">{winnerLabel}</span>
+                  </div>
+                ) : null}
+                {!isJudgeSeat ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#7A1F2B]">{t.resultRole}</span>
+                      <span className="text-right">
+                        {payload?.roleLabel ?? "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#7A1F2B]">{t.resultTeam}</span>
+                      <span className="text-right">
+                        {payload?.alignmentLabel ?? "-"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="leading-6">{t.resultJudgeBody}</p>
+                )}
+                <Link
+                  className={`mt-2 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-black ${
+                    resultKind
+                      ? "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
+                      : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
+                  }`}
+                  href={roomHref}
+                >
+                  {t.back}
+                </Link>
+              </div>
             </div>
           ) : null}
 

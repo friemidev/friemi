@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, Lock, Moon, UsersRound } from "lucide-react";
@@ -41,7 +42,7 @@ const copies: Record<string, Copy> = {
     enabled: "MVP 支持",
     eyebrow: "线下法官辅助工具",
     helper:
-      "第一版只做 10 人预女猎局：9 名玩家发身份，1 名法官主持线下流程。",
+      "选择人数后创建房间。所有版型都包含 1 名法官，系统只给玩家发身份。",
     judge: "含法官",
     players: "人数",
     title: "先开一张狼人杀桌，剩下的交给现场。",
@@ -57,7 +58,7 @@ const copies: Record<string, Copy> = {
     enabled: "MVP",
     eyebrow: "Offline judge helper",
     helper:
-      "The first version supports one setup: 9 players receive roles and 1 judge hosts the table offline.",
+      "Choose a setup, then create the room. Every setup includes 1 judge and roles are dealt only to players.",
     judge: "with judge",
     players: "Seats",
     title: "Open a Werewolf table, then keep the game at the table.",
@@ -73,7 +74,7 @@ const copies: Record<string, Copy> = {
     enabled: "MVP",
     eyebrow: "Assistant maître du jeu",
     helper:
-      "La première version prend en charge une configuration : 9 joueurs avec rôles et 1 maître du jeu hors ligne.",
+      "Choisissez une configuration. Chaque table inclut 1 maître du jeu et les rôles sont distribués seulement aux joueurs.",
     judge: "avec maître",
     players: "Places",
     title: "Ouvrez une table Loups-garous, puis gardez le jeu autour de la table.",
@@ -106,6 +107,9 @@ export function WerewolfCreateRoomPanel({
   const [state, formAction] = useActionState(
     createWerewolfRoomAction,
     initialState,
+  );
+  const [selectedVariantKey, setSelectedVariantKey] = useState(
+    defaultWerewolfVariantKey,
   );
   const t = copies[locale] ?? copies.en;
 
@@ -142,7 +146,7 @@ export function WerewolfCreateRoomPanel({
         className="grid content-between gap-5 rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4 shadow-[0_18px_48px_rgba(30,23,24,0.08)] sm:p-5"
       >
         <input name="locale" type="hidden" value={locale} />
-        <input name="variantKey" type="hidden" value={defaultWerewolfVariantKey} />
+        <input name="variantKey" type="hidden" value={selectedVariantKey} />
 
         <div className="grid gap-4">
           <label className="grid gap-1.5">
@@ -170,14 +174,23 @@ export function WerewolfCreateRoomPanel({
 
             <div className="mt-3 grid gap-2">
               {werewolfVariants.map((variant) => (
-                <div
-                  className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl border px-3 py-2 ${
-                    variant.enabled
-                      ? "border-[#7A1F2B] bg-[#FFF7F1]"
-                      : "border-[#D9C7B4] bg-[#F7F3EC] text-[#1E1718]/50"
-                  }`}
+                <label
+                  className={`flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border px-3 py-2 transition ${
+                    selectedVariantKey === variant.key
+                      ? "border-[#7A1F2B] bg-[#FFF7F1] shadow-sm"
+                      : "border-[#D9C7B4] bg-[#F7F3EC] text-[#1E1718]/70 hover:bg-[#FFFDF7]"
+                  } ${variant.enabled ? "" : "cursor-not-allowed opacity-60"}`}
                   key={variant.key}
                 >
+                  <input
+                    checked={selectedVariantKey === variant.key}
+                    className="sr-only"
+                    disabled={!variant.enabled}
+                    name="variantChoice"
+                    onChange={() => setSelectedVariantKey(variant.key)}
+                    type="radio"
+                    value={variant.key}
+                  />
                   <div>
                     <p className="text-sm font-black text-[#1E1718]">
                       {getWerewolfVariantLabel(locale, variant)}
@@ -196,7 +209,7 @@ export function WerewolfCreateRoomPanel({
                     {!variant.enabled ? <Lock className="h-3 w-3" /> : null}
                     {variant.enabled ? t.enabled : t.disabled}
                   </span>
-                </div>
+                </label>
               ))}
             </div>
           </div>

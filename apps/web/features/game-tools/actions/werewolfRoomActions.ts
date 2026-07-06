@@ -234,6 +234,7 @@ function buildFinishedWerewolfRoomState({
     ...currentState,
     finishedAt: timestamp,
     phase: "FINISHED",
+    resultRecordedAt: timestamp,
     winner,
   };
 }
@@ -1322,6 +1323,7 @@ export async function finishWerewolfRoomAction(
               select: {
                 displayName: true,
                 privateToken: true,
+                profileId: true,
                 roleAlignment: true,
                 roleKey: true,
                 seatNumber: true,
@@ -1350,6 +1352,7 @@ export async function finishWerewolfRoomAction(
     const winner = result.data.winner as Exclude<WerewolfWinner, null>;
     const finishedAt = new Date();
     const currentState = normalizeWerewolfRoomState(room.state);
+    const variantName = getWerewolfVariantLabel(room.locale, variant);
     const playerResults = room.seats
       .filter((seat) => isWerewolfPlayerSeat(seat.seatNumber, variant))
       .map((seat) => {
@@ -1361,15 +1364,48 @@ export async function finishWerewolfRoomAction(
         return {
           alignment: seat.roleAlignment,
           displayName: seat.displayName,
+          profileId: seat.profileId,
           result: won ? "WIN" : "LOSE",
           roleKey: seat.roleKey,
           seatNumber: seat.seatNumber,
         };
       });
-
-    await prisma.$transaction([
-      prisma.gameToolRoom.update({
-        where: { id: room.id },
+    const eventPlayerResults = playerResults.map((player) => ({
+      alignment: player.alignment,
+      displayName: player.displayName,
+      result: player.result,
+      roleKey: player.roleKey,
+      seatNumber: player.seatNumber,
+    }));
+    const recordInputs = [
+      ...playerResults
+        .filter((player) => player.profileId)
+        .map((player) => ({
+          displayName: player.displayName,
+          isJudge: false,
+          profileId: player.profileId!,
+          result: player.result,
+          roleAlignment: player.alignment,
+          roleKey: player.roleKey,
+          seatNumber: player.seatNumber,
+        })),
+      ...(judgeSeat.profileId
+        ? [
+            {
+              displayName: judgeSeat.displayName,
+              isJudge: true,
+              profileId: judgeSeat.profileId,
+              result: null,
+              roleAlignment: null,
+              roleKey: null,
+              seatNumber: judgeSeat.seatNumber,
+            },
+          ]
+        : []),
+    ];
+    const didFinish = await prisma.$transaction(async (tx) => {
+      const updatedRoom = await tx.gameToolRoom.updateMany({
+        where: { id: room.id, status: "IN_PROGRESS" },
         data: {
           finishedAt,
           state: buildFinishedWerewolfRoomState({
@@ -1379,21 +1415,78 @@ export async function finishWerewolfRoomAction(
           }),
           status: "FINISHED",
         },
-      }),
-      prisma.gameToolEvent.create({
+      });
+
+      if (updatedRoom.count !== 1) {
+        return false;
+      }
+
+      await tx.gameToolEvent.create({
         data: {
           actorId: judgeSeat.profileId,
           payload: {
             finishedAt: finishedAt.toISOString(),
             judgeSeatNumber: judgeSeat.seatNumber,
-            results: playerResults,
+            results: eventPlayerResults,
             winner,
           },
           roomId: room.id,
           type: "werewolf_room_finished",
         },
-      }),
-    ]);
+      });
+      await Promise.all(
+        recordInputs.map((record) =>
+          tx.gameToolPlayerRecord.upsert({
+            where: {
+              roomId_profileId: {
+                profileId: record.profileId,
+                roomId: room.id,
+              },
+            },
+            create: {
+              kind: "WEREWOLF",
+              metadata: {
+                displayName: record.displayName,
+                roomCode: room.code,
+                winner,
+              },
+              isJudge: record.isJudge,
+              playedAt: finishedAt,
+              profileId: record.profileId,
+              result: record.result,
+              roleAlignment: record.roleAlignment,
+              roleKey: record.roleKey,
+              roomId: room.id,
+              seatNumber: record.seatNumber,
+              variantKey: variant.key,
+              variantName,
+            },
+            update: {
+              kind: "WEREWOLF",
+              metadata: {
+                displayName: record.displayName,
+                roomCode: room.code,
+                winner,
+              },
+              isJudge: record.isJudge,
+              playedAt: finishedAt,
+              result: record.result,
+              roleAlignment: record.roleAlignment,
+              roleKey: record.roleKey,
+              seatNumber: record.seatNumber,
+              variantKey: variant.key,
+              variantName,
+            },
+          }),
+        ),
+      );
+
+      return true;
+    });
+
+    if (!didFinish) {
+      return { formError: t.notRunning };
+    }
 
     revalidateGameToolRoom({
       locale: result.data.locale,
@@ -1403,6 +1496,16 @@ export async function finishWerewolfRoomAction(
     room.seats.forEach((seat) =>
       revalidateWerewolfSeatPath(result.data.locale, seat.privateToken),
     );
+    const recordProfileIds = Array.from(
+      new Set(recordInputs.map((record) => record.profileId)),
+    );
+
+    if (recordProfileIds.length > 0) {
+      revalidatePath(withLocale(result.data.locale, "/profile"));
+      recordProfileIds.forEach((profileId) => {
+        revalidatePath(withLocale(result.data.locale, `/profile/${profileId}`));
+      });
+    }
   } catch (error) {
     console.error("Failed to finish Werewolf room", error);
 

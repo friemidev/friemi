@@ -1,5 +1,6 @@
 export type WerewolfRoleKey =
   | "hunter"
+  | "idiot"
   | "seer"
   | "villager"
   | "werewolf"
@@ -7,12 +8,17 @@ export type WerewolfRoleKey =
 
 export type WerewolfAlignment = "good" | "werewolf";
 
-export type WerewolfVariantKey = "ten_player_seer_witch_hunter";
+export type WerewolfVariantKey =
+  | "eight_player_basic"
+  | "nine_player_basic"
+  | "seven_player_basic"
+  | "ten_player_seer_witch_hunter"
+  | "twelve_player_idiot";
 
 export type WerewolfVariant = {
   enabled: boolean;
   judgeSeatNumber: number;
-  key: WerewolfVariantKey | string;
+  key: WerewolfVariantKey;
   labels: Record<string, string>;
   playerSeatCount: number;
   roles: WerewolfRoleKey[];
@@ -36,7 +42,7 @@ export const werewolfToolPath = "/game-tools/werewolf";
 
 export const werewolfVariants: WerewolfVariant[] = [
   {
-    enabled: false,
+    enabled: true,
     judgeSeatNumber: 7,
     key: "seven_player_basic",
     labels: {
@@ -45,11 +51,11 @@ export const werewolfVariants: WerewolfVariant[] = [
       fr: "Table à 7",
     },
     playerSeatCount: 6,
-    roles: [],
+    roles: ["werewolf", "werewolf", "seer", "witch", "villager", "villager"],
     totalSeats: 7,
   },
   {
-    enabled: false,
+    enabled: true,
     judgeSeatNumber: 8,
     key: "eight_player_basic",
     labels: {
@@ -58,11 +64,19 @@ export const werewolfVariants: WerewolfVariant[] = [
       fr: "Table à 8",
     },
     playerSeatCount: 7,
-    roles: [],
+    roles: [
+      "werewolf",
+      "werewolf",
+      "seer",
+      "witch",
+      "hunter",
+      "villager",
+      "villager",
+    ],
     totalSeats: 8,
   },
   {
-    enabled: false,
+    enabled: true,
     judgeSeatNumber: 9,
     key: "nine_player_basic",
     labels: {
@@ -71,7 +85,16 @@ export const werewolfVariants: WerewolfVariant[] = [
       fr: "Table à 9",
     },
     playerSeatCount: 8,
-    roles: [],
+    roles: [
+      "werewolf",
+      "werewolf",
+      "werewolf",
+      "seer",
+      "witch",
+      "hunter",
+      "villager",
+      "villager",
+    ],
     totalSeats: 9,
   },
   {
@@ -98,7 +121,7 @@ export const werewolfVariants: WerewolfVariant[] = [
     totalSeats: 10,
   },
   {
-    enabled: false,
+    enabled: true,
     judgeSeatNumber: 12,
     key: "twelve_player_idiot",
     labels: {
@@ -107,7 +130,19 @@ export const werewolfVariants: WerewolfVariant[] = [
       fr: "Table à 12 avec idiot",
     },
     playerSeatCount: 11,
-    roles: [],
+    roles: [
+      "werewolf",
+      "werewolf",
+      "werewolf",
+      "werewolf",
+      "seer",
+      "witch",
+      "hunter",
+      "idiot",
+      "villager",
+      "villager",
+      "villager",
+    ],
     totalSeats: 12,
   },
 ];
@@ -196,6 +231,7 @@ export const werewolfRoleAlignments: Record<
   WerewolfAlignment
 > = {
   hunter: "good",
+  idiot: "good",
   seer: "good",
   villager: "good",
   werewolf: "werewolf",
@@ -210,6 +246,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleDescriptions: {
       hunter: "你是猎人。线下法官会按现场规则处理你的技能。",
+      idiot: "你是白痴。技能是否翻牌由线下法官按现场规则裁定。",
       seer: "你是预言家。夜晚行动由线下法官主持。",
       villager: "你是平民。没有夜晚技能，白天通过发言和投票找出狼人。",
       werewolf: "你是狼人。夜晚行动由线下法官主持。",
@@ -217,6 +254,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleLabels: {
       hunter: "猎人",
+      idiot: "白痴",
       seer: "预言家",
       villager: "平民",
       werewolf: "狼人",
@@ -230,6 +268,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleDescriptions: {
       hunter: "You are the hunter. The judge handles your ability at the table.",
+      idiot: "You are the idiot. The judge handles reveal timing at the table.",
       seer: "You are the seer. Night actions are hosted offline by the judge.",
       villager: "You are a villager. You have no night ability; read the table by day.",
       werewolf: "You are a werewolf. Night actions are hosted offline by the judge.",
@@ -237,6 +276,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleLabels: {
       hunter: "Hunter",
+      idiot: "Idiot",
       seer: "Seer",
       villager: "Villager",
       werewolf: "Werewolf",
@@ -251,6 +291,8 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     roleDescriptions: {
       hunter:
         "Vous êtes chasseur. Le maître du jeu gère votre capacité à la table.",
+      idiot:
+        "Vous êtes l'idiot. Le maître du jeu décide du moment de révélation.",
       seer:
         "Vous êtes voyante. Les actions de nuit sont menées hors ligne par le maître du jeu.",
       villager:
@@ -262,6 +304,7 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleLabels: {
       hunter: "Chasseur",
+      idiot: "Idiot",
       seer: "Voyante",
       villager: "Villageois",
       werewolf: "Loup-garou",

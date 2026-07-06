@@ -201,7 +201,8 @@ export const getWerewolfRoomById = cache(
       playerCount: room.playerCount,
       seats: room.seats.map((seat) => {
         const canViewPrivateSeat = viewerSeat?.id === seat.id;
-        const roleLabel = canViewPrivateSeat
+        const canViewRole = canViewPrivateSeat || room.status === "FINISHED";
+        const roleLabel = canViewRole
           ? getWerewolfRoleLabel(locale, seat.roleKey)
           : null;
 
@@ -220,8 +221,8 @@ export const getWerewolfRoomById = cache(
           profile: seat.profile,
           profileId: seat.profileId,
           readyAt: seat.readyAt,
-          roleAlignment: canViewPrivateSeat ? seat.roleAlignment : null,
-          roleKey: canViewPrivateSeat ? seat.roleKey : null,
+          roleAlignment: canViewRole ? seat.roleAlignment : null,
+          roleKey: canViewRole ? seat.roleKey : null,
           roleLabel,
           seatNumber: seat.seatNumber,
         };
