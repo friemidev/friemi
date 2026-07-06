@@ -67,6 +67,7 @@ export default async function WerewolfSeatPage({
   const roomState = normalizeWerewolfRoomState(seat.room.state);
   const variant = getWerewolfVariant(getConfigVariantKey(seat.room.config));
   const isCurrentSeatJudge = isWerewolfJudgeSeat(seat.seatNumber, variant);
+  const deadSeatSet = new Set(roomState.deadSeatNumbers);
   const seatMember = seat.room.members.find(
     (member) => member.seatedSeatId === seat.id,
   );
@@ -87,6 +88,7 @@ export default async function WerewolfSeatPage({
       <WerewolfPrivateSeatCard
         allReady={allReady}
         isJudgeSeat={isCurrentSeatJudge}
+        isDead={deadSeatSet.has(seat.seatNumber)}
         isReady={Boolean(seat.readyAt)}
         locale={locale}
         payload={parsePrivatePayload(seat.privatePayload)}
@@ -101,6 +103,7 @@ export default async function WerewolfSeatPage({
         seatNumber={seat.seatNumber}
         seats={seat.room.seats.map((roomSeat) => ({
           displayName: roomSeat.displayName,
+          isDead: deadSeatSet.has(roomSeat.seatNumber),
           isJudgeSeat: isWerewolfJudgeSeat(roomSeat.seatNumber, variant),
           isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),
           readyAt: roomSeat.readyAt?.toISOString() ?? null,

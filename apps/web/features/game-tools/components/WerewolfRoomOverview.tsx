@@ -7,8 +7,10 @@ import {
   ArrowLeft,
   Check,
   Crown,
+  HeartPulse,
   Moon,
   Shield,
+  Skull,
   Ticket,
   UserPlus,
   UsersRound,
@@ -75,6 +77,7 @@ type WerewolfRoomOverviewProps = {
     }>;
     state: {
       phase: string;
+      winner?: "GOOD" | "WEREWOLF" | null;
     };
     status: string;
     title: string;
@@ -96,9 +99,11 @@ function getCopy(locale: string) {
       claimError: "Impossible de modifier la place.",
       code: "Code",
       currentMember: "Votre entrée",
+      dead: "Mort",
       empty: "Libre",
       enterMember: "Entrer",
       events: "Événements",
+      finished: "Partie terminée",
       foundation: "Base MVP",
       host: "Hôte",
       joinFirst: "Entrez d'abord dans la zone membres",
@@ -111,6 +116,7 @@ function getCopy(locale: string) {
       openSeat: "Page privée",
       playerSeats: "Places joueurs",
       ready: "Prêt",
+      alive: "Vivant",
       seatedAt: "Place",
       selectSeat: "Choisir",
       share: "Lien de partage",
@@ -118,6 +124,8 @@ function getCopy(locale: string) {
       unready: "Pas prêt",
       waitingMember:
         "Entrez dans la table pour apparaître ici, puis choisissez une place.",
+      winnerGood: "Village gagnant",
+      winnerWerewolf: "Loups gagnants",
     };
   }
 
@@ -130,9 +138,11 @@ function getCopy(locale: string) {
       claimError: "Could not update the seat.",
       code: "Code",
       currentMember: "Your entry",
+      dead: "Dead",
       empty: "Open",
       enterMember: "Enter",
       events: "Events",
+      finished: "Game finished",
       foundation: "MVP foundation",
       host: "Host",
       joinFirst: "Join the member area first",
@@ -145,6 +155,7 @@ function getCopy(locale: string) {
       openSeat: "Private page",
       playerSeats: "Player seats",
       ready: "Ready",
+      alive: "Alive",
       seatedAt: "Seat",
       selectSeat: "Choose",
       share: "Share link",
@@ -152,6 +163,8 @@ function getCopy(locale: string) {
       unready: "Not ready",
       waitingMember:
         "Enter the room to appear here, then choose a seat.",
+      winnerGood: "Good team wins",
+      winnerWerewolf: "Werewolf team wins",
     };
   }
 
@@ -163,9 +176,11 @@ function getCopy(locale: string) {
     claimError: "座位操作失败。",
     code: "房号",
     currentMember: "我的成员状态",
+    dead: "死亡",
     empty: "空位",
     enterMember: "进入成员区",
     events: "事件",
+    finished: "本局已结束",
     foundation: "MVP 基础设施",
     host: "房主",
     joinFirst: "请先进入成员区",
@@ -178,12 +193,15 @@ function getCopy(locale: string) {
     openSeat: "进入私密座位页",
     playerSeats: "玩家座位",
     ready: "已准备",
+    alive: "存活",
     seatedAt: "已落座",
     selectSeat: "选择此座",
     share: "分享链接",
     status: "状态",
     unready: "未准备",
     waitingMember: "先进入房间成员区，再选择玩家座或法官位。",
+    winnerGood: "好人阵营获胜",
+    winnerWerewolf: "狼人阵营获胜",
   };
 }
 
@@ -216,15 +234,21 @@ function SubmitButton({
 
 function getStatusLabel({
   isClaimed,
+  isDead,
   isReady,
   t,
 }: {
   isClaimed: boolean;
+  isDead: boolean;
   isReady: boolean;
   t: ReturnType<typeof getCopy>;
 }) {
   if (!isClaimed) {
     return t.empty;
+  }
+
+  if (isDead) {
+    return t.dead;
   }
 
   return isReady ? t.ready : t.unready;
@@ -260,6 +284,12 @@ export function WerewolfRoomOverview({
   );
   const currentMemberToken = room.currentMember?.memberToken ?? "";
   const canChooseSeat = Boolean(room.currentMember) && isLobby;
+  const winnerLabel =
+    room.state.winner === "GOOD"
+      ? t.winnerGood
+      : room.state.winner === "WEREWOLF"
+        ? t.winnerWerewolf
+        : null;
 
   return (
     <div className="space-y-5">
@@ -315,6 +345,19 @@ export function WerewolfRoomOverview({
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
+          {room.status === "FINISHED" ? (
+            <div className="mb-4 rounded-[1rem] border border-[#D9C7B4] bg-[#1E1718] px-4 py-3 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/62">
+                {t.finished}
+              </p>
+              {winnerLabel ? (
+                <p className="mt-1 text-lg font-black text-[#F0C36A]">
+                  {winnerLabel}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black text-[#1E1718]">
@@ -347,7 +390,9 @@ export function WerewolfRoomOverview({
               return (
                 <div
                   className={`grid min-h-40 content-between rounded-[1rem] border p-2 text-center ${
-                    isCurrentSeat
+                    seat.isDead
+                      ? "border-[#C8B9AA] bg-[#E8E1D8] grayscale"
+                      : isCurrentSeat
                       ? "border-[#7A1F2B] bg-[#FFF7F1]"
                       : "border-[#D9C7B4] bg-[#FFFDF7]"
                   }`}
@@ -360,9 +405,15 @@ export function WerewolfRoomOverview({
                     <p className="mt-2 w-full truncate text-sm font-black text-[#1E1718]">
                       {seat.isClaimed ? seat.displayName : t.empty}
                     </p>
-                    <p className="text-xs font-bold text-[#7A1F2B]/68">
+                    <p className="inline-flex items-center justify-center gap-1 text-xs font-bold text-[#7A1F2B]/68">
+                      {seat.isDead ? (
+                        <Skull className="h-3.5 w-3.5" />
+                      ) : seat.isClaimed && room.status !== "LOBBY" ? (
+                        <HeartPulse className="h-3.5 w-3.5" />
+                      ) : null}
                       {getStatusLabel({
                         isClaimed: seat.isClaimed,
+                        isDead: seat.isDead,
                         isReady: Boolean(seat.readyAt),
                         t,
                       })}
