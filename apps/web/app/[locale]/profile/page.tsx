@@ -29,6 +29,13 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     friends: [],
     followers: [],
     following: [],
+    werewolfStats: {
+      judgeCount: 0,
+      lossCount: 0,
+      playerGameCount: 0,
+      winCount: 0,
+      winRate: 0,
+    },
     viewerRelationship: {
       friendshipId: null,
       isFriend: false,

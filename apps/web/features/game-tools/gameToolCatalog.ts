@@ -1,7 +1,14 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpenCheck, Crown, Dice5, Sparkles, UsersRound } from "lucide-react";
+import {
+  BookOpenCheck,
+  Crown,
+  Dice5,
+  Moon,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
 
-export type GameToolKind = "AVALON" | "STORYTELLER";
+export type GameToolKind = "AVALON" | "STORYTELLER" | "WEREWOLF";
 
 export type GameToolDefinition = {
   accent: string;
@@ -41,6 +48,31 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       "zh-CN": "阿瓦隆",
       en: "The Resistance: Avalon",
       fr: "The Resistance: Avalon",
+    },
+  },
+  {
+    accent: "#7A1F2B",
+    availability: "available",
+    description: {
+      "zh-CN": "手机发身份、记生死和结算，桌上照常推理、发言、投票。",
+      en: "Use phones for private roles, deaths, and results while the table keeps the talking and voting.",
+      fr: "Le téléphone garde les rôles, morts et résultats pendant que la table garde la parole et les votes.",
+    },
+    href: "/game-tools/werewolf",
+    icon: Moon,
+    imageSrc: "/game-tools/mafia/mafia.jpeg",
+    kind: "WEREWOLF",
+    maxPlayers: 10,
+    minPlayers: 10,
+    phase: {
+      "zh-CN": "已可使用",
+      en: "Playable",
+      fr: "Jouable",
+    },
+    title: {
+      "zh-CN": "狼人杀",
+      en: "Werewolf",
+      fr: "Loups-garous",
     },
   },
   {

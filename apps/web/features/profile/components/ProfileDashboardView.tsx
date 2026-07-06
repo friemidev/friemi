@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { UsersRound } from "lucide-react";
+import { Crown, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { getFriendsCopy } from "@/features/friends/copy";
 import {
   isDetailSourceReturnPage,
@@ -58,6 +58,91 @@ function getSelfProfileMetricLabels(locale: string) {
   };
 }
 
+function getWerewolfStatsCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      judge: "Maître",
+      loss: "Défaites",
+      played: "Parties",
+      title: "Loups-garous",
+      win: "Victoires",
+      winRate: "Taux de victoire",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      judge: "Judge",
+      loss: "Losses",
+      played: "Games",
+      title: "Werewolf",
+      win: "Wins",
+      winRate: "Win rate",
+    };
+  }
+
+  return {
+    judge: "法官",
+    loss: "失败",
+    played: "局数",
+    title: "狼人杀",
+    win: "胜利",
+    winRate: "胜率",
+  };
+}
+
+function WerewolfStatsPanel({
+  locale,
+  stats,
+}: {
+  locale: string;
+  stats: ProfileDashboardViewModel["werewolfStats"];
+}) {
+  const copy = getWerewolfStatsCopy(locale);
+
+  return (
+    <section className="rounded-[1.15rem] border border-[#D9C7B4] bg-[#FFFDF7] p-3 shadow-[0_12px_28px_rgba(30,23,24,0.05)] sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-[#1E1718]">
+          <ShieldCheck className="h-4 w-4 text-[#7A1F2B]" />
+          {copy.title}
+        </h2>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E1718] px-3 py-1 text-xs font-semibold text-white">
+          <Trophy className="h-3.5 w-3.5 text-[#F0C36A]" />
+          {copy.winRate} {stats.winRate}%
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {[
+          { label: copy.played, value: stats.playerGameCount },
+          { label: copy.win, value: stats.winCount },
+          { label: copy.loss, value: stats.lossCount },
+          { label: copy.winRate, value: `${stats.winRate}%` },
+          { icon: Crown, label: copy.judge, value: stats.judgeCount },
+        ].map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <div
+              className="min-w-0 rounded-[0.9rem] border border-[#D9C7B4] bg-white px-3 py-2.5"
+              key={item.label}
+            >
+              <p className="flex items-center gap-1.5 text-lg font-semibold leading-none text-[#1E1718]">
+                {Icon ? <Icon className="h-4 w-4 text-[#7A1F2B]" /> : null}
+                {item.value}
+              </p>
+              <p className="mt-1 truncate text-xs font-medium text-[#7A1F2B]/72">
+                {item.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function ProfileDashboardView({
   dashboard,
   hasDashboardError = false,
@@ -71,6 +156,9 @@ export function ProfileDashboardView({
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
   const showPrivateParticipation = isSelf;
+  const showWerewolfStats =
+    dashboard.werewolfStats.playerGameCount > 0 ||
+    dashboard.werewolfStats.judgeCount > 0;
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
 
@@ -252,14 +340,22 @@ export function ProfileDashboardView({
           description={t.profile.errorDescription}
         />
       ) : (
-        <ProfileActivitySections
-          activeSection={activeProfileSection}
-          dashboard={dashboard}
-          isAuthenticated={isAuthenticated}
-          isSelf={showPrivateParticipation}
-          locale={locale}
-          onActiveSectionChange={setActiveProfileSection}
-        />
+        <>
+          {showWerewolfStats ? (
+            <WerewolfStatsPanel
+              locale={locale}
+              stats={dashboard.werewolfStats}
+            />
+          ) : null}
+          <ProfileActivitySections
+            activeSection={activeProfileSection}
+            dashboard={dashboard}
+            isAuthenticated={isAuthenticated}
+            isSelf={showPrivateParticipation}
+            locale={locale}
+            onActiveSectionChange={setActiveProfileSection}
+          />
+        </>
       )}
     </div>
   );

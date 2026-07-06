@@ -1180,7 +1180,8 @@ export default async function ActivityDetailPage({
     (isTeamOperator ||
       viewerParticipation?.status === "JOINED" ||
       viewerParticipation?.status === "APPROVED");
-  const boardGameToolHref = withLocale(locale, "/game-tools/avalon");
+  const avalonToolHref = withLocale(locale, "/game-tools/avalon");
+  const werewolfToolHref = withLocale(locale, "/game-tools/werewolf");
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
@@ -2085,8 +2086,9 @@ export default async function ActivityDetailPage({
         ) : null}
         {canUseBoardGameTools ? (
           <BoardGameToolFloatingEntry
-            avalonHref={boardGameToolHref}
+            avalonHref={avalonToolHref}
             locale={locale}
+            werewolfHref={werewolfToolHref}
           />
         ) : null}
       </section>
