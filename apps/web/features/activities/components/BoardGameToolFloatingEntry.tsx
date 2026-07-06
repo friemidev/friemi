@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 type BoardGameToolFloatingEntryProps = {
   avalonHref: string;
   locale: string;
+  werewolfHref: string;
 };
 
 type BoardGameToolCopy = {
@@ -24,6 +25,7 @@ type BoardGameToolCopy = {
   mafiaTitle: string;
   open: string;
   title: string;
+  werewolfSubtitle: string;
 };
 
 function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
@@ -40,6 +42,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       mafiaTitle: "Loup-garou",
       open: "Outils jeu",
       title: "Outils de table",
+      werewolfSubtitle: "Disponible",
     };
   }
 
@@ -56,6 +59,7 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       mafiaTitle: "Werewolf",
       open: "Game tools",
       title: "Table tools",
+      werewolfSubtitle: "Ready",
     };
   }
 
@@ -71,12 +75,14 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
     mafiaTitle: "狼人杀",
     open: "桌游工具",
     title: "桌游",
+    werewolfSubtitle: "已开放",
   };
 }
 
 export function BoardGameToolFloatingEntry({
   avalonHref,
   locale,
+  werewolfHref,
 }: BoardGameToolFloatingEntryProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
@@ -90,9 +96,10 @@ export function BoardGameToolFloatingEntry({
       title: copy.avalonTitle,
     },
     {
+      href: werewolfHref,
       icon: "/game-tools/mafia/mafia.jpeg",
       key: "mafia",
-      status: copy.comingSoon,
+      status: copy.werewolfSubtitle,
       title: copy.mafiaTitle,
     },
     {

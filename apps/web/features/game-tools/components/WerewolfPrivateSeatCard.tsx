@@ -92,6 +92,7 @@ type Copy = {
   revive: string;
   role: string;
   roleHidden: string;
+  roleWaiting: string;
   seat: string;
   start: string;
   startConfirm: string;
@@ -106,25 +107,25 @@ type Copy = {
 
 const copies: Record<string, Copy> = {
   "zh-CN": {
-    allReady: "全员已准备，法官可以开始。",
+    allReady: "可以发身份",
     alive: "存活",
     back: "返回房间",
-    boundary: "发言、投票、计时和夜晚行动继续由线下法官主持。",
+    boundary: "听法官主持，手机只看身份。",
     dead: "死亡",
-    deathBody: "法官已将你标记为死亡。你仍可以留在房间观看公开状态。",
+    deathBody: "你已出局，留在房间看结算。",
     deathTitle: "你已出局",
-    dealingSubtitle: "请把屏幕拿稳，身份默认不会展示。",
-    dealingTitle: "身份已发放",
+    dealingSubtitle: "身份已经放进你的座位页。",
+    dealingTitle: "身份发好了",
     finishGame: "结束游戏",
     finishGood: "好人阵营获胜",
-    finishGoodConfirm: "确认结束游戏并判定好人阵营获胜？",
+    finishGoodConfirm: "好人阵营获胜，结束本局？",
     finishWerewolf: "狼人阵营获胜",
-    finishWerewolfConfirm: "确认结束游戏并判定狼人阵营获胜？",
+    finishWerewolfConfirm: "狼人阵营获胜，结束本局？",
     finished: "本局已结束",
     hide: "盖回去",
-    hiddenBody: "点击查看后只显示 2 秒。不要把屏幕朝向其他玩家。",
-    hiddenTitle: "身份已隐藏",
-    judgeHelper: "你是法官。所有玩家和法官准备后，可以从这里开始游戏并发身份。",
+    hiddenBody: "2 秒后自动盖回。",
+    hiddenTitle: "盖住了",
+    judgeHelper: "你坐法官席。人齐准备后，从这里发身份。",
     judgePrompts: [
       "天黑请闭眼",
       "狼人请睁眼",
@@ -135,45 +136,45 @@ const copies: Record<string, Copy> = {
       "进入投票",
       "宣布死亡",
     ],
-    judgeStatus: "法官管理台",
-    leaveSeat: "离开座位",
+    judgeStatus: "法官席",
+    leaveSeat: "离座",
     markDead: "标记死亡",
-    noRole: "法官还没有开始发身份。",
-    notReady: "等待所有座位准备。",
-    ready: "我准备好了",
+    noRole: "等发身份",
+    notReady: "等人齐",
+    ready: "准备",
     reveal: "查看我的角色",
     resultDefeat: "失败",
-    resultJudgeBody: "法官不参与阵营胜负，本局会记录为担任法官。",
+    resultJudgeBody: "这局你坐法官席。",
     resultOutcome: "本局结果",
     resultRole: "本局角色",
     resultTeam: "所属阵营",
     resultVictory: "胜利",
     revive: "取消死亡",
     role: "角色",
-    roleHidden: "角色、阵营和说明将在翻牌时短暂显示。",
+    roleHidden: "只给自己看。",
+    roleWaiting: "开局后显示身份。",
     seat: "座位",
-    start: "开始游戏并发身份",
-    startConfirm: "确认开始游戏并随机发身份？开始后不能换座或加入本局。",
+    start: "发身份",
+    startConfirm: "发身份后座位会锁定，确定开局？",
     started: "游戏已开始",
-    statusError: "状态操作失败。",
+    statusError: "没改成功，再试一次。",
     unready: "取消准备",
     visibleFor: "剩余",
-    waiting: "已准备，等待其他人。",
+    waiting: "已准备",
     winnerGood: "好人阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
   },
   en: {
-    allReady: "Everyone is ready. The judge can start.",
+    allReady: "The table is ready. Deal roles.",
     alive: "Alive",
     back: "Back to room",
     boundary:
-      "Speaking, votes, timing, and night actions stay with the offline judge.",
+      "Keep speeches, votes, and night calls at the table.",
     dead: "Dead",
-    deathBody:
-      "The judge marked you dead. You can still stay and watch the public room state.",
+    deathBody: "You are out. Stay in the room for the result.",
     deathTitle: "You are out",
-    dealingSubtitle: "Keep the screen steady. Your role stays hidden by default.",
-    dealingTitle: "Roles dealt",
+    dealingSubtitle: "Your role is now on this seat page.",
+    dealingTitle: "Roles are dealt",
     finishGame: "End game",
     finishGood: "Good team wins",
     finishGoodConfirm: "End the game and mark the good team as winner?",
@@ -181,10 +182,10 @@ const copies: Record<string, Copy> = {
     finishWerewolfConfirm: "End the game and mark the werewolf team as winner?",
     finished: "Game finished",
     hide: "Hide",
-    hiddenBody: "Reveal shows for 2 seconds only. Keep the screen away from others.",
+    hiddenBody: "Tap to reveal for 2 seconds.",
     hiddenTitle: "Role hidden",
     judgeHelper:
-      "You are the judge. Once everyone is ready, start the game and deal roles here.",
+      "You are in the judge seat. Once the table is ready, deal roles here.",
     judgePrompts: [
       "Night falls",
       "Werewolves open eyes",
@@ -195,29 +196,29 @@ const copies: Record<string, Copy> = {
       "Start voting",
       "Announce deaths",
     ],
-    judgeStatus: "Judge board",
+    judgeStatus: "Judge seat",
     leaveSeat: "Leave seat",
     markDead: "Mark dead",
-    noRole: "The judge has not dealt roles yet.",
-    notReady: "Waiting for every seat to be ready.",
+    noRole: "Roles are not dealt yet.",
+    notReady: "Waiting for the table.",
     ready: "I'm ready",
     reveal: "Reveal my role",
     resultDefeat: "Defeat",
-    resultJudgeBody:
-      "The judge is not part of team victory and is recorded as judge.",
+    resultJudgeBody: "You sat in the judge seat this game.",
     resultOutcome: "Result",
     resultRole: "Role",
     resultTeam: "Team",
     resultVictory: "Victory",
     revive: "Revive",
     role: "Role",
-    roleHidden: "Role, team, and notes appear only during the reveal window.",
+    roleHidden: "Reveal to see your role and team.",
+    roleWaiting: "Once the table starts, your role appears here.",
     seat: "Seat",
-    start: "Start and deal roles",
+    start: "Deal roles",
     startConfirm:
       "Start the game and randomly deal roles? Seats lock after this.",
     started: "Game started",
-    statusError: "Could not update status.",
+    statusError: "That did not go through. Try again.",
     unready: "Cancel ready",
     visibleFor: "Left",
     waiting: "Ready. Waiting for the table.",
@@ -225,17 +226,15 @@ const copies: Record<string, Copy> = {
     winnerWerewolf: "Werewolf team wins",
   },
   fr: {
-    allReady: "Tout le monde est prêt. Le maître peut commencer.",
+    allReady: "La table est prête. Distribuez les rôles.",
     alive: "Vivant",
     back: "Retour salle",
     boundary:
-      "Parole, votes, rythme et nuit restent gérés par le maître du jeu.",
+      "La parole, les votes et la nuit restent autour de la table.",
     dead: "Mort",
-    deathBody:
-      "Le maître du jeu vous a marqué mort. Vous pouvez rester et regarder l'état public.",
+    deathBody: "Vous êtes éliminé. Restez pour voir le résultat.",
     deathTitle: "Vous êtes éliminé",
-    dealingSubtitle:
-      "Gardez l'écran stable. Le rôle reste masqué par défaut.",
+    dealingSubtitle: "Votre rôle est maintenant sur cette page.",
     dealingTitle: "Rôles distribués",
     finishGame: "Terminer",
     finishGood: "Village gagnant",
@@ -244,11 +243,10 @@ const copies: Record<string, Copy> = {
     finishWerewolfConfirm: "Terminer la partie avec les loups gagnants ?",
     finished: "Partie terminée",
     hide: "Masquer",
-    hiddenBody:
-      "La révélation dure 2 secondes. Ne tournez pas l'écran vers les autres.",
+    hiddenBody: "Touchez pour révéler 2 secondes.",
     hiddenTitle: "Rôle masqué",
     judgeHelper:
-      "Vous êtes le maître du jeu. Quand tout le monde est prêt, démarrez et distribuez les rôles ici.",
+      "Vous êtes à la place du maître. Quand la table est prête, distribuez les rôles ici.",
     judgePrompts: [
       "La nuit tombe",
       "Les loups ouvrent les yeux",
@@ -259,16 +257,15 @@ const copies: Record<string, Copy> = {
       "Début du vote",
       "Annonce des morts",
     ],
-    judgeStatus: "Table du maître",
+    judgeStatus: "Place du maître",
     leaveSeat: "Quitter la place",
     markDead: "Marquer mort",
-    noRole: "Le maître du jeu n'a pas encore distribué les rôles.",
-    notReady: "En attente de toutes les places.",
+    noRole: "Les rôles ne sont pas encore distribués.",
+    notReady: "En attente de la table.",
     ready: "Je suis prêt",
     reveal: "Voir mon rôle",
     resultDefeat: "Défaite",
-    resultJudgeBody:
-      "Le maître ne participe pas à la victoire des camps et sera enregistré comme maître.",
+    resultJudgeBody: "Vous étiez à la place du maître cette partie.",
     resultOutcome: "Résultat",
     resultRole: "Rôle",
     resultTeam: "Camp",
@@ -276,13 +273,14 @@ const copies: Record<string, Copy> = {
     revive: "Réanimer",
     role: "Rôle",
     roleHidden:
-      "Rôle, camp et notes apparaissent seulement pendant la révélation.",
+      "Révélez pour voir votre rôle et votre camp.",
+    roleWaiting: "Quand la partie démarre, votre rôle apparaît ici.",
     seat: "Place",
-    start: "Démarrer et distribuer",
+    start: "Distribuer les rôles",
     startConfirm:
       "Démarrer la partie et distribuer les rôles ? Les places seront verrouillées.",
     started: "Partie commencée",
-    statusError: "Impossible de modifier l'état.",
+    statusError: "Ça n'a pas marché. Réessayez.",
     unready: "Annuler prêt",
     visibleFor: "Reste",
     waiting: "Prêt. En attente de la table.",
@@ -328,6 +326,51 @@ function getRoleTone(payload: WerewolfPrivatePayload | null) {
     payload.alignmentLabel.toLowerCase().includes("loup")
     ? "from-[#4A1018] to-[#9B2D3C]"
     : "from-[#15395C] to-[#2F6E7C]";
+}
+
+function getPrivateRoleIcon(payload: WerewolfPrivatePayload | null) {
+  const text = `${payload?.roleLabel ?? ""} ${payload?.alignmentLabel ?? ""}`.toLowerCase();
+
+  if (
+    text.includes("狼") ||
+    text.includes("werewolf") ||
+    text.includes("loup")
+  ) {
+    return Moon;
+  }
+
+  if (
+    text.includes("预言") ||
+    text.includes("seer") ||
+    text.includes("voyante")
+  ) {
+    return Eye;
+  }
+
+  if (
+    text.includes("女巫") ||
+    text.includes("witch") ||
+    text.includes("sorci")
+  ) {
+    return Sparkles;
+  }
+
+  if (
+    text.includes("猎") ||
+    text.includes("hunter") ||
+    text.includes("chasseur")
+  ) {
+    return Flag;
+  }
+
+  if (
+    text.includes("白痴") ||
+    text.includes("idiot")
+  ) {
+    return ShieldCheck;
+  }
+
+  return UsersRound;
 }
 
 export function WerewolfPrivateSeatCard({
@@ -391,6 +434,7 @@ export function WerewolfPrivateSeatCard({
     () => seats.filter((seat) => Boolean(seat.readyAt)).length,
     [seats],
   );
+  const RoleIcon = getPrivateRoleIcon(payload);
 
   useEffect(() => {
     if (!revealed) {
@@ -566,16 +610,18 @@ export function WerewolfPrivateSeatCard({
             </span>
           </div>
 
-          <div className="mt-8 grid place-items-center text-center">
-            <div className="grid h-24 w-24 place-items-center rounded-full border border-white/30 bg-white/12 text-5xl font-black shadow-[0_22px_48px_rgba(0,0,0,0.22)]">
+          <div className="mt-6 grid place-items-center text-center sm:mt-8">
+            <div className="grid h-20 w-20 place-items-center rounded-full border border-white/30 bg-white/12 text-4xl font-black shadow-[0_22px_48px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24 sm:text-5xl">
               {seatNumber}
             </div>
-            <h1 className="mt-5 text-3xl font-black tracking-normal">
+            <h1 className="mt-4 text-2xl font-black tracking-normal sm:mt-5 sm:text-3xl">
               {seatDisplayName}
             </h1>
-            <p className="mt-2 max-w-xl text-sm font-bold leading-6 text-white/72">
-              {isJudgeSeat ? t.judgeHelper : t.boundary}
-            </p>
+            {isJudgeSeat ? (
+              <p className="mt-2 max-w-xl text-sm font-bold leading-6 text-white/72">
+                {t.judgeHelper}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -768,7 +814,11 @@ export function WerewolfPrivateSeatCard({
                   </span>
                 ) : null}
               </div>
-              <div className="mt-3 grid min-h-64 place-items-center rounded-[1.1rem] bg-[#F7F3EC] p-4 text-center">
+              <div
+                className={`mt-3 grid place-items-center rounded-[1.1rem] bg-[#F7F3EC] p-4 text-center ${
+                  roomStatus === "LOBBY" ? "min-h-32" : "min-h-64"
+                }`}
+              >
                 {(roomStatus === "IN_PROGRESS" || roomStatus === "FINISHED") &&
                 payload ? (
                   <div
@@ -784,11 +834,11 @@ export function WerewolfPrivateSeatCard({
                       >
                         <div
                           aria-hidden={revealed}
-                          className="absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br from-[#1E1718] to-[#3D2E31] p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
-                        >
-                          <div>
-                            <EyeOff className="mx-auto h-10 w-10 text-white/76" />
-                            <p className="mt-4 text-base font-black">
+                        className="absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br from-[#1E1718] to-[#3D2E31] p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
+                      >
+                        <div>
+                          <EyeOff className="mx-auto h-10 w-10 text-white/76" />
+                          <p className="mt-4 text-base font-black">
                               {t.hiddenTitle}
                             </p>
                             <p className="mt-2 text-xs font-bold leading-5 text-white/58">
@@ -799,12 +849,13 @@ export function WerewolfPrivateSeatCard({
                         {revealed ? (
                           <div
                             aria-live="polite"
-                            className={`absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
-                          >
-                            <div>
-                              <p className="text-2xl font-black">
-                                {payload.roleLabel}
-                              </p>
+                        className={`absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+                      >
+                        <div>
+                          <RoleIcon className="mx-auto mb-4 h-12 w-12 text-white/86" />
+                          <p className="text-2xl font-black">
+                            {payload.roleLabel}
+                          </p>
                               <p className="mt-2 text-xs font-bold text-white/72">
                                 {payload.alignmentLabel}
                               </p>
@@ -829,25 +880,31 @@ export function WerewolfPrivateSeatCard({
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
-                    <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A1F2B]/62">
-                        {revealed ? payload.variantLabel : variantLabel}
-                      </p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
-                        {revealed ? payload.roleDescription : t.roleHidden}
-                      </p>
+                    {revealed || isDead ? (
+                      <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
+                        {revealed ? (
+                          <>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A1F2B]/62">
+                              {payload.variantLabel}
+                            </p>
+                            <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
+                              {payload.roleDescription}
+                            </p>
+                          </>
+                        ) : null}
                       {isDead ? (
                         <p className="mt-2 rounded-2xl bg-[#F4ECE6] px-3 py-2 text-sm font-black text-[#1E1718]">
                           {t.deathBody}
                         </p>
                       ) : null}
-                    </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
-                  <div>
-                    <Skull className="mx-auto h-10 w-10 text-[#7A1F2B]/35" />
-                    <p className="mt-3 text-sm font-bold text-[#7A1F2B]/72">
-                      {roomStatus === "IN_PROGRESS" ? t.noRole : t.noRole}
+                  <div className="max-w-xs">
+                    <Moon className="mx-auto h-10 w-10 text-[#7A1F2B]/38" />
+                    <p className="mt-3 text-base font-black text-[#1E1718]">
+                      {t.noRole}
                     </p>
                   </div>
                 )}
@@ -910,7 +967,7 @@ export function WerewolfPrivateSeatCard({
                           roomStatus === "FINISHED"
                             ? (seat.roleLabel ?? "-")
                             : seat.readyAt
-                              ? "ready"
+                              ? t.ready
                               : "-"}
                         </p>
                       </div>

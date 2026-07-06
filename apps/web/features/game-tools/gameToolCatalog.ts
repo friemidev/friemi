@@ -54,9 +54,9 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     accent: "#7A1F2B",
     availability: "available",
     description: {
-      "zh-CN": "线下狼人杀辅助工具。开房、入座、发身份、法官看全局和记录死亡，不接管发言、投票和夜晚流程。",
-      en: "An offline Werewolf helper. Open a room, seat players, deal roles, and let the judge track deaths without moving the game online.",
-      fr: "Un assistant Loups-garous hors ligne : salle, places, rôles et suivi du maître du jeu, sans déplacer la partie en ligne.",
+      "zh-CN": "手机发身份、记生死和结算，桌上照常推理、发言、投票。",
+      en: "Use phones for private roles, deaths, and results while the table keeps the talking and voting.",
+      fr: "Le téléphone garde les rôles, morts et résultats pendant que la table garde la parole et les votes.",
     },
     href: "/game-tools/werewolf",
     icon: Moon,
@@ -65,9 +65,9 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     maxPlayers: 10,
     minPlayers: 10,
     phase: {
-      "zh-CN": "MVP 基建中",
-      en: "MVP foundation",
-      fr: "Base MVP",
+      "zh-CN": "已可使用",
+      en: "Playable",
+      fr: "Jouable",
     },
     title: {
       "zh-CN": "狼人杀",

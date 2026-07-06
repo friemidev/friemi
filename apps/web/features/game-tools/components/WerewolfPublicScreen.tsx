@@ -49,7 +49,7 @@ const copy = {
     goodWins: "好人阵营获胜",
     join: "扫码进入",
     judge: "法官",
-    lobby: "等待入座",
+    lobby: "开局前",
     players: "玩家",
     ready: "已准备",
     roomCode: "房号",
@@ -119,39 +119,39 @@ function getStatusLabel({
 function getEventLabel(type: string, locale: string) {
   const labels: Record<string, Record<string, string>> = {
     werewolf_member_joined: {
-      "zh-CN": "成员进入",
+      "zh-CN": "进房间",
       en: "Member joined",
       fr: "Entrée",
     },
     werewolf_player_marked_dead: {
-      "zh-CN": "标记死亡",
-      en: "Marked dead",
-      fr: "Mort marqué",
+      "zh-CN": "出局",
+      en: "Out",
+      fr: "Élimination",
     },
     werewolf_player_revived: {
-      "zh-CN": "取消死亡",
-      en: "Revived",
-      fr: "Réanimer",
+      "zh-CN": "回到场上",
+      en: "Back in",
+      fr: "Retour",
     },
     werewolf_ready_changed: {
-      "zh-CN": "准备变化",
-      en: "Ready changed",
-      fr: "Prêt changé",
+      "zh-CN": "准备更新",
+      en: "Ready update",
+      fr: "Prêt",
     },
     werewolf_room_created: {
-      "zh-CN": "创建房间",
-      en: "Room created",
-      fr: "Table créée",
+      "zh-CN": "开桌",
+      en: "Table opened",
+      fr: "Table ouverte",
     },
     werewolf_room_finished: {
-      "zh-CN": "游戏结束",
-      en: "Game finished",
-      fr: "Partie terminée",
+      "zh-CN": "结算",
+      en: "Result",
+      fr: "Résultat",
     },
     werewolf_room_started: {
-      "zh-CN": "游戏开始",
-      en: "Game started",
-      fr: "Partie lancée",
+      "zh-CN": "发身份",
+      en: "Roles dealt",
+      fr: "Rôles donnés",
     },
     werewolf_seat_changed: {
       "zh-CN": "换座",
@@ -159,9 +159,14 @@ function getEventLabel(type: string, locale: string) {
       fr: "Place changée",
     },
     werewolf_seat_claimed: {
-      "zh-CN": "落座",
-      en: "Seat claimed",
+      "zh-CN": "入座",
+      en: "Seated",
       fr: "Place prise",
+    },
+    werewolf_seat_left: {
+      "zh-CN": "离座",
+      en: "Left seat",
+      fr: "Place quittée",
     },
   };
 
@@ -201,9 +206,9 @@ export function WerewolfPublicScreen({
         <div className="grid content-between gap-6">
           <header className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_32rem] xl:items-start">
             <div className="min-w-0">
-              <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.24em] text-[#7A1F2B]">
+              <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[#7A1F2B]">
                 <Moon className="h-4 w-4" />
-                Friemi Werewolf
+                {locale === "zh-CN" ? "狼人杀公屏" : "Friemi Werewolf"}
               </p>
               <h1 className="mt-3 max-w-5xl text-4xl font-black leading-[1.02] tracking-normal text-[#1E1718] md:text-6xl">
                 {room.title}

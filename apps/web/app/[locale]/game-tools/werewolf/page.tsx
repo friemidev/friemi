@@ -18,18 +18,16 @@ type WerewolfToolPageProps = {
 
 const metadataCopy = {
   "zh-CN": {
-    description:
-      "Friemi 狼人杀线下辅助工具：开房、入座、发身份、法官记录死亡和结算。",
+    description: "开狼人杀、扫码入座、私密发身份，现场照常推理。",
     title: "狼人杀",
   },
   en: {
-    description:
-      "Friemi Werewolf offline helper: room, seats, role deal, judge death tracking, and results.",
+    description: "Open a Werewolf table, seat players by QR, and deal private roles.",
     title: "Werewolf",
   },
   fr: {
     description:
-      "Assistant Loups-garous Friemi : salle, places, rôles, morts et résultats.",
+      "Ouvrez une table Loups-garous, faites scanner les places et distribuez les rôles.",
     title: "Loups-garous",
   },
 };

@@ -48,7 +48,7 @@ type WerewolfRecapViewProps = {
 
 const copy = {
   "zh-CN": {
-    actor: "操作者",
+    actor: "来自",
     alive: "存活",
     backRoom: "回房间",
     dead: "死亡",
@@ -57,10 +57,10 @@ const copy = {
     finished: "本局已结束",
     goodWins: "好人阵营获胜",
     judge: "法官",
-    noEvents: "暂无复盘记录。",
+    noEvents: "还没有记录。",
     pending: "未结算",
     publicScreen: "公共屏",
-    recap: "复盘",
+    recap: "本局复盘",
     result: "结果",
     seats: "座位结果",
     victory: "胜利",
@@ -141,39 +141,39 @@ function getPlayerResult({
 function getEventLabel(type: string, locale: string) {
   const labels: Record<string, Record<string, string>> = {
     werewolf_member_joined: {
-      "zh-CN": "成员进入",
+      "zh-CN": "进房间",
       en: "Member joined",
       fr: "Entrée",
     },
     werewolf_player_marked_dead: {
-      "zh-CN": "标记死亡",
-      en: "Marked dead",
-      fr: "Mort marqué",
+      "zh-CN": "出局",
+      en: "Out",
+      fr: "Élimination",
     },
     werewolf_player_revived: {
-      "zh-CN": "取消死亡",
-      en: "Revived",
-      fr: "Réanimer",
+      "zh-CN": "回到场上",
+      en: "Back in",
+      fr: "Retour",
     },
     werewolf_ready_changed: {
-      "zh-CN": "准备变化",
-      en: "Ready changed",
-      fr: "Prêt changé",
+      "zh-CN": "准备更新",
+      en: "Ready update",
+      fr: "Prêt",
     },
     werewolf_room_created: {
-      "zh-CN": "创建房间",
-      en: "Room created",
-      fr: "Table créée",
+      "zh-CN": "开桌",
+      en: "Table opened",
+      fr: "Table ouverte",
     },
     werewolf_room_finished: {
-      "zh-CN": "游戏结束",
-      en: "Game finished",
-      fr: "Partie terminée",
+      "zh-CN": "结算",
+      en: "Result",
+      fr: "Résultat",
     },
     werewolf_room_started: {
-      "zh-CN": "游戏开始",
-      en: "Game started",
-      fr: "Partie lancée",
+      "zh-CN": "发身份",
+      en: "Roles dealt",
+      fr: "Rôles donnés",
     },
     werewolf_seat_changed: {
       "zh-CN": "换座",
@@ -181,9 +181,14 @@ function getEventLabel(type: string, locale: string) {
       fr: "Place changée",
     },
     werewolf_seat_claimed: {
-      "zh-CN": "落座",
-      en: "Seat claimed",
+      "zh-CN": "入座",
+      en: "Seated",
       fr: "Place prise",
+    },
+    werewolf_seat_left: {
+      "zh-CN": "离座",
+      en: "Left seat",
+      fr: "Place quittée",
     },
   };
 
@@ -224,7 +229,7 @@ export function WerewolfRecapView({
         <div className="grid content-start gap-5">
           <div className="rounded-[1.5rem] border border-[#D9C7B4] bg-[#1E1718] p-5 text-white shadow-xl">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/55">
-              Friemi Werewolf
+              {locale === "zh-CN" ? "狼人杀" : "Friemi Werewolf"}
             </p>
             <h1 className="mt-3 text-4xl font-black leading-tight tracking-normal sm:text-5xl">
               {t.recap}

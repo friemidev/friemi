@@ -170,14 +170,14 @@ export function getWerewolfVariantLabel(locale: string, variant: WerewolfVariant
 
 export function getWerewolfDefaultRoomTitle(locale: string) {
   if (locale === "fr") {
-    return "Table Loups-garous Friemi";
+    return "Loups-garous de ce soir";
   }
 
   if (locale === "en") {
-    return "Friemi Werewolf table";
+    return "Tonight's Werewolf";
   }
 
-  return "Friemi 狼人杀小局";
+  return "今晚的狼人杀";
 }
 
 export function getWerewolfSeatName({
@@ -245,12 +245,12 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
       werewolf: "狼人阵营",
     },
     roleDescriptions: {
-      hunter: "你是猎人。线下法官会按现场规则处理你的技能。",
-      idiot: "你是白痴。技能是否翻牌由线下法官按现场规则裁定。",
-      seer: "你是预言家。夜晚行动由线下法官主持。",
+      hunter: "你是猎人。出局时按现场规则带走一人。",
+      idiot: "你是白痴。被票出时按现场规则翻牌。",
+      seer: "你是预言家。夜晚验人，白天把信息藏好。",
       villager: "你是平民。没有夜晚技能，白天通过发言和投票找出狼人。",
-      werewolf: "你是狼人。夜晚行动由线下法官主持。",
-      witch: "你是女巫。解药和毒药由线下法官按现场规则处理。",
+      werewolf: "你是狼人。夜晚和同伴行动，白天别露馅。",
+      witch: "你是女巫。夜晚用药，什么时候出手看你判断。",
     },
     roleLabels: {
       hunter: "猎人",
@@ -267,12 +267,12 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
       werewolf: "Werewolf team",
     },
     roleDescriptions: {
-      hunter: "You are the hunter. The judge handles your ability at the table.",
-      idiot: "You are the idiot. The judge handles reveal timing at the table.",
-      seer: "You are the seer. Night actions are hosted offline by the judge.",
+      hunter: "You are the hunter. If you go out, take one player with you by table rules.",
+      idiot: "You are the idiot. Reveal on vote-out by table rules.",
+      seer: "You are the seer. Check one player at night and guard the truth by day.",
       villager: "You are a villager. You have no night ability; read the table by day.",
-      werewolf: "You are a werewolf. Night actions are hosted offline by the judge.",
-      witch: "You are the witch. Potion choices are handled offline by the judge.",
+      werewolf: "You are a werewolf. Move with the pack at night and stay clean by day.",
+      witch: "You are the witch. Use your potions when the table gives you the moment.",
     },
     roleLabels: {
       hunter: "Hunter",
@@ -290,17 +290,17 @@ const roleCopy: Record<string, WerewolfRoleCopy> = {
     },
     roleDescriptions: {
       hunter:
-        "Vous êtes chasseur. Le maître du jeu gère votre capacité à la table.",
+        "Vous êtes chasseur. Si vous sortez, emportez quelqu'un selon les règles de table.",
       idiot:
-        "Vous êtes l'idiot. Le maître du jeu décide du moment de révélation.",
+        "Vous êtes l'idiot. Révélez-vous au vote selon les règles de table.",
       seer:
-        "Vous êtes voyante. Les actions de nuit sont menées hors ligne par le maître du jeu.",
+        "Vous êtes voyante. Vérifiez quelqu'un la nuit, gardez l'information le jour.",
       villager:
         "Vous êtes villageois. Pas de capacité de nuit, tout se joue à la parole.",
       werewolf:
-        "Vous êtes loup-garou. Les actions de nuit sont menées hors ligne par le maître du jeu.",
+        "Vous êtes loup-garou. Agissez avec la meute la nuit, restez crédible le jour.",
       witch:
-        "Vous êtes sorcière. Les potions sont gérées hors ligne par le maître du jeu.",
+        "Vous êtes sorcière. Utilisez vos potions au bon moment.",
     },
     roleLabels: {
       hunter: "Chasseur",
@@ -320,6 +320,7 @@ export function getWerewolfRoleCopy(locale: string) {
 export function isWerewolfRoleKey(value: string | null | undefined): value is WerewolfRoleKey {
   return (
     value === "hunter" ||
+    value === "idiot" ||
     value === "seer" ||
     value === "villager" ||
     value === "werewolf" ||
