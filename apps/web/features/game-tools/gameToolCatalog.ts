@@ -1,7 +1,14 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpenCheck, Crown, Dice5, Sparkles, UsersRound } from "lucide-react";
+import {
+  BookOpenCheck,
+  Crown,
+  Dice5,
+  Moon,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
 
-export type GameToolKind = "AVALON" | "STORYTELLER";
+export type GameToolKind = "AVALON" | "STORYTELLER" | "WEREWOLF";
 
 export type GameToolDefinition = {
   accent: string;
@@ -41,6 +48,31 @@ export const gameToolDefinitions: GameToolDefinition[] = [
       "zh-CN": "阿瓦隆",
       en: "The Resistance: Avalon",
       fr: "The Resistance: Avalon",
+    },
+  },
+  {
+    accent: "#7A1F2B",
+    availability: "available",
+    description: {
+      "zh-CN": "线下狼人杀辅助工具。开房、入座、发身份、法官看全局和记录死亡，不接管发言、投票和夜晚流程。",
+      en: "An offline Werewolf helper. Open a room, seat players, deal roles, and let the judge track deaths without moving the game online.",
+      fr: "Un assistant Loups-garous hors ligne : salle, places, rôles et suivi du maître du jeu, sans déplacer la partie en ligne.",
+    },
+    href: "/game-tools/werewolf",
+    icon: Moon,
+    imageSrc: "/game-tools/mafia/mafia.jpeg",
+    kind: "WEREWOLF",
+    maxPlayers: 10,
+    minPlayers: 10,
+    phase: {
+      "zh-CN": "MVP 基建中",
+      en: "MVP foundation",
+      fr: "Base MVP",
+    },
+    title: {
+      "zh-CN": "狼人杀",
+      en: "Werewolf",
+      fr: "Loups-garous",
     },
   },
   {

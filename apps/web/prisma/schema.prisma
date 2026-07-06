@@ -134,6 +134,7 @@ enum ReportStatus {
 enum GameToolKind {
   AVALON
   STORYTELLER
+  WEREWOLF
 }
 
 enum GameToolRoomStatus {
@@ -200,6 +201,7 @@ model UserProfile {
   reviewedReports        Report[]                   @relation("ReportReviewer")
   mobileDevices          MobileDevice[]
   hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
+  gameToolRoomMembers    GameToolRoomMember[]       @relation("GameToolRoomMemberProfile")
   gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
   gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
   gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
@@ -707,6 +709,7 @@ model GameToolRoom {
   finishedAt  DateTime?
   cancelledAt DateTime?
   seats       GameToolSeat[]
+  members     GameToolRoomMember[]
   events      GameToolEvent[]
   submissions GameToolSubmission[]
   createdAt   DateTime             @default(now())
@@ -715,6 +718,28 @@ model GameToolRoom {
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
   @@index([code])
+}
+
+model GameToolRoomMember {
+  id           String        @id @default(cuid())
+  roomId       String
+  room         GameToolRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profileId    String?
+  profile      UserProfile?  @relation("GameToolRoomMemberProfile", fields: [profileId], references: [id], onDelete: SetNull)
+  guestName    String?
+  memberToken  String        @unique @db.VarChar(32)
+  seatedSeatId String?
+  seatedSeat   GameToolSeat? @relation("GameToolRoomMemberSeat", fields: [seatedSeatId], references: [id], onDelete: SetNull)
+  readyAt      DateTime?
+  lastSeenAt   DateTime      @default(now())
+  leftAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([roomId, profileId])
+  @@unique([seatedSeatId])
+  @@index([roomId, lastSeenAt])
+  @@index([profileId])
 }
 
 model GameToolSeat {
@@ -732,6 +757,7 @@ model GameToolSeat {
   joinedAt       DateTime             @default(now())
   leftAt         DateTime?
   room           GameToolRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomMember     GameToolRoomMember?  @relation("GameToolRoomMemberSeat")
   profile        UserProfile?         @relation("GameToolSeatProfile", fields: [profileId], references: [id], onDelete: SetNull)
   submissions    GameToolSubmission[]
 

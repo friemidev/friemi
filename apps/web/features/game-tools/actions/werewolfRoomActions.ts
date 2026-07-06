@@ -1,0 +1,1123 @@
+"use server";
+
+import { randomInt } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import {
+  createWerewolfPrivatePayload,
+  getEnabledWerewolfVariant,
+  getWerewolfDefaultRoomTitle,
+  getWerewolfSeatName,
+  getWerewolfVariantLabel,
+  isWerewolfJudgeSeat,
+  isWerewolfPlayerSeat,
+  type WerewolfRoleKey,
+  werewolfRoleAlignments,
+  werewolfToolPath,
+} from "@/features/game-tools/werewolfConfig";
+import {
+  createInitialWerewolfRoomState,
+  normalizeWerewolfRoomState,
+  type WerewolfRoomState,
+} from "@/features/game-tools/werewolfRoomState";
+import {
+  ensureCurrentUserProfile,
+  getOptionalCurrentUserProfile,
+} from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { withLocale } from "@/lib/routes";
+import {
+  createGameToolPrivateToken,
+  createUniqueGameToolRoomCode,
+  revalidateGameToolRoom,
+} from "@/features/game-tools/gameToolRooms";
+
+export type WerewolfRoomActionState = {
+  fieldErrors?: Record<string, string[]>;
+  formError?: string;
+};
+
+const roomTitleMaxLength = 80;
+
+const createWerewolfRoomSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  title: z.string().trim().max(roomTitleMaxLength).optional(),
+  variantKey: z.string().trim().min(1).default("ten_player_seer_witch_hunter"),
+});
+
+const joinWerewolfRoomSchema = z.object({
+  displayName: z.string().trim().max(40).optional(),
+  locale: z.string().min(1).default("zh-CN"),
+  memberToken: z.string().min(16).max(40).optional(),
+  roomId: z.string().min(1),
+});
+
+const claimWerewolfSeatSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  memberToken: z.string().min(16).max(40).optional(),
+  roomId: z.string().min(1),
+  seatNumber: z.coerce.number().int().min(1).max(20),
+});
+
+const privateSeatActionSchema = z.object({
+  locale: z.string().min(1).default("zh-CN"),
+  operation: z.enum(["ready", "unready"]).optional(),
+  privateToken: z.string().min(16).max(40),
+});
+
+const leaveWerewolfSeatSchema = z
+  .object({
+    locale: z.string().min(1).default("zh-CN"),
+    memberToken: z.string().min(16).max(40).optional(),
+    privateToken: z.string().min(16).max(40).optional(),
+    roomId: z.string().min(1).optional(),
+  })
+  .refine((input) => input.privateToken || (input.roomId && input.memberToken), {
+    path: ["privateToken"],
+  });
+
+function getString(formData: FormData, key: string) {
+  const value = formData.get(key);
+
+  return typeof value === "string" ? value : "";
+}
+
+function getOptionalString(formData: FormData, key: string) {
+  const value = getString(formData, key).trim();
+
+  return value || undefined;
+}
+
+function getActionCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      claimFailed: "Impossible de prendre cette place.",
+      createFailed: "Impossible de créer la table Loups-garous.",
+      invalidRequest: "Vérifiez les informations de la table.",
+      joinFailed: "Impossible d'entrer dans la table.",
+      joinRequired: "Entrez d'abord dans la zone membres.",
+      leaveFailed: "Impossible de quitter cette place.",
+      notJudge: "Seul le maître du jeu peut démarrer la partie.",
+      notLobby: "La table est déjà verrouillée.",
+      notReady: "Tous les joueurs et le maître du jeu doivent être prêts.",
+      readyFailed: "Impossible de modifier l'état prêt.",
+      seatTaken: "Cette place est déjà prise.",
+      startFailed: "Impossible de démarrer la partie.",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      claimFailed: "Could not claim this seat.",
+      createFailed: "Could not create the Werewolf room.",
+      invalidRequest: "Check the room details.",
+      joinFailed: "Could not join the room.",
+      joinRequired: "Join the member area first.",
+      leaveFailed: "Could not leave this seat.",
+      notJudge: "Only the judge can start the game.",
+      notLobby: "The room is already locked.",
+      notReady: "Every player and the judge must be ready.",
+      readyFailed: "Could not update ready state.",
+      seatTaken: "This seat is already taken.",
+      startFailed: "Could not start the game.",
+    };
+  }
+
+  return {
+    claimFailed: "认领座位失败。",
+    createFailed: "狼人杀房间创建失败。",
+    invalidRequest: "请检查房间信息。",
+    joinFailed: "进入房间失败。",
+    joinRequired: "请先进入成员区，再选择座位。",
+    leaveFailed: "离开座位失败。",
+    notJudge: "只有法官可以开始游戏。",
+    notLobby: "房间已经锁定。",
+    notReady: "所有玩家和法官都准备后才能开始。",
+    readyFailed: "准备状态更新失败。",
+    seatTaken: "这个座位已经有人了。",
+    startFailed: "开始游戏失败。",
+  };
+}
+
+function getClaimedDisplayName({
+  displayName,
+  fallback,
+}: {
+  displayName?: string | null;
+  fallback: string;
+}) {
+  const trimmed = displayName?.trim();
+
+  return trimmed ? trimmed.slice(0, 40) : fallback;
+}
+
+function getRoomHref({
+  locale,
+  memberToken,
+  roomId,
+}: {
+  locale: string;
+  memberToken?: string | null;
+  roomId: string;
+}) {
+  const query = memberToken
+    ? `?memberToken=${encodeURIComponent(memberToken)}`
+    : "";
+
+  return withLocale(locale, `${werewolfToolPath}/rooms/${roomId}${query}`);
+}
+
+function shuffleRoles(roles: WerewolfRoleKey[]) {
+  const shuffled = [...roles];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    const current = shuffled[index];
+    shuffled[index] = shuffled[swapIndex]!;
+    shuffled[swapIndex] = current!;
+  }
+
+  return shuffled;
+}
+
+function buildStartedWerewolfRoomState(now: Date): WerewolfRoomState {
+  const timestamp = now.toISOString();
+
+  return {
+    deadSeatNumbers: [],
+    finishedAt: null,
+    lockedAt: timestamp,
+    phase: "IN_PROGRESS",
+    resultRecordedAt: null,
+    startedAt: timestamp,
+    winner: null,
+  };
+}
+
+export async function createWerewolfRoomAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    title: getString(formData, "title"),
+    variantKey: getString(formData, "variantKey") || "ten_player_seer_witch_hunter",
+  };
+  const result = createWerewolfRoomSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const variant = getEnabledWerewolfVariant(result.data.variantKey);
+  const host = await ensureCurrentUserProfile(
+    result.data.locale,
+    werewolfToolPath,
+  );
+  const roomTitle =
+    result.data.title?.trim() ||
+    `${getWerewolfDefaultRoomTitle(result.data.locale)} · ${getWerewolfVariantLabel(
+      result.data.locale,
+      variant,
+    )}`;
+  let roomId: string;
+
+  try {
+    const room = await prisma.gameToolRoom.create({
+      data: {
+        code: await createUniqueGameToolRoomCode(),
+        config: {
+          hasJudge: true,
+          judgeSeatNumber: variant.judgeSeatNumber,
+          kind: "WEREWOLF",
+          playerSeatCount: variant.playerSeatCount,
+          roleDeck: variant.roles,
+          totalSeats: variant.totalSeats,
+          variantKey: variant.key,
+          variantName: getWerewolfVariantLabel(result.data.locale, variant),
+        },
+        events: {
+          create: {
+            actorId: host.id,
+            payload: {
+              playerSeatCount: variant.playerSeatCount,
+              totalSeats: variant.totalSeats,
+              variantKey: variant.key,
+            },
+            type: "werewolf_room_created",
+          },
+        },
+        hostId: host.id,
+        kind: "WEREWOLF",
+        locale: result.data.locale,
+        members: {
+          create: {
+            memberToken: createGameToolPrivateToken(),
+            profileId: host.id,
+          },
+        },
+        mode: "offline_judge",
+        playerCount: variant.totalSeats,
+        state: createInitialWerewolfRoomState(),
+        seats: {
+          create: Array.from({ length: variant.totalSeats }, (_, index) => {
+            const seatNumber = index + 1;
+
+            return {
+              displayName: getWerewolfSeatName({
+                locale: result.data.locale,
+                seatNumber,
+                variant,
+              }),
+              privateToken: createGameToolPrivateToken(),
+              seatNumber,
+            };
+          }),
+        },
+        title: roomTitle,
+      },
+      select: { id: true },
+    });
+
+    roomId = room.id;
+  } catch (error) {
+    console.error("Failed to create Werewolf room", error);
+
+    return {
+      formError: t.createFailed,
+    };
+  }
+
+  revalidateGameToolRoom({
+    locale: result.data.locale,
+    roomId,
+    toolPath: werewolfToolPath,
+  });
+  redirect(withLocale(result.data.locale, `${werewolfToolPath}/rooms/${roomId}`));
+}
+
+export async function joinWerewolfRoomAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    displayName: getString(formData, "displayName"),
+    locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
+    roomId: getString(formData, "roomId"),
+  };
+  const result = joinWerewolfRoomSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await getOptionalCurrentUserProfile();
+  let redirectMemberToken: string | null = null;
+
+  try {
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "WEREWOLF" },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!room) {
+      return { formError: t.joinFailed };
+    }
+
+    if (room.status !== "LOBBY") {
+      return { formError: t.notLobby };
+    }
+
+    const displayName = getClaimedDisplayName({
+      displayName: profile?.nickname ?? result.data.displayName,
+      fallback: "玩家",
+    });
+
+    if (profile) {
+      await prisma.gameToolRoomMember.upsert({
+        where: {
+          roomId_profileId: {
+            profileId: profile.id,
+            roomId: room.id,
+          },
+        },
+        create: {
+          memberToken: createGameToolPrivateToken(),
+          profileId: profile.id,
+          roomId: room.id,
+        },
+        update: {
+          lastSeenAt: new Date(),
+          leftAt: null,
+        },
+      });
+    } else if (result.data.memberToken) {
+      const member = await prisma.gameToolRoomMember.findFirst({
+        where: {
+          leftAt: null,
+          memberToken: result.data.memberToken,
+          roomId: room.id,
+        },
+        select: {
+          memberToken: true,
+        },
+      });
+
+      if (member) {
+        await prisma.gameToolRoomMember.update({
+          where: { memberToken: member.memberToken },
+          data: {
+            guestName: displayName,
+            lastSeenAt: new Date(),
+          },
+        });
+        redirectMemberToken = member.memberToken;
+      }
+    }
+
+    if (!profile && !redirectMemberToken) {
+      const member = await prisma.gameToolRoomMember.create({
+        data: {
+          guestName: displayName,
+          memberToken: createGameToolPrivateToken(),
+          roomId: room.id,
+        },
+        select: {
+          memberToken: true,
+        },
+      });
+
+      redirectMemberToken = member.memberToken;
+    }
+
+    await prisma.gameToolEvent.create({
+      data: {
+        actorId: profile?.id ?? null,
+        payload: {
+          displayName,
+        },
+        roomId: room.id,
+        type: "werewolf_member_joined",
+      },
+    });
+
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+  } catch (error) {
+    console.error("Failed to join Werewolf room", error);
+
+    return { formError: t.joinFailed };
+  }
+
+  redirect(
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: redirectMemberToken,
+      roomId: result.data.roomId,
+    }),
+  );
+}
+
+export async function claimWerewolfSeatAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
+    roomId: getString(formData, "roomId"),
+    seatNumber: getString(formData, "seatNumber"),
+  };
+  const result = claimWerewolfSeatSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await getOptionalCurrentUserProfile();
+  let privateToken: string | null = null;
+  let redirectMemberToken: string | null = null;
+
+  try {
+    const room = await prisma.gameToolRoom.findFirst({
+      where: { id: result.data.roomId, kind: "WEREWOLF" },
+      include: {
+        members: {
+          where: { leftAt: null },
+          select: {
+            guestName: true,
+            id: true,
+            memberToken: true,
+            profile: {
+              select: {
+                nickname: true,
+              },
+            },
+            profileId: true,
+            readyAt: true,
+            seatedSeatId: true,
+          },
+        },
+        seats: {
+          orderBy: { seatNumber: "asc" },
+          select: {
+            displayName: true,
+            guestName: true,
+            id: true,
+            privateToken: true,
+            profileId: true,
+            readyAt: true,
+            seatNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!room) {
+      return { formError: t.claimFailed };
+    }
+
+    if (room.status !== "LOBBY") {
+      return { formError: t.notLobby };
+    }
+
+    const variant = getEnabledWerewolfVariant(
+      typeof (room.config as { variantKey?: unknown } | null)?.variantKey ===
+        "string"
+        ? ((room.config as { variantKey: string }).variantKey)
+        : null,
+    );
+    if (profile) {
+      const existingMember = room.members.find(
+        (member) => member.profileId === profile.id,
+      );
+
+      if (!existingMember) {
+        const member = await prisma.gameToolRoomMember.create({
+          data: {
+            memberToken: createGameToolPrivateToken(),
+            profileId: profile.id,
+            roomId: room.id,
+          },
+          select: {
+            id: true,
+            memberToken: true,
+            profileId: true,
+            seatedSeatId: true,
+          },
+        });
+
+        room.members.push({
+          guestName: null,
+          id: member.id,
+          memberToken: member.memberToken,
+          profile: {
+            nickname: profile.nickname,
+          },
+          profileId: member.profileId,
+          readyAt: null,
+          seatedSeatId: member.seatedSeatId,
+        });
+      }
+    }
+
+    const currentMember = profile
+      ? room.members.find((member) => member.profileId === profile.id)
+      : result.data.memberToken
+        ? room.members.find(
+            (member) => member.memberToken === result.data.memberToken,
+          )
+        : null;
+
+    if (!currentMember) {
+      return { formError: t.joinRequired };
+    }
+
+    redirectMemberToken = currentMember.profileId
+      ? null
+      : currentMember.memberToken;
+
+    const targetSeat = room.seats.find(
+      (seat) => seat.seatNumber === result.data.seatNumber,
+    );
+
+    if (!targetSeat) {
+      return { formError: t.claimFailed };
+    }
+
+    const targetMember = room.members.find(
+      (member) => member.seatedSeatId === targetSeat.id,
+    );
+    const alreadyOnTarget = currentMember.seatedSeatId === targetSeat.id;
+
+    if (
+      !alreadyOnTarget &&
+      (targetSeat.profileId ||
+        targetSeat.guestName ||
+        (targetMember && targetMember.id !== currentMember.id))
+    ) {
+      return { formError: t.seatTaken };
+    }
+
+    privateToken = targetSeat.privateToken;
+
+    if (!alreadyOnTarget) {
+      const now = new Date();
+      const previousSeat = currentMember.seatedSeatId
+        ? room.seats.find((seat) => seat.id === currentMember.seatedSeatId)
+        : null;
+      const displayName = getClaimedDisplayName({
+        displayName:
+          profile?.nickname ??
+          currentMember.profile?.nickname ??
+          currentMember.guestName,
+        fallback: getWerewolfSeatName({
+          locale: room.locale,
+          seatNumber: targetSeat.seatNumber,
+          variant,
+        }),
+      });
+      const updates: Prisma.PrismaPromise<unknown>[] = [];
+
+      if (previousSeat) {
+        updates.push(
+          prisma.gameToolSeat.update({
+            where: { id: previousSeat.id },
+            data: {
+              displayName: getWerewolfSeatName({
+                locale: room.locale,
+                seatNumber: previousSeat.seatNumber,
+                variant,
+              }),
+              guestName: null,
+              leftAt: now,
+              profileId: null,
+              readyAt: null,
+            },
+          }),
+        );
+      }
+
+      updates.push(
+        prisma.gameToolSeat.update({
+          where: { id: targetSeat.id },
+          data: {
+            displayName,
+            guestName: currentMember.profileId ? null : displayName,
+            joinedAt: now,
+            leftAt: null,
+            profileId: currentMember.profileId,
+            readyAt: null,
+          },
+        }),
+        prisma.gameToolRoomMember.update({
+          where: { id: currentMember.id },
+          data: {
+            lastSeenAt: now,
+            readyAt: null,
+            seatedSeatId: targetSeat.id,
+          },
+        }),
+        prisma.gameToolEvent.create({
+          data: {
+            actorId: currentMember.profileId,
+            payload: {
+              displayName,
+              previousSeatNumber: previousSeat?.seatNumber ?? null,
+              seatNumber: result.data.seatNumber,
+            },
+            roomId: room.id,
+            type: previousSeat
+              ? "werewolf_seat_changed"
+              : "werewolf_seat_claimed",
+          },
+        }),
+      );
+
+      await prisma.$transaction(updates);
+    }
+
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+  } catch (error) {
+    console.error("Failed to claim Werewolf seat", error);
+
+    return { formError: t.claimFailed };
+  }
+
+  if (privateToken) {
+    redirect(withLocale(result.data.locale, `${werewolfToolPath}/seats/${privateToken}`));
+  }
+
+  redirect(
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: redirectMemberToken,
+      roomId: result.data.roomId,
+    }),
+  );
+}
+
+export async function updateWerewolfReadyAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    operation: getString(formData, "operation") || "ready",
+    privateToken: getString(formData, "privateToken"),
+  };
+  const result = privateSeatActionSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  try {
+    const seat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      include: {
+        room: {
+          select: {
+            id: true,
+            kind: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!seat || seat.room.kind !== "WEREWOLF") {
+      return { formError: t.readyFailed };
+    }
+
+    if (seat.room.status !== "LOBBY") {
+      return { formError: t.notLobby };
+    }
+
+    if (!seat.profileId && !seat.guestName) {
+      return { formError: t.readyFailed };
+    }
+
+    const readyAt = result.data.operation === "unready" ? null : new Date();
+    const member = await prisma.gameToolRoomMember.findFirst({
+      where: {
+        leftAt: null,
+        seatedSeatId: seat.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+    const updates: Prisma.PrismaPromise<unknown>[] = [
+      prisma.gameToolSeat.update({
+        where: { id: seat.id },
+        data: {
+          readyAt,
+        },
+      }),
+    ];
+
+    if (member) {
+      updates.push(
+        prisma.gameToolRoomMember.update({
+          where: { id: member.id },
+          data: {
+            lastSeenAt: new Date(),
+            readyAt,
+          },
+        }),
+      );
+    }
+
+    updates.push(
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: seat.profileId,
+          payload: {
+            ready: Boolean(readyAt),
+            seatNumber: seat.seatNumber,
+          },
+          roomId: seat.room.id,
+          type: "werewolf_ready_changed",
+        },
+      }),
+    );
+
+    await prisma.$transaction(updates);
+
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: seat.room.id,
+      toolPath: werewolfToolPath,
+    });
+  } catch (error) {
+    console.error("Failed to update Werewolf ready state", error);
+
+    return { formError: t.readyFailed };
+  }
+
+  redirect(withLocale(result.data.locale, `${werewolfToolPath}/seats/${result.data.privateToken}`));
+}
+
+export async function leaveWerewolfSeatAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    memberToken: getOptionalString(formData, "memberToken"),
+    privateToken: getOptionalString(formData, "privateToken"),
+    roomId: getOptionalString(formData, "roomId"),
+  };
+  const result = leaveWerewolfSeatSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await getOptionalCurrentUserProfile();
+  let roomId: string | null = result.data.roomId ?? null;
+  let redirectMemberToken: string | null = result.data.memberToken ?? null;
+
+  try {
+    const seat = result.data.privateToken
+      ? await prisma.gameToolSeat.findUnique({
+          where: { privateToken: result.data.privateToken },
+          include: {
+            room: {
+              select: {
+                config: true,
+                id: true,
+                kind: true,
+                locale: true,
+                status: true,
+              },
+            },
+          },
+        })
+      : null;
+    const member = seat
+      ? await prisma.gameToolRoomMember.findFirst({
+          where: {
+            leftAt: null,
+            seatedSeatId: seat.id,
+          },
+          select: {
+            id: true,
+            memberToken: true,
+            profileId: true,
+            room: {
+              select: {
+                config: true,
+                id: true,
+                kind: true,
+                locale: true,
+                status: true,
+              },
+            },
+            roomId: true,
+            seatedSeat: true,
+            seatedSeatId: true,
+          },
+        })
+      : await prisma.gameToolRoomMember.findFirst({
+          where: {
+            leftAt: null,
+            memberToken: result.data.memberToken ?? "",
+            roomId: result.data.roomId ?? "",
+          },
+          select: {
+            id: true,
+            memberToken: true,
+            profileId: true,
+            room: {
+              select: {
+                config: true,
+                id: true,
+                kind: true,
+                locale: true,
+                status: true,
+              },
+            },
+            roomId: true,
+            seatedSeat: true,
+            seatedSeatId: true,
+          },
+        });
+
+    const targetSeat = seat ?? member?.seatedSeat ?? null;
+    const room = seat?.room ?? member?.room ?? null;
+
+    if (!room || room.kind !== "WEREWOLF" || !targetSeat) {
+      return { formError: t.leaveFailed };
+    }
+
+    if (room.status !== "LOBBY") {
+      return { formError: t.notLobby };
+    }
+
+    if (member?.profileId && profile?.id !== member.profileId) {
+      return { formError: t.leaveFailed };
+    }
+
+    const variant = getEnabledWerewolfVariant(
+      typeof (room.config as { variantKey?: unknown } | null)?.variantKey ===
+        "string"
+        ? ((room.config as { variantKey: string }).variantKey)
+        : null,
+    );
+    const now = new Date();
+
+    await prisma.$transaction([
+      prisma.gameToolSeat.update({
+        where: { id: targetSeat.id },
+        data: {
+          displayName: getWerewolfSeatName({
+            locale: room.locale,
+            seatNumber: targetSeat.seatNumber,
+            variant,
+          }),
+          guestName: null,
+          leftAt: now,
+          profileId: null,
+          readyAt: null,
+        },
+      }),
+      ...(member
+        ? [
+            prisma.gameToolRoomMember.update({
+              where: { id: member.id },
+              data: {
+                lastSeenAt: now,
+                readyAt: null,
+                seatedSeatId: null,
+              },
+            }),
+          ]
+        : []),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: member?.profileId ?? targetSeat.profileId,
+          payload: {
+            seatNumber: targetSeat.seatNumber,
+          },
+          roomId: room.id,
+          type: "werewolf_seat_left",
+        },
+      }),
+    ]);
+
+    roomId = room.id;
+    redirectMemberToken = member?.profileId ? null : member?.memberToken ?? null;
+
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+  } catch (error) {
+    console.error("Failed to leave Werewolf seat", error);
+
+    return { formError: t.leaveFailed };
+  }
+
+  redirect(
+    getRoomHref({
+      locale: result.data.locale,
+      memberToken: redirectMemberToken,
+      roomId: roomId ?? "",
+    }),
+  );
+}
+
+export async function startWerewolfRoomAction(
+  _previousState: WerewolfRoomActionState,
+  formData: FormData,
+): Promise<WerewolfRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    privateToken: getString(formData, "privateToken"),
+  };
+  const result = privateSeatActionSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  let roomId: string | null = null;
+
+  try {
+    const judgeSeat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      include: {
+        room: {
+          include: {
+            seats: {
+              orderBy: { seatNumber: "asc" },
+              select: {
+                displayName: true,
+                guestName: true,
+                id: true,
+                profileId: true,
+                readyAt: true,
+                seatNumber: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!judgeSeat || judgeSeat.room.kind !== "WEREWOLF") {
+      return { formError: t.startFailed };
+    }
+
+    const room = judgeSeat.room;
+    const variant = getEnabledWerewolfVariant(
+      typeof (room.config as { variantKey?: unknown } | null)?.variantKey ===
+        "string"
+        ? ((room.config as { variantKey: string }).variantKey)
+        : null,
+    );
+
+    if (!isWerewolfJudgeSeat(judgeSeat.seatNumber, variant)) {
+      return { formError: t.notJudge };
+    }
+
+    if (room.status !== "LOBBY") {
+      return { formError: t.notLobby };
+    }
+
+    const playerSeats = room.seats.filter((seat) =>
+      isWerewolfPlayerSeat(seat.seatNumber, variant),
+    );
+    const judgeSeatInRoom = room.seats.find((seat) =>
+      isWerewolfJudgeSeat(seat.seatNumber, variant),
+    );
+    const requiredSeats = [...playerSeats, ...(judgeSeatInRoom ? [judgeSeatInRoom] : [])];
+    const allReady =
+      playerSeats.length === variant.playerSeatCount &&
+      requiredSeats.length === variant.totalSeats &&
+      requiredSeats.every(
+        (seat) => Boolean(seat.profileId || seat.guestName) && Boolean(seat.readyAt),
+      );
+
+    if (!allReady) {
+      return { formError: t.notReady };
+    }
+
+    const now = new Date();
+    const roleDeck = shuffleRoles(variant.roles);
+    const roleUpdates = playerSeats.map((seat, index) => {
+      const roleKey = roleDeck[index];
+
+      if (!roleKey) {
+        throw new Error("Missing Werewolf role assignment");
+      }
+
+      return prisma.gameToolSeat.update({
+        where: { id: seat.id },
+        data: {
+          privatePayload: createWerewolfPrivatePayload({
+            locale: room.locale,
+            roleKey,
+            variant,
+          }),
+          roleAlignment: werewolfRoleAlignments[roleKey],
+          roleKey,
+        },
+      });
+    });
+
+    await prisma.$transaction([
+      ...roleUpdates,
+      prisma.gameToolSeat.update({
+        where: { id: judgeSeat.id },
+        data: {
+          privatePayload: Prisma.JsonNull,
+          roleAlignment: null,
+          roleKey: null,
+        },
+      }),
+      prisma.gameToolRoom.update({
+        where: { id: room.id },
+        data: {
+          startedAt: now,
+          state: {
+            ...normalizeWerewolfRoomState(room.state),
+            ...buildStartedWerewolfRoomState(now),
+          },
+          status: "IN_PROGRESS",
+        },
+      }),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: judgeSeat.profileId,
+          payload: {
+            playerSeatCount: variant.playerSeatCount,
+            totalSeats: variant.totalSeats,
+            variantKey: variant.key,
+          },
+          roomId: room.id,
+          type: "werewolf_room_started",
+        },
+      }),
+    ]);
+
+    roomId = room.id;
+    revalidateGameToolRoom({
+      locale: result.data.locale,
+      roomId: room.id,
+      toolPath: werewolfToolPath,
+    });
+  } catch (error) {
+    console.error("Failed to start Werewolf room", error);
+
+    return { formError: t.startFailed };
+  }
+
+  redirect(
+    withLocale(
+      result.data.locale,
+      roomId
+        ? `${werewolfToolPath}/rooms/${roomId}`
+        : `${werewolfToolPath}/seats/${result.data.privateToken}`,
+    ),
+  );
+}
