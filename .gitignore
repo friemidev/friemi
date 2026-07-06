@@ -26,6 +26,13 @@ test-results
 .env.*.local
 !.env.example
 
+# Android signing secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+keystore.properties
+
 # Vercel / Clerk local state
 .vercel
 .clerk

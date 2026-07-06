@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 220" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Approve vote card</title>
+  <desc id="desc">An original approve vote card icon.</desc>
+  <defs>
+    <linearGradient id="approveBg" x1="22" y1="18" x2="138" y2="202" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF7EF"/>
+      <stop offset="1" stop-color="#FEFFF9"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="16" width="124" height="188" rx="26" fill="url(#approveBg)" stroke="#156240" stroke-width="5"/>
+  <circle cx="80" cy="94" r="38" fill="#156240"/>
+  <path d="m59 94 14 15 29-34" stroke="#FEFFF9" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 158h70" stroke="#8AB68E" stroke-width="7" stroke-linecap="round"/>
+</svg>

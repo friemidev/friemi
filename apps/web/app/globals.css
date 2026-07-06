@@ -55,6 +55,34 @@ body {
   color: var(--friemi-palette-ink);
 }
 
+html[data-friemi-android-app="true"],
+html[data-friemi-android-app="true"] body {
+  overscroll-behavior-y: contain;
+}
+
+html[data-friemi-android-app="true"] * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-friemi-ios-app="true"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
+    ui-sans-serif, system-ui, sans-serif;
+  overscroll-behavior-y: contain;
+}
+
+html[data-friemi-ios-app="true"] body {
+  font-family: var(--font-sans);
+}
+
+html[data-friemi-ios-app="true"] * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-friemi-ios-app="true"] .app-layout-shell > header {
+  padding-top: env(safe-area-inset-top);
+}
+
 .app-orientation-lock {
   display: none;
 }
@@ -377,6 +405,179 @@ a {
   50% {
     transform: translate3d(0, -0.22rem, 0) rotate(0.5deg);
   }
+}
+
+@keyframes avalon-tool-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes avalon-tool-ambient {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  50% {
+    transform: translate3d(0, -5px, 0) rotate(0.35deg);
+  }
+}
+
+@keyframes avalon-token-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(0.45rem) rotate(-4deg) scale(0.72);
+    filter: blur(0.18rem);
+  }
+
+  58% {
+    opacity: 1;
+    transform: translateY(-0.12rem) rotate(1.2deg) scale(1.1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes avalon-mission-card-shuffle {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0.65rem, 0) rotate(-9deg) scale(0.78);
+    filter: blur(0.16rem);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translate3d(var(--shuffle-x, 0), -0.35rem, 0)
+      rotate(var(--shuffle-rotate, 0deg)) scale(1.06);
+    filter: blur(0);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate3d(calc(var(--shuffle-x, 0) * -0.22), 0.08rem, 0)
+      rotate(calc(var(--shuffle-rotate, 0deg) * -0.32)) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes avalon-result-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 1rem 2.5rem rgb(var(--friemi-forest-rgb) / 0.14);
+  }
+
+  50% {
+    transform: scale(1.035);
+    box-shadow: 0 1.25rem 3rem rgb(var(--friemi-coral-rgb) / 0.2);
+  }
+}
+
+@keyframes avalon-player-focus {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 0 1rem 2.2rem rgb(var(--friemi-forest-rgb) / 0.14);
+  }
+
+  50% {
+    transform: translate3d(0, -0.12rem, 0);
+    box-shadow: 0 1.2rem 2.7rem rgb(var(--friemi-forest-rgb) / 0.2);
+  }
+}
+
+@keyframes avalon-recorded-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(0.35rem) scale(0.82) rotate(-4deg);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translateY(-0.08rem) scale(1.08) rotate(1deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes avalon-action-shine {
+  0% {
+    transform: translateX(-130%) rotate(14deg);
+  }
+
+  100% {
+    transform: translateX(130%) rotate(14deg);
+  }
+}
+
+.avalon-rise {
+  animation: avalon-tool-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.avalon-token-reveal {
+  animation: avalon-token-reveal 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.avalon-mission-card {
+  animation: avalon-mission-card-shuffle 940ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+.avalon-result-pulse {
+  animation: avalon-result-pulse 1.8s ease-in-out infinite;
+}
+
+.avalon-player-focus {
+  animation: avalon-player-focus 2.4s ease-in-out infinite;
+}
+
+.avalon-recorded-pop {
+  animation: avalon-recorded-pop 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.avalon-action-shine::after {
+  position: absolute;
+  inset: -2rem auto -2rem 0;
+  width: 42%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.46),
+    transparent
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+.avalon-action-shine:hover::after,
+.avalon-action-shine:focus-visible::after {
+  animation: avalon-action-shine 820ms ease both;
+  opacity: 1;
+}
+
+.avalon-tool img[src$=".svg"] {
+  user-select: none;
 }
 
 .friemi-brand-loader {

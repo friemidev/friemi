@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mission board background</title>
+  <desc id="desc">A five-round mission board background.</desc>
+  <defs>
+    <linearGradient id="missionBg" x1="40" y1="34" x2="1160" y2="386" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".55" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <filter id="missionShadow" x="0" y="0" width="1200" height="420" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#156240" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect x="36" y="40" width="1128" height="340" rx="48" fill="url(#missionBg)" filter="url(#missionShadow)" stroke="#8AB68E" stroke-width="4"/>
+  <path d="M164 210h872" stroke="#D6D5B2" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#FEFFF9" stroke="#156240" stroke-width="6">
+    <circle cx="180" cy="210" r="58"/>
+    <circle cx="390" cy="210" r="58"/>
+    <circle cx="600" cy="210" r="58"/>
+    <circle cx="810" cy="210" r="58"/>
+    <circle cx="1020" cy="210" r="58"/>
+  </g>
+  <g fill="#8AB68E">
+    <circle cx="180" cy="210" r="12"/>
+    <circle cx="390" cy="210" r="12"/>
+    <circle cx="600" cy="210" r="12"/>
+    <circle cx="810" cy="210" r="12"/>
+    <circle cx="1020" cy="210" r="12"/>
+  </g>
+  <path d="M120 96h960" stroke="#FEFFF9" stroke-width="3" stroke-opacity=".7"/>
+  <path d="M120 324h960" stroke="#D6D5B2" stroke-width="3" stroke-opacity=".7"/>
+</svg>

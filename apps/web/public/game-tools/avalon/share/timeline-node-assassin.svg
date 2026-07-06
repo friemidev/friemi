@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Assassin timeline node</title>
+  <desc id="desc">A non-graphic assassination phase node.</desc>
+  <circle cx="16" cy="16" r="14" fill="#1D1D1B" stroke="#F09182" stroke-width="2"/>
+  <path d="m21 8-8 15-5 3 3-5L26 13 21 8Z" fill="#FEFFF9"/>
+  <path d="M14 22 10 18" stroke="#F09182" stroke-width="2" stroke-linecap="round"/>
+</svg>

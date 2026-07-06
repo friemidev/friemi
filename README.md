@@ -1,31 +1,144 @@
 # Friemi
 
-> What's next? Fun begins. / 下一场，Fun 开场。
+<p align="center">
+  <img src="./apps/web/public/brand/v2_1/friemi-og-default-1200x630.png" alt="Friemi" width="760" />
+</p>
 
-Friemi 是一个面向海外中文用户的活动发现、组队和找搭子工具。当前首发市场是法国巴黎，产品已经从早期 MVP 进入 v1.4：核心能力包括公开活动导入、活动发现、组队大厅、游客报名、好友关系、消息通知、分享海报、微信分享卡片、天气、翻译和 Playwright 预览环境监控。
+<p align="center">
+  <strong>把一次想出门，变成有人一起去的活动入口。</strong>
+</p>
 
-## 当前能力
+<p align="center">
+  <a href="https://www.friemi.com">www.friemi.com</a>
+  ·
+  <a href="./docs/v2_2/implementation-checklist.md">v2.2 roadmap</a>
+  ·
+  <a href="./docs/v2_1/production-database-release-runbook.md">release runbook</a>
+</p>
 
-- 活动发现：公开活动列表、筛选、搜索、收藏、卡片视图和按日期视图。
-- 组队大厅：公开组局、好友相关组局、我的发起 / 参与 / 收藏、移动端滑一滑发现活动。
-- 活动详情：活动介绍、时间地点、地图、Google Maps 跳转、天气、订票链接、复制信息和活动分享。
-- 组队详情：报名、游客报名、参与人头像、活动关联入口、组队分享和宣传图下载。
-- 游客报名：未登录用户可先报名，之后通过已验证邮箱或微信号自动关联到正式账号。
-- 社交能力：好友号、扫码加好友、关注 / 粉丝 / 好友、私聊、通知中心。
-- 多语言与翻译：`zh-CN`、`en`、`fr` 界面，DeepL 手动翻译活动内容和评论并缓存结果。
-- 运营与监控：公共活动导入、性能日志、Playwright 站点监控、数据看板和举报处理。
+Friemi 是一个面向海外中文用户的活动发现、组局和线下社交工具。它不是单纯的活动列表，也不是只靠群聊接龙的报名表，而是把“发现活动、找人一起去、报名管理、好友关系、现场工具和复盘沉淀”放在同一个产品体验里。
+
+当前首发市场是法国巴黎，产品支持中文、英文和法语。
+
+## 产品定位
+
+很多线下活动原本散落在微信群、小红书、Instagram、城市官网、朋友私聊和临时接龙里。Friemi 想解决的是一个更具体的问题：
+
+```text
+我想出门 -> 找到合适的活动 -> 看看有没有人一起去 -> 轻松报名 -> 活动后还能沉淀关系
+```
+
+Friemi 的核心人群：
+
+- 想在海外找到活动和朋友的中文用户
+- 经常发起饭局、展览、桌游、运动、city walk 的主理人
+- 想把微信群里的临时小局变成可复用活动页面的组织者
+- 需要中 / 英 / 法多语言活动信息的本地生活用户
+
+## 核心体验
+
+<table>
+  <tr>
+    <td width="42%">
+      <img src="./apps/web/public/illustrations/design.png" alt="Friemi mobile hall concept" width="100%" />
+    </td>
+    <td>
+      <h3>移动端大厅</h3>
+      <p>把高频入口压缩在一屏里：活动推荐、搜索、我要组局、九宫格分类和底部导航。用户打开手机时先看到能做什么，而不是先读一大段说明。</p>
+      <ul>
+        <li>9+1 全局分类：饭局、闲逛、视听、艺术、桌游、进步、旅行、音乐、运动、其它</li>
+        <li>冷门分类有补全策略，避免点进去只有空结果</li>
+        <li>底部导航突出大厅，适合移动端重复使用</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td>
+      <h3>活动发现</h3>
+      <p>从公开数据和站内组局中整理可参加内容，支持卡片视图、按日期视图、搜索、筛选、收藏和分享。</p>
+      <ul>
+        <li>公开活动导入后自动分类</li>
+        <li>长期活动和单日活动按质量策略调配</li>
+        <li>时间、地点、费用、天气、地图和订票信息集中展示</li>
+      </ul>
+    </td>
+   
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="42%">
+      <img src="./apps/web/public/home/v2_1/friemi-home-v21-creator-hosting.jpg" alt="Friemi creators" width="100%" />
+    </td>
+    <td>
+      <h3>组局和共创主理人</h3>
+      <p>用户可以把一个想法变成清晰的组局页面，邀请朋友一起参加。对于长期发起活动的人，Friemi 提供共创主理人身份展示和更专业的主页露出。</p>
+      <ul>
+        <li>登录报名、游客报名、报名审核和参与者头像</li>
+        <li>分享链接、微信分享兜底、宣传海报下载</li>
+        <li>他人主页只展示公开发起和已结束的参加记录，避免暴露正在参加或未来计划</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## 当前产品能力
+
+### 发现与搜索
+
+- 活动大厅：公开活动、筛选、排序、卡片视图、日期视图
+- 组局大厅：公开组局、分类筛选、滑动发现、我要组局
+- 全局搜索：搜索活动、组局和用户
+- 多语言：`zh-CN`、`en`、`fr`，活动内容支持翻译缓存
+
+### 组局与报名
+
+- 用户发起组局，支持时间、地点、人数、费用、封面、公开性和报名审核
+- 游客可先报名，之后通过邮箱、电话或微信号绑定回正式账号
+- 报名状态对用户可见，需审核的组局有明确提示
+- 发起人和管理人可以管理报名、修改组局和取消组局
+
+### 关系与消息
+
+- 好友号、好友申请、私聊和通知中心
+- 个人主页展示发起内容和已结束的参加记录
+- 共创主理人身份在主页、头像弹窗和参与者信息中可见
+- 关注 / 粉丝展示入口暂时隐藏，当前关系重点放在好友和活动参与
+
+### 分享与传播
+
+- Open Graph / 微信分享兜底
+- 组局详情页海报生成和二维码
+- 公开活动、组局和个人主页都可作为外部传播入口
+- 没有微信公众号 JS-SDK 权限时，海报是更稳定的朋友圈替代方案
+
+### 线下工具
+
+Friemi 正在把“活动结束前后”的现场体验也放进产品。桌游组局报名后可以进入桌游工具入口。
+
+<p>
+  <img src="./apps/web/public/game-tools/avalon/avalon.jpeg" alt="Avalon 阿瓦隆" width="140" />
+</p>
+
+- Avalon 阿瓦隆：开房、座位、发身份、投票、任务、复盘
+- 狼人杀和血染钟楼：素材和入口已准备，后续逐步实现
+- 工具目标：线下桌游少一点口头统计，多一点轻量好玩的现场辅助
 
 ## 技术栈
 
 - Monorepo：Turborepo + npm workspaces
 - Web：Next.js App Router + React 19 + TypeScript
-- UI：Tailwind CSS + lucide-react + 共享 UI 包
-- 认证：Clerk
-- 数据库：PostgreSQL + Prisma
-- 存储：Supabase Storage，用于活动封面等公开图片
-- 国际化：next-intl
-- 测试与监控：Node tests + Playwright monitoring
-- 部署：Vercel
+- UI：Tailwind CSS + lucide-react + shared UI package
+- Auth：Clerk
+- Database：PostgreSQL + Prisma
+- Storage：Supabase Storage
+- I18n：next-intl
+- Deploy：Vercel
+- Tests：Node tests + Playwright site monitoring
 
 ## 项目结构
 
@@ -34,17 +147,17 @@ friemi/
 ├── apps/
 │   └── web/                 # Next.js Web 应用
 ├── packages/
-│   ├── scraper-core         # 公共活动抓取 / 解析共享逻辑
+│   ├── scraper-core         # 公共活动抓取与解析共享逻辑
 │   ├── shared               # 共享类型、日期格式化等工具
 │   └── ui                   # 基础 UI 组件
-├── docs/                    # 版本清单、导入、监控和流程文档
+├── docs/                    # 版本清单、发布 runbook、设计说明
 ├── scripts/                 # 测试脚本与辅助工具
 ├── package.json
 ├── package-lock.json
 └── turbo.json
 ```
 
-## 本地启动
+## 本地开发
 
 需要 Node.js `20.19+` 和 npm `10+`。
 
@@ -55,64 +168,16 @@ npm run db:generate
 npm run dev
 ```
 
-访问：
+常用入口：
 
 - 首页：`http://localhost:3000/zh-CN/home`
-- 活动页：`http://localhost:3000/zh-CN/activities`
-- 组队大厅：`http://localhost:3000/zh-CN/lobby`
+- 移动端大厅：`http://localhost:3000/zh-CN/mobile-home`
+- 活动大厅：`http://localhost:3000/zh-CN/activities`
+- 组局大厅：`http://localhost:3000/zh-CN/lobby`
 - 更新公告：`http://localhost:3000/zh-CN/updates`
 - 健康检查：`http://localhost:3000/api/health`
 
-如果本地需要 Prisma CLI 直接读取环境变量，也可以把同一份变量放到 `apps/web/.env`。不要把真实密钥提交到 Git。
-
-## 环境变量
-
-参考根目录 `.env.example`，常用变量如下：
-
-```bash
-# Database
-DATABASE_URL=
-DIRECT_URL=
-
-# Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-CLERK_WEBHOOK_SIGNING_SECRET=
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/zh-CN/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/zh-CN/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/zh-CN
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/zh-CN
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-ADMIN_CLERK_USER_IDS=
-ADMIN_EMAILS=
-CRON_SECRET=
-
-# Public activity import
-PARIS_OPEN_DATA_API_KEY=
-
-# Translation
-DEEPL_API_KEY=
-
-# Weather
-WEATHER_PROVIDER=open-meteo
-METEOFRANCE_API_KEY=
-METEOFRANCE_APPLICATION_ID=
-
-# Supabase storage
-NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_STORAGE_BUCKET=activity-covers
-```
-
-说明：
-
-- `DATABASE_URL`：运行时连接串，线上建议使用 Supabase / Neon pooler。
-- `DIRECT_URL`：迁移和 `db push` 用的直连串；本地可以和 `DATABASE_URL` 相同。
-- `NEXT_PUBLIC_APP_URL`：生成分享链接、二维码和 Open Graph 图片时使用，预览和生产环境需要填公网 HTTPS 域名。
-- `DEEPL_API_KEY`：只在服务端使用，不要加 `NEXT_PUBLIC_`。
-- 当前天气默认使用 Open-Meteo，不需要 API key；Meteo-France 变量只作为后续切换预留。
+不要把真实密钥提交到 Git。环境变量参考根目录 `.env.example`。
 
 ## 数据库与 Prisma
 
@@ -125,25 +190,17 @@ apps/web/prisma/schema.prisma
 常用命令：
 
 ```bash
-npm run db:generate   # 生成 Prisma Client
-npm run db:push       # 将 schema 同步到当前数据库
-npm run db:migrate    # 创建并执行开发迁移
-npm run db:seed       # 写入本地测试数据
+npm run db:generate
+npm run db:push
+npm run db:migrate
+npm run db:seed
 ```
 
-如果直接使用 Prisma CLI：
-
-```bash
-cd apps/web
-npx prisma generate
-npx prisma db push
-```
-
-本项目约定：结构变更可以通过 Prisma 或 SQL 变更文件提交；对已有数据的修复、回填和导入，优先提供 SQL Editor 脚本或 dry-run 脚本，由操作者确认后手动执行。
+结构变更优先通过 Prisma migration 或明确的 SQL runbook 管理。生产数据库不要直接执行 `prisma db push`。
 
 ## 公共活动导入
 
-本地开发环境启动后，可以手动调用 Open Data 导入接口：
+本地开发环境启动后，可以手动调用导入接口：
 
 ```bash
 export LOCAL_URL="http://localhost:3000"
@@ -157,20 +214,9 @@ unset LOCAL_URL
 unset CRON_SECRET
 ```
 
-预览或生产环境把 `LOCAL_URL` 换成对应 HTTPS 域名。`limit` 可以按测试需要调整，先用小批量确认日志和数据结果，再扩大导入量。
+预览或生产环境把 `LOCAL_URL` 换成对应 HTTPS 域名。先小批量确认日志和数据结果，再扩大导入量。
 
-订票链接历史回填：
-
-```bash
-npm run db:backfill-ticket-links --workspace=apps/web
-npm run db:backfill-ticket-links --workspace=apps/web -- --write
-```
-
-第一条是 dry-run，第二条才会写库。
-
-## 测试与质量检查
-
-常规检查：
+## 质量检查
 
 ```bash
 npm run typecheck
@@ -186,31 +232,21 @@ PLAYWRIGHT_MONITOR_MAX_LOAD_MS=15000 \
 npm run monitor:site --workspace=apps/web
 ```
 
-打开报告：
+## 发布前检查
 
-```bash
-npm run monitor:site:report --workspace=apps/web
-```
-
-监控重点看首页、活动页、组队大厅、搜索页和登录态页面是否出现 500、客户端异常、长时间 loading 或明显超时。性能优化记录见 `docs/v1_4/playwright-performance-optimization-log.md`。
-
-## 部署检查
-
-部署到 Vercel 前至少确认：
-
-- `npm run typecheck` 通过。
-- Prisma schema 已同步到目标数据库。
-- Vercel 环境变量和目标数据库一致，特别是 `DATABASE_URL`、`DIRECT_URL`、Clerk、`NEXT_PUBLIC_APP_URL`、`CRON_SECRET`。
-- 新增字段已经在预览数据库执行过结构同步。
-- 公开活动导入、天气、翻译、分享卡片等辅助能力失败时不会影响主页面浏览。
-- 预览环境用 Playwright 跑过基础监控。
+- `npm run typecheck` 通过
+- Prisma schema 已同步到目标数据库
+- Vercel 环境变量和目标数据库一致
+- `NEXT_PUBLIC_APP_URL` 指向正确的 Preview 或 Production 域名
+- 公开活动导入、天气、翻译、分享卡片失败时不影响主页面浏览
+- 预览环境跑过核心页面 smoke / monitoring
 
 ## 版本文档
 
-- v1.4 实现清单：`docs/v1_4/implementation-checklist.md`
-- v1.4 Playwright 教程：`docs/v1_4/playwright-testing-guide.md`
-- v1.4 性能分析：`docs/v1_4/preview-auth-performance-analysis.md`
-- v1.4 性能优化记录：`docs/v1_4/playwright-performance-optimization-log.md`
-- 站内更新公告数据：`apps/web/features/updates/versionUpdates.ts`
+- v2.2 实现清单：`docs/v2_2/implementation-checklist.md`
+- v2.1 发布数据库 runbook：`docs/v2_1/production-database-release-runbook.md`
+- v2.1 首页规划：`docs/v2_1/home-luxury-co-creators-layout-plan.md`
+- v2.1 品牌风格计划：`docs/v2_1/brand-style-overhaul-plan.md`
+- v2.0 实现清单：`docs/v2_0/implementation-checklist.md`
 
-更多历史文档位于 `docs/v1_0`、`docs/v1_1`、`docs/v1_2`、`docs/v1_3`。
+更多历史文档位于 `docs/v1_0` 到 `docs/v1_4`。

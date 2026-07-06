@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Undo mission token">
+  <defs>
+    <linearGradient id="undoCard" x1="18" x2="78" y1="12" y2="84" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF5E6"/>
+      <stop offset=".52" stop-color="#FEFFF9"/>
+      <stop offset="1" stop-color="#F1F2EC"/>
+    </linearGradient>
+    <filter id="undoShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#B5301F" flood-opacity=".16"/>
+    </filter>
+  </defs>
+  <rect x="23" y="13" width="50" height="70" rx="16" fill="url(#undoCard)" stroke="#F09182" stroke-width="3" filter="url(#undoShadow)"/>
+  <path d="M57 36H39a10 10 0 1 0 0 20h16" fill="none" stroke="#156240" stroke-width="7" stroke-linecap="round"/>
+  <path d="M40 26 28 37l12 11" fill="none" stroke="#156240" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="58" cy="58" r="12" fill="#F09182"/>
+  <path d="m53 58 4 4 7-9" fill="none" stroke="#FEFFF9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 73h28" stroke="#D6D5B2" stroke-width="4" stroke-linecap="round"/>
+</svg>

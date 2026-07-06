@@ -7,6 +7,7 @@ import { isLegacyActivityInfoSource } from "@/features/activities/queries/getAct
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 const maxCoverImageUrlLength = 2048;
 
@@ -53,7 +54,8 @@ function getCoverImageCopy(locale: string) {
   if (locale === "fr") {
     return {
       failed: "Impossible de mettre à jour l'image pour le moment.",
-      forbidden: "Seul l'organisateur peut modifier cette image.",
+      forbidden:
+        "Seul l'organisateur ou un gestionnaire peut modifier cette image.",
       invalid: "Choisissez une image importée valide.",
       unavailable: "Ce plan n'est plus disponible.",
     };
@@ -62,7 +64,7 @@ function getCoverImageCopy(locale: string) {
   if (locale === "en") {
     return {
       failed: "Could not update the cover image right now.",
-      forbidden: "Only the organizer can update this image.",
+      forbidden: "Only the organizer or a manager can update this image.",
       invalid: "Choose a valid uploaded image.",
       unavailable: "This plan is no longer available.",
     };
@@ -70,7 +72,7 @@ function getCoverImageCopy(locale: string) {
 
   return {
     failed: "暂时无法更新预览图，请稍后重试。",
-    forbidden: "只有组局发起人可以修改这张预览图。",
+    forbidden: "只有组局发起人或管理人可以修改这张预览图。",
     invalid: "请选择有效的已上传图片。",
     unavailable: "这个组局当前不可用。",
   };
@@ -127,7 +129,9 @@ export async function updateActivityCoverImageAction(
     };
   }
 
-  if (activity.organizerId !== profile.id && profile.role !== "ADMIN") {
+  const permission = await assertCanManageActivity(activity.id, profile.id);
+
+  if (!permission.ok && profile.role !== "ADMIN") {
     return {
       formError: copy.forbidden,
     };

@@ -79,7 +79,7 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
     user.primaryEmailAddress?.emailAddress ??
     user.emailAddresses[0]?.emailAddress ??
     null;
-  const nickname = user.username?.trim() ?? "";
+  const nickname = getFallbackNicknameFromClerkUser(user, email);
 
   return {
     email,
@@ -92,6 +92,20 @@ function getProfileFieldsFromClerkUser(user: ClerkCurrentUser) {
     clerkDeletedAt: null,
     syncedAt: new Date(),
   };
+}
+
+function getFallbackNicknameFromClerkUser(
+  user: ClerkCurrentUser,
+  email?: string | null,
+) {
+  const nickname =
+    user.username?.trim() ||
+    user.fullName?.trim() ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+    email?.split("@")[0]?.trim() ||
+    "";
+
+  return nickname.slice(0, 24);
 }
 
 function getVerifiedEmailFromClerkUser(user: ClerkCurrentUser) {
@@ -176,6 +190,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     select: {
       email: true,
       emailVerifiedAt: true,
+      nickname: true,
     },
   });
   const updatedEmailVerifiedAt = getStoredEmailVerifiedAt({
@@ -197,6 +212,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
       emailVerifiedAt: updatedEmailVerifiedAt,
       firstName: profileFields.firstName,
       lastName: profileFields.lastName,
+      ...(existing?.nickname?.trim() ? {} : { nickname: profileFields.nickname }),
       username: profileFields.username,
       avatarUrl: profileFields.avatarUrl,
       status: profileFields.status,
@@ -382,6 +398,34 @@ function getLayoutViewerProfile(profile: LayoutViewerProfile) {
   };
 }
 
+async function ensureProfileNicknameFromClerkUser<
+  TProfile extends LayoutViewerProfile,
+>(profile: TProfile, user: ClerkCurrentUser) {
+  if (profile.nickname.trim()) {
+    return profile;
+  }
+
+  const nickname = getFallbackNicknameFromClerkUser(user, profile.email);
+
+  if (!nickname) {
+    return profile;
+  }
+
+  await prisma.userProfile.update({
+    where: {
+      id: profile.id,
+    },
+    data: {
+      nickname,
+    },
+  });
+
+  return {
+    ...profile,
+    nickname,
+  };
+}
+
 function isAdminUser(user: ClerkCurrentUser) {
   return isAdminByFields({
     userId: user.id,
@@ -430,28 +474,32 @@ export const getOptionalLayoutViewerState = cache(
       },
     });
 
-    if (profile?.status === "ACTIVE" && profile.role === "ADMIN") {
+    const user = await currentUser();
+    const viewerProfile =
+      profile && user
+        ? await ensureProfileNicknameFromClerkUser(profile, user)
+        : profile;
+
+    if (viewerProfile?.status === "ACTIVE" && viewerProfile.role === "ADMIN") {
       const unreadNotificationCount = await prisma.notification.count({
         where: {
-          recipientId: profile.id,
+          recipientId: viewerProfile.id,
           readAt: null,
         },
       });
 
       return {
         initialUnreadNotificationCount: unreadNotificationCount,
-        profile: getLayoutViewerProfile(profile),
-        showAdminNav: true,
+        profile: getLayoutViewerProfile(viewerProfile),
+        showAdminNav: user ? isAdminUser(user) : true,
       };
     }
 
-    const user = await currentUser();
-
     if (!user) {
-      const unreadNotificationCount = profile
+      const unreadNotificationCount = viewerProfile
         ? await prisma.notification.count({
             where: {
-              recipientId: profile.id,
+              recipientId: viewerProfile.id,
               readAt: null,
             },
           })
@@ -459,12 +507,12 @@ export const getOptionalLayoutViewerState = cache(
 
       return {
         initialUnreadNotificationCount: unreadNotificationCount,
-        profile: profile ? getLayoutViewerProfile(profile) : null,
+        profile: viewerProfile ? getLayoutViewerProfile(viewerProfile) : null,
         showAdminNav: false,
       };
     }
 
-    if (!profile) {
+    if (!viewerProfile) {
       const createdProfile = await upsertClerkUserProfile(user);
       const unreadNotificationCount = await prisma.notification.count({
         where: {
@@ -482,14 +530,14 @@ export const getOptionalLayoutViewerState = cache(
 
     const unreadNotificationCount = await prisma.notification.count({
       where: {
-        recipientId: profile.id,
+        recipientId: viewerProfile.id,
         readAt: null,
       },
     });
 
     return {
       initialUnreadNotificationCount: unreadNotificationCount,
-      profile: getLayoutViewerProfile(profile),
+      profile: getLayoutViewerProfile(viewerProfile),
       showAdminNav: isAdminUser(user),
     };
   },

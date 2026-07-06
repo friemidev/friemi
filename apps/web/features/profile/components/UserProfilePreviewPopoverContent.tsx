@@ -8,16 +8,12 @@ import {
   ExternalLink,
   Loader2,
   UserPlus,
-  UserRoundPlus,
-  Users,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import {
   sendFriendRequestToProfileAction,
   type FriendActionState,
 } from "@/features/friends/actions/friendActions";
-import { FollowButton } from "@/features/follow/components/FollowButton";
-import { getFollowCopy } from "@/features/follow/copy";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
@@ -25,8 +21,6 @@ import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 type UserPreviewPayload = {
   avatarUrl: string | null;
   bio: string | null;
-  followerCount: number;
-  followingCount: number;
   id: string;
   isCoCreator: boolean;
   isSelf: boolean;
@@ -58,19 +52,6 @@ const fallbackRelationship: UserPreviewPayload["relationship"] = {
 };
 const userPreviewCache = new Map<string, UserPreviewPayload | null>();
 
-function updateCachedPreview(
-  profileId: string,
-  updater: (current: UserPreviewPayload) => UserPreviewPayload,
-) {
-  const current = userPreviewCache.get(profileId);
-
-  if (!current) {
-    return;
-  }
-
-  userPreviewCache.set(profileId, updater(current));
-}
-
 function getInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "N";
 }
@@ -82,7 +63,6 @@ function getPreviewCopy(locale: string) {
       alreadyFriends: "Déjà ami",
       emptyBio: "Pas encore de présentation.",
       failed: "Échec du chargement.",
-      followingCount: "Abonnements",
       guestNotice: "Cet utilisateur est encore visiteur.",
       openProfile: "Profil",
       pendingFriendRequest: "En attente",
@@ -98,7 +78,6 @@ function getPreviewCopy(locale: string) {
       alreadyFriends: "Friends",
       emptyBio: "No bio yet.",
       failed: "Failed to load.",
-      followingCount: "Following",
       guestNotice: "This user is still a guest.",
       openProfile: "Profile",
       pendingFriendRequest: "Pending",
@@ -113,7 +92,6 @@ function getPreviewCopy(locale: string) {
     alreadyFriends: "已经是好友",
     emptyBio: "这个人还没有写简介。",
     failed: "加载失败。",
-    followingCount: "关注",
     guestNotice: "该用户还是游客哦",
     openProfile: "主页",
     pendingFriendRequest: "已申请",
@@ -166,9 +144,9 @@ function AddFriendQuickButton({
 
   if (!isAuthenticated) {
     return (
-      <Link href={getSignInHref(locale, redirectPath)}>
+      <Link className="block min-w-0" href={getSignInHref(locale, redirectPath)}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
           variant="secondary"
         >
           <UserPlus className="h-3 w-3 shrink-0" />
@@ -180,7 +158,7 @@ function AddFriendQuickButton({
 
   if (relationship.isFriend) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.alreadyFriends}
       </div>
@@ -194,7 +172,7 @@ function AddFriendQuickButton({
     isOptimisticPending
   ) {
     return (
-      <div className="inline-flex h-7 min-w-[6.6rem] items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-3 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
+      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
         <CheckCircle2 className="h-3 w-3 shrink-0" />
         {previewCopy.pendingFriendRequest}
       </div>
@@ -203,9 +181,9 @@ function AddFriendQuickButton({
 
   if (relationship.pendingFriendRequest === "received") {
     return (
-      <Link href={withLocale(locale, "/friends")}>
+      <Link className="block min-w-0" href={withLocale(locale, "/friends")}>
         <Button
-          className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#156240] hover:bg-white"
+          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-2 !text-[11px] font-semibold text-[#156240] hover:bg-white"
           variant="secondary"
         >
           {previewCopy.requestReceived}
@@ -217,7 +195,7 @@ function AddFriendQuickButton({
   return (
     <form
       action={formAction}
-      className="inline-grid min-w-[6.6rem] gap-1 justify-items-center"
+      className="inline-grid w-full min-w-0 gap-1 justify-items-center"
       onSubmit={() => {
         setIsOptimisticPending(true);
       }}
@@ -240,7 +218,7 @@ function FriendSubmitButton({ locale }: { locale: string }) {
 
   return (
     <Button
-      className="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/70 bg-[#F09182] !px-3 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+      className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
       type="submit"
     >
       {pending ? (
@@ -273,49 +251,17 @@ export function UserProfilePreviewPopoverContent({
     null,
   );
   const previewCopy = getPreviewCopy(locale);
-  const followCopy = getFollowCopy(locale);
   const resolvedNickname = data?.nickname ?? nickname;
   const resolvedAvatarUrl = data?.avatarUrl ?? avatarUrl;
   const resolvedBio = data?.bio?.trim() || previewCopy.emptyBio;
   const isCoCreator = Boolean(data?.isCoCreator);
   const isSelf = Boolean(data?.isSelf);
   const relationship = data?.relationship ?? fallbackRelationship;
-  const showStats = !errorType;
   const showBio = errorType !== "not_found";
   const showProfileLink =
     !isLoading && Boolean(profileId) && !isGuest && errorType !== "not_found";
   const showActionButtons =
     !isLoading && !isSelf && errorType !== "not_found";
-
-  function handleFollowStateChange(nextIsFollowing: boolean) {
-    setData((current) => {
-      if (!current) {
-        return current;
-      }
-
-      const previousIsFollowing = current.relationship.isFollowing;
-
-      if (previousIsFollowing === nextIsFollowing) {
-        return current;
-      }
-
-      const nextFollowingCount = Math.max(
-        0,
-        current.followingCount + (nextIsFollowing ? 1 : -1),
-      );
-      const nextValue = {
-        ...current,
-        followingCount: nextFollowingCount,
-        relationship: {
-          ...current.relationship,
-          isFollowing: nextIsFollowing,
-        },
-      };
-
-      updateCachedPreview(profileId, () => nextValue);
-      return nextValue;
-    });
-  }
 
   useEffect(() => {
     if (isGuest || !profileId) {
@@ -400,37 +346,6 @@ export function UserProfilePreviewPopoverContent({
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
               ) : null}
             </div>
-            {showStats ? (
-              <div className="mt-1 flex min-h-6 flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
-                  <Users className="h-3 w-3" />
-                  {isLoading ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    </span>
-                  ) : data ? (
-                    <span>
-                      {followCopy.followers} {data.followerCount}
-                    </span>
-                  ) : (
-                    <span>{followCopy.followers} --</span>
-                  )}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FEFFF9]/82 px-2 py-1 text-[10px] font-semibold text-[#156240] ring-1 ring-[#D6D5B2]/80">
-                  {isLoading ? (
-                    <span className="inline-flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    </span>
-                  ) : data ? (
-                    <span>
-                      {previewCopy.followingCount} {data.followingCount}
-                    </span>
-                  ) : (
-                    <span>{previewCopy.followingCount} --</span>
-                  )}
-                </span>
-              </div>
-            ) : null}
             {showBio ? (
               <p className="mt-2 text-[11px] leading-5 text-[#156240]/70">
                 {resolvedBio}
@@ -439,15 +354,34 @@ export function UserProfilePreviewPopoverContent({
           </div>
         </div>
 
-        {showProfileLink ? (
-          <Link
-            className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
-            href={withLocale(locale, `/profile/${profileId}`)}
-            prefetch={false}
+        {showProfileLink || showActionButtons ? (
+          <div
+            className={
+              showProfileLink && showActionButtons
+                ? "grid grid-cols-2 gap-2"
+                : "grid gap-2"
+            }
           >
-            <ExternalLink className="h-3 w-3" />
-            {previewCopy.openProfile}
-          </Link>
+            {showProfileLink ? (
+              <Link
+                className="inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
+                href={withLocale(locale, `/profile/${profileId}`)}
+                prefetch={false}
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="truncate">{previewCopy.openProfile}</span>
+              </Link>
+            ) : null}
+            {showActionButtons ? (
+              <AddFriendQuickButton
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                profileId={profileId}
+                redirectPath={redirectPath}
+                relationship={relationship}
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {isSelf ? (
@@ -464,30 +398,6 @@ export function UserProfilePreviewPopoverContent({
           </p>
         ) : null}
 
-        {showActionButtons ? (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <FollowButton
-              buttonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#8AB68E]/85 bg-[#FEFFF9] !px-3 !text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] hover:bg-[#F1F2EC]"
-              activeButtonClassName="!h-7 !min-h-7 !min-w-[6.6rem] rounded-full border border-[#F09182]/65 bg-[#FFF5E6] !px-3 !text-[11px] font-semibold text-[#B5301F] hover:bg-white"
-              activeLabel={followCopy.unfollow}
-              fullWidth={false}
-              icon={UserRoundPlus}
-              isAuthenticated={isAuthenticated}
-              isFollowing={relationship.isFollowing}
-              locale={locale}
-              onStateChange={handleFollowStateChange}
-              redirectPath={redirectPath}
-              targetUserProfileId={profileId}
-            />
-            <AddFriendQuickButton
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              profileId={profileId}
-              redirectPath={redirectPath}
-              relationship={relationship}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 const reviewParticipationSchema = z.object({
   activityId: z.string().min(1),
@@ -145,7 +146,13 @@ export async function reviewParticipationAction(
             };
           }
 
-          if (participation.activity.organizerId !== profile.id) {
+          const permission = await assertCanManageActivity(
+            participation.activity.id,
+            profile.id,
+            tx,
+          );
+
+          if (!permission.ok) {
             return {
               ok: false,
               error: copy.permissionError,
@@ -245,7 +252,13 @@ export async function reviewParticipationAction(
           };
         }
 
-        if (participation.activity.organizerId !== profile.id) {
+        const permission = await assertCanManageActivity(
+          participation.activity.id,
+          profile.id,
+          tx,
+        );
+
+        if (!permission.ok) {
           return {
             ok: false,
             error: copy.permissionError,

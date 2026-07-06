@@ -74,6 +74,11 @@ enum UserRole {
   ADMIN
 }
 
+enum MobilePlatform {
+  ANDROID
+  IOS
+}
+
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
@@ -95,6 +100,7 @@ enum NotificationType {
   PARTICIPATION_REJECTED
   ACTIVITY_UPDATED
   ACTIVITY_CANCELLED
+  ACTIVITY_ANNOUNCEMENT
   FRIEND_REQUEST
   ACTIVITY_COMMENTED
   COMMENT_REPLY
@@ -125,6 +131,24 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum GameToolKind {
+  AVALON
+  STORYTELLER
+}
+
+enum GameToolRoomStatus {
+  LOBBY
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum GameToolSubmissionKind {
+  TEAM_VOTE
+  MISSION_CARD
+  ASSASSINATION_TARGET
+}
+
 model UserProfile {
   id                     String                     @id @default(cuid())
   clerkUserId            String                     @unique
@@ -153,6 +177,9 @@ model UserProfile {
   clerkDeletedAt         DateTime?
   syncedAt               DateTime?
   activities             Activity[]                 @relation("ActivityOrganizer")
+  managedActivities      ActivityCoManager[]        @relation("ActivityCoManagerProfile")
+  addedCoManagers        ActivityCoManager[]        @relation("ActivityCoManagerAddedBy")
+  activityManagementLogs ActivityManagementLog[]    @relation("ActivityManagementLogActor")
   participations         ActivityParticipant[]
   guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
   comments               Comment[]
@@ -168,8 +195,14 @@ model UserProfile {
   conversationsAsUserA   Conversation[]             @relation("ConversationUserA")
   conversationsAsUserB   Conversation[]             @relation("ConversationUserB")
   sentDirectMessages     DirectMessage[]            @relation("DirectMessageSender")
+  authoredAnnouncements  ActivityAnnouncement[]     @relation("ActivityAnnouncementAuthor")
   submittedReports       Report[]                   @relation("ReportReporter")
   reviewedReports        Report[]                   @relation("ReportReviewer")
+  mobileDevices          MobileDevice[]
+  hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
+  gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
+  gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
+  gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
   publicEventFavorites   PublicEventFavorite[]
@@ -180,6 +213,26 @@ model UserProfile {
   @@index([normalizedWechatId])
   @@index([isCoCreator, status])
   @@index([role, status])
+}
+
+model MobileDevice {
+  id            String         @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile    @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  platform      MobilePlatform
+  fcmToken      String         @unique
+  deviceId      String?
+  appVersion    String?
+  locale        String?
+  timezone      String?
+  userAgent     String?
+  lastSeenAt    DateTime       @default(now())
+  disabledAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([userProfileId, disabledAt, lastSeenAt])
+  @@index([platform, deviceId])
 }
 
 model Activity {
@@ -227,7 +280,10 @@ model Activity {
   notifications     Notification[]
   sourceLinks       ActivitySourceLink[]
   favorites         ActivityFavorite[]
+  coManagers        ActivityCoManager[]
+  managementLogs    ActivityManagementLog[]
   directMessages    DirectMessage[]
+  announcements     ActivityAnnouncement[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -241,6 +297,35 @@ model Activity {
   @@index([externalUrl])
   @@index([ticketUrl])
   @@index([importedAt])
+}
+
+model ActivityCoManager {
+  id               String       @id @default(cuid())
+  activityId       String
+  managerProfileId String
+  addedByProfileId String?
+  activity         Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  manager          UserProfile  @relation("ActivityCoManagerProfile", fields: [managerProfileId], references: [id], onDelete: Cascade)
+  addedBy          UserProfile? @relation("ActivityCoManagerAddedBy", fields: [addedByProfileId], references: [id], onDelete: SetNull)
+  createdAt        DateTime     @default(now())
+
+  @@unique([activityId, managerProfileId])
+  @@index([managerProfileId])
+  @@index([addedByProfileId])
+}
+
+model ActivityManagementLog {
+  id         String       @id @default(cuid())
+  activityId String
+  actorId    String?
+  action     String
+  metadata   Json?
+  activity   Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  actor      UserProfile? @relation("ActivityManagementLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime     @default(now())
+
+  @@index([activityId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model PublicEvent {
@@ -444,20 +529,38 @@ model ContentTranslation {
 }
 
 model Notification {
-  id          String           @id @default(cuid())
-  type        NotificationType
-  recipientId String
-  recipient   UserProfile      @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  actorId     String?
-  actor       UserProfile?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  activityId  String?
-  activity    Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  readAt      DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                     String                @id @default(cuid())
+  type                   NotificationType
+  recipientId            String
+  recipient              UserProfile           @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId                String?
+  actor                  UserProfile?          @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  activityId             String?
+  activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  activityAnnouncementId String?
+  activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  readAt                 DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
+  @@index([activityAnnouncementId])
+}
+
+model ActivityAnnouncement {
+  id            String         @id @default(cuid())
+  activityId    String
+  authorId      String
+  content       String
+  activity      Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author        UserProfile    @relation("ActivityAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([activityId, createdAt])
+  @@index([authorId, createdAt])
 }
 
 model Report {
@@ -585,4 +688,89 @@ model AnalyticsEvent {
   @@index([userProfileId, createdAt])
   @@index([sourceSurface, createdAt])
   @@index([environment, createdAt])
+}
+
+model GameToolRoom {
+  id          String               @id @default(cuid())
+  kind        GameToolKind         @default(AVALON)
+  status      GameToolRoomStatus   @default(LOBBY)
+  code        String               @unique @db.VarChar(8)
+  locale      String               @default("zh-CN")
+  title       String
+  mode        String               @default("identity")
+  playerCount Int                  @default(7)
+  hostId      String
+  host        UserProfile          @relation("GameToolRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  config      Json?
+  state       Json?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  cancelledAt DateTime?
+  seats       GameToolSeat[]
+  events      GameToolEvent[]
+  submissions GameToolSubmission[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([hostId, createdAt])
+  @@index([kind, status, updatedAt])
+  @@index([code])
+}
+
+model GameToolSeat {
+  id             String               @id @default(cuid())
+  roomId         String
+  profileId      String?
+  privateToken   String               @unique @db.VarChar(32)
+  seatNumber     Int
+  displayName    String
+  guestName      String?
+  roleKey        String?
+  roleAlignment  String?
+  privatePayload Json?
+  readyAt        DateTime?
+  joinedAt       DateTime             @default(now())
+  leftAt         DateTime?
+  room           GameToolRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profile        UserProfile?         @relation("GameToolSeatProfile", fields: [profileId], references: [id], onDelete: SetNull)
+  submissions    GameToolSubmission[]
+
+  @@unique([roomId, seatNumber])
+  @@unique([roomId, profileId])
+  @@index([profileId, joinedAt])
+  @@index([roomId, readyAt])
+}
+
+model GameToolEvent {
+  id        String       @id @default(cuid())
+  roomId    String
+  actorId   String?
+  type      String
+  payload   Json?
+  room      GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  actor     UserProfile? @relation("GameToolEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+
+  @@index([roomId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
+}
+
+model GameToolSubmission {
+  id          String                 @id @default(cuid())
+  roomId      String
+  seatId      String?
+  profileId   String?
+  roundIndex  Int                    @default(0)
+  kind        GameToolSubmissionKind
+  value       String
+  metadata    Json?
+  submittedAt DateTime               @default(now())
+  room        GameToolRoom           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  seat        GameToolSeat?          @relation(fields: [seatId], references: [id], onDelete: SetNull)
+  profile     UserProfile?           @relation("GameToolSubmissionProfile", fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@unique([roomId, roundIndex, kind, seatId])
+  @@index([roomId, kind, roundIndex])
+  @@index([profileId, submittedAt])
 }

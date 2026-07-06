@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Friemi game room QR frame</title>
+  <desc id="desc">A light rounded QR frame for offline game rooms.</desc>
+  <defs>
+    <linearGradient id="qrFrameBg" x1="28" y1="34" x2="332" y2="324" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".52" stop-color="#F1F2EC"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <filter id="qrShadow" x="8" y="8" width="344" height="344" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#156240" flood-opacity=".14"/>
+    </filter>
+    <pattern id="qrDots" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.2" fill="#8AB68E" opacity=".26"/>
+    </pattern>
+  </defs>
+  <rect x="26" y="26" width="308" height="308" rx="42" fill="url(#qrFrameBg)" filter="url(#qrShadow)"/>
+  <rect x="43" y="43" width="274" height="274" rx="30" fill="url(#qrDots)" opacity=".78"/>
+  <rect x="64" y="64" width="232" height="232" rx="24" fill="#FEFFF9" stroke="#8AB68E" stroke-width="3"/>
+  <path d="M87 87h46v46H87V87Zm140 0h46v46h-46V87ZM87 227h46v46H87v-46Z" fill="#156240" opacity=".95"/>
+  <path d="M101 101h18v18h-18v-18Zm140 0h18v18h-18v-18ZM101 241h18v18h-18v-18Z" fill="#FEFFF9"/>
+  <circle cx="180" cy="180" r="42" fill="#EAF7EF" stroke="#8AB68E" stroke-width="2"/>
+  <path d="M166 179c7 7 21 7 28 0" stroke="#156240" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="158" cy="168" r="8" fill="#F09182"/>
+  <circle cx="202" cy="168" r="8" fill="#FFF5E6" stroke="#156240" stroke-width="2"/>
+  <path d="M180 145v11m-18-5 7 8m29-8-7 8" stroke="#D6D5B2" stroke-width="6" stroke-linecap="round"/>
+</svg>

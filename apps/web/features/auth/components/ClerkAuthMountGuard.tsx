@@ -22,10 +22,23 @@ export function ClerkAuthMountGuard({
   locale,
 }: ClerkAuthMountGuardProps) {
   const [mounted, setMounted] = useState(false);
+  const [isFriemiIOSApp, setIsFriemiIOSApp] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    setIsFriemiIOSApp(/FriemiIOS\//i.test(window.navigator.userAgent));
   }, []);
+
+  const appSafeAppearance = isFriemiIOSApp
+    ? {
+        elements: {
+          dividerRow: "hidden",
+          socialButtons: "hidden",
+          socialButtonsBlockButton: "hidden",
+          socialButtonsBlockButtonText: "hidden",
+        },
+      }
+    : undefined;
 
   if (!mounted) {
     return (
@@ -42,6 +55,7 @@ export function ClerkAuthMountGuard({
   if (mode === "sign-in") {
     return (
       <SignIn
+        appearance={appSafeAppearance}
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={forceRedirectUrl}
         path={path}
@@ -53,6 +67,7 @@ export function ClerkAuthMountGuard({
 
   return (
     <SignUp
+      appearance={appSafeAppearance}
       fallbackRedirectUrl={fallbackRedirectUrl}
       forceRedirectUrl={forceRedirectUrl}
       path={path}

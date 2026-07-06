@@ -58,8 +58,21 @@ function tryTextareaCopy(value: string) {
   return didCopy;
 }
 
+function tryAndroidCopy(value: string) {
+  if (!window.FriemiAndroid?.copyText) {
+    return false;
+  }
+
+  window.FriemiAndroid.copyText(value);
+  return true;
+}
+
 async function copyText(value: string) {
   if (await tryClipboardCopy(value)) {
+    return;
+  }
+
+  if (tryAndroidCopy(value)) {
     return;
   }
 

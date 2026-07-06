@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mission success token</title>
+  <desc id="desc">A green mission success token.</desc>
+  <circle cx="24" cy="24" r="21" fill="#EAF7EF" stroke="#156240" stroke-width="3"/>
+  <path d="m14 24 7 7 14-16" stroke="#156240" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

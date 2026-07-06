@@ -7,6 +7,7 @@ import type { FriendRequestViewModel } from "@/features/friends/queries/getFrien
 
 type UserMenuProps = {
   locale: string;
+  isAuthenticated?: boolean;
   showAdminLink?: boolean;
   unreadNotificationCount?: number;
   viewerContactEmail?: string | null;
@@ -20,6 +21,7 @@ type UserMenuProps = {
 
 export function UserMenu({
   locale,
+  isAuthenticated = false,
   showAdminLink = false,
   unreadNotificationCount = 0,
   viewerContactEmail = null,
@@ -34,6 +36,23 @@ export function UserMenu({
 
   if (!hasClerkKeys()) {
     return <AuthRedirectSignInButton label={t.nav.signIn} locale={locale} />;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <AccountMenu
+        locale={locale}
+        showAdminLink={showAdminLink}
+        viewerContactEmail={viewerContactEmail}
+        viewerEmail={viewerEmail}
+        viewerFriendCode={viewerFriendCode}
+        viewerPhone={viewerPhone}
+        viewerWechatId={viewerWechatId}
+        viewerNickname={viewerNickname}
+        incomingFriendRequests={incomingFriendRequests}
+        unreadNotificationCount={unreadNotificationCount}
+      />
+    );
   }
 
   return (

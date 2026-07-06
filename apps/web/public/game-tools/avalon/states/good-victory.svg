@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Good victory scene</title>
+  <desc id="desc">A soft sunrise round table victory scene.</desc>
+  <defs>
+    <linearGradient id="goodWinBg" x1="80" y1="70" x2="820" y2="530" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".56" stop-color="#EAF7EF"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+  </defs>
+  <rect x="54" y="48" width="792" height="504" rx="64" fill="url(#goodWinBg)" stroke="#8AB68E" stroke-width="8"/>
+  <circle cx="450" cy="242" r="74" fill="#D6D5B2"/>
+  <path d="M266 338c88-88 280-88 368 0" stroke="#156240" stroke-width="24" stroke-linecap="round"/>
+  <ellipse cx="450" cy="396" rx="230" ry="70" fill="#FEFFF9" stroke="#8AB68E" stroke-width="8"/>
+  <path d="M340 396c56 46 164 46 220 0" stroke="#156240" stroke-width="16" stroke-linecap="round"/>
+</svg>

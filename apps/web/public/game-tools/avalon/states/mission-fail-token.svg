@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mission fail token</title>
+  <desc id="desc">A coral mission fail token.</desc>
+  <circle cx="24" cy="24" r="21" fill="#FFF5E6" stroke="#F09182" stroke-width="3"/>
+  <path d="m16 16 16 16m0-16L16 32" stroke="#B5301F" stroke-width="5" stroke-linecap="round"/>
+</svg>

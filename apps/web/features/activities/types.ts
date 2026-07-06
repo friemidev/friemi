@@ -26,6 +26,12 @@ export type ActivityParticipantPreviewViewModel = {
   kind?: "user" | "guest";
 };
 
+export type ActivityContactableParticipantViewModel = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+};
+
 export type ActivityCardViewModel = ActivitySummary & {
   autoCreatedTeam: {
     autoCreatedAt: string | null;
@@ -53,6 +59,7 @@ export type ActivityCardViewModel = ActivitySummary & {
   publicEventId?: string | null;
   organizerId?: string | null;
   participantPreview?: ActivityParticipantPreviewViewModel[];
+  contactableParticipants?: ActivityContactableParticipantViewModel[];
   friendSignal?: ActivityFriendSignalViewModel | null;
   isFavorited?: boolean;
   viewerParticipationStatus?:
@@ -81,6 +88,15 @@ export type ActivityOrganizerViewModel = {
   followingCount: number;
 };
 
+export type ActivityAnnouncementViewModel = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  isByOrganizer: boolean;
+};
+
 export type ActivityDetailViewModel = ActivityCardViewModel & {
   itinerary: string | null;
   type: ActivityType;
@@ -91,6 +107,7 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   shareEnabled?: boolean;
   shareToken?: string | null;
   organizer: ActivityOrganizerViewModel;
+  announcements: ActivityAnnouncementViewModel[];
   publicEvent: {
     id: string;
     title: string;

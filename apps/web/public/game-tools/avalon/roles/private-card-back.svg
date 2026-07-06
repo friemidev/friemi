@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 720" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Private identity card back</title>
+  <desc id="desc">A Friemi-styled hidden role card back.</desc>
+  <defs>
+    <linearGradient id="cardBack" x1="60" y1="48" x2="452" y2="672" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#156240"/>
+      <stop offset=".5" stop-color="#369758"/>
+      <stop offset="1" stop-color="#8AB68E"/>
+    </linearGradient>
+    <pattern id="cardBackDots" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="6" cy="6" r="2" fill="#FEFFF9" opacity=".16"/>
+    </pattern>
+  </defs>
+  <rect x="34" y="34" width="444" height="652" rx="58" fill="url(#cardBack)"/>
+  <rect x="58" y="58" width="396" height="604" rx="42" fill="url(#cardBackDots)" stroke="#FEFFF9" stroke-opacity=".48" stroke-width="5"/>
+  <circle cx="256" cy="360" r="112" fill="#FEFFF9" fill-opacity=".92"/>
+  <path d="M211 363c24 27 66 27 90 0" stroke="#156240" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="198" cy="314" r="26" fill="#F09182"/>
+  <circle cx="314" cy="314" r="26" fill="#FFF5E6" stroke="#156240" stroke-width="8"/>
+  <path d="M256 228v32m-48-16 23 23m73-23-23 23" stroke="#D6D5B2" stroke-width="14" stroke-linecap="round"/>
+  <path d="M98 142h316M98 578h316" stroke="#FEFFF9" stroke-opacity=".45" stroke-width="4"/>
+</svg>

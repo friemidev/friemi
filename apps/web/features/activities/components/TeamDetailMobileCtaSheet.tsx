@@ -46,6 +46,7 @@ type TeamDetailMobileCtaSheetProps = {
   children: ReactNode;
   locale: string;
   mode?: TeamDetailMobileCtaMode;
+  openLabel?: string;
   participantLabel: string;
   statusLabel: string;
 };
@@ -55,6 +56,7 @@ export function TeamDetailMobileCtaSheet({
   children,
   locale,
   mode = "join",
+  openLabel,
   participantLabel,
   statusLabel,
 }: TeamDetailMobileCtaSheetProps) {
@@ -218,7 +220,7 @@ export function TeamDetailMobileCtaSheet({
         </span>
         <span className="grid min-w-0 text-left">
           <span className="text-sm font-extrabold leading-tight text-[#156240]">
-            {copy.open}
+            {openLabel ?? copy.open}
           </span>
         </span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]/65 transition group-hover:-translate-y-0.5">

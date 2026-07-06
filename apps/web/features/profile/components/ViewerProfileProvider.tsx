@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -28,19 +29,34 @@ export function ViewerProfileProvider({
   children,
   initialNickname = null,
 }: ViewerProfileProviderProps) {
-  const [nickname, setNicknameState] = useState(initialNickname?.trim() ?? "");
+  const normalizedInitialNickname = initialNickname?.trim() ?? "";
+  const [nickname, setNicknameState] = useState(normalizedInitialNickname);
 
   const setNickname = useCallback((nextNickname: string) => {
     setNicknameState(nextNickname.trim());
   }, []);
 
+  useEffect(() => {
+    if (!normalizedInitialNickname) {
+      return;
+    }
+
+    setNicknameState((currentNickname) =>
+      currentNickname === normalizedInitialNickname
+        ? currentNickname
+        : normalizedInitialNickname,
+    );
+  }, [normalizedInitialNickname]);
+
+  const resolvedNickname = nickname || normalizedInitialNickname;
+
   const value = useMemo<ViewerProfileContextValue>(
     () => ({
-      nickname,
-      nicknameResolved: nickname.length > 0,
+      nickname: resolvedNickname,
+      nicknameResolved: resolvedNickname.length > 0,
       setNickname,
     }),
-    [nickname, setNickname],
+    [resolvedNickname, setNickname],
   );
 
   return (

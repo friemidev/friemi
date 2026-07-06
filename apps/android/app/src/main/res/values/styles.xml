@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Friemi" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/friemi_mist</item>
+        <item name="android:navigationBarColor">@color/friemi_mist</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@color/friemi_paper</item>
+    </style>
+</resources>

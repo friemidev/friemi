@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Host token</title>
+  <desc id="desc">A light host badge with flag and star.</desc>
+  <circle cx="16" cy="16" r="14" fill="#FEFFF9" stroke="#156240" stroke-width="2"/>
+  <path d="M10 23V9m0 1h11l-3 4 3 4H10" fill="#8AB68E"/>
+  <path d="M10 23V9m0 1h11l-3 4 3 4H10" stroke="#156240" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 9v2m-1-1h2" stroke="#F09182" stroke-width="2" stroke-linecap="round"/>
+</svg>

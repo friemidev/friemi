@@ -41,7 +41,7 @@ export function LocaleSwitcher({ locale }: LocaleSwitcherProps) {
       <summary
         aria-label={t.common.switchLanguage(currentMeta.label)}
         title={currentMeta.label}
-        className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-black/10 bg-white/85 text-base leading-none shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-300 [&::-webkit-details-marker]:hidden"
+        className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-black/10 bg-white/85 text-base leading-none shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-300 max-[420px]:h-9 max-[420px]:w-9 [&::-webkit-details-marker]:hidden"
       >
         <LocaleFlagIcon
           flag={currentMeta.flag}

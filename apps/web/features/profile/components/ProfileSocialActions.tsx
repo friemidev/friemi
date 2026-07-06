@@ -11,7 +11,6 @@ import {
   type FriendActionState,
 } from "@/features/friends/actions/friendActions";
 import { getFriendsCopy } from "@/features/friends/copy";
-import { FollowButton } from "@/features/follow/components/FollowButton";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
@@ -227,17 +226,8 @@ export function ProfileSocialActions({
   const redirectPath = `/profile/${profileId}`;
 
   return (
-    <div className="grid w-full gap-2 sm:w-[280px]">
-      <div className="grid grid-cols-2 gap-2">
-        <FollowButton
-          buttonClassName="h-10 rounded-full px-4 text-sm"
-          fullWidth
-          isAuthenticated={isAuthenticated}
-          isFollowing={relationship.isFollowing}
-          locale={locale}
-          redirectPath={redirectPath}
-          targetUserProfileId={profileId}
-        />
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+      <div className="grid gap-2">
         <FriendAction
           isAuthenticated={isAuthenticated}
           locale={locale}
@@ -246,13 +236,13 @@ export function ProfileSocialActions({
         />
       </div>
       <ReportDialog
-        className="h-9 w-full bg-transparent text-xs"
+        className="h-10 bg-white/65 px-3 text-xs text-zinc-600 ring-[#D6D5B2] hover:bg-white"
         isAuthenticated={isAuthenticated}
         locale={locale}
         redirectPath={redirectPath}
         targetId={profileId}
         targetType="USER_PROFILE"
-        variant="link"
+        variant="button"
       />
     </div>
   );

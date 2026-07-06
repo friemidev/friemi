@@ -8,8 +8,9 @@ import type {
   SelectHTMLAttributes,
 } from "react";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { flushSync, useFormStatus } from "react-dom";
 import {
+  CircleAlert,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -80,12 +81,67 @@ const compactTextareaClassName =
   "min-h-24 rounded-lg border-[#D6D5B2] bg-white/95 px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-[#8AB68E]/20 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
 
+function getCategoryPlaceholder(locale: string) {
+  if (locale === "fr") {
+    return "Choisir un thème";
+  }
+
+  if (locale === "en") {
+    return "Choose a theme";
+  }
+
+  return "选择组局主题";
+}
+
 type FormSectionTone = "cream" | "mint" | "rose" | "sky";
 type TeamFormSectionId =
   | "visibility"
   | "activity-content"
   | "time-location"
   | "people-price";
+type FieldErrorMap = NonNullable<CreateActivityState["fieldErrors"]>;
+
+const teamFormSectionOrder: TeamFormSectionId[] = [
+  "visibility",
+  "activity-content",
+  "time-location",
+  "people-price",
+];
+
+const teamFormSectionFields: Record<TeamFormSectionId, string[]> = {
+  visibility: ["visibility"],
+  "activity-content": [
+    "coverImageUrl",
+    "title",
+    "description",
+    "itinerary",
+    "type",
+    "category",
+    "otherCategoryText",
+  ],
+  "time-location": [
+    "city",
+    "destination",
+    "address",
+    "latitude",
+    "longitude",
+    "startAt",
+    "endAt",
+  ],
+  "people-price": [
+    "capacity",
+    "capacityLimitEnabled",
+    "minParticipants",
+    "priceType",
+    "priceText",
+    "ticketUrl",
+    "ticketLabel",
+    "requiresApproval",
+  ],
+};
+
+const invalidControlClassName =
+  "border-[#F09182] bg-[#FFF7F5] ring-2 ring-[#F09182]/15 focus:border-[#F09182] focus:ring-[#F09182]/25";
 
 const formSectionTones: Record<
   FormSectionTone,
@@ -171,6 +227,116 @@ function getLongDurationConfirmCopy(locale: string) {
     confirm: "再次确认发起",
     days: (value: string) => `${value} 天`,
   };
+}
+
+function getFormValidationCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      errorStepLabel: (count: number) =>
+        count > 1 ? `${count} champs à corriger` : "1 champ à corriger",
+      formErrorPrefix: "À corriger",
+      jumpToStep: "Voir cette étape",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      errorStepLabel: (count: number) =>
+        count > 1 ? `${count} fields need attention` : "1 field needs attention",
+      formErrorPrefix: "Needs attention",
+      jumpToStep: "Open this step",
+    };
+  }
+
+  return {
+    errorStepLabel: (count: number) =>
+      count > 1 ? `${count} 个字段待修改` : "1 个字段待修改",
+    formErrorPrefix: "需要修改",
+    jumpToStep: "查看这一步",
+  };
+}
+
+function getFieldErrorCount(fieldErrors?: FieldErrorMap) {
+  if (!fieldErrors) {
+    return 0;
+  }
+
+  return Object.values(fieldErrors).filter((errors) => errors?.length).length;
+}
+
+function getSectionErrorFields(
+  sectionId: TeamFormSectionId,
+  fieldErrors?: FieldErrorMap,
+) {
+  if (!fieldErrors) {
+    return [];
+  }
+
+  return teamFormSectionFields[sectionId].filter(
+    (fieldName) => fieldErrors[fieldName]?.length,
+  );
+}
+
+function getFirstErroredSection(fieldErrors?: FieldErrorMap) {
+  return teamFormSectionOrder.find(
+    (sectionId) => getSectionErrorFields(sectionId, fieldErrors).length > 0,
+  );
+}
+
+function getFirstErroredField(fieldErrors?: FieldErrorMap) {
+  const sectionId = getFirstErroredSection(fieldErrors);
+
+  if (!sectionId) {
+    return null;
+  }
+
+  const fieldName = getSectionErrorFields(sectionId, fieldErrors)[0];
+
+  return fieldName
+    ? {
+        fieldName,
+        sectionId,
+      }
+    : null;
+}
+
+function focusFieldAfterSectionSwitch(
+  form: HTMLFormElement | null,
+  fieldName: string,
+) {
+  if (!form) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    const lookupFieldName = fieldName === "longitude" ? "latitude" : fieldName;
+    const namedControl = Array.from(
+      form.querySelectorAll<HTMLElement>("[name]"),
+    ).find((element) => {
+      if (element.getAttribute("name") !== lookupFieldName) {
+        return false;
+      }
+
+      return !(
+        element instanceof HTMLInputElement && element.type === "hidden"
+      );
+    });
+    const fieldContainer = Array.from(
+      form.querySelectorAll<HTMLElement>("[data-field-name]"),
+    ).find((element) => element.dataset.fieldName === lookupFieldName);
+    const focusTarget =
+      namedControl ??
+      fieldContainer?.querySelector<HTMLElement>(
+        "button, input:not([type='hidden']), select, textarea",
+      ) ??
+      fieldContainer;
+
+    (fieldContainer ?? focusTarget)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    focusTarget?.focus({ preventScroll: true });
+  }, 80);
 }
 
 function formatLongDurationDays(durationMs: number, locale: string) {
@@ -452,11 +618,13 @@ function normalizeTimeValue(time: string) {
 function DateTimePickerField({
   defaultValue,
   fallbackDateFieldName,
+  hasError = false,
   locale,
   name,
 }: {
   defaultValue?: string;
   fallbackDateFieldName?: string;
+  hasError?: boolean;
   locale: string;
   name: string;
 }) {
@@ -583,12 +751,16 @@ function DateTimePickerField({
   }
 
   return (
-    <div className="relative" ref={pickerRef}>
+    <div className="relative" data-field-name={name} ref={pickerRef}>
       <input name={name} type="hidden" value={value} />
       <button
         type="button"
-        className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-3 text-left text-base font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg"
+        className={cn(
+          "flex h-11 w-full items-center justify-between gap-3 rounded-xl border-2 border-[#D6D5B2] bg-white px-3 text-left text-base font-semibold text-zinc-800 shadow-sm transition hover:border-[#8AB68E] focus:border-[#8AB68E] focus:outline-none focus:ring-4 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg",
+          hasError && invalidControlClassName,
+        )}
         aria-expanded={isOpen}
+        aria-invalid={hasError}
         onClick={() => {
           if (isOpen) {
             setIsOpen(false);
@@ -717,41 +889,55 @@ function DateTimePickerField({
 
 function FormSection({
   children,
+  errorCount = 0,
   title,
   tone = "cream",
 }: {
   children: ReactNode;
+  errorCount?: number;
   title: string;
   tone?: FormSectionTone;
 }) {
   const toneClassNames = formSectionTones[tone];
+  const hasErrors = errorCount > 0;
 
   return (
     <section
       className={cn(
         "relative min-w-0 overflow-visible rounded-2xl border-2 p-3 pl-4 shadow-[0_8px_24px_rgba(21,98,64,0.05)] ring-1 ring-white/80 sm:border-[3px] sm:p-3.5 sm:pl-5",
-        toneClassNames.section,
+        hasErrors
+          ? "border-[#F09182] bg-[#FEFFF9] shadow-[0_12px_30px_rgba(240,145,130,0.12)]"
+          : toneClassNames.section,
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
           "absolute inset-y-0 left-0 w-2 rounded-l-[0.85rem]",
-          toneClassNames.accent,
+          hasErrors ? "bg-[#F09182]" : toneClassNames.accent,
         )}
       />
       <div
         className={cn(
           "flex items-center gap-2 border-b pb-2.5",
-          toneClassNames.header,
+          hasErrors ? "border-[#F09182]/40" : toneClassNames.header,
         )}
       >
         <span
-          className={cn("h-2 w-2 shrink-0 rounded-full", toneClassNames.dot)}
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            hasErrors ? "bg-[#F09182]" : toneClassNames.dot,
+          )}
         />
         <h3 className="text-base font-semibold leading-6 text-ink sm:text-lg sm:leading-7">
           {title}
         </h3>
+        {hasErrors ? (
+          <span className="ml-auto inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border border-[#F09182]/45 bg-[#FFF7F5] px-2 text-xs font-bold text-[#B5301F]">
+            <CircleAlert className="h-3.5 w-3.5" aria-hidden />
+            {errorCount}
+          </span>
+        ) : null}
       </div>
       <div className="mt-3 grid gap-3 sm:gap-3.5">{children}</div>
     </section>
@@ -760,10 +946,14 @@ function FormSection({
 
 function TeamFormSectionSwitcher({
   activeSection,
+  errorCounts,
+  locale,
   onSelect,
   sections,
 }: {
   activeSection: TeamFormSectionId;
+  errorCounts: Record<TeamFormSectionId, number>;
+  locale: string;
   onSelect: (id: TeamFormSectionId) => void;
   sections: Array<{
     description: string;
@@ -772,11 +962,15 @@ function TeamFormSectionSwitcher({
     title: string;
   }>;
 }) {
+  const validationCopy = getFormValidationCopy(locale);
+
   return (
     <div className="w-full min-w-0 rounded-[1.7rem] border border-[#D6D5B2]/80 bg-[#FFFCF8] p-2 shadow-[0_12px_30px_rgba(21,98,64,0.06)]">
       <div className="grid grid-cols-4 gap-1.5 lg:hidden">
         {sections.map((section, index) => {
           const active = activeSection === section.id;
+          const errorCount = errorCounts[section.id];
+          const hasErrors = errorCount > 0;
 
           return (
             <button
@@ -784,16 +978,31 @@ function TeamFormSectionSwitcher({
               type="button"
               onClick={() => onSelect(section.id)}
               aria-pressed={active}
+              aria-describedby={
+                hasErrors ? `${section.id}-step-error-mobile` : undefined
+              }
               className={cn(
-                "flex min-h-10 min-w-0 items-center justify-center rounded-full border px-1 py-1.5 text-center text-[0.66rem] font-semibold leading-[1.12] transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-1.5 sm:text-xs",
+                "relative flex min-h-10 min-w-0 items-center justify-center rounded-full border px-1 py-1.5 text-center text-[0.66rem] font-semibold leading-[1.12] transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-1.5 sm:text-xs",
                 active
                   ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-white text-zinc-700 hover:border-[#8AB68E] hover:bg-[#FEFFF9]",
+                hasErrors &&
+                  "border-[#F09182] bg-[#FFF7F5] pr-2 text-[#B5301F] ring-2 ring-[#F09182]/14 hover:border-[#F09182]",
               )}
             >
               <span className="block whitespace-normal break-words">
                 {index + 1}. {section.mobileTitle ?? section.title}
               </span>
+              {hasErrors ? (
+                <>
+                  <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-[#B5301F] text-[0.68rem] font-black leading-none text-white shadow-[0_6px_14px_rgba(181,48,31,0.22)]">
+                    !
+                  </span>
+                  <span className="sr-only" id={`${section.id}-step-error-mobile`}>
+                    {validationCopy.errorStepLabel(errorCount)}
+                  </span>
+                </>
+              ) : null}
             </button>
           );
         })}
@@ -802,6 +1011,8 @@ function TeamFormSectionSwitcher({
       <div className="hidden gap-2 lg:grid lg:grid-cols-4">
         {sections.map((section, index) => {
           const active = activeSection === section.id;
+          const errorCount = errorCounts[section.id];
+          const hasErrors = errorCount > 0;
 
           return (
             <button
@@ -809,14 +1020,29 @@ function TeamFormSectionSwitcher({
               type="button"
               onClick={() => onSelect(section.id)}
               aria-pressed={active}
+              aria-describedby={
+                hasErrors ? `${section.id}-step-error-desktop` : undefined
+              }
               className={cn(
-                "flex min-w-[6.4rem] shrink-0 items-center justify-center rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "relative flex min-w-[6.4rem] shrink-0 items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 active
                   ? "border-[#369758] bg-[#F1F2EC] text-[#156240] shadow-[0_8px_18px_rgba(54,151,88,0.12)]"
                   : "border-[#D6D5B2] bg-[#FFFCF8] text-zinc-600 hover:border-[#8AB68E] hover:bg-white",
+                hasErrors &&
+                  "border-[#F09182] bg-[#FFF7F5] text-[#B5301F] ring-2 ring-[#F09182]/14 hover:border-[#F09182]",
               )}
             >
               <span className="truncate">{index + 1}. {section.title}</span>
+              {hasErrors ? (
+                <>
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#B5301F] px-1 text-[0.68rem] font-black leading-none text-white">
+                    !
+                  </span>
+                  <span className="sr-only" id={`${section.id}-step-error-desktop`}>
+                    {validationCopy.errorStepLabel(errorCount)}
+                  </span>
+                </>
+              ) : null}
             </button>
           );
         })}
@@ -872,8 +1098,12 @@ function FieldError({ errors }: { errors?: string[] }) {
   }
 
   return (
-    <p className="text-xs font-medium text-red-600" role="alert">
-      {errors[0]}
+    <p
+      className="inline-flex w-fit max-w-full items-start gap-1.5 rounded-lg border border-[#F09182]/45 bg-[#FFF7F5] px-2.5 py-1.5 text-xs font-semibold leading-5 text-[#B5301F]"
+      role="alert"
+    >
+      <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>{errors[0]}</span>
     </p>
   );
 }
@@ -1132,17 +1362,18 @@ export function NewActivityForm({
   const [prefillVersion, setPrefillVersion] = useState(0);
   const values = state.values ?? importedValues ?? initialValues;
   const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
-  const [category, setCategory] = useState(values?.category ?? "BOARD_GAME");
+  const [category, setCategory] = useState(values?.category ?? "");
   const [visibility, setVisibility] = useState(
     values?.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
   );
-  const [priceType, setPriceType] = useState(values?.priceType ?? "FIXED");
+  const [priceType, setPriceType] = useState(values?.priceType ?? "FREE");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const skipLongDurationConfirmRef = useRef(false);
   const [longDurationConfirmation, setLongDurationConfirmation] =
     useState<LongDurationConfirmation | null>(null);
   const t = getCopy(locale);
+  const validationCopy = getFormValidationCopy(locale);
   const publicEventTeamFormCopy = values?.publicEventId
     ? getPublicEventTeamFormCopy(locale)
     : null;
@@ -1152,6 +1383,21 @@ export function NewActivityForm({
   );
   const [activeSection, setActiveSection] =
     useState<TeamFormSectionId>("visibility");
+  const lastHandledErrorVersionRef = useRef<number | undefined>(undefined);
+  const sectionErrorCounts = {
+    visibility: getSectionErrorFields("visibility", state.fieldErrors).length,
+    "activity-content": getSectionErrorFields(
+      "activity-content",
+      state.fieldErrors,
+    ).length,
+    "time-location": getSectionErrorFields(
+      "time-location",
+      state.fieldErrors,
+    ).length,
+    "people-price": getSectionErrorFields("people-price", state.fieldErrors)
+      .length,
+  } satisfies Record<TeamFormSectionId, number>;
+  const totalFieldErrorCount = getFieldErrorCount(state.fieldErrors);
   const formSections: Array<{
     description: string;
     id: TeamFormSectionId;
@@ -1185,12 +1431,22 @@ export function NewActivityForm({
   ];
   const isSectionActive = (sectionId: TeamFormSectionId) =>
     activeSection === sectionId;
-  const sectionOrder: TeamFormSectionId[] = [
-    "visibility",
-    "activity-content",
-    "time-location",
-    "people-price",
-  ];
+
+  useEffect(() => {
+    if (!state.version || lastHandledErrorVersionRef.current === state.version) {
+      return;
+    }
+
+    const firstError = getFirstErroredField(state.fieldErrors);
+
+    if (!firstError) {
+      return;
+    }
+
+    lastHandledErrorVersionRef.current = state.version;
+    setActiveSection(firstError.sectionId);
+    focusFieldAfterSectionSwitch(formRef.current, firstError.fieldName);
+  }, [state.fieldErrors, state.version]);
 
   function applyImportedValues(nextValues: Partial<ActivityFormValues>) {
     setImportedValues((currentValues) => ({
@@ -1237,22 +1493,31 @@ export function NewActivityForm({
   }
 
   function confirmLongDurationSubmit() {
+    const form = formRef.current;
     skipLongDurationConfirmRef.current = true;
-    setLongDurationConfirmation(null);
-    window.requestAnimationFrame(() => {
-      formRef.current?.requestSubmit();
+    flushSync(() => {
+      setLongDurationConfirmation(null);
     });
+    window.setTimeout(() => {
+      form?.requestSubmit();
+      window.setTimeout(() => {
+        skipLongDurationConfirmRef.current = false;
+      }, 0);
+    }, 0);
   }
 
   function goToNextSection() {
-    const currentIndex = sectionOrder.indexOf(activeSection);
-    const nextSection = sectionOrder[Math.min(currentIndex + 1, sectionOrder.length - 1)];
+    const currentIndex = teamFormSectionOrder.indexOf(activeSection);
+    const nextSection =
+      teamFormSectionOrder[
+        Math.min(currentIndex + 1, teamFormSectionOrder.length - 1)
+      ];
     setActiveSection(nextSection);
   }
 
   function goToPreviousSection() {
-    const currentIndex = sectionOrder.indexOf(activeSection);
-    const previousSection = sectionOrder[Math.max(currentIndex - 1, 0)];
+    const currentIndex = teamFormSectionOrder.indexOf(activeSection);
+    const previousSection = teamFormSectionOrder[Math.max(currentIndex - 1, 0)];
     setActiveSection(previousSection);
   }
 
@@ -1286,10 +1551,51 @@ export function NewActivityForm({
 
           {state.formError ? (
             <div
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              className="grid gap-3 rounded-2xl border border-[#F09182]/55 bg-[#FFF7F5] px-3 py-3 text-sm text-[#B5301F] shadow-[0_10px_24px_rgba(240,145,130,0.1)] sm:px-4"
               role="alert"
             >
-              {state.formError}
+              <div className="flex items-start gap-2">
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <div className="min-w-0">
+                  <p className="font-semibold">{state.formError}</p>
+                  {totalFieldErrorCount > 0 ? (
+                    <p className="mt-1 text-xs font-medium text-[#B5301F]/80">
+                      {validationCopy.errorStepLabel(totalFieldErrorCount)}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              {totalFieldErrorCount > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {formSections
+                    .filter((section) => sectionErrorCounts[section.id] > 0)
+                    .map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#F09182]/45 bg-white px-3 text-xs font-bold text-[#B5301F] transition hover:border-[#B5301F]"
+                        aria-label={`${validationCopy.jumpToStep}: ${section.title}`}
+                        onClick={() => {
+                          setActiveSection(section.id);
+                          const [firstField] = getSectionErrorFields(
+                            section.id,
+                            state.fieldErrors,
+                          );
+
+                          if (firstField) {
+                            focusFieldAfterSectionSwitch(
+                              formRef.current,
+                              firstField,
+                            );
+                          }
+                        }}
+                      >
+                        <span>{section.mobileTitle ?? section.title}</span>
+                        <span aria-hidden>!</span>
+                      </button>
+                    ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -1302,6 +1608,8 @@ export function NewActivityForm({
 
           <TeamFormSectionSwitcher
             activeSection={activeSection}
+            errorCounts={sectionErrorCounts}
+            locale={locale}
             onSelect={setActiveSection}
             sections={formSections}
           />
@@ -1326,7 +1634,11 @@ export function NewActivityForm({
           ) : null}
 
           <div className={cn("min-w-0", !isSectionActive("visibility") && "hidden")}>
-            <FormSection title={t.form.visibilityTitle} tone="mint">
+            <FormSection
+              errorCount={sectionErrorCounts.visibility}
+              title={t.form.visibilityTitle}
+              tone="mint"
+            >
             <div className="grid gap-3 lg:grid-cols-2">
               {visibilityOptions.map((option) => {
                 const active = visibility === option;
@@ -1372,12 +1684,16 @@ export function NewActivityForm({
 
           <div className={cn("min-w-0", !isSectionActive("activity-content") && "hidden")}>
             <FormSection
+              errorCount={sectionErrorCounts["activity-content"]}
               title={
                 publicEventTeamFormCopy?.activityContent ?? t.form.activityContent
               }
               tone="sky"
             >
-            <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <div
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="coverImageUrl"
+            >
               <span>{t.form.coverImage}</span>
               <ActivityCoverUpload
                 initialUrl={values?.coverImageUrl}
@@ -1387,10 +1703,16 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.coverImageUrl} />
             </div>
 
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <label
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="title"
+            >
               {publicEventTeamFormCopy?.title ?? t.form.title}
               <Input
-                className={compactInputClassName}
+                className={cn(
+                  compactInputClassName,
+                  state.fieldErrors?.title?.length && invalidControlClassName,
+                )}
                 name="title"
                 aria-invalid={Boolean(state.fieldErrors?.title)}
                 defaultValue={values?.title}
@@ -1403,10 +1725,17 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.title} />
             </label>
 
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <label
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="description"
+            >
               {publicEventTeamFormCopy?.description ?? t.form.description}
               <Textarea
-                className={compactTextareaClassName}
+                className={cn(
+                  compactTextareaClassName,
+                  state.fieldErrors?.description?.length &&
+                    invalidControlClassName,
+                )}
                 name="description"
                 aria-invalid={Boolean(state.fieldErrors?.description)}
                 defaultValue={values?.description}
@@ -1419,10 +1748,18 @@ export function NewActivityForm({
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <label
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="itinerary"
+            >
               {publicEventTeamFormCopy?.itinerary ?? t.form.itinerary}
               <Textarea
-                className={cn(compactTextareaClassName, "min-h-[72px]")}
+                className={cn(
+                  compactTextareaClassName,
+                  "min-h-[72px]",
+                  state.fieldErrors?.itinerary?.length &&
+                    invalidControlClassName,
+                )}
                 name="itinerary"
                 aria-invalid={Boolean(state.fieldErrors?.itinerary)}
                 defaultValue={values?.itinerary}
@@ -1436,11 +1773,18 @@ export function NewActivityForm({
 
             {!isPublicEventTeam ? (
               <div className="grid gap-4 lg:grid-cols-2">
-                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+                <label
+                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                  data-field-name="type"
+                >
                   {t.form.type}
                   <Select
                     name="type"
                     aria-invalid={Boolean(state.fieldErrors?.type)}
+                    className={cn(
+                      state.fieldErrors?.type?.length &&
+                        invalidControlClassName,
+                    )}
                     onChange={(event) => setActivityType(event.target.value)}
                     required
                     value={activityType}
@@ -1456,15 +1800,25 @@ export function NewActivityForm({
                   <FieldError errors={state.fieldErrors?.type} />
                 </label>
 
-                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+                <label
+                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                  data-field-name="category"
+                >
                   {t.form.category}
                   <Select
                     name="category"
                     aria-invalid={Boolean(state.fieldErrors?.category)}
+                    className={cn(
+                      state.fieldErrors?.category?.length &&
+                        invalidControlClassName,
+                    )}
                     onChange={(event) => setCategory(event.target.value)}
                     required
                     value={category}
                   >
+                    <option value="" disabled>
+                      {getCategoryPlaceholder(locale)}
+                    </option>
                     {categoryOptions.map((value) => (
                       <option key={value} value={value}>
                         {getCategoryLabel(value, locale)}
@@ -1480,10 +1834,17 @@ export function NewActivityForm({
             ) : null}
 
             {!isPublicEventTeam && category === "OTHER" ? (
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="otherCategoryText"
+              >
                 {t.form.otherCategory}
                 <Input
-                  className={compactInputClassName}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.otherCategoryText?.length &&
+                      invalidControlClassName,
+                  )}
                   name="otherCategoryText"
                   aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
                   defaultValue={values?.otherCategoryText}
@@ -1502,13 +1863,20 @@ export function NewActivityForm({
 
           <div className={cn("min-w-0", !isSectionActive("time-location") && "hidden")}>
             <FormSection
+              errorCount={sectionErrorCounts["time-location"]}
               title={publicEventTeamFormCopy?.timeLocation ?? t.form.timeLocation}
               tone="cream"
             >
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <label
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="city"
+            >
               {t.form.city}
               <Input
-                className={compactInputClassName}
+                className={cn(
+                  compactInputClassName,
+                  state.fieldErrors?.city?.length && invalidControlClassName,
+                )}
                 name="city"
                 aria-invalid={Boolean(state.fieldErrors?.city)}
                 defaultValue={values?.city ?? "Paris"}
@@ -1518,10 +1886,17 @@ export function NewActivityForm({
             </label>
 
             {activityType === "TRIP" ? (
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="destination"
+              >
                 {t.form.destination}
                 <Input
-                  className={compactInputClassName}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.destination?.length &&
+                      invalidControlClassName,
+                  )}
                   name="destination"
                   aria-invalid={Boolean(state.fieldErrors?.destination)}
                   defaultValue={values?.destination}
@@ -1535,10 +1910,17 @@ export function NewActivityForm({
               </label>
             ) : null}
 
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <label
+              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+              data-field-name="address"
+            >
               {t.form.address}
               <Input
-                className={compactInputClassName}
+                className={cn(
+                  compactInputClassName,
+                  state.fieldErrors?.address?.length &&
+                    invalidControlClassName,
+                )}
                 name="address"
                 aria-invalid={Boolean(state.fieldErrors?.address)}
                 defaultValue={values?.address}
@@ -1555,20 +1937,23 @@ export function NewActivityForm({
               title={t.form.hideAddressFromNonParticipants}
             />
 
-            <ActivityPlacePicker
-              initialAddress={values?.address}
-              initialLatitude={values?.latitude}
-              initialLongitude={values?.longitude}
-              latitudeErrors={state.fieldErrors?.latitude}
-              locale={locale}
-              longitudeErrors={state.fieldErrors?.longitude}
-            />
+            <div data-field-name="latitude">
+              <ActivityPlacePicker
+                initialAddress={values?.address}
+                initialLatitude={values?.latitude}
+                initialLongitude={values?.longitude}
+                latitudeErrors={state.fieldErrors?.latitude}
+                locale={locale}
+                longitudeErrors={state.fieldErrors?.longitude}
+              />
+            </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
                 {t.form.startAt}
                 <DateTimePickerField
                   defaultValue={values?.startAt}
+                  hasError={Boolean(state.fieldErrors?.startAt?.length)}
                   locale={locale}
                   name="startAt"
                 />
@@ -1583,6 +1968,7 @@ export function NewActivityForm({
                 <DateTimePickerField
                   defaultValue={values?.endAt}
                   fallbackDateFieldName="startAt"
+                  hasError={Boolean(state.fieldErrors?.endAt?.length)}
                   locale={locale}
                   name="endAt"
                 />
@@ -1597,6 +1983,7 @@ export function NewActivityForm({
 
           <div className={cn("min-w-0", !isSectionActive("people-price") && "hidden")}>
             <FormSection
+              errorCount={sectionErrorCounts["people-price"]}
               title={publicEventTeamFormCopy?.peoplePrice ?? t.form.peoplePrice}
               tone="rose"
             >
@@ -1610,10 +1997,17 @@ export function NewActivityForm({
 
             {isCapacityLimited ? (
               <div className="grid gap-4 lg:grid-cols-2">
-                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+                <label
+                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                  data-field-name="capacity"
+                >
                   {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
                   <Input
-                    className={compactInputClassName}
+                    className={cn(
+                      compactInputClassName,
+                      state.fieldErrors?.capacity?.length &&
+                        invalidControlClassName,
+                    )}
                     name="capacity"
                     aria-invalid={Boolean(state.fieldErrors?.capacity)}
                     type="number"
@@ -1628,11 +2022,18 @@ export function NewActivityForm({
                   <FieldError errors={state.fieldErrors?.capacity} />
                 </label>
 
-                <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+                <label
+                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                  data-field-name="minParticipants"
+                >
                   {publicEventTeamFormCopy?.minParticipants ??
                     t.form.minParticipants}
                   <Input
-                    className={compactInputClassName}
+                    className={cn(
+                      compactInputClassName,
+                      state.fieldErrors?.minParticipants?.length &&
+                        invalidControlClassName,
+                    )}
                     name="minParticipants"
                     aria-invalid={Boolean(state.fieldErrors?.minParticipants)}
                     type="number"
@@ -1652,11 +2053,18 @@ export function NewActivityForm({
             )}
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="priceType"
+              >
                 {t.form.priceType}
                 <Select
                   name="priceType"
                   aria-invalid={Boolean(state.fieldErrors?.priceType)}
+                  className={cn(
+                    state.fieldErrors?.priceType?.length &&
+                      invalidControlClassName,
+                  )}
                   onChange={(event) => setPriceType(event.target.value)}
                   required
                   value={priceType}
@@ -1670,10 +2078,17 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.priceType} />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="priceText"
+              >
                 {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
                 <Input
-                  className={compactInputClassName}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.priceText?.length &&
+                      invalidControlClassName,
+                  )}
                   name="priceText"
                   aria-invalid={Boolean(state.fieldErrors?.priceText)}
                   defaultValue={values?.priceText}
@@ -1685,10 +2100,17 @@ export function NewActivityForm({
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="ticketUrl"
+              >
                 {t.form.ticketUrl}
                 <Input
-                  className={compactInputClassName}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.ticketUrl?.length &&
+                      invalidControlClassName,
+                  )}
                   name="ticketUrl"
                   aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
                   defaultValue={values?.ticketUrl}
@@ -1702,10 +2124,17 @@ export function NewActivityForm({
                 <FieldError errors={state.fieldErrors?.ticketUrl} />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="ticketLabel"
+              >
                 {t.form.ticketLabel}
                 <Input
-                  className={compactInputClassName}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.ticketLabel?.length &&
+                      invalidControlClassName,
+                  )}
                   name="ticketLabel"
                   aria-invalid={Boolean(state.fieldErrors?.ticketLabel)}
                   defaultValue={values?.ticketLabel}

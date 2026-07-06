@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Reject track dot</title>
+  <desc id="desc">A small rejection counter dot.</desc>
+  <circle cx="12" cy="12" r="9" fill="#FFF5E6" stroke="#F09182" stroke-width="3"/>
+  <path d="m8 8 8 8m0-8-8 8" stroke="#B5301F" stroke-width="3" stroke-linecap="round"/>
+</svg>

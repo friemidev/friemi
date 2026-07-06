@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { AndroidAuthReturnRefresh } from "@/features/auth/components/AndroidAuthReturnRefresh";
 import { OrientationLockOverlay } from "@/components/layout/OrientationLockOverlay";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSectionContext";
@@ -11,6 +12,8 @@ import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgre
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
+import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
+import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
@@ -47,6 +50,7 @@ export default async function LocaleLayout({
     hasViewer: Boolean(viewerProfile),
     showAdminNav: viewerState.showAdminNav,
   });
+  const clerkEnabled = hasClerkKeys();
   const content = (
     <NextIntlClientProvider messages={messages}>
       <ViewerProfileProvider initialNickname={viewerProfile?.nickname ?? null}>
@@ -59,8 +63,11 @@ export default async function LocaleLayout({
           <MobileNavSectionProvider>
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
               <RouteProgress />
+              <AndroidAppBridge locale={locale} />
+              <IOSAppBridge />
               <AppHeader
                 locale={locale}
+                isAuthenticated={Boolean(viewerProfile)}
                 showNotificationNav={Boolean(viewerProfile)}
                 showAdminNav={viewerState.showAdminNav}
                 viewerContactEmail={viewerProfile?.contactEmail ?? null}
@@ -80,6 +87,12 @@ export default async function LocaleLayout({
                 idleDelayMs={4000}
                 locale={locale}
               />
+              {clerkEnabled ? (
+                <AndroidAuthReturnRefresh
+                  locale={locale}
+                  serverAuthenticated={Boolean(viewerProfile)}
+                />
+              ) : null}
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
               {children}
               <MobileNav locale={locale} />
@@ -91,5 +104,5 @@ export default async function LocaleLayout({
     </NextIntlClientProvider>
   );
 
-  return hasClerkKeys() ? <ClerkProvider>{content}</ClerkProvider> : content;
+  return clerkEnabled ? <ClerkProvider>{content}</ClerkProvider> : content;
 }

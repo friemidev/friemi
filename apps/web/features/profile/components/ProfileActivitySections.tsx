@@ -73,6 +73,30 @@ function getProfileSpaceCopy(locale: string) {
   };
 }
 
+function getPublicParticipationTitle(locale: string) {
+  if (locale === "fr") {
+    return "Sorties passées";
+  }
+
+  if (locale === "en") {
+    return "Past activities";
+  }
+
+  return "参加过的活动";
+}
+
+function getPublicParticipationTabTitle(locale: string) {
+  if (locale === "fr") {
+    return "Passées";
+  }
+
+  if (locale === "en") {
+    return "Past";
+  }
+
+  return "参加过";
+}
+
 function CompactEmptyState({
   actionHref,
   actionLabel,
@@ -184,12 +208,16 @@ export function ProfileActivitySections({
     dashboard.favoriteActivityCount - dashboard.favoriteActivities.length,
     0,
   );
-  const createdTitle = isSelf
+  const createdSectionTitle = isSelf
     ? profileSpaceCopy.createdTitle
     : t.profile.createdTitle;
-  const participationTitle = isSelf
+  const createdTabTitle = profileSpaceCopy.createdTitle;
+  const participationSectionTitle = isSelf
     ? profileSpaceCopy.participationTitle
-    : t.profile.participationTitle;
+    : getPublicParticipationTitle(locale);
+  const participationTabTitle = isSelf
+    ? profileSpaceCopy.participationTitle
+    : getPublicParticipationTabTitle(locale);
   const favoriteTitle = isSelf
     ? profileSpaceCopy.favoriteTitle
     : t.profile.favoriteTitle;
@@ -197,16 +225,16 @@ export function ProfileActivitySections({
     () => [
       {
         key: "created" as const,
-        title: createdTitle,
+        title: createdTabTitle,
         count: dashboard.createdActivityCount,
+      },
+      {
+        key: "participation" as const,
+        title: participationTabTitle,
+        count: dashboard.participationCount,
       },
       ...(isSelf
         ? [
-            {
-              key: "participation" as const,
-              title: participationTitle,
-              count: dashboard.participationCount,
-            },
             {
               key: "favorite" as const,
               title: favoriteTitle,
@@ -219,10 +247,10 @@ export function ProfileActivitySections({
       dashboard.createdActivityCount,
       dashboard.favoriteActivityCount,
       dashboard.participationCount,
-      createdTitle,
+      createdTabTitle,
       favoriteTitle,
       isSelf,
-      participationTitle,
+      participationTabTitle,
     ],
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>("latest");
@@ -268,8 +296,13 @@ export function ProfileActivitySections({
   return (
     <section className="space-y-5">
       <DetailSourceRestore sourceKey="profile" />
-      {isSelf && tabs.length > 1 ? (
-        <div className="sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-20 grid grid-cols-3 gap-1.5 rounded-[1.35rem] border border-event-border/45 bg-white/88 p-1.5 shadow-[0_12px_28px_rgba(21,98,64,0.08)] backdrop-blur md:static md:gap-2 md:rounded-2xl md:bg-white/72 md:p-2 md:backdrop-blur-0">
+      {tabs.length > 1 ? (
+        <div
+          className={cn(
+            "sticky top-[calc(var(--app-header-height,0px)+0.5rem)] z-20 grid gap-1.5 rounded-[1.35rem] border border-event-border/45 bg-white/88 p-1.5 shadow-[0_12px_28px_rgba(21,98,64,0.08)] backdrop-blur md:static md:gap-2 md:rounded-2xl md:bg-white/72 md:p-2 md:backdrop-blur-0",
+            isSelf ? "grid-cols-3" : "grid-cols-2",
+          )}
+        >
           {tabs.map((tab) => {
             const active = activeSection === tab.key;
 
@@ -320,7 +353,7 @@ export function ProfileActivitySections({
                 : undefined
             }
             sortDirection={sortDirection}
-            title={createdTitle}
+            title={createdSectionTitle}
           />
           {dashboard.createdActivities.length === 0 ? (
             <CompactEmptyState
@@ -375,7 +408,7 @@ export function ProfileActivitySections({
                     : undefined
                 }
                 sortDirection={sortDirection}
-                title={participationTitle}
+                title={participationSectionTitle}
               />
               {dashboard.participations.length === 0 ? (
                 <CompactEmptyState
@@ -468,7 +501,62 @@ export function ProfileActivitySections({
               )}
             </section>
           </>
-        ) : null}
+        ) : (
+          <section
+            className={cn(
+              "space-y-3 border-t border-black/10 pt-4",
+              activeSection !== "participation" && "hidden",
+            )}
+          >
+            <SectionHeader
+              count={dashboard.participationCount}
+              locale={locale}
+              onToggleSort={
+                dashboard.participations.length > 1
+                  ? toggleSortDirection
+                  : undefined
+              }
+              sortDirection={sortDirection}
+              title={participationSectionTitle}
+            />
+            {dashboard.participations.length === 0 ? (
+              <CompactEmptyState
+                title={t.profile.participationEmptyTitle}
+                description={t.profile.participationEmptyDescription}
+              />
+            ) : (
+              <>
+                <div className="grid gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
+                  {sortedParticipations.map((participation) => (
+                    <ActivityCard
+                      key={participation.id}
+                      actionContext="profile"
+                      activity={participation.activity}
+                      isAuthenticated={isAuthenticated}
+                      locale={locale}
+                      mobileDense
+                      showPrimaryAction={false}
+                      sourceSurface="profile"
+                      detailSourceKey="profile"
+                      detailSourceState={{
+                        section: "participation",
+                        sortDirection,
+                      }}
+                    />
+                  ))}
+                </div>
+                {hiddenParticipationCount > 0 ? (
+                  <p className="text-sm text-zinc-500">
+                    {t.profile.hiddenParticipation(
+                      profileActivityListLimit,
+                      hiddenParticipationCount,
+                    )}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </section>
+        )}
       </div>
     </section>
   );

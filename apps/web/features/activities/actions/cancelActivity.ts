@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
+import { assertCanManageActivity } from "../utils/activityManagement";
 
 const cancellableActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -98,10 +99,9 @@ export async function cancelActivityAction(
   try {
     const cancelResult = await prisma.$transaction(
       async (tx): Promise<CancelActivityResult> => {
-        const activity = await tx.activity.findFirst({
+        const activity = await tx.activity.findUnique({
           where: {
             id: result.data.activityId,
-            organizerId: profile.id,
           },
           select: {
             id: true,
@@ -122,6 +122,19 @@ export async function cancelActivityAction(
         });
 
         if (!activity) {
+          return {
+            ok: false,
+            error: actionCopy.permissionError,
+          };
+        }
+
+        const permission = await assertCanManageActivity(
+          activity.id,
+          profile.id,
+          tx,
+        );
+
+        if (!permission.ok) {
           return {
             ok: false,
             error: actionCopy.permissionError,
@@ -155,6 +168,17 @@ export async function cancelActivityAction(
           },
           data: {
             status: "CANCELLED",
+          },
+        });
+
+        await tx.activityManagementLog.create({
+          data: {
+            activityId: activity.id,
+            actorId: profile.id,
+            action: "ACTIVITY_CANCELLED",
+            metadata: {
+              role: permission.role,
+            },
           },
         });
 

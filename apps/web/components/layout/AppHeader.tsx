@@ -13,6 +13,7 @@ import { NotificationHeaderLink } from "@/features/notifications/components/Noti
 
 type AppHeaderProps = {
   locale: string;
+  isAuthenticated?: boolean;
   showNotificationNav?: boolean;
   showAdminNav?: boolean;
   unreadNotificationCount?: number;
@@ -27,6 +28,7 @@ type AppHeaderProps = {
 
 export function AppHeader({
   locale,
+  isAuthenticated = false,
   showNotificationNav = false,
   showAdminNav = false,
   unreadNotificationCount = 0,
@@ -40,14 +42,14 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4 lg:gap-3 lg:px-8">
+      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 sm:h-16 sm:px-4 lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
           className="group flex shrink-0 items-center gap-2"
           prefetch={false}
         >
           <BrandLockup
-            className="transition duration-200 group-hover:scale-[1.02] max-[900px]:h-8 max-[900px]:w-[6.8rem]"
+            className="transition duration-200 group-hover:scale-[1.02] max-[900px]:h-8 max-[900px]:w-[6.8rem] max-[420px]:!h-7 max-[420px]:!w-[5.95rem]"
             priority
             size="md"
           />
@@ -55,7 +57,7 @@ export function AppHeader({
 
         <DesktopNav locale={locale} />
 
-        <div className="flex min-w-0 items-center justify-end gap-1 max-[900px]:gap-0.5 lg:gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-1 lg:gap-2">
           <GlobalSearchForm
             locale={locale}
             className="hidden min-[1480px]:flex"
@@ -71,6 +73,7 @@ export function AppHeader({
           ) : null}
           <UserMenu
             locale={locale}
+            isAuthenticated={isAuthenticated}
             showAdminLink={showAdminNav}
             viewerContactEmail={viewerContactEmail}
             viewerEmail={viewerEmail}

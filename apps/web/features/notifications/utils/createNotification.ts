@@ -1,10 +1,12 @@
 import type { NotificationType, Prisma } from "@prisma/client";
+import { sendMobilePushForNotification } from "@/features/mobile/push/sendMobilePush";
 
 type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
 
 type CreateNotificationInput = {
   actorId?: string | null;
   activityId?: string | null;
+  activityAnnouncementId?: string | null;
   dedupe?: boolean;
   recipientId: string;
   type: NotificationType;
@@ -14,6 +16,7 @@ function getNotificationIdentity(input: CreateNotificationInput) {
   return {
     actorId: input.actorId ?? null,
     activityId: input.activityId ?? null,
+    activityAnnouncementId: input.activityAnnouncementId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };
@@ -42,9 +45,17 @@ export async function createNotification(
     }
   }
 
-  return tx.notification.create({
+  const notification = await tx.notification.create({
     data: identity,
   });
+
+  setTimeout(() => {
+    void sendMobilePushForNotification(notification.id).catch((error) => {
+      console.error("Failed to dispatch mobile push notification", error);
+    });
+  }, 750);
+
+  return notification;
 }
 
 export async function createNotifications(

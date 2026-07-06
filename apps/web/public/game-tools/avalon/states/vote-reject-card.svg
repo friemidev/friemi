@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 220" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Reject vote card</title>
+  <desc id="desc">An original reject vote card icon.</desc>
+  <defs>
+    <linearGradient id="rejectBg" x1="22" y1="18" x2="138" y2="202" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF5E6"/>
+      <stop offset="1" stop-color="#FEFFF9"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="16" width="124" height="188" rx="26" fill="url(#rejectBg)" stroke="#F09182" stroke-width="5"/>
+  <circle cx="80" cy="94" r="38" fill="#B5301F"/>
+  <path d="m62 76 36 36m0-36-36 36" stroke="#FEFFF9" stroke-width="10" stroke-linecap="round"/>
+  <path d="M45 158h70" stroke="#D6D5B2" stroke-width="7" stroke-linecap="round"/>
+</svg>

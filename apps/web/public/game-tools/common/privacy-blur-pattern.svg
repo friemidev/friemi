@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Privacy blur pattern</title>
+  <desc id="desc">A soft low-contrast privacy screen pattern.</desc>
+  <defs>
+    <linearGradient id="privacyBg" x1="0" y1="0" x2="240" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FEFFF9"/>
+      <stop offset=".52" stop-color="#EAF7EF"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <pattern id="privacyLines" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(24)">
+      <rect width="2" height="22" fill="#156240" opacity=".08"/>
+      <rect x="11" width="1.5" height="22" fill="#F09182" opacity=".08"/>
+    </pattern>
+  </defs>
+  <rect width="240" height="240" rx="28" fill="url(#privacyBg)"/>
+  <rect width="240" height="240" rx="28" fill="url(#privacyLines)"/>
+  <g opacity=".4">
+    <circle cx="62" cy="72" r="5" fill="#156240"/>
+    <circle cx="178" cy="58" r="4" fill="#F09182"/>
+    <circle cx="98" cy="170" r="4" fill="#8AB68E"/>
+    <circle cx="184" cy="180" r="5" fill="#D6D5B2"/>
+  </g>
+</svg>

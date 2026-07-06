@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Player not ready token</title>
+  <desc id="desc">A neutral waiting token.</desc>
+  <circle cx="16" cy="16" r="14" fill="#FFF5E6" stroke="#D6D5B2" stroke-width="2"/>
+  <path d="M16 9v8l6 3" stroke="#8E8383" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

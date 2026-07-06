@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Public screen corner mark</title>
+  <desc id="desc">A decorative public screen corner marker.</desc>
+  <path d="M22 70V34c0-7 5-12 12-12h36" stroke="#156240" stroke-width="8" stroke-linecap="round"/>
+  <path d="M138 90v36c0 7-5 12-12 12H90" stroke="#8AB68E" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="80" cy="80" r="30" fill="#FEFFF9" stroke="#D6D5B2" stroke-width="4"/>
+  <path d="M65 81c8 8 22 8 30 0" stroke="#156240" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="62" cy="69" r="6" fill="#F09182"/>
+  <circle cx="98" cy="69" r="6" fill="#FFF5E6" stroke="#156240" stroke-width="3"/>
+</svg>

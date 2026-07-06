@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Avalon offline assistant icon</title>
+  <desc id="desc">Original Friemi-style round table and shield icon.</desc>
+  <defs>
+    <linearGradient id="avalonIconBg" x1="15" y1="12" x2="84" y2="84" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF7EF"/>
+      <stop offset=".58" stop-color="#FEFFF9"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <filter id="avalonIconShadow" x="4" y="4" width="88" height="88" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#156240" flood-opacity=".16"/>
+    </filter>
+  </defs>
+  <rect x="10" y="10" width="76" height="76" rx="24" fill="url(#avalonIconBg)" filter="url(#avalonIconShadow)" stroke="#8AB68E" stroke-width="3"/>
+  <path d="M48 23c13 5 22 5 26 6v17c0 15-9 25-26 31-17-6-26-16-26-31V29c4-1 13-1 26-6Z" fill="#156240"/>
+  <ellipse cx="48" cy="50" rx="21" ry="12" fill="#FEFFF9"/>
+  <circle cx="33" cy="50" r="5" fill="#F09182"/>
+  <circle cx="63" cy="50" r="5" fill="#D6D5B2"/>
+  <path d="M39 57c5 5 13 5 18 0" stroke="#156240" stroke-width="5" stroke-linecap="round"/>
+  <path d="M48 32v7m-12-3 5 5m19-5-5 5" stroke="#F09182" stroke-width="4" stroke-linecap="round"/>
+</svg>
