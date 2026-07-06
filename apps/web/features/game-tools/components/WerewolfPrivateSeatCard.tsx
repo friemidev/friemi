@@ -9,6 +9,8 @@ import {
   Crown,
   Eye,
   EyeOff,
+  Sparkles,
+  TimerReset,
   Moon,
   Skull,
   UsersRound,
@@ -49,7 +51,11 @@ type Copy = {
   allReady: string;
   back: string;
   boundary: string;
+  dealingSubtitle: string;
+  dealingTitle: string;
   hide: string;
+  hiddenBody: string;
+  hiddenTitle: string;
   judgeHelper: string;
   leaveSeat: string;
   noRole: string;
@@ -57,11 +63,13 @@ type Copy = {
   ready: string;
   reveal: string;
   role: string;
+  roleHidden: string;
   seat: string;
   start: string;
   startConfirm: string;
   started: string;
   unready: string;
+  visibleFor: string;
   waiting: string;
 };
 
@@ -70,7 +78,11 @@ const copies: Record<string, Copy> = {
     allReady: "全员已准备，法官可以开始。",
     back: "返回房间",
     boundary: "发言、投票、计时和夜晚行动继续由线下法官主持。",
+    dealingSubtitle: "请把屏幕拿稳，身份默认不会展示。",
+    dealingTitle: "身份已发放",
     hide: "盖回去",
+    hiddenBody: "点击查看后只显示 2 秒。不要把屏幕朝向其他玩家。",
+    hiddenTitle: "身份已隐藏",
     judgeHelper: "你是法官。所有玩家和法官准备后，可以从这里开始游戏并发身份。",
     leaveSeat: "离开座位",
     noRole: "法官还没有开始发身份。",
@@ -78,11 +90,13 @@ const copies: Record<string, Copy> = {
     ready: "我准备好了",
     reveal: "查看我的角色",
     role: "角色",
+    roleHidden: "角色、阵营和说明将在翻牌时短暂显示。",
     seat: "座位",
     start: "开始游戏并发身份",
     startConfirm: "确认开始游戏并随机发身份？开始后不能换座或加入本局。",
     started: "游戏已开始",
     unready: "取消准备",
+    visibleFor: "剩余",
     waiting: "已准备，等待其他人。",
   },
   en: {
@@ -90,7 +104,11 @@ const copies: Record<string, Copy> = {
     back: "Back to room",
     boundary:
       "Speaking, votes, timing, and night actions stay with the offline judge.",
+    dealingSubtitle: "Keep the screen steady. Your role stays hidden by default.",
+    dealingTitle: "Roles dealt",
     hide: "Hide",
+    hiddenBody: "Reveal shows for 2 seconds only. Keep the screen away from others.",
+    hiddenTitle: "Role hidden",
     judgeHelper:
       "You are the judge. Once everyone is ready, start the game and deal roles here.",
     leaveSeat: "Leave seat",
@@ -99,12 +117,14 @@ const copies: Record<string, Copy> = {
     ready: "I'm ready",
     reveal: "Reveal my role",
     role: "Role",
+    roleHidden: "Role, team, and notes appear only during the reveal window.",
     seat: "Seat",
     start: "Start and deal roles",
     startConfirm:
       "Start the game and randomly deal roles? Seats lock after this.",
     started: "Game started",
     unready: "Cancel ready",
+    visibleFor: "Left",
     waiting: "Ready. Waiting for the table.",
   },
   fr: {
@@ -112,7 +132,13 @@ const copies: Record<string, Copy> = {
     back: "Retour salle",
     boundary:
       "Parole, votes, rythme et nuit restent gérés par le maître du jeu.",
+    dealingSubtitle:
+      "Gardez l'écran stable. Le rôle reste masqué par défaut.",
+    dealingTitle: "Rôles distribués",
     hide: "Masquer",
+    hiddenBody:
+      "La révélation dure 2 secondes. Ne tournez pas l'écran vers les autres.",
+    hiddenTitle: "Rôle masqué",
     judgeHelper:
       "Vous êtes le maître du jeu. Quand tout le monde est prêt, démarrez et distribuez les rôles ici.",
     leaveSeat: "Quitter la place",
@@ -121,12 +147,15 @@ const copies: Record<string, Copy> = {
     ready: "Je suis prêt",
     reveal: "Voir mon rôle",
     role: "Rôle",
+    roleHidden:
+      "Rôle, camp et notes apparaissent seulement pendant la révélation.",
     seat: "Place",
     start: "Démarrer et distribuer",
     startConfirm:
       "Démarrer la partie et distribuer les rôles ? Les places seront verrouillées.",
     started: "Partie commencée",
     unready: "Annuler prêt",
+    visibleFor: "Reste",
     waiting: "Prêt. En attente de la table.",
   },
 };
@@ -198,6 +227,8 @@ export function WerewolfPrivateSeatCard({
     initialState,
   );
   const [revealed, setRevealed] = useState(false);
+  const [revealSecondsLeft, setRevealSecondsLeft] = useState(0);
+  const [showDealIntro, setShowDealIntro] = useState(false);
   const t = copies[locale] ?? copies.en;
   const canStart = isJudgeSeat && roomStatus === "LOBBY" && allReady;
   const readySeats = useMemo(
@@ -207,18 +238,62 @@ export function WerewolfPrivateSeatCard({
 
   useEffect(() => {
     if (!revealed) {
+      setRevealSecondsLeft(0);
       return;
     }
 
+    setRevealSecondsLeft(2);
+    const tick = window.setInterval(() => {
+      setRevealSecondsLeft((current) => Math.max(current - 1, 0));
+    }, 1000);
     const timer = window.setTimeout(() => {
       setRevealed(false);
     }, 2000);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(timer);
+    };
   }, [revealed]);
 
+  useEffect(() => {
+    if (isJudgeSeat || roomStatus !== "IN_PROGRESS" || !payload) {
+      return;
+    }
+
+    const storageKey = `friemi:werewolf:deal-intro:${privateToken}:${roomState.startedAt ?? "started"}`;
+
+    if (window.sessionStorage.getItem(storageKey)) {
+      return;
+    }
+
+    window.sessionStorage.setItem(storageKey, "1");
+    setShowDealIntro(true);
+    const timer = window.setTimeout(() => {
+      setShowDealIntro(false);
+    }, 1400);
+
+    return () => window.clearTimeout(timer);
+  }, [isJudgeSeat, payload, privateToken, roomState.startedAt, roomStatus]);
+
   return (
-    <div className="space-y-5">
+    <div className="relative space-y-5">
+      {showDealIntro ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#1E1718]/78 px-6 backdrop-blur-sm">
+          <div className="grid w-full max-w-xs place-items-center rounded-[1.25rem] border border-white/14 bg-[#FFFDF7] p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.42)]">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-[#7A1F2B] text-white shadow-[0_16px_34px_rgba(122,31,43,0.28)]">
+              <Sparkles className="h-7 w-7" />
+            </span>
+            <p className="mt-4 text-xl font-black text-[#1E1718]">
+              {t.dealingTitle}
+            </p>
+            <p className="mt-2 text-sm font-bold leading-6 text-[#7A1F2B]/72">
+              {t.dealingSubtitle}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <Link
         className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-bold text-[#7A1F2B] shadow-sm transition hover:bg-[#FFF7F1]"
         href={roomHref}
@@ -339,22 +414,47 @@ export function WerewolfPrivateSeatCard({
               </span>
               <div className="mt-3 grid min-h-64 place-items-center rounded-[1.1rem] bg-[#F7F3EC] p-4 text-center">
                 {roomStatus === "IN_PROGRESS" && payload ? (
-                  <div className="grid gap-4">
-                    <div
-                      className={`grid h-44 w-32 place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-gradient-to-br ${revealed ? getRoleTone(payload) : "from-[#1E1718] to-[#3D2E31]"} p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] transition`}
-                    >
-                      {revealed ? (
-                        <div>
-                          <p className="text-2xl font-black">
-                            {payload.roleLabel}
-                          </p>
-                          <p className="mt-2 text-xs font-bold text-white/72">
-                            {payload.alignmentLabel}
-                          </p>
+                  <div className="grid w-full max-w-sm place-items-center gap-4">
+                    <div className="h-52 w-36 [perspective:1000px]">
+                      <div
+                        className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                          revealed ? "[transform:rotateY(180deg)]" : ""
+                        }`}
+                      >
+                        <div
+                          aria-hidden={revealed}
+                          className="absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br from-[#1E1718] to-[#3D2E31] p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
+                        >
+                          <div>
+                            <EyeOff className="mx-auto h-10 w-10 text-white/76" />
+                            <p className="mt-4 text-base font-black">
+                              {t.hiddenTitle}
+                            </p>
+                            <p className="mt-2 text-xs font-bold leading-5 text-white/58">
+                              {t.hiddenBody}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <EyeOff className="h-10 w-10 text-white/76" />
-                      )}
+                        {revealed ? (
+                          <div
+                            aria-live="polite"
+                            className={`absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+                          >
+                            <div>
+                              <p className="text-2xl font-black">
+                                {payload.roleLabel}
+                              </p>
+                              <p className="mt-2 text-xs font-bold text-white/72">
+                                {payload.alignmentLabel}
+                              </p>
+                              <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/14 px-2 py-1 text-[11px] font-black text-white">
+                                <TimerReset className="h-3.5 w-3.5" />
+                                {t.visibleFor} {revealSecondsLeft}s
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                     <button
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C]"
@@ -368,9 +468,14 @@ export function WerewolfPrivateSeatCard({
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
-                    <p className="max-w-sm text-sm font-bold leading-6 text-[#7A1F2B]/72">
-                      {payload.roleDescription}
-                    </p>
+                    <div className="min-h-20 w-full rounded-[1rem] border border-[#D9C7B4] bg-white px-4 py-3 text-left">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A1F2B]/62">
+                        {revealed ? payload.variantLabel : variantLabel}
+                      </p>
+                      <p className="mt-2 text-sm font-bold leading-6 text-[#1E1718]">
+                        {revealed ? payload.roleDescription : t.roleHidden}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div>
