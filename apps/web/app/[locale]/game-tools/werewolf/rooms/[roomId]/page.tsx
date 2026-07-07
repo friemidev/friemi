@@ -108,6 +108,7 @@ export default async function WerewolfRoomPage({
       isViewerSeat: seat.isViewerSeat,
       privateToken: seat.privateToken,
       readyAt: seat.readyAt?.toISOString() ?? null,
+      roleKey: seat.roleKey,
       roleLabel: seat.roleLabel,
       seatNumber: seat.seatNumber,
     })),

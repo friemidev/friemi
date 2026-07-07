@@ -70,6 +70,7 @@ export default async function WerewolfPublicScreenPage({
       isJudgeSeat: seat.isJudgeSeat,
       isPlayerSeat: seat.isPlayerSeat,
       readyAt: seat.readyAt?.toISOString() ?? null,
+      roleKey: seat.roleKey,
       roleLabel: seat.roleLabel,
       seatNumber: seat.seatNumber,
     })),

@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { WerewolfPrivateSeatCard } from "@/features/game-tools/components/WerewolfPrivateSeatCard";
 import {
   getWerewolfVariant,
   getWerewolfVariantLabel,
   getWerewolfRoleLabel,
+  isWerewolfRoleKey,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
   type WerewolfPrivatePayload,
+  type WerewolfRoleKey,
 } from "@/features/game-tools/werewolfConfig";
 import { normalizeWerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 import { getWerewolfSeatByToken } from "@/features/game-tools/queries/getWerewolfRoom";
@@ -30,7 +33,13 @@ function getConfigVariantKey(config: unknown) {
   return typeof value === "string" ? value : null;
 }
 
-function parsePrivatePayload(value: unknown): WerewolfPrivatePayload | null {
+function parsePrivatePayload({
+  roleKey,
+  value,
+}: {
+  roleKey: WerewolfRoleKey | null;
+  value: unknown;
+}): WerewolfPrivatePayload | null {
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -49,6 +58,9 @@ function parsePrivatePayload(value: unknown): WerewolfPrivatePayload | null {
   return {
     alignmentLabel: payload.alignmentLabel,
     roleDescription: payload.roleDescription,
+    roleKey: isWerewolfRoleKey(payload.roleKey)
+      ? payload.roleKey
+      : (roleKey ?? "villager"),
     roleLabel: payload.roleLabel,
     variantLabel: payload.variantLabel,
   };
@@ -91,9 +103,14 @@ export default async function WerewolfSeatPage({
         isDead={deadSeatSet.has(seat.seatNumber)}
         isReady={Boolean(seat.readyAt)}
         locale={locale}
-        payload={parsePrivatePayload(seat.privatePayload)}
+        payload={parsePrivatePayload({
+          roleKey: seat.roleKey as WerewolfRoleKey | null,
+          value: seat.privatePayload,
+        })}
         privateToken={seat.privateToken}
+        roleKey={seat.roleKey as WerewolfRoleKey | null}
         roleAlignment={seat.roleAlignment}
+        roomUpdatedAt={seat.room.updatedAt.toISOString()}
         roomHref={withLocale(
           locale,
           `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
@@ -108,12 +125,20 @@ export default async function WerewolfSeatPage({
           isJudgeSeat: isWerewolfJudgeSeat(roomSeat.seatNumber, variant),
           isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),
           readyAt: roomSeat.readyAt?.toISOString() ?? null,
+          roleKey: isCurrentSeatJudge
+            ? (roomSeat.roleKey as WerewolfRoleKey | null)
+            : null,
           roleLabel: isCurrentSeatJudge
             ? getWerewolfRoleLabel(locale, roomSeat.roleKey)
             : null,
           seatNumber: roomSeat.seatNumber,
         }))}
         variantLabel={getWerewolfVariantLabel(locale, variant)}
+      />
+      <AvalonLiveRefresh
+        enabled={seat.room.status !== "FINISHED"}
+        intervalMs={3500}
+        locale={locale}
       />
     </PageContainer>
   );

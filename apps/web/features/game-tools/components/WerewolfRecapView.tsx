@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Crown, HeartPulse, Monitor, Skull } from "lucide-react";
+import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
 import type {
   WerewolfRoomState,
   WerewolfWinner,
@@ -23,6 +24,7 @@ type WerewolfRecapSeat = {
   isJudgeSeat: boolean;
   isPlayerSeat: boolean;
   roleAlignment: string | null;
+  roleKey: string | null;
   roleLabel: string | null;
   seatNumber: number;
 };
@@ -316,6 +318,10 @@ export function WerewolfRecapView({
                 alignment: seat.roleAlignment,
                 winner: room.state.winner ?? null,
               });
+              const roleCard =
+                finished && !seat.isJudgeSeat
+                  ? getWerewolfRoleCardImage(seat.roleKey, locale)
+                  : null;
 
               return (
                 <div
@@ -348,6 +354,20 @@ export function WerewolfRecapView({
                   </div>
 
                   <div className="mt-3 grid gap-1.5">
+                    {roleCard ? (
+                      <div
+                        className={`mx-auto aspect-[2/3] h-28 overflow-hidden rounded-[0.8rem] border border-[#D9C7B4] bg-white shadow-sm ${
+                          seat.isDead ? "grayscale" : ""
+                        }`}
+                      >
+                        <img
+                          alt={seat.roleLabel ?? ""}
+                          className="h-full w-full object-cover"
+                          draggable={false}
+                          src={roleCard}
+                        />
+                      </div>
+                    ) : null}
                     <p className="truncate rounded-full bg-white px-2 py-1 text-xs font-black text-[#7A1F2B]">
                       {finished
                         ? seat.isJudgeSeat

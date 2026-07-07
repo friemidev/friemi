@@ -25,6 +25,7 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
+import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
@@ -76,6 +77,7 @@ type WerewolfRoomOverviewProps = {
       isViewerSeat: boolean;
       privateToken: string | null;
       readyAt: string | null;
+      roleKey: string | null;
       roleLabel: string | null;
       seatNumber: number;
     }>;
@@ -501,6 +503,10 @@ export function WerewolfRoomOverview({
                 isReady: Boolean(seat.readyAt),
                 t,
               });
+              const roleCard =
+                room.status === "FINISHED"
+                  ? getWerewolfRoleCardImage(seat.roleKey, locale)
+                  : null;
 
               if (!seat.isClaimed && isLobby && canChooseSeat) {
                 return (
@@ -576,19 +582,34 @@ export function WerewolfRoomOverview({
                   </div>
 
                   <div className="grid place-items-center gap-1">
-                    <span
-                      className={`grid h-12 w-12 place-items-center rounded-full text-base font-black ${
-                        seat.isClaimed
-                          ? "bg-[#1E1718] text-white"
-                          : "border border-dashed border-[#D9C7B4] bg-white text-[#7A1F2B]/42"
-                      }`}
-                    >
-                      {seat.isClaimed ? (
-                        seat.avatarLabel
-                      ) : (
-                        <Plus className="h-5 w-5" />
-                      )}
-                    </span>
+                    {roleCard ? (
+                      <span
+                        className={`aspect-[2/3] h-16 overflow-hidden rounded-[0.65rem] border border-[#D9C7B4] bg-white shadow-sm ${
+                          seat.isDead ? "grayscale" : ""
+                        }`}
+                      >
+                        <img
+                          alt={seat.roleLabel ?? ""}
+                          className="h-full w-full object-cover"
+                          draggable={false}
+                          src={roleCard}
+                        />
+                      </span>
+                    ) : (
+                      <span
+                        className={`grid h-12 w-12 place-items-center rounded-full text-base font-black ${
+                          seat.isClaimed
+                            ? "bg-[#1E1718] text-white"
+                            : "border border-dashed border-[#D9C7B4] bg-white text-[#7A1F2B]/42"
+                        }`}
+                      >
+                        {seat.isClaimed ? (
+                          seat.avatarLabel
+                        ) : (
+                          <Plus className="h-5 w-5" />
+                        )}
+                      </span>
+                    )}
                     <p className="w-full truncate text-sm font-black text-[#1E1718]">
                       {seat.isClaimed ? seat.displayName : t.empty}
                     </p>

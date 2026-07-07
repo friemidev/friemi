@@ -2,6 +2,7 @@
 
 import { Crown, HeartPulse, Moon, Skull, UsersRound } from "lucide-react";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
+import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
 import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ type WerewolfPublicSeat = {
   isJudgeSeat: boolean;
   isPlayerSeat: boolean;
   readyAt: string | null;
+  roleKey: string | null;
   roleLabel: string | null;
   seatNumber: number;
 };
@@ -227,7 +229,12 @@ export function WerewolfPublicScreen({
           </header>
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 xl:grid-cols-6">
-            {playerSeats.map((seat) => (
+            {playerSeats.map((seat) => {
+              const roleCard = showRoles
+                ? getWerewolfRoleCardImage(seat.roleKey, locale)
+                : null;
+
+              return (
               <div
                 className={cn(
                   "relative grid min-h-32 place-items-center rounded-[1.3rem] border bg-white p-3 text-center shadow-lg transition",
@@ -242,9 +249,20 @@ export function WerewolfPublicScreen({
                 <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
                   {seat.seatNumber}
                 </span>
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-[#1E1718] text-lg font-black text-white">
-                  {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
-                </span>
+                {roleCard ? (
+                  <span className="aspect-[2/3] h-20 overflow-hidden rounded-[0.75rem] border border-[#D9C7B4] bg-white shadow-sm">
+                    <img
+                      alt={seat.roleLabel ?? ""}
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                      src={roleCard}
+                    />
+                  </span>
+                ) : (
+                  <span className="grid h-14 w-14 place-items-center rounded-full bg-[#1E1718] text-lg font-black text-white">
+                    {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                  </span>
+                )}
                 <span className="line-clamp-1 max-w-full text-sm font-black text-[#1E1718]">
                   {seat.displayName}
                 </span>
@@ -270,7 +288,8 @@ export function WerewolfPublicScreen({
                   </span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

@@ -26,7 +26,14 @@ import {
   updateWerewolfReadyAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
-import type { WerewolfPrivatePayload } from "@/features/game-tools/werewolfConfig";
+import {
+  getWerewolfRoleCardImage,
+  getWerewolfSeatBackImage,
+} from "@/features/game-tools/werewolfCardAssets";
+import type {
+  WerewolfPrivatePayload,
+  WerewolfRoleKey,
+} from "@/features/game-tools/werewolfConfig";
 import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 
 type WerewolfPrivateSeatCardProps = {
@@ -37,10 +44,12 @@ type WerewolfPrivateSeatCardProps = {
   locale: string;
   payload: WerewolfPrivatePayload | null;
   privateToken: string;
+  roleKey: WerewolfRoleKey | null;
   roleAlignment: string | null;
   roomHref: string;
   roomState: WerewolfRoomState;
   roomStatus: string;
+  roomUpdatedAt: string;
   seatDisplayName: string;
   seatNumber: number;
   seats: Array<{
@@ -49,6 +58,7 @@ type WerewolfPrivateSeatCardProps = {
     isJudgeSeat: boolean;
     isPlayerSeat: boolean;
     readyAt: string | null;
+    roleKey: WerewolfRoleKey | null;
     roleLabel: string | null;
     seatNumber: number;
   }>;
@@ -83,6 +93,7 @@ type Copy = {
   notReady: string;
   ready: string;
   reveal: string;
+  revealConfirm: string;
   resultDefeat: string;
   resultJudgeBody: string;
   resultOutcome: string;
@@ -143,6 +154,7 @@ const copies: Record<string, Copy> = {
     notReady: "等人齐",
     ready: "准备",
     reveal: "查看我的角色",
+    revealConfirm: "确认现在查看身份？请先确认屏幕没有朝向其他玩家。",
     resultDefeat: "失败",
     resultJudgeBody: "这局你坐法官席。",
     resultOutcome: "本局结果",
@@ -203,6 +215,7 @@ const copies: Record<string, Copy> = {
     notReady: "Waiting for the table.",
     ready: "I'm ready",
     reveal: "Reveal my role",
+    revealConfirm: "Reveal your role now? Make sure no one else can see your screen.",
     resultDefeat: "Defeat",
     resultJudgeBody: "You sat in the judge seat this game.",
     resultOutcome: "Result",
@@ -264,6 +277,8 @@ const copies: Record<string, Copy> = {
     notReady: "En attente de la table.",
     ready: "Je suis prêt",
     reveal: "Voir mon rôle",
+    revealConfirm:
+      "Révéler votre rôle maintenant ? Vérifiez que personne ne voit l'écran.",
     resultDefeat: "Défaite",
     resultJudgeBody: "Vous étiez à la place du maître cette partie.",
     resultOutcome: "Résultat",
@@ -381,10 +396,12 @@ export function WerewolfPrivateSeatCard({
   locale,
   payload,
   privateToken,
+  roleKey,
   roleAlignment,
   roomHref,
   roomState,
   roomStatus,
+  roomUpdatedAt,
   seatDisplayName,
   seatNumber,
   seats,
@@ -416,6 +433,9 @@ export function WerewolfPrivateSeatCard({
   const [showDeathIntro, setShowDeathIntro] = useState(false);
   const [showResultIntro, setShowResultIntro] = useState(false);
   const t = copies[locale] ?? copies.en;
+  const currentRoleKey = roleKey ?? payload?.roleKey ?? null;
+  const roleCardImage = getWerewolfRoleCardImage(currentRoleKey, locale);
+  const seatBackImage = getWerewolfSeatBackImage(seatNumber);
   const canStart = isJudgeSeat && roomStatus === "LOBBY" && allReady;
   const winnerLabel =
     roomState.winner === "GOOD"
@@ -481,20 +501,40 @@ export function WerewolfPrivateSeatCard({
       return;
     }
 
-    const storageKey = `friemi:werewolf:death-intro:${privateToken}:${roomState.deadSeatNumbers.join("-")}`;
+    const storageKey = `friemi:werewolf:death-intro:${privateToken}:${roomUpdatedAt}:${roomState.deadSeatNumbers.join("-")}`;
 
     if (window.sessionStorage.getItem(storageKey)) {
       return;
     }
 
     window.sessionStorage.setItem(storageKey, "1");
+    window.navigator.vibrate?.([80, 40, 80]);
     setShowDeathIntro(true);
     const timer = window.setTimeout(() => {
       setShowDeathIntro(false);
     }, 1500);
 
     return () => window.clearTimeout(timer);
-  }, [isDead, isJudgeSeat, privateToken, roomState.deadSeatNumbers]);
+  }, [
+    isDead,
+    isJudgeSeat,
+    privateToken,
+    roomState.deadSeatNumbers,
+    roomUpdatedAt,
+  ]);
+
+  function handleRevealToggle() {
+    if (revealed) {
+      setRevealed(false);
+      return;
+    }
+
+    if (!window.confirm(t.revealConfirm)) {
+      return;
+    }
+
+    setRevealed(true);
+  }
 
   useEffect(() => {
     if (isJudgeSeat || roomStatus !== "FINISHED" || !resultKind) {
@@ -826,7 +866,7 @@ export function WerewolfPrivateSeatCard({
                       isDead ? "grayscale" : ""
                     }`}
                   >
-                    <div className="h-52 w-36 [perspective:1000px]">
+                    <div className="aspect-[2/3] w-44 max-w-[72vw] [perspective:1000px] sm:w-52">
                       <div
                         className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                           revealed ? "[transform:rotateY(180deg)]" : ""
@@ -834,43 +874,57 @@ export function WerewolfPrivateSeatCard({
                       >
                         <div
                           aria-hidden={revealed}
-                        className="absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br from-[#1E1718] to-[#3D2E31] p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
-                      >
-                        <div>
-                          <EyeOff className="mx-auto h-10 w-10 text-white/76" />
-                          <p className="mt-4 text-base font-black">
+                          className="absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-[#1E1718] text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden]"
+                        >
+                          <img
+                            alt=""
+                            className="h-full w-full object-cover"
+                            draggable={false}
+                            src={seatBackImage}
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/82 to-transparent px-3 pb-3 pt-8 text-center">
+                            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur">
+                              <EyeOff className="h-3.5 w-3.5" />
                               {t.hiddenTitle}
-                            </p>
-                            <p className="mt-2 text-xs font-bold leading-5 text-white/58">
-                              {t.hiddenBody}
                             </p>
                           </div>
                         </div>
-                        {revealed ? (
-                          <div
-                            aria-live="polite"
-                        className={`absolute inset-0 grid place-items-center rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} p-3 text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
-                      >
-                        <div>
-                          <RoleIcon className="mx-auto mb-4 h-12 w-12 text-white/86" />
-                          <p className="text-2xl font-black">
-                            {payload.roleLabel}
-                          </p>
-                              <p className="mt-2 text-xs font-bold text-white/72">
-                                {payload.alignmentLabel}
-                              </p>
-                              <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/14 px-2 py-1 text-[11px] font-black text-white">
-                                <TimerReset className="h-3.5 w-3.5" />
-                                {t.visibleFor} {revealSecondsLeft}s
-                              </p>
+                        <div
+                          aria-live="polite"
+                          className={`absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+                        >
+                          {roleCardImage ? (
+                            <img
+                              alt={payload.roleLabel}
+                              className="h-full w-full object-cover"
+                              draggable={false}
+                              src={roleCardImage}
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center p-3 text-center">
+                              <div>
+                                <RoleIcon className="mx-auto mb-4 h-12 w-12 text-white/86" />
+                                <p className="text-2xl font-black">
+                                  {payload.roleLabel}
+                                </p>
+                                <p className="mt-2 text-xs font-bold text-white/72">
+                                  {payload.alignmentLabel}
+                                </p>
+                              </div>
                             </div>
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/84 to-transparent px-3 pb-3 pt-10">
+                            <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur">
+                              <TimerReset className="h-3.5 w-3.5" />
+                              {t.visibleFor} {revealSecondsLeft}s
+                            </p>
                           </div>
-                        ) : null}
+                        </div>
                       </div>
                     </div>
                     <button
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C]"
-                      onClick={() => setRevealed((current) => !current)}
+                      onClick={handleRevealToggle}
                       type="button"
                     >
                       {revealed ? t.hide : t.reveal}
@@ -932,44 +986,70 @@ export function WerewolfPrivateSeatCard({
                 <div className="mt-3 grid gap-2">
                 {seats
                   .filter((seat) => seat.isPlayerSeat)
-                  .map((seat) => (
+                  .map((seat) => {
+                    const roleCard = getWerewolfRoleCardImage(
+                      seat.roleKey,
+                      locale,
+                    );
+
+                    return (
                     <div
                       className={`grid gap-3 rounded-2xl px-3 py-3 text-sm font-bold text-[#1E1718] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
                         seat.isDead ? "bg-[#E8E1D8] text-[#1E1718]/62" : "bg-[#F7F3EC]"
                       }`}
                       key={seat.seatNumber}
                     >
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
-                            {seat.seatNumber}
-                          </span>
-                          <span className="min-w-0 truncate">
-                            {seat.displayName}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-black ${
-                              seat.isDead
-                                ? "bg-[#1E1718] text-white"
-                                : "bg-white text-[#36624A]"
-                            }`}
-                          >
-                            {seat.isDead ? (
-                              <Skull className="h-3.5 w-3.5" />
-                            ) : (
-                              <HeartPulse className="h-3.5 w-3.5" />
-                            )}
-                            {seat.isDead ? t.dead : t.alive}
-                          </span>
+                      <div className="flex min-w-0 gap-3">
+                        <div
+                          className={`relative aspect-[2/3] h-20 shrink-0 overflow-hidden rounded-[0.7rem] border border-[#D9C7B4] bg-white shadow-sm ${
+                            seat.isDead ? "grayscale" : ""
+                          }`}
+                        >
+                          {roleCard ? (
+                            <img
+                              alt={seat.roleLabel ?? ""}
+                              className="h-full w-full object-cover"
+                              draggable={false}
+                              src={roleCard}
+                            />
+                          ) : (
+                            <div className="grid h-full place-items-center bg-[#1E1718] text-xs font-black text-white">
+                              {seat.seatNumber}
+                            </div>
+                          )}
                         </div>
-                        <p className="mt-2 text-xs font-black text-[#7A1F2B]">
-                          {roomStatus === "IN_PROGRESS" ||
-                          roomStatus === "FINISHED"
-                            ? (seat.roleLabel ?? "-")
-                            : seat.readyAt
-                              ? t.ready
-                              : "-"}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
+                              {seat.seatNumber}
+                            </span>
+                            <span className="min-w-0 truncate">
+                              {seat.displayName}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-black ${
+                                seat.isDead
+                                  ? "bg-[#1E1718] text-white"
+                                  : "bg-white text-[#36624A]"
+                              }`}
+                            >
+                              {seat.isDead ? (
+                                <Skull className="h-3.5 w-3.5" />
+                              ) : (
+                                <HeartPulse className="h-3.5 w-3.5" />
+                              )}
+                              {seat.isDead ? t.dead : t.alive}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs font-black text-[#7A1F2B]">
+                            {roomStatus === "IN_PROGRESS" ||
+                            roomStatus === "FINISHED"
+                              ? (seat.roleLabel ?? "-")
+                              : seat.readyAt
+                                ? t.ready
+                                : "-"}
+                          </p>
+                        </div>
                       </div>
 
                       {roomStatus === "IN_PROGRESS" ? (
@@ -1013,7 +1093,8 @@ export function WerewolfPrivateSeatCard({
                         </form>
                       ) : null}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

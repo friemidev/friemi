@@ -65,6 +65,7 @@ export default async function WerewolfRecapPage({
       isJudgeSeat: seat.isJudgeSeat,
       isPlayerSeat: seat.isPlayerSeat,
       roleAlignment: seat.roleAlignment,
+      roleKey: seat.roleKey,
       roleLabel: seat.roleLabel,
       seatNumber: seat.seatNumber,
     })),
