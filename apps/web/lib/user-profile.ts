@@ -95,8 +95,18 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
     select: {
       email: true,
       emailVerifiedAt: true,
+      status: true,
     },
   });
+
+  if (existing?.status === "DELETED") {
+    return prisma.userProfile.findUniqueOrThrow({
+      where: {
+        clerkUserId: user.id,
+      },
+    });
+  }
+
   const emailVerifiedAt = getStoredEmailVerifiedAt({
     email,
     previousEmail: existing?.email,

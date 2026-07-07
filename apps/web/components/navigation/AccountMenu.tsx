@@ -11,6 +11,7 @@ import {
   Check,
   Copy,
   FileText,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -62,6 +63,12 @@ const accountMenuPrivacyCopy: Record<string, string> = {
   "zh-CN": "隐私政策",
   en: "Privacy Policy",
   fr: "Politique de confidentialite",
+};
+
+const accountMenuSecurityCopy: Record<string, string> = {
+  "zh-CN": "账号与安全",
+  en: "Account & Security",
+  fr: "Compte et securite",
 };
 
 function isFriemiAndroidApp() {
@@ -160,6 +167,7 @@ export function AccountMenu({
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
   const privacyHref = withLocale(locale, "/privacy");
+  const accountSecurityHref = withLocale(locale, "/account/security");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
@@ -457,6 +465,16 @@ export function AccountMenu({
               <Settings className="h-4 w-4 shrink-0 text-zinc-500" />
               <span className="font-medium">{t.accountSettings}</span>
             </button>
+            <MenuLink
+              href={accountSecurityHref}
+              icon={KeyRound}
+              label={
+                accountMenuSecurityCopy[locale] ??
+                accountMenuSecurityCopy["zh-CN"]
+              }
+              active={pathname === accountSecurityHref}
+              onClick={closeMenu}
+            />
             <MenuLink
               href={privacyHref}
               icon={FileText}
