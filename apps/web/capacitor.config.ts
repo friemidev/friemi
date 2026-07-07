@@ -21,6 +21,10 @@ const iosServerUrl =
   (iosPreviewHost
     ? `https://${iosPreviewHost}${iosPreviewPath}`
     : "https://www.friemi.com/zh-CN/mobile-home");
+const iosServerHost = new URL(iosServerUrl).hostname;
+const iosAllowNavigationWithServerHost = Array.from(
+  new Set([...iosAllowNavigation, iosServerHost]),
+);
 
 const config: CapacitorConfig = {
   appId: "com.friemi.app",
@@ -38,7 +42,9 @@ const config: CapacitorConfig = {
     url: isIOSCommand ? iosServerUrl : "https://friemi.com/zh-CN/mobile-home",
     ...(isIOSCommand ? { errorPath: "error.html" } : {}),
     cleartext: isIOSCommand && iosServerUrl.startsWith("http://"),
-    allowNavigation: isIOSCommand ? iosAllowNavigation : baseAllowNavigation,
+    allowNavigation: isIOSCommand
+      ? iosAllowNavigationWithServerHost
+      : baseAllowNavigation,
   },
 };
 
