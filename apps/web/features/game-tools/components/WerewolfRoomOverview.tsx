@@ -25,6 +25,7 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
+import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
 import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
 import { withLocale } from "@/lib/routes";
 
@@ -93,6 +94,7 @@ type WerewolfRoomOverviewProps = {
       totalSeats: number;
     };
   };
+  testBotsEnabled?: boolean;
 };
 
 function getCopy(locale: string) {
@@ -351,6 +353,26 @@ function getEventLabel(type: string, locale: string) {
       en: "Left seat",
       fr: "Place quittée",
     },
+    werewolf_test_bots_filled: {
+      "zh-CN": "测试补位",
+      en: "Test seats filled",
+      fr: "Places test ajoutées",
+    },
+    werewolf_test_bots_readied: {
+      "zh-CN": "测试准备",
+      en: "Test ready",
+      fr: "Prêt test",
+    },
+    werewolf_test_flow_started: {
+      "zh-CN": "测试开局",
+      en: "Test start",
+      fr: "Départ test",
+    },
+    werewolf_test_phase_advanced: {
+      "zh-CN": "测试推进",
+      en: "Test step",
+      fr: "Étape test",
+    },
   };
 
   return labels[type]?.[locale] ?? labels[type]?.en ?? type;
@@ -360,6 +382,7 @@ export function WerewolfRoomOverview({
   baseUrl,
   locale,
   room,
+  testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
   const [joinState, joinAction] = useActionState(
     joinWerewolfRoomAction,
@@ -675,6 +698,10 @@ export function WerewolfRoomOverview({
               </Link>
             </div>
           </div>
+
+          {testBotsEnabled && room.isHost ? (
+            <WerewolfTestBotPanel locale={locale} room={room} />
+          ) : null}
 
           <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white shadow-sm">
             <span className="inline-flex items-center gap-2 text-sm font-black">

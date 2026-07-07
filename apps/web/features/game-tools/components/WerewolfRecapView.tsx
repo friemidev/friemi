@@ -192,6 +192,26 @@ function getEventLabel(type: string, locale: string) {
       en: "Left seat",
       fr: "Place quittée",
     },
+    werewolf_test_bots_filled: {
+      "zh-CN": "测试补位",
+      en: "Test seats filled",
+      fr: "Places test ajoutées",
+    },
+    werewolf_test_bots_readied: {
+      "zh-CN": "测试准备",
+      en: "Test ready",
+      fr: "Prêt test",
+    },
+    werewolf_test_flow_started: {
+      "zh-CN": "测试开局",
+      en: "Test start",
+      fr: "Départ test",
+    },
+    werewolf_test_phase_advanced: {
+      "zh-CN": "测试推进",
+      en: "Test step",
+      fr: "Étape test",
+    },
   };
 
   return labels[type]?.[locale] ?? labels[type]?.en ?? type;

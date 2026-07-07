@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRoom";
+import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -124,6 +125,7 @@ export default async function WerewolfRoomPage({
         baseUrl={baseUrl}
         locale={locale}
         room={roomForClient}
+        testBotsEnabled={isWerewolfTestBotFeatureEnabled()}
       />
     </PageContainer>
   );
