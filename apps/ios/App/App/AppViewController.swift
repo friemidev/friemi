@@ -43,6 +43,11 @@ class AppViewController: CAPBridgeViewController {
             hostname === "localhost" ||
             hostname === "127.0.0.1";
 
+          const isPrivateIPv4Host = (hostname) =>
+            /^10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname) ||
+            /^192\\.168\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname) ||
+            /^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d{1,3}\\.\\d{1,3}$/.test(hostname);
+
           const isPreviewHost = (hostname) =>
             hostname.endsWith(".vercel.app");
 
@@ -50,6 +55,7 @@ class AppViewController: CAPBridgeViewController {
             isFriemiHost(hostname) ||
             isClerkHost(hostname) ||
             isLocalHost(hostname) ||
+            isPrivateIPv4Host(hostname) ||
             isPreviewHost(hostname);
 
           const shouldStayInWebView = (value) => {
@@ -57,7 +63,8 @@ class AppViewController: CAPBridgeViewController {
               const url = new URL(String(value), window.location.href);
               const isAllowedProtocol =
                 url.protocol === "https:" ||
-                (url.protocol === "http:" && isLocalHost(url.hostname));
+                (url.protocol === "http:" &&
+                  (isLocalHost(url.hostname) || isPrivateIPv4Host(url.hostname)));
 
               return isAllowedProtocol && shouldKeepInApp(url.hostname)
                 ? url.toString()
@@ -126,7 +133,24 @@ class AppViewController: CAPBridgeViewController {
             normalizedHost == "clerk.shared.lcl.dev" ||
             normalizedHost == "localhost" ||
             normalizedHost == "127.0.0.1" ||
+            isPrivateIPv4Host(normalizedHost) ||
             normalizedHost.hasSuffix(".vercel.app")
+    }
+
+    private func isPrivateIPv4Host(_ host: String) -> Bool {
+        let parts = host.split(separator: ".")
+
+        guard parts.count == 4,
+              let first = Int(parts[0]),
+              let second = Int(parts[1]),
+              parts.dropFirst(2).allSatisfy({ Int($0) != nil })
+        else {
+            return false
+        }
+
+        return first == 10 ||
+            (first == 172 && (16...31).contains(second)) ||
+            (first == 192 && second == 168)
     }
 }
 

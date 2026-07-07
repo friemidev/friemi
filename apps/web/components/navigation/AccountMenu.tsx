@@ -10,6 +10,7 @@ import {
   Building2,
   Check,
   Copy,
+  FileText,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -55,6 +56,12 @@ type AndroidPushTokenPayload = {
   deviceId?: string;
   fcmToken?: string;
   ok?: boolean;
+};
+
+const accountMenuPrivacyCopy: Record<string, string> = {
+  "zh-CN": "隐私政策",
+  en: "Privacy Policy",
+  fr: "Politique de confidentialite",
 };
 
 function isFriemiAndroidApp() {
@@ -152,6 +159,7 @@ export function AccountMenu({
   const profileHref = withLocale(locale, "/profile");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
+  const privacyHref = withLocale(locale, "/privacy");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
@@ -449,6 +457,16 @@ export function AccountMenu({
               <Settings className="h-4 w-4 shrink-0 text-zinc-500" />
               <span className="font-medium">{t.accountSettings}</span>
             </button>
+            <MenuLink
+              href={privacyHref}
+              icon={FileText}
+              label={
+                accountMenuPrivacyCopy[locale] ??
+                accountMenuPrivacyCopy["zh-CN"]
+              }
+              active={pathname === privacyHref}
+              onClick={closeMenu}
+            />
             <button
               type="button"
               role="menuitem"

@@ -57,6 +57,23 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
             normalizedHost == "clerk.shared.lcl.dev" ||
             normalizedHost == "localhost" ||
             normalizedHost == "127.0.0.1" ||
+            isPrivateIPv4Host(normalizedHost) ||
             normalizedHost.hasSuffix(".vercel.app")
+    }
+
+    private func isPrivateIPv4Host(_ host: String) -> Bool {
+        let parts = host.split(separator: ".")
+
+        guard parts.count == 4,
+              let first = Int(parts[0]),
+              let second = Int(parts[1]),
+              parts.dropFirst(2).allSatisfy({ Int($0) != nil })
+        else {
+            return false
+        }
+
+        return first == 10 ||
+            (first == 172 && (16...31).contains(second)) ||
+            (first == 192 && second == 168)
     }
 }

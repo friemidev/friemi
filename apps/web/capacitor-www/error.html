@@ -124,7 +124,10 @@
         <div aria-label="Friemi" class="mark">F</div>
         <h1>Page unavailable</h1>
         <p>Check your connection and try again.</p>
-        <button type="button" onclick="window.location.href='https://www.friemi.com/zh-CN/mobile-home'">
+        <button
+          type="button"
+          onclick="window.history.length > 1 ? window.history.back() : window.location.reload()"
+        >
           Retry
         </button>
         <p class="hint">Friemi</p>
