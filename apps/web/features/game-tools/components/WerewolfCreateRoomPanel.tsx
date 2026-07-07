@@ -221,7 +221,7 @@ export function WerewolfCreateRoomPanel({
             className="h-full min-h-[22rem] w-full object-cover opacity-70"
             height={720}
             priority={false}
-            src="/game-tools/mafia/mafia.jpeg"
+            src="/game-tools/werewolf/werewolf.jpeg"
             width={960}
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,24,32,0.12),rgba(20,24,32,0.88))]" />
