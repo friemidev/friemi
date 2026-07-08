@@ -11,6 +11,7 @@ import {
   areProfilesFriends,
   maxActivityCoManagers,
 } from "../utils/activityManagement";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const coManagerActionSchema = z.object({
   activityId: z.string().min(1),
@@ -111,7 +112,7 @@ function getString(formData: FormData, key: string) {
 }
 
 function refreshActivityViews(locale: string, activityId: string) {
-  revalidatePath(withLocale(locale, `/activities/${activityId}`));
+  revalidatePath(withLocale(locale, getActivityDetailPath(activityId)));
   revalidatePath(withLocale(locale, `/activities/${activityId}/edit`));
   revalidatePath(withLocale(locale, "/lobby"));
   revalidatePath(withLocale(locale, "/profile"));
@@ -147,7 +148,7 @@ export async function addActivityCoManagerAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
 
   const requestedManagerId = result.data.managerProfileId?.trim() ?? "";
@@ -325,7 +326,7 @@ export async function removeActivityCoManagerAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
 
   try {

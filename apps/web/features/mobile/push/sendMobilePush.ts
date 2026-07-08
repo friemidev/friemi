@@ -1,6 +1,7 @@
 import { createSign } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import type { NotificationType } from "@prisma/client";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 const firebaseTokenUrl = "https://oauth2.googleapis.com/token";
 const firebaseScope = "https://www.googleapis.com/auth/firebase.messaging";
@@ -126,14 +127,14 @@ function getNotificationPath(input: {
       input.type === "ACTIVITY_COMMENTED" ||
       input.type === "COMMENT_REPLY"
     ) {
-      return `/activities/${input.activityId}#comments`;
+      return `${getActivityDetailPath(input.activityId)}#comments`;
     }
 
     if (input.type === "PARTICIPATION_PENDING") {
-      return `/activities/${input.activityId}#participation-approval`;
+      return `${getActivityDetailPath(input.activityId)}#participation-approval`;
     }
 
-    return `/activities/${input.activityId}`;
+    return getActivityDetailPath(input.activityId);
   }
 
   if (input.type === "DIRECT_MESSAGE") {

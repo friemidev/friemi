@@ -4,6 +4,7 @@ import type {
   ReportStatus,
   ReportTargetType,
 } from "@prisma/client";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { prisma } from "@/lib/prisma";
 
 export type AdminReportViewModel = {
@@ -176,7 +177,7 @@ export async function getAdminReports(
       return {
         ...report,
         targetLabel: activity?.title ?? "",
-        targetHref: activity ? `/activities/${activity.id}` : null,
+        targetHref: activity ? getActivityDetailPath(activity.id) : null,
         createdAt: report.createdAt.toISOString(),
         reviewedAt: report.reviewedAt?.toISOString() ?? null,
       };
@@ -190,7 +191,7 @@ export async function getAdminReports(
     return {
       ...report,
       targetLabel: commentPreview ?? "",
-      targetHref: comment ? `/activities/${comment.activityId}` : null,
+      targetHref: comment ? getActivityDetailPath(comment.activityId) : null,
       createdAt: report.createdAt.toISOString(),
       reviewedAt: report.reviewedAt?.toISOString() ?? null,
     };

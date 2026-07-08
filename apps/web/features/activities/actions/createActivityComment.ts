@@ -17,6 +17,7 @@ import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 import { publicActivityVisibility } from "../queries/getActivities";
 
 const commentableActivityStatuses: ActivityStatus[] = [
@@ -154,7 +155,7 @@ export async function createActivityCommentAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      `/activities/${result.data.activityId}#comments`,
+      `${getActivityDetailPath(result.data.activityId)}#comments`,
     );
     const activity = await prisma.activity.findFirst({
       where: await getCommentableActivityWhere(
@@ -253,7 +254,7 @@ export async function createActivityCommentAction(
       {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: result.data.parentId ? "comment_reply_created" : "comment_created",
-        route: `/${result.data.locale}/activities/${activity.id}`,
+        route: `/${result.data.locale}${getActivityDetailPath(activity.id)}`,
         entityId: activity.id,
         entityType: "team",
         sourceSurface: "comments",
@@ -280,7 +281,10 @@ export async function createActivityCommentAction(
   }
 
   revalidatePath(
-    withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+    withLocale(
+      result.data.locale,
+      getActivityDetailPath(result.data.activityId),
+    ),
   );
   revalidatePath(withLocale(result.data.locale, "/notifications"));
   revalidatePath(withLocale(result.data.locale, "/"), "layout");
@@ -317,7 +321,7 @@ export async function updateActivityCommentAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      `/activities/${result.data.activityId}#comments`,
+      `${getActivityDetailPath(result.data.activityId)}#comments`,
     );
     const comment = await prisma.comment.findFirst({
       where: {
@@ -365,7 +369,10 @@ export async function updateActivityCommentAction(
   }
 
   revalidatePath(
-    withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+    withLocale(
+      result.data.locale,
+      getActivityDetailPath(result.data.activityId),
+    ),
   );
 
   return {
@@ -397,7 +404,7 @@ export async function deleteActivityCommentAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      `/activities/${result.data.activityId}#comments`,
+      `${getActivityDetailPath(result.data.activityId)}#comments`,
     );
     const comment = await prisma.comment.findFirst({
       where: {
@@ -439,7 +446,10 @@ export async function deleteActivityCommentAction(
   }
 
   revalidatePath(
-    withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+    withLocale(
+      result.data.locale,
+      getActivityDetailPath(result.data.activityId),
+    ),
   );
 
   return {

@@ -23,6 +23,7 @@ import {
 import { activityLinkImportSites } from "@/lib/activity-link-import-sites";
 import { withLocale } from "@/lib/routes";
 import type { ActivityFormValues } from "@/features/activities/actions/activityActionUtils";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import type {
   ActivityLinkPreview,
   ActivityLinkPreviewValues,
@@ -525,7 +526,7 @@ export function ActivityLinkImportPanel({
                 className="mt-1 inline-block font-medium underline"
                 href={withLocale(
                   locale,
-                  `/activities/${preview.duplicateHint.activityId}`,
+                  getActivityDetailPath(preview.duplicateHint.activityId),
                 )}
                 rel="noreferrer"
                 target="_blank"

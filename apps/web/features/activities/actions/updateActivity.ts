@@ -21,6 +21,7 @@ import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActi
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 import { assertCanManageActivity } from "../utils/activityManagement";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 export type UpdateActivityState = ActivityFormState;
 
@@ -302,7 +303,7 @@ export async function updateActivityAction(
     );
   }
 
-  revalidatePath(withLocale(locale, `/activities/${activityId}`));
+  revalidatePath(withLocale(locale, getActivityDetailPath(activityId)));
   revalidatePath(withLocale(locale, "/activities"));
   revalidatePath(withLocale(locale, "/lobby"));
   revalidatePath(withLocale(locale, "/profile"));
@@ -310,5 +311,5 @@ export async function updateActivityAction(
   revalidatePath(withLocale(locale, "/"), "layout");
   revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
 
-  redirect(withLocale(locale, `/activities/${activityId}`));
+  redirect(withLocale(locale, getActivityDetailPath(activityId)));
 }

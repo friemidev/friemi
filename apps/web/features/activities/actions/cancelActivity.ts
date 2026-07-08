@@ -12,6 +12,7 @@ import { withLocale } from "@/lib/routes";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { OPEN_LOBBY_ACTIVITIES_TAG } from "@/features/activities/queries/getActivityLobby";
 import { assertCanManageActivity } from "../utils/activityManagement";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const cancellableActivityStatuses: ActivityStatus[] = [
   "OPEN",
@@ -51,7 +52,7 @@ function getString(formData: FormData, key: string) {
 }
 
 function refreshActivityViews(locale: string, activityId: string) {
-  const activityPath = withLocale(locale, `/activities/${activityId}`);
+  const activityPath = withLocale(locale, getActivityDetailPath(activityId));
 
   revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
   revalidatePath(activityPath);
@@ -92,7 +93,7 @@ export async function cancelActivityAction(
   const actionCopy = getCopy(result.data.locale).activityOwner;
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   let cancelledActivityId: string;
 

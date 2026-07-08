@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getCategoryLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ function getActivityHref(activity: ActivityCardViewModel, locale: string) {
     return withLocale(locale, `/public-events/${activity.publicEventId}`);
   }
 
-  return withLocale(locale, `/activities/${activity.id}`);
+  return withLocale(locale, getActivityDetailPath(activity.id));
 }
 
 function getLocationLabel(activity: ActivityCardViewModel) {

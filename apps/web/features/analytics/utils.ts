@@ -19,6 +19,7 @@ export function inferAnalyticsSourceSurfaceFromReferrer(
 
     if (pathname.includes("/search")) return "global_search";
     if (pathname.includes("/public-events/")) return "public_event_detail";
+    if (pathname.includes("/lobby/")) return "activity_detail";
     if (pathname.includes("/activities/")) return "activity_detail";
     if (pathname.endsWith("/activities")) return "activity_list";
     if (pathname.includes("/profile")) return "profile";

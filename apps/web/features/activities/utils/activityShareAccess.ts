@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getActivityDetailPath } from "./activityRoutes";
 
 export function generateActivityShareToken() {
   return randomBytes(24).toString("base64url");
@@ -15,7 +16,7 @@ export function getPrivateActivitySharePath({
   locale: string;
   shareToken: string;
 }) {
-  return `/${locale}/activities/${activityId}?access=${encodeURIComponent(shareToken)}`;
+  return `/${locale}${getActivityDetailPath(activityId)}?access=${encodeURIComponent(shareToken)}`;
 }
 
 export async function ensurePrivateActivityShareToken(
