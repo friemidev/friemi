@@ -9,6 +9,7 @@ type AvalonLiveRefreshProps = {
   enabled: boolean;
   intervalMs?: number;
   locale?: string;
+  showIndicator?: boolean;
   variant?: "floating" | "inline";
 };
 
@@ -16,6 +17,7 @@ export function AvalonLiveRefresh({
   enabled,
   intervalMs = 3200,
   locale = "zh-CN",
+  showIndicator = true,
   variant = "floating",
 }: AvalonLiveRefreshProps) {
   const router = useRouter();
@@ -82,7 +84,7 @@ export function AvalonLiveRefresh({
     };
   }, [enabled, intervalMs, refresh]);
 
-  if (!enabled) {
+  if (!enabled || !showIndicator) {
     return null;
   }
 
@@ -142,22 +144,22 @@ function getLiveRefreshCopy(locale: string) {
   if (locale === "fr") {
     return {
       offline: "Hors ligne",
-      synced: "Synchronisé",
-      syncing: "Synchro",
+      synced: "Actualisé",
+      syncing: "Actualisation",
     };
   }
 
   if (locale === "en") {
     return {
       offline: "Offline",
-      synced: "Synced",
-      syncing: "Syncing",
+      synced: "Refreshed",
+      syncing: "Refreshing",
     };
   }
 
   return {
     offline: "离线",
-    synced: "已同步",
-    syncing: "同步中",
+    synced: "已刷新",
+    syncing: "刷新中",
   };
 }

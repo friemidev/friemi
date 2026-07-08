@@ -28,6 +28,7 @@ export type WerewolfVariant = {
 export type WerewolfPrivatePayload = {
   alignmentLabel: string;
   roleDescription: string;
+  roleKey: WerewolfRoleKey;
   roleLabel: string;
   variantLabel: string;
 };
@@ -354,6 +355,7 @@ export function createWerewolfPrivatePayload({
   return {
     alignmentLabel: copy.alignmentLabels[alignment],
     roleDescription: copy.roleDescriptions[roleKey],
+    roleKey,
     roleLabel: copy.roleLabels[roleKey],
     variantLabel: getWerewolfVariantLabel(locale, variant),
   };

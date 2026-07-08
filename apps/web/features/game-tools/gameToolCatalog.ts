@@ -60,7 +60,7 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     },
     href: "/game-tools/werewolf",
     icon: Moon,
-    imageSrc: "/game-tools/mafia/mafia.jpeg",
+    imageSrc: "/game-tools/werewolf/werewolf.jpeg",
     kind: "WEREWOLF",
     maxPlayers: 10,
     minPlayers: 10,

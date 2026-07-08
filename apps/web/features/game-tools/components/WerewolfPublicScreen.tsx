@@ -1,7 +1,11 @@
 "use client";
 
-import { Crown, HeartPulse, Moon, Skull, UsersRound } from "lucide-react";
+import { Crown, Moon, UsersRound } from "lucide-react";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
+import {
+  getWerewolfRoleCardImage,
+  werewolfUiAssets,
+} from "@/features/game-tools/werewolfCardAssets";
 import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +18,7 @@ type WerewolfPublicSeat = {
   isJudgeSeat: boolean;
   isPlayerSeat: boolean;
   readyAt: string | null;
+  roleKey: string | null;
   roleLabel: string | null;
   seatNumber: number;
 };
@@ -43,16 +48,19 @@ type WerewolfPublicScreenProps = {
 const copy = {
   "zh-CN": {
     alive: "存活",
-    dead: "死亡",
+    dead: "出局",
     events: "最新记录",
     finished: "本局结束",
     goodWins: "好人阵营获胜",
+    copied: "已复制",
+    copyInvite: "复制邀请链接",
     join: "扫码进入",
     judge: "法官",
     lobby: "开局前",
     players: "玩家",
     ready: "已准备",
     roomCode: "房号",
+    qrUnavailable: "二维码没生成，先用房号。",
     running: "游戏进行中",
     seats: "座位",
     unready: "未准备",
@@ -64,12 +72,15 @@ const copy = {
     events: "Latest",
     finished: "Finished",
     goodWins: "Good team wins",
+    copied: "Copied",
+    copyInvite: "Copy invite",
     join: "Scan to join",
     judge: "Judge",
     lobby: "Lobby",
     players: "Players",
     ready: "Ready",
     roomCode: "Code",
+    qrUnavailable: "QR unavailable. Use the code.",
     running: "In progress",
     seats: "Seats",
     unready: "Not ready",
@@ -81,12 +92,15 @@ const copy = {
     events: "Dernières actions",
     finished: "Terminée",
     goodWins: "Village gagnant",
+    copied: "Copié",
+    copyInvite: "Copier le lien",
     join: "Scanner",
     judge: "Maître",
     lobby: "Accueil",
     players: "Joueurs",
     ready: "Prêt",
     roomCode: "Code",
+    qrUnavailable: "QR indisponible. Utilisez le code.",
     running: "En cours",
     seats: "Places",
     unready: "Pas prêt",
@@ -168,6 +182,26 @@ function getEventLabel(type: string, locale: string) {
       en: "Left seat",
       fr: "Place quittée",
     },
+    werewolf_test_bots_filled: {
+      "zh-CN": "测试补位",
+      en: "Test seats filled",
+      fr: "Places test ajoutées",
+    },
+    werewolf_test_bots_readied: {
+      "zh-CN": "测试准备",
+      en: "Test ready",
+      fr: "Prêt test",
+    },
+    werewolf_test_flow_started: {
+      "zh-CN": "测试开局",
+      en: "Test start",
+      fr: "Départ test",
+    },
+    werewolf_test_phase_advanced: {
+      "zh-CN": "测试推进",
+      en: "Test step",
+      fr: "Étape test",
+    },
   };
 
   return labels[type]?.[locale] ?? labels[type]?.en ?? type;
@@ -227,7 +261,12 @@ export function WerewolfPublicScreen({
           </header>
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 xl:grid-cols-6">
-            {playerSeats.map((seat) => (
+            {playerSeats.map((seat) => {
+              const roleCard = showRoles
+                ? getWerewolfRoleCardImage(seat.roleKey, locale)
+                : null;
+
+              return (
               <div
                 className={cn(
                   "relative grid min-h-32 place-items-center rounded-[1.3rem] border bg-white p-3 text-center shadow-lg transition",
@@ -242,9 +281,37 @@ export function WerewolfPublicScreen({
                 <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
                   {seat.seatNumber}
                 </span>
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-[#1E1718] text-lg font-black text-white">
-                  {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
-                </span>
+                {roleCard ? (
+                  <span className="aspect-[2/3] h-20 overflow-hidden rounded-[0.75rem] border border-[#D9C7B4] bg-white shadow-sm">
+                    <img
+                      alt={seat.roleLabel ?? ""}
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                      src={roleCard}
+                    />
+                  </span>
+                ) : (
+                  <span className="relative grid h-16 w-16 place-items-center text-lg font-black">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full"
+                      draggable={false}
+                      src={
+                        seat.isClaimed
+                          ? seat.isDead
+                            ? werewolfUiAssets.seatPlayerDead
+                            : seat.readyAt || room.status !== "LOBBY"
+                              ? werewolfUiAssets.seatPlayerReady
+                              : werewolfUiAssets.seatPlayerOccupied
+                          : werewolfUiAssets.seatPlayerEmpty
+                      }
+                    />
+                    <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#1E1718] text-sm text-white shadow-sm">
+                      {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                    </span>
+                  </span>
+                )}
                 <span className="line-clamp-1 max-w-full text-sm font-black text-[#1E1718]">
                   {seat.displayName}
                 </span>
@@ -262,15 +329,28 @@ export function WerewolfPublicScreen({
                     )}
                   >
                     {seat.isDead ? (
-                      <Skull className="h-3 w-3" />
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        draggable={false}
+                        src={werewolfUiAssets.seatPlayerDead}
+                      />
                     ) : (
-                      <HeartPulse className="h-3 w-3" />
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        draggable={false}
+                        src={werewolfUiAssets.seatPlayerReady}
+                      />
                     )}
                     {seat.isDead ? t.dead : room.status === "LOBBY" ? seat.readyAt ? t.ready : t.unready : t.alive}
                   </span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -293,7 +373,15 @@ export function WerewolfPublicScreen({
             </div>
           </div>
 
-          <WerewolfQrCode label={t.join} value={joinUrl} />
+          <WerewolfQrCode
+            codeLabel={t.roomCode}
+            copiedLabel={t.copied}
+            copyLabel={t.copyInvite}
+            label={t.join}
+            roomCode={room.code}
+            unavailableLabel={t.qrUnavailable}
+            value={joinUrl}
+          />
 
           <div className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">
@@ -306,8 +394,17 @@ export function WerewolfPublicScreen({
                   className="flex items-center justify-between gap-3 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-black text-[#7A1F2B]"
                   key={event.id}
                 >
-                  <span className="truncate">
-                    {getEventLabel(event.type, locale)}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-5 w-5 shrink-0"
+                      draggable={false}
+                      src={werewolfUiAssets.timelineEventDot}
+                    />
+                    <span className="truncate">
+                      {getEventLabel(event.type, locale)}
+                    </span>
                   </span>
                   <span>{formatTime(locale, event.createdAt)}</span>
                 </div>
@@ -329,6 +426,13 @@ function PublicStat({
   tone?: "alive" | "dead" | "neutral";
   value: number | string;
 }) {
+  const iconSrc =
+    tone === "alive"
+      ? werewolfUiAssets.seatPlayerReady
+      : tone === "dead"
+        ? werewolfUiAssets.seatPlayerDead
+        : werewolfUiAssets.seatPlayerOccupied;
+
   return (
     <div
       className={cn(
@@ -337,9 +441,16 @@ function PublicStat({
           ? "border-[#8AB68E]"
           : tone === "dead"
             ? "border-[#7A1F2B]"
-            : "border-[#D9C7B4]",
+          : "border-[#D9C7B4]",
       )}
     >
+      <img
+        alt=""
+        aria-hidden="true"
+        className="mb-1 h-6 w-6"
+        draggable={false}
+        src={iconSrc}
+      />
       <p className="text-2xl font-black leading-none text-[#1E1718]">{value}</p>
       <p className="mt-1 text-[0.66rem] font-black uppercase tracking-[0.08em] text-[#7A1F2B]/70">
         {label}

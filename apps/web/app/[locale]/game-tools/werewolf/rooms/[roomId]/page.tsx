@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRoom";
+import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -19,6 +21,7 @@ type WerewolfRoomPageProps = {
   }>;
   searchParams?: Promise<{
     memberToken?: string | string[];
+    notice?: string | string[];
   }>;
 };
 
@@ -46,6 +49,9 @@ export default async function WerewolfRoomPage({
   const memberToken = Array.isArray(query.memberToken)
     ? query.memberToken[0]
     : query.memberToken;
+  const notice = Array.isArray(query.notice)
+    ? query.notice[0]
+    : query.notice;
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders).replace(/\/$/, "");
   const viewerProfile = await getOptionalCurrentUserProfile();
@@ -108,6 +114,7 @@ export default async function WerewolfRoomPage({
       isViewerSeat: seat.isViewerSeat,
       privateToken: seat.privateToken,
       readyAt: seat.readyAt?.toISOString() ?? null,
+      roleKey: seat.roleKey,
       roleLabel: seat.roleLabel,
       seatNumber: seat.seatNumber,
     })),
@@ -119,10 +126,19 @@ export default async function WerewolfRoomPage({
 
   return (
     <PageContainer className="max-w-[94rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
+      <div className="mb-3 flex justify-end">
+        <AvalonLiveRefresh
+          enabled={room.status !== "FINISHED"}
+          locale={locale}
+          variant="inline"
+        />
+      </div>
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}
+        notice={notice}
         room={roomForClient}
+        testBotsEnabled={isWerewolfTestBotFeatureEnabled()}
       />
     </PageContainer>
   );

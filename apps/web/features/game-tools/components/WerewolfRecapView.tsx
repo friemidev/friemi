@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Crown, HeartPulse, Monitor, Skull } from "lucide-react";
+import { ArrowLeft, Crown, Monitor } from "lucide-react";
+import {
+  getWerewolfRoleCardImage,
+  werewolfUiAssets,
+} from "@/features/game-tools/werewolfCardAssets";
 import type {
   WerewolfRoomState,
   WerewolfWinner,
@@ -23,6 +27,7 @@ type WerewolfRecapSeat = {
   isJudgeSeat: boolean;
   isPlayerSeat: boolean;
   roleAlignment: string | null;
+  roleKey: string | null;
   roleLabel: string | null;
   seatNumber: number;
 };
@@ -51,7 +56,7 @@ const copy = {
     actor: "来自",
     alive: "存活",
     backRoom: "回房间",
-    dead: "死亡",
+    dead: "出局",
     defeat: "失败",
     events: "时间线",
     finished: "本局已结束",
@@ -190,6 +195,26 @@ function getEventLabel(type: string, locale: string) {
       en: "Left seat",
       fr: "Place quittée",
     },
+    werewolf_test_bots_filled: {
+      "zh-CN": "测试补位",
+      en: "Test seats filled",
+      fr: "Places test ajoutées",
+    },
+    werewolf_test_bots_readied: {
+      "zh-CN": "测试准备",
+      en: "Test ready",
+      fr: "Prêt test",
+    },
+    werewolf_test_flow_started: {
+      "zh-CN": "测试开局",
+      en: "Test start",
+      fr: "Départ test",
+    },
+    werewolf_test_phase_advanced: {
+      "zh-CN": "测试推进",
+      en: "Test step",
+      fr: "Étape test",
+    },
   };
 
   return labels[type]?.[locale] ?? labels[type]?.en ?? type;
@@ -316,6 +341,10 @@ export function WerewolfRecapView({
                 alignment: seat.roleAlignment,
                 winner: room.state.winner ?? null,
               });
+              const roleCard =
+                finished && !seat.isJudgeSeat
+                  ? getWerewolfRoleCardImage(seat.roleKey, locale)
+                  : null;
 
               return (
                 <div
@@ -341,13 +370,38 @@ export function WerewolfRecapView({
                       <p className="truncate text-sm font-black text-[#1E1718]">
                         {seat.displayName}
                       </p>
-                      <p className="mt-0.5 text-xs font-bold text-[#7A1F2B]/68">
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-bold text-[#7A1F2B]/68">
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5"
+                          draggable={false}
+                          src={
+                            seat.isDead
+                              ? werewolfUiAssets.seatPlayerDead
+                              : werewolfUiAssets.seatPlayerReady
+                          }
+                        />
                         {seat.isDead ? t.dead : t.alive}
                       </p>
                     </div>
                   </div>
 
                   <div className="mt-3 grid gap-1.5">
+                    {roleCard ? (
+                      <div
+                        className={`mx-auto aspect-[2/3] h-28 overflow-hidden rounded-[0.8rem] border border-[#D9C7B4] bg-white shadow-sm ${
+                          seat.isDead ? "grayscale" : ""
+                        }`}
+                      >
+                        <img
+                          alt={seat.roleLabel ?? ""}
+                          className="h-full w-full object-cover"
+                          draggable={false}
+                          src={roleCard}
+                        />
+                      </div>
+                    ) : null}
                     <p className="truncate rounded-full bg-white px-2 py-1 text-xs font-black text-[#7A1F2B]">
                       {finished
                         ? seat.isJudgeSeat
@@ -364,11 +418,17 @@ export function WerewolfRecapView({
                             : "bg-[#FFF0EC] text-[#7A1F2B]",
                         )}
                       >
-                        {won ? (
-                          <HeartPulse className="h-3.5 w-3.5" />
-                        ) : (
-                          <Skull className="h-3.5 w-3.5" />
-                        )}
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                          draggable={false}
+                          src={
+                            won
+                              ? werewolfUiAssets.resultGoodBadge
+                              : werewolfUiAssets.seatPlayerDead
+                          }
+                        />
                         {won ? t.victory : t.defeat}
                       </p>
                     ) : null}
@@ -392,6 +452,13 @@ function SummaryTile({
   tone?: "good" | "neutral" | "werewolf";
   value: number | string;
 }) {
+  const iconSrc =
+    tone === "good"
+      ? werewolfUiAssets.resultGoodBadge
+      : tone === "werewolf"
+        ? werewolfUiAssets.resultWerewolfBadge
+        : werewolfUiAssets.seatPlayerOccupied;
+
   return (
     <div
       className={cn(
@@ -400,9 +467,16 @@ function SummaryTile({
           ? "border-[#8AB68E]"
           : tone === "werewolf"
             ? "border-[#7A1F2B]"
-            : "border-[#D9C7B4]",
+          : "border-[#D9C7B4]",
       )}
     >
+      <img
+        alt=""
+        aria-hidden="true"
+        className="mb-1 h-7 w-7"
+        draggable={false}
+        src={iconSrc}
+      />
       <p className="text-lg font-black leading-tight text-[#1E1718]">{value}</p>
       <p className="mt-1 text-[0.66rem] font-black uppercase tracking-[0.08em] text-[#7A1F2B]/70">
         {label}
@@ -422,8 +496,14 @@ function TimelineEvent({
 }) {
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-[1rem] border border-[#D9C7B4] bg-[#FFFDF7] px-3 py-2 shadow-sm">
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-[#1E1718] text-xs font-black text-white">
-        W
+      <span className="grid h-10 w-10 place-items-center">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full"
+          draggable={false}
+          src={werewolfUiAssets.timelineEventDot}
+        />
       </span>
       <div className="min-w-0">
         <p className="truncate text-sm font-black text-[#1E1718]">
