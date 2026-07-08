@@ -31,11 +31,17 @@ const iosServerHost = new URL(iosServerUrl).hostname;
 const iosAllowNavigationWithServerHost = Array.from(
   new Set([...iosAllowNavigation, iosServerHost]),
 );
+const pushNotifications = {
+  presentationOptions: ["badge", "sound", "alert"],
+};
 
 const config: CapacitorConfig = {
   appId: "com.friemi.app",
   appName: "Friemi",
   webDir: "capacitor-www",
+  plugins: {
+    PushNotifications: pushNotifications,
+  },
   ...(isIOSCommand
     ? {
         ios: {

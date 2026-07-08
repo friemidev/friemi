@@ -5,6 +5,7 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "@/features/activities/utils/activityShareAccess";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -75,16 +76,12 @@ async function createDirectMessageNotification(
     recipientId: string;
   },
 ) {
-  return db.notification.create({
-    data: {
-      type: "DIRECT_MESSAGE",
-      recipientId: input.recipientId,
-      actorId: input.actorId,
-      activityId: input.activityId ?? null,
-    },
-    select: {
-      id: true,
-    },
+  return createNotification(db, {
+    type: "DIRECT_MESSAGE",
+    recipientId: input.recipientId,
+    actorId: input.actorId,
+    activityId: input.activityId ?? null,
+    dedupe: false,
   });
 }
 

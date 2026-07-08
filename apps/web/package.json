@@ -22,6 +22,7 @@
     "db:migrate-legacy-public-events": "tsx prisma/migrate-legacy-activity-info-to-public-events.ts"
   },
   "dependencies": {
+    "@capacitor/push-notifications": "^7.0.7",
     "@chill-club/scraper-core": "file:../../packages/scraper-core",
     "@chill-club/shared": "file:../../packages/shared",
     "@chill-club/ui": "file:../../packages/ui",

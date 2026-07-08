@@ -25,6 +25,7 @@ import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { ProfileContactBindingDialog } from "@/features/profile/components/ProfileContactBindingDialog";
+import { isFriemiIOSApp, unregisterIOSMobileDevice } from "@/features/mobile/push/clientPush";
 import { useViewerProfile } from "@/features/profile/components/ViewerProfileProvider";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -466,7 +467,13 @@ export function AccountMenu({
               role="menuitem"
               onClick={() => {
                 closeMenu();
-                void unregisterAndroidPushToken().finally(() => {
+                const unregisterTask = isFriemiAndroidApp()
+                  ? unregisterAndroidPushToken()
+                  : isFriemiIOSApp()
+                    ? unregisterIOSMobileDevice()
+                    : Promise.resolve();
+
+                void unregisterTask.finally(() => {
                   void signOut({ redirectUrl: withLocale(locale, "/") });
                 });
               }}
