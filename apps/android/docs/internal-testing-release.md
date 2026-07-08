@@ -119,8 +119,8 @@ cd /home/ubuntu23/Bureau/friemi/apps/android
 
 ./gradlew clean :app:bundleRelease \
   -PfriemiBaseUrl=https://www.friemi.com \
-  -PfriemiVersionCode=1 \
-  -PfriemiVersionName=0.1.0-internal1
+  -PfriemiVersionCode=2 \
+  -PfriemiVersionName=0.1.0-internal2
 ```
 
 输出：
@@ -140,8 +140,8 @@ cd /home/ubuntu23/Bureau/friemi/apps/android
 
 ./gradlew clean :app:assembleRelease \
   -PfriemiBaseUrl=https://www.friemi.com \
-  -PfriemiVersionCode=1 \
-  -PfriemiVersionName=0.1.0-internal1
+  -PfriemiVersionCode=2 \
+  -PfriemiVersionName=0.1.0-internal2
 ```
 
 输出：

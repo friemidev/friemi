@@ -17,11 +17,11 @@ val friemiBaseUrl = providers
 val friemiVersionCode = providers
     .gradleProperty("friemiVersionCode")
     .map { it.toInt() }
-    .orElse(1)
+    .orElse(2)
     .get()
 val friemiVersionName = providers
     .gradleProperty("friemiVersionName")
-    .orElse("0.1.0")
+    .orElse("0.1.0-internal2")
     .get()
 val friemiAppLinkHost = providers
     .gradleProperty("friemiAppLinkHost")
