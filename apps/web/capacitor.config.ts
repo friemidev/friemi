@@ -3,16 +3,22 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const isIOSCommand =
   process.argv.includes("ios") && !process.argv.includes("android");
 const baseAllowNavigation = ["friemi.com", "www.friemi.com", "*.friemi.com"];
-const iosAllowNavigation = [
-  ...baseAllowNavigation,
-  "localhost",
-  "127.0.0.1",
-  "*.vercel.app",
+const iosInAppAuthNavigation = [
   "clerk.com",
   "*.clerk.com",
   "accounts.dev",
   "*.accounts.dev",
   "clerk.shared.lcl.dev",
+];
+// Third-party OAuth providers such as Google should not be forced into the
+// embedded WebView. The iOS navigation plugin opens non-Friemi/Clerk hosts
+// externally when needed, then Clerk/Friemi callbacks return to the app session.
+const iosAllowNavigation = [
+  ...baseAllowNavigation,
+  "localhost",
+  "127.0.0.1",
+  "*.vercel.app",
+  ...iosInAppAuthNavigation,
 ];
 const iosPreviewHost = "";
 const iosPreviewPath = "/fr/home";

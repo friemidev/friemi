@@ -9,8 +9,8 @@
 - 当前 iOS 壳：Capacitor WebView，线上入口为 `https://www.friemi.com/zh-CN/mobile-home`
 - 当前 iOS 原生权限：未在 `Info.plist` 声明相机、定位、相册、推送权限
 - 登录：Clerk / Google OAuth 相关域名已放入 iOS `allowNavigation`
-- 隐私政策正式页：缺少 Web 页面入口，需要补 `https://www.friemi.com/privacy` 或多语言隐私页
-- 账号删除闭环：需要补 App 内入口、确认页/对话框、服务端软删除/数据保留逻辑
+- 隐私政策正式页：已补 Web 页面和 App 内入口，提审前确认 `https://www.friemi.com/privacy` 或多语言隐私页可访问
+- 账号删除闭环：已补 App 内“账号与安全”入口、确认流程、服务端删除/匿名化逻辑和退出登录
 - iOS 推送：数据库和 API schema 已预留 `platform: IOS`，但当前未看到 APNs 原生注册流程
 
 ## 1. App Store Connect 元数据草案
@@ -156,6 +156,8 @@ Password / Code: 待确认
 
 如果使用邮箱验证码登录，需要准备固定验证码或说明审核期间如何获取验证码。不要让审核员依赖私人邮箱或临时人工转发。
 
+建议审核账号使用邮箱登录/验证码登录，不优先依赖 Google OAuth。这样审核员不需要离开 App 或处理第三方账号安全提示。
+
 ### Demo 流程
 
 ```text
@@ -166,14 +168,15 @@ Password / Code: 待确认
 5. Open Notifications to review activity updates and signup-related notifications.
 6. Open Messages to view demo conversations.
 7. Open Account / Profile to view user settings.
+8. Open Account menu > Account & Security > Delete Account to verify the account deletion flow.
 ```
 
 ### 外部登录说明
 
-当前 iOS 壳使用 WebView 加载 Friemi Web App，登录服务由 Clerk / Google OAuth 提供。审核说明建议写：
+当前 iOS 壳使用 WebView 加载 Friemi Web App，登录服务由 Clerk 提供。Friemi 和 Clerk 托管页面保留在 App WebView 内；若用户选择第三方 OAuth，提供商控制的页面可能会打开系统浏览器或外部认证页面，避免在内嵌 WebView 里完成第三方 OAuth。审核说明建议写：
 
 ```text
-Friemi uses Clerk for account authentication. Some OAuth steps may open provider-controlled authentication pages for security and compliance. After authentication, the user is redirected back into the Friemi app session. This is used only for sign-in and account security.
+Friemi is a Capacitor-based iOS app that loads the Friemi web app in an in-app web session. Friemi uses Clerk for account authentication. Friemi and Clerk-hosted pages are allowed in the app web session. If a third-party OAuth provider is used, provider-controlled authentication pages may open outside the app web session for security and compliance. After authentication, the user is redirected back to the Friemi app session.
 ```
 
 如果最终 iOS 登录没有跳出外部浏览器，只是在允许域名内完成，也可改成：
@@ -195,7 +198,42 @@ Users can create group plans and send messages. Friemi provides reporting and mo
 提交前需要 App 内真实可操作。完成后写：
 
 ```text
-Users can request account deletion from Account Settings > Account & Security > Delete Account. The flow asks for confirmation, signs the user out, disables the profile, removes active device tokens, and starts deletion/retention handling for related account data.
+Users can delete their account from Account menu > Account & Security > Delete Account. The flow asks for confirmation, signs the user out, marks the Friemi profile as deleted, removes active device tokens, clears or anonymizes personal data, and deletes the Clerk user when server credentials are available. Some records may be retained or anonymized for safety, anti-abuse, dispute handling, and legal compliance as described in the Privacy Policy.
+```
+
+### 可复制 Review Notes
+
+提交前把审核账号和验证码/密码替换成真实信息：
+
+```text
+Friemi is a Capacitor-based iOS app that loads the Friemi web app in an in-app web session.
+
+Review account:
+Email: app-review@friemi.com
+Password / Verification code: [fill before submission]
+
+Suggested review flow:
+1. Open Friemi.
+2. Tap Sign in.
+3. Sign in with the review account.
+4. Open Home to browse public activities.
+5. Open Lobby / group plans to view user-created group activities.
+6. Open an activity detail page to view time, location, organizer, and join flow.
+7. Open Messages to view communication features.
+8. Open Notifications to view activity and signup updates.
+9. Open Account menu > Account & Security > Delete Account to verify the account deletion flow.
+
+Authentication:
+Friemi uses Clerk for account authentication. Friemi and Clerk-hosted pages are allowed in the app web session. If a third-party OAuth provider is used, provider-controlled authentication pages may open outside the app web session for security and compliance. After authentication, the user is redirected back to the Friemi app session.
+
+Account deletion:
+Users can delete their account from Account menu > Account & Security > Delete Account. The flow asks for confirmation, signs the user out, marks the Friemi profile as deleted, removes device tokens, clears or anonymizes personal data, and deletes the Clerk user when server credentials are available.
+
+User-generated content and moderation:
+Users can create group plans, comments, messages, and reports. Friemi provides report flows for inappropriate content or behavior. Reports can be reviewed by administrators, and content or accounts can be restricted when needed.
+
+Privacy Policy:
+https://www.friemi.com/privacy
 ```
 
 ## 4. 隐私与权限问卷草案
@@ -288,9 +326,10 @@ Users can request account deletion from Account Settings > Account & Security > 
 
 ### C. iOS 登录 / 回跳路径
 
-- 决定提审期策略：邮箱验证码登录，或外部 OAuth + App 回跳
-- 如果使用外部浏览器 OAuth，需要准备 Review Notes
+- 提审期策略：优先使用审核账号邮箱登录/验证码登录
+- 如果使用第三方 OAuth，提供商页面可外部打开，Review Notes 说明原因和回跳方式
 - 确保 TestFlight 中能从登录成功回到 App 内会话
+- 正式包执行 `npx cap sync ios`，不要带 `FRIEMI_IOS_SERVER_URL=http://192.168.x.x:3000/...`
 
 ### D. UGC 风险控制
 
