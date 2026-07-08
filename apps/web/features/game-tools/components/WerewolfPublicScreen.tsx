@@ -48,16 +48,19 @@ type WerewolfPublicScreenProps = {
 const copy = {
   "zh-CN": {
     alive: "存活",
-    dead: "死亡",
+    dead: "出局",
     events: "最新记录",
     finished: "本局结束",
     goodWins: "好人阵营获胜",
+    copied: "已复制",
+    copyInvite: "复制邀请链接",
     join: "扫码进入",
     judge: "法官",
     lobby: "开局前",
     players: "玩家",
     ready: "已准备",
     roomCode: "房号",
+    qrUnavailable: "二维码没生成，先用房号。",
     running: "游戏进行中",
     seats: "座位",
     unready: "未准备",
@@ -69,12 +72,15 @@ const copy = {
     events: "Latest",
     finished: "Finished",
     goodWins: "Good team wins",
+    copied: "Copied",
+    copyInvite: "Copy invite",
     join: "Scan to join",
     judge: "Judge",
     lobby: "Lobby",
     players: "Players",
     ready: "Ready",
     roomCode: "Code",
+    qrUnavailable: "QR unavailable. Use the code.",
     running: "In progress",
     seats: "Seats",
     unready: "Not ready",
@@ -86,12 +92,15 @@ const copy = {
     events: "Dernières actions",
     finished: "Terminée",
     goodWins: "Village gagnant",
+    copied: "Copié",
+    copyInvite: "Copier le lien",
     join: "Scanner",
     judge: "Maître",
     lobby: "Accueil",
     players: "Joueurs",
     ready: "Prêt",
     roomCode: "Code",
+    qrUnavailable: "QR indisponible. Utilisez le code.",
     running: "En cours",
     seats: "Places",
     unready: "Pas prêt",
@@ -364,7 +373,15 @@ export function WerewolfPublicScreen({
             </div>
           </div>
 
-          <WerewolfQrCode label={t.join} value={joinUrl} />
+          <WerewolfQrCode
+            codeLabel={t.roomCode}
+            copiedLabel={t.copied}
+            copyLabel={t.copyInvite}
+            label={t.join}
+            roomCode={room.code}
+            unavailableLabel={t.qrUnavailable}
+            value={joinUrl}
+          />
 
           <div className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">

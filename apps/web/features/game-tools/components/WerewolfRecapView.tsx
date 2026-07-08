@@ -56,7 +56,7 @@ const copy = {
     actor: "来自",
     alive: "存活",
     backRoom: "回房间",
-    dead: "死亡",
+    dead: "出局",
     defeat: "失败",
     events: "时间线",
     finished: "本局已结束",

@@ -1,4 +1,8 @@
 export function isWerewolfTestBotFeatureEnabled() {
+  const isNonProductionRuntime =
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV === "development" ||
+    process.env.VERCEL_ENV === "preview";
   const explicitValue =
     process.env.ENABLE_WEREWOLF_TEST_BOTS ??
     process.env.NEXT_PUBLIC_ENABLE_WEREWOLF_TEST_BOTS;
@@ -9,7 +13,7 @@ export function isWerewolfTestBotFeatureEnabled() {
     normalizedValue === "true" ||
     normalizedValue === "yes"
   ) {
-    return true;
+    return isNonProductionRuntime;
   }
 
   if (
@@ -20,5 +24,5 @@ export function isWerewolfTestBotFeatureEnabled() {
     return false;
   }
 
-  return process.env.NODE_ENV !== "production";
+  return isNonProductionRuntime;
 }

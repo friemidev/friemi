@@ -23,6 +23,7 @@ import {
   claimWerewolfSeatAction,
   joinWerewolfRoomAction,
   leaveWerewolfSeatAction,
+  manageWerewolfSeatAction,
   startWerewolfRoomAction,
   updateWerewolfReadyAction,
   type WerewolfRoomActionState,
@@ -38,6 +39,7 @@ import { withLocale } from "@/lib/routes";
 type WerewolfRoomOverviewProps = {
   baseUrl: string;
   locale: string;
+  notice?: string | null;
   room: {
     code: string;
     currentMember: {
@@ -112,6 +114,8 @@ function getCopy(locale: string) {
       changeSeat: "Changer",
       claimError: "Impossible de modifier la place.",
       code: "Code",
+      copied: "Copié",
+      copyInvite: "Copier le lien",
       currentMember: "Vous",
       dead: "Mort",
       empty: "Libre",
@@ -120,6 +124,12 @@ function getCopy(locale: string) {
       finished: "Partie terminée",
       foundation: "Loups-garous",
       host: "Hôte",
+      manageConfirmRefresh: "Remplacer le lien privé de cette place ?",
+      manageConfirmRelease: "Libérer cette place ?",
+      manageNamePlaceholder: "Nom de table",
+      manageRefresh: "Nouveau lien",
+      manageRelease: "Libérer",
+      manageRename: "Renommer",
       joinFirst: "Entrez un nom d'abord",
       joinName: "Nom",
       judge: "Maître",
@@ -128,10 +138,18 @@ function getCopy(locale: string) {
       locked: "La partie a commencé.",
       members: "À placer",
       noMembers: "Personne en attente.",
+      noticeJoined: "Vous êtes dans la table.",
+      noticeLeft: "Place quittée.",
+      noticeReady: "Vous êtes prêt.",
+      noticeSeatChanged: "Place changée.",
+      noticeSeatClaimed: "Place prise.",
+      noticeSeatManaged: "Place mise à jour.",
+      noticeUnready: "Prêt annulé.",
       openSeat: "Voir rôle",
       playerSeats: "Places",
       playerUnit: "joueurs",
       publicScreen: "Écran public",
+      qrUnavailable: "QR indisponible. Utilisez le code.",
       ready: "Prêt",
       readyAction: "Prêt",
       alive: "Vivant",
@@ -145,6 +163,7 @@ function getCopy(locale: string) {
       startConfirm: "Distribuer les rôles et verrouiller les places ?",
       startWaiting: "Attendez que toute la table soit prête.",
       status: "Statut",
+      systemActor: "Table",
       unready: "Pas prêt",
       unreadyAction: "Annuler",
       waitingMember: "Entrez un nom, puis choisissez une place.",
@@ -161,6 +180,8 @@ function getCopy(locale: string) {
       changeSeat: "Switch",
       claimError: "Could not update the seat.",
       code: "Code",
+      copied: "Copied",
+      copyInvite: "Copy invite",
       currentMember: "You",
       dead: "Dead",
       empty: "Open",
@@ -169,6 +190,12 @@ function getCopy(locale: string) {
       finished: "Game finished",
       foundation: "Werewolf",
       host: "Host",
+      manageConfirmRefresh: "Replace this seat's private link?",
+      manageConfirmRelease: "Release this seat?",
+      manageNamePlaceholder: "Table name",
+      manageRefresh: "New link",
+      manageRelease: "Release",
+      manageRename: "Rename",
       joinFirst: "Enter a name first",
       joinName: "Name",
       judge: "Judge",
@@ -177,10 +204,18 @@ function getCopy(locale: string) {
       locked: "The game has started.",
       members: "Waiting to sit",
       noMembers: "No one is waiting.",
+      noticeJoined: "You are in the table.",
+      noticeLeft: "Seat left.",
+      noticeReady: "You are ready.",
+      noticeSeatChanged: "Seat switched.",
+      noticeSeatClaimed: "Seat claimed.",
+      noticeSeatManaged: "Seat updated.",
+      noticeUnready: "Ready cancelled.",
       openSeat: "View role",
       playerSeats: "Player seats",
       playerUnit: "players",
       publicScreen: "Public screen",
+      qrUnavailable: "QR unavailable. Use the code.",
       ready: "Ready",
       readyAction: "Ready",
       alive: "Alive",
@@ -194,6 +229,7 @@ function getCopy(locale: string) {
       startConfirm: "Deal roles and lock seats?",
       startWaiting: "Wait until the full table is ready.",
       status: "Status",
+      systemActor: "Table",
       unready: "Not ready",
       unreadyAction: "Cancel",
       waitingMember: "Enter a name, then choose a seat.",
@@ -208,14 +244,22 @@ function getCopy(locale: string) {
     changeSeat: "换座",
     claimError: "座位操作失败。",
     code: "房号",
+    copied: "已复制",
+    copyInvite: "复制邀请链接",
     currentMember: "我",
-    dead: "死亡",
+    dead: "出局",
     empty: "空位",
     enterMember: "进入房间",
     events: "最近记录",
     finished: "本局已结束",
     foundation: "狼人杀",
     host: "房主",
+    manageConfirmRefresh: "刷新后旧身份链接会失效，确定继续？",
+    manageConfirmRelease: "确定清空这个座位？",
+    manageNamePlaceholder: "桌上昵称",
+    manageRefresh: "换链接",
+    manageRelease: "清座",
+    manageRename: "改名",
     joinFirst: "先输入昵称",
     joinName: "昵称",
     judge: "法官",
@@ -224,10 +268,18 @@ function getCopy(locale: string) {
     locked: "本局已经开始。",
     members: "待入座",
     noMembers: "没人等座。",
+    noticeJoined: "已进入房间。",
+    noticeLeft: "已离座。",
+    noticeReady: "已准备。",
+    noticeSeatChanged: "已换座。",
+    noticeSeatClaimed: "已入座。",
+    noticeSeatManaged: "座位已更新。",
+    noticeUnready: "已取消准备。",
     openSeat: "查看身份",
     playerSeats: "座位",
     playerUnit: "玩家",
     publicScreen: "公共屏",
+    qrUnavailable: "二维码没生成，先用房号。",
     ready: "已准备",
     readyAction: "准备",
     alive: "存活",
@@ -241,6 +293,7 @@ function getCopy(locale: string) {
     startConfirm: "发身份后座位会锁定，确定开局？",
     startWaiting: "等所有人准备。",
     status: "进度",
+    systemActor: "房间",
     unready: "未准备",
     unreadyAction: "取消准备",
     waitingMember: "取个昵称入房。",
@@ -374,6 +427,21 @@ function getEventLabel(type: string, locale: string) {
       en: "Left seat",
       fr: "Place quittée",
     },
+    werewolf_seat_link_refreshed: {
+      "zh-CN": "身份链接刷新",
+      en: "Private link refreshed",
+      fr: "Lien privé changé",
+    },
+    werewolf_seat_released: {
+      "zh-CN": "清空座位",
+      en: "Seat released",
+      fr: "Place libérée",
+    },
+    werewolf_seat_renamed: {
+      "zh-CN": "座位改名",
+      en: "Seat renamed",
+      fr: "Place renommée",
+    },
     werewolf_test_bots_filled: {
       "zh-CN": "测试补位",
       en: "Test seats filled",
@@ -399,9 +467,44 @@ function getEventLabel(type: string, locale: string) {
   return labels[type]?.[locale] ?? labels[type]?.en ?? type;
 }
 
+function getEventTimeLabel(value: string, locale: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getNoticeLabel(notice: string | null | undefined, t: ReturnType<typeof getCopy>) {
+  switch (notice) {
+    case "joined":
+      return t.noticeJoined;
+    case "left":
+      return t.noticeLeft;
+    case "ready":
+      return t.noticeReady;
+    case "seat_changed":
+      return t.noticeSeatChanged;
+    case "seat_claimed":
+      return t.noticeSeatClaimed;
+    case "seat_managed":
+      return t.noticeSeatManaged;
+    case "unready":
+      return t.noticeUnready;
+    default:
+      return null;
+  }
+}
+
 export function WerewolfRoomOverview({
   baseUrl,
   locale,
+  notice,
   room,
   testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
@@ -416,6 +519,10 @@ export function WerewolfRoomOverview({
   );
   const [leaveState, leaveAction] = useActionState(
     leaveWerewolfSeatAction,
+    initialState,
+  );
+  const [manageState, manageAction] = useActionState(
+    manageWerewolfSeatAction,
     initialState,
   );
   const [readyState, readyAction] = useActionState(
@@ -445,6 +552,12 @@ export function WerewolfRoomOverview({
   const unseatedMembers = room.members.filter(
     (member) => !member.seatedSeatNumber,
   );
+  const canManageSeats =
+    isLobby && (room.isHost || Boolean(judgeSeat?.isViewerSeat));
+  const managerPrivateToken =
+    judgeSeat?.isViewerSeat && judgeSeat.privateToken
+      ? judgeSeat.privateToken
+      : "";
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -461,6 +574,7 @@ export function WerewolfRoomOverview({
   const startEventId =
     room.events.find((event) => event.type === "werewolf_room_started")?.id ??
     "current";
+  const noticeLabel = getNoticeLabel(notice, t);
 
   useEffect(() => {
     if (room.status !== "IN_PROGRESS" || !currentSeatPrivateToken) {
@@ -485,6 +599,97 @@ export function WerewolfRoomOverview({
     router,
     startEventId,
   ]);
+
+  const renderSeatManagement = ({
+    dark = false,
+    displayName,
+    seatNumber,
+  }: {
+    dark?: boolean;
+    displayName: string;
+    seatNumber: number;
+  }) => {
+    if (!canManageSeats) {
+      return null;
+    }
+
+    const baseHiddenFields = (
+      <>
+        <input name="locale" type="hidden" value={locale} />
+        <input name="roomId" type="hidden" value={room.id} />
+        <input name="memberToken" type="hidden" value={currentMemberToken} />
+        <input
+          name="actorPrivateToken"
+          type="hidden"
+          value={managerPrivateToken}
+        />
+        <input name="seatNumber" type="hidden" value={seatNumber} />
+      </>
+    );
+    const secondaryClass = dark
+      ? "border border-white/20 bg-white/10 text-white hover:bg-white/16"
+      : "border border-[#D9C7B4] bg-white text-[#7A1F2B] hover:bg-[#FFF7F1]";
+
+    return (
+      <div className="mt-2 grid gap-1.5 border-t border-[#D9C7B4]/55 pt-2 dark:border-white/15">
+        <form action={manageAction} className="grid grid-cols-[minmax(0,1fr)_3.75rem] gap-1.5">
+          {baseHiddenFields}
+          <input name="operation" type="hidden" value="rename" />
+          <input
+            className={`h-8 min-w-0 rounded-full px-2 text-xs font-bold outline-none transition ${
+              dark
+                ? "border border-white/20 bg-white/10 text-white placeholder:text-white/42 focus:border-[#F0C36A]"
+                : "border border-[#D9C7B4] bg-white text-[#1E1718] placeholder:text-[#7A1F2B]/42 focus:border-[#7A1F2B]"
+            }`}
+            maxLength={40}
+            name="displayName"
+            placeholder={t.manageNamePlaceholder}
+            defaultValue={displayName}
+          />
+          <SubmitButton
+            className={`inline-flex h-8 items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
+              dark
+                ? "bg-[#F0C36A] text-[#1E1718] hover:bg-[#F8D581]"
+                : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
+            }`}
+            label={t.manageRename}
+          />
+        </form>
+        <div className="grid grid-cols-2 gap-1.5">
+          <form
+            action={manageAction}
+            onSubmit={(event) => {
+              if (!window.confirm(t.manageConfirmRelease)) {
+                event.preventDefault();
+              }
+            }}
+          >
+            {baseHiddenFields}
+            <input name="operation" type="hidden" value="release" />
+            <SubmitButton
+              className={`inline-flex h-8 w-full items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${secondaryClass}`}
+              label={t.manageRelease}
+            />
+          </form>
+          <form
+            action={manageAction}
+            onSubmit={(event) => {
+              if (!window.confirm(t.manageConfirmRefresh)) {
+                event.preventDefault();
+              }
+            }}
+          >
+            {baseHiddenFields}
+            <input name="operation" type="hidden" value="refresh_token" />
+            <SubmitButton
+              className={`inline-flex h-8 w-full items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${secondaryClass}`}
+              label={t.manageRefresh}
+            />
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -531,6 +736,15 @@ export function WerewolfRoomOverview({
           </div>
         </div>
       </section>
+
+      {noticeLabel ? (
+        <div className="flex items-center gap-2 rounded-[1.1rem] border border-[#BBD9C2] bg-[#F2FAEF] px-4 py-3 text-sm font-black text-[#36624A] shadow-sm">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#1F8F55] text-white">
+            <Check className="h-4 w-4" />
+          </span>
+          {noticeLabel}
+        </div>
+      ) : null}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
@@ -791,6 +1005,12 @@ export function WerewolfRoomOverview({
                       )}
                     </div>
                   ) : null}
+                  {seat.isClaimed
+                    ? renderSeatManagement({
+                        displayName: seat.displayName,
+                        seatNumber: seat.seatNumber,
+                      })
+                    : null}
                 </div>
               );
             })}
@@ -799,7 +1019,15 @@ export function WerewolfRoomOverview({
 
         <aside className="space-y-4">
           <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
-            <WerewolfQrCode label={t.scanJoin} value={joinUrl} />
+            <WerewolfQrCode
+              codeLabel={t.code}
+              copiedLabel={t.copied}
+              copyLabel={t.copyInvite}
+              label={t.scanJoin}
+              roomCode={room.code}
+              unavailableLabel={t.qrUnavailable}
+              value={joinUrl}
+            />
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Link
                 className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
@@ -963,6 +1191,13 @@ export function WerewolfRoomOverview({
                   )}
                 </div>
               ) : null}
+              {judgeSeat?.isClaimed
+                ? renderSeatManagement({
+                    dark: true,
+                    displayName: judgeSeat.displayName,
+                    seatNumber: judgeSeat.seatNumber,
+                  })
+                : null}
             </div>
           </div>
 
@@ -1055,6 +1290,11 @@ export function WerewolfRoomOverview({
                 {leaveState.formError}
               </p>
             ) : null}
+            {manageState.formError ? (
+              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {manageState.formError}
+              </p>
+            ) : null}
             {readyState.formError ? (
               <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
                 {readyState.formError}
@@ -1072,14 +1312,14 @@ export function WerewolfRoomOverview({
               <UserPlus className="h-4 w-4 text-[#7A1F2B]" />
               {t.events}
             </h2>
-            <div className="mt-3 space-y-2">
+            <div className="relative mt-3 space-y-2 before:absolute before:bottom-3 before:left-3 before:top-3 before:w-px before:bg-[#D9C7B4]">
               {room.events.length ? (
-                room.events.slice(0, 4).map((event) => (
+                room.events.slice(0, 8).map((event) => (
                   <div
-                    className="flex items-center gap-2 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-bold text-[#7A1F2B]"
+                    className="relative flex items-start gap-2 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-bold text-[#7A1F2B]"
                     key={event.id}
                   >
-                    <span className="grid h-6 w-6 shrink-0 place-items-center">
+                    <span className="relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F7F3EC]">
                       <img
                         alt=""
                         aria-hidden="true"
@@ -1088,7 +1328,20 @@ export function WerewolfRoomOverview({
                         src={werewolfUiAssets.timelineEventDot}
                       />
                     </span>
-                    <span className="truncate">{getEventLabel(event.type, locale)}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-black text-[#1E1718]">
+                        {event.actorName ?? t.systemActor}
+                      </span>
+                      <span className="block truncate">
+                        {getEventLabel(event.type, locale)}
+                      </span>
+                    </span>
+                    <time
+                      className="shrink-0 pt-0.5 font-mono text-[10px] font-black text-[#7A1F2B]/52"
+                      dateTime={event.createdAt}
+                    >
+                      {getEventTimeLabel(event.createdAt, locale)}
+                    </time>
                   </div>
                 ))
               ) : (

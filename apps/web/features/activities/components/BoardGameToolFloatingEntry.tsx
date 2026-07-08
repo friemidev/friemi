@@ -89,18 +89,18 @@ export function BoardGameToolFloatingEntry({
   const copy = getBoardGameToolCopy(locale);
   const tools = [
     {
-      href: avalonHref,
-      icon: "/game-tools/avalon/avalon.jpeg",
-      key: "avalon",
-      status: copy.avalonSubtitle,
-      title: copy.avalonTitle,
-    },
-    {
       href: werewolfHref,
       icon: "/game-tools/werewolf/werewolf.jpeg",
       key: "werewolf",
       status: copy.werewolfSubtitle,
       title: copy.werewolfTitle,
+    },
+    {
+      href: avalonHref,
+      icon: "/game-tools/avalon/avalon.jpeg",
+      key: "avalon",
+      status: copy.avalonSubtitle,
+      title: copy.avalonTitle,
     },
     {
       icon: "/game-tools/blood_on_the_clockTower/blood_on_the_clockTower.jpeg",
