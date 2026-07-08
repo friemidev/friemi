@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Mail, ShieldCheck } from "lucide-react";
+import { FileWarning, Mail, ShieldCheck } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 
@@ -16,6 +16,7 @@ type PrivacyCopy = {
   description: string;
   updatedAt: string;
   contactLabel: string;
+  safetyLabel: string;
   contactEmail: string;
   backHome: string;
   sections: {
@@ -32,6 +33,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       "Friemi 是面向海外中文用户的活动发现与组局工具。我们只在提供账号、活动、报名、消息、通知、安全和支持服务所需的范围内处理数据。",
     updatedAt: "最后更新：2026-07-08",
     contactLabel: "隐私与账号删除联系邮箱",
+    safetyLabel: "查看社区安全说明",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "返回首页",
     sections: [
@@ -93,6 +95,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       "Friemi helps overseas Chinese-speaking users discover activities, start group plans, and communicate around events. We process data only to provide account, event, messaging, notification, safety, analytics, and support features.",
     updatedAt: "Last updated: 2026-07-08",
     contactLabel: "Privacy and account deletion contact",
+    safetyLabel: "View Community Safety",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Back home",
     sections: [
@@ -135,6 +138,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       "Friemi aide les utilisateurs sinophones a l'etranger a decouvrir des activites, creer des sorties et communiquer autour des evenements. Nous traitons les donnees necessaires au compte, aux activites, aux messages, aux notifications, a la securite, a l'analyse et au support.",
     updatedAt: "Derniere mise a jour : 2026-07-08",
     contactLabel: "Contact confidentialite et suppression de compte",
+    safetyLabel: "Voir la securite communautaire",
     contactEmail: "friemi.dev@gmail.com",
     backHome: "Retour a l'accueil",
     sections: [
@@ -217,13 +221,22 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
           <h2 className="text-lg font-semibold text-[#1D1D1B]">
             {copy.contactLabel}
           </h2>
-          <a
-            className="mt-3 inline-flex min-w-0 items-center gap-2 rounded-full bg-[#156240] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D1D1B]"
-            href={`mailto:${copy.contactEmail}`}
-          >
-            <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 break-all">{copy.contactEmail}</span>
-          </a>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <a
+              className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[#156240] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D1D1B]"
+              href={`mailto:${copy.contactEmail}`}
+            >
+              <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 break-all">{copy.contactEmail}</span>
+            </a>
+            <Link
+              className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+              href={withLocale(locale, "/safety")}
+            >
+              <FileWarning className="h-4 w-4" aria-hidden="true" />
+              {copy.safetyLabel}
+            </Link>
+          </div>
         </section>
 
         <div className="mt-6 grid gap-4">

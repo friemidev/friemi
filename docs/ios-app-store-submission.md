@@ -11,6 +11,7 @@
 - 登录：Clerk / Google OAuth 相关域名已放入 iOS `allowNavigation`
 - 隐私政策正式页：已补 Web 页面和 App 内入口，提审前确认 `https://www.friemi.com/privacy` 或多语言隐私页可访问
 - 账号删除闭环：已补 App 内“账号与安全”入口、确认流程、服务端删除/匿名化逻辑和退出登录
+- 社区安全页：建议提审前确认 `https://www.friemi.com/safety` 或多语言安全页可访问，并在 App 内可打开
 - iOS 推送：数据库和 API schema 已预留 `platform: IOS`，但当前未看到 APNs 原生注册流程
 
 ## 1. App Store Connect 元数据草案
@@ -190,8 +191,16 @@ Friemi uses Clerk-hosted authentication pages inside the app web session. The al
 Friemi 有用户发起组局、消息、举报等 UGC 场景，审核说明建议补：
 
 ```text
-Users can create group plans and send messages. Friemi provides reporting and moderation workflows for inappropriate content or user behavior. Reported content can be reviewed by administrators, and accounts or content can be restricted when needed.
+Users can create group plans, comments, profile content, and send messages. Friemi provides in-product reporting flows for inappropriate content or behavior. Reports are reviewed by administrators in an internal moderation queue with statuses such as pending, reviewing, resolved, and dismissed. Friemi also provides public Privacy Policy and Community Safety pages that explain reporting, moderation, and account/data handling.
 ```
+
+当前代码层面的真实情况建议这样理解：
+
+- 已有用户侧举报入口：用户资料、活动详情、组局详情、评论
+- 已有管理端处理后台：`/admin/reports`
+- 已有公开说明页：隐私政策、社区安全页
+- 当前没有明确看到用户侧“拉黑 / 黑名单”独立入口，因此提审文案不要写成已有该能力
+- 提审时重点强调“举报 + 管理员人工复核 + 处理状态记录”的治理闭环
 
 ### 账号删除说明
 
@@ -230,10 +239,13 @@ Account deletion:
 Users can delete their account from Account menu > Account & Security > Delete Account. The flow asks for confirmation, signs the user out, marks the Friemi profile as deleted, removes device tokens, clears or anonymizes personal data, and deletes the Clerk user when server credentials are available.
 
 User-generated content and moderation:
-Users can create group plans, comments, messages, and reports. Friemi provides report flows for inappropriate content or behavior. Reports can be reviewed by administrators, and content or accounts can be restricted when needed.
+Users can create group plans, comments, profile content, messages, and reports. Friemi provides report flows for inappropriate content or behavior. Reports are reviewed by administrators in an internal moderation queue, with review statuses recorded as pending, reviewing, resolved, or dismissed.
 
 Privacy Policy:
 https://www.friemi.com/privacy
+
+Community Safety:
+https://www.friemi.com/safety
 ```
 
 ## 4. 隐私与权限问卷草案
