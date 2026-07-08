@@ -172,6 +172,16 @@ function getSupportedSiteName(url: URL) {
   return null;
 }
 
+function getGenericSiteName(url: URL) {
+  const hostParts = normalizeHost(url.hostname).split(".");
+
+  if (hostParts.length <= 2) {
+    return normalizeHost(url.hostname);
+  }
+
+  return hostParts.slice(-2).join(".");
+}
+
 function getLinkImportHostKey(url: URL) {
   const normalizedHost = normalizeHost(url.hostname);
 
@@ -347,6 +357,34 @@ function extractMeta(html: string) {
   return meta;
 }
 
+function extractCanonicalUrl(html: string, baseUrl: URL) {
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const attrs = getAttributes(match[0]);
+    const rel = attrs.rel?.toLowerCase() ?? "";
+
+    if (!rel.split(/\s+/).includes("canonical")) {
+      continue;
+    }
+
+    const canonicalUrl = getAbsoluteUrl(attrs.href, baseUrl);
+
+    if (canonicalUrl) {
+      return canonicalUrl;
+    }
+  }
+
+  return undefined;
+}
+
+function getPreviewSourceUrl(html: string, meta: Map<string, string>, baseUrl: URL) {
+  return (
+    getAbsoluteUrl(meta.get("og:url"), baseUrl) ??
+    getAbsoluteUrl(meta.get("twitter:url"), baseUrl) ??
+    extractCanonicalUrl(html, baseUrl) ??
+    baseUrl.toString()
+  );
+}
+
 function extractTimeDatetime(html: string) {
   const match = html.match(/<time\b[^>]*datetime=(?:"([^"]+)"|'([^']+)')/i);
 
@@ -400,6 +438,38 @@ function isEventJsonLd(value: JsonLdObject) {
       normalized.endsWith("festival")
     );
   });
+}
+
+function isArticleJsonLd(value: JsonLdObject) {
+  const type = value["@type"];
+  const typeValues = Array.isArray(type) ? type : [type];
+
+  return typeValues.some((item) => {
+    const normalized = String(item).toLowerCase();
+
+    return (
+      normalized === "article" ||
+      normalized.endsWith("article") ||
+      normalized === "newsarticle" ||
+      normalized.endsWith("newsarticle") ||
+      normalized === "blogposting" ||
+      normalized.endsWith("blogposting")
+    );
+  });
+}
+
+function isArticleLikePage(html: string, meta: Map<string, string>) {
+  const openGraphType = meta.get("og:type")?.toLowerCase() ?? "";
+
+  if (
+    openGraphType.includes("article") ||
+    meta.has("article:published_time") ||
+    meta.has("article:modified_time")
+  ) {
+    return true;
+  }
+
+  return extractJsonLdObjects(html).some(isArticleJsonLd);
 }
 
 function resolvePreviewImageUrl(value: unknown, baseUrl: URL) {
@@ -971,6 +1041,13 @@ function buildPreview(
   copy: ActivityLinkImportLocaleCopy,
 ): ActivityLinkPreview {
   const meta = extractMeta(html);
+  const previewSourceUrl = getPreviewSourceUrl(html, meta, sourceUrl);
+  const articleLikePage = isArticleLikePage(html, meta);
+  const previewSiteName =
+    meta.get("og:site_name") ||
+    meta.get("application-name") ||
+    meta.get("twitter:site")?.replace(/^@/, "") ||
+    siteName;
   const jsonLdEvent = parseJsonLdEvent(html, sourceUrl, copy);
   const title =
     jsonLdEvent.title ||
@@ -991,7 +1068,7 @@ function buildPreview(
   const startAt =
     jsonLdEvent.startAt ||
     normalizeDateInput(meta.get("event:start_time")) ||
-    extractTimeDatetime(html);
+    (articleLikePage ? undefined : extractTimeDatetime(html));
   const endAt =
     jsonLdEvent.endAt || normalizeDateInput(meta.get("event:end_time"));
   const category = mapCategory(
@@ -1006,7 +1083,7 @@ function buildPreview(
     coverImageUrl: image,
     description: buildDescription(
       stripHtml(description),
-      sourceUrl.toString(),
+      previewSourceUrl,
       copy,
     ),
     endAt,
@@ -1022,8 +1099,8 @@ function buildPreview(
 
   return {
     missingFields: getMissingFields(values),
-    siteName,
-    sourceUrl: sourceUrl.toString(),
+    siteName: previewSiteName,
+    sourceUrl: previewSourceUrl,
     values,
   };
 }
@@ -1102,12 +1179,6 @@ export async function parseActivityLink(
     throw new Error("UNSUPPORTED_URL");
   }
 
-  const siteName = getSupportedSiteName(sourceUrl);
-
-  if (!siteName) {
-    throw new Error("UNSUPPORTED_HOST");
-  }
-
   const response = await fetch(sourceUrl, {
     headers: {
       Accept:
@@ -1122,15 +1193,31 @@ export async function parseActivityLink(
     throw new Error("FETCH_FAILED");
   }
 
+  let finalSourceUrl = sourceUrl;
+
+  if (response.url) {
+    try {
+      finalSourceUrl = new URL(response.url);
+    } catch {
+      finalSourceUrl = sourceUrl;
+    }
+  }
+
+  if (finalSourceUrl.protocol !== "https:") {
+    throw new Error("UNSUPPORTED_URL");
+  }
+
+  const siteName =
+    getSupportedSiteName(finalSourceUrl) ?? getGenericSiteName(finalSourceUrl);
   const contentType = response.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {
-    if (!normalizeHost(sourceUrl.hostname).endsWith("opendata.paris.fr")) {
+    if (!normalizeHost(finalSourceUrl.hostname).endsWith("opendata.paris.fr")) {
       throw new Error("UNSUPPORTED_CONTENT");
     }
 
     return buildParisOpenDataPreview(
-      sourceUrl,
+      finalSourceUrl,
       siteName,
       await response.json(),
       copy,
@@ -1143,21 +1230,27 @@ export async function parseActivityLink(
 
   const html = (await response.text()).slice(0, maxHtmlLength);
   let siteSpecificPreview = buildSiteSpecificPreview(
-    sourceUrl,
+    finalSourceUrl,
     siteName,
     html,
     copy,
   );
 
-  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "sortiraparis.com") {
+  if (
+    siteSpecificPreview &&
+    getLinkImportHostKey(finalSourceUrl) === "sortiraparis.com"
+  ) {
     siteSpecificPreview = await enrichSortirLinkPreview(
       siteSpecificPreview,
       html,
-      sourceUrl,
+      finalSourceUrl,
     );
   }
 
-  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "paris.fr") {
+  if (
+    siteSpecificPreview &&
+    getLinkImportHostKey(finalSourceUrl) === "paris.fr"
+  ) {
     siteSpecificPreview = await enrichParisFrLinkPreview(
       siteSpecificPreview,
       html,
@@ -1165,10 +1258,13 @@ export async function parseActivityLink(
     );
   }
 
-  if (siteSpecificPreview && getLinkImportHostKey(sourceUrl) === "eventbrite.fr") {
+  if (
+    siteSpecificPreview &&
+    getLinkImportHostKey(finalSourceUrl) === "eventbrite.fr"
+  ) {
     siteSpecificPreview = await enrichEventbriteLinkPreview(
       siteSpecificPreview,
-      sourceUrl,
+      finalSourceUrl,
       copy,
     );
   }
@@ -1177,7 +1273,7 @@ export async function parseActivityLink(
     return siteSpecificPreview;
   }
 
-  return buildPreview(sourceUrl, siteName, html, copy);
+  return buildPreview(finalSourceUrl, siteName, html, copy);
 }
 
 async function enrichEventbriteLinkPreview(

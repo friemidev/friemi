@@ -773,12 +773,12 @@ const copy = {
       linkImportToggleLabel: "从活动网址导入",
       linkImportUrlLabel: "活动网址",
       linkImportPlaceholder:
-        "https://meetup.com/.../events/... 或 https://www.eventbrite.fr/e/...",
-      linkImportSupportedSitesTitle: "支持的网站",
+        "粘贴活动页面链接，Google 分享链接也可以试试",
+      linkImportSupportedSitesTitle: "解析效果更好的网站",
       linkImportSupportedSitesClose: "关闭",
       linkImportSupportedSitesAriaLabel: "查看支持的网站列表",
       linkImportSupportedSiteExamples:
-        "例如：feverup.com、meetup.com、eventbrite.fr、sortiraparis.com、playinparis.com",
+        "这些网站解析更完整；其他 HTTPS 活动页也会尝试识别标题、时间、地点和封面。",
       linkImportPreview: "解析链接",
       linkImportParsing: "解析中...",
       linkImportApply: "套用到表单",
@@ -798,7 +798,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "请输入有效的 https 链接。",
         UNSUPPORTED_HOST:
-          "暂不支持这个网站。请先使用 Paris.fr、Que Faire à Paris、Sortir à Paris、Play in Paris、Eventbrite、Billetweb 或 Meetup 链接。",
+          "暂时无法识别这个链接，请换一个活动页链接或手动填写。",
         UNSUPPORTED_CONTENT: "这个链接不是可解析的活动页面。",
         FETCH_FAILED: "链接解析失败，请稍后重试或手动填写。",
         UNAUTHORIZED: "请登录后再解析链接。",
@@ -1743,12 +1743,12 @@ const copy = {
       linkImportToggleLabel: "Import from activity URL",
       linkImportUrlLabel: "Activity URL",
       linkImportPlaceholder:
-        "https://meetup.com/.../events/... or https://www.eventbrite.fr/e/...",
-      linkImportSupportedSitesTitle: "Supported websites",
+        "Paste an activity page URL. Google share links can work too.",
+      linkImportSupportedSitesTitle: "Best parsed websites",
       linkImportSupportedSitesClose: "Close",
       linkImportSupportedSitesAriaLabel: "View supported websites",
       linkImportSupportedSiteExamples:
-        "Examples: feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
+        "These sites parse best. Other HTTPS activity pages will still be scanned for title, time, place, and cover.",
       linkImportPreview: "Preview link",
       linkImportParsing: "Parsing...",
       linkImportApply: "Apply to form",
@@ -1769,7 +1769,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Enter a valid https link.",
         UNSUPPORTED_HOST:
-          "This website is not supported yet. Use Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb, or Meetup.",
+          "This link could not be recognized. Try another activity page or fill the form manually.",
         UNSUPPORTED_CONTENT: "This link is not a parsable activity page.",
         FETCH_FAILED:
           "Failed to parse the link. Try again later or fill the form manually.",
@@ -2752,12 +2752,12 @@ const copy = {
       linkImportToggleLabel: "Importer depuis une URL d'activité",
       linkImportUrlLabel: "URL de l'activité",
       linkImportPlaceholder:
-        "https://meetup.com/.../events/... ou https://www.eventbrite.fr/e/...",
-      linkImportSupportedSitesTitle: "Sites pris en charge",
+        "Collez l'URL d'une page d'activité. Les liens Google partagés peuvent aussi fonctionner.",
+      linkImportSupportedSitesTitle: "Sites les mieux analysés",
       linkImportSupportedSitesClose: "Fermer",
       linkImportSupportedSitesAriaLabel: "Voir les sites pris en charge",
       linkImportSupportedSiteExamples:
-        "Ex. : feverup.com, meetup.com, eventbrite.fr, sortiraparis.com, playinparis.com",
+        "Ces sites donnent les meilleurs résultats. Les autres pages HTTPS seront aussi analysées pour le titre, l'horaire, le lieu et l'image.",
       linkImportPreview: "Analyser le lien",
       linkImportParsing: "Analyse...",
       linkImportApply: "Appliquer au formulaire",
@@ -2778,7 +2778,7 @@ const copy = {
       linkImportErrors: {
         INVALID_URL: "Saisissez un lien https valide.",
         UNSUPPORTED_HOST:
-          "Ce site n'est pas encore pris en charge. Utilisez Paris.fr, Que Faire à Paris, Sortir à Paris, Play in Paris, Eventbrite, Billetweb ou Meetup.",
+          "Ce lien n'a pas pu être reconnu. Essayez une autre page d'activité ou remplissez le formulaire manuellement.",
         UNSUPPORTED_CONTENT:
           "Ce lien n'est pas une page d'activité analysable.",
         FETCH_FAILED:

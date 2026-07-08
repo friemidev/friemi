@@ -1037,16 +1037,14 @@ function LobbyPagination({
   onPageChange,
   page,
   scrollTargetId,
-  totalItems,
+  totalPages,
 }: {
   locale: string;
   onPageChange: (page: number) => void;
   page: number;
   scrollTargetId: string;
-  totalItems: number;
+  totalPages: number;
 }) {
-  const totalPages = getLobbyTotalPages(totalItems);
-
   return (
     <PaginationControl
       currentPage={page}
@@ -1725,7 +1723,7 @@ export function ActivityLobbyPreviewView({
                   onPageChange={setPage}
                   page={page}
                   scrollTargetId="lobby-preview-results"
-                  totalItems={dedupedActivities.length}
+                  totalPages={totalPages}
                 />
               </>
             ) : null}
@@ -2018,37 +2016,33 @@ export function ActivityLobbyView({
       ),
     [activeCategoryActivities, activeStatusFilter],
   );
-  const activeFeedPageSize = activeAllFeedSummary?.pageSize || LOBBY_PAGE_SIZE;
-  const activeFeedStatusCount =
-    activeFilter === "all"
-      ? activeAllFeedSummary
-        ? getLobbyFeedStatusCount(activeAllFeedSummary, activeStatusFilter)
-        : null
-      : clientVisibleActivities.length;
-  const activeFeedTotalItems =
-    activeFeedStatusCount ??
-    (activeFilter === "all"
-      ? (
-          feedCache[
-            getLobbyFeedCacheKey(activeStatusFilter, page, activeTypeFilter)
-          ]?.activities ??
-          activeAllFeedSummary?.activities ??
-          []
-        ).length
-      : clientVisibleActivities.length);
-  const activeFeedTotalPages =
-    activeFilter === "all" && activeAllFeedSummary?.countsApproximate
-      ? activeAllFeedSummary.totalPages
-      : getLobbyTotalPages(
-          activeFeedTotalItems,
-          activeFilter === "all" ? activeFeedPageSize : LOBBY_PAGE_SIZE,
-        );
   const activeFeedKey = getLobbyFeedCacheKey(
     activeStatusFilter,
     page,
     activeTypeFilter,
   );
   const activeFeed = activeFilter === "all" ? feedCache[activeFeedKey] : null;
+  const activeFeedPageSize =
+    activeFeed?.pageSize || activeAllFeedSummary?.pageSize || LOBBY_PAGE_SIZE;
+  const activeFeedSummaryForCounts = activeFeed ?? activeAllFeedSummary;
+  const activeFeedStatusCount =
+    activeFilter === "all"
+      ? activeFeedSummaryForCounts
+        ? getLobbyFeedStatusCount(
+            activeFeedSummaryForCounts,
+            activeStatusFilter,
+          )
+        : null
+      : clientVisibleActivities.length;
+  const activeFeedTotalItems =
+    activeFilter === "all"
+      ? (activeFeedStatusCount ?? activeFeedSummaryForCounts?.totalCount ?? 0)
+      : clientVisibleActivities.length;
+  const activeFeedTotalPages =
+    activeFilter === "all"
+      ? (activeFeedSummaryForCounts?.totalPages ??
+        getLobbyTotalPages(activeFeedTotalItems, activeFeedPageSize))
+      : getLobbyTotalPages(activeFeedTotalItems, LOBBY_PAGE_SIZE);
   const activeFeedFailed = Boolean(failedFeedKeys[activeFeedKey]);
   const activeFeedNeedsLoad =
     activeFilter === "all" &&
@@ -3097,7 +3091,7 @@ export function ActivityLobbyView({
               onPageChange={setPage}
               page={page}
               scrollTargetId="lobby-results"
-              totalItems={activeFeedTotalItems}
+              totalPages={totalPages}
             />
           </section>
 
