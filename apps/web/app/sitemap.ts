@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import type { ActivityStatus } from "@prisma/client";
 import { locales } from "@chill-club/shared";
 import { versionUpdates } from "@/features/updates/versionUpdates";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { prisma } from "@/lib/prisma";
 import { buildCanonicalSiteUrl } from "@/lib/site-url";
 
@@ -132,7 +133,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     createLocalizedEntries({
       changeFrequency: "daily",
       lastModified: activity.updatedAt,
-      path: `/activities/${activity.id}`,
+      path: getActivityDetailPath(activity.id),
       priority: 0.82,
     }),
   );

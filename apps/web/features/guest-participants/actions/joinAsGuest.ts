@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 import {
@@ -385,7 +386,7 @@ export async function joinActivityAsGuestAction(
     queueAnalyticsEvent({
       locale: normalizeAnalyticsLocale(result.data.locale),
       name: "join_submitted",
-      route: `/${result.data.locale}/activities/${joinResult.activityId}`,
+      route: `/${result.data.locale}${getActivityDetailPath(joinResult.activityId)}`,
       entityId: joinResult.activityId,
       entityType: "team",
       sourceSurface: "activity_detail",

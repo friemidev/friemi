@@ -16,6 +16,7 @@ import {
 import { Button } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -258,7 +259,7 @@ function ActivitySignalRow({
           ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
           : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
-      href={withLocale(locale, `/activities/${activity.id}`)}
+      href={withLocale(locale, getActivityDetailPath(activity.id))}
       detailSource={{
         sourceKey: "messages",
         targetKey: `activity:${activity.id}`,
@@ -453,7 +454,7 @@ function ActivityContextCard({
         </div>
         <ContextualDetailLink
           className="shrink-0 rounded-full bg-[#FEFFF9] px-3 py-1.5 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={withLocale(locale, `/activities/${activityContext.id}`)}
+          href={withLocale(locale, getActivityDetailPath(activityContext.id))}
           detailSource={{
             sourceKey: "messages",
             targetKey: `activity:${activityContext.id}`,

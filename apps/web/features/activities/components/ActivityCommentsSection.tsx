@@ -3,6 +3,7 @@ import { MessageCircleQuestion, UserRound } from "lucide-react";
 import { getCopy } from "@/lib/copy";
 import { getSignInHref } from "@/lib/auth-redirect";
 import type { ActivityCommentViewModel } from "../types";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 import { ActivityCommentForm } from "./ActivityCommentForm";
 import { ActivityCommentThread } from "./ActivityCommentThread";
 
@@ -53,7 +54,10 @@ export function ActivityCommentsSection({
             </p>
             <Link
               className="mt-3 inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#8AB68E] bg-white px-4 text-sm font-medium text-[#156240] transition hover:bg-[#FEFFF9]"
-              href={getSignInHref(locale, `/activities/${activityId}#comments`)}
+              href={getSignInHref(
+                locale,
+                `${getActivityDetailPath(activityId)}#comments`,
+              )}
             >
               {t.signInTitle}
             </Link>

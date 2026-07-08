@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
@@ -224,7 +225,7 @@ export async function openActivityOrganizerConversationAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   let conversationId: string;
 
@@ -241,7 +242,7 @@ export async function openActivityOrganizerConversationAction(
       {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: "organizer_contact_clicked",
-        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        route: `/${result.data.locale}${getActivityDetailPath(result.data.activityId)}`,
         entityId: result.data.activityId,
         entityType: "team",
         sourceSurface: "activity_detail",
@@ -260,7 +261,7 @@ export async function openActivityOrganizerConversationAction(
   } catch (error) {
     console.error("Failed to open activity organizer conversation", error);
     redirect(
-      withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+      withLocale(result.data.locale, getActivityDetailPath(result.data.activityId)),
     );
   }
 
@@ -301,7 +302,7 @@ export async function openActivityOrganizerConversationFormAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   let conversationId: string;
 
@@ -318,7 +319,7 @@ export async function openActivityOrganizerConversationFormAction(
       {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: "organizer_contact_clicked",
-        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        route: `/${result.data.locale}${getActivityDetailPath(result.data.activityId)}`,
         entityId: result.data.activityId,
         entityType: "team",
         sourceSurface: "activity_detail",
@@ -375,7 +376,7 @@ export async function openActivityParticipantConversationAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   let conversationId: string;
 
@@ -391,7 +392,7 @@ export async function openActivityParticipantConversationAction(
       {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: "organizer_contact_clicked",
-        route: `/${result.data.locale}/activities/${result.data.activityId}`,
+        route: `/${result.data.locale}${getActivityDetailPath(result.data.activityId)}`,
         entityId: result.data.activityId,
         entityType: "team",
         sourceSurface: "activity_detail",
@@ -413,7 +414,7 @@ export async function openActivityParticipantConversationAction(
   } catch (error) {
     console.error("Failed to open activity participant conversation", error);
     redirect(
-      withLocale(result.data.locale, `/activities/${result.data.activityId}`),
+      withLocale(result.data.locale, getActivityDetailPath(result.data.activityId)),
     );
   }
 

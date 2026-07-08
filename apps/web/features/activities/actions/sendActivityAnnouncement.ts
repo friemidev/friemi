@@ -7,6 +7,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 export type SendActivityAnnouncementState = {
   ok?: boolean;
@@ -102,7 +103,7 @@ export async function sendActivityAnnouncementAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      `/activities/${result.data.activityId}`,
+      getActivityDetailPath(result.data.activityId),
     );
 
     const activity = await prisma.activity.findFirst({
@@ -170,7 +171,9 @@ export async function sendActivityAnnouncementAction(
       );
     });
 
-    revalidatePath(withLocale(result.data.locale, `/activities/${activity.id}`));
+    revalidatePath(
+      withLocale(result.data.locale, getActivityDetailPath(activity.id)),
+    );
     revalidatePath(withLocale(result.data.locale, "/notifications"));
 
     return {

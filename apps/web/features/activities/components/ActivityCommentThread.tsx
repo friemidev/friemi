@@ -22,6 +22,7 @@ import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
 } from "../types";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 type ActivityCommentThreadProps = {
   activityId: string;
@@ -446,7 +447,7 @@ function ReplyItem({
   const canReport =
     !reply.isDeleted &&
     (!isAuthenticated || viewerProfileId !== reply.author.id);
-  const redirectPath = `/activities/${activityId}`;
+  const redirectPath = getActivityDetailPath(activityId);
 
   return (
     <div className="flex gap-2 py-3">
@@ -539,7 +540,7 @@ export function ActivityCommentThread({
   const canReport =
     !comment.isDeleted &&
     (!isAuthenticated || viewerProfileId !== comment.author.id);
-  const redirectPath = `/activities/${activityId}`;
+  const redirectPath = getActivityDetailPath(activityId);
 
   return (
     <article className="py-4 first:pt-0 last:pb-0">

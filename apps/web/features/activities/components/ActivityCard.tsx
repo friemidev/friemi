@@ -28,6 +28,7 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 import type { ActivityCardViewModel } from "../types";
 import {
   getActivityDateLabel,
@@ -557,7 +558,7 @@ export function ActivityCard({
     : `/activities/${activity.id}/teams/new`;
   const cardHref = isActivityInfo
     ? withLocale(locale, activityInfoHref)
-    : withLocale(locale, `/activities/${activity.id}`);
+    : withLocale(locale, getActivityDetailPath(activity.id));
   const actionHref = isOwnActivity
     ? cardHref
     : isActivityInfo &&
@@ -1102,7 +1103,7 @@ export function ActivityCard({
                   detailHref={cardHref}
                   isAuthenticated={isAuthenticated}
                   locale={locale}
-                  redirectPath={`/activities/${activity.id}`}
+                  redirectPath={getActivityDetailPath(activity.id)}
                   variant="single"
                 />
               ) : (
@@ -1158,7 +1159,7 @@ export function ActivityCard({
                   detailHref={cardHref}
                   isAuthenticated={isAuthenticated}
                   locale={locale}
-                  redirectPath={`/activities/${activity.id}`}
+                  redirectPath={getActivityDetailPath(activity.id)}
                   secondaryHref={copyActivityHref}
                   secondaryLabel={getCopyTeamButtonLabel(locale)}
                   variant="split"

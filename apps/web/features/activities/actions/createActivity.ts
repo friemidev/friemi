@@ -27,6 +27,7 @@ import { normalizeActivitySourceUrl } from "@/lib/activity-dedupe";
 import type { ActivityStatus } from "@prisma/client";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -499,5 +500,5 @@ export async function createActivityAction(
   revalidatePath(withLocale(locale, "/"));
   revalidatePath(withLocale(locale, "/"), "layout");
 
-  redirect(withLocale(locale, `/activities/${activityId}`));
+  redirect(withLocale(locale, getActivityDetailPath(activityId)));
 }

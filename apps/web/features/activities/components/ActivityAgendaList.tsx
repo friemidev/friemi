@@ -37,6 +37,7 @@ import {
   getActivityLocationLabel,
   getActivityTimeState,
 } from "../utils/activityDisplay";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 type ActivityAgendaListProps = {
   activities: ActivityCardViewModel[];
@@ -75,7 +76,7 @@ function getAgendaActivityHref(
     return withLocale(locale, `/public-events/${activity.publicEventId}`);
   }
 
-  return withLocale(locale, `/activities/${activity.id}`);
+  return withLocale(locale, getActivityDetailPath(activity.id));
 }
 
 function getGroupTitle(

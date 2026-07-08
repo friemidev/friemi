@@ -17,6 +17,7 @@ import {
   IncomingFriendRequestsPanel,
   RequestCountBadge,
 } from "@/features/friends/components/FriendsDashboard";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -355,7 +356,7 @@ function DesktopActivitySignalRow({
           ? "bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E] hover:bg-white hover:text-ink"
           : "bg-team-bg text-[#156240] ring-1 ring-sand hover:bg-white hover:text-ink",
       )}
-      href={withLocale(locale, `/activities/${activity.id}`)}
+      href={withLocale(locale, getActivityDetailPath(activity.id))}
       title={label}
     >
       <CalendarDays

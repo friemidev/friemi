@@ -13,6 +13,7 @@ import {
   getActivityDisplayStatus,
   getActivityLocationLabel,
 } from "@/features/activities/utils/activityDisplay";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import type { ProfileParticipationViewModel } from "../queries/getProfileDashboard";
 
 type ProfileParticipationCardProps = {
@@ -51,7 +52,7 @@ export function ProfileParticipationCard({
 
   return (
     <ContextualDetailLink
-      href={withLocale(locale, `/activities/${activity.id}`)}
+      href={withLocale(locale, getActivityDetailPath(activity.id))}
       detailSource={{
         sourceKey: "profile",
         sourceState: detailSourceState ?? {

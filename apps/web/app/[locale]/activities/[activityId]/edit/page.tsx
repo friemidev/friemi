@@ -6,6 +6,7 @@ import { getEditableActivityById } from "@/features/activities/queries/getEditab
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 type EditActivityPageProps = {
   params: Promise<{
@@ -71,7 +72,7 @@ export default async function EditActivityPage({
         activityId={editableActivity.activityId}
         cancelHref={withLocale(
           locale,
-          `/activities/${editableActivity.activityId}`,
+          getActivityDetailPath(editableActivity.activityId),
         )}
         initialValues={editableActivity.values}
         locale={locale}
