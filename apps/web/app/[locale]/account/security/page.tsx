@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Mail, ShieldCheck, UserRound } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountDeletionEntryCard } from "@/features/account/components/AccountDeletionEntryCard";
+import { AccountContactBindingsSection } from "@/features/account/components/AccountContactBindingsSection";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
@@ -18,13 +19,14 @@ const accountSecurityCopy = {
     eyebrow: "账号与安全",
     title: "管理你的 Friemi 账号",
     description:
-      "查看账号标识、隐私入口，并在需要时从 App 内发起账号删除。",
+      "查看账号标识、联系方式绑定、隐私入口，并在需要时从 App 内发起账号删除。",
     profileTitle: "当前账号",
     loginEmail: "登录邮箱",
     contactEmail: "联系邮箱",
     friendCode: "好友号",
     missing: "暂未填写",
     privacyLink: "查看隐私政策",
+    safetyLink: "查看社区安全说明",
     supportTitle: "需要帮助？",
     supportBody:
       "如果你对账号删除、数据保留或隐私政策有疑问，可以通过邮箱联系我们。",
@@ -52,13 +54,14 @@ const accountSecurityCopy = {
     eyebrow: "Account & Security",
     title: "Manage your Friemi account",
     description:
-      "Review account identifiers, privacy links, and initiate account deletion from inside the app when needed.",
+      "Review account identifiers, contact bindings, privacy links, and initiate account deletion from inside the app when needed.",
     profileTitle: "Current account",
     loginEmail: "Login email",
     contactEmail: "Contact email",
     friendCode: "Friend code",
     missing: "Not set",
     privacyLink: "View Privacy Policy",
+    safetyLink: "View Community Safety",
     supportTitle: "Need help?",
     supportBody:
       "Contact us by email if you have questions about account deletion, data retention, or the privacy policy.",
@@ -87,13 +90,14 @@ const accountSecurityCopy = {
     eyebrow: "Compte et securite",
     title: "Gerer votre compte Friemi",
     description:
-      "Consultez les informations du compte, les liens de confidentialite et lancez la suppression du compte depuis l'app si besoin.",
+      "Consultez les informations du compte, les coordonnees liees, les liens de confidentialite et lancez la suppression du compte depuis l'app si besoin.",
     profileTitle: "Compte actuel",
     loginEmail: "E-mail de connexion",
     contactEmail: "E-mail de contact",
     friendCode: "Code ami",
     missing: "Non renseigne",
     privacyLink: "Voir la politique de confidentialite",
+    safetyLink: "Voir la securite communautaire",
     supportTitle: "Besoin d'aide ?",
     supportBody:
       "Contactez-nous par e-mail pour toute question sur la suppression du compte, la conservation des donnees ou la politique de confidentialite.",
@@ -174,13 +178,29 @@ export default async function AccountSecurityPage({
           />
           <AccountField label={copy.friendCode} value={profile.friendCode} />
         </dl>
-        <Link
-          className="mt-5 inline-flex rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
-          href={withLocale(locale, "/privacy")}
-        >
-          {copy.privacyLink}
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            className="inline-flex rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+            href={withLocale(locale, "/privacy")}
+          >
+            {copy.privacyLink}
+          </Link>
+          <Link
+            className="inline-flex rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-4 py-2 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-white"
+            href={withLocale(locale, "/safety")}
+          >
+            {copy.safetyLink}
+          </Link>
+        </div>
       </section>
+
+      <AccountContactBindingsSection
+        initialContactEmail={profile.contactEmail}
+        initialPhone={profile.phone}
+        initialWechatId={profile.wechatId}
+        loginEmail={profile.email}
+        locale={locale}
+      />
 
       <section className="rounded-2xl border border-[#D6D5B2] bg-white p-5 shadow-[0_18px_48px_rgba(21,98,64,0.05)] sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">

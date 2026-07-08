@@ -10,7 +10,6 @@ import {
   Building2,
   Check,
   Copy,
-  FileText,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -57,12 +56,6 @@ type AndroidPushTokenPayload = {
   deviceId?: string;
   fcmToken?: string;
   ok?: boolean;
-};
-
-const accountMenuPrivacyCopy: Record<string, string> = {
-  "zh-CN": "隐私政策",
-  en: "Privacy Policy",
-  fr: "Politique de confidentialite",
 };
 
 const accountMenuSecurityCopy: Record<string, string> = {
@@ -166,7 +159,6 @@ export function AccountMenu({
   const profileHref = withLocale(locale, "/profile");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
-  const privacyHref = withLocale(locale, "/privacy");
   const accountSecurityHref = withLocale(locale, "/account/security");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
@@ -397,12 +389,6 @@ export function AccountMenu({
               badgeCount={liveIncomingFriendRequests.length}
               onClick={openAddFriendDialog}
             />
-            <ContactBindingsMenuButton
-              active={hasContactBindings}
-              badgeCount={contactBindingCount}
-              label={profileCopy.contactBindingsTitle}
-              onClick={openContactDialog}
-            />
             <MenuLink
               href={messagesHref}
               icon={MessageCircle}
@@ -473,16 +459,6 @@ export function AccountMenu({
                 accountMenuSecurityCopy["zh-CN"]
               }
               active={pathname === accountSecurityHref}
-              onClick={closeMenu}
-            />
-            <MenuLink
-              href={privacyHref}
-              icon={FileText}
-              label={
-                accountMenuPrivacyCopy[locale] ??
-                accountMenuPrivacyCopy["zh-CN"]
-              }
-              active={pathname === privacyHref}
               onClick={closeMenu}
             />
             <button
@@ -634,49 +610,6 @@ function MenuButton({
             </span>
           ) : null}
         </span>
-      </span>
-    </button>
-  );
-}
-
-function ContactBindingsMenuButton({
-  active,
-  badgeCount,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  badgeCount: number;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="relative flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
-    >
-      <span
-        className={cn(
-          "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-          active
-            ? "bg-[#FEFFF9] text-[#156240] ring-1 ring-[#8AB68E]"
-            : "bg-zinc-100 ring-1 ring-zinc-200",
-        )}
-        aria-hidden="true"
-      >
-        <ShieldCheck
-          className={cn("h-3.5 w-3.5", !active && "text-zinc-400")}
-        />
-      </span>
-      <span className="flex min-w-0 items-center gap-2">
-        <span className="truncate font-medium">{label}</span>
-        {badgeCount > 0 ? (
-          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#156240] px-1.5 text-[11px] font-semibold text-white">
-            {badgeCount}
-          </span>
-        ) : null}
       </span>
     </button>
   );

@@ -39,6 +39,12 @@ function getPrivacyLabel(locale: string) {
   return "隐私政策";
 }
 
+function getSafetyLabel(locale: string) {
+  if (locale === "en") return "Community Safety";
+  if (locale === "fr") return "Securite communautaire";
+  return "社区安全";
+}
+
 export default async function SignInPage({
   params,
   searchParams,
@@ -98,11 +104,19 @@ export default async function SignInPage({
 
 function PrivacyLink({ locale }: { locale: string }) {
   return (
-    <Link
-      className="text-sm font-medium text-zinc-500 underline underline-offset-4 transition hover:text-[#156240]"
-      href={withLocale(locale, "/privacy")}
-    >
-      {getPrivacyLabel(locale)}
-    </Link>
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium text-zinc-500">
+      <Link
+        className="underline underline-offset-4 transition hover:text-[#156240]"
+        href={withLocale(locale, "/privacy")}
+      >
+        {getPrivacyLabel(locale)}
+      </Link>
+      <Link
+        className="underline underline-offset-4 transition hover:text-[#156240]"
+        href={withLocale(locale, "/safety")}
+      >
+        {getSafetyLabel(locale)}
+      </Link>
+    </div>
   );
 }

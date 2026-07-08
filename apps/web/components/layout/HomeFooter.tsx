@@ -16,6 +16,7 @@ const footerCopy = {
     versionLabel: "版本号",
     updatesLabel: "更新公告",
     privacyLabel: "隐私政策",
+    safetyLabel: "社区安全",
     copyright: `© 2026 ${brand.name}`,
   },
   en: {
@@ -25,6 +26,7 @@ const footerCopy = {
     versionLabel: "Version",
     updatesLabel: "Release notes",
     privacyLabel: "Privacy Policy",
+    safetyLabel: "Community Safety",
     copyright: `© 2026 ${brand.name}`,
   },
   fr: {
@@ -35,6 +37,7 @@ const footerCopy = {
     versionLabel: "Version",
     updatesLabel: "Notes de version",
     privacyLabel: "Politique de confidentialite",
+    safetyLabel: "Securite communautaire",
     copyright: `© 2026 ${brand.name}`,
   },
 } as const;
@@ -78,12 +81,20 @@ export function HomeFooter({ locale }: HomeFooterProps) {
                 />
                 <span className="min-w-0 break-all">{t.contactEmail}</span>
               </a>
-              <Link
-                className="inline-flex text-sm font-semibold text-white/65 underline underline-offset-4 transition hover:text-white"
-                href={withLocale(locale, "/privacy")}
-              >
-                {t.privacyLabel}
-              </Link>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <Link
+                  className="inline-flex text-sm font-semibold text-white/65 underline underline-offset-4 transition hover:text-white"
+                  href={withLocale(locale, "/privacy")}
+                >
+                  {t.privacyLabel}
+                </Link>
+                <Link
+                  className="inline-flex text-sm font-semibold text-white/65 underline underline-offset-4 transition hover:text-white"
+                  href={withLocale(locale, "/safety")}
+                >
+                  {t.safetyLabel}
+                </Link>
+              </div>
             </div>
           </div>
 
