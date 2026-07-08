@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRoom";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
@@ -121,6 +122,11 @@ export default async function WerewolfRoomPage({
 
   return (
     <PageContainer className="max-w-[94rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
+      <AvalonLiveRefresh
+        enabled={room.status !== "FINISHED"}
+        locale={locale}
+        showIndicator={false}
+      />
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}

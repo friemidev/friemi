@@ -4,11 +4,9 @@ import { useActionState } from "react";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  Bot,
   CheckCircle2,
   FastForward,
   HeartPulse,
-  Skull,
   Trophy,
   UsersRound,
 } from "lucide-react";
@@ -16,6 +14,7 @@ import {
   runWerewolfTestBotAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
+import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
 
 type WerewolfTestBotPanelProps = {
   locale: string;
@@ -164,29 +163,59 @@ export function WerewolfTestBotPanel({
       <div className="flex items-start justify-between gap-3">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-[#F0C36A] px-2.5 py-1 text-[11px] font-black text-[#1E1718]">
-            <Bot className="h-3.5 w-3.5" />
+            <img
+              alt=""
+              aria-hidden="true"
+              className="h-4 w-4"
+              draggable={false}
+              src={werewolfUiAssets.testOnlyBadge}
+            />
             {t.title}
           </span>
           <p className="mt-2 text-xs font-bold text-white/58">{t.help}</p>
         </div>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/12 bg-white/8 text-[#F0C36A]">
-          <FastForward className="h-5 w-5" />
+        <span className="grid h-12 w-12 shrink-0 place-items-center">
+          <img
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full"
+            draggable={false}
+            src={werewolfUiAssets.testOnlyBadge}
+          />
         </span>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-[0.9rem] bg-white/8 px-3 py-2">
-          <UsersRound className="h-4 w-4 text-[#F0C36A]" />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5"
+            draggable={false}
+            src={werewolfUiAssets.seatPlayerOccupied}
+          />
           <p className="mt-1 text-sm font-black">
             {claimedSeats}/{room.variant.totalSeats}
           </p>
         </div>
         <div className="rounded-[0.9rem] bg-white/8 px-3 py-2">
-          <CheckCircle2 className="h-4 w-4 text-[#8AB68E]" />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5"
+            draggable={false}
+            src={werewolfUiAssets.seatPlayerReady}
+          />
           <p className="mt-1 text-sm font-black">{readySeats}</p>
         </div>
         <div className="rounded-[0.9rem] bg-white/8 px-3 py-2">
-          <Skull className="h-4 w-4 text-[#F09182]" />
+          <img
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5"
+            draggable={false}
+            src={werewolfUiAssets.seatPlayerDead}
+          />
           <p className="mt-1 text-sm font-black">
             {deadSeats}/{playerSeats.length}
           </p>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
 
 type WerewolfQrCodeProps = {
   label: string;
@@ -48,7 +49,14 @@ export function WerewolfQrCode({ label, value }: WerewolfQrCodeProps) {
         </span>
         <p className="text-xs font-black text-[#7A1F2B]">{label}</p>
       </div>
-      <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-white p-2 shadow-sm">
+      <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-white p-3 shadow-sm">
+        <img
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          draggable={false}
+          src={werewolfUiAssets.qrCornerFrame}
+        />
         {dataUrl ? (
           <Image
             alt={label}

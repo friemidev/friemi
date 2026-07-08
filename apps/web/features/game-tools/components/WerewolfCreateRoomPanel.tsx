@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   ArrowRight,
-  Lock,
   Moon,
   Shield,
   Sparkles,
@@ -23,6 +23,8 @@ import {
   type WerewolfRoleKey,
   type WerewolfVariant,
 } from "@/features/game-tools/werewolfConfig";
+import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
+import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
   locale: string;
@@ -32,12 +34,11 @@ type Copy = {
   boundary: string;
   chips: string[];
   create: string;
-  disabled: string;
-  enabled: string;
   eyebrow: string;
   helper: string;
   judge: string;
   players: string;
+  preview: string;
   title: string;
   titleLabel: string;
   titlePlaceholder: string;
@@ -49,12 +50,11 @@ const copies: Record<string, Copy> = {
     boundary: "手机发身份、记生死和结算，桌上照常发言、投票、走夜晚。",
     chips: ["扫码入座", "私密身份", "法官记生死"],
     create: "开一局",
-    disabled: "稍后开放",
-    enabled: "可开局",
     eyebrow: "狼人杀",
     helper: "选版型，朋友扫码入座。",
     judge: "含 1 位法官",
     players: "席",
+    preview: "卡牌预览",
     title: "今晚开狼人杀",
     titleLabel: "这局叫什么",
     titlePlaceholder: "今晚的狼人杀",
@@ -65,12 +65,11 @@ const copies: Record<string, Copy> = {
       "Use phones for seats, private roles, deaths, and results. Keep speeches, votes, and night calls at the table.",
     chips: ["Scan seats", "Private roles", "Judge notes"],
     create: "Start a table",
-    disabled: "Later",
-    enabled: "Ready",
     eyebrow: "Werewolf",
     helper: "Pick a setup. Friends scan in.",
     judge: "includes 1 judge",
     players: "Seats",
+    preview: "Card preview",
     title: "Start tonight's Werewolf table",
     titleLabel: "Table name",
     titlePlaceholder: "Tonight's Werewolf",
@@ -81,12 +80,11 @@ const copies: Record<string, Copy> = {
       "Le téléphone garde les places, rôles, morts et résultats. La parole, les votes et la nuit restent autour de la table.",
     chips: ["Places par QR", "Rôles privés", "Notes du maître"],
     create: "Ouvrir la table",
-    disabled: "Plus tard",
-    enabled: "Prêt",
     eyebrow: "Loups-garous",
     helper: "Choisissez une configuration. Les amis scannent.",
     judge: "inclut 1 maître",
     players: "Places",
+    preview: "Aperçu cartes",
     title: "Lancez la table Loups-garous de ce soir",
     titleLabel: "Nom de table",
     titlePlaceholder: "Loups-garous de ce soir",
@@ -126,7 +124,7 @@ function RoleMixBadges({
         };
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
+    <div className="mt-2 flex flex-nowrap items-center gap-1.5 overflow-hidden">
       <RoleMixPill label={labels.wolves} tone="wolf" value={mix.wolves} />
       <RoleMixPill label={labels.specials} tone="power" value={mix.specials} />
       <RoleMixPill label={labels.villagers} tone="villager" value={mix.villagers} />
@@ -138,11 +136,11 @@ function VariantSeatDots({ variant }: { variant: WerewolfVariant }) {
   return (
     <div
       aria-hidden="true"
-      className="mt-3 grid grid-cols-6 gap-1.5 sm:grid-cols-8"
+      className="mt-2 flex flex-wrap gap-1.5"
     >
       {variant.roles.map((role, index) => (
         <span
-          className={`h-2.5 rounded-full ${
+          className={`h-2 w-3.5 rounded-full sm:h-2.5 sm:w-5 ${
             role === "werewolf"
               ? "bg-[#7A1F2B]"
               : role === "villager"
@@ -152,7 +150,7 @@ function VariantSeatDots({ variant }: { variant: WerewolfVariant }) {
           key={`${role}-${index}`}
         />
       ))}
-      <span className="h-2.5 rounded-full bg-[#1E1718]" />
+      <span className="h-2 w-3.5 rounded-full bg-[#1E1718] sm:h-2.5 sm:w-5" />
     </div>
   );
 }
@@ -170,7 +168,7 @@ function RoleMixPill({
 
   return (
     <span
-      className={`inline-flex h-7 items-center gap-1 rounded-full px-2 text-[11px] font-black ${
+      className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-black leading-none sm:h-7 ${
         tone === "wolf"
           ? "bg-[#7A1F2B] text-white"
           : tone === "power"
@@ -178,7 +176,7 @@ function RoleMixPill({
             : "bg-[#F4ECE6] text-[#1E1718]/72"
       }`}
     >
-      <Icon className="h-3 w-3" />
+      <Icon className="h-3 w-3 shrink-0" />
       {label}
       <span className="font-mono">{value}</span>
     </span>
@@ -246,6 +244,19 @@ export function WerewolfCreateRoomPanel({
                   {chip}
                 </span>
               ))}
+              <Link
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-[#1E1718] shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition hover:bg-[#F4ECE6]"
+                href={withLocale(locale, "/game-tools/werewolf/card-preview")}
+              >
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  draggable={false}
+                  src={werewolfUiAssets.actionRevealCard}
+                />
+                {t.preview}
+              </Link>
             </div>
           </div>
         </div>
@@ -271,21 +282,27 @@ export function WerewolfCreateRoomPanel({
             />
           </label>
 
-          <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-4">
+          <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-black text-[#1E1718]">
                 {t.variants}
               </h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F4ECE6] px-2.5 py-1 text-xs font-black text-[#7A1F2B]">
-                <UsersRound className="h-3.5 w-3.5" />
-                {t.judge}
+              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-[#F4ECE6] px-2.5 py-1 text-[11px] font-black text-[#7A1F2B] sm:text-xs">
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0"
+                  draggable={false}
+                  src={werewolfUiAssets.seatJudge}
+                />
+                <span className="truncate">{t.judge}</span>
               </span>
             </div>
 
             <div className="mt-3 grid gap-2">
               {werewolfVariants.map((variant) => (
                 <label
-                  className={`flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border px-3 py-2 transition ${
+                  className={`grid min-h-14 cursor-pointer grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-2 rounded-2xl border px-2.5 py-2.5 transition sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-3 sm:px-3 ${
                     selectedVariantKey === variant.key
                       ? "border-[#7A1F2B] bg-[#FFF7F1] shadow-[0_10px_22px_rgba(122,31,43,0.08)]"
                       : "border-[#D9C7B4] bg-[#F7F3EC] text-[#1E1718]/70 hover:bg-[#FFFDF7]"
@@ -301,7 +318,19 @@ export function WerewolfCreateRoomPanel({
                     type="radio"
                     value={variant.key}
                   />
-                  <div>
+                  <span className="relative mt-0.5 grid h-9 w-9 shrink-0 place-items-center sm:h-12 sm:w-12">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full"
+                      draggable={false}
+                      src={werewolfUiAssets.seatPlayerOccupied}
+                    />
+                    <span className="relative text-xs font-black text-white sm:text-sm">
+                      {variant.roles.length}
+                    </span>
+                  </span>
+                  <div className="min-w-0">
                     <p className="text-sm font-black text-[#1E1718]">
                       {getWerewolfVariantLabel(locale, variant)}
                     </p>
@@ -313,16 +342,6 @@ export function WerewolfCreateRoomPanel({
                     <VariantSeatDots variant={variant} />
                     <RoleMixBadges locale={locale} variant={variant} />
                   </div>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black ${
-                      variant.enabled
-                        ? "bg-[#7A1F2B] text-white"
-                        : "bg-white text-[#1E1718]/52"
-                    }`}
-                  >
-                    {!variant.enabled ? <Lock className="h-3 w-3" /> : null}
-                    {variant.enabled ? t.enabled : t.disabled}
-                  </span>
                 </label>
               ))}
             </div>

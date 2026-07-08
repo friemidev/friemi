@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
+import { MobileChromeFullscreenOverride } from "@/features/game-tools/components/MobileChromeFullscreenOverride";
 import { WerewolfPrivateSeatCard } from "@/features/game-tools/components/WerewolfPrivateSeatCard";
 import {
   getWerewolfVariant,
@@ -94,52 +95,64 @@ export default async function WerewolfSeatPage({
         Boolean(roomSeat.profileId || roomSeat.guestName) &&
         Boolean(roomSeat.readyAt),
     );
+  const showPlayerFullScreenCard =
+    seat.room.status === "IN_PROGRESS" && !isCurrentSeatJudge;
 
   return (
-    <PageContainer className="max-w-3xl pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <WerewolfPrivateSeatCard
-        allReady={allReady}
-        isJudgeSeat={isCurrentSeatJudge}
-        isDead={deadSeatSet.has(seat.seatNumber)}
-        isReady={Boolean(seat.readyAt)}
-        locale={locale}
-        payload={parsePrivatePayload({
-          roleKey: seat.roleKey as WerewolfRoleKey | null,
-          value: seat.privatePayload,
-        })}
-        privateToken={seat.privateToken}
-        roleKey={seat.roleKey as WerewolfRoleKey | null}
-        roleAlignment={seat.roleAlignment}
-        roomUpdatedAt={seat.room.updatedAt.toISOString()}
-        roomHref={withLocale(
-          locale,
-          `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
-        )}
-        roomState={roomState}
-        roomStatus={seat.room.status}
-        seatDisplayName={seat.displayName}
-        seatNumber={seat.seatNumber}
-        seats={seat.room.seats.map((roomSeat) => ({
-          displayName: roomSeat.displayName,
-          isDead: deadSeatSet.has(roomSeat.seatNumber),
-          isJudgeSeat: isWerewolfJudgeSeat(roomSeat.seatNumber, variant),
-          isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),
-          readyAt: roomSeat.readyAt?.toISOString() ?? null,
-          roleKey: isCurrentSeatJudge
-            ? (roomSeat.roleKey as WerewolfRoleKey | null)
-            : null,
-          roleLabel: isCurrentSeatJudge
-            ? getWerewolfRoleLabel(locale, roomSeat.roleKey)
-            : null,
-          seatNumber: roomSeat.seatNumber,
-        }))}
-        variantLabel={getWerewolfVariantLabel(locale, variant)}
-      />
-      <AvalonLiveRefresh
-        enabled={seat.room.status !== "FINISHED"}
-        intervalMs={3500}
-        locale={locale}
-      />
-    </PageContainer>
+    <>
+      <MobileChromeFullscreenOverride enabled={showPlayerFullScreenCard} />
+      <PageContainer
+        className={
+          showPlayerFullScreenCard
+            ? "werewolf-seat-mobile-fullscreen !max-w-none !px-0 !py-0 max-md:!fixed max-md:!inset-0 max-md:!m-0 max-md:!h-[100svh] max-md:!w-screen max-md:!overflow-hidden max-md:!bg-[#090A0C] md:px-4 md:pb-6 md:pt-4"
+            : "max-w-3xl pb-28 pt-4 sm:pb-12 sm:pt-7"
+        }
+      >
+        <WerewolfPrivateSeatCard
+          allReady={allReady}
+          isJudgeSeat={isCurrentSeatJudge}
+          isDead={deadSeatSet.has(seat.seatNumber)}
+          isReady={Boolean(seat.readyAt)}
+          locale={locale}
+          payload={parsePrivatePayload({
+            roleKey: seat.roleKey as WerewolfRoleKey | null,
+            value: seat.privatePayload,
+          })}
+          privateToken={seat.privateToken}
+          roleKey={seat.roleKey as WerewolfRoleKey | null}
+          roleAlignment={seat.roleAlignment}
+          roomUpdatedAt={seat.room.updatedAt.toISOString()}
+          roomHref={withLocale(
+            locale,
+            `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
+          )}
+          roomState={roomState}
+          roomStatus={seat.room.status}
+          seatDisplayName={seat.displayName}
+          seatNumber={seat.seatNumber}
+          seats={seat.room.seats.map((roomSeat) => ({
+            displayName: roomSeat.displayName,
+            isDead: deadSeatSet.has(roomSeat.seatNumber),
+            isJudgeSeat: isWerewolfJudgeSeat(roomSeat.seatNumber, variant),
+            isPlayerSeat: isWerewolfPlayerSeat(roomSeat.seatNumber, variant),
+            readyAt: roomSeat.readyAt?.toISOString() ?? null,
+            roleKey: isCurrentSeatJudge
+              ? (roomSeat.roleKey as WerewolfRoleKey | null)
+              : null,
+            roleLabel: isCurrentSeatJudge
+              ? getWerewolfRoleLabel(locale, roomSeat.roleKey)
+              : null,
+            seatNumber: roomSeat.seatNumber,
+          }))}
+          variantLabel={getWerewolfVariantLabel(locale, variant)}
+        />
+        <AvalonLiveRefresh
+          enabled={seat.room.status !== "FINISHED"}
+          intervalMs={3500}
+          locale={locale}
+          showIndicator={!showPlayerFullScreenCard}
+        />
+      </PageContainer>
+    </>
   );
 }

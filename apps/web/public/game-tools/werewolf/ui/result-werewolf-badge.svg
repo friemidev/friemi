@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="werewolf team result">
+  <defs>
+    <linearGradient id="wolf" x1="22" x2="106" y1="14" y2="114" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F2528"/>
+      <stop offset=".52" stop-color="#7A1F2B"/>
+      <stop offset="1" stop-color="#1E1718"/>
+    </linearGradient>
+    <filter id="shadow" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1E1718" flood-opacity=".26"/>
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="50" fill="url(#wolf)" filter="url(#shadow)"/>
+  <path d="M72 25a38 38 0 1 0 0 78 31 31 0 1 1 0-78z" fill="#F0C36A"/>
+  <path d="M39 84l9-36 10 28 8-34 8 34 10-28 9 36" fill="none" stroke="#FFFDF7" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+</svg>

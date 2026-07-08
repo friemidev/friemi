@@ -1,8 +1,11 @@
 "use client";
 
-import { Crown, HeartPulse, Moon, Skull, UsersRound } from "lucide-react";
+import { Crown, Moon, UsersRound } from "lucide-react";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
-import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
+import {
+  getWerewolfRoleCardImage,
+  werewolfUiAssets,
+} from "@/features/game-tools/werewolfCardAssets";
 import type { WerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 import { cn } from "@/lib/utils";
 
@@ -279,8 +282,25 @@ export function WerewolfPublicScreen({
                     />
                   </span>
                 ) : (
-                  <span className="grid h-14 w-14 place-items-center rounded-full bg-[#1E1718] text-lg font-black text-white">
-                    {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                  <span className="relative grid h-16 w-16 place-items-center text-lg font-black">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full"
+                      draggable={false}
+                      src={
+                        seat.isClaimed
+                          ? seat.isDead
+                            ? werewolfUiAssets.seatPlayerDead
+                            : seat.readyAt || room.status !== "LOBBY"
+                              ? werewolfUiAssets.seatPlayerReady
+                              : werewolfUiAssets.seatPlayerOccupied
+                          : werewolfUiAssets.seatPlayerEmpty
+                      }
+                    />
+                    <span className="relative grid h-10 w-10 place-items-center rounded-full bg-[#1E1718] text-sm text-white shadow-sm">
+                      {seat.isClaimed ? seat.avatarLabel : seat.seatNumber}
+                    </span>
                   </span>
                 )}
                 <span className="line-clamp-1 max-w-full text-sm font-black text-[#1E1718]">
@@ -300,9 +320,21 @@ export function WerewolfPublicScreen({
                     )}
                   >
                     {seat.isDead ? (
-                      <Skull className="h-3 w-3" />
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        draggable={false}
+                        src={werewolfUiAssets.seatPlayerDead}
+                      />
                     ) : (
-                      <HeartPulse className="h-3 w-3" />
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                        draggable={false}
+                        src={werewolfUiAssets.seatPlayerReady}
+                      />
                     )}
                     {seat.isDead ? t.dead : room.status === "LOBBY" ? seat.readyAt ? t.ready : t.unready : t.alive}
                   </span>
@@ -345,8 +377,17 @@ export function WerewolfPublicScreen({
                   className="flex items-center justify-between gap-3 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-black text-[#7A1F2B]"
                   key={event.id}
                 >
-                  <span className="truncate">
-                    {getEventLabel(event.type, locale)}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="h-5 w-5 shrink-0"
+                      draggable={false}
+                      src={werewolfUiAssets.timelineEventDot}
+                    />
+                    <span className="truncate">
+                      {getEventLabel(event.type, locale)}
+                    </span>
                   </span>
                   <span>{formatTime(locale, event.createdAt)}</span>
                 </div>
@@ -368,6 +409,13 @@ function PublicStat({
   tone?: "alive" | "dead" | "neutral";
   value: number | string;
 }) {
+  const iconSrc =
+    tone === "alive"
+      ? werewolfUiAssets.seatPlayerReady
+      : tone === "dead"
+        ? werewolfUiAssets.seatPlayerDead
+        : werewolfUiAssets.seatPlayerOccupied;
+
   return (
     <div
       className={cn(
@@ -376,9 +424,16 @@ function PublicStat({
           ? "border-[#8AB68E]"
           : tone === "dead"
             ? "border-[#7A1F2B]"
-            : "border-[#D9C7B4]",
+          : "border-[#D9C7B4]",
       )}
     >
+      <img
+        alt=""
+        aria-hidden="true"
+        className="mb-1 h-6 w-6"
+        draggable={false}
+        src={iconSrc}
+      />
       <p className="text-2xl font-black leading-none text-[#1E1718]">{value}</p>
       <p className="mt-1 text-[0.66rem] font-black uppercase tracking-[0.08em] text-[#7A1F2B]/70">
         {label}

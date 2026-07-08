@@ -9,6 +9,7 @@ type AvalonLiveRefreshProps = {
   enabled: boolean;
   intervalMs?: number;
   locale?: string;
+  showIndicator?: boolean;
   variant?: "floating" | "inline";
 };
 
@@ -16,6 +17,7 @@ export function AvalonLiveRefresh({
   enabled,
   intervalMs = 3200,
   locale = "zh-CN",
+  showIndicator = true,
   variant = "floating",
 }: AvalonLiveRefreshProps) {
   const router = useRouter();
@@ -82,7 +84,7 @@ export function AvalonLiveRefresh({
     };
   }, [enabled, intervalMs, refresh]);
 
-  if (!enabled) {
+  if (!enabled || !showIndicator) {
     return null;
   }
 

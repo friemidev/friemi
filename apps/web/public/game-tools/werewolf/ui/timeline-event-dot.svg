@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="timeline event">
+  <defs>
+    <linearGradient id="dot" x1="12" x2="52" y1="10" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF7"/>
+      <stop offset=".55" stop-color="#F0C36A"/>
+      <stop offset="1" stop-color="#7A1F2B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="23" fill="#1E1718"/>
+  <circle cx="32" cy="32" r="14" fill="url(#dot)"/>
+  <path d="M32 6v10M32 48v10M6 32h10M48 32h10" stroke="#D9C7B4" stroke-linecap="round" stroke-width="4"/>
+</svg>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
@@ -22,11 +23,16 @@ import {
   claimWerewolfSeatAction,
   joinWerewolfRoomAction,
   leaveWerewolfSeatAction,
+  startWerewolfRoomAction,
+  updateWerewolfReadyAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
-import { getWerewolfRoleCardImage } from "@/features/game-tools/werewolfCardAssets";
+import {
+  getWerewolfRoleCardImage,
+  werewolfUiAssets,
+} from "@/features/game-tools/werewolfCardAssets";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
@@ -122,11 +128,12 @@ function getCopy(locale: string) {
       locked: "La partie a commencé.",
       members: "À placer",
       noMembers: "Personne en attente.",
-      openSeat: "Ma place",
+      openSeat: "Voir rôle",
       playerSeats: "Places",
       playerUnit: "joueurs",
       publicScreen: "Écran public",
       ready: "Prêt",
+      readyAction: "Prêt",
       alive: "Vivant",
       recap: "Récap",
       running: "En cours",
@@ -134,8 +141,12 @@ function getCopy(locale: string) {
       selectSeat: "Choisir",
       scanJoin: "Scanner pour entrer",
       share: "Invitation",
+      start: "Distribuer",
+      startConfirm: "Distribuer les rôles et verrouiller les places ?",
+      startWaiting: "Attendez que toute la table soit prête.",
       status: "Statut",
       unready: "Pas prêt",
+      unreadyAction: "Annuler",
       waitingMember: "Entrez un nom, puis choisissez une place.",
       winnerGood: "Village gagnant",
       winnerWerewolf: "Loups gagnants",
@@ -166,11 +177,12 @@ function getCopy(locale: string) {
       locked: "The game has started.",
       members: "Waiting to sit",
       noMembers: "No one is waiting.",
-      openSeat: "My seat",
+      openSeat: "View role",
       playerSeats: "Player seats",
       playerUnit: "players",
       publicScreen: "Public screen",
       ready: "Ready",
+      readyAction: "Ready",
       alive: "Alive",
       recap: "Recap",
       running: "In progress",
@@ -178,8 +190,12 @@ function getCopy(locale: string) {
       selectSeat: "Choose",
       scanJoin: "Scan to join",
       share: "Invite link",
+      start: "Deal roles",
+      startConfirm: "Deal roles and lock seats?",
+      startWaiting: "Wait until the full table is ready.",
       status: "Status",
       unready: "Not ready",
+      unreadyAction: "Cancel",
       waitingMember: "Enter a name, then choose a seat.",
       winnerGood: "Good team wins",
       winnerWerewolf: "Werewolf team wins",
@@ -208,11 +224,12 @@ function getCopy(locale: string) {
     locked: "本局已经开始。",
     members: "待入座",
     noMembers: "没人等座。",
-    openSeat: "身份页",
+    openSeat: "查看身份",
     playerSeats: "座位",
     playerUnit: "玩家",
     publicScreen: "公共屏",
     ready: "已准备",
+    readyAction: "准备",
     alive: "存活",
     recap: "复盘",
     running: "游戏中",
@@ -220,8 +237,12 @@ function getCopy(locale: string) {
     selectSeat: "入座",
     scanJoin: "扫码进入房间",
     share: "邀请链接",
+    start: "发身份",
+    startConfirm: "发身份后座位会锁定，确定开局？",
+    startWaiting: "等所有人准备。",
     status: "进度",
     unready: "未准备",
+    unreadyAction: "取消准备",
     waitingMember: "取个昵称入房。",
     winnerGood: "好人阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
@@ -384,6 +405,7 @@ export function WerewolfRoomOverview({
   room,
   testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
+  const router = useRouter();
   const [joinState, joinAction] = useActionState(
     joinWerewolfRoomAction,
     initialState,
@@ -394,6 +416,14 @@ export function WerewolfRoomOverview({
   );
   const [leaveState, leaveAction] = useActionState(
     leaveWerewolfSeatAction,
+    initialState,
+  );
+  const [readyState, readyAction] = useActionState(
+    updateWerewolfReadyAction,
+    initialState,
+  );
+  const [startState, startAction] = useActionState(
+    startWerewolfRoomAction,
     initialState,
   );
   const t = getCopy(locale);
@@ -415,6 +445,9 @@ export function WerewolfRoomOverview({
   const unseatedMembers = room.members.filter(
     (member) => !member.seatedSeatNumber,
   );
+  const allSeatsReady =
+    room.seats.length === room.variant.totalSeats &&
+    room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
   const currentMemberToken = room.currentMember?.memberToken ?? "";
   const canChooseSeat = Boolean(room.currentMember) && isLobby;
   const winnerLabel =
@@ -424,6 +457,34 @@ export function WerewolfRoomOverview({
         ? t.winnerWerewolf
         : null;
   const statusLabel = getRoomStatusLabel({ room, t });
+  const currentSeatPrivateToken = room.currentMember?.seatedPrivateToken;
+  const startEventId =
+    room.events.find((event) => event.type === "werewolf_room_started")?.id ??
+    "current";
+
+  useEffect(() => {
+    if (room.status !== "IN_PROGRESS" || !currentSeatPrivateToken) {
+      return;
+    }
+
+    const storageKey = `friemi:werewolf:started-redirect:${room.id}:${startEventId}`;
+
+    if (window.sessionStorage.getItem(storageKey)) {
+      return;
+    }
+
+    window.sessionStorage.setItem(storageKey, "1");
+    router.replace(
+      withLocale(locale, `/game-tools/werewolf/seats/${currentSeatPrivateToken}`),
+    );
+  }, [
+    currentSeatPrivateToken,
+    locale,
+    room.id,
+    room.status,
+    router,
+    startEventId,
+  ]);
 
   return (
     <div className="space-y-5">
@@ -554,8 +615,15 @@ export function WerewolfRoomOverview({
                         {seat.seatNumber}
                       </span>
                       <span className="grid place-items-center gap-1.5">
-                        <span className="grid h-12 w-12 place-items-center rounded-full border border-[#D9C7B4] bg-white text-[#7A1F2B] transition group-hover:scale-105 group-hover:bg-[#7A1F2B] group-hover:text-white">
-                          <Plus className="h-5 w-5" />
+                        <span className="relative grid h-14 w-14 place-items-center transition group-hover:scale-105">
+                          <img
+                            alt=""
+                            aria-hidden="true"
+                            className="absolute inset-0 h-full w-full"
+                            draggable={false}
+                            src={werewolfUiAssets.seatPlayerEmpty}
+                          />
+                          <Plus className="relative h-5 w-5 text-[#7A1F2B]" />
                         </span>
                         <span className="text-sm font-black text-[#1E1718]">
                           {emptySeatActionLabel}
@@ -594,6 +662,19 @@ export function WerewolfRoomOverview({
                               : "bg-[#F4ECE6] text-[#7A1F2B]"
                         }`}
                       >
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-4 w-4 shrink-0"
+                          draggable={false}
+                          src={
+                            seat.isDead
+                              ? werewolfUiAssets.seatPlayerDead
+                              : seat.readyAt || room.status !== "LOBBY"
+                                ? werewolfUiAssets.seatPlayerReady
+                                : werewolfUiAssets.seatPlayerOccupied
+                          }
+                        />
                         {seat.isDead ? (
                           <Skull className="h-3 w-3" />
                         ) : seat.isClaimed && room.status !== "LOBBY" ? (
@@ -620,16 +701,29 @@ export function WerewolfRoomOverview({
                       </span>
                     ) : (
                       <span
-                        className={`grid h-12 w-12 place-items-center rounded-full text-base font-black ${
-                          seat.isClaimed
-                            ? "bg-[#1E1718] text-white"
-                            : "border border-dashed border-[#D9C7B4] bg-white text-[#7A1F2B]/42"
-                        }`}
+                        className="relative grid h-14 w-14 place-items-center text-base font-black"
                       >
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 h-full w-full"
+                          draggable={false}
+                          src={
+                            seat.isClaimed
+                              ? seat.isDead
+                                ? werewolfUiAssets.seatPlayerDead
+                                : seat.readyAt || room.status !== "LOBBY"
+                                  ? werewolfUiAssets.seatPlayerReady
+                                  : werewolfUiAssets.seatPlayerOccupied
+                              : werewolfUiAssets.seatPlayerEmpty
+                          }
+                        />
                         {seat.isClaimed ? (
-                          seat.avatarLabel
+                          <span className="relative grid h-9 w-9 place-items-center rounded-full bg-[#1E1718] text-xs text-white shadow-sm">
+                            {seat.avatarLabel}
+                          </span>
                         ) : (
-                          <Plus className="h-5 w-5" />
+                          <Plus className="relative h-5 w-5 text-[#7A1F2B]" />
                         )}
                       </span>
                     )}
@@ -645,30 +739,56 @@ export function WerewolfRoomOverview({
 
                   {isCurrentSeat && seat.privateToken ? (
                     <div className="mt-3 grid gap-1.5">
-                      <Link
-                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
-                        href={withLocale(
-                          locale,
-                          `/game-tools/werewolf/seats/${seat.privateToken}`,
-                        )}
-                      >
-                        <Ticket className="h-3.5 w-3.5" />
-                        {t.openSeat}
-                      </Link>
                       {isLobby ? (
-                        <form action={leaveAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="privateToken"
-                            type="hidden"
-                            value={seat.privateToken}
-                          />
-                          <SubmitButton
-                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-white px-3 text-xs font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
-                            label={t.leaveSeat}
-                          />
-                        </form>
-                      ) : null}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <form action={readyAction}>
+                            <input name="locale" type="hidden" value={locale} />
+                            <input
+                              name="privateToken"
+                              type="hidden"
+                              value={seat.privateToken}
+                            />
+                            <input
+                              name="operation"
+                              type="hidden"
+                              value={seat.readyAt ? "unready" : "ready"}
+                            />
+                            <SubmitButton
+                              className={`inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
+                                seat.readyAt
+                                  ? "border border-[#D9C7B4] bg-white text-[#7A1F2B] hover:bg-[#FFF7F1]"
+                                  : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
+                              }`}
+                              label={
+                                seat.readyAt ? t.unreadyAction : t.readyAction
+                              }
+                            />
+                          </form>
+                          <form action={leaveAction}>
+                            <input name="locale" type="hidden" value={locale} />
+                            <input
+                              name="privateToken"
+                              type="hidden"
+                              value={seat.privateToken}
+                            />
+                            <SubmitButton
+                              className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-white px-3 text-xs font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
+                              label={t.leaveSeat}
+                            />
+                          </form>
+                        </div>
+                      ) : (
+                        <Link
+                          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
+                          href={withLocale(
+                            locale,
+                            `/game-tools/werewolf/seats/${seat.privateToken}`,
+                          )}
+                        >
+                          <Ticket className="h-3.5 w-3.5" />
+                          {t.openSeat}
+                        </Link>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -709,8 +829,17 @@ export function WerewolfRoomOverview({
               {t.judge}
             </span>
             <div className="mt-4 grid min-h-36 place-items-center rounded-[1rem] border border-white/12 bg-white/8 p-3 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-sm font-black text-[#1E1718]">
-                {judgeSeat?.seatNumber ?? "J"}
+              <span className="relative grid h-16 w-16 place-items-center">
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full"
+                  draggable={false}
+                  src={werewolfUiAssets.seatJudge}
+                />
+                <span className="relative rounded-full bg-white/90 px-2 py-1 text-sm font-black text-[#1E1718] shadow-sm">
+                  {judgeSeat?.seatNumber ?? "J"}
+                </span>
               </span>
               <p className="mt-2 text-sm font-black">
                 {judgeSeat?.isClaimed ? judgeSeat.displayName : t.empty}
@@ -752,30 +881,86 @@ export function WerewolfRoomOverview({
               ) : null}
               {judgeSeat?.isViewerSeat && judgeSeat.privateToken ? (
                 <div className="mt-3 grid w-full gap-1.5">
-                  <Link
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F4ECE6]"
-                    href={withLocale(
-                      locale,
-                      `/game-tools/werewolf/seats/${judgeSeat.privateToken}`,
-                    )}
-                  >
-                    <Ticket className="h-3.5 w-3.5" />
-                    {t.openSeat}
-                  </Link>
                   {isLobby ? (
-                    <form action={leaveAction}>
-                      <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={judgeSeat.privateToken}
-                      />
-                      <SubmitButton
-                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-xs font-black text-white transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.leaveSeat}
-                      />
-                    </form>
-                  ) : null}
+                    <>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <form action={readyAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input
+                            name="privateToken"
+                            type="hidden"
+                            value={judgeSeat.privateToken}
+                          />
+                          <input
+                            name="operation"
+                            type="hidden"
+                            value={judgeSeat.readyAt ? "unready" : "ready"}
+                          />
+                          <SubmitButton
+                            className={`inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
+                              judgeSeat.readyAt
+                                ? "border border-white/20 bg-white/10 text-white hover:bg-white/16"
+                                : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
+                            }`}
+                            label={
+                              judgeSeat.readyAt
+                                ? t.unreadyAction
+                                : t.readyAction
+                            }
+                          />
+                        </form>
+                        <form action={leaveAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input
+                            name="privateToken"
+                            type="hidden"
+                            value={judgeSeat.privateToken}
+                          />
+                          <SubmitButton
+                            className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-xs font-black text-white transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-55"
+                            label={t.leaveSeat}
+                          />
+                        </form>
+                      </div>
+                      <form
+                        action={startAction}
+                        className="grid gap-1.5"
+                        onSubmit={(event) => {
+                          if (!window.confirm(t.startConfirm)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <input name="locale" type="hidden" value={locale} />
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={judgeSeat.privateToken}
+                        />
+                        <SubmitButton
+                          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#F0C36A] px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F8D581] disabled:cursor-not-allowed disabled:opacity-45"
+                          disabled={!allSeatsReady}
+                          label={t.start}
+                        />
+                        {!allSeatsReady ? (
+                          <p className="text-[11px] font-bold text-white/58">
+                            {t.startWaiting}
+                          </p>
+                        ) : null}
+                      </form>
+                    </>
+                  ) : (
+                    <Link
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F4ECE6]"
+                      href={withLocale(
+                        locale,
+                        `/game-tools/werewolf/seats/${judgeSeat.privateToken}`,
+                      )}
+                    >
+                      <Ticket className="h-3.5 w-3.5" />
+                      {t.openSeat}
+                    </Link>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -870,6 +1055,16 @@ export function WerewolfRoomOverview({
                 {leaveState.formError}
               </p>
             ) : null}
+            {readyState.formError ? (
+              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {readyState.formError}
+              </p>
+            ) : null}
+            {startState.formError ? (
+              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {startState.formError}
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
@@ -884,8 +1079,14 @@ export function WerewolfRoomOverview({
                     className="flex items-center gap-2 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-bold text-[#7A1F2B]"
                     key={event.id}
                   >
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-[#7A1F2B]">
-                      <UserPlus className="h-3.5 w-3.5" />
+                    <span className="grid h-6 w-6 shrink-0 place-items-center">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-full w-full"
+                        draggable={false}
+                        src={werewolfUiAssets.timelineEventDot}
+                      />
                     </span>
                     <span className="truncate">{getEventLabel(event.type, locale)}</span>
                   </div>
