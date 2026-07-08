@@ -87,6 +87,7 @@ import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWea
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -707,6 +708,22 @@ export async function ActivityDetailPageContent({
     }
 
     redirect(withLocale(locale, `/public-events/${publicEventId}`));
+  }
+
+  if (viewerProfile?.id) {
+    await prisma.notification.updateMany({
+      where: {
+        activityId: activity.id,
+        readAt: null,
+        recipientId: viewerProfile.id,
+        type: {
+          in: ["ACTIVITY_COMMENTED", "COMMENT_REPLY"],
+        },
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
   }
 
   const weatherInput = getActivityWeatherWidgetInput(activity);

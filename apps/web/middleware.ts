@@ -41,6 +41,7 @@ const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
 const isTranslationsApiRoute = createRouteMatcher(["/api/translations(.*)"]);
+const isMobileApiRoute = createRouteMatcher(["/api/mobile(.*)"]);
 
 function getLocaleFromPath(pathname: string) {
   const locale = pathname.split("/").filter(Boolean)[0];
@@ -164,6 +165,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isMobileApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   return intlMiddleware(request);
 });
 
@@ -182,5 +187,6 @@ export const config = {
     "/api/analytics/:path*",
     "/api/search/:path*",
     "/api/translations/:path*",
+    "/api/mobile/:path*",
   ],
 };

@@ -12,6 +12,7 @@ import {
 import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { prisma } from "@/lib/prisma";
 
 type MessageThreadPageProps = {
   params: Promise<{
@@ -72,6 +73,18 @@ export default async function MessageThreadPage({
   if (!conversationResult.conversation) {
     notFound();
   }
+
+  await prisma.notification.updateMany({
+    where: {
+      actorId: conversationResult.conversation.peer.id,
+      readAt: null,
+      recipientId: profile.id,
+      type: "DIRECT_MESSAGE",
+    },
+    data: {
+      readAt: new Date(),
+    },
+  });
 
   const activityContext = activityId
     ? await getDirectConversationActivityContext({

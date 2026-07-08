@@ -7,12 +7,12 @@
 - App Bundle ID：`com.friemi.app`
 - App 名称：`Friemi`
 - 当前 iOS 壳：Capacitor WebView，线上入口为 `https://www.friemi.com/zh-CN/mobile-home`
-- 当前 iOS 原生权限：未在 `Info.plist` 声明相机、定位、相册、推送权限
+- 当前 iOS 原生权限：未声明相机、定位、相册权限；推送改为运行时请求并通过 `App.entitlements` 启用 APNs capability
 - 登录：Clerk / Google OAuth 相关域名已放入 iOS `allowNavigation`
 - 隐私政策正式页：已补 Web 页面和 App 内入口，提审前确认 `https://www.friemi.com/privacy` 或多语言隐私页可访问
 - 账号删除闭环：已补 App 内“账号与安全”入口、确认流程、服务端删除/匿名化逻辑和退出登录
 - 社区安全页：建议提审前确认 `https://www.friemi.com/safety` 或多语言安全页可访问，并在 App 内可打开
-- iOS 推送：数据库和 API schema 已预留 `platform: IOS`，但当前未看到 APNs 原生注册流程
+- iOS 推送：已补 Capacitor Push Notifications、iOS 原生 APNs 注册回调、设备注册 API 对接和服务端 APNs 发送器；提交前仍需 Apple Push Key、Xcode Signing & Capabilities 和真机联调
 
 ## 1. App Store Connect 元数据草案
 
@@ -286,8 +286,8 @@ https://www.friemi.com/safety
 
 ### 推送 token
 
-- 当前 Android 已有 FCM 逻辑，iOS 数据结构已预留 `IOS`
-- iOS 只有 APNs 注册上线后才在问卷中按实际收集声明
+- 当前 Android 使用 FCM，iOS 使用 APNs token；现阶段都复用 `mobile_devices.fcmToken` 字段存储设备 token
+- iOS 现已接入 APNs 注册，问卷里应按“已收集”填写
 - 用途：活动更新、报名审核、好友请求、消息提醒
 
 ### 分析埋点
@@ -351,8 +351,63 @@ https://www.friemi.com/safety
 
 ### E. iOS 推送和系统能力
 
-- 若首版不上 iOS 推送：不要申请推送权限，不要在截图或描述里承诺系统推送
-- 若首版上 iOS 推送：补 APNs 注册、权限请求时机、后端 token 保存、取消注册逻辑、Review Notes
+- 已完成的代码侧内容：
+  - 安装 `@capacitor/push-notifications`
+  - iOS AppDelegate 补 APNs 注册成功/失败回调
+  - `App.entitlements` 启用 `aps-environment`
+  - Web 端 `IOSAppBridge` 请求权限、注册 token、点击通知后回到 App 内路径
+  - token 接入 `/api/mobile/devices/register` 与 `/api/mobile/devices/unregister`
+  - 后端发送器同时支持 Android FCM 与 iOS APNs
+- 提交前必须手动完成：
+  - Apple Developer 后台创建 Push Notifications Key
+  - 配置环境变量：`APPLE_PUSH_TEAM_ID`、`APPLE_PUSH_KEY_ID`、`APPLE_PUSH_BUNDLE_ID`、`APPLE_PUSH_PRIVATE_KEY`
+  - 按环境设置 `APPLE_PUSH_USE_SANDBOX=true|false`
+  - Xcode `Signing & Capabilities` 中确认 Push Notifications 已开启
+  - 真机安装后首次允许通知权限，并验证 token 已写入 `mobile_devices`
+  - 用真实通知事件验证锁屏提醒、前台提醒、点按跳转
+
+### F. iOS 推送联调步骤
+
+开发真机联调：
+
+1. 在 `apps/web` 启动本地服务，确保手机可访问你的局域网地址。
+2. 执行：
+
+```bash
+cd apps/web
+FRIEMI_IOS_SERVER_URL=http://你的局域网IP:3000/zh-CN/mobile-home npx cap sync ios
+```
+
+3. 用 Xcode 打开 `apps/ios/App/App.xcworkspace`
+4. `Signing & Capabilities` 确认 Team、Bundle ID、Push Notifications
+5. 运行到真机，第一次弹通知权限时点允许
+6. 登录 Friemi 账号，检查服务端 `mobile_devices` 是否出现 `platform = IOS` 的设备记录
+7. 触发一条站内通知，确认手机收到系统推送，并且点开后能回到对应页面
+
+提审/TestFlight 构建前：
+
+```bash
+cd apps/web
+npx cap sync ios
+```
+
+不要带本地 `FRIEMI_IOS_SERVER_URL`，否则打出来的包会继续指向你电脑上的开发地址。
+
+后端环境变量示例：
+
+```bash
+APPLE_PUSH_TEAM_ID=YOUR_TEAM_ID
+APPLE_PUSH_KEY_ID=YOUR_KEY_ID
+APPLE_PUSH_BUNDLE_ID=com.friemi.app
+APPLE_PUSH_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+APPLE_PUSH_USE_SANDBOX=true
+```
+
+说明：
+
+- `APPLE_PUSH_PRIVATE_KEY` 使用 Apple Push Notifications Key (`.p8`) 内容
+- 本地开发和 Debug 真机通常先用 `APPLE_PUSH_USE_SANDBOX=true`
+- TestFlight / App Store 构建切到生产环境后，改为 `APPLE_PUSH_USE_SANDBOX=false`
 
 ## 6. 建议 Jira 拆分
 
@@ -372,6 +427,7 @@ https://www.friemi.com/safety
 - App 内能找到隐私政策和删除账号入口
 - 审核账号可登录，验证码/密码可用
 - 登录后能访问首页、组队大厅、活动详情、消息、通知
+- iPhone 真机允许通知后，能够收到至少一条 APNs 提醒
 - 若有 UGC，举报入口和后台处理路径可说明
 - App Privacy 与实际数据收集一致
 - 截图来自 iOS 构建且不含调试信息
