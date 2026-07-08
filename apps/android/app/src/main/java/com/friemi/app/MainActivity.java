@@ -122,6 +122,9 @@ public final class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         configureWindow();
+        if (webView != null) {
+            webView.post(() -> injectAndroidAppContext(false));
+        }
         maybeResumePendingAuthBrowser();
     }
 
@@ -792,10 +795,105 @@ public final class MainActivity extends Activity {
             payload.put("baseUrl", getBaseUrl());
             payload.put("locale", resolveLocale(null));
             payload.put("pushSupported", true);
+            payload.put("safeArea", getSafeAreaJson());
         } catch (JSONException ignored) {
             return "{}";
         }
         return payload.toString();
+    }
+
+    private JSONObject getSafeAreaJson() throws JSONException {
+        JSONObject safeArea = new JSONObject();
+        int statusBarHeightPx = getSystemInsetTopPx();
+        int navigationBarHeightPx = getSystemInsetBottomPx();
+        int topOverlapPx = getWebViewTopOverlapPx(statusBarHeightPx);
+        int bottomOverlapPx = getWebViewBottomOverlapPx(navigationBarHeightPx);
+
+        safeArea.put("statusBarHeight", pxToCssPx(statusBarHeightPx));
+        safeArea.put("navigationBarHeight", pxToCssPx(navigationBarHeightPx));
+        safeArea.put("top", pxToCssPx(topOverlapPx));
+        safeArea.put("bottom", pxToCssPx(bottomOverlapPx));
+
+        return safeArea;
+    }
+
+    private int getSystemInsetTopPx() {
+        android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
+        if (insets != null && insets.getSystemWindowInsetTop() > 0) {
+            return insets.getSystemWindowInsetTop();
+        }
+        return getSystemDimensionPx("status_bar_height");
+    }
+
+    private int getSystemInsetBottomPx() {
+        android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
+        if (insets != null && insets.getSystemWindowInsetBottom() > 0) {
+            return insets.getSystemWindowInsetBottom();
+        }
+        return getSystemDimensionPx("navigation_bar_height");
+    }
+
+    private int getSystemDimensionPx(String name) {
+        int resourceId = getResources().getIdentifier(name, "dimen", "android");
+        if (resourceId <= 0) {
+            return 0;
+        }
+        return getResources().getDimensionPixelSize(resourceId);
+    }
+
+    private int getWebViewTopOverlapPx(int statusBarHeightPx) {
+        if (webView == null || statusBarHeightPx <= 0) {
+            return 0;
+        }
+        int[] location = new int[2];
+        webView.getLocationOnScreen(location);
+        return Math.max(0, statusBarHeightPx - Math.max(0, location[1]));
+    }
+
+    private int getWebViewBottomOverlapPx(int navigationBarHeightPx) {
+        if (webView == null || navigationBarHeightPx <= 0) {
+            return 0;
+        }
+        int[] location = new int[2];
+        webView.getLocationOnScreen(location);
+        int webViewBottomPx = location[1] + webView.getHeight();
+        int screenHeightPx = getResources().getDisplayMetrics().heightPixels;
+        int freeBottomPx = Math.max(0, screenHeightPx - webViewBottomPx);
+
+        return Math.max(0, navigationBarHeightPx - freeBottomPx);
+    }
+
+    private int pxToCssPx(int physicalPx) {
+        if (physicalPx <= 0) {
+            return 0;
+        }
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(physicalPx / Math.max(1f, density));
+    }
+
+    private void injectAndroidAppContext(boolean dispatchReady) {
+        if (webView == null) {
+            return;
+        }
+        String payloadJson = getAppInfoJson();
+        String dispatchReadyCode = dispatchReady
+            ? "window.dispatchEvent(new CustomEvent('friemi:android-ready',{detail:payload}));"
+            : "";
+
+        webView.evaluateJavascript(
+            "(function(payload){try{"
+                + "var root=document.documentElement;"
+                + "var safe=payload.safeArea||{};"
+                + "root.dataset.friemiAndroidApp='true';"
+                + "root.style.setProperty('--friemi-android-statusbar-height',(safe.statusBarHeight||0)+'px');"
+                + "root.style.setProperty('--friemi-android-navigationbar-height',(safe.navigationBarHeight||0)+'px');"
+                + "root.style.setProperty('--friemi-android-top-inset',(safe.top||0)+'px');"
+                + "root.style.setProperty('--friemi-android-bottom-inset',(safe.bottom||0)+'px');"
+                + "window.dispatchEvent(new CustomEvent('friemi:android-safe-area',{detail:safe}));"
+                + dispatchReadyCode
+                + "}catch(error){}})(" + payloadJson + ");",
+            null
+        );
     }
 
     void saveLocaleFromBridge(String locale) {
@@ -1106,10 +1204,7 @@ public final class MainActivity extends Activity {
             }
             hideLoading();
             hideError();
-            view.evaluateJavascript(
-                "window.dispatchEvent(new CustomEvent('friemi:android-ready',{detail:" + getAppInfoJson() + "}))",
-                null
-            );
+            injectAndroidAppContext(true);
         }
 
         @Override

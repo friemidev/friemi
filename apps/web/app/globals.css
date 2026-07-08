@@ -36,6 +36,9 @@
   --friemi-brand-ink: var(--friemi-palette-ink);
   --friemi-brand-sand: var(--friemi-palette-sand);
   --friemi-brand-warm: var(--friemi-palette-coral);
+  --app-top-safe-area: env(safe-area-inset-top);
+  --app-bottom-safe-area: env(safe-area-inset-bottom);
+  --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
 }
 
 * {
@@ -60,6 +63,11 @@ html[data-friemi-android-app="true"] body {
   overscroll-behavior-y: contain;
 }
 
+html[data-friemi-android-app="true"] {
+  --app-top-safe-area: var(--friemi-android-top-inset, 0px);
+  --app-bottom-safe-area: var(--friemi-android-bottom-inset, 0px);
+}
+
 html[data-friemi-android-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -79,8 +87,30 @@ html[data-friemi-ios-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
 
+html[data-friemi-android-app="true"] .app-layout-shell > header,
 html[data-friemi-ios-app="true"] .app-layout-shell > header {
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--app-top-safe-area);
+}
+
+html[data-friemi-android-app="true"] [data-mobile-scroll-progress],
+html[data-friemi-ios-app="true"] [data-mobile-scroll-progress] {
+  top: var(--app-mobile-header-height);
+}
+
+html[data-friemi-android-app="true"] .app-layout-shell > nav {
+  padding-bottom: var(--app-bottom-safe-area);
+}
+
+@media (max-width: 767px) {
+  html[data-friemi-android-app="true"] .app-layout-shell {
+    padding-bottom: calc(6rem + var(--app-bottom-safe-area));
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --app-mobile-header-height: calc(4rem + var(--app-top-safe-area));
+  }
 }
 
 .app-orientation-lock {

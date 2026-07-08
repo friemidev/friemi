@@ -820,7 +820,7 @@ export function WerewolfPrivateSeatCard({
 
           <Link
             aria-label={t.back}
-            className="absolute left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/14 bg-black/32 text-white shadow-[0_12px_30px_rgba(0,0,0,0.34)] backdrop-blur-md transition active:scale-95 md:hidden"
+            className="absolute left-3 top-[calc(var(--app-top-safe-area)+0.75rem)] z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/14 bg-black/32 text-white shadow-[0_12px_30px_rgba(0,0,0,0.34)] backdrop-blur-md transition active:scale-95 md:hidden"
             href={roomHref}
           >
             <ArrowLeft className="h-5 w-5" />
@@ -853,7 +853,7 @@ export function WerewolfPrivateSeatCard({
 
             <div className="grid flex-1 place-items-center md:py-6">
               <div
-                className={`werewolf-live-card-frame relative aspect-[2/3] w-[min(100vw,calc((100svh_-_7rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))*0.6667))] [perspective:1200px] md:h-[72svh] md:min-h-[22rem] md:max-h-[44rem] md:max-w-[88vw] md:w-auto ${
+                className={`werewolf-live-card-frame relative aspect-[2/3] w-[min(100vw,calc((100svh_-_7rem_-_var(--app-top-safe-area)_-_var(--app-bottom-safe-area))*0.6667))] [perspective:1200px] md:h-[72svh] md:min-h-[22rem] md:max-h-[44rem] md:max-w-[88vw] md:w-auto ${
                   isDead && !revealed && !showDeathIntro ? "grayscale" : ""
                 }`}
               >
