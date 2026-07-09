@@ -373,15 +373,16 @@ export async function joinActivityAsGuestAction(
 
     successfulStatus = joinResult.status;
 
-    if (joinResult.status === "PENDING") {
-      await createNotification(prisma, {
-        activityId: joinResult.activityId,
-        recipientId: joinResult.organizerId,
-        type: "PARTICIPATION_PENDING",
-      }).catch((error) => {
-        console.error("Failed to create guest participation notification", error);
-      });
-    }
+    await createNotification(prisma, {
+      activityId: joinResult.activityId,
+      recipientId: joinResult.organizerId,
+      type:
+        joinResult.status === "PENDING"
+          ? "PARTICIPATION_PENDING"
+          : "PARTICIPATION_CONFIRMED",
+    }).catch((error) => {
+      console.error("Failed to create guest participation notification", error);
+    });
 
     queueAnalyticsEvent({
       locale: normalizeAnalyticsLocale(result.data.locale),
