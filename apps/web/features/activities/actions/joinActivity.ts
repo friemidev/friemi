@@ -526,7 +526,7 @@ export async function joinActivityAction(
       };
     }
 
-    void createNotification(prisma, {
+    await createNotification(prisma, {
       activityId: joinResult.activityId,
       recipientId: profile.id,
       type:
@@ -538,7 +538,7 @@ export async function joinActivityAction(
     });
 
     if (joinResult.participantStatus === "PENDING") {
-      void createNotification(prisma, {
+      await createNotification(prisma, {
         actorId: profile.id,
         activityId: joinResult.activityId,
         recipientId: joinResult.organizerId,

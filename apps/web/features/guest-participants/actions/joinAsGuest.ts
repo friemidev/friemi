@@ -374,7 +374,7 @@ export async function joinActivityAsGuestAction(
     successfulStatus = joinResult.status;
 
     if (joinResult.status === "PENDING") {
-      void createNotification(prisma, {
+      await createNotification(prisma, {
         activityId: joinResult.activityId,
         recipientId: joinResult.organizerId,
         type: "PARTICIPATION_PENDING",

@@ -216,7 +216,7 @@ export async function cancelParticipationAction(
     userProfileId: profile.id,
   });
   if (participation.activity.organizerId !== profile.id) {
-    void createNotification(prisma, {
+    await createNotification(prisma, {
       actorId: profile.id,
       activityId: result.data.activityId,
       recipientId: participation.activity.organizerId,
