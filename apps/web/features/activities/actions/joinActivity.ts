@@ -537,12 +537,15 @@ export async function joinActivityAction(
       console.error("Failed to create participant notification", error);
     });
 
-    if (joinResult.participantStatus === "PENDING") {
+    if (joinResult.organizerId !== profile.id) {
       await createNotification(prisma, {
         actorId: profile.id,
         activityId: joinResult.activityId,
         recipientId: joinResult.organizerId,
-        type: "PARTICIPATION_PENDING",
+        type:
+          joinResult.participantStatus === "PENDING"
+            ? "PARTICIPATION_PENDING"
+            : "PARTICIPATION_CONFIRMED",
       }).catch((error) => {
         console.error("Failed to create organizer notification", error);
       });
