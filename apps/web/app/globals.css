@@ -105,6 +105,21 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   html[data-friemi-android-app="true"] .app-layout-shell {
     padding-bottom: calc(6rem + var(--app-bottom-safe-area));
   }
+
+  .app-layout-shell:has(.mobile-v23-home) {
+    padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.mobile-v23-home) > .app-header,
+  .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-lobby) > .app-header,
+  .app-layout-shell:has(.mobile-v23-lobby) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
+  .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-create) > .app-header,
+  .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress] {
+    display: none;
+  }
 }
 
 @media (min-width: 640px) {

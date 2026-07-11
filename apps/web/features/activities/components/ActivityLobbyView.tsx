@@ -42,7 +42,9 @@ type ActivityLobbyViewProps = {
   favoriteActivities: ActivityCardViewModel[];
   friendHostedActivities: ActivityCardViewModel[];
   friendJoinedActivities: ActivityCardViewModel[];
+  initialFilter?: LobbyFilterId;
   initialCategoryFilter?: ActivityCategory | null;
+  initialStatusFilter?: LobbyStatusFilterId;
   starterActivities: ActivityCardViewModel[];
   locale: string;
 };
@@ -1764,15 +1766,17 @@ export function ActivityLobbyView({
   favoriteActivities,
   friendHostedActivities,
   friendJoinedActivities,
+  initialFilter = "all",
   initialCategoryFilter = null,
+  initialStatusFilter = "all",
   starterActivities,
   locale,
 }: ActivityLobbyViewProps) {
   const appCopy = getCopy(locale);
   const t = appCopy.activityLobby;
-  const [activeFilter, setActiveFilter] = useState<LobbyFilterId>("all");
+  const [activeFilter, setActiveFilter] = useState<LobbyFilterId>(initialFilter);
   const [activeStatusFilter, setActiveStatusFilter] =
-    useState<LobbyStatusFilterId>("all");
+    useState<LobbyStatusFilterId>(initialStatusFilter);
   const [activeTypeFilter, setActiveTypeFilter] = useState<LobbyTypeFilterId>(
     initialCategoryFilter ?? "all",
   );

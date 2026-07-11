@@ -6,6 +6,34 @@ import { usePathname, useSearchParams } from "next/navigation";
 const MOBILE_MEDIA_QUERY = "(max-width: 767px)";
 const MIN_SCROLLABLE_DISTANCE = 24;
 
+function shouldHideMobileScrollProgress(pathname: string) {
+  const segments = pathname.split("/").filter(Boolean);
+  const firstRouteSegment = segments[0];
+  const localizedRouteSegment = segments[1];
+
+  if (
+    firstRouteSegment === "game-tools" ||
+    localizedRouteSegment === "game-tools"
+  ) {
+    return true;
+  }
+
+  return (
+    (segments.length === 1 &&
+      (firstRouteSegment === "mobile-home" ||
+        firstRouteSegment === "lobby")) ||
+    (segments.length === 2 &&
+      (localizedRouteSegment === "mobile-home" ||
+        localizedRouteSegment === "lobby")) ||
+    (segments.length === 2 &&
+      firstRouteSegment === "activities" &&
+      segments[1] === "new") ||
+    (segments.length === 3 &&
+      localizedRouteSegment === "activities" &&
+      segments[2] === "new")
+  );
+}
+
 function getScrollProgress() {
   const scrollableDistance =
     document.documentElement.scrollHeight - window.innerHeight;
@@ -27,6 +55,7 @@ export function MobileScrollProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
+  const hideForRoute = shouldHideMobileScrollProgress(pathname);
   const animationFrameRef = useRef<number | null>(null);
   const [state, setState] = useState({
     isMobile: false,
@@ -38,9 +67,9 @@ export function MobileScrollProgress() {
     const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
 
     function updateProgress() {
-      if (!mediaQuery.matches) {
+      if (!mediaQuery.matches || hideForRoute) {
         setState({
-          isMobile: false,
+          isMobile: mediaQuery.matches,
           progress: 0,
           visible: false,
         });
@@ -87,7 +116,7 @@ export function MobileScrollProgress() {
         animationFrameRef.current = null;
       }
     };
-  }, []);
+  }, [hideForRoute]);
 
   useEffect(() => {
     setState((current) => ({
@@ -95,6 +124,10 @@ export function MobileScrollProgress() {
       progress: 0,
       visible: false,
     }));
+
+    if (hideForRoute) {
+      return;
+    }
 
     const timeoutId = window.setTimeout(() => {
       const next = getScrollProgress();
@@ -108,9 +141,9 @@ export function MobileScrollProgress() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [routeKey]);
+  }, [hideForRoute, routeKey]);
 
-  if (!state.isMobile || !state.visible) {
+  if (hideForRoute || !state.isMobile || !state.visible) {
     return null;
   }
 

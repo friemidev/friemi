@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
@@ -19,6 +20,7 @@ import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
@@ -30,6 +32,9 @@ import {
 type HomePageProps = {
   params: Promise<{
     locale: string;
+  }>;
+  searchParams?: Promise<{
+    view?: string | string[];
   }>;
 };
 
@@ -335,8 +340,19 @@ export async function generateMetadata({
   });
 }
 
-export default async function HomePage({ params }: HomePageProps) {
+export default async function HomePage({ params, searchParams }: HomePageProps) {
   const { locale } = await params;
+  const query = (await searchParams) ?? {};
+  const view = Array.isArray(query.view) ? query.view[0] : query.view;
+  const requestHeaders = await headers();
+
+  if (
+    view !== "desktop" &&
+    isMobileUserAgent(requestHeaders.get("user-agent"))
+  ) {
+    redirect(withLocale(locale, "/mobile-home"));
+  }
+
   const t = getLuxuryHomeCopy(locale);
   const perf = createPerformanceTracker({
     locale,

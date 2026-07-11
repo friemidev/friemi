@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppHeaderChrome } from "@/components/layout/AppHeaderChrome";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
@@ -41,7 +42,7 @@ export function AppHeader({
   incomingFriendRequests = [],
 }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC] shadow-[0_2px_10px_rgba(21,98,64,0.06)]">
+    <AppHeaderChrome locale={locale}>
       <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 sm:h-16 sm:px-4 lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
@@ -86,6 +87,6 @@ export function AppHeader({
           />
         </div>
       </div>
-    </header>
+    </AppHeaderChrome>
   );
 }

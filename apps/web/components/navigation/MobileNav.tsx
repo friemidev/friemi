@@ -5,9 +5,9 @@ import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
   CircleUserRound,
-  Compass,
   House,
   MessageCircle,
+  Plus,
   UsersRound,
 } from "lucide-react";
 import { withLocale } from "@/lib/routes";
@@ -48,10 +48,10 @@ export function MobileNav({ locale }: MobileNavProps) {
   const items = useMemo(
     () => [
       {
-        href: "/activities",
-        label: t.nav.activities,
-        icon: Compass,
-        tone: "blue",
+        href: "/mobile-home",
+        label: t.nav.hallShort,
+        icon: House,
+        tone: "green",
       },
       {
         href: "/lobby",
@@ -60,9 +60,9 @@ export function MobileNav({ locale }: MobileNavProps) {
         tone: "rose",
       },
       {
-        href: "/mobile-home",
-        label: t.nav.hallShort,
-        icon: House,
+        href: "/activities/new",
+        label: t.nav.newActivity,
+        icon: Plus,
         isPrimary: true,
         tone: "green",
       },
@@ -80,10 +80,10 @@ export function MobileNav({ locale }: MobileNavProps) {
       },
     ],
     [
-      t.nav.activities,
       t.nav.hallShort,
       t.nav.lobbyShort,
       t.nav.messagesShort,
+      t.nav.newActivity,
       t.nav.profileShort,
     ],
   );
@@ -94,7 +94,7 @@ export function MobileNav({ locale }: MobileNavProps) {
     }
 
     if (sectionOverride === "activities") {
-      return href === "/activities";
+      return href === "/activities/new";
     }
 
     const localizedHref = withLocale(currentLocale, href);
@@ -103,14 +103,8 @@ export function MobileNav({ locale }: MobileNavProps) {
       return pathname === localizedHref;
     }
 
-    if (href === "/activities") {
-      const newActivityHref = withLocale(currentLocale, "/activities/new");
-
-      return (
-        pathname === localizedHref ||
-        (pathname.startsWith(`${localizedHref}/`) &&
-          !pathname.startsWith(newActivityHref))
-      );
+    if (href === "/activities/new") {
+      return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
     }
 
     return (
@@ -119,8 +113,8 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
-      <div className="mx-auto grid h-[5.35rem] max-w-md grid-cols-[0.92fr_0.92fr_1.22fr_0.92fr_0.92fr] gap-1.5 px-3 py-2.5">
+    <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
+      <div className="mx-auto grid h-[5.15rem] max-w-md grid-cols-5 gap-1.5 px-4 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -136,8 +130,8 @@ export function MobileNav({ locale }: MobileNavProps) {
                 "relative flex min-w-0 flex-col items-center justify-end gap-1 rounded-[1.35rem] px-1 pb-1.5 pt-1 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "-mt-6 h-[5.65rem] scale-[1.02] justify-center gap-1.5 bg-[linear-gradient(160deg,#156240_0%,#369758_56%,#8AB68E_135%)] text-white shadow-[0_20px_38px_rgba(21,98,64,0.42),0_0_0_5px_rgba(254,255,249,0.92)] ring-2 ring-[#D6D5B2]/85"
-                    : "-mt-4 h-[5.15rem] justify-center gap-1.5 bg-[linear-gradient(160deg,#369758,#156240)] text-white shadow-[0_14px_28px_rgba(21,98,64,0.24)] ring-1 ring-[#FEFFF9]/70"
+                    ? "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[linear-gradient(160deg,#156240_0%,#369758_62%,#8AB68E_140%)] p-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.28),0_0_0_4px_rgba(254,255,249,0.88)] ring-2 ring-[#D6D5B2]/85"
+                    : "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[linear-gradient(160deg,#369758,#156240)] p-0 text-white shadow-[0_10px_20px_rgba(21,98,64,0.22)] ring-1 ring-[#FEFFF9]/75"
                   : active
                     ? "-translate-y-1 bg-[#FEFFF9]/72 text-forest shadow-[0_10px_22px_rgba(21,98,64,0.11)] ring-1 ring-[#8E8383]/12"
                     : "text-[#1D1D1B]/72",
@@ -159,8 +153,8 @@ export function MobileNav({ locale }: MobileNavProps) {
                   "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
                   item.isPrimary
                     ? active
-                      ? "h-11 w-11 bg-[#FEFFF9]/20 text-white ring-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_1px_rgba(21,98,64,0.1)]"
-                      : "h-10 w-10 bg-white/14 text-white ring-white/24"
+                      ? "h-11 w-11 bg-[#FEFFF9]/18 text-white ring-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_1px_rgba(21,98,64,0.1)]"
+                      : "h-10 w-10 bg-white/12 text-white ring-white/24"
                     : getMobileNavToneClasses(item.tone, active),
                 )}
               >
@@ -172,20 +166,18 @@ export function MobileNav({ locale }: MobileNavProps) {
                   strokeWidth={active ? 2.4 : 2}
                 />
               </span>
-              <span
-                className={cn(
-                  "max-w-full whitespace-nowrap transition",
-                  item.isPrimary
-                    ? active
-                      ? "rounded-full bg-[#FEFFF9]/18 px-2 py-0.5 text-[11px] font-extrabold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]"
-                      : "text-[11px] font-extrabold"
-                    : active
+              {item.isPrimary ? null : (
+                <span
+                  className={cn(
+                    "max-w-full whitespace-nowrap transition",
+                    active
                       ? "rounded-full bg-[#FEFFF9]/72 px-1.5 py-0.5 font-extrabold text-forest shadow-[0_1px_0_rgba(255,255,255,0.7)]"
                       : null,
-                )}
-              >
-                {item.label}
-              </span>
+                  )}
+                >
+                  {item.label}
+                </span>
+              )}
             </IntentPrefetchLink>
           );
         })}
