@@ -7,6 +7,10 @@ import {
   ActivityLobbyView,
 } from "@/features/activities/components/ActivityLobbyView";
 import {
+  MobileLobbyV23View,
+  type MobileLobbyV23TabId,
+} from "@/features/activities/components/MobileLobbyV23View";
+import {
   createEmptyActivityLobbyFeedPage,
   getActivityLobbyInitial,
   getActivityLobbyPreview,
@@ -28,8 +32,52 @@ type ActivityLobbyPageProps = {
   }>;
   searchParams?: Promise<{
     category?: string | string[];
+    filter?: string | string[];
+    status?: string | string[];
+    tab?: string | string[];
   }>;
 };
+
+const lobbyFilterIds = [
+  "all",
+  "open",
+  "created",
+  "joined",
+  "favorites",
+  "friendHosted",
+  "friendJoined",
+] as const;
+
+const lobbyStatusFilterIds = ["all", "ongoing", "ended"] as const;
+const mobileLobbyTabIds = ["nearby", "friends", "today", "popular"] as const;
+
+function getSingleQueryValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getInitialMobileLobbyTab({
+  filter,
+  tab,
+}: {
+  filter: string | undefined;
+  tab: string | undefined;
+}): MobileLobbyV23TabId {
+  const explicitTab = mobileLobbyTabIds.find((item) => item === tab);
+
+  if (explicitTab) {
+    return explicitTab;
+  }
+
+  if (filter === "friendJoined" || filter === "friendHosted") {
+    return "friends";
+  }
+
+  if (filter === "open") {
+    return "popular";
+  }
+
+  return "nearby";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -55,12 +103,21 @@ export default async function ActivityLobbyPage({
 }: ActivityLobbyPageProps) {
   const { locale } = await params;
   const query = (await searchParams) ?? {};
-  const categoryParam = Array.isArray(query.category)
-    ? query.category[0]
-    : query.category;
+  const categoryParam = getSingleQueryValue(query.category);
+  const filterParam = getSingleQueryValue(query.filter);
+  const statusParam = getSingleQueryValue(query.status);
+  const tabParam = getSingleQueryValue(query.tab);
   const initialCategoryFilter =
     activityCategoryOptions.find((category) => category === categoryParam) ??
     null;
+  const initialFilter =
+    lobbyFilterIds.find((filter) => filter === filterParam) ?? "all";
+  const initialStatusFilter =
+    lobbyStatusFilterIds.find((status) => status === statusParam) ?? "all";
+  const initialMobileTab = getInitialMobileLobbyTab({
+    filter: filterParam,
+    tab: tabParam,
+  });
   const perf = createPerformanceTracker({
     locale,
     route: "/lobby",
@@ -90,13 +147,21 @@ export default async function ActivityLobbyPage({
     );
 
     return (
-      <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-        <ActivityLobbyPreviewView
+      <>
+        <MobileLobbyV23View
+          activeTab={initialMobileTab}
           activities={previewActivities}
-          initialCategoryFilter={initialCategoryFilter}
+          isSignedIn={false}
           locale={locale}
         />
-      </PageContainer>
+        <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
+          <ActivityLobbyPreviewView
+            activities={previewActivities}
+            initialCategoryFilter={initialCategoryFilter}
+            locale={locale}
+          />
+        </PageContainer>
+      </>
     );
   }
 
@@ -133,21 +198,42 @@ export default async function ActivityLobbyPage({
   );
 
   return (
-    <PageContainer className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-      <ActivityLobbyView
-        allActivities={lobby.allActivities}
-        allActivityFeed={lobby.allActivityFeed}
-        openActivities={lobby.openActivities}
-        createdActivities={lobby.createdActivities}
-        deferredFilters={["favorites", "friendHosted", "friendJoined"]}
-        joinedActivities={lobby.joinedActivities}
-        favoriteActivities={lobby.favoriteActivities}
-        friendHostedActivities={lobby.friendHostedActivities}
-        friendJoinedActivities={lobby.friendJoinedActivities}
-        initialCategoryFilter={initialCategoryFilter}
-        starterActivities={lobby.starterActivities}
+    <>
+      <MobileLobbyV23View
+        activeTab={initialMobileTab}
+        activities={[
+          ...lobby.allActivityFeed.activities,
+          ...lobby.allActivities,
+          ...lobby.openActivities,
+          ...lobby.starterActivities,
+          ...lobby.joinedActivities,
+          ...lobby.createdActivities,
+        ]}
+        friendActivities={[
+          ...lobby.friendJoinedActivities,
+          ...lobby.friendHostedActivities,
+        ]}
+        isSignedIn
         locale={locale}
       />
-    </PageContainer>
+      <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
+        <ActivityLobbyView
+          allActivities={lobby.allActivities}
+          allActivityFeed={lobby.allActivityFeed}
+          openActivities={lobby.openActivities}
+          createdActivities={lobby.createdActivities}
+          deferredFilters={["favorites", "friendHosted", "friendJoined"]}
+          joinedActivities={lobby.joinedActivities}
+          favoriteActivities={lobby.favoriteActivities}
+          friendHostedActivities={lobby.friendHostedActivities}
+          friendJoinedActivities={lobby.friendJoinedActivities}
+          initialFilter={initialFilter}
+          initialCategoryFilter={initialCategoryFilter}
+          initialStatusFilter={initialStatusFilter}
+          starterActivities={lobby.starterActivities}
+          locale={locale}
+        />
+      </PageContainer>
+    </>
   );
 }

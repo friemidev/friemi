@@ -16,6 +16,7 @@ type GlobalSearchFormProps = {
   defaultQuery?: string;
   inputId?: string;
   locale: string;
+  placeholder?: string;
   variant?: "header" | "page";
 };
 
@@ -68,6 +69,7 @@ export function GlobalSearchForm({
   defaultQuery = "",
   inputId,
   locale,
+  placeholder,
   variant = "header",
 }: GlobalSearchFormProps) {
   const t = getCopy(locale).globalSearch;
@@ -100,7 +102,7 @@ export function GlobalSearchForm({
         type="search"
         defaultValue={normalizeGlobalSearchQuery(defaultQuery)}
         maxLength={globalSearchQueryMaxLength}
-        placeholder={t.placeholder}
+        placeholder={placeholder ?? t.placeholder}
         className={cn(
           "min-w-0 flex-1 rounded-full border border-[#D6D5B2] bg-white pl-10 text-ink outline-none shadow-sm transition placeholder:text-zinc-400 focus:border-[#369758] focus:bg-white focus:ring-2 focus:ring-[#369758]/18",
           isPage ? "h-12 pr-14 text-base sm:pr-32" : "h-10 pr-12 text-sm",

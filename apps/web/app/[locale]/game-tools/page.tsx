@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowRight, Layers3 } from "lucide-react";
+import { ArrowRight, ChevronRight, Layers3 } from "lucide-react";
 
 import { PageContainer } from "@/components/layout/PageContainer";
+import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
 import {
   gameToolDefinitions,
   getGameToolHubCopy,
@@ -40,6 +41,51 @@ const metadataCopy = {
   },
 };
 
+function getMobileGameToolsCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      available: "Ouvrir",
+      coming: "Bientôt",
+      playerRange: "joueurs",
+      title: "Jeux",
+      toolList: "Tous les outils",
+      intros: {
+        AVALON: "Rôles, votes et quêtes.",
+        STORYTELLER: "Grimoire et rythme de nuit.",
+        WEREWOLF: "Rôles, morts et résultat.",
+      },
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      available: "Open",
+      coming: "Soon",
+      playerRange: "players",
+      title: "Games",
+      toolList: "All tools",
+      intros: {
+        AVALON: "Roles, votes, and quests.",
+        STORYTELLER: "Grimoire and night flow.",
+        WEREWOLF: "Roles, deaths, and result.",
+      },
+    };
+  }
+
+  return {
+    available: "开局",
+    coming: "敬请期待",
+    playerRange: "人",
+    title: "桌游",
+    toolList: "全部工具",
+    intros: {
+      AVALON: "发身份、投票、记任务。",
+      STORYTELLER: "魔典和夜晚流程。",
+      WEREWOLF: "发身份、记生死、看结算。",
+    },
+  };
+}
+
 export async function generateMetadata({
   params,
 }: GameToolsPageProps): Promise<Metadata> {
@@ -60,10 +106,102 @@ export async function generateMetadata({
 export default async function GameToolsPage({ params }: GameToolsPageProps) {
   const { locale } = await params;
   const copy = getGameToolHubCopy(locale);
+  const mobileCopy = getMobileGameToolsCopy(locale);
 
   return (
-    <PageContainer className="max-w-[94rem] space-y-6 pb-28 pt-4 sm:pb-14 sm:pt-7">
-      <section className="relative isolate overflow-hidden rounded-[2.1rem] border border-[#8AB68E]/40 bg-[#FEFFF9] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.12)] sm:p-7 lg:p-9">
+    <>
+      <main className="mobile-v23-game-tools min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.35rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.55rem)] text-[#111210] md:hidden">
+        <div className="mx-auto w-full max-w-[430px] px-5">
+          <header className="space-y-6">
+            <GameToolBackButton
+              fallbackHref={withLocale(locale, "/activities/new")}
+              locale={locale}
+            />
+            <h1 className="text-[31px] font-black leading-none tracking-normal">
+              {mobileCopy.title}
+            </h1>
+          </header>
+
+          <section className="mt-7">
+            <h2 className="text-[18px] font-black leading-none tracking-normal text-[#0D5A3C]">
+              {mobileCopy.toolList}
+            </h2>
+            <div className="mt-4 space-y-3">
+              {gameToolDefinitions.map((tool) => {
+                const Icon = tool.icon;
+                const isAvailable = tool.availability === "available";
+                const cardClassName =
+                  "group grid min-h-[7.35rem] grid-cols-[6.6rem_minmax(0,1fr)_2.1rem] items-center gap-3 rounded-[1.45rem] border border-[#D6D5B2]/72 bg-white p-2.5 shadow-[0_12px_28px_rgba(29,29,27,0.075)] transition focus:outline-none focus-visible:border-[#8AB68E]";
+                const cardContent = (
+                  <>
+                    <div className="relative h-[6.85rem] overflow-hidden rounded-[1.15rem] bg-[#F1F2EC]">
+                      <Image
+                        alt=""
+                        className={
+                          tool.kind === "STORYTELLER"
+                            ? "object-contain p-8"
+                            : "object-cover"
+                        }
+                        fill
+                        priority={tool.kind === "WEREWOLF"}
+                        sizes="(max-width: 768px) 390px"
+                        src={tool.imageSrc}
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#F1F2EC] px-2 text-[10.5px] font-extrabold text-[#0D5A3C]">
+                        <Icon className="h-3.5 w-3.5" />
+                        {isAvailable ? mobileCopy.available : mobileCopy.coming}
+                      </span>
+                      <h3 className="mt-2 truncate text-[18px] font-black leading-tight tracking-normal text-[#111210]">
+                        {getGameToolLabel(tool.title, locale)}
+                      </h3>
+                      <p className="mt-1 line-clamp-1 text-[12.5px] font-semibold leading-5 text-[#123D31]/62">
+                        {mobileCopy.intros[tool.kind]}
+                      </p>
+                      <span className="mt-2 inline-flex rounded-full border border-[#D6D5B2]/70 bg-[#FEFFF9] px-2 py-0.5 text-[11px] font-extrabold text-[#0D5A3C]">
+                        {tool.minPlayers === tool.maxPlayers
+                          ? tool.minPlayers
+                          : `${tool.minPlayers}-${tool.maxPlayers}`}{" "}
+                        {mobileCopy.playerRange}
+                      </span>
+                    </div>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#D6D5B2]/75 bg-[#F1F2EC] text-[#0D5A3C] transition group-active:translate-x-0.5">
+                      {isAvailable ? (
+                        <ChevronRight className="h-[16px] w-[16px]" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#0D5A3C]/70" />
+                      )}
+                    </span>
+                  </>
+                );
+
+                return isAvailable ? (
+                  <Link
+                    className={`${cardClassName} active:scale-[0.985]`}
+                    href={withLocale(locale, tool.href)}
+                    key={tool.kind}
+                  >
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div
+                    aria-disabled="true"
+                    className={`${cardClassName} opacity-90`}
+                    key={tool.kind}
+                  >
+                    {cardContent}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <PageContainer className="hidden max-w-[94rem] space-y-6 pb-28 pt-4 md:block sm:pb-14 sm:pt-7">
+        <section className="relative isolate overflow-hidden rounded-[2.1rem] border border-[#8AB68E]/40 bg-[#FEFFF9] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.12)] sm:p-7 lg:p-9">
         <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F09182]/18 blur-3xl" />
         <div className="absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-[#DEEBFF]/55 blur-3xl" />
         <div className="absolute right-10 top-12 hidden h-36 w-36 rounded-full border border-[#8AB68E]/35 lg:block" />
@@ -156,21 +294,22 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
             })}
           </div>
         </div>
-      </section>
+        </section>
 
-      <section className="grid gap-4 rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-5 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-6">
-        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]/45">
-          <Layers3 className="h-6 w-6" />
-        </span>
-        <div>
-          <h2 className="text-xl font-extrabold text-[#0E2A5C]">
-            {copy.foundation}
-          </h2>
-          <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-[#156240]/72">
-            {copy.foundationBody}
-          </p>
-        </div>
-      </section>
-    </PageContainer>
+        <section className="grid gap-4 rounded-[1.75rem] border border-[#D6D5B2] bg-white/82 p-5 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-6">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]/45">
+            <Layers3 className="h-6 w-6" />
+          </span>
+          <div>
+            <h2 className="text-xl font-extrabold text-[#0E2A5C]">
+              {copy.foundation}
+            </h2>
+            <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-[#156240]/72">
+              {copy.foundationBody}
+            </p>
+          </div>
+        </section>
+      </PageContainer>
+    </>
   );
 }

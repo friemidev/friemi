@@ -30,6 +30,7 @@ type ActivityShareToolsProps = {
   analyticsEntityType: AnalyticsEntityType;
   analyticsSourceSurface?: AnalyticsSourceSurface;
   categoryLabel: string;
+  collapsible?: boolean;
   coverImageUrl?: string | null;
   dateLabel: string;
   description: string;
@@ -318,6 +319,7 @@ export function ActivityShareTools({
   analyticsEntityType,
   analyticsSourceSurface = "activity_detail",
   categoryLabel,
+  collapsible = true,
   coverImageUrl,
   dateLabel,
   description,
@@ -593,6 +595,7 @@ export function ActivityShareTools({
       : shareMode === "wechat"
         ? t.savePoster
         : t.downloadPoster;
+  const showSecondaryActions = !collapsible || expanded;
 
   return (
     <div className="rounded-[1.1rem] border border-[#8AB68E] bg-[#FEFFF9] p-3 shadow-sm">
@@ -615,18 +618,20 @@ export function ActivityShareTools({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
-          onClick={() => setExpanded((value) => !value)}
-          title={expanded ? t.collapse : t.expand}
-        >
-          <ChevronDown
-            className={cn("h-4 w-4 transition", expanded && "rotate-180")}
-          />
-          <span className="sr-only">{expanded ? t.collapse : t.expand}</span>
-        </button>
+        {collapsible ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
+            onClick={() => setExpanded((value) => !value)}
+            title={expanded ? t.collapse : t.expand}
+          >
+            <ChevronDown
+              className={cn("h-4 w-4 transition", expanded && "rotate-180")}
+            />
+            <span className="sr-only">{expanded ? t.collapse : t.expand}</span>
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -686,7 +691,7 @@ export function ActivityShareTools({
         </Button>
       </div>
 
-      {expanded ? (
+      {showSecondaryActions ? (
         <div className="mt-2 grid gap-2 border-t border-[#D6D5B2] pt-2 sm:grid-cols-2 lg:grid-cols-1">
           {usesSystemSharePrimary && activityUrl ? (
             <ActivityCopyButton
@@ -743,7 +748,7 @@ export function ActivityShareTools({
         </div>
       ) : null}
 
-      {expanded && activityUrl ? (
+      {showSecondaryActions && activityUrl ? (
         <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-[#D6D5B2]">
           <LinkIcon className="h-4 w-4 shrink-0" />
           <span className="min-w-0 truncate">{getUrlHost(activityUrl)}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +26,9 @@ export function GameToolBackButton({
 
   return (
     <button
+      aria-label={label}
       className={cn(
-        "inline-flex h-10 max-w-full items-center gap-2 rounded-full border border-[#8AB68E]/70 bg-[#FEFFF9]/95 px-3.5 text-sm font-black text-[#156240] shadow-sm shadow-[#156240]/5 transition hover:-translate-y-0.5 hover:border-[#369758] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25",
+        "inline-flex h-10 w-10 max-w-full items-center justify-center rounded-full border border-[#8AB68E]/70 bg-[#FEFFF9]/95 text-sm font-black text-[#156240] shadow-sm shadow-[#156240]/5 transition hover:-translate-y-0.5 hover:border-[#369758] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/25 md:w-auto md:gap-2 md:px-3.5",
         className,
       )}
       type="button"
@@ -40,8 +41,8 @@ export function GameToolBackButton({
         router.push(fallbackHref);
       }}
     >
-      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="truncate">{label}</span>
+      <ChevronLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span className="hidden truncate md:inline">{label}</span>
     </button>
   );
 }

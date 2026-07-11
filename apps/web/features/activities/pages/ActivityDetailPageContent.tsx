@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { formatActivityDate } from "@chill-club/shared";
 import {
+  ArrowLeft,
   Bell,
   CalendarDays,
   CheckCircle2,
@@ -43,6 +44,7 @@ import { ActivityCoverImage } from "@/features/activities/components/ActivityCov
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
 import { ActivityMapPreview } from "@/features/activities/components/ActivityMapPreview";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
+import { ActivityShareDialogButton } from "@/features/activities/components/ActivityShareDialogButton";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
@@ -74,6 +76,7 @@ import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendId
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { getPublicEventCopy } from "@/features/public-events/copy";
@@ -1251,6 +1254,35 @@ export async function ActivityDetailPageContent({
     locale,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
   });
+  const mobileDetailTitle =
+    locale === "fr"
+      ? "Détail du groupe"
+      : locale === "en"
+        ? "Hangout Detail"
+        : "组局详情";
+  const mobileShareLabel =
+    locale === "fr"
+      ? "Partager le groupe"
+      : locale === "en"
+        ? "Share hangout"
+        : "组队分享";
+  const mobileCloseLabel =
+    locale === "fr" ? "Fermer" : locale === "en" ? "Close" : "关闭";
+  const mobileMapHref =
+    !protectedLocationNotice && !activityAddressUrl
+      ? getGoogleMapsSearchUrl({
+          address: activityLocationLabel,
+          city: activity.city,
+          latitude: activity.latitude,
+          longitude: activity.longitude,
+          queryAddress: activity.address,
+        })
+      : null;
+  const mobileParticipantPreview = participantPreview.slice(0, 6);
+  const extraParticipantCount = Math.max(
+    activity.participantCount - mobileParticipantPreview.length,
+    0,
+  );
   const canViewAnnouncements =
     isTeamOperator ||
     viewerParticipation?.status === "JOINED" ||
@@ -1295,9 +1327,27 @@ export async function ActivityDetailPageContent({
       userProfileId: viewerProfile?.id,
     },
   );
+  const renderTeamShareTools = (options?: { collapsible?: boolean }) => (
+    <ActivityShareTools
+      activityTitle={activity.title}
+      analyticsEntityId={detailAnalyticsEntity.entityId}
+      analyticsEntityType={detailAnalyticsEntity.entityType}
+      analyticsSourceSurface="activity_detail"
+      categoryLabel={activityCategoryLabel}
+      collapsible={options?.collapsible}
+      coverImageUrl={activity.coverImageUrl}
+      dateLabel={activityDateLabel}
+      description={activity.description}
+      locationLabel={activityShareLocationLabel}
+      locale={locale}
+      priceLabel={activityPriceLabel}
+      shareKind="team"
+      sharePath={privateSharePath}
+    />
+  );
 
   return (
-    <PageContainer className="space-y-6">
+    <PageContainer className="mobile-v23-lobby-detail space-y-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.1rem)] md:space-y-6 md:py-8">
       <MobileNavSectionOverride section="lobby" />
       <DetailSourceRestore sourceKey="activity_detail" />
       <ClaimAutoCreatedActivityCelebration
@@ -1305,14 +1355,26 @@ export async function ActivityDetailPageContent({
         editHref={activityEditHref}
         locale={locale}
       />
+      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
+        <Link
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/78 text-[#111210]/60 transition active:scale-95"
+          href={withLocale(locale, "/lobby")}
+          aria-label={mobileDetailTitle}
+        >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+        </Link>
+        <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
+          {mobileDetailTitle}
+        </p>
+      </div>
       <DetailSourceReturnLink
-        className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
+        className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
         locale={locale}
       />
-      <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
+      <div className="relative aspect-[1.75/1] overflow-hidden rounded-[1.45rem] bg-moss shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:aspect-[16/9] md:aspect-[2.35/1]">
         <ActivityCoverImage
           src={activity.coverImageUrl}
-          overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
+          overlayClassName="bg-gradient-to-t from-black/16 via-transparent to-black/20"
         />
         <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
           {!isTeamOperator ? (
@@ -1345,17 +1407,181 @@ export async function ActivityDetailPageContent({
             variant="icon"
           />
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/62 to-transparent" />
-        <div className="relative max-w-3xl space-y-2 rounded-[1.15rem] bg-black/24 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:space-y-3 sm:p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
-              {activityCategoryLabel}
+      </div>
+      <div className="space-y-4 px-1 sm:px-0">
+        <h1 className="text-[1.55rem] font-black leading-[1.08] tracking-normal text-ink sm:text-4xl md:text-5xl">
+          {activity.title}
+        </h1>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 md:hidden">
+          <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1.5 text-[12px] font-semibold leading-5 text-[#111210]/55">
+            <span className="inline-flex items-center gap-1.5">
+              <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+              {activityParticipantLabel}
             </span>
-            <ActivityStatusBadge status={displayStatus} locale={locale} />
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+              {activityDateLabel}
+            </span>
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
+              <span className="line-clamp-1">
+                {activityShareLocationLabel}
+              </span>
+            </span>
+            {activityPriceLabel ? (
+              <span className="inline-flex items-center gap-1.5">
+                <WalletCards className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
+                {activityPriceLabel}
+              </span>
+            ) : null}
           </div>
-          <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
-            {activity.title}
-          </h1>
+          <div className="flex shrink-0 items-center gap-2">
+            {mobileMapHref ? (
+              <a
+                aria-label={t.activityDetail.openGoogleMaps}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95"
+                href={mobileMapHref}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <MapPin className="h-4 w-4" strokeWidth={2.4} />
+              </a>
+            ) : null}
+            <ActivityShareDialogButton
+              closeLabel={mobileCloseLabel}
+              label={mobileShareLabel}
+            >
+              {renderTeamShareTools({ collapsible: false })}
+            </ActivityShareDialogButton>
+          </div>
+        </div>
+        <div className="space-y-4 md:hidden">
+          <div>
+            <p className="text-[12px] font-black leading-none text-[#111210]/72">
+              {t.activityDetail.organizerTitle}
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <UserProfilePreviewPopover
+                avatarUrl={activity.organizer.avatarUrl}
+                isAuthenticated={Boolean(viewerProfile)}
+                locale={locale}
+                nickname={activity.organizer.nickname}
+                profileId={activity.organizer.id}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-xs font-semibold text-ink ring-1 ring-[#8AB68E]/50">
+                  {activity.organizer.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activity.organizer.avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    getActivityOrganizerInitial(activity)
+                  )}
+                </span>
+              </UserProfilePreviewPopover>
+              <div className="min-w-0">
+                <p className="truncate text-[13.5px] font-black leading-tight text-ink">
+                  {activity.organizer.nickname}
+                </p>
+                <p className="mt-0.5 line-clamp-1 text-[11px] font-semibold leading-4 text-[#111210]/45">
+                  {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
+                </p>
+              </div>
+            </div>
+          </div>
+          {mobileParticipantPreview.length > 0 ? (
+            <div>
+              <p className="text-[12px] font-black leading-none text-[#111210]/72">
+                {t.activityDetail.participants}
+              </p>
+              <div className="mt-2 flex items-center">
+                {mobileParticipantPreview.map((participant, index) => (
+                  <UserProfilePreviewPopover
+                    avatarUrl={participant.avatarUrl}
+                    isAuthenticated={Boolean(viewerProfile)}
+                    isGuest={participant.kind !== "user"}
+                    key={participant.id}
+                    locale={locale}
+                    nickname={participant.nickname}
+                    profileId={participant.id}
+                  >
+                    <span
+                      className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white text-xs font-semibold shadow-sm ring-1 ring-[#8AB68E]"
+                      style={{ marginLeft: index === 0 ? 0 : -7 }}
+                      aria-label={participant.nickname}
+                      title={participant.nickname}
+                    >
+                      <span
+                        className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold ${getStableParticipantAvatarTone(participant.id)}`}
+                      >
+                        {participant.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={participant.avatarUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          getParticipantInitial(participant.nickname)
+                        )}
+                      </span>
+                    </span>
+                  </UserProfilePreviewPopover>
+                ))}
+                {extraParticipantCount > 0 ? (
+                  <span className="-ml-1 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-[#F1F2EC] px-2 text-[11px] font-black text-[#111210]/58 shadow-sm ring-1 ring-[#D6D5B2]">
+                    +{extraParticipantCount}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+          {!isTeamOperator ? (
+            <TeamDetailMobileCtaSheet
+              activityTitle={activity.title}
+              locale={locale}
+              openLabel={mobileJoinCtaOpenLabel}
+              participantLabel={activityParticipantLabel}
+              placement="inline"
+              statusLabel={getActivitySeatLabel(activity, locale)}
+            >
+              <div className="grid gap-3">
+                <ApprovalModeNotice
+                  isOrganizer={false}
+                  locale={locale}
+                  requiresApproval={activity.requiresApproval}
+                />
+                <JoinActivityForm
+                  activityId={activity.id}
+                  activityTitle={activity.title}
+                  accessToken={accessToken ?? null}
+                  compactUnauthenticated
+                  formInstanceId="mobile"
+                  locale={locale}
+                  requiresApproval={activity.requiresApproval}
+                  isFull={isFull}
+                  isClosed={isClosed}
+                  isOrganizer={isOrganizer}
+                  isAuthenticated={Boolean(viewerProfile)}
+                  viewerParticipationStatus={
+                    viewerParticipation?.status ?? null
+                  }
+                />
+                {canContactOrganizer ? (
+                  <ContactOrganizerForm
+                    accessToken={accessToken ?? null}
+                    activityId={activity.id}
+                    isAuthenticated={Boolean(viewerProfile)}
+                    locale={locale}
+                    organizerNickname={activity.organizer.nickname}
+                    organizerProfileId={activity.organizer.id}
+                  />
+                ) : null}
+              </div>
+            </TeamDetailMobileCtaSheet>
+          ) : null}
         </div>
       </div>
 
@@ -1411,14 +1637,14 @@ export async function ActivityDetailPageContent({
             />
           </div>
 
-          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
-            <div className="flex items-center gap-2">
-              <Route className="h-5 w-5 text-moss" />
-              <h2 className="text-lg font-semibold text-ink">
-                {t.activityDetail.itineraryTitle}
-              </h2>
-            </div>
-            {itineraryItems.length > 0 ? (
+          {itineraryItems.length > 0 ? (
+            <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <Route className="h-5 w-5 text-moss" />
+                <h2 className="text-lg font-semibold text-ink">
+                  {t.activityDetail.itineraryTitle}
+                </h2>
+              </div>
               <ol className="mt-4 space-y-3">
                 {itineraryItems.map((item, index) => (
                   <li
@@ -1432,12 +1658,8 @@ export async function ActivityDetailPageContent({
                   </li>
                 ))}
               </ol>
-            ) : (
-              <p className="mt-3 text-sm leading-7 text-zinc-500">
-                {t.activityDetail.emptyItinerary}
-              </p>
-            )}
-          </div>
+            </div>
+          ) : null}
 
           {protectedLocationNotice ? (
             <ProtectedDetailNotice
@@ -1448,7 +1670,7 @@ export async function ActivityDetailPageContent({
             (activity.latitude !== null ||
               activity.longitude !== null ||
               activityLocationLabel.trim()) ? (
-            <div>
+            <div className="hidden md:block">
               <ActivityMapPreview
                 address={activityLocationLabel}
                 city={activity.city}
@@ -1545,7 +1767,7 @@ export async function ActivityDetailPageContent({
             </div>
           ) : null}
 
-          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
+          <div className="hidden rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5 md:block">
             <div className="flex items-center gap-2">
               <UserRound className="h-5 w-5 text-moss" />
               <h2 className="text-lg font-semibold text-ink">
@@ -1733,7 +1955,7 @@ export async function ActivityDetailPageContent({
 
           <div
             id="activity-participants"
-            className="order-2 mt-3 scroll-mt-24 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm"
+            className="order-2 mt-3 hidden scroll-mt-24 rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm md:block"
           >
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -1798,22 +2020,8 @@ export async function ActivityDetailPageContent({
             </div>
           </div>
 
-          <div className="order-3 mt-3">
-            <ActivityShareTools
-              activityTitle={activity.title}
-              analyticsEntityId={detailAnalyticsEntity.entityId}
-              analyticsEntityType={detailAnalyticsEntity.entityType}
-              analyticsSourceSurface="activity_detail"
-              categoryLabel={activityCategoryLabel}
-              coverImageUrl={activity.coverImageUrl}
-              dateLabel={activityDateLabel}
-              description={activity.description}
-              locationLabel={activityShareLocationLabel}
-              locale={locale}
-              priceLabel={activityPriceLabel}
-              shareKind="team"
-              sharePath={privateSharePath}
-            />
+          <div className="order-3 mt-3 hidden md:block">
+            {renderTeamShareTools()}
           </div>
 
           {weatherInput ? (
@@ -1827,7 +2035,7 @@ export async function ActivityDetailPageContent({
             />
           ) : null}
 
-          <div className="order-5 mt-3 space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4">
+          <div className="order-5 mt-3 hidden space-y-3 rounded-[1.1rem] border border-sand bg-white/68 p-3 text-sm text-zinc-700 sm:p-4 md:block">
             <p className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 break-words">{activityDateLabel}</span>
@@ -2013,7 +2221,7 @@ export async function ActivityDetailPageContent({
             ) : null}
           </div>
 
-          <div className="order-6 mt-4 space-y-4 text-sm text-zinc-700 lg:mt-5">
+          <div className="order-6 mt-4 hidden space-y-4 text-sm text-zinc-700 md:block lg:mt-5">
             <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
                 <ClipboardList className="h-4 w-4 shrink-0" />
@@ -2062,47 +2270,6 @@ export async function ActivityDetailPageContent({
             />
           </div>
         </aside>
-        {!isTeamOperator ? (
-          <TeamDetailMobileCtaSheet
-            activityTitle={activity.title}
-            locale={locale}
-            openLabel={mobileJoinCtaOpenLabel}
-            participantLabel={activityParticipantLabel}
-            statusLabel={getActivitySeatLabel(activity, locale)}
-          >
-            <div className="grid gap-3">
-              <ApprovalModeNotice
-                isOrganizer={false}
-                locale={locale}
-                requiresApproval={activity.requiresApproval}
-              />
-              <JoinActivityForm
-                activityId={activity.id}
-                activityTitle={activity.title}
-                accessToken={accessToken ?? null}
-                compactUnauthenticated
-                formInstanceId="mobile"
-                locale={locale}
-                requiresApproval={activity.requiresApproval}
-                isFull={isFull}
-                isClosed={isClosed}
-                isOrganizer={isOrganizer}
-                isAuthenticated={Boolean(viewerProfile)}
-                viewerParticipationStatus={viewerParticipation?.status ?? null}
-              />
-              {canContactOrganizer ? (
-                <ContactOrganizerForm
-                  accessToken={accessToken ?? null}
-                  activityId={activity.id}
-                  isAuthenticated={Boolean(viewerProfile)}
-                  locale={locale}
-                  organizerNickname={activity.organizer.nickname}
-                  organizerProfileId={activity.organizer.id}
-                />
-              ) : null}
-            </div>
-          </TeamDetailMobileCtaSheet>
-        ) : null}
         {isTeamOperator ? (
           <TeamDetailMobileCtaSheet
             activityTitle={activity.title}
@@ -2275,6 +2442,11 @@ function ActivityAnnouncementsSection({
   locale: string;
 }) {
   const copy = getAnnouncementSectionCopy(locale);
+  const hasAnnouncements = announcements.length > 0;
+
+  if (!hasAnnouncements && !isOrganizer) {
+    return null;
+  }
 
   return (
     <section className="rounded-[1.35rem] border border-sand bg-white/72 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.06)] ring-1 ring-white/70">
@@ -2299,7 +2471,7 @@ function ActivityAnnouncementsSection({
         </p>
       ) : null}
 
-      {canView && announcements.length > 0 ? (
+      {canView && hasAnnouncements ? (
         <div className="mt-4 grid gap-2.5">
           {announcements.map((announcement) => (
             <article
