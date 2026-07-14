@@ -49,7 +49,13 @@ const lobbyFilterIds = [
 ] as const;
 
 const lobbyStatusFilterIds = ["all", "ongoing", "ended"] as const;
-const mobileLobbyTabIds = ["nearby", "friends", "today", "popular"] as const;
+const mobileLobbyTabIds = [
+  "nearby",
+  "friends",
+  "today",
+  "popular",
+  "mine",
+] as const;
 
 function getSingleQueryValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -215,6 +221,10 @@ export default async function ActivityLobbyPage({
         ]}
         isSignedIn
         locale={locale}
+        mineActivities={[
+          ...lobby.createdActivities,
+          ...lobby.joinedActivities,
+        ]}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView
