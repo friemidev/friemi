@@ -13,7 +13,6 @@ import {
   MapPin,
   Pencil,
   ShieldAlert,
-  Route,
   Store,
   Ticket,
   UserRound,
@@ -61,7 +60,6 @@ import { getPendingParticipants } from "@/features/activities/queries/getPending
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
-  getActivityItineraryItems,
   getActivityLocationLabel,
   getActivityOrganizerInitial,
   getActivityParticipantPercent,
@@ -1176,7 +1174,6 @@ export async function ActivityDetailPageContent({
   );
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
-  const itineraryItems = getActivityItineraryItems(activity);
   const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
   const isEndedByTime = activityEndBoundary <= new Date();
   const isClosed =
@@ -1627,39 +1624,10 @@ export async function ActivityDetailPageContent({
                   label: t.translation.fields.priceText,
                   text: activity.priceText,
                 },
-                {
-                  field: "itinerary",
-                  label: t.translation.fields.itinerary,
-                  text: activity.itinerary,
-                },
               ]}
               locale={locale}
             />
           </div>
-
-          {itineraryItems.length > 0 ? (
-            <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
-              <div className="flex items-center gap-2">
-                <Route className="h-5 w-5 text-moss" />
-                <h2 className="text-lg font-semibold text-ink">
-                  {t.activityDetail.itineraryTitle}
-                </h2>
-              </div>
-              <ol className="mt-4 space-y-3">
-                {itineraryItems.map((item, index) => (
-                  <li
-                    key={`${item}-${index}`}
-                    className="flex gap-3 text-sm leading-6 text-zinc-600"
-                  >
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-moss text-xs font-semibold text-white">
-                      {index + 1}
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : null}
 
           {protectedLocationNotice ? (
             <ProtectedDetailNotice
