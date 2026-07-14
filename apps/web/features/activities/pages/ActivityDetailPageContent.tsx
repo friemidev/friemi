@@ -353,14 +353,14 @@ function getTeamDetailMobileJoinOpenLabel({
     viewerParticipationStatus === "APPROVED"
   ) {
     if (locale === "fr") {
-      return "Inscrit";
+      return "Annuler l'inscription";
     }
 
     if (locale === "en") {
-      return "Joined";
+      return "Cancel join";
     }
 
-    return "已报名";
+    return "取消报名";
   }
 
   if (viewerParticipationStatus === "PENDING") {
