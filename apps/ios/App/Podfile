@@ -12,6 +12,7 @@ def capacitor_pods
   pod 'Capacitor', :path => '../../web/node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../web/node_modules/@capacitor/ios'
   pod 'CapacitorPushNotifications', :path => '../../../node_modules/@capacitor/push-notifications'
+  pod 'CapawesomeCapacitorBadge', :path => '../../../node_modules/@capawesome/capacitor-badge'
 end
 
 target 'App' do

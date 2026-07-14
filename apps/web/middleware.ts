@@ -31,9 +31,6 @@ const isProtectedRoute = createRouteMatcher([
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
 const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
-const isActivityLinkPreviewRoute = createRouteMatcher([
-  "/api/activity-link-preview",
-]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
@@ -125,7 +122,7 @@ export default clerkMiddleware(async (auth, request) => {
     }
   }
 
-  if (isUploadApiRoute(request) || isActivityLinkPreviewRoute(request)) {
+  if (isUploadApiRoute(request)) {
     if (hasClerkKeys()) {
       const { userId } = await auth();
 
@@ -179,7 +176,6 @@ export const config = {
     "/:locale/updates/:path*",
     "/api/admin/:path*",
     "/api/uploads/:path*",
-    "/api/activity-link-preview",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
     "/api/notifications/:path*",
