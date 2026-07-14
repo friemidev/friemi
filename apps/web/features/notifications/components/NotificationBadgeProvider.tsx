@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+import { Badge } from "@capawesome/capacitor-badge";
+import { isFriemiIOSApp } from "@/features/mobile/push/clientPush";
 
 const NOTIFICATION_BADGE_POLL_INTERVAL_MS =
   process.env.NODE_ENV === "development" ? 60000 : 15000;
@@ -159,6 +161,23 @@ export function NotificationBadgeProvider({
       abortControllerRef.current?.abort();
     };
   }, [enabled, refreshUnreadNotificationCount]);
+
+  useEffect(() => {
+    if (!isFriemiIOSApp()) {
+      return;
+    }
+
+    if (unreadNotificationCount <= 0) {
+      Badge.clear().catch((error: unknown) => {
+        console.error("Failed to clear iOS app badge", error);
+      });
+      return;
+    }
+
+    Badge.set({ count: unreadNotificationCount }).catch((error: unknown) => {
+      console.error("Failed to set iOS app badge", error);
+    });
+  }, [unreadNotificationCount]);
 
   const value = useMemo(
     () => ({

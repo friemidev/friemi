@@ -160,6 +160,7 @@ async function getFirebaseAccessToken(config: {
 }
 
 async function sendIOSPushNotification(input: {
+  badge: number;
   config: APNsConfig;
   copy: { body: string; title: string };
   notificationId: string;
@@ -218,7 +219,7 @@ async function sendIOSPushNotification(input: {
               body: input.copy.body,
               title: input.copy.title,
             },
-            badge: 1,
+            badge: input.badge,
             sound: "default",
           },
           notificationId: input.notificationId,
@@ -318,6 +319,12 @@ export async function sendMobilePushForNotification(notificationId: string) {
   }
 
   const accessToken = config ? await getFirebaseAccessToken(config) : null;
+  const badgeCount = await prisma.notification.count({
+    where: {
+      recipientId: notification.recipientId,
+      readAt: null,
+    },
+  });
   let sentCount = 0;
 
   for (const device of devices) {
@@ -399,6 +406,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
     }
 
     const response = await sendIOSPushNotification({
+      badge: badgeCount,
       config: apnsConfig,
       copy,
       notificationId,
