@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
-import { Prisma } from "@prisma/client";
+import { ActivityCategory, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import {
-  buildFingerprint,
-  scrapeActivities,
-  type ScrapedActivity,
-  type ScraperSource,
-} from "@chill-club/scraper-core";
-import { geocodeActivitiesMissingCoordinates } from "@/lib/nominatim-geocode";
 
 export type AdminActivityListItem = {
   id: string;
@@ -41,13 +34,6 @@ export type AdminActivityListItem = {
   organizerNickname: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type ScraperPreviewItem = ScrapedActivity & {
-  fingerprint: string;
-  duplicateStatus: "new" | "existing" | "duplicate";
-  duplicateOfId: string | null;
-  duplicateOfTitle: string | null;
 };
 
 export type AdminOrganizerOption = {
@@ -88,7 +74,7 @@ type AdminActivityInput = {
   description: string;
   itinerary?: string | null;
   type: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP";
-  category: ScrapedActivity["category"];
+  category: ActivityCategory;
   city: string;
   destination?: string | null;
   address: string;
@@ -113,34 +99,6 @@ type AdminActivityInput = {
   visibility: "PUBLIC" | "LINK_ONLY" | "PRIVATE";
   organizerId: string;
   merchantId?: string | null;
-};
-
-export type ScraperPreviewRequest = {
-  sources: ScraperSource[];
-  limit: number;
-  mode: "recent" | "range" | "database";
-  from?: string | null;
-  to?: string | null;
-  maxPages?: number;
-  /** When true (default), geocode items that lack coordinates via Nominatim. */
-  geocodeMissing?: boolean;
-};
-
-export type ScraperImportMode =
-  | "create_only"
-  | "update_only"
-  | "upsert"
-  | "skip_existing";
-
-export type ScraperImportOptions = {
-  mode: ScraperImportMode;
-  mergeDuplicates: boolean;
-};
-
-export type ScraperImportResult = {
-  imported: number;
-  skipped: number;
-  merged: number;
 };
 
 function hashFingerprint(title: string, startAt: string, address: string) {
@@ -348,250 +306,6 @@ export async function getAdminMerchants() {
   });
 
   return merchants.map(serializeAdminMerchantListItem);
-}
-
-async function resolveDatabaseRange(
-  mode: ScraperPreviewRequest["mode"],
-  from?: string | null,
-  to?: string | null,
-) {
-  if (mode !== "database") {
-    return {
-      from: from ? new Date(from) : null,
-      to: to ? new Date(to) : null,
-    };
-  }
-
-  const latest = await prisma.activity.findFirst({
-    orderBy: { startAt: "desc" },
-    select: { startAt: true },
-  });
-  return {
-    from: latest?.startAt ?? null,
-    to: to ? new Date(to) : null,
-  };
-}
-
-export async function previewScraperActivities(
-  request: ScraperPreviewRequest,
-): Promise<ScraperPreviewItem[]> {
-  const { from, to } = await resolveDatabaseRange(
-    request.mode,
-    request.from,
-    request.to,
-  );
-  const scraped = await scrapeActivities({
-    sources: request.sources,
-    limit: request.limit,
-    maxPages: request.maxPages ?? 3,
-    from,
-    to,
-  });
-  const geocodeMissing = request.geocodeMissing ?? true;
-  const resolvedScraped = geocodeMissing
-    ? await geocodeActivitiesMissingCoordinates(scraped)
-    : scraped;
-
-  const existing = await prisma.activity.findMany({
-    select: {
-      id: true,
-      title: true,
-      startAt: true,
-      address: true,
-      sourceUrl: true,
-    },
-  });
-  const byId = new Map(existing.map((item) => [item.id, item]));
-  const byFingerprint = new Map(
-    existing.map((item) => [
-      hashFingerprint(item.title, item.startAt.toISOString(), item.address),
-      item,
-    ]),
-  );
-  const bySourceUrl = new Map(
-    existing
-      .filter((item) => item.sourceUrl)
-      .map((item) => [item.sourceUrl as string, item]),
-  );
-
-  return resolvedScraped.map((activity) => {
-    const fingerprint = buildFingerprint({
-      source: activity.source,
-      title: activity.title,
-      startAt: activity.startAt,
-      address: activity.address,
-    });
-    const lookupFingerprint = hashFingerprint(
-      activity.title,
-      activity.startAt,
-      activity.address,
-    );
-    const sameId = byId.get(activity.id);
-    const sameSourceUrl = bySourceUrl.get(activity.sourceUrl);
-    const duplicate =
-      sameId ?? sameSourceUrl ?? byFingerprint.get(lookupFingerprint) ?? null;
-
-    return {
-      ...activity,
-      duplicateStatus: sameId ? "existing" : duplicate ? "duplicate" : "new",
-      duplicateOfId: duplicate?.id ?? null,
-      duplicateOfTitle: duplicate?.title ?? null,
-      fingerprint,
-    };
-  });
-}
-
-function scraperActivityFields(
-  activity: ScraperPreviewItem,
-  organizerId: string,
-) {
-  return {
-    title: activity.title,
-    description: activity.description,
-    itinerary: activity.itinerary,
-    type: activity.type,
-    category: activity.category,
-    city: activity.city,
-    destination: activity.destination,
-    address: activity.address,
-    latitude: normalizeOptionalLatitude(activity.latitude),
-    longitude: normalizeOptionalLongitude(activity.longitude),
-    startAt: new Date(activity.startAt),
-    endAt: activity.endAt ? new Date(activity.endAt) : null,
-    capacity: activity.capacity,
-    minParticipants: activity.minParticipants,
-    requiresApproval: activity.requiresApproval,
-    priceType: activity.priceType,
-    priceText: activity.priceText,
-    coverImageUrl: activity.coverImageUrl,
-    status: activity.status,
-    visibility: activity.visibility,
-    source: activity.source,
-    sourceUrl: activity.sourceUrl,
-    organizerId,
-  };
-}
-
-async function upsertActivitySourceLink(
-  activityId: string,
-  source: string,
-  sourceUrl: string,
-) {
-  await prisma.activitySourceLink.upsert({
-    where: { sourceUrl },
-    update: { activityId, source },
-    create: { activityId, source, sourceUrl },
-  });
-}
-
-function resolveImportTarget(
-  activity: ScraperPreviewItem,
-  mergeDuplicates: boolean,
-) {
-  if (
-    mergeDuplicates &&
-    activity.duplicateStatus === "duplicate" &&
-    activity.duplicateOfId
-  ) {
-    return activity.duplicateOfId;
-  }
-
-  if (activity.duplicateStatus === "existing") {
-    return activity.id;
-  }
-
-  return activity.id;
-}
-
-function shouldImportItem(
-  activity: ScraperPreviewItem,
-  options: ScraperImportOptions,
-) {
-  const { mode, mergeDuplicates } = options;
-
-  if (activity.duplicateStatus === "existing") {
-    if (mode === "create_only") return false;
-    if (mode === "skip_existing") return false;
-    return true;
-  }
-
-  if (activity.duplicateStatus === "duplicate") {
-    if (mode === "create_only" && !mergeDuplicates) return false;
-    if (mode === "update_only" && !mergeDuplicates) return false;
-    return true;
-  }
-
-  if (mode === "update_only") return false;
-  return true;
-}
-
-export async function importScraperActivities(
-  items: ScraperPreviewItem[],
-  options: ScraperImportOptions = {
-    mode: "create_only",
-    mergeDuplicates: false,
-  },
-): Promise<ScraperImportResult> {
-  const importer = await prisma.userProfile.upsert({
-    where: { clerkUserId: "scraper-import-bot" },
-    update: {
-      nickname: "Imported Paris Events",
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-    create: {
-      clerkUserId: "scraper-import-bot",
-      nickname: "Imported Paris Events",
-      bio: "Imported from the scraper dashboard",
-      interests: ["巴黎活动", "展览", "本地活动"],
-      status: "ACTIVE",
-      syncedAt: new Date(),
-    },
-  });
-
-  let imported = 0;
-  let skipped = 0;
-  let merged = 0;
-
-  for (const activity of items) {
-    if (!shouldImportItem(activity, options)) {
-      skipped += 1;
-      continue;
-    }
-
-    const targetId = resolveImportTarget(activity, options.mergeDuplicates);
-    const fields = scraperActivityFields(activity, importer.id);
-    const isMerge =
-      options.mergeDuplicates &&
-      activity.duplicateStatus === "duplicate" &&
-      activity.duplicateOfId === targetId;
-
-    if (activity.duplicateStatus === "new" || options.mode === "upsert") {
-      await prisma.activity.upsert({
-        where: { id: targetId },
-        update: fields,
-        create: { id: targetId, ...fields },
-      });
-    } else {
-      await prisma.activity.update({
-        where: { id: targetId },
-        data: fields,
-      });
-    }
-
-    if (isMerge) {
-      await upsertActivitySourceLink(
-        targetId,
-        activity.source,
-        activity.sourceUrl,
-      );
-      merged += 1;
-    }
-
-    imported += 1;
-  }
-
-  return { imported, skipped, merged };
 }
 
 function buildAdminActivityUpdateData(

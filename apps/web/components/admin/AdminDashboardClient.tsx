@@ -18,7 +18,6 @@ import type {
   AdminMerchantOption,
   AdminOrganizerOption,
 } from "@/lib/admin-scraper";
-import { ScraperImportSection } from "@/components/admin/ScraperImportSection";
 import { FormField, selectClassName } from "@/components/admin/FormField";
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
 
@@ -62,7 +61,7 @@ type ActivityFormState = {
   merchantId: string;
 };
 
-type DashboardTab = "activities" | "scraper";
+type DashboardTab = "activities";
 
 const adminActivityCategoryOptions = Object.keys(
   activityCategories,
@@ -283,14 +282,6 @@ export function AdminDashboardClient({
           onClick={() => setActiveTab("activities")}
         >
           活动库
-        </Button>
-        <Button
-          type="button"
-          className="w-full sm:w-auto"
-          variant={activeTab === "scraper" ? "primary" : "secondary"}
-          onClick={() => setActiveTab("scraper")}
-        >
-          公共活动导入
         </Button>
       </div>
 
@@ -907,14 +898,6 @@ export function AdminDashboardClient({
             </CardContent>
           </Card>
         </section>
-      ) : null}
-
-      {activeTab === "scraper" ? (
-        <ScraperImportSection
-          busy={busy}
-          onBusyChange={setBusy}
-          onImported={refreshActivities}
-        />
       ) : null}
     </div>
   );
