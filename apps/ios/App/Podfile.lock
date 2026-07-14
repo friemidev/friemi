@@ -4,11 +4,14 @@ PODS:
   - CapacitorCordova (7.6.7)
   - CapacitorPushNotifications (7.0.7):
     - Capacitor
+  - CapawesomeCapacitorBadge (7.0.1):
+    - Capacitor
 
 DEPENDENCIES:
   - "Capacitor (from `../../web/node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../web/node_modules/@capacitor/ios`)"
   - "CapacitorPushNotifications (from `../../../node_modules/@capacitor/push-notifications`)"
+  - "CapawesomeCapacitorBadge (from `../../../node_modules/@capawesome/capacitor-badge`)"
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -17,12 +20,15 @@ EXTERNAL SOURCES:
     :path: "../../web/node_modules/@capacitor/ios"
   CapacitorPushNotifications:
     :path: "../../../node_modules/@capacitor/push-notifications"
+  CapawesomeCapacitorBadge:
+    :path: "../../../node_modules/@capawesome/capacitor-badge"
 
 SPEC CHECKSUMS:
   Capacitor: 8ef25ba872436d2c5ac2a4791f7255529bdcd93b
   CapacitorCordova: 139e2ed3d91c54b5aeae7941135c9f9aefc6da1d
   CapacitorPushNotifications: 0527809a9619ed775439d5ab2c2d996122b48319
+  CapawesomeCapacitorBadge: 7fc1fa00c920b88eabb8451ddc92bdc75da2cffa
 
-PODFILE CHECKSUM: 3749e0afecf1e21ea34ca6492bf382c55ff70559
+PODFILE CHECKSUM: 5f347c4ea3b7aa27ffe5a3e38f2c27ddc0c14fa9
 
 COCOAPODS: 1.16.2
