@@ -14,7 +14,12 @@ import { getCategoryLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-export type MobileLobbyV23TabId = "nearby" | "friends" | "today" | "popular";
+export type MobileLobbyV23TabId =
+  | "nearby"
+  | "friends"
+  | "today"
+  | "popular"
+  | "mine";
 
 type MobileLobbyV23ViewProps = {
   activeTab: MobileLobbyV23TabId;
@@ -22,6 +27,7 @@ type MobileLobbyV23ViewProps = {
   friendActivities?: ActivityCardViewModel[];
   isSignedIn: boolean;
   locale: string;
+  mineActivities?: ActivityCardViewModel[];
 };
 
 type MobileLobbyV23Copy = {
@@ -30,6 +36,7 @@ type MobileLobbyV23Copy = {
   emptyTitle: string;
   friendEmptyDescription: string;
   friendGoing: (count: number) => string;
+  mineEmptyDescription: string;
   participants: string;
   signIn: string;
   tabs: Record<MobileLobbyV23TabId, string>;
@@ -41,6 +48,7 @@ const mobileLobbyV23Tabs: MobileLobbyV23TabId[] = [
   "friends",
   "today",
   "popular",
+  "mine",
 ];
 
 function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
@@ -51,6 +59,8 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       emptyTitle: "Aucun groupe pour le moment",
       friendEmptyDescription: "Connectez-vous pour voir les sorties de vos amis.",
       friendGoing: (count) => `${count} ami${count > 1 ? "s" : ""} y vont`,
+      mineEmptyDescription:
+        "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
       participants: "pers.",
       signIn: "Se connecter",
       tabs: {
@@ -58,6 +68,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
         friends: "Amis",
         today: "Aujourd'hui",
         popular: "Populaire",
+        mine: "Les miens",
       },
       title: "Groupes",
     };
@@ -70,6 +81,8 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       emptyTitle: "No hangouts yet",
       friendEmptyDescription: "Sign in to see what friends are joining.",
       friendGoing: (count) => `${count} friend${count > 1 ? "s" : ""} going`,
+      mineEmptyDescription:
+        "Sign in to see hangouts you're hosting or joining.",
       participants: "people",
       signIn: "Sign in",
       tabs: {
@@ -77,6 +90,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
         friends: "Friends",
         today: "Today",
         popular: "Popular",
+        mine: "Mine",
       },
       title: "Hangout",
     };
@@ -88,6 +102,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     emptyTitle: "暂时没有组局",
     friendEmptyDescription: "登录后可以看到好友参加的组局。",
     friendGoing: (count) => `${count} 位好友参加`,
+    mineEmptyDescription: "登录后可以看到你发起和参加的组局。",
     participants: "人",
     signIn: "登录",
     tabs: {
@@ -95,6 +110,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       friends: "好友",
       today: "今天",
       popular: "热门",
+      mine: "我的",
     },
     title: "组局",
   };
@@ -196,15 +212,21 @@ function getVisibleActivities({
   activeTab,
   activities,
   friendActivities = [],
+  mineActivities = [],
 }: {
   activeTab: MobileLobbyV23TabId;
   activities: ActivityCardViewModel[];
   friendActivities?: ActivityCardViewModel[];
+  mineActivities?: ActivityCardViewModel[];
 }) {
   const dedupedActivities = dedupeActivities(activities);
 
   if (activeTab === "friends") {
     return dedupeActivities(friendActivities);
+  }
+
+  if (activeTab === "mine") {
+    return dedupeActivities(mineActivities);
   }
 
   if (activeTab === "today") {
@@ -290,14 +312,19 @@ export function MobileLobbyV23View({
   friendActivities,
   isSignedIn,
   locale,
+  mineActivities,
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
   const visibleActivities = getVisibleActivities({
     activeTab,
     activities,
     friendActivities,
+    mineActivities,
   }).slice(0, 30);
-  const showFriendSignIn = activeTab === "friends" && !isSignedIn;
+  const showFriendSignIn =
+    (activeTab === "friends" || activeTab === "mine") && !isSignedIn;
+  const signInPromptDescription =
+    activeTab === "mine" ? copy.mineEmptyDescription : copy.friendEmptyDescription;
 
   return (
     <section className="mobile-v23-lobby min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+2.85rem)] text-[#111210] md:hidden">
@@ -341,7 +368,7 @@ export function MobileLobbyV23View({
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
             <p className="text-[18px] font-black">{copy.emptyTitle}</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
-              {copy.friendEmptyDescription}
+              {signInPromptDescription}
             </p>
             <Link
               href={withLocale(locale, "/sign-in")}
