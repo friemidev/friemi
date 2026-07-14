@@ -77,6 +77,14 @@ export type ProfileParticipationViewModel = {
   activity: ActivityCardViewModel;
 };
 
+export type ProfileWerewolfStatsViewModel = {
+  judgeCount: number;
+  lossCount: number;
+  playerGameCount: number;
+  winCount: number;
+  winRate: number;
+};
+
 export type ProfileDashboardViewModel = {
   createdActivityCount: number;
   participationCount: number;
@@ -91,6 +99,7 @@ export type ProfileDashboardViewModel = {
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
   viewerRelationship: ProfileViewerRelationshipViewModel;
+  werewolfStats: ProfileWerewolfStatsViewModel;
 };
 
 export type ProfileFavoriteActivityViewModel = {
@@ -205,6 +214,29 @@ function mapFollowUser(user: {
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     isCoCreator: user.isCoCreator,
+  };
+}
+
+function buildWerewolfStats(
+  records: Array<{
+    isJudge: boolean;
+    result: string | null;
+  }>,
+): ProfileWerewolfStatsViewModel {
+  const judgeCount = records.filter((record) => record.isJudge).length;
+  const playerRecords = records.filter((record) => !record.isJudge);
+  const winCount = playerRecords.filter((record) => record.result === "WIN").length;
+  const lossCount = playerRecords.filter(
+    (record) => record.result === "LOSE",
+  ).length;
+  const playerGameCount = playerRecords.length;
+
+  return {
+    judgeCount,
+    lossCount,
+    playerGameCount,
+    winCount,
+    winRate: playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
   };
 }
 
@@ -429,6 +461,7 @@ export async function getProfileDashboard(
     friendships,
     followers,
     following,
+    werewolfRecords,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -562,6 +595,16 @@ export async function getProfileDashboard(
         },
       },
     }),
+    prisma.gameToolPlayerRecord.findMany({
+      where: {
+        kind: "WEREWOLF",
+        profileId,
+      },
+      select: {
+        isJudge: true,
+        result: true,
+      },
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -617,6 +660,7 @@ export async function getProfileDashboard(
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
     viewerRelationship: relationship,
+    werewolfStats: buildWerewolfStats(werewolfRecords),
   };
 }
 
@@ -650,6 +694,7 @@ export async function getPublicProfileDashboard(
     friendships,
     followers,
     following,
+    werewolfRecords,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -749,6 +794,16 @@ export async function getPublicProfileDashboard(
         },
       },
     }),
+    prisma.gameToolPlayerRecord.findMany({
+      where: {
+        kind: "WEREWOLF",
+        profileId,
+      },
+      select: {
+        isJudge: true,
+        result: true,
+      },
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -782,6 +837,7 @@ export async function getPublicProfileDashboard(
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
     viewerRelationship: relationship,
+    werewolfStats: buildWerewolfStats(werewolfRecords),
   };
 }
 

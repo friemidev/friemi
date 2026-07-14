@@ -40,6 +40,7 @@ import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -1290,7 +1291,7 @@ function FriendActivitySummary({
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-moss" />
         <ContextualDetailLink
           className="min-w-0 flex-1 text-xs font-medium leading-5 text-ink transition hover:text-moss"
-          href={withLocale(locale, `/activities/${firstActivity.id}`)}
+          href={withLocale(locale, getActivityDetailPath(firstActivity.id))}
           detailSource={{
             sourceKey: "friends",
             targetKey: `activity:${firstActivity.id}`,
@@ -1338,7 +1339,7 @@ function FriendActivitySummary({
             <ContextualDetailLink
               key={activity.id}
               className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs leading-5 text-zinc-600 ring-1 ring-black/5 transition hover:bg-white hover:text-ink"
-              href={withLocale(locale, `/activities/${activity.id}`)}
+              href={withLocale(locale, getActivityDetailPath(activity.id))}
               detailSource={{
                 sourceKey: "friends",
                 targetKey: `activity:${activity.id}`,

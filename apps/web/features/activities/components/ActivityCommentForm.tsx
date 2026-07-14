@@ -29,7 +29,11 @@ function SubmitButton({ locale }: { locale: string }) {
   const t = getCopy(locale).activityComments;
 
   return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
+    <Button
+      type="submit"
+      className="h-10 w-full rounded-full px-5 font-semibold sm:w-auto"
+      disabled={pending}
+    >
       {pending ? t.submitting : t.submit}
     </Button>
   );
@@ -53,7 +57,12 @@ export function ActivityCommentForm({
   }, [state.ok]);
 
   return (
-    <form ref={formRef} action={formAction} className="grid gap-4" noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      className="grid gap-3 rounded-[1.15rem] bg-[#FEFFF9]/76 p-3 shadow-sm ring-1 ring-[#D6D5B2]/70 sm:gap-4 sm:bg-transparent sm:p-0 sm:shadow-none sm:ring-0"
+      noValidate
+    >
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
 
@@ -64,14 +73,14 @@ export function ActivityCommentForm({
       ) : null}
 
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium text-zinc-700">
+        <legend className="text-xs font-black uppercase tracking-[0.08em] text-[#156240]/70 sm:text-sm sm:normal-case sm:tracking-normal sm:text-zinc-700">
           {t.typeLabel}
         </legend>
-        <div className="grid grid-cols-3 gap-2 rounded-md bg-zinc-100 p-1">
+        <div className="grid grid-cols-3 gap-1.5 rounded-full bg-[#F1F2EC] p-1">
           {commentTypes.map((type) => (
             <label
               key={type}
-              className="cursor-pointer rounded-[5px] text-center text-sm font-medium text-zinc-600 transition has-[:checked]:bg-white has-[:checked]:text-ink has-[:checked]:shadow-sm"
+              className="cursor-pointer rounded-full text-center text-xs font-bold text-zinc-500 transition has-[:checked]:bg-white has-[:checked]:text-[#156240] has-[:checked]:shadow-sm sm:text-sm"
             >
               <input
                 className="sr-only"
@@ -88,10 +97,10 @@ export function ActivityCommentForm({
         </div>
       </fieldset>
 
-      <label className="grid gap-2 text-sm font-medium text-zinc-700">
+      <label className="grid gap-2 text-sm font-semibold text-zinc-700">
         {t.contentLabel}
         <Textarea
-          className="min-h-28"
+          className="min-h-24 rounded-[1rem] border-[#D6D5B2] bg-white/88 text-base shadow-none"
           name="content"
           defaultValue={state.ok ? "" : state.values?.content}
           maxLength={500}

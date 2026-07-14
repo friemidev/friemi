@@ -8,6 +8,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getConversationPair } from "@/features/direct-messages/utils/conversation";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -364,11 +365,11 @@ export async function openNotificationActivityAction(formData: FormData) {
 
   const target =
     notification.type === "PARTICIPATION_PENDING" && notification.actorId
-      ? `/activities/${notification.activityId}#participation-approval`
+      ? `${getActivityDetailPath(notification.activityId)}#participation-approval`
       : notification.type === "ACTIVITY_COMMENTED" ||
           notification.type === "COMMENT_REPLY"
-        ? `/activities/${notification.activityId}#comments`
-      : `/activities/${notification.activityId}`;
+        ? `${getActivityDetailPath(notification.activityId)}#comments`
+      : getActivityDetailPath(notification.activityId);
 
   trackNotificationOpened({
     locale,

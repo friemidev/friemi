@@ -48,6 +48,7 @@ type TeamDetailMobileCtaSheetProps = {
   mode?: TeamDetailMobileCtaMode;
   openLabel?: string;
   participantLabel: string;
+  placement?: "fixed" | "inline";
   statusLabel: string;
 };
 
@@ -58,6 +59,7 @@ export function TeamDetailMobileCtaSheet({
   mode = "join",
   openLabel,
   participantLabel,
+  placement = "fixed",
   statusLabel,
 }: TeamDetailMobileCtaSheetProps) {
   const [mounted, setMounted] = useState(false);
@@ -182,8 +184,30 @@ export function TeamDetailMobileCtaSheet({
     </div>
   );
 
-  return (
-    <div className="md:hidden">
+  const triggerLabel = openLabel ?? copy.open;
+  const trigger =
+    placement === "inline" ? (
+      <button
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-label={copy.title}
+        className="group relative inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#F09182] px-12 py-2.5 text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] transition active:scale-[0.98]"
+        title={copy.title}
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        <span className="min-w-0 truncate text-center text-[15px] font-black leading-none">
+          {triggerLabel}
+        </span>
+        <span className="absolute right-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/42 transition group-active:translate-x-0.5">
+          <span className="text-sm font-black leading-none" aria-hidden="true">
+            &gt;
+          </span>
+        </span>
+      </button>
+    ) : (
       <button
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -220,13 +244,18 @@ export function TeamDetailMobileCtaSheet({
         </span>
         <span className="grid min-w-0 text-left">
           <span className="text-sm font-extrabold leading-tight text-[#156240]">
-            {openLabel ?? copy.open}
+            {triggerLabel}
           </span>
         </span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]/65 transition group-hover:-translate-y-0.5">
           <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </button>
+    );
+
+  return (
+    <div className="md:hidden">
+      {trigger}
       {rendered && mounted ? createPortal(sheet, document.body) : null}
     </div>
   );

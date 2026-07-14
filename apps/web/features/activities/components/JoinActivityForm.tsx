@@ -17,6 +17,7 @@ import {
   joinActivityAction,
   type JoinActivityState,
 } from "../actions/joinActivity";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 import { CancelParticipationForm } from "./CancelParticipationForm";
 
 type ViewerParticipationStatus =
@@ -401,7 +402,7 @@ function GuestJoinForm({
       <GuestSubmitButton locale={locale} requiresApproval={requiresApproval} />
       <Link
         className="text-center text-xs font-medium text-zinc-500 underline-offset-4 hover:text-ink hover:underline"
-        href={getSignInHref(locale, `/activities/${activityId}`)}
+        href={getSignInHref(locale, getActivityDetailPath(activityId))}
       >
         {t.signIn}
       </Link>
@@ -515,7 +516,7 @@ function GuestJoinEntry({
       <div className="grid gap-2.5">
         <Link
           className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
-          href={getSignInHref(locale, `/activities/${activityId}`)}
+          href={getSignInHref(locale, getActivityDetailPath(activityId))}
         >
           <span className="min-w-0 leading-tight">{loginJoinLabel}</span>
         </Link>
@@ -531,7 +532,7 @@ function GuestJoinEntry({
       <div className="grid gap-2 sm:grid-cols-2">
         <Link
           className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-full border border-transparent bg-coral px-3 py-2 text-center text-sm font-semibold leading-tight text-white shadow-[0_12px_24px_rgba(240,145,130,0.22)] transition hover:bg-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral/35"
-          href={getSignInHref(locale, `/activities/${activityId}`)}
+          href={getSignInHref(locale, getActivityDetailPath(activityId))}
         >
           <span className="min-w-0 leading-tight">{loginJoinLabel}</span>
         </Link>

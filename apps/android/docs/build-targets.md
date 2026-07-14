@@ -27,8 +27,8 @@ Release APK：
 ```bash
 ./gradlew clean :app:assembleRelease \
   -PfriemiBaseUrl=https://www.friemi.com \
-  -PfriemiVersionCode=1 \
-  -PfriemiVersionName=0.1.0
+  -PfriemiVersionCode=2 \
+  -PfriemiVersionName=0.1.0-internal2
 ```
 
 Release AAB：
@@ -36,8 +36,8 @@ Release AAB：
 ```bash
 ./gradlew clean :app:bundleRelease \
   -PfriemiBaseUrl=https://www.friemi.com \
-  -PfriemiVersionCode=1 \
-  -PfriemiVersionName=0.1.0
+  -PfriemiVersionCode=2 \
+  -PfriemiVersionName=0.1.0-internal2
 ```
 
 注意：

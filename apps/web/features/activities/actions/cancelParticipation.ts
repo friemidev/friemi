@@ -11,7 +11,7 @@ import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
-import { withLocale } from "@/lib/routes";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const cancellableParticipantStatuses: ParticipantStatus[] = [
   "JOINED",
@@ -60,7 +60,7 @@ export async function cancelParticipationAction(
       locale: rawInput.locale,
       operationKey: "cancel_participation",
       route: rawInput.activityId
-        ? `/${rawInput.locale}/activities/${rawInput.activityId}`
+        ? `/${rawInput.locale}${getActivityDetailPath(rawInput.activityId)}`
         : `/${rawInput.locale}/activities`,
       sourceSurface: "activity_detail",
       status,
@@ -97,7 +97,7 @@ export async function cancelParticipationAction(
     profile = await perf.measure("viewer_profile", () =>
       ensureCurrentUserProfileSnapshot(
         result.data.locale,
-        `/activities/${result.data.activityId}`,
+        getActivityDetailPath(result.data.activityId),
       ),
     );
   } catch (error) {
@@ -216,7 +216,7 @@ export async function cancelParticipationAction(
     userProfileId: profile.id,
   });
   if (participation.activity.organizerId !== profile.id) {
-    void createNotification(prisma, {
+    await createNotification(prisma, {
       actorId: profile.id,
       activityId: result.data.activityId,
       recipientId: participation.activity.organizerId,

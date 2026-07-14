@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGuard";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/auth-redirect";
 import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,18 @@ function isWechatWebView(userAgent: string | null) {
 
 function isFriemiAndroidApp(userAgent: string | null) {
   return /FriemiAndroid\//i.test(userAgent ?? "");
+}
+
+function getPrivacyLabel(locale: string) {
+  if (locale === "en") return "Privacy Policy";
+  if (locale === "fr") return "Politique de confidentialite";
+  return "隐私政策";
+}
+
+function getSafetyLabel(locale: string) {
+  if (locale === "en") return "Community Safety";
+  if (locale === "fr") return "Securite communautaire";
+  return "社区安全";
 }
 
 export default async function SignInPage({
@@ -59,7 +73,7 @@ export default async function SignInPage({
 
   if (!hasClerkKeys()) {
     return (
-      <PageContainer className="flex min-h-[70vh] items-center justify-center">
+      <PageContainer className="flex min-h-[70vh] flex-col items-center justify-center gap-5">
         <div className="max-w-md rounded-lg border border-black/10 bg-white/80 p-6 text-center">
           <h1 className="text-xl font-semibold text-ink">
             {t.auth.clerkMissingTitle}
@@ -68,12 +82,13 @@ export default async function SignInPage({
             {t.auth.signInMissingDescription}
           </p>
         </div>
+        <PrivacyLink locale={locale} />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer className="flex min-h-[70vh] items-center justify-center">
+    <PageContainer className="flex min-h-[70vh] flex-col items-center justify-center gap-5">
       <ClerkAuthMountGuard
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={forceRedirectUrl}
@@ -82,6 +97,26 @@ export default async function SignInPage({
         path={`/${locale}/sign-in`}
         secondaryUrl={getSignUpHref(locale, redirectTarget)}
       />
+      <PrivacyLink locale={locale} />
     </PageContainer>
+  );
+}
+
+function PrivacyLink({ locale }: { locale: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium text-zinc-500">
+      <Link
+        className="underline underline-offset-4 transition hover:text-[#156240]"
+        href={withLocale(locale, "/privacy")}
+      >
+        {getPrivacyLabel(locale)}
+      </Link>
+      <Link
+        className="underline underline-offset-4 transition hover:text-[#156240]"
+        href={withLocale(locale, "/safety")}
+      >
+        {getSafetyLabel(locale)}
+      </Link>
+    </div>
   );
 }

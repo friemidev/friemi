@@ -10,6 +10,7 @@ import {
   Building2,
   Check,
   Copy,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -24,6 +25,7 @@ import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { ProfileContactBindingDialog } from "@/features/profile/components/ProfileContactBindingDialog";
+import { isFriemiIOSApp, unregisterIOSMobileDevice } from "@/features/mobile/push/clientPush";
 import { useViewerProfile } from "@/features/profile/components/ViewerProfileProvider";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -55,6 +57,12 @@ type AndroidPushTokenPayload = {
   deviceId?: string;
   fcmToken?: string;
   ok?: boolean;
+};
+
+const accountMenuSecurityCopy: Record<string, string> = {
+  "zh-CN": "账号与安全",
+  en: "Account & Security",
+  fr: "Compte et securite",
 };
 
 function isFriemiAndroidApp() {
@@ -152,6 +160,7 @@ export function AccountMenu({
   const profileHref = withLocale(locale, "/profile");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
+  const accountSecurityHref = withLocale(locale, "/account/security");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
@@ -381,12 +390,6 @@ export function AccountMenu({
               badgeCount={liveIncomingFriendRequests.length}
               onClick={openAddFriendDialog}
             />
-            <ContactBindingsMenuButton
-              active={hasContactBindings}
-              badgeCount={contactBindingCount}
-              label={profileCopy.contactBindingsTitle}
-              onClick={openContactDialog}
-            />
             <MenuLink
               href={messagesHref}
               icon={MessageCircle}
@@ -449,12 +452,28 @@ export function AccountMenu({
               <Settings className="h-4 w-4 shrink-0 text-zinc-500" />
               <span className="font-medium">{t.accountSettings}</span>
             </button>
+            <MenuLink
+              href={accountSecurityHref}
+              icon={KeyRound}
+              label={
+                accountMenuSecurityCopy[locale] ??
+                accountMenuSecurityCopy["zh-CN"]
+              }
+              active={pathname === accountSecurityHref}
+              onClick={closeMenu}
+            />
             <button
               type="button"
               role="menuitem"
               onClick={() => {
                 closeMenu();
-                void unregisterAndroidPushToken().finally(() => {
+                const unregisterTask = isFriemiAndroidApp()
+                  ? unregisterAndroidPushToken()
+                  : isFriemiIOSApp()
+                    ? unregisterIOSMobileDevice()
+                    : Promise.resolve();
+
+                void unregisterTask.finally(() => {
                   void signOut({ redirectUrl: withLocale(locale, "/") });
                 });
               }}
@@ -598,49 +617,6 @@ function MenuButton({
             </span>
           ) : null}
         </span>
-      </span>
-    </button>
-  );
-}
-
-function ContactBindingsMenuButton({
-  active,
-  badgeCount,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  badgeCount: number;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="relative flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
-    >
-      <span
-        className={cn(
-          "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-          active
-            ? "bg-[#FEFFF9] text-[#156240] ring-1 ring-[#8AB68E]"
-            : "bg-zinc-100 ring-1 ring-zinc-200",
-        )}
-        aria-hidden="true"
-      >
-        <ShieldCheck
-          className={cn("h-3.5 w-3.5", !active && "text-zinc-400")}
-        />
-      </span>
-      <span className="flex min-w-0 items-center gap-2">
-        <span className="truncate font-medium">{label}</span>
-        {badgeCount > 0 ? (
-          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#156240] px-1.5 text-[11px] font-semibold text-white">
-            {badgeCount}
-          </span>
-        ) : null}
       </span>
     </button>
   );

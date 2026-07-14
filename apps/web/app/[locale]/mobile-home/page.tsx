@@ -3,14 +3,29 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
-import { ArrowRight, CalendarPlus } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarPlus,
+  ChevronDown,
+  Clock3,
+  Heart,
+  MapPin,
+  UsersRound,
+} from "lucide-react";
+import { BrandLockup } from "@/components/brand/BrandLockup";
+import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
+import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
+import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { brand } from "@/lib/brand";
+import { getCategoryLabel } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
@@ -18,6 +33,9 @@ import {
   getGeneralPageShareDescription,
   getRequestBaseUrl,
 } from "@/lib/share-metadata";
+import { cn } from "@/lib/utils";
+import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
+import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 
 type MobileHomePageProps = {
   params: Promise<{
@@ -61,6 +79,10 @@ type MobileHomeCopy = {
 type MobileHomeExperienceProps = {
   locale: string;
   swipeActivities: ActivityCardViewModel[];
+};
+
+type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
+  viewerName: string | null;
 };
 
 const mobileHomeIllustrationPath = "/illustrations/vector";
@@ -213,6 +235,213 @@ function getMobileHomeCopy(locale: string) {
   return mobileHomeCopy[locale] ?? mobileHomeCopy["zh-CN"];
 }
 
+function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
+  if (locale === "fr") {
+    return {
+      greeting: viewerName ? `Bonsoir, ${viewerName}` : "Bonsoir",
+      subtitle: "Qu'avez-vous envie de faire aujourd'hui ?",
+      searchPlaceholder: "Rechercher activités ou personnes...",
+      location: "Paris",
+      cityOptions: [
+        { label: "Paris", href: "/activities?city=Paris" },
+        { label: "Lyon", href: "/activities?city=Lyon" },
+        { label: "Marseille", href: "/activities?city=Marseille" },
+      ],
+      filters: [
+        { href: "/lobby", label: "Tout" },
+        { href: "/activities?city=Paris", label: "Proche" },
+        { href: "/activities?dateRange=TODAY", label: "Aujourd'hui" },
+        { href: "/lobby?filter=friendJoined", label: "Amis" },
+        { href: "/activities?q=gratuit", label: "Gratuit" },
+      ],
+      categoriesTitle: "Catégories populaires",
+      topNewsTitle: "À la une",
+      trendingTitle: "🔥 Tendance aujourd'hui",
+      seeAll: "Voir tout",
+      participantsLabel: "personnes",
+      distanceFallback: "800m",
+      newsCards: [
+        {
+          href: "/game-tools/werewolf",
+          image: "/game-tools/werewolf/werewolf.jpeg",
+          title: "Soirée loup-garou",
+        },
+        {
+          href: "/game-tools",
+          image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+          title: "Outils de table",
+        },
+      ],
+      fallbackCards: [
+        {
+          category: "BOARD_GAME",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+          href: "/lobby?category=BOARD_GAME",
+          meta: "6 / 8 personnes",
+          title: "Soirée jeux",
+        },
+        {
+          category: "MUSIC",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
+          href: "/activities?category=MUSIC",
+          meta: "2 amis y vont",
+          title: "Jazz au parc",
+        },
+        {
+          category: "FOOD",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
+          href: "/lobby?category=FOOD",
+          meta: "4 / 6 personnes",
+          title: "Café & discussion",
+        },
+      ],
+      bottomNav: {
+        home: "Accueil",
+        hangout: "Groupes",
+        create: "Créer",
+        moment: "Activités",
+        profile: "Profil",
+      },
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      greeting: viewerName ? `Good evening, ${viewerName}!` : "Good evening!",
+      subtitle: "What are you up to today?",
+      searchPlaceholder: "Search activities or people...",
+      location: "Paris",
+      cityOptions: [
+        { label: "Paris", href: "/activities?city=Paris" },
+        { label: "London", href: "/activities?city=London" },
+        { label: "New York", href: "/activities?city=New%20York" },
+      ],
+      filters: [
+        { href: "/lobby", label: "All" },
+        { href: "/activities?city=Paris", label: "Nearby" },
+        { href: "/activities?dateRange=TODAY", label: "Today" },
+        { href: "/lobby?filter=friendJoined", label: "Friends" },
+        { href: "/activities?q=free", label: "Free" },
+      ],
+      categoriesTitle: "Popular Categories",
+      topNewsTitle: "Top News",
+      trendingTitle: "🔥 Trending Today",
+      seeAll: "See all",
+      participantsLabel: "people",
+      distanceFallback: "800m",
+      newsCards: [
+        {
+          href: "/game-tools/werewolf",
+          image: "/game-tools/werewolf/werewolf.jpeg",
+          title: "Werewolf Night",
+        },
+        {
+          href: "/game-tools",
+          image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+          title: "Board Game Tools",
+        },
+      ],
+      fallbackCards: [
+        {
+          category: "BOARD_GAME",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+          href: "/lobby?category=BOARD_GAME",
+          meta: "6 / 8 people",
+          title: "Board Game Night",
+        },
+        {
+          category: "MUSIC",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
+          href: "/activities?category=MUSIC",
+          meta: "2 friends going",
+          title: "Jazz in the Park",
+        },
+        {
+          category: "FOOD",
+          coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
+          href: "/lobby?category=FOOD",
+          meta: "4 / 6 people",
+          title: "Cafe & Talk",
+        },
+      ],
+      bottomNav: {
+        home: "Home",
+        hangout: "Hangout",
+        create: "Create",
+        moment: "Activity",
+        profile: "Profile",
+      },
+    };
+  }
+
+  return {
+    greeting: viewerName ? `晚上好，${viewerName}` : "晚上好",
+    subtitle: "今天想做点什么？",
+    searchPlaceholder: "搜索活动或用户...",
+    location: "巴黎",
+    cityOptions: [
+      { label: "巴黎", href: "/activities?city=Paris" },
+      { label: "上海", href: "/activities?city=Shanghai" },
+      { label: "北京", href: "/activities?city=Beijing" },
+    ],
+    filters: [
+      { href: "/lobby", label: "全部" },
+      { href: "/activities?city=Paris", label: "附近" },
+      { href: "/activities?dateRange=TODAY", label: "今天" },
+      { href: "/lobby?filter=friendJoined", label: "好友" },
+      { href: "/activities?q=免费", label: "免费" },
+    ],
+    categoriesTitle: "热门分类",
+    topNewsTitle: "最新动态",
+    trendingTitle: "🔥 今日热门",
+    seeAll: "查看全部",
+    participantsLabel: "人",
+    distanceFallback: "800m",
+    newsCards: [
+      {
+        href: "/game-tools/werewolf",
+        image: "/game-tools/werewolf/werewolf.jpeg",
+        title: "今晚狼人杀",
+      },
+      {
+        href: "/game-tools",
+        image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+        title: "桌游工具",
+      },
+    ],
+    fallbackCards: [
+      {
+        category: "BOARD_GAME",
+        coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
+        href: "/lobby?category=BOARD_GAME",
+        meta: "6 / 8 人",
+        title: "今晚桌游局",
+      },
+      {
+        category: "MUSIC",
+        coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
+        href: "/activities?category=MUSIC",
+        meta: "2 位好友参加",
+        title: "公园爵士",
+      },
+      {
+        category: "FOOD",
+        coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
+        href: "/lobby?category=FOOD",
+        meta: "4 / 6 人",
+        title: "咖啡聊天",
+      },
+    ],
+    bottomNav: {
+      home: "大厅",
+      hangout: "组局",
+      create: "发布",
+      moment: "活动",
+      profile: "主页",
+    },
+  };
+}
+
 export async function generateMetadata({
   params,
 }: MobileHomePageProps): Promise<Metadata> {
@@ -235,20 +464,29 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
     locale,
     route: "/mobile-home",
   });
-  const activitiesResult = await perf.measure("mobileHome.activities", () =>
-    getLobbySwipePublicEventActivities(null, { limit: 8 })
-      .then((swipeActivities) => ({
-        error: null,
-        swipeActivities,
-      }))
-      .catch((error: unknown) => {
-        console.error("Failed to load mobile home activities", error);
-        return { error, swipeActivities: [] };
-      }),
+  const [activitiesResult, viewerProfile] = await perf.measure(
+    "mobileHome.bootstrap",
+    () =>
+      Promise.all([
+        getLobbySwipePublicEventActivities(null, { limit: 8 })
+          .then((swipeActivities) => ({
+            error: null,
+            swipeActivities,
+          }))
+          .catch((error: unknown) => {
+            console.error("Failed to load mobile home activities", error);
+            return { error, swipeActivities: [] };
+          }),
+        getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
+          console.error("Failed to load mobile home viewer profile", error);
+          return null;
+        }),
+      ]),
   );
 
   perf.finish({
     hasActivityError: Boolean(activitiesResult.error),
+    hasViewer: Boolean(viewerProfile),
     swipeCount: activitiesResult.swipeActivities.length,
   });
 
@@ -256,12 +494,350 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
     <>
       <HomeLuxuryMotion />
       <main className="overflow-x-hidden bg-[#FEFFF9] text-[#1D1D1B]">
-        <MobileHomeExperience
+        <MobileHomeV23Experience
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
+          viewerName={viewerProfile?.nickname ?? null}
         />
+        <div className="hidden md:block">
+          <MobileHomeExperience
+            locale={locale}
+            swipeActivities={activitiesResult.swipeActivities}
+          />
+        </div>
       </main>
     </>
+  );
+}
+
+function getMobileHomeActivityHref(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
+  if (activity.type === "PUBLIC_EVENT" && activity.publicEventId) {
+    return withLocale(locale, `/public-events/${activity.publicEventId}`);
+  }
+
+  return withLocale(locale, getActivityDetailPath(activity.id));
+}
+
+function MobileHomeV23Experience({
+  locale,
+  swipeActivities,
+  viewerName,
+}: MobileHomeV23ExperienceProps) {
+  const copy = getMobileHomeV23Copy(locale, viewerName);
+  const categories = getMobileHomeCopy(locale).categories;
+  const newsActivities = swipeActivities.slice(0, 2);
+  const trendingActivities = swipeActivities.slice(2, 8);
+
+  return (
+    <section className="mobile-v23-home min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.15rem)] text-[#111210] md:hidden">
+      <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
+        <header className="flex min-h-[6.75rem] items-start justify-between gap-4 pt-2">
+          <Link
+            href={withLocale(locale, "/home?view=desktop")}
+            className="mt-2 inline-flex shrink-0"
+            aria-label="Friemi"
+          >
+            <BrandLockup className="h-10 w-[8.4rem]" priority size="md" />
+          </Link>
+
+          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-4">
+            <MobileHomeV23CitySelector
+              cityOptions={copy.cityOptions}
+              currentCity={copy.location}
+              locale={locale}
+            />
+            <LocaleSwitcher locale={locale} />
+            <MobileHomeV23NotificationLink locale={locale} />
+          </div>
+        </header>
+
+        <section className="pt-2">
+          <h1 className="text-[26px] font-black leading-tight tracking-normal text-[#111210]">
+            {copy.greeting}
+          </h1>
+          <p className="mt-1 text-[15px] font-medium leading-6 text-[#111210]/72">
+            {copy.subtitle}
+          </p>
+
+          <GlobalSearchForm
+            inputId="mobile-home-v23-search"
+            locale={locale}
+            placeholder={copy.searchPlaceholder}
+            variant="page"
+            className="mt-6 w-full [&_button]:right-2 [&_button]:h-10 [&_button]:w-10 [&_input]:h-[3.55rem] [&_input]:rounded-[1.05rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-14 [&_input]:text-[15px] [&_input]:font-semibold [&_input]:shadow-[0_18px_38px_rgba(23,36,28,0.06)] [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
+          />
+
+          <div className="mt-5 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {copy.filters.map((filter, index) => (
+              <Link
+                key={filter.label}
+                href={withLocale(locale, filter.href)}
+                className={cn(
+                  "inline-flex h-11 shrink-0 items-center justify-center rounded-full px-5 text-[14px] font-extrabold shadow-[0_10px_22px_rgba(21,98,64,0.07)] ring-1 transition active:scale-[0.96]",
+                  index === 0
+                    ? "bg-[#096B45] text-white ring-[#096B45]"
+                    : "bg-white text-[#123D31] ring-[#D7D5C8]",
+                )}
+              >
+                {filter.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-7">
+          <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+            {copy.categoriesTitle}
+          </h2>
+          <MobileHomeV23CategoryCarousel categories={categories} locale={locale} />
+        </section>
+
+        <section className="mt-4">
+          <h2 className="text-[19px] font-black tracking-normal text-[#064133]">
+            {copy.topNewsTitle}
+          </h2>
+          <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {newsActivities.length > 0
+              ? newsActivities.map((activity) => (
+                  <MobileHomeV23NewsActivityCard
+                    activity={activity}
+                    key={`${activity.type}:${activity.id}:news`}
+                    locale={locale}
+                  />
+                ))
+              : copy.newsCards.map((card) => (
+                  <MobileHomeV23NewsCard
+                    href={withLocale(locale, card.href)}
+                    image={card.image}
+                    key={card.href}
+                    title={card.title}
+                  />
+                ))}
+          </div>
+        </section>
+
+        <section className="mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[18px] font-black tracking-normal text-[#111210]">
+              {copy.trendingTitle}
+            </h2>
+            <Link
+              href={withLocale(locale, "/lobby")}
+              className="text-[13px] font-extrabold text-[#096B45]"
+            >
+              {copy.seeAll}
+            </Link>
+          </div>
+
+          <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {trendingActivities.length > 0
+              ? trendingActivities.slice(0, 5).map((activity) => (
+                  <MobileHomeV23ActivityCard
+                    activity={activity}
+                    key={`${activity.type}:${activity.id}`}
+                    locale={locale}
+                    participantsLabel={copy.participantsLabel}
+                  />
+                ))
+              : copy.fallbackCards.map((card) => (
+                  <MobileHomeV23FallbackCard
+                    card={card}
+                    key={card.title}
+                    locale={locale}
+                  />
+                ))}
+          </div>
+        </section>
+      </div>
+
+    </section>
+  );
+}
+
+function MobileHomeV23NewsCard({
+  href,
+  image,
+  title,
+}: {
+  href: string;
+  image: string;
+  title: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
+    >
+      <Image
+        src={image}
+        alt=""
+        fill
+        sizes="320px"
+        className="object-cover transition duration-500 group-active:scale-[1.03]"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
+      <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
+        {title}
+      </span>
+    </Link>
+  );
+}
+
+function MobileHomeV23NewsActivityCard({
+  activity,
+  locale,
+}: {
+  activity: ActivityCardViewModel;
+  locale: string;
+}) {
+  return (
+    <Link
+      href={getMobileHomeActivityHref(activity, locale)}
+      className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
+    >
+      <ActivityCoverImage
+        alt={activity.title}
+        src={activity.coverImageUrl}
+        overlayClassName="bg-gradient-to-t from-black/54 via-black/12 to-black/4"
+      />
+      <div className="absolute bottom-3 left-3 right-3">
+        <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
+          <span className="truncate">{getCategoryLabel(activity.category, locale)}</span>
+        </span>
+        <h3 className="mt-2 line-clamp-2 text-[17px] font-black leading-5 tracking-normal text-white drop-shadow-sm">
+          {activity.title}
+        </h3>
+      </div>
+    </Link>
+  );
+}
+
+function MobileHomeV23CitySelector({
+  cityOptions,
+  currentCity,
+  locale,
+}: {
+  cityOptions: ReturnType<typeof getMobileHomeV23Copy>["cityOptions"];
+  currentCity: string;
+  locale: string;
+}) {
+  return (
+    <details className="group relative">
+      <summary className="inline-flex h-9 min-w-0 cursor-pointer list-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-extrabold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35 [&::-webkit-details-marker]:hidden">
+        <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
+        <span className="max-w-[4.4rem] truncate">{currentCity}</span>
+        <ChevronDown className="h-3 w-3 shrink-0 text-[#123D31]/72 transition group-open:rotate-180" />
+      </summary>
+      <div className="absolute right-0 top-11 z-[60] grid min-w-[8.5rem] gap-1 rounded-[1rem] border border-[#D7D5C8] bg-white p-1.5 shadow-[0_18px_36px_rgba(17,18,16,0.12)]">
+        {cityOptions.map((city) => (
+          <Link
+            key={city.label}
+            href={withLocale(locale, city.href)}
+            className="rounded-[0.75rem] px-3 py-2 text-[13px] font-extrabold text-[#123D31] transition hover:bg-[#F5F4EC]"
+          >
+            {city.label}
+          </Link>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function MobileHomeV23ActivityCard({
+  activity,
+  locale,
+  participantsLabel,
+}: {
+  activity: ActivityCardViewModel;
+  locale: string;
+  participantsLabel: string;
+}) {
+  const participantLabel =
+    activity.capacity > 0
+      ? `${activity.participantCount}/${activity.capacity}`
+      : `${activity.participantCount}`;
+
+  return (
+    <Link
+      href={getMobileHomeActivityHref(activity, locale)}
+      className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
+    >
+      <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
+        <ActivityCoverImage
+          alt={activity.title}
+          src={activity.coverImageUrl}
+          overlayClassName="bg-gradient-to-t from-black/28 to-transparent"
+        />
+        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur-sm">
+          <Heart className="h-3.5 w-3.5" />
+        </span>
+      </div>
+      <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
+        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+          {activity.title}
+        </h3>
+        <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
+          <UsersRound className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {participantLabel} {participantsLabel}
+          </span>
+        </p>
+        <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
+          <Clock3 className="h-3 w-3 shrink-0" />
+          <span className="truncate">{getActivityDateLabel(activity, locale)}</span>
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function MobileHomeV23FallbackCard({
+  card,
+  locale,
+}: {
+  card: ReturnType<typeof getMobileHomeV23Copy>["fallbackCards"][number];
+  locale: string;
+}) {
+  return (
+    <Link
+      href={withLocale(locale, card.href)}
+      className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
+    >
+      <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
+        <Image
+          src={card.coverImageUrl}
+          alt=""
+          fill
+          sizes="150px"
+          className="object-cover transition duration-500 group-active:scale-[1.03]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/24 to-transparent" />
+        <span className="absolute right-2 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/28 text-white backdrop-blur-sm">
+          <Heart className="h-3.5 w-3.5" />
+        </span>
+      </div>
+      <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
+        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+          {card.title}
+        </h3>
+        <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
+          <UsersRound className="h-3 w-3 shrink-0" />
+          <span className="truncate">{card.meta}</span>
+        </p>
+        <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
+          <Clock3 className="h-3 w-3 shrink-0" />
+          <span>
+            {getCategoryLabel(
+              card.category as ActivityCardViewModel["category"],
+              locale,
+            )}
+          </span>
+        </p>
+      </div>
+    </Link>
   );
 }
 

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
 import { assertCanManageActivity } from "../utils/activityManagement";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const reviewParticipationSchema = z.object({
   activityId: z.string().min(1),
@@ -52,7 +53,7 @@ function isPrismaTransactionConflictError(error: unknown) {
 }
 
 function refreshActivityViews(locale: string, activityId: string) {
-  const activityPath = withLocale(locale, `/activities/${activityId}`);
+  const activityPath = withLocale(locale, getActivityDetailPath(activityId));
 
   revalidatePath(activityPath);
   revalidatePath(withLocale(locale, "/activities"));
@@ -89,7 +90,7 @@ export async function reviewParticipationAction(
 
   const profile = await ensureCurrentUserProfile(
     result.data.locale,
-    `/activities/${result.data.activityId}#participation-approval`,
+    `${getActivityDetailPath(result.data.activityId)}#participation-approval`,
   );
 
   try {

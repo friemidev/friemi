@@ -8,6 +8,7 @@ import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { assertCanManageActivity } from "../utils/activityManagement";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const maxCoverImageUrlLength = 2048;
 
@@ -98,7 +99,7 @@ export async function updateActivityCoverImageAction(
 
   const profile = await ensureCurrentUserProfileSnapshot(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   const activity = await prisma.activity.findUnique({
     where: {
@@ -156,7 +157,9 @@ export async function updateActivityCoverImageAction(
     };
   }
 
-  revalidatePath(withLocale(result.data.locale, `/activities/${activity.id}`));
+  revalidatePath(
+    withLocale(result.data.locale, getActivityDetailPath(activity.id)),
+  );
   revalidatePath(withLocale(result.data.locale, "/activities"));
   revalidatePath(withLocale(result.data.locale, "/lobby"));
   revalidatePath(withLocale(result.data.locale, "/profile"));

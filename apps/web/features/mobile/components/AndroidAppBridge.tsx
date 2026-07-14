@@ -28,6 +28,17 @@ type AndroidPushTokenPayload = {
   timezone?: string;
 };
 
+type AndroidSafeAreaPayload = {
+  bottom?: number;
+  navigationBarHeight?: number;
+  statusBarHeight?: number;
+  top?: number;
+};
+
+type AndroidAppInfoPayload = AndroidPushTokenPayload & {
+  safeArea?: AndroidSafeAreaPayload;
+};
+
 declare global {
   interface Window {
     FriemiAndroid?: AndroidBridge;
@@ -125,6 +136,59 @@ function parsePushTokenPayload(detail: unknown): AndroidPushTokenPayload | null 
   return null;
 }
 
+function parseAndroidAppInfoPayload(detail: unknown): AndroidAppInfoPayload | null {
+  if (!detail) {
+    return null;
+  }
+
+  if (typeof detail === "string") {
+    try {
+      return JSON.parse(detail) as AndroidAppInfoPayload;
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof detail === "object") {
+    return detail as AndroidAppInfoPayload;
+  }
+
+  return null;
+}
+
+function getSafeAreaNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, value)
+    : 0;
+}
+
+function applyAndroidSafeArea(payload?: AndroidAppInfoPayload | null) {
+  const safeArea = payload?.safeArea ?? {};
+  const root = document.documentElement;
+
+  root.dataset.friemiAndroidApp = "true";
+  root.style.setProperty(
+    "--friemi-android-statusbar-height",
+    `${getSafeAreaNumber(safeArea.statusBarHeight)}px`,
+  );
+  root.style.setProperty(
+    "--friemi-android-navigationbar-height",
+    `${getSafeAreaNumber(safeArea.navigationBarHeight)}px`,
+  );
+  root.style.setProperty(
+    "--friemi-android-top-inset",
+    `${getSafeAreaNumber(safeArea.top)}px`,
+  );
+  root.style.setProperty(
+    "--friemi-android-bottom-inset",
+    `${getSafeAreaNumber(safeArea.bottom)}px`,
+  );
+}
+
+function readAndroidAppInfo() {
+  return parseAndroidAppInfoPayload(window.FriemiAndroid?.getAppInfo?.());
+}
+
 async function registerMobileDevice(payload: AndroidPushTokenPayload) {
   if (!payload.ok || !payload.fcmToken) {
     return false;
@@ -165,6 +229,7 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
     }
 
     document.documentElement.dataset.friemiAndroidApp = "true";
+    applyAndroidSafeArea(readAndroidAppInfo());
     window.FriemiAndroid?.saveLocale?.(locale);
 
     const sendBackBehavior = () => {
@@ -184,10 +249,19 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
       updateTimerRef.current = window.setTimeout(sendBackBehavior, 80);
     };
 
-    const handleAndroidReady = () => {
+    const handleAndroidReady = (event: Event) => {
+      applyAndroidSafeArea(
+        parseAndroidAppInfoPayload((event as CustomEvent<unknown>).detail) ??
+          readAndroidAppInfo(),
+      );
       window.FriemiAndroid?.saveLocale?.(locale);
       window.FriemiAndroid?.registerPushToken?.();
       sendBackBehavior();
+    };
+    const handleAndroidSafeArea = (event: Event) => {
+      applyAndroidSafeArea({
+        safeArea: (event as CustomEvent<AndroidSafeAreaPayload>).detail,
+      });
     };
     const handleAndroidBack = () => {
       closeTopDialog();
@@ -210,6 +284,7 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
     };
 
     window.addEventListener("friemi:android-ready", handleAndroidReady);
+    window.addEventListener("friemi:android-safe-area", handleAndroidSafeArea);
     window.addEventListener("friemi:android-back", handleAndroidBack);
     window.addEventListener("friemi:android-push-token", handleAndroidPushToken);
     document.addEventListener("click", scheduleBackBehaviorUpdate, true);
@@ -237,6 +312,10 @@ export function AndroidAppBridge({ locale }: AndroidAppBridgeProps) {
       );
       observer.disconnect();
       window.removeEventListener("friemi:android-ready", handleAndroidReady);
+      window.removeEventListener(
+        "friemi:android-safe-area",
+        handleAndroidSafeArea,
+      );
       window.removeEventListener("friemi:android-back", handleAndroidBack);
       window.removeEventListener(
         "friemi:android-push-token",

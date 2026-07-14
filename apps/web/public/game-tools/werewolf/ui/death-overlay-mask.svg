@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 360" preserveAspectRatio="none" role="img" aria-label="out overlay">
+  <defs>
+    <radialGradient id="night" cx="50%" cy="48%" r="78%">
+      <stop stop-color="#0D0C0D" stop-opacity=".62"/>
+      <stop offset=".48" stop-color="#0A090A" stop-opacity=".76"/>
+      <stop offset="1" stop-color="#020203" stop-opacity=".95"/>
+    </radialGradient>
+    <linearGradient id="edge" x1="0" x2="0" y1="0" y2="1">
+      <stop stop-color="#FFFFFF" stop-opacity=".04"/>
+      <stop offset=".34" stop-color="#000000" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#000000" stop-opacity=".58"/>
+    </linearGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence baseFrequency=".82" numOctaves="2" seed="7" type="fractalNoise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA slope=".08" type="linear"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="240" height="360" fill="#050506" opacity=".42"/>
+  <rect width="240" height="360" fill="url(#night)"/>
+  <rect width="240" height="360" fill="url(#edge)"/>
+  <rect width="240" height="360" filter="url(#grain)" opacity=".9"/>
+</svg>

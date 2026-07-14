@@ -23,6 +23,7 @@ import {
   normalizeGuestPhone,
   normalizeGuestWechatId,
 } from "@/features/guest-participants/utils/contactIdentity";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 const existingGuestStatuses: ParticipantStatus[] = [
@@ -103,7 +104,7 @@ async function trackJoinFormFailure({
       locale: normalizeAnalyticsLocale(locale),
       name: "form_submit_failed",
       route: activityId
-        ? `/${locale}/activities/${activityId}`
+        ? `/${locale}${getActivityDetailPath(activityId)}`
         : `/${locale}/activities`,
       entityId: activityId || undefined,
       entityType: activityId ? "team" : undefined,
@@ -167,7 +168,7 @@ export async function joinActivityAction(
       locale: rawInput.locale,
       operationKey: "join_activity",
       route: rawInput.activityId
-        ? `/${rawInput.locale}/activities/${rawInput.activityId}`
+        ? `/${rawInput.locale}${getActivityDetailPath(rawInput.activityId)}`
         : `/${rawInput.locale}/activities`,
       sourceSurface: "activity_detail",
       status,
@@ -211,7 +212,7 @@ export async function joinActivityAction(
     profile = await perf.measure("viewer_profile", () =>
       ensureCurrentUserProfileSnapshot(
         result.data.locale,
-        `/activities/${result.data.activityId}`,
+        getActivityDetailPath(result.data.activityId),
       ),
     );
   } catch (error) {
@@ -525,7 +526,7 @@ export async function joinActivityAction(
       };
     }
 
-    void createNotification(prisma, {
+    await createNotification(prisma, {
       activityId: joinResult.activityId,
       recipientId: profile.id,
       type:
@@ -536,12 +537,15 @@ export async function joinActivityAction(
       console.error("Failed to create participant notification", error);
     });
 
-    if (joinResult.participantStatus === "PENDING") {
-      void createNotification(prisma, {
+    if (joinResult.organizerId !== profile.id) {
+      await createNotification(prisma, {
         actorId: profile.id,
         activityId: joinResult.activityId,
         recipientId: joinResult.organizerId,
-        type: "PARTICIPATION_PENDING",
+        type:
+          joinResult.participantStatus === "PENDING"
+            ? "PARTICIPATION_PENDING"
+            : "PARTICIPATION_CONFIRMED",
       }).catch((error) => {
         console.error("Failed to create organizer notification", error);
       });
@@ -552,7 +556,7 @@ export async function joinActivityAction(
       {
         locale: normalizeAnalyticsLocale(result.data.locale),
         name: "join_submitted",
-        route: `/${result.data.locale}/activities/${joinResult.activityId}`,
+        route: `/${result.data.locale}${getActivityDetailPath(joinResult.activityId)}`,
         entityId: joinResult.activityId,
         entityType: "team",
         sourceSurface: "activity_detail",

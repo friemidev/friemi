@@ -43,6 +43,7 @@ import { DetailSourceRestore } from "@/features/navigation/components/DetailSour
 import { ManualTranslationBundle } from "@/features/translations/components/ManualTranslation";
 import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
+import { MobileNavSectionOverride } from "@/components/navigation/MobileNavSectionOverride";
 import { getCopy } from "@/lib/copy";
 import {
   buildCanonicalUrl,
@@ -189,6 +190,7 @@ export default async function PublicEventDetailPage({
 
   return (
     <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">
+      <MobileNavSectionOverride section="activities" />
       <DetailSourceRestore sourceKey="public_event" />
       <DetailSourceReturnLink
         className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"

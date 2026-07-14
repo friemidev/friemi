@@ -134,6 +134,7 @@ enum ReportStatus {
 enum GameToolKind {
   AVALON
   STORYTELLER
+  WEREWOLF
 }
 
 enum GameToolRoomStatus {
@@ -200,9 +201,11 @@ model UserProfile {
   reviewedReports        Report[]                   @relation("ReportReviewer")
   mobileDevices          MobileDevice[]
   hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
+  gameToolRoomMembers    GameToolRoomMember[]       @relation("GameToolRoomMemberProfile")
   gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
   gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
   gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
+  gameToolPlayerRecords  GameToolPlayerRecord[]     @relation("GameToolPlayerRecordProfile")
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
   publicEventFavorites   PublicEventFavorite[]
@@ -691,30 +694,54 @@ model AnalyticsEvent {
 }
 
 model GameToolRoom {
-  id          String               @id @default(cuid())
-  kind        GameToolKind         @default(AVALON)
-  status      GameToolRoomStatus   @default(LOBBY)
-  code        String               @unique @db.VarChar(8)
-  locale      String               @default("zh-CN")
-  title       String
-  mode        String               @default("identity")
-  playerCount Int                  @default(7)
-  hostId      String
-  host        UserProfile          @relation("GameToolRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
-  config      Json?
-  state       Json?
-  startedAt   DateTime?
-  finishedAt  DateTime?
-  cancelledAt DateTime?
-  seats       GameToolSeat[]
-  events      GameToolEvent[]
-  submissions GameToolSubmission[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id            String                 @id @default(cuid())
+  kind          GameToolKind           @default(AVALON)
+  status        GameToolRoomStatus     @default(LOBBY)
+  code          String                 @unique @db.VarChar(8)
+  locale        String                 @default("zh-CN")
+  title         String
+  mode          String                 @default("identity")
+  playerCount   Int                    @default(7)
+  hostId        String
+  host          UserProfile            @relation("GameToolRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  config        Json?
+  state         Json?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  cancelledAt   DateTime?
+  seats         GameToolSeat[]
+  members       GameToolRoomMember[]
+  events        GameToolEvent[]
+  submissions   GameToolSubmission[]
+  playerRecords GameToolPlayerRecord[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
   @@index([hostId, createdAt])
   @@index([kind, status, updatedAt])
   @@index([code])
+}
+
+model GameToolRoomMember {
+  id           String        @id @default(cuid())
+  roomId       String
+  room         GameToolRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profileId    String?
+  profile      UserProfile?  @relation("GameToolRoomMemberProfile", fields: [profileId], references: [id], onDelete: SetNull)
+  guestName    String?
+  memberToken  String        @unique @db.VarChar(32)
+  seatedSeatId String?
+  seatedSeat   GameToolSeat? @relation("GameToolRoomMemberSeat", fields: [seatedSeatId], references: [id], onDelete: SetNull)
+  readyAt      DateTime?
+  lastSeenAt   DateTime      @default(now())
+  leftAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([roomId, profileId])
+  @@unique([seatedSeatId])
+  @@index([roomId, lastSeenAt])
+  @@index([profileId])
 }
 
 model GameToolSeat {
@@ -732,6 +759,7 @@ model GameToolSeat {
   joinedAt       DateTime             @default(now())
   leftAt         DateTime?
   room           GameToolRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomMember     GameToolRoomMember?  @relation("GameToolRoomMemberSeat")
   profile        UserProfile?         @relation("GameToolSeatProfile", fields: [profileId], references: [id], onDelete: SetNull)
   submissions    GameToolSubmission[]
 
@@ -773,4 +801,28 @@ model GameToolSubmission {
   @@unique([roomId, roundIndex, kind, seatId])
   @@index([roomId, kind, roundIndex])
   @@index([profileId, submittedAt])
+}
+
+model GameToolPlayerRecord {
+  id            String       @id @default(cuid())
+  roomId        String
+  profileId     String
+  kind          GameToolKind
+  variantKey    String?
+  variantName   String?
+  seatNumber    Int?
+  roleKey       String?
+  roleAlignment String?
+  result        String?
+  isJudge       Boolean      @default(false)
+  playedAt      DateTime     @default(now())
+  metadata      Json?
+  room          GameToolRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  profile       UserProfile  @relation("GameToolPlayerRecordProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([roomId, profileId])
+  @@index([profileId, kind, playedAt])
+  @@index([roomId])
 }

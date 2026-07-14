@@ -151,30 +151,38 @@ function getStoredEmailVerifiedAt({
     : new Date();
 }
 
-function upsertLocalUserProfile(clerkUserId: string) {
-  return prisma.userProfile
-    .upsert({
-      where: {
-        clerkUserId,
-      },
-      create: {
-        clerkUserId,
-        email: "local-dev@example.com",
-        emailVerifiedAt: new Date(),
-        nickname: "本地开发用户",
-        status: "ACTIVE",
-        syncedAt: new Date(),
-      },
-      update: {
-        status: "ACTIVE",
-        syncedAt: new Date(),
-      },
-    })
-    .then((profile) =>
-      finalizeUserProfile(profile, {
-        verifiedEmail: profile.email,
-      }),
-    );
+async function upsertLocalUserProfile(clerkUserId: string) {
+  const existing = await prisma.userProfile.findUnique({
+    where: {
+      clerkUserId,
+    },
+  });
+
+  if (existing?.status === "DELETED") {
+    return existing;
+  }
+
+  const profile = await prisma.userProfile.upsert({
+    where: {
+      clerkUserId,
+    },
+    create: {
+      clerkUserId,
+      email: "local-dev@example.com",
+      emailVerifiedAt: new Date(),
+      nickname: "本地开发用户",
+      status: "ACTIVE",
+      syncedAt: new Date(),
+    },
+    update: {
+      status: "ACTIVE",
+      syncedAt: new Date(),
+    },
+  });
+
+  return finalizeUserProfile(profile, {
+    verifiedEmail: profile.email,
+  });
 }
 
 async function upsertClerkUserProfile(user: ClerkCurrentUser) {
@@ -191,8 +199,20 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
       email: true,
       emailVerifiedAt: true,
       nickname: true,
+      status: true,
     },
   });
+
+  if (existing?.status === "DELETED") {
+    const deletedProfile = await prisma.userProfile.findUniqueOrThrow({
+      where: {
+        clerkUserId: user.id,
+      },
+    });
+
+    return deletedProfile;
+  }
+
   const updatedEmailVerifiedAt = getStoredEmailVerifiedAt({
     email: profileFields.email,
     previousEmail: existing?.email,

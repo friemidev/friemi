@@ -3,13 +3,19 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getActivityCopyValuesById } from "@/features/activities/queries/getActivityById";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
+import { MobileNewActivityEntryView } from "@/features/activities/components/MobileNewActivityEntryView";
+import { getActivityList } from "@/features/activities/queries/getActivities";
+import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getCopy } from "@/lib/copy";
 
 type NewActivityPageProps = {
   params: Promise<{
     locale: string;
   }>;
-  searchParams: Promise<{ copyActivityId?: string | string[] }>;
+  searchParams: Promise<{
+    copyActivityId?: string | string[];
+    mode?: string | string[];
+  }>;
 };
 
 export default async function NewActivityPage({
@@ -23,16 +29,39 @@ export default async function NewActivityPage({
   const copyActivityId = Array.isArray(resolvedSearchParams.copyActivityId)
     ? resolvedSearchParams.copyActivityId[0]
     : resolvedSearchParams.copyActivityId;
+  const mode = Array.isArray(resolvedSearchParams.mode)
+    ? resolvedSearchParams.mode[0]
+    : resolvedSearchParams.mode;
+  const showForm = mode === "form" || Boolean(copyActivityId);
   const initialValues = copyActivityId
     ? await getActivityCopyValuesById(copyActivityId, profile.id)
     : undefined;
+  const activityPreviewList = showForm
+    ? null
+    : await getActivityList(
+        normalizeActivityFilterValues({
+          page: "1",
+          relation: "ALL",
+          sort: "soonest",
+          timeStates: "UPCOMING,ONGOING",
+          view: "card",
+        }),
+        {
+          pageSize: 6,
+          publicInfoOnly: true,
+          viewerProfileId: profile.id,
+        },
+      ).catch((error: unknown) => {
+        console.error("Failed to load mobile new activity preview", error);
+        return null;
+      });
 
   if (copyActivityId && !initialValues) {
     notFound();
   }
 
-  return (
-      <PageContainer className="max-w-6xl space-y-6">
+  const formContent = (
+    <PageContainer className="max-w-6xl space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-normal text-ink">
           {t.newActivity.title}
@@ -53,5 +82,19 @@ export default async function NewActivityPage({
         initialValues={initialValues ?? undefined}
       />
     </PageContainer>
+  );
+
+  if (showForm) {
+    return formContent;
+  }
+
+  return (
+    <>
+      <MobileNewActivityEntryView
+        activities={activityPreviewList?.activities ?? []}
+        locale={locale}
+      />
+      <div className="hidden md:block">{formContent}</div>
+    </>
   );
 }

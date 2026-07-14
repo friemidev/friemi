@@ -21,8 +21,8 @@ import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipati
 import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import type { Prisma } from "@prisma/client";
 
-const activityLobbySectionLimit = 6;
 const activityLobbyFeedPageSize = 10;
+const activityLobbySectionLimit = activityLobbyFeedPageSize * 6;
 const activityLobbyPreviewLimit = activityLobbyFeedPageSize * 2;
 const activityLobbyStarterLimit = 8;
 const activityLobbySwipeLimit = 24;
@@ -934,7 +934,6 @@ export async function getActivityLobbyInitial(
           getActivityLobbyFeedPage(viewerProfileId, {
             context: feedContext,
             decorate: false,
-            skipCounts: true,
           }),
       ),
     ),

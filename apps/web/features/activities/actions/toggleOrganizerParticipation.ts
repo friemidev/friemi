@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const toggleOrganizerParticipationSchema = z.object({
   activityId: z.string().min(1),
@@ -66,7 +67,7 @@ export async function toggleOrganizerParticipationAction(
 
   const profile = await ensureCurrentUserProfileSnapshot(
     result.data.locale,
-    `/activities/${result.data.activityId}`,
+    getActivityDetailPath(result.data.activityId),
   );
   const activity = await prisma.activity.findUnique({
     where: {

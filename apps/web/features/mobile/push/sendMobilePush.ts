@@ -1,6 +1,14 @@
 import { createSign } from "node:crypto";
+import { connect } from "node:http2";
 import { prisma } from "@/lib/prisma";
 import type { NotificationType } from "@prisma/client";
+import {
+  getNotificationCopy,
+  getNotificationPath,
+  isInvalidAPNsTokenResponse,
+  isInvalidFirebaseTokenResponse,
+  normalizePushLocale,
+} from "./pushDelivery";
 
 const firebaseTokenUrl = "https://oauth2.googleapis.com/token";
 const firebaseScope = "https://www.googleapis.com/auth/firebase.messaging";
@@ -10,7 +18,13 @@ let cachedAccessToken: {
   token: string;
 } | null = null;
 
-type PushCopyLocale = "zh-CN" | "en" | "fr";
+type APNsConfig = {
+  bundleId: string;
+  keyId: string;
+  privateKey: string;
+  teamId: string;
+  useSandbox: boolean;
+};
 
 function getFirebaseConfig() {
   const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
@@ -25,6 +39,25 @@ function getFirebaseConfig() {
     clientEmail,
     privateKey,
     projectId,
+  };
+}
+
+function getAPNsConfig(): APNsConfig | null {
+  const teamId = process.env.APPLE_PUSH_TEAM_ID?.trim();
+  const keyId = process.env.APPLE_PUSH_KEY_ID?.trim();
+  const bundleId = process.env.APPLE_PUSH_BUNDLE_ID?.trim();
+  const privateKey = process.env.APPLE_PUSH_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+  if (!teamId || !keyId || !bundleId || !privateKey) {
+    return null;
+  }
+
+  return {
+    bundleId,
+    keyId,
+    privateKey,
+    teamId,
+    useSandbox: process.env.APPLE_PUSH_USE_SANDBOX === "true",
   };
 }
 
@@ -58,6 +91,27 @@ function createServiceAccountJwt(config: {
   const signature = createSign("RSA-SHA256")
     .update(unsigned)
     .sign(config.privateKey);
+
+  return `${unsigned}.${base64Url(signature)}`;
+}
+
+function createAPNsJwt(config: APNsConfig) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = {
+    alg: "ES256",
+    kid: config.keyId,
+  };
+  const claimSet = {
+    iat: now,
+    iss: config.teamId,
+  };
+  const unsigned = `${base64Url(JSON.stringify(header))}.${base64Url(
+    JSON.stringify(claimSet),
+  )}`;
+  const signature = createSign("SHA256").update(unsigned).sign({
+    key: config.privateKey,
+    dsaEncoding: "ieee-p1363",
+  });
 
   return `${unsigned}.${base64Url(signature)}`;
 }
@@ -105,133 +159,88 @@ async function getFirebaseAccessToken(config: {
   return payload.access_token;
 }
 
-function normalizePushLocale(value: string | null): PushCopyLocale {
-  if (value === "zh-CN" || value?.toLowerCase().startsWith("zh")) {
-    return "zh-CN";
-  }
-
-  if (value === "en" || value?.toLowerCase().startsWith("en")) {
-    return "en";
-  }
-
-  return "fr";
-}
-
-function getNotificationPath(input: {
-  activityId: string | null;
+async function sendIOSPushNotification(input: {
+  config: APNsConfig;
+  copy: { body: string; title: string };
+  notificationId: string;
+  path: string;
+  token: string;
   type: NotificationType;
 }) {
-  if (input.activityId) {
-    if (
-      input.type === "ACTIVITY_COMMENTED" ||
-      input.type === "COMMENT_REPLY"
-    ) {
-      return `/activities/${input.activityId}#comments`;
-    }
+  const authority = input.config.useSandbox
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com";
+  const jwt = createAPNsJwt(input.config);
+  const client = connect(authority);
 
-    if (input.type === "PARTICIPATION_PENDING") {
-      return `/activities/${input.activityId}#participation-approval`;
-    }
+  return await new Promise<{ ok: boolean; status: number; text: string }>(
+    (resolve, reject) => {
+      client.on("error", reject);
 
-    return `/activities/${input.activityId}`;
-  }
+      const request = client.request({
+        ":method": "POST",
+        ":path": `/3/device/${input.token}`,
+        authorization: `bearer ${jwt}`,
+        "apns-priority": "10",
+        "apns-push-type": "alert",
+        "apns-topic": input.config.bundleId,
+        "content-type": "application/json",
+      });
 
-  if (input.type === "DIRECT_MESSAGE") {
-    return "/messages";
-  }
+      let body = "";
+      let status = 0;
 
-  return "/notifications";
-}
+      request.setEncoding("utf8");
+      request.on("response", (headers) => {
+        const headerStatus = headers[":status"];
+        status = typeof headerStatus === "number" ? headerStatus : 0;
+      });
+      request.on("data", (chunk) => {
+        body += chunk;
+      });
+      request.on("end", () => {
+        client.close();
+        resolve({
+          ok: status >= 200 && status < 300,
+          status,
+          text: body,
+        });
+      });
+      request.on("error", (error) => {
+        client.destroy();
+        reject(error);
+      });
 
-function getNotificationCopy(input: {
-  activityTitle: string | null;
-  actorName: string | null;
-  locale: PushCopyLocale;
-  type: NotificationType;
-}) {
-  const activityTitle =
-    input.activityTitle ||
-    (input.locale === "zh-CN"
-      ? "你的活动"
-      : input.locale === "en"
-        ? "your plan"
-        : "votre sortie");
-  const actorName =
-    input.actorName ||
-    (input.locale === "zh-CN"
-      ? "有人"
-      : input.locale === "en"
-        ? "Someone"
-        : "Quelqu'un");
-
-  const copy: Record<PushCopyLocale, Partial<Record<NotificationType, string>>> = {
-    "zh-CN": {
-      ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
-      ACTIVITY_CANCELLED: `${activityTitle} 已取消`,
-      ACTIVITY_COMMENTED: `${actorName} 评论了 ${activityTitle}`,
-      ACTIVITY_UPDATED: `${activityTitle} 有更新`,
-      COMMENT_REPLY: `${actorName} 回复了你`,
-      DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
-      FRIEND_REQUEST: `${actorName} 想加你为好友`,
-      PARTICIPATION_APPROVED: `${activityTitle} 已通过你的报名`,
-      PARTICIPATION_CANCELLED: `${actorName} 取消了报名`,
-      PARTICIPATION_CONFIRMED: `${activityTitle} 报名已确认`,
-      PARTICIPATION_PENDING: `${actorName} 提交了报名申请`,
-      PARTICIPATION_REJECTED: `${activityTitle} 未通过报名`,
-      REPORT_CREATED: "有新的举报需要处理",
+      request.end(
+        JSON.stringify({
+          aps: {
+            alert: {
+              body: input.copy.body,
+              title: input.copy.title,
+            },
+            badge: 1,
+            sound: "default",
+          },
+          notificationId: input.notificationId,
+          path: input.path,
+          type: input.type,
+          url: input.path,
+        }),
+      );
     },
-    en: {
-      ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
-      ACTIVITY_CANCELLED: `${activityTitle} was cancelled`,
-      ACTIVITY_COMMENTED: `${actorName} commented on ${activityTitle}`,
-      ACTIVITY_UPDATED: `${activityTitle} was updated`,
-      COMMENT_REPLY: `${actorName} replied to you`,
-      DIRECT_MESSAGE: `${actorName} sent you a message`,
-      FRIEND_REQUEST: `${actorName} sent you a friend request`,
-      PARTICIPATION_APPROVED: `You're approved for ${activityTitle}`,
-      PARTICIPATION_CANCELLED: `${actorName} cancelled their join`,
-      PARTICIPATION_CONFIRMED: `You're confirmed for ${activityTitle}`,
-      PARTICIPATION_PENDING: `${actorName} asked to join`,
-      PARTICIPATION_REJECTED: `${activityTitle} could not approve you`,
-      REPORT_CREATED: "A new report needs review",
-    },
-    fr: {
-      ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
-      ACTIVITY_CANCELLED: `${activityTitle} a été annulée`,
-      ACTIVITY_COMMENTED: `${actorName} a commenté ${activityTitle}`,
-      ACTIVITY_UPDATED: `${activityTitle} a été mise à jour`,
-      COMMENT_REPLY: `${actorName} vous a répondu`,
-      DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
-      FRIEND_REQUEST: `${actorName} vous a ajouté en ami`,
-      PARTICIPATION_APPROVED: `Votre inscription à ${activityTitle} est validée`,
-      PARTICIPATION_CANCELLED: `${actorName} a annulé son inscription`,
-      PARTICIPATION_CONFIRMED: `Votre inscription à ${activityTitle} est confirmée`,
-      PARTICIPATION_PENDING: `${actorName} demande à participer`,
-      PARTICIPATION_REJECTED: `${activityTitle} n'a pas pu vous accepter`,
-      REPORT_CREATED: "Un nouveau signalement est à traiter",
-    },
-  };
-
-  return {
-    body: copy[input.locale][input.type] ?? activityTitle,
-    title: "Friemi",
-  };
-}
-
-function isInvalidTokenResponse(status: number, text: string) {
-  return (
-    status === 400 ||
-    status === 404 ||
-    text.includes("UNREGISTERED") ||
-    text.includes("INVALID_ARGUMENT")
   );
 }
 
 export async function sendMobilePushForNotification(notificationId: string) {
   const config = getFirebaseConfig();
+  const apnsConfig = getAPNsConfig();
 
-  if (!config) {
-    return { ok: false, skipped: true, reason: "FIREBASE_NOT_CONFIGURED" };
+  if (!config && !apnsConfig) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "PUSH_NOT_CONFIGURED",
+    };
   }
 
   const notification = await prisma.notification.findUnique({
@@ -250,6 +259,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
           nickname: true,
         },
       },
+      actorId: true,
       recipientId: true,
       type: true,
     },
@@ -259,15 +269,47 @@ export async function sendMobilePushForNotification(notificationId: string) {
     return { ok: false, skipped: true, reason: "NOTIFICATION_NOT_FOUND" };
   }
 
+  const messageBody =
+    notification.type === "DIRECT_MESSAGE" && notification.actorId
+      ? (
+          await prisma.directMessage.findFirst({
+            where: {
+              senderId: notification.actorId,
+              conversation: {
+                OR: [
+                  {
+                    userAId: notification.actorId,
+                    userBId: notification.recipientId,
+                  },
+                  {
+                    userAId: notification.recipientId,
+                    userBId: notification.actorId,
+                  },
+                ],
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              body: true,
+            },
+          })
+        )?.body ?? null
+      : null;
+
   const devices = await prisma.mobileDevice.findMany({
     where: {
       disabledAt: null,
-      platform: "ANDROID",
+      platform: {
+        in: ["ANDROID", "IOS"],
+      },
       userProfileId: notification.recipientId,
     },
     select: {
       fcmToken: true,
       locale: true,
+      platform: true,
     },
   });
 
@@ -275,7 +317,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
     return { ok: true, sentCount: 0 };
   }
 
-  const accessToken = await getFirebaseAccessToken(config);
+  const accessToken = config ? await getFirebaseAccessToken(config) : null;
   let sentCount = 0;
 
   for (const device of devices) {
@@ -284,48 +326,93 @@ export async function sendMobilePushForNotification(notificationId: string) {
       activityTitle: notification.activity?.title ?? null,
       actorName: notification.actor?.nickname ?? null,
       locale,
+      messageBody,
       type: notification.type,
     });
     const path = getNotificationPath({
       activityId: notification.activityId,
       type: notification.type,
     });
-    const response = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`,
-      {
-        body: JSON.stringify({
-          message: {
-            android: {
-              notification: {
-                channel_id: "friemi_activity_updates",
+    if (device.platform === "ANDROID") {
+      if (!config || !accessToken) {
+        continue;
+      }
+
+      const response = await fetch(
+        `https://fcm.googleapis.com/v1/projects/${config.projectId}/messages:send`,
+        {
+          body: JSON.stringify({
+            message: {
+              android: {
+                notification: {
+                  channel_id: "friemi_activity_updates",
+                },
               },
+              data: {
+                notificationId,
+                path,
+                type: notification.type,
+                url: path,
+              },
+              notification: copy,
+              token: device.fcmToken,
             },
-            data: {
-              notificationId,
-              path,
-              type: notification.type,
-              url: path,
-            },
-            notification: copy,
-            token: device.fcmToken,
+          }),
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+            "content-type": "application/json",
           },
-        }),
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-          "content-type": "application/json",
+          method: "POST",
         },
-        method: "POST",
-      },
-    );
+      );
+
+      if (response.ok) {
+        sentCount += 1;
+        continue;
+      }
+
+      const errorText = await response.text();
+
+      if (isInvalidFirebaseTokenResponse(response.status, errorText)) {
+        await prisma.mobileDevice.updateMany({
+          where: {
+            fcmToken: device.fcmToken,
+          },
+          data: {
+            disabledAt: new Date(),
+          },
+        });
+      } else {
+        console.error("Failed to send mobile push notification", {
+          notificationId,
+          platform: device.platform,
+          status: response.status,
+          body: errorText,
+        });
+      }
+
+      continue;
+    }
+
+    if (!apnsConfig) {
+      continue;
+    }
+
+    const response = await sendIOSPushNotification({
+      config: apnsConfig,
+      copy,
+      notificationId,
+      path,
+      token: device.fcmToken,
+      type: notification.type,
+    });
 
     if (response.ok) {
       sentCount += 1;
       continue;
     }
 
-    const errorText = await response.text();
-
-    if (isInvalidTokenResponse(response.status, errorText)) {
+    if (isInvalidAPNsTokenResponse(response.status, response.text)) {
       await prisma.mobileDevice.updateMany({
         where: {
           fcmToken: device.fcmToken,
@@ -337,8 +424,9 @@ export async function sendMobilePushForNotification(notificationId: string) {
     } else {
       console.error("Failed to send mobile push notification", {
         notificationId,
+        platform: device.platform,
         status: response.status,
-        body: errorText,
+        body: response.text,
       });
     }
   }

@@ -19,6 +19,7 @@ import {
   IncomingFriendRequestsPanel,
   RequestCountBadge,
 } from "@/features/friends/components/FriendsDashboard";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
@@ -274,7 +275,7 @@ function MobileActivitySignalRow({
     <Link
       aria-label={t.openActivity(activity.title)}
       className="grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5 rounded-full bg-team-bg px-2.5 py-1 text-xs leading-5 text-[#156240] ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-      href={withLocale(locale, `/activities/${activity.id}`)}
+      href={withLocale(locale, getActivityDetailPath(activity.id))}
       title={label}
     >
       <CalendarDays className="h-3.5 w-3.5 shrink-0 text-moss" />

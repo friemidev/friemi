@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 type BoardGameToolFloatingEntryProps = {
   avalonHref: string;
   locale: string;
+  werewolfHref: string;
 };
 
 type BoardGameToolCopy = {
@@ -21,9 +22,10 @@ type BoardGameToolCopy = {
   comingSoon: string;
   description: string;
   eyebrow: string;
-  mafiaTitle: string;
+  werewolfTitle: string;
   open: string;
   title: string;
+  werewolfSubtitle: string;
 };
 
 function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
@@ -37,9 +39,10 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       comingSoon: "Bientôt",
       description: "Choisis l'outil qui accompagne la partie autour de la table.",
       eyebrow: "Débloqué",
-      mafiaTitle: "Loup-garou",
+      werewolfTitle: "Loup-garou",
       open: "Outils jeu",
       title: "Outils de table",
+      werewolfSubtitle: "Disponible",
     };
   }
 
@@ -53,9 +56,10 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
       comingSoon: "Coming soon",
       description: "Pick a table tool for the game you are running.",
       eyebrow: "Unlocked",
-      mafiaTitle: "Werewolf",
+      werewolfTitle: "Werewolf",
       open: "Game tools",
       title: "Table tools",
+      werewolfSubtitle: "Ready",
     };
   }
 
@@ -68,32 +72,35 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
     comingSoon: "敬请期待",
     description: "选择Friemi 桌游应用，开启你的桌游世界。",
     eyebrow: "已解锁",
-    mafiaTitle: "狼人杀",
+    werewolfTitle: "狼人杀",
     open: "桌游工具",
     title: "桌游",
+    werewolfSubtitle: "已开放",
   };
 }
 
 export function BoardGameToolFloatingEntry({
   avalonHref,
   locale,
+  werewolfHref,
 }: BoardGameToolFloatingEntryProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
   const copy = getBoardGameToolCopy(locale);
   const tools = [
     {
+      href: werewolfHref,
+      icon: "/game-tools/werewolf/werewolf.jpeg",
+      key: "werewolf",
+      status: copy.werewolfSubtitle,
+      title: copy.werewolfTitle,
+    },
+    {
       href: avalonHref,
       icon: "/game-tools/avalon/avalon.jpeg",
       key: "avalon",
       status: copy.avalonSubtitle,
       title: copy.avalonTitle,
-    },
-    {
-      icon: "/game-tools/mafia/mafia.jpeg",
-      key: "mafia",
-      status: copy.comingSoon,
-      title: copy.mafiaTitle,
     },
     {
       icon: "/game-tools/blood_on_the_clockTower/blood_on_the_clockTower.jpeg",

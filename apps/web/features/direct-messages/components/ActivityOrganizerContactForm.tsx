@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle, MessageCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getSignInHref } from "@/lib/auth-redirect";
 import {
   openActivityOrganizerConversationFormAction,
@@ -59,7 +60,7 @@ export function ActivityOrganizerContactForm({
     openActivityOrganizerConversationFormAction,
     initialState,
   );
-  const redirectPath = `/activities/${activityId}`;
+  const redirectPath = getActivityDetailPath(activityId);
 
   if (!isAuthenticated) {
     return (

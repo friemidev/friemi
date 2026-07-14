@@ -22,6 +22,7 @@ import type {
   ActivityCommentReplyViewModel,
   ActivityCommentViewModel,
 } from "../types";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 
 type ActivityCommentThreadProps = {
   activityId: string;
@@ -102,8 +103,8 @@ function CommentAvatar({
       <div
         className={
           size === "sm"
-            ? "flex h-7 w-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-xs font-semibold text-moss"
-            : "flex h-9 w-9 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-moss/10 text-sm font-semibold text-moss"
+            ? "flex h-7 w-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-[#E7F4EA] text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]/45"
+            : "flex h-9 w-9 shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-[#E7F4EA] text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E]/45"
         }
       >
         {avatarUrl ? (
@@ -134,10 +135,10 @@ function CommentMeta({
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <p className="max-w-[11rem] truncate font-medium text-ink sm:max-w-[18rem]">
+      <p className="max-w-[11rem] truncate font-bold text-ink sm:max-w-[18rem]">
         {nickname}
       </p>
-      <span className="text-xs text-zinc-500">
+      <span className="text-xs font-medium text-zinc-400">
         {formatActivityDate(createdAt, locale)}
       </span>
       {!isDeleted && editedAt ? (
@@ -378,11 +379,11 @@ function CommentActions({
   }
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium">
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
       {canReply ? (
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600 transition hover:bg-zinc-200"
+          className="inline-flex items-center gap-1 rounded-full bg-[#F1F2EC] px-2.5 py-1 text-[#156240] transition hover:bg-[#E7F4EA]"
           onClick={onReply}
         >
           <Reply className="h-3.5 w-3.5" aria-hidden="true" />
@@ -393,7 +394,7 @@ function CommentActions({
         <>
           <button
             type="button"
-            className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600 transition hover:bg-zinc-200"
+            className="rounded-full bg-[#F1F2EC] px-2.5 py-1 text-zinc-600 transition hover:bg-zinc-200"
             onClick={onEdit}
           >
             {t.edit}
@@ -446,7 +447,7 @@ function ReplyItem({
   const canReport =
     !reply.isDeleted &&
     (!isAuthenticated || viewerProfileId !== reply.author.id);
-  const redirectPath = `/activities/${activityId}`;
+  const redirectPath = getActivityDetailPath(activityId);
 
   return (
     <div className="flex gap-2 py-3">
@@ -539,10 +540,10 @@ export function ActivityCommentThread({
   const canReport =
     !comment.isDeleted &&
     (!isAuthenticated || viewerProfileId !== comment.author.id);
-  const redirectPath = `/activities/${activityId}`;
+  const redirectPath = getActivityDetailPath(activityId);
 
   return (
-    <article className="py-4 first:pt-0 last:pb-0">
+    <article className="rounded-[1.1rem] bg-[#FEFFF9]/72 p-3 shadow-sm ring-1 ring-[#D6D5B2]/60 sm:bg-transparent sm:p-0 sm:shadow-none sm:ring-0">
       <div className="flex items-start gap-3">
         <CommentAvatar
           avatarUrl={comment.author.avatarUrl}
@@ -561,7 +562,7 @@ export function ActivityCommentThread({
               nickname={comment.author.nickname}
             />
             {!comment.isDeleted ? (
-              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+              <span className="rounded-full bg-[#F1F2EC] px-2 py-0.5 text-xs font-semibold text-[#156240]">
                 {t.types[comment.type]}
               </span>
             ) : null}
@@ -639,7 +640,7 @@ export function ActivityCommentThread({
           ) : null}
 
           {comment.replies.length > 0 ? (
-            <div className="mt-4 rounded-r-md border-l-2 border-moss/20 bg-moss/[0.03] pl-3 sm:pl-4">
+            <div className="mt-4 rounded-[0.95rem] bg-[#F1F2EC]/58 px-3 sm:rounded-r-md sm:border-l-2 sm:border-moss/20 sm:bg-moss/[0.03] sm:pl-4">
               {comment.replies.map((reply) => (
                 <ReplyItem
                   key={reply.id}
