@@ -172,7 +172,6 @@ export default async function NewPublicEventTeamPage({
             <NewActivityForm
               initialValues={getInitialValues(publicEvent, locale)}
               locale={locale}
-              showLinkImport={false}
             />
           )}
         </div>

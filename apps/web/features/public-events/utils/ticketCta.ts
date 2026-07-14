@@ -1,25 +1,25 @@
 function getDefaultTicketCtaLabel(locale: string) {
   if (locale === "fr") {
-    return "Réserver";
+    return "Réserver une place";
   }
 
   if (locale === "en") {
-    return "Get tickets";
+    return "Save a spot";
   }
 
-  return "立即抢票";
+  return "抢位置";
 }
 
 function getDefaultDetailsCtaLabel(locale: string) {
   if (locale === "fr") {
-    return "En savoir plus";
+    return "Voir les détails";
   }
 
   if (locale === "en") {
-    return "Learn more";
+    return "View details";
   }
 
-  return "了解详情";
+  return "查看详情";
 }
 
 function normalizeLabelKey(value: string) {
@@ -33,6 +33,10 @@ function normalizeLabelKey(value: string) {
 }
 
 const genericReservationLabels = new Set([
+  "reserve spot",
+  "save a spot",
+  "reserver une place",
+  "抢位置",
   "reservation",
   "reserver",
   "billetterie",
@@ -55,6 +59,9 @@ const genericReservationLabels = new Set([
 ]);
 
 const genericDetailsLabels = new Set([
+  "view details",
+  "voir les details",
+  "查看详情",
   "en savoir plus",
   "plus dinfos",
   "plus dinfo",
@@ -110,6 +117,14 @@ export function getTicketCtaLabel(locale: string, label?: string | null) {
   const normalizedLabel = label?.trim();
 
   if (normalizedLabel && isUsableTicketLabel(normalizedLabel)) {
+    if (normalizedLabel === "RESERVE_SPOT") {
+      return getDefaultTicketCtaLabel(locale);
+    }
+
+    if (normalizedLabel === "VIEW_DETAILS") {
+      return getDefaultDetailsCtaLabel(locale);
+    }
+
     const genericKind = getGenericTicketLabelKind(normalizedLabel);
 
     if (genericKind === "details") {
