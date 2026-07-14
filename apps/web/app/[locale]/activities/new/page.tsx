@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getActivityCopyValuesById } from "@/features/activities/queries/getActivityById";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -7,6 +8,7 @@ import { MobileNewActivityEntryView } from "@/features/activities/components/Mob
 import { getActivityList } from "@/features/activities/queries/getActivities";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
 import { getCopy } from "@/lib/copy";
+import { withLocale } from "@/lib/routes";
 
 type NewActivityPageProps = {
   params: Promise<{
@@ -17,6 +19,30 @@ type NewActivityPageProps = {
     mode?: string | string[];
   }>;
 };
+
+function getMobileCreateHeaderCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      cancel: "Annuler",
+      publish: "Publier",
+      title: "Créer une sortie",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      cancel: "Cancel",
+      publish: "Publish",
+      title: "Create plan",
+    };
+  }
+
+  return {
+    cancel: "取消",
+    publish: "发布",
+    title: "创建组局",
+  };
+}
 
 export default async function NewActivityPage({
   params,
@@ -60,15 +86,27 @@ export default async function NewActivityPage({
     notFound();
   }
 
+  const formId = "new-activity-form";
+  const headerCopy = getMobileCreateHeaderCopy(locale);
   const formContent = (
-    <PageContainer className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-normal text-ink">
-          {t.newActivity.title}
+    <PageContainer className="max-w-3xl space-y-5 max-md:px-6">
+      <div className="grid grid-cols-[4rem_minmax(0,1fr)_4rem] items-center py-1">
+        <Link
+          className="justify-self-start text-sm font-semibold text-zinc-600 transition hover:text-[#156240]"
+          href={withLocale(locale, "/activities/new")}
+        >
+          {headerCopy.cancel}
+        </Link>
+        <h1 className="truncate text-center text-lg font-semibold text-ink">
+          {headerCopy.title}
         </h1>
-        <p className="mt-2 text-sm leading-6 text-zinc-600">
-          {t.newActivity.description}
-        </p>
+        <button
+          className="h-9 rounded-full bg-[#006F52] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,111,82,0.18)] transition hover:bg-[#075f49]"
+          form={formId}
+          type="submit"
+        >
+          {headerCopy.publish}
+        </button>
       </div>
 
       {copyActivityId ? (
@@ -78,8 +116,10 @@ export default async function NewActivityPage({
       ) : null}
 
       <NewActivityForm
+        formId={formId}
         locale={locale}
         initialValues={initialValues ?? undefined}
+        showFormActions={false}
       />
     </PageContainer>
   );

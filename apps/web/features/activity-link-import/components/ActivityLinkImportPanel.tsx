@@ -42,7 +42,6 @@ const importFieldKeys = [
   "category",
   "coverImageUrl",
   "description",
-  "itinerary",
   "price",
 ] as const;
 
@@ -82,7 +81,6 @@ function buildDefaultFieldSelection(
     category: Boolean(values.category),
     coverImageUrl: Boolean(values.coverImageUrl),
     description: Boolean(values.description),
-    itinerary: Boolean(values.itinerary),
     price: Boolean(values.priceText),
   };
 }
@@ -97,13 +95,6 @@ function formatPreviewValue(
     return values.description
       ? values.description.slice(0, 220) +
           (values.description.length > 220 ? "…" : "")
-      : missingLabel;
-  }
-
-  if (field === "itinerary") {
-    return values.itinerary
-      ? values.itinerary.slice(0, 220) +
-          (values.itinerary.length > 220 ? "…" : "")
       : missingLabel;
   }
 
@@ -197,7 +188,6 @@ export function ActivityLinkImportPanel({
       category: t.category,
       coverImageUrl: t.coverImage,
       description: t.description,
-      itinerary: t.itinerary,
       price: t.priceText,
     }),
     [t],
@@ -279,11 +269,6 @@ export function ActivityLinkImportPanel({
 
       if (field === "description" && preview.values.description) {
         payload.description = preview.values.description;
-        continue;
-      }
-
-      if (field === "itinerary" && preview.values.itinerary) {
-        payload.itinerary = preview.values.itinerary;
         continue;
       }
 
@@ -564,8 +549,7 @@ export function ActivityLinkImportPanel({
                         className="h-16 w-16 rounded-md border border-zinc-200 object-cover"
                         src={getActivityCoverDisplayUrl(displayValue)}
                       />
-                    ) : (field === "description" || field === "itinerary") &&
-                      hasValue ? (
+                    ) : field === "description" && hasValue ? (
                       <span className="whitespace-pre-wrap text-base leading-7 text-zinc-700">
                         {displayValue}
                       </span>

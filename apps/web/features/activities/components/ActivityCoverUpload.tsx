@@ -2,19 +2,22 @@
 
 import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverUploadProps = {
+  buttonOnlyUntilUploaded?: boolean;
   fallbackPreviewUrl?: string | null;
   initialUrl?: string | null;
+  label?: string;
   locale: string;
   name?: string;
   onChange?: (url: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
+  splitPreviewBelow?: boolean;
 };
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -29,12 +32,15 @@ type UploadErrorCode =
   | "UPLOAD_FAILED";
 
 export function ActivityCoverUpload({
+  buttonOnlyUntilUploaded = false,
   fallbackPreviewUrl,
   initialUrl,
+  label,
   locale,
   name = "coverImageUrl",
   onChange,
   onUploadingChange,
+  splitPreviewBelow = false,
 }: ActivityCoverUploadProps) {
   const t = getCopy(locale).form;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +146,81 @@ export function ActivityCoverUpload({
     }
   }
 
+  if (buttonOnlyUntilUploaded && splitPreviewBelow) {
+    return (
+      <div className="contents">
+        <input name={name} type="hidden" value={imageUrl} />
+        <input
+          ref={inputRef}
+          accept={allowedTypes.join(",")}
+          className="hidden"
+          type="file"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) {
+              void uploadFile(file);
+            }
+          }}
+        />
+        <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+          <button
+            type="button"
+            className={cn(
+              "flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-[#F6F5F1] px-4 text-sm font-semibold text-zinc-400 shadow-[inset_0_0_0_1px_rgba(29,29,27,0.04),0_10px_24px_rgba(29,29,27,0.035)] transition hover:bg-[#F1F0EB] hover:text-zinc-600",
+              isUploading && "cursor-wait opacity-80",
+            )}
+            disabled={isUploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <span>{label ?? t.coverUpload}</span>
+            )}
+            {isUploading ? (
+              <span>{t.coverUploading}</span>
+            ) : (
+              <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-white text-zinc-400 shadow-sm">
+                <Plus className="h-4 w-4" />
+              </span>
+            )}
+          </button>
+        </div>
+        {displayImageUrl ? (
+          <div className="col-span-2 overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]">
+            <div className="relative h-36 bg-[#F6F5F1] sm:h-44">
+              {/* Uploaded and fallback covers can come from different public URLs. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={displayImageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+            {imageUrl ? (
+              <div className="flex justify-end bg-white p-2">
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100"
+                  disabled={isUploading}
+                  onClick={() => updateImageUrl("")}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                  {t.coverRemove}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {error ? (
+          <p className="col-span-2 text-xs font-medium text-red-600" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-2">
       <input name={name} type="hidden" value={imageUrl} />
@@ -156,84 +237,134 @@ export function ActivityCoverUpload({
         }}
       />
 
-      <div className="overflow-hidden rounded-xl border border-[#D6D5B2] bg-white shadow-sm">
-        <div
-          className={cn(
-            "relative flex h-28 items-center justify-center bg-[#DEEBFF]/42 transition sm:h-32",
-            isDragging && "bg-white ring-2 ring-inset ring-moss",
-          )}
-          onDragEnter={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-          }}
-          onDragLeave={(event) => {
-            const relatedTarget = event.relatedTarget;
-            if (
-              !(relatedTarget instanceof Node) ||
-              !event.currentTarget.contains(relatedTarget)
-            ) {
-              setIsDragging(false);
-            }
-          }}
-          onDrop={handleDroppedFile}
-        >
+      {buttonOnlyUntilUploaded ? (
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-10 w-fit rounded-full border-[#8AB68E] bg-white px-4 text-base"
+            disabled={isUploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {isUploading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <UploadCloud className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            {isUploading ? t.coverUploading : t.coverUpload}
+          </Button>
           {displayImageUrl ? (
-            // Uploaded and fallback covers can come from different public URLs.
-            // Native img keeps this uploader independent from remote image config.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={displayImageUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-1.5 px-4 text-center text-zinc-600">
-              <ImagePlus className="h-6 w-6 text-zinc-500" aria-hidden />
-              <span className="text-base font-semibold text-ink">
-                {isDragging ? t.coverDropHere : t.coverDefault}
-              </span>
-              <span className="text-base leading-7 text-zinc-600">
-                {t.coverImageHint}
-              </span>
+            <div className="overflow-hidden rounded-xl border border-[#D6D5B2] bg-white shadow-sm">
+              <div className="relative h-32 bg-[#DEEBFF]/42 sm:h-40">
+                {/* Uploaded and fallback covers can come from different public URLs. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={displayImageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+              {imageUrl ? (
+                <div className="border-t border-[#D6D5B2]/70 bg-[#FEFFF9] p-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8"
+                    disabled={isUploading}
+                    onClick={() => updateImageUrl("")}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                    {t.coverRemove}
+                  </Button>
+                </div>
+              ) : null}
             </div>
-          )}
-        </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-[#D6D5B2] bg-white shadow-sm">
+          <div
+            className={cn(
+              "relative flex h-28 items-center justify-center bg-[#DEEBFF]/42 transition sm:h-32",
+              isDragging && "bg-white ring-2 ring-inset ring-moss",
+            )}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDragLeave={(event) => {
+              const relatedTarget = event.relatedTarget;
+              if (
+                !(relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(relatedTarget)
+              ) {
+                setIsDragging(false);
+              }
+            }}
+            onDrop={handleDroppedFile}
+          >
+            {displayImageUrl ? (
+              // Uploaded and fallback covers can come from different public URLs.
+              // Native img keeps this uploader independent from remote image config.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayImageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 px-4 text-center text-zinc-600">
+                <ImagePlus className="h-6 w-6 text-zinc-500" aria-hidden />
+                <span className="text-base font-semibold text-ink">
+                  {isDragging ? t.coverDropHere : t.coverDefault}
+                </span>
+                <span className="text-base leading-7 text-zinc-600">
+                  {t.coverImageHint}
+                </span>
+              </div>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-2 border-t border-[#D6D5B2]/70 bg-[#FEFFF9] p-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-base leading-7 text-zinc-600">{t.coverFileHint}</p>
-          <div className="flex shrink-0 gap-2">
-            {imageUrl ? (
+          <div className="flex flex-col gap-2 border-t border-[#D6D5B2]/70 bg-[#FEFFF9] p-2 sm:flex-row sm:items-center sm:justify-between">
+            {buttonOnlyUntilUploaded ? null : (
+              <p className="text-base leading-7 text-zinc-600">
+                {t.coverFileHint}
+              </p>
+            )}
+            <div className="flex shrink-0 gap-2">
+              {imageUrl ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-8"
+                  disabled={isUploading}
+                  onClick={() => updateImageUrl("")}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                  {t.coverRemove}
+                </Button>
+              ) : null}
               <Button
                 type="button"
-                variant="ghost"
-                className="h-8"
+                variant="secondary"
+                className="h-10 rounded-full border-[#8AB68E] bg-white px-4 text-base"
                 disabled={isUploading}
-                onClick={() => updateImageUrl("")}
+                onClick={() => inputRef.current?.click()}
               >
-                <Trash2 className="mr-2 h-4 w-4" aria-hidden />
-                {t.coverRemove}
+                {isUploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <UploadCloud className="mr-2 h-4 w-4" aria-hidden />
+                )}
+                {isUploading ? t.coverUploading : t.coverUpload}
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-10 rounded-full border-[#8AB68E] bg-white px-4 text-base"
-              disabled={isUploading}
-              onClick={() => inputRef.current?.click()}
-            >
-              {isUploading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <UploadCloud className="mr-2 h-4 w-4" aria-hidden />
-              )}
-              {isUploading ? t.coverUploading : t.coverUpload}
-            </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {error ? (
         <p className="text-xs font-medium text-red-600" role="alert">

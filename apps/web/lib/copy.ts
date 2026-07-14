@@ -879,8 +879,8 @@ const copy = {
       ticketLabelPlaceholder: "立即抢票 / 立即预约",
       ticketHint:
         "可选；填写后详情页会展示主要跳转按钮。组局报名仍在站内完成。",
-      requiresApproval: "加入需要确认",
-      requiresApprovalHint: "开启后，别人申请加入需要你确认。",
+      requiresApproval: "加入需要审核",
+      requiresApprovalHint: "开启后，别人申请加入需要你审核。",
       copyTimeReminder:
         "此为复制组局草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
@@ -1859,9 +1859,9 @@ const copy = {
       ticketLabelPlaceholder: "Get tickets / Book now",
       ticketHint:
         "Optional. When filled, the detail page shows a primary external button. Crew sign-ups still happen here.",
-      requiresApproval: "Confirm join requests",
+      requiresApproval: "Review join requests",
       requiresApprovalHint:
-        "When enabled, you confirm each request before someone joins.",
+        "When enabled, you review each request before someone joins.",
       copyTimeReminder:
         "This draft is prefilled from an existing crew. Pick a new start time; the end time can stay empty. Review the rest before publishing.",
       creating: "Publishing...",
@@ -2876,9 +2876,9 @@ const copy = {
       ticketLabelPlaceholder: "Réserver / Billetterie",
       ticketHint:
         "Facultatif. Si renseigné, la page détail affiche un bouton externe principal. Les inscriptions au groupe restent ici.",
-      requiresApproval: "Confirmer les demandes",
+      requiresApproval: "Valider les demandes",
       requiresApprovalHint:
-        "Si activé, vous confirmez chaque demande avant l'ajout au groupe.",
+        "Si activé, vous validez chaque demande avant l'ajout au groupe.",
       copyTimeReminder:
         "Ce brouillon est prérempli à partir d'un groupe existant. Choisissez un nouveau début ; la fin peut rester vide. Vérifiez le reste avant publication.",
       creating: "Publication...",
