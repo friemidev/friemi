@@ -119,7 +119,6 @@ export default async function NewActivityPage({
         formId={formId}
         locale={locale}
         initialValues={initialValues ?? undefined}
-        showFormActions={false}
       />
     </PageContainer>
   );
