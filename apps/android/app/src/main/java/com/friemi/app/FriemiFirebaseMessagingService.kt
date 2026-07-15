@@ -28,11 +28,14 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
         val url = message.data["url"]
             ?: message.data["deepLink"]
             ?: message.data["path"]
+        val badgeCount = message.data["badgeCount"]?.toIntOrNull()
+            ?: message.data["unreadCount"]?.toIntOrNull()
+            ?: 0
 
-        showNotification(title, body, url)
+        showNotification(title, body, url, badgeCount)
     }
 
-    private fun showNotification(title: String, body: String, url: String?) {
+    private fun showNotification(title: String, body: String, url: String?, badgeCount: Int) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "friemi_activity_updates"
 
@@ -45,6 +48,7 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
                 description = "Friemi notifications"
                 enableLights(true)
                 lightColor = Color.rgb(54, 151, 88)
+                setShowBadge(true)
             }
             manager.createNotificationChannel(channel)
         }
@@ -75,6 +79,12 @@ class FriemiFirebaseMessagingService : FirebaseMessagingService() {
             .setStyle(Notification.BigTextStyle().bigText(body))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setNumber(badgeCount.coerceAtLeast(0))
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    setBadgeIconType(Notification.BADGE_ICON_SMALL)
+                }
+            }
             .build()
 
         manager.notify(targetUri.toString().hashCode(), notification)

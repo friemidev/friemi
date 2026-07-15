@@ -353,12 +353,15 @@ export async function sendMobilePushForNotification(notificationId: string) {
               android: {
                 notification: {
                   channel_id: "friemi_activity_updates",
+                  notification_count: badgeCount,
                 },
               },
               data: {
+                badgeCount: String(badgeCount),
                 notificationId,
                 path,
                 type: notification.type,
+                unreadCount: String(badgeCount),
                 url: path,
               },
               notification: copy,
