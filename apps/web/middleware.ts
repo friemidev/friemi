@@ -17,6 +17,8 @@ const intlMiddleware = createMiddleware({
   defaultLocale,
   localePrefix: "always",
 });
+const canonicalProductionHost = "www.friemi.com";
+const productionHostRedirects = new Set(["friemi.com", "friemi.vercel.app"]);
 
 const isProtectedRoute = createRouteMatcher([
   "/:locale/activities/new(.*)",
@@ -76,7 +78,43 @@ function redirectToSignIn(request: NextRequest) {
   );
 }
 
+function getCanonicalHostRedirectUrl(request: NextRequest) {
+  if (process.env.VERCEL_ENV !== "production") {
+    return null;
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return null;
+  }
+
+  const host =
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host") ??
+    request.nextUrl.host;
+  const normalizedHost = host
+    .split(",")[0]
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "");
+
+  if (!productionHostRedirects.has(normalizedHost)) {
+    return null;
+  }
+
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.protocol = "https:";
+  redirectUrl.host = canonicalProductionHost;
+
+  return redirectUrl;
+}
+
 export default clerkMiddleware(async (auth, request) => {
+  const canonicalHostRedirectUrl = getCanonicalHostRedirectUrl(request);
+
+  if (canonicalHostRedirectUrl) {
+    return NextResponse.redirect(canonicalHostRedirectUrl);
+  }
+
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
     acceptLanguage: request.headers.get("accept-language"),
     localeCookie: request.cookies.get(localeCookieName)?.value,

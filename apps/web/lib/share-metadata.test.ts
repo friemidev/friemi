@@ -58,10 +58,10 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
     metadata.description,
     "Discover activities and crews with friends.",
   );
-  assert.equal(metadata.openGraph?.url, "https://friemi.example/en/home");
+  assert.equal(metadata.openGraph?.url, "https://www.friemi.com/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
   assert.deepEqual(metadata.twitter?.images, [
-    "https://friemi.example/brand/v2_1/friemi-og-default-1200x630.png",
+    "https://www.friemi.com/brand/v2_1/friemi-og-default-1200x630.png",
   ]);
 });
 

@@ -10,10 +10,8 @@ export const dynamic = "force-dynamic";
 
 const staticLocalePaths = [
   "/home",
-  "/mobile-home",
   "/activities",
   "/lobby",
-  "/public-events",
   "/co-creators",
   "/updates",
 ] as const;
@@ -155,12 +153,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   return [
-    {
-      changeFrequency: "daily",
-      lastModified: now,
-      priority: 1,
-      url: buildCanonicalSiteUrl("/"),
-    },
     ...staticEntries,
     ...updateEntries,
     ...activityEntries,

@@ -25,8 +25,8 @@ import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
+  getCanonicalMetadataBaseUrl,
   getGeneralPageShareDescription,
-  getRequestBaseUrl,
 } from "@/lib/share-metadata";
 
 type HomePageProps = {
@@ -329,8 +329,7 @@ export async function generateMetadata({
 }: HomePageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = getLuxuryHomeCopy(locale);
-  const requestHeaders = await headers();
-  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const baseUrl = getCanonicalMetadataBaseUrl();
 
   return buildPageShareMetadata({
     baseUrl,
