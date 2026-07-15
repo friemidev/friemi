@@ -162,33 +162,48 @@ export function ActivityCoverUpload({
             }
           }}
         />
-        <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
-          <button
-            type="button"
-            className={cn(
-              "flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-[#F6F5F1] px-4 text-sm font-semibold text-zinc-400 shadow-[inset_0_0_0_1px_rgba(29,29,27,0.04),0_10px_24px_rgba(29,29,27,0.035)] transition hover:bg-[#F1F0EB] hover:text-zinc-600",
-              isUploading && "cursor-wait opacity-80",
-            )}
-            disabled={isUploading}
-            onClick={() => inputRef.current?.click()}
-          >
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <span>{label ?? t.coverUpload}</span>
-            )}
-            {isUploading ? (
-              <span>{t.coverUploading}</span>
-            ) : (
-              <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-white text-zinc-400 shadow-sm">
-                <Plus className="h-4 w-4" />
-              </span>
-            )}
-          </button>
-        </div>
+        {!displayImageUrl ? (
+          <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <button
+              type="button"
+              className={cn(
+                "flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-[#F6F5F1] px-4 text-sm font-semibold text-zinc-400 shadow-[inset_0_0_0_1px_rgba(29,29,27,0.04),0_10px_24px_rgba(29,29,27,0.035)] transition hover:bg-[#F1F0EB] hover:text-zinc-600",
+                isUploading && "cursor-wait opacity-80",
+              )}
+              disabled={isUploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <span>{label ?? t.coverUpload}</span>
+              )}
+              {isUploading ? (
+                <span>{t.coverUploading}</span>
+              ) : (
+                <span
+                  aria-hidden
+                  className="grid h-8 w-8 place-items-center rounded-full bg-white text-zinc-400 shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                </span>
+              )}
+            </button>
+          </div>
+        ) : null}
         {displayImageUrl ? (
-          <div className="col-span-2 overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]">
-            <div className="relative h-36 bg-[#F6F5F1] sm:h-44">
+          <div className="relative col-span-2 overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]">
+            <button
+              type="button"
+              className={cn(
+                "relative block h-36 w-full bg-[#F6F5F1] text-left transition sm:h-44",
+                !isUploading && "cursor-pointer hover:opacity-95",
+                isUploading && "cursor-wait opacity-80",
+              )}
+              disabled={isUploading}
+              onClick={() => inputRef.current?.click()}
+              aria-label={label ?? t.coverUpload}
+            >
               {/* Uploaded and fallback covers can come from different public URLs. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -196,19 +211,23 @@ export function ActivityCoverUpload({
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
               />
-            </div>
+              {isUploading ? (
+                <span className="absolute inset-0 grid place-items-center bg-black/24 text-white">
+                  <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+                </span>
+              ) : null}
+            </button>
             {imageUrl ? (
-              <div className="flex justify-end bg-white p-2">
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100"
-                  disabled={isUploading}
-                  onClick={() => updateImageUrl("")}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" aria-hidden />
-                  {t.coverRemove}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="absolute right-2.5 top-2.5 z-10 rounded-full bg-[#1D1D1B]/62 px-3 py-1.5 text-xs font-black leading-none text-white shadow-[0_8px_18px_rgba(29,29,27,0.18)] backdrop-blur-md transition hover:bg-[#1D1D1B]/76 active:scale-95"
+                disabled={isUploading}
+                onClick={() => updateImageUrl("")}
+                aria-label={t.coverRemove}
+                title={t.coverRemove}
+              >
+                {t.coverRemove}
+              </button>
             ) : null}
           </div>
         ) : null}

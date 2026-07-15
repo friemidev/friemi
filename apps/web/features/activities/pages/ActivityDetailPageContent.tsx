@@ -45,6 +45,7 @@ import { ActivityMapPreview } from "@/features/activities/components/ActivityMap
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { ActivityShareDialogButton } from "@/features/activities/components/ActivityShareDialogButton";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
+import { CancelParticipationForm } from "@/features/activities/components/CancelParticipationForm";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
 import { BoardGameToolFloatingEntry } from "@/features/activities/components/BoardGameToolFloatingEntry";
@@ -1251,6 +1252,10 @@ export async function ActivityDetailPageContent({
     locale,
     viewerParticipationStatus: viewerParticipation?.status ?? null,
   });
+  const canCancelViewerParticipation =
+    viewerParticipation?.status === "JOINED" ||
+    viewerParticipation?.status === "APPROVED" ||
+    viewerParticipation?.status === "PENDING";
   const mobileDetailTitle =
     locale === "fr"
       ? "Détail du groupe"
@@ -1535,7 +1540,14 @@ export async function ActivityDetailPageContent({
               </div>
             </div>
           ) : null}
-          {!isTeamOperator ? (
+          {!isTeamOperator && canCancelViewerParticipation ? (
+            <CancelParticipationForm
+              activityId={activity.id}
+              activityTitle={activity.title}
+              buttonClassName="min-h-11 border-transparent bg-[#F09182] px-10 text-[15px] font-black text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] hover:bg-[#F09182] active:scale-[0.98]"
+              locale={locale}
+            />
+          ) : !isTeamOperator ? (
             <TeamDetailMobileCtaSheet
               activityTitle={activity.title}
               locale={locale}

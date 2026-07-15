@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import {
   cancelParticipationAction,
   type CancelParticipationState,
@@ -14,6 +15,7 @@ import {
 type CancelParticipationFormProps = {
   activityId: string;
   activityTitle: string;
+  buttonClassName?: string;
   locale: string;
   onCancelled?: () => void;
 };
@@ -21,9 +23,11 @@ type CancelParticipationFormProps = {
 const initialState: CancelParticipationState = {};
 
 function CancelButton({
+  className,
   locale,
   onOpen,
 }: {
+  className?: string;
   locale: string;
   onOpen: () => void;
 }) {
@@ -34,7 +38,10 @@ function CancelButton({
     <Button
       type="button"
       variant="secondary"
-      className="h-11 w-full gap-2 rounded-full border border-[#8AB68E] bg-white text-[#156240] shadow-none hover:bg-[#FEFFF9]"
+      className={cn(
+        "h-11 w-full gap-2 rounded-full border border-[#8AB68E] bg-white text-[#156240] shadow-none hover:bg-[#FEFFF9]",
+        className,
+      )}
       disabled={pending}
       aria-busy={pending}
       onClick={onOpen}
@@ -149,6 +156,7 @@ function PendingCancelNotice({ locale }: { locale: string }) {
 export function CancelParticipationForm({
   activityId,
   activityTitle,
+  buttonClassName,
   locale,
   onCancelled,
 }: CancelParticipationFormProps) {
@@ -195,7 +203,11 @@ export function CancelParticipationForm({
       ) : null}
 
       <PendingCancelNotice locale={locale} />
-      <CancelButton locale={locale} onOpen={() => setIsConfirmOpen(true)} />
+      <CancelButton
+        className={buttonClassName}
+        locale={locale}
+        onOpen={() => setIsConfirmOpen(true)}
+      />
       {isConfirmOpen ? (
         <CancelParticipationConfirmDialog
           activityTitle={activityTitle}

@@ -213,9 +213,17 @@ export function formatStoredDescription(values: {
   description: string;
   otherCategoryText?: string | null;
 }) {
-  return values.category === "OTHER" && values.otherCategoryText
-    ? `${otherCategoryPrefix}${values.otherCategoryText}\n\n${values.description}`
-    : values.description;
+  const description = values.description.trim();
+
+  if (values.category !== "OTHER" || !values.otherCategoryText) {
+    return description;
+  }
+
+  const otherCategoryLine = `${otherCategoryPrefix}${values.otherCategoryText}`;
+
+  return description
+    ? `${otherCategoryLine}\n\n${description}`
+    : otherCategoryLine;
 }
 
 export function splitStoredDescription(category: string, description: string) {

@@ -81,7 +81,7 @@ export const createActivitySchema = z
         typeof value === "string"
           ? clampActivityDescription(value, MAX_ACTIVITY_DESCRIPTION_LENGTH)
           : value,
-      nonEmptyString.max(
+      z.string().trim().max(
         MAX_ACTIVITY_DESCRIPTION_LENGTH,
         `描述最多 ${MAX_ACTIVITY_DESCRIPTION_LENGTH} 个字`,
       ),
