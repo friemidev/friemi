@@ -4,6 +4,7 @@ import Link from "next/link";
 import type {
   ChangeEventHandler,
   FormEvent,
+  MouseEvent as ReactMouseEvent,
   ReactNode,
   SelectHTMLAttributes,
 } from "react";
@@ -26,11 +27,7 @@ import {
   Textarea,
 } from "@chill-club/ui";
 import { activityCategories, type ActivityCategory } from "@chill-club/shared";
-import {
-  getCategoryLabel,
-  getCopy,
-  getTypeLabel,
-} from "@/lib/copy";
+import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import {
   createActivityAction,
@@ -1300,7 +1297,10 @@ function DateTimeRangePickerField({
     syncMonthToDate(startDateKey || getTodayDateKey());
   }
 
-  function handleDone() {
+  function handleDone(event?: ReactMouseEvent<HTMLButtonElement>) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
     if (startTime) {
       setStartTime(normalizeTimeValue(startTime));
     }
@@ -1925,7 +1925,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="mx-auto min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-white shadow-[0_10px_24px_rgba(54,151,88,0.22)] hover:bg-[#156240] sm:mx-0 sm:min-w-0"
+      className="mx-auto h-12 w-full min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-base font-black text-white shadow-[0_12px_28px_rgba(54,151,88,0.24)] hover:bg-[#156240] sm:mx-0 sm:w-auto sm:min-w-0"
       disabled={pending || disabled}
       aria-busy={pending || disabled}
     >
@@ -2084,7 +2084,7 @@ function FormActions({
   const t = getCopy(locale).form;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] md:pb-0">
       <PendingFormNotice locale={locale} mode={mode} />
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         {mode === "edit" && cancelHref ? (
@@ -2113,7 +2113,7 @@ export function NewActivityForm({
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
   const values = state.values ?? initialValues;
-  const [activityType, setActivityType] = useState(values?.type ?? "LOCAL");
+  const activityType = values?.type ?? "LOCAL";
   const [category, setCategory] = useState(values?.category ?? "");
   const [city, setCity] = useState(values?.city?.trim() || "Paris");
   const [visibility, setVisibility] = useState(
@@ -2404,9 +2404,9 @@ export function NewActivityForm({
               className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
               data-field-name="description"
             >
-              <RequiredLabel>
+              <span>
                 {publicEventTeamFormCopy?.description ?? t.form.description}
-              </RequiredLabel>
+              </span>
               <Textarea
                 className={cn(
                   compactTextareaClassName,
@@ -2420,41 +2420,17 @@ export function NewActivityForm({
                   publicEventTeamFormCopy?.descriptionPlaceholder ??
                   t.form.descriptionPlaceholder
                 }
-                required
               />
               <FieldError errors={state.fieldErrors?.description} />
             </label>
 
             <input name="itinerary" type="hidden" value="" />
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3">
               {!isPublicEventTeam ? (
                 <>
                 <input name="type" type="hidden" value={activityType} />
                 <input name="category" type="hidden" value={category} />
-                <label
-                  className="hidden gap-2 text-base font-semibold text-zinc-700 sm:text-lg md:grid"
-                  data-field-name="type"
-                >
-                  <RequiredLabel>{t.form.type}</RequiredLabel>
-                  <Select
-                    aria-invalid={Boolean(state.fieldErrors?.type)}
-                    className={cn(
-                      state.fieldErrors?.type?.length &&
-                        invalidControlClassName,
-                    )}
-                    onChange={(event) => setActivityType(event.target.value)}
-                    required
-                    value={activityType}
-                  >
-                    <option value="LOCAL">
-                      {getTypeLabel("LOCAL", locale)}
-                    </option>
-                    <option value="TRIP">{getTypeLabel("TRIP", locale)}</option>
-                  </Select>
-                  <FieldError errors={state.fieldErrors?.type} />
-                </label>
-
                 <div
                   className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
                   data-field-name="category"
@@ -2599,7 +2575,7 @@ export function NewActivityForm({
               />
             </div>
 
-            <label className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+            <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
               <RequiredLabel>{t.form.startAt}</RequiredLabel>
               <DateTimeRangePickerField
                 endDefaultValue={values?.endAt}
@@ -2612,7 +2588,7 @@ export function NewActivityForm({
                 startLabel={t.form.startAt}
                 startName="startAt"
               />
-            </label>
+            </div>
             </FormSection>
           </div>
 
