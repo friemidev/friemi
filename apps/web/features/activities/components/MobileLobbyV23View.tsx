@@ -45,10 +45,10 @@ type MobileLobbyV23Copy = {
 
 const mobileLobbyV23Tabs: MobileLobbyV23TabId[] = [
   "nearby",
+  "mine",
   "friends",
   "today",
   "popular",
-  "mine",
 ];
 
 function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {

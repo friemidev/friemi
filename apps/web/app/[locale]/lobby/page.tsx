@@ -51,10 +51,10 @@ const lobbyFilterIds = [
 const lobbyStatusFilterIds = ["all", "ongoing", "ended"] as const;
 const mobileLobbyTabIds = [
   "nearby",
+  "mine",
   "friends",
   "today",
   "popular",
-  "mine",
 ] as const;
 
 function getSingleQueryValue(value: string | string[] | undefined) {
