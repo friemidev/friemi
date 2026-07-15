@@ -99,7 +99,7 @@ import {
   buildFallbackShareMetadata,
   buildTeamShareImageUrl,
   buildTeamShareMetadata,
-  getRequestBaseUrl,
+  getCanonicalMetadataBaseUrl,
   getShareDateLabel,
   getShareLocationLabel,
   getSharePriceLabel,
@@ -568,6 +568,16 @@ function ProtectedDetailNotice({
 
 export const dynamic = "force-dynamic";
 
+function withPrivateNoIndex(metadata: Metadata): Metadata {
+  return {
+    ...metadata,
+    robots: {
+      follow: false,
+      index: false,
+    },
+  };
+}
+
 export async function generateActivityDetailMetadata(
   {
     params,
@@ -577,13 +587,10 @@ export async function generateActivityDetailMetadata(
 ): Promise<Metadata> {
   const { locale, activityId } = await params;
   const { access: accessToken } = await searchParams;
-  const requestHeaders = await headers();
-  const baseUrl = getRequestBaseUrl(requestHeaders);
-  const activityPath = withLocale(
+  const baseUrl = getCanonicalMetadataBaseUrl();
+  const fallbackActivityPath = withLocale(
     locale,
-    routeKind === "lobby"
-      ? getActivityDetailPath(activityId)
-      : getLegacyActivityDetailPath(activityId),
+    getActivityDetailPath(activityId),
   );
   const activity = await getActivityShareMetadataById(
     activityId,
@@ -591,9 +598,15 @@ export async function generateActivityDetailMetadata(
   );
 
   if (!activity) {
-    return buildFallbackShareMetadata(baseUrl, activityPath);
+    return buildFallbackShareMetadata(baseUrl, fallbackActivityPath);
   }
 
+  const activityPath = withLocale(
+    locale,
+    activity.publicEventId
+      ? `/public-events/${activity.publicEventId}`
+      : getActivityDetailPath(activityId),
+  );
   const canonicalUrl = buildCanonicalUrl(
     baseUrl,
     activityPath,
@@ -616,7 +629,7 @@ export async function generateActivityDetailMetadata(
   );
 
   if (!activity.publicEventId) {
-    return buildTeamShareMetadata({
+    const metadata = buildTeamShareMetadata({
       canonicalUrl,
       capacity: activity.capacity,
       coverImageUrl: activity.coverImageUrl,
@@ -638,9 +651,13 @@ export async function generateActivityDetailMetadata(
       ),
       title: activity.title,
     });
+
+    return activity.visibility === "PRIVATE"
+      ? withPrivateNoIndex(metadata)
+      : metadata;
   }
 
-  return buildDetailShareMetadata({
+  const metadata = buildDetailShareMetadata({
     canonicalUrl,
     coverImageUrl: activity.coverImageUrl,
     dateLabel,
@@ -649,6 +666,10 @@ export async function generateActivityDetailMetadata(
     priceLabel,
     title: activity.title,
   });
+
+  return activity.visibility === "PRIVATE"
+    ? withPrivateNoIndex(metadata)
+    : metadata;
 }
 
 export async function generateLobbyActivityDetailMetadata(

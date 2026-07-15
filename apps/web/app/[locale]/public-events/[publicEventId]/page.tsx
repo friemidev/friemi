@@ -49,7 +49,7 @@ import {
   buildCanonicalUrl,
   buildDetailShareMetadata,
   buildFallbackShareMetadata,
-  getRequestBaseUrl,
+  getCanonicalMetadataBaseUrl,
   getShareDateLabel,
   getSharePriceLabel,
 } from "@/lib/share-metadata";
@@ -67,8 +67,7 @@ export async function generateMetadata({
   params,
 }: PublicEventDetailPageProps): Promise<Metadata> {
   const { locale, publicEventId } = await params;
-  const requestHeaders = await headers();
-  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const baseUrl = getCanonicalMetadataBaseUrl();
   const publicEventPath = withLocale(
     locale,
     `/public-events/${publicEventId}`,

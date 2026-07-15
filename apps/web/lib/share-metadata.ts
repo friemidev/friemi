@@ -104,6 +104,10 @@ export function getRequestBaseUrl(headersList?: HeaderGetter | null) {
   return getCanonicalSiteUrl();
 }
 
+export function getCanonicalMetadataBaseUrl() {
+  return getCanonicalSiteUrl();
+}
+
 export function resolveAbsoluteUrl(
   value: string | null | undefined,
   baseUrl: string,
@@ -494,10 +498,10 @@ export function buildTeamShareMetadata({
 }
 
 export function buildFallbackShareMetadata(
-  baseUrl: string,
+  _baseUrl: string,
   path: string,
 ): Metadata {
-  const canonicalUrl = buildCanonicalUrl(baseUrl, path);
+  const canonicalUrl = buildCanonicalUrl(getCanonicalMetadataBaseUrl(), path);
 
   return buildDetailShareMetadata({
     canonicalUrl,
@@ -507,13 +511,12 @@ export function buildFallbackShareMetadata(
 }
 
 export function buildPageShareMetadata({
-  baseUrl,
   description,
   path,
   title,
 }: PageShareMetadataInput): Metadata {
   return buildDetailShareMetadata({
-    canonicalUrl: buildCanonicalUrl(baseUrl, path),
+    canonicalUrl: buildCanonicalUrl(getCanonicalMetadataBaseUrl(), path),
     description,
     title,
   });

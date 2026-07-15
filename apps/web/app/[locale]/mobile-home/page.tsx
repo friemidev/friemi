@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import {
   ArrowRight,
@@ -30,8 +29,8 @@ import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
 import {
   buildPageShareMetadata,
+  getCanonicalMetadataBaseUrl,
   getGeneralPageShareDescription,
-  getRequestBaseUrl,
 } from "@/lib/share-metadata";
 import { cn } from "@/lib/utils";
 import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
@@ -447,15 +446,20 @@ export async function generateMetadata({
 }: MobileHomePageProps): Promise<Metadata> {
   const { locale } = await params;
   const mobile = getMobileHomeCopy(locale);
-  const requestHeaders = await headers();
-  const baseUrl = getRequestBaseUrl(requestHeaders);
+  const baseUrl = getCanonicalMetadataBaseUrl();
 
-  return buildPageShareMetadata({
-    baseUrl,
-    description: getGeneralPageShareDescription(locale),
-    path: withLocale(locale, "/mobile-home"),
-    title: `${brand.name} · ${mobile.featureBadge}`,
-  });
+  return {
+    ...buildPageShareMetadata({
+      baseUrl,
+      description: getGeneralPageShareDescription(locale),
+      path: withLocale(locale, "/home"),
+      title: `${brand.name} · ${mobile.featureBadge}`,
+    }),
+    robots: {
+      follow: true,
+      index: false,
+    },
+  };
 }
 
 export default async function MobileHomePage({ params }: MobileHomePageProps) {
