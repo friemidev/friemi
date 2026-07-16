@@ -9,10 +9,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import {
-  formatActivityDate,
-  formatActivityDateOnly,
-} from "@chill-club/shared";
+import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -301,10 +298,12 @@ export function NoConversationSelected({ locale }: { locale: string }) {
 
 export function MessageThread({
   activityContext,
+  backHref = "/messages",
   conversation,
   locale,
 }: {
   activityContext?: DirectConversationActivityContextViewModel | null;
+  backHref?: string;
   conversation: DirectConversationThreadViewModel;
   locale: string;
 }) {
@@ -320,7 +319,7 @@ export function MessageThread({
       <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
         <div className="flex h-9 w-9 items-center justify-start">
           <Link
-            href={withLocale(locale, "/messages")}
+            href={withLocale(locale, backHref)}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg lg:hidden"
             aria-label={t.backToMessages}
             title={t.backToMessages}
@@ -472,7 +471,7 @@ function ReadOnlyMessageComposer({ locale }: { locale: string }) {
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <div className="shrink-0 border-t border-sand bg-white/92 p-3 backdrop-blur md:rounded-b-[1.45rem]">
+    <div className="shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
       <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
         <p className="mt-1 text-xs leading-5 text-[#156240]">
@@ -546,7 +545,11 @@ function MessageBubbleAvatar({
       }}
       title={user.nickname}
     >
-      <MessageAvatar avatarUrl={user.avatarUrl} name={user.nickname} size="sm" />
+      <MessageAvatar
+        avatarUrl={user.avatarUrl}
+        name={user.nickname}
+        size="sm"
+      />
     </ContextualDetailLink>
   );
 }

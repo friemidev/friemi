@@ -40,6 +40,8 @@ const copy = {
       newActivityShort: "组局",
       messages: "消息",
       messagesShort: "消息",
+      footprints: "足迹",
+      footprintsShort: "足迹",
       profile: "个人空间",
       profileShort: "主页",
       signIn: "登录",
@@ -541,11 +543,7 @@ const copy = {
         },
         ACTIVITY_ANNOUNCEMENT: {
           title: "群公告",
-          body: (
-            activityTitle: string,
-            actorName = "发起人",
-            content = "",
-          ) =>
+          body: (activityTitle: string, actorName = "发起人", content = "") =>
             content
               ? `${actorName}在「${activityTitle}」发布了群公告：${content}`
               : `${actorName}在「${activityTitle}」发布了群公告。`,
@@ -772,8 +770,7 @@ const copy = {
         "如果你已经有活动页面，可以先解析链接，再把识别到的信息套用到组局表单。",
       linkImportToggleLabel: "从活动网址导入",
       linkImportUrlLabel: "活动网址",
-      linkImportPlaceholder:
-        "粘贴活动页面链接，Google 分享链接也可以试试",
+      linkImportPlaceholder: "粘贴活动页面链接，Google 分享链接也可以试试",
       linkImportSupportedSitesTitle: "解析效果更好的网站",
       linkImportSupportedSitesClose: "关闭",
       linkImportSupportedSitesAriaLabel: "查看支持的网站列表",
@@ -958,6 +955,8 @@ const copy = {
       newActivityShort: "Plan",
       messages: "Messages",
       messagesShort: "Chat",
+      footprints: "Trace",
+      footprintsShort: "Trace",
       profile: "Profile",
       profileShort: "Me",
       signIn: "Sign in",
@@ -1486,7 +1485,7 @@ const copy = {
           body: (activityTitle: string, actorName = "The organizer") =>
             `${actorName} updated the time or location for "${activityTitle}".`,
         },
-                ACTIVITY_ANNOUNCEMENT: {
+        ACTIVITY_ANNOUNCEMENT: {
           title: "New group announcement",
           body: (
             activityTitle: string,
@@ -1540,7 +1539,8 @@ const copy = {
       cancelledHint: "This crew is cancelled. Users can no longer join.",
       endedHint: "This activity has ended and can no longer be cancelled.",
       refreshError: "Try again later.",
-      permissionError: "Only the organizer or a manager can cancel this activity.",
+      permissionError:
+        "Only the organizer or a manager can cancel this activity.",
       statusError: "This activity status cannot be cancelled.",
       endedError: "This activity has ended and can no longer be cancelled.",
       conflictError: "The activity status changed. Try again later.",
@@ -1579,7 +1579,8 @@ const copy = {
       description:
         "Only the organizer or a manager can update this plan. You will return to the detail page after saving.",
       forbiddenTitle: "No edit access",
-      forbiddenDescription: "Only the organizer or a manager can edit this plan.",
+      forbiddenDescription:
+        "Only the organizer or a manager can edit this plan.",
       lockedTitle: "Plan cannot be edited",
       lockedDescription: "Ended or cancelled plans can no longer be edited.",
     },
@@ -1939,6 +1940,8 @@ const copy = {
       newActivityShort: "Lancer",
       messages: "Messages",
       messagesShort: "Chat",
+      footprints: "Trace",
+      footprintsShort: "Trace",
       profile: "Profil",
       profileShort: "Moi",
       signIn: "Connexion",
@@ -2233,7 +2236,8 @@ const copy = {
       editActivity: "Modifier le plan",
       locationMapTitle: "Lieu de l'activité",
       hiddenAddressNotice: "Adresse complète affichée après inscription.",
-      hiddenAddressApprovalNotice: "Adresse complète affichée après validation.",
+      hiddenAddressApprovalNotice:
+        "Adresse complète affichée après validation.",
       hiddenOnlineLinkNotice: "Lien affiché après inscription.",
       hiddenOnlineLinkApprovalNotice: "Lien affiché après validation.",
       onlineLink: "Lien en ligne",
@@ -2483,7 +2487,7 @@ const copy = {
           body: (activityTitle: string, actorName = "L'organisateur") =>
             `${actorName} a modifié l'heure ou le lieu de « ${activityTitle} ».`,
         },
-                ACTIVITY_ANNOUNCEMENT: {
+        ACTIVITY_ANNOUNCEMENT: {
           title: "Nouvelle annonce du groupe",
           body: (
             activityTitle: string,

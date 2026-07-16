@@ -183,7 +183,7 @@ export function MessageComposer({
     <form
       ref={formRef}
       action={formAction}
-      className="relative z-20 shrink-0 border-t border-sand bg-white/92 p-3 backdrop-blur md:rounded-b-[1.45rem]"
+      className="relative z-20 shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3"
       data-message-composer
       noValidate
       onSubmit={handleSubmit}
@@ -239,10 +239,12 @@ export function MessageComposer({
             key={state.messageId ?? "new-message"}
             name="body"
             maxLength={messageMaxLength}
-            defaultValue={state.ok ? "" : state.values?.body ?? initialBody}
+            defaultValue={state.ok ? "" : (state.values?.body ?? initialBody)}
             placeholder={t.messagePlaceholder}
             className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
-            onChange={(event) => setBodyLength(event.currentTarget.value.length)}
+            onChange={(event) =>
+              setBodyLength(event.currentTarget.value.length)
+            }
           />
         </label>
         <SubmitButton locale={locale} />

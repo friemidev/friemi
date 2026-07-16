@@ -5,8 +5,8 @@ import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
 import {
   CircleUserRound,
+  Footprints,
   House,
-  MessageCircle,
   Plus,
   UsersRound,
 } from "lucide-react";
@@ -38,6 +38,10 @@ function getMobileNavToneClasses(tone: string, active: boolean) {
     : "bg-[#DEEBFF]/58 text-[#1D1D1B]/70 ring-[#8E8383]/10";
 }
 
+function shouldHideMobileNav(pathname: string, locale: string) {
+  return pathname.startsWith(`${withLocale(locale, "/messages")}/`);
+}
+
 export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
@@ -67,9 +71,9 @@ export function MobileNav({ locale }: MobileNavProps) {
         tone: "green",
       },
       {
-        href: "/messages",
-        label: t.nav.messagesShort,
-        icon: MessageCircle,
+        href: "/footprints",
+        label: t.nav.footprintsShort,
+        icon: Footprints,
         tone: "rose",
       },
       {
@@ -81,12 +85,16 @@ export function MobileNav({ locale }: MobileNavProps) {
     ],
     [
       t.nav.hallShort,
+      t.nav.footprintsShort,
       t.nav.lobbyShort,
-      t.nav.messagesShort,
       t.nav.newActivity,
       t.nav.profileShort,
     ],
   );
+
+  if (shouldHideMobileNav(pathname, currentLocale)) {
+    return null;
+  }
 
   function isItemActive(href: string) {
     if (sectionOverride === "lobby") {
@@ -104,7 +112,9 @@ export function MobileNav({ locale }: MobileNavProps) {
     }
 
     if (href === "/activities/new") {
-      return pathname === localizedHref || pathname.startsWith(`${localizedHref}/`);
+      return (
+        pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
+      );
     }
 
     return (

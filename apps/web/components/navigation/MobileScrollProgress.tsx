@@ -13,7 +13,9 @@ function shouldHideMobileScrollProgress(pathname: string) {
 
   if (
     firstRouteSegment === "game-tools" ||
-    localizedRouteSegment === "game-tools"
+    localizedRouteSegment === "game-tools" ||
+    (segments.length === 2 && firstRouteSegment === "messages") ||
+    (segments.length === 3 && localizedRouteSegment === "messages")
   ) {
     return true;
   }
@@ -21,9 +23,11 @@ function shouldHideMobileScrollProgress(pathname: string) {
   return (
     (segments.length === 1 &&
       (firstRouteSegment === "mobile-home" ||
+        firstRouteSegment === "footprints" ||
         firstRouteSegment === "lobby")) ||
     (segments.length === 2 &&
       (localizedRouteSegment === "mobile-home" ||
+        localizedRouteSegment === "footprints" ||
         localizedRouteSegment === "lobby")) ||
     (segments.length === 2 &&
       firstRouteSegment === "activities" &&
