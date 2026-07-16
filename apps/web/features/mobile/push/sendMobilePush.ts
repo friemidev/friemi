@@ -261,6 +261,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
         },
       },
       actorId: true,
+      momentId: true,
       recipientId: true,
       type: true,
     },
@@ -272,7 +273,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
 
   const messageBody =
     notification.type === "DIRECT_MESSAGE" && notification.actorId
-      ? (
+      ? ((
           await prisma.directMessage.findFirst({
             where: {
               senderId: notification.actorId,
@@ -296,7 +297,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
               body: true,
             },
           })
-        )?.body ?? null
+        )?.body ?? null)
       : null;
 
   const devices = await prisma.mobileDevice.findMany({
@@ -338,6 +339,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
     });
     const path = getNotificationPath({
       activityId: notification.activityId,
+      momentId: notification.momentId,
       type: notification.type,
     });
     if (device.platform === "ANDROID") {

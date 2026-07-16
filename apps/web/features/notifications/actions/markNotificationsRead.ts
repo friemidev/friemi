@@ -235,6 +235,7 @@ export async function openNotificationActivityAction(formData: FormData) {
     select: {
       actorId: true,
       activityId: true,
+      momentId: true,
       type: true,
     },
   });
@@ -265,7 +266,9 @@ export async function openNotificationActivityAction(formData: FormData) {
     redirect(
       withLocale(
         locale,
-        notification.actorId ? `/profile/${notification.actorId}` : "/notifications",
+        notification.actorId
+          ? `/profile/${notification.actorId}`
+          : "/notifications",
       ),
     );
   }
@@ -337,6 +340,42 @@ export async function openNotificationActivityAction(formData: FormData) {
     redirect(withLocale(locale, target));
   }
 
+  if (
+    notification?.type === "MOMENT_LIKED" ||
+    notification?.type === "MOMENT_COMMENTED" ||
+    notification?.type === "MOMENT_COMMENT_REPLY" ||
+    notification?.type === "MOMENT_REPOSTED"
+  ) {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    revalidatePath(withLocale(locale, "/footprints"));
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "notifications",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.momentId
+          ? `/footprints/${notification.momentId}`
+          : "/footprints",
+      ),
+    );
+  }
+
   if (!notification?.activityId) {
     if (notification) {
       trackNotificationOpened({
@@ -369,7 +408,7 @@ export async function openNotificationActivityAction(formData: FormData) {
       : notification.type === "ACTIVITY_COMMENTED" ||
           notification.type === "COMMENT_REPLY"
         ? `${getActivityDetailPath(notification.activityId)}#comments`
-      : getActivityDetailPath(notification.activityId);
+        : getActivityDetailPath(notification.activityId);
 
   trackNotificationOpened({
     locale,

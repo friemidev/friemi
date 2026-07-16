@@ -34,6 +34,14 @@ test("getNotificationPath routes activity and message notifications correctly", 
   assert.equal(
     getNotificationPath({
       activityId: null,
+      momentId: "moment_1",
+      type: "MOMENT_COMMENTED",
+    }),
+    "/footprints/moment_1",
+  );
+  assert.equal(
+    getNotificationPath({
+      activityId: null,
       type: "DIRECT_MESSAGE",
     }),
     "/messages",
@@ -67,9 +75,18 @@ test("firebase invalid-token detection matches FCM responses", () => {
 });
 
 test("apns invalid-token detection parses structured reasons", () => {
-  assert.equal(getAPNsErrorReason('{"reason":"BadDeviceToken"}'), "BadDeviceToken");
-  assert.equal(isInvalidAPNsTokenResponse(400, '{"reason":"BadDeviceToken"}'), true);
-  assert.equal(isInvalidAPNsTokenResponse(410, '{"reason":"Unregistered"}'), true);
+  assert.equal(
+    getAPNsErrorReason('{"reason":"BadDeviceToken"}'),
+    "BadDeviceToken",
+  );
+  assert.equal(
+    isInvalidAPNsTokenResponse(400, '{"reason":"BadDeviceToken"}'),
+    true,
+  );
+  assert.equal(
+    isInvalidAPNsTokenResponse(410, '{"reason":"Unregistered"}'),
+    true,
+  );
   assert.equal(
     isInvalidAPNsTokenResponse(403, '{"reason":"ExpiredProviderToken"}'),
     false,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
+import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 
 type FootprintsPageProps = {
@@ -33,21 +34,35 @@ export default async function FootprintsPage({
   const query = await searchParams;
   const initialTab = query?.tab === "message" ? "message" : "moment";
   const profile = await ensureCurrentUserProfile(locale, "/footprints");
-  const messageFriendsResult = await getDirectMessageFriendRoster(profile.id)
-    .then((friends) => ({ friends, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load footprints message roster", error);
+  const [momentsResult, messageFriendsResult] = await Promise.all([
+    getMomentFeed(profile.id)
+      .then((moments) => ({ moments, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load moment feed", error);
 
-      return {
-        friends: [],
-        error,
-      };
-    });
+        return {
+          moments: [],
+          error,
+        };
+      }),
+    getDirectMessageFriendRoster(profile.id)
+      .then((friends) => ({ friends, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load footprints message roster", error);
+
+        return {
+          friends: [],
+          error,
+        };
+      }),
+  ]);
 
   return (
     <FootprintsMobilePage
       locale={locale}
       initialTab={initialTab}
+      moments={momentsResult.moments}
+      momentFeedError={Boolean(momentsResult.error)}
       messageFriends={messageFriendsResult.friends}
       messageRosterError={Boolean(messageFriendsResult.error)}
       profile={{

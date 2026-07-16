@@ -563,6 +563,26 @@ const copy = {
           body: (activityTitle: string, actorName = "有人") =>
             `${actorName}回复了你在「${activityTitle}」下的评论。`,
         },
+        MOMENT_LIKED: {
+          title: "足迹收到点赞",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}点赞了你的足迹。`,
+        },
+        MOMENT_COMMENTED: {
+          title: "足迹有新评论",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}评论了你的足迹。`,
+        },
+        MOMENT_COMMENT_REPLY: {
+          title: "有人回复了你",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}回复了你在足迹下的评论。`,
+        },
+        MOMENT_REPOSTED: {
+          title: "足迹被转发",
+          body: (_activityTitle: string, actorName = "有人") =>
+            `${actorName}转发了你的足迹。`,
+        },
         DIRECT_MESSAGE: {
           title: "有新的私信",
           body: (activityTitle: string, actorName = "有人") =>
@@ -1510,6 +1530,26 @@ const copy = {
           title: "New reply",
           body: (activityTitle: string, actorName = "Someone") =>
             `${actorName} replied to your comment on "${activityTitle}".`,
+        },
+        MOMENT_LIKED: {
+          title: "Moment liked",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} liked your moment.`,
+        },
+        MOMENT_COMMENTED: {
+          title: "New moment comment",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} commented on your moment.`,
+        },
+        MOMENT_COMMENT_REPLY: {
+          title: "New reply",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} replied to your moment comment.`,
+        },
+        MOMENT_REPOSTED: {
+          title: "Moment reposted",
+          body: (_activityTitle: string, actorName = "Someone") =>
+            `${actorName} reposted your moment.`,
         },
         DIRECT_MESSAGE: {
           title: "New message",
@@ -2512,6 +2552,26 @@ const copy = {
           title: "Nouvelle réponse",
           body: (activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} a répondu à votre commentaire sur « ${activityTitle} ».`,
+        },
+        MOMENT_LIKED: {
+          title: "Moment aimé",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a aimé votre moment.`,
+        },
+        MOMENT_COMMENTED: {
+          title: "Nouveau commentaire",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a commenté votre moment.`,
+        },
+        MOMENT_COMMENT_REPLY: {
+          title: "Nouvelle réponse",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a répondu à votre commentaire de moment.`,
+        },
+        MOMENT_REPOSTED: {
+          title: "Moment republié",
+          body: (_activityTitle: string, actorName = "Quelqu'un") =>
+            `${actorName} a republié votre moment.`,
         },
         DIRECT_MESSAGE: {
           title: "Nouveau message",
