@@ -6,6 +6,7 @@ import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AndroidAuthReturnRefresh } from "@/features/auth/components/AndroidAuthReturnRefresh";
 import { OrientationLockOverlay } from "@/components/layout/OrientationLockOverlay";
+import { PortraitOrientationLock } from "@/components/layout/PortraitOrientationLock";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSectionContext";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
@@ -63,6 +64,7 @@ export default async function LocaleLayout({
           <MobileNavSectionProvider>
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
               <RouteProgress />
+              <PortraitOrientationLock />
               <AndroidAppBridge locale={locale} />
               <IOSAppBridge />
               <AppHeader

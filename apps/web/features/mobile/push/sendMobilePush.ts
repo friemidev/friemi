@@ -2,6 +2,7 @@ import { createSign } from "node:crypto";
 import { connect } from "node:http2";
 import { prisma } from "@/lib/prisma";
 import type { NotificationType } from "@prisma/client";
+import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import {
   getNotificationCopy,
   getNotificationPath,
@@ -320,12 +321,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
   }
 
   const accessToken = config ? await getFirebaseAccessToken(config) : null;
-  const badgeCount = await prisma.notification.count({
-    where: {
-      recipientId: notification.recipientId,
-      readAt: null,
-    },
-  });
+  const badgeCount = await getUnreadNotificationCount(notification.recipientId);
   let sentCount = 0;
 
   for (const device of devices) {

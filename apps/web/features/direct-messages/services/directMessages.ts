@@ -5,7 +5,6 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "@/features/activities/utils/activityShareAccess";
-import { createNotification } from "@/features/notifications/utils/createNotification";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -66,23 +65,6 @@ export class DirectMessageDomainError extends Error {
     this.name = "DirectMessageDomainError";
     this.code = code;
   }
-}
-
-async function createDirectMessageNotification(
-  db: DbClient,
-  input: {
-    activityId?: string | null;
-    actorId: string;
-    recipientId: string;
-  },
-) {
-  return createNotification(db, {
-    type: "DIRECT_MESSAGE",
-    recipientId: input.recipientId,
-    actorId: input.actorId,
-    activityId: input.activityId ?? null,
-    dedupe: false,
-  });
 }
 
 function assertDifferentUsers(userId: string, otherUserId: string) {
@@ -446,12 +428,6 @@ export async function sendDirectMessage({
       select: directMessageSelect,
     });
 
-    await createDirectMessageNotification(tx, {
-      activityId: activityId ?? null,
-      actorId: currentUserProfileId,
-      recipientId: peerProfileId,
-    });
-
     const updatedConversation = await tx.conversation.update({
       where: {
         id: conversation.id,
@@ -502,10 +478,6 @@ export async function sendDirectMessageToFriend({
         body: normalizedBody,
       },
       select: directMessageSelect,
-    });
-    await createDirectMessageNotification(tx, {
-      actorId: currentUserProfileId,
-      recipientId: friendProfileId,
     });
     const updatedConversation = await tx.conversation.update({
       where: {
