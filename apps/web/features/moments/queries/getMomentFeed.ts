@@ -45,7 +45,7 @@ const momentCommentSelect = {
 } satisfies Prisma.MomentCommentSelect;
 
 function getMomentFeedSelect(
-  viewerProfileId: string,
+  viewerProfileId: string | null,
   options: { commentTake?: number } = {},
 ) {
   return {
@@ -70,7 +70,7 @@ function getMomentFeedSelect(
     },
     likes: {
       where: {
-        userId: viewerProfileId,
+        userId: viewerProfileId ?? "__anonymous_viewer__",
       },
       take: 1,
       select: {
@@ -202,9 +202,21 @@ function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
 
 export async function getVisibleMomentWhere(
   momentId: string,
-  viewerProfileId: string,
+  viewerProfileId: string | null,
 ): Promise<Prisma.MomentWhereInput> {
-  const friendIds = await getViewerFriendIds(viewerProfileId);
+  const visibilityRules: Prisma.MomentWhereInput[] = [{ visibility: "PUBLIC" }];
+
+  if (viewerProfileId) {
+    const friendIds = await getViewerFriendIds(viewerProfileId);
+
+    visibilityRules.unshift({ authorId: viewerProfileId });
+    visibilityRules.push({
+      authorId: {
+        in: friendIds,
+      },
+      visibility: "FRIENDS",
+    });
+  }
 
   return {
     id: momentId,
@@ -212,37 +224,32 @@ export async function getVisibleMomentWhere(
     author: {
       status: "ACTIVE",
     },
-    OR: [
-      { authorId: viewerProfileId },
-      { visibility: "PUBLIC" },
-      {
-        authorId: {
-          in: friendIds,
-        },
-        visibility: "FRIENDS",
-      },
-    ],
+    OR: visibilityRules,
   };
 }
 
-export const getMomentFeed = cache(async (viewerProfileId: string) => {
-  const friendIds = await getViewerFriendIds(viewerProfileId);
+export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
+  const visibilityRules: Prisma.MomentWhereInput[] = [{ visibility: "PUBLIC" }];
+
+  if (viewerProfileId) {
+    const friendIds = await getViewerFriendIds(viewerProfileId);
+
+    visibilityRules.unshift({ authorId: viewerProfileId });
+    visibilityRules.push({
+      authorId: {
+        in: friendIds,
+      },
+      visibility: "FRIENDS",
+    });
+  }
+
   const moments = await prisma.moment.findMany({
     where: {
       deletedAt: null,
       author: {
         status: "ACTIVE",
       },
-      OR: [
-        { authorId: viewerProfileId },
-        { visibility: "PUBLIC" },
-        {
-          authorId: {
-            in: friendIds,
-          },
-          visibility: "FRIENDS",
-        },
-      ],
+      OR: visibilityRules,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 50,
@@ -253,7 +260,7 @@ export const getMomentFeed = cache(async (viewerProfileId: string) => {
 });
 
 export const getMomentDetail = cache(
-  async (momentId: string, viewerProfileId: string) => {
+  async (momentId: string, viewerProfileId: string | null) => {
     const moment = await prisma.moment.findFirst({
       where: await getVisibleMomentWhere(momentId, viewerProfileId),
       select: getMomentFeedSelect(viewerProfileId, { commentTake: 100 }),

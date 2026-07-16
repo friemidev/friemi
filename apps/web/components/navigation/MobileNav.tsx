@@ -3,16 +3,11 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import {
-  CircleUserRound,
-  Footprints,
-  House,
-  Plus,
-  UsersRound,
-} from "lucide-react";
+import { Footprints, House, Orbit, Plus, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 import { useMobileNavSection } from "./MobileNavSectionContext";
 
@@ -46,9 +41,12 @@ export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
   const { sectionOverride } = useMobileNavSection();
+  const { unreadNotificationCount } = useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
+  const unreadBadgeText =
+    unreadNotificationCount > 99 ? "99+" : String(unreadNotificationCount);
   const items = useMemo(
     () => [
       {
@@ -77,9 +75,9 @@ export function MobileNav({ locale }: MobileNavProps) {
         tone: "rose",
       },
       {
-        href: "/profile",
-        label: t.nav.profileShort,
-        icon: CircleUserRound,
+        href: "/planets",
+        label: t.nav.planetShort,
+        icon: Orbit,
         tone: "cream",
       },
     ],
@@ -88,7 +86,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       t.nav.footprintsShort,
       t.nav.lobbyShort,
       t.nav.newActivity,
-      t.nav.profileShort,
+      t.nav.planetShort,
     ],
   );
 
@@ -128,6 +126,8 @@ export function MobileNav({ locale }: MobileNavProps) {
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
+          const showUnreadBadge =
+            item.href === "/footprints" && unreadNotificationCount > 0;
 
           return (
             <IntentPrefetchLink
@@ -175,6 +175,11 @@ export function MobileNav({ locale }: MobileNavProps) {
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />
+                {showUnreadBadge ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.28)] ring-2 ring-[#FEFFF9]">
+                    {unreadBadgeText}
+                  </span>
+                ) : null}
               </span>
               {item.isPrimary ? null : (
                 <span

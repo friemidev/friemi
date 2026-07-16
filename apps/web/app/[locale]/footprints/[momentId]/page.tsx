@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MomentDetailMobilePage } from "@/features/moments/components/MomentDetailMobilePage";
 import { getMomentDetail } from "@/features/moments/queries/getMomentFeed";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   buildCanonicalUrl,
@@ -89,11 +89,8 @@ export default async function MomentDetailPage({
   params,
 }: MomentDetailPageProps) {
   const { locale, momentId } = await params;
-  const profile = await ensureCurrentUserProfile(
-    locale,
-    `/footprints/${momentId}`,
-  );
-  const moment = await getMomentDetail(momentId, profile.id);
+  const profile = await getOptionalCurrentUserProfileSnapshot();
+  const moment = await getMomentDetail(momentId, profile?.id ?? null);
 
   if (!moment) {
     notFound();
@@ -103,9 +100,7 @@ export default async function MomentDetailPage({
     <MomentDetailMobilePage
       locale={locale}
       moment={moment}
-      profile={{
-        id: profile.id,
-      }}
+      profile={profile ? { id: profile.id } : null}
     />
   );
 }

@@ -232,7 +232,9 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
       emailVerifiedAt: updatedEmailVerifiedAt,
       firstName: profileFields.firstName,
       lastName: profileFields.lastName,
-      ...(existing?.nickname?.trim() ? {} : { nickname: profileFields.nickname }),
+      ...(existing?.nickname?.trim()
+        ? {}
+        : { nickname: profileFields.nickname }),
       username: profileFields.username,
       avatarUrl: profileFields.avatarUrl,
       status: profileFields.status,
@@ -248,19 +250,7 @@ export async function ensureCurrentUserProfile(
   locale = "zh-CN",
   redirectPath?: string,
 ) {
-  const clerkUserId = await requireUser(locale, redirectPath);
-
-  if (!hasClerkKeys()) {
-    return upsertLocalUserProfile(clerkUserId);
-  }
-
-  const user = await currentUser();
-
-  if (!user) {
-    redirect(getSignInHref(locale, redirectPath));
-  }
-
-  return upsertClerkUserProfile(user);
+  return ensureCurrentUserProfileSnapshot(locale, redirectPath);
 }
 
 export async function getOptionalCurrentUserProfile() {

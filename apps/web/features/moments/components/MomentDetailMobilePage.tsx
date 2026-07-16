@@ -11,7 +11,7 @@ type MomentDetailMobilePageProps = {
   moment: MomentFeedItemViewModel;
   profile: {
     id: string;
-  };
+  } | null;
 };
 
 export function MomentDetailMobilePage({
@@ -22,8 +22,8 @@ export function MomentDetailMobilePage({
   const copy = getFootprintsCopy(locale);
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9] pb-10 text-[#111210] md:bg-[#EEF4FB]">
-      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1rem)] md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
+    <main className="min-h-screen bg-[#FEFFF9] pb-10 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1rem)] md:min-h-[calc(100vh-4rem)] md:max-w-3xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
         <header className="flex items-center justify-between pb-5">
           <Link
             href={withLocale(locale, "/footprints?tab=moment")}
@@ -40,10 +40,11 @@ export function MomentDetailMobilePage({
 
         <FeedCard
           deleteRedirectPath="/footprints?tab=moment"
+          isAuthenticated={Boolean(profile)}
           locale={locale}
           moment={moment}
           copy={copy}
-          viewerProfileId={profile.id}
+          viewerProfileId={profile?.id ?? null}
         />
       </div>
     </main>

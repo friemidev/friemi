@@ -18,6 +18,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
   return (
     pathname === withLocale(locale, "/mobile-home") ||
     pathname === withLocale(locale, "/footprints") ||
+    pathname === withLocale(locale, "/planets") ||
     pathname === withLocale(locale, "/lobby") ||
     pathname.startsWith(localizedLobbyPrefix) ||
     pathname.startsWith(localizedMessagesPrefix) ||

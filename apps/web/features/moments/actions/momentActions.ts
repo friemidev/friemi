@@ -19,7 +19,7 @@ const createMomentSchema = z
     content: z.string().trim().max(momentContentMaxLength).optional(),
     imageUrls: z.array(z.string().trim().url()).max(6).default([]),
     locale: z.string().min(1).default("zh-CN"),
-    visibility: z.enum(["FRIENDS", "PUBLIC"]).default("FRIENDS"),
+    visibility: z.enum(["FRIENDS", "PUBLIC"]).default("PUBLIC"),
   })
   .refine(
     (value) => Boolean(value.content?.trim()) || value.imageUrls.length > 0,
@@ -147,7 +147,7 @@ export async function createMomentAction(
       ...getStringList(formData, "imageUrl"),
     ].filter((url, index, urls) => urls.indexOf(url) === index),
     locale: getString(formData, "locale") || "zh-CN",
-    visibility: getString(formData, "visibility") || "FRIENDS",
+    visibility: getString(formData, "visibility") || "PUBLIC",
   };
   const result = createMomentSchema.safeParse(rawInput);
   const copy = getMomentActionCopy(rawInput.locale);
@@ -162,7 +162,7 @@ export async function createMomentAction(
         visibility:
           rawInput.visibility === "PUBLIC" || rawInput.visibility === "FRIENDS"
             ? rawInput.visibility
-            : "FRIENDS",
+            : "PUBLIC",
       },
     };
   }
@@ -218,9 +218,9 @@ export async function createMomentAction(
         imageUrls: result.success ? result.data.imageUrls : rawInput.imageUrls,
         visibility: result.success
           ? result.data.visibility
-          : rawInput.visibility === "PUBLIC"
-            ? "PUBLIC"
-            : "FRIENDS",
+          : rawInput.visibility === "FRIENDS"
+            ? "FRIENDS"
+            : "PUBLIC",
       },
     };
   }
@@ -232,7 +232,7 @@ export async function createMomentAction(
     values: {
       content: "",
       imageUrls: [],
-      visibility: "FRIENDS",
+      visibility: "PUBLIC",
     },
   };
 }

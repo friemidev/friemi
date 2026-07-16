@@ -2,21 +2,29 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { useActionState, useMemo, useOptimistic, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent, TouchEvent } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { formatActivityDate } from "@chill-club/shared";
 import {
-  Camera,
+  ChevronDown,
   ChevronRight,
   Eye,
+  Globe2,
   Heart,
   MessageCircle,
   MoreHorizontal,
-  Plus,
   Repeat2,
-  Settings,
+  SendHorizontal,
   Share2,
-  ShieldCheck,
   Trash2,
   UserRound,
   X,
@@ -26,6 +34,8 @@ import { openDirectConversationAction } from "@/features/direct-messages/actions
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
+import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
+import type { ProfileDashboardViewModel } from "@/features/profile/queries/getProfileDashboard";
 import {
   createMomentAction,
   createMomentCommentAction,
@@ -38,10 +48,21 @@ import {
 } from "@/features/moments/actions/momentActions";
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "moment" | "message" | "profile";
+type MomentFeedScope = "PUBLIC" | "FRIENDS";
+
+type FootprintsViewerProfile = {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  friendCode: string | null;
+  isCoCreator: boolean;
+};
 
 type FootprintsMobilePageProps = {
   initialTab?: FootprintsTab;
@@ -50,13 +71,9 @@ type FootprintsMobilePageProps = {
   messageRosterError?: boolean;
   momentFeedError?: boolean;
   moments: MomentFeedItemViewModel[];
-  profile: {
-    id: string;
-    nickname: string;
-    avatarUrl: string | null;
-    bio: string | null;
-    friendCode: string | null;
-  };
+  profile: FootprintsViewerProfile | null;
+  profileDashboard: ProfileDashboardViewModel;
+  profileDashboardError?: boolean;
 };
 
 type MomentCard = {
@@ -88,15 +105,23 @@ const copyByLocale = {
     commentSubmit: "发送",
     delete: "删除",
     detail: "详情",
-    emptyFeedTitle: "还没有好友动态",
+    emptyFeedTitle: "还没有动态",
     emptyFeedDescription: "发一条足迹，或者添加好友后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
-    feedTitle: "好友动态",
-    publish: "发布",
+    feedFriends: "好友",
+    feedPublic: "公共",
+    guestProfileDescription: "登录后可以管理头像、简介和好友码。",
+    guestProfileTitle: "登录查看主页",
+    guestMessageDescription: "登录后可以查看好友私聊和组局沟通。",
+    guestMessageTitle: "登录查看消息",
+    signIn: "登录",
+    signInToInteract: "登录后互动",
+    signInToPost: "登录后发布足迹",
     report: "举报",
     shareCopied: "链接已复制",
     shareFailed: "暂时无法分享",
     visibilityFriends: "好友可见",
+    visibilityLabel: "发布范围",
     visibilityPublic: "公开",
     like: "点赞",
     comment: "评论",
@@ -161,12 +186,21 @@ const copyByLocale = {
     emptyFeedTitle: "No moments yet",
     emptyFeedDescription: "Post one, or come back after adding friends.",
     feedError: "Moments could not load. Try again later.",
-    feedTitle: "Friends",
-    publish: "Post",
+    feedFriends: "Friends",
+    feedPublic: "Public",
+    guestProfileDescription:
+      "Sign in to manage your avatar, bio, and friend code.",
+    guestProfileTitle: "Sign in to view your profile",
+    guestMessageDescription: "Sign in to see friend chats and plan messages.",
+    guestMessageTitle: "Sign in to view messages",
+    signIn: "Sign in",
+    signInToInteract: "Sign in to interact",
+    signInToPost: "Sign in to post",
     report: "Report",
     shareCopied: "Link copied",
     shareFailed: "Could not share",
     visibilityFriends: "Friends",
+    visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "Like",
     comment: "Comment",
@@ -234,12 +268,22 @@ const copyByLocale = {
     emptyFeedDescription:
       "Publiez un moment, ou revenez après avoir ajouté des amis.",
     feedError: "Les moments ne se chargent pas pour le moment.",
-    feedTitle: "Amis",
-    publish: "Publier",
+    feedFriends: "Amis",
+    feedPublic: "Public",
+    guestProfileDescription:
+      "Connecte-toi pour gérer ton avatar, ta bio et ton code ami.",
+    guestProfileTitle: "Connecte-toi pour voir ton profil",
+    guestMessageDescription:
+      "Connecte-toi pour voir tes discussions et messages de sorties.",
+    guestMessageTitle: "Connecte-toi pour voir tes messages",
+    signIn: "Connexion",
+    signInToInteract: "Connecte-toi pour interagir",
+    signInToPost: "Connecte-toi pour publier",
     report: "Signaler",
     shareCopied: "Lien copié",
     shareFailed: "Partage impossible",
     visibilityFriends: "Amis",
+    visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "J'aime",
     comment: "Commenter",
@@ -335,130 +379,168 @@ function ProfileAvatar({
 
 export function FeedCard({
   deleteRedirectPath,
+  isAuthenticated,
   locale,
   moment,
   copy,
   viewerProfileId,
 }: {
   deleteRedirectPath?: string;
+  isAuthenticated: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
   copy: ReturnType<typeof getFootprintsCopy>;
-  viewerProfileId: string;
+  viewerProfileId: string | null;
 }) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
-  const isOwnMoment = moment.author.id === viewerProfileId;
+  const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
+  const isOwnMoment = viewerProfileId === moment.author.id;
   const canRepost =
-    isOwnMoment ||
-    moment.visibility === "PUBLIC" ||
-    Boolean(moment.resharedMoment);
+    isAuthenticated &&
+    (isOwnMoment ||
+      moment.visibility === "PUBLIC" ||
+      Boolean(moment.resharedMoment));
+  const openDetail = () => router.push(detailHref);
+  const handleDetailKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openDetail();
+    }
+  };
 
   return (
     <>
       <article className="overflow-hidden rounded-[1.35rem] border border-[#E3DCC5] bg-white shadow-[0_12px_34px_rgba(21,98,64,0.08)]">
-        <div className="flex items-start gap-3 px-4 pb-2 pt-4">
-          <ProfileAvatar
-            avatarUrl={moment.author.avatarUrl}
-            name={moment.author.nickname}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
-                  {moment.author.nickname}
-                </p>
-                <p className="text-xs font-semibold text-[#6C746A]">
-                  {formatActivityDate(moment.createdAt, locale)}
-                </p>
-              </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1D1D1B]/62 transition hover:bg-[#F1F2EC]"
-                  aria-label="More"
-                  onClick={() => setMenuOpen((open) => !open)}
+        <div
+          className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
+          role="link"
+          tabIndex={0}
+          onClick={openDetail}
+          onKeyDown={handleDetailKeyDown}
+        >
+          <div className="flex items-start gap-3 px-4 pb-2 pt-4">
+            <Link
+              href={withLocale(locale, `/profile/${moment.author.id}`)}
+              className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              aria-label={moment.author.nickname}
+            >
+              <ProfileAvatar
+                avatarUrl={moment.author.avatarUrl}
+                name={moment.author.nickname}
+              />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
+                    {moment.author.nickname}
+                  </p>
+                  <p className="text-xs font-semibold text-[#6C746A]">
+                    {formatActivityDate(moment.createdAt, locale)}
+                  </p>
+                </div>
+                <div
+                  className="relative"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
                 >
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-                {menuOpen ? (
-                  <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
-                    <Link
-                      className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
-                      href={detailHref}
-                    >
-                      <Eye className="h-4 w-4" />
-                      {copy.detail}
-                    </Link>
-                    <ShareMomentButton
-                      className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
-                      copy={copy}
-                      href={detailHref}
-                    />
-                    {isOwnMoment ? (
-                      <form action={deleteMomentAction}>
-                        <input name="locale" type="hidden" value={locale} />
-                        <input
-                          name="momentId"
-                          type="hidden"
-                          value={moment.id}
-                        />
-                        {deleteRedirectPath ? (
-                          <input
-                            name="redirectPath"
-                            type="hidden"
-                            value={deleteRedirectPath}
-                          />
-                        ) : null}
-                        <button
-                          type="submit"
-                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {copy.delete}
-                        </button>
-                      </form>
-                    ) : (
-                      <ReportDialog
-                        className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
-                        isAuthenticated
-                        locale={locale}
-                        redirectPath={`/footprints/${moment.id}`}
-                        targetId={moment.id}
-                        targetType="MOMENT"
-                        variant="link"
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1D1D1B]/62 transition hover:bg-[#F1F2EC]"
+                    aria-label="More"
+                    onClick={() => setMenuOpen((open) => !open)}
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
+                  {menuOpen ? (
+                    <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
+                      <Link
+                        className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
+                        href={detailHref}
+                      >
+                        <Eye className="h-4 w-4" />
+                        {copy.detail}
+                      </Link>
+                      <ShareMomentButton
+                        className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
+                        copy={copy}
+                        href={detailHref}
                       />
-                    )}
-                  </div>
-                ) : null}
+                      {isOwnMoment ? (
+                        <form action={deleteMomentAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input
+                            name="momentId"
+                            type="hidden"
+                            value={moment.id}
+                          />
+                          {deleteRedirectPath ? (
+                            <input
+                              name="redirectPath"
+                              type="hidden"
+                              value={deleteRedirectPath}
+                            />
+                          ) : null}
+                          <button
+                            type="submit"
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {copy.delete}
+                          </button>
+                        </form>
+                      ) : (
+                        <ReportDialog
+                          className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
+                          isAuthenticated={isAuthenticated}
+                          locale={locale}
+                          redirectPath={`/footprints/${moment.id}`}
+                          targetId={moment.id}
+                          targetType="MOMENT"
+                          variant="link"
+                        />
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
+              {moment.content ? (
+                <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#1D1D1B]">
+                  {moment.content}
+                </p>
+              ) : null}
             </div>
-            {moment.content ? (
-              <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#1D1D1B]">
-                {moment.content}
-              </p>
-            ) : null}
           </div>
+
+          {moment.resharedMoment ? (
+            <SharedMomentPreview
+              copy={copy}
+              locale={locale}
+              moment={moment.resharedMoment}
+            />
+          ) : null}
+
+          {moment.images.length > 0 ? (
+            <MomentImageGrid
+              images={moment.images}
+              onImageClick={setPreviewIndex}
+            />
+          ) : null}
         </div>
-
-        {moment.resharedMoment ? (
-          <SharedMomentPreview
-            copy={copy}
-            locale={locale}
-            moment={moment.resharedMoment}
-          />
-        ) : null}
-
-        {moment.images.length > 0 ? (
-          <MomentImageGrid images={moment.images} />
-        ) : null}
 
         <div className="grid grid-cols-3 px-4 py-3 text-[#1D1D1B]/76">
           <OptimisticMomentLikeButton
             copy={copy}
+            isAuthenticated={isAuthenticated}
             locale={locale}
             moment={moment}
+            signInHref={signInHref}
           />
           <button
             type="button"
@@ -472,8 +554,10 @@ export function FeedCard({
           <RepostMomentButton
             canRepost={canRepost}
             copy={copy}
+            isAuthenticated={isAuthenticated}
             locale={locale}
             moment={moment}
+            signInHref={signInHref}
           />
         </div>
 
@@ -508,10 +592,19 @@ export function FeedCard({
         <MomentCommentSheet
           copy={copy}
           isOwnMoment={isOwnMoment}
+          isAuthenticated={isAuthenticated}
           locale={locale}
           moment={moment}
           onClose={() => setCommentsOpen(false)}
           viewerProfileId={viewerProfileId}
+        />
+      ) : null}
+
+      {previewIndex !== null ? (
+        <MomentImagePreview
+          images={moment.images}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
         />
       ) : null}
     </>
@@ -520,12 +613,16 @@ export function FeedCard({
 
 function OptimisticMomentLikeButton({
   copy,
+  isAuthenticated,
   locale,
   moment,
+  signInHref,
 }: {
   copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
+  signInHref: string;
 }) {
   const [optimisticLike, toggleOptimisticLike] = useOptimistic(
     {
@@ -537,6 +634,30 @@ function OptimisticMomentLikeButton({
       isLiked: !current.isLiked,
     }),
   );
+
+  const content = (
+    <>
+      <Heart
+        className={cn(
+          "h-[18px] w-[18px]",
+          optimisticLike.isLiked ? "fill-current" : null,
+        )}
+      />
+      <span>{optimisticLike.count}</span>
+    </>
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        href={signInHref}
+        className="inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold"
+        aria-label={copy.signInToInteract}
+      >
+        {content}
+      </Link>
+    );
+  }
 
   return (
     <form
@@ -555,13 +676,7 @@ function OptimisticMomentLikeButton({
         )}
         aria-label={copy.like}
       >
-        <Heart
-          className={cn(
-            "h-[18px] w-[18px]",
-            optimisticLike.isLiked ? "fill-current" : null,
-          )}
-        />
-        <span>{optimisticLike.count}</span>
+        {content}
       </button>
     </form>
   );
@@ -570,18 +685,41 @@ function OptimisticMomentLikeButton({
 function RepostMomentButton({
   canRepost,
   copy,
+  isAuthenticated,
   locale,
   moment,
+  signInHref,
 }: {
   canRepost: boolean;
   copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
+  signInHref: string;
 }) {
   const [optimisticCount, addOptimisticRepost] = useOptimistic(
     moment.repostCount,
     (current, _action: null) => current + 1,
   );
+
+  const content = (
+    <>
+      <Repeat2 className="h-[18px] w-[18px]" />
+      <span>{optimisticCount}</span>
+    </>
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        href={signInHref}
+        className="ml-auto inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold"
+        aria-label={copy.signInToInteract}
+      >
+        {content}
+      </Link>
+    );
+  }
 
   return (
     <form
@@ -606,8 +744,7 @@ function RepostMomentButton({
         disabled={!canRepost}
         aria-label={copy.repost}
       >
-        <Repeat2 className="h-[18px] w-[18px]" />
-        <span>{optimisticCount}</span>
+        {content}
       </button>
     </form>
   );
@@ -626,6 +763,8 @@ function SharedMomentPreview({
     <Link
       href={withLocale(locale, `/footprints/${moment.id}`)}
       className="mx-4 mb-3 flex gap-3 rounded-[1rem] bg-[#F7F7F0] p-3 transition hover:bg-[#F1F2EC]"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
     >
       {moment.image ? (
         <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F7EDE6]">
@@ -653,6 +792,7 @@ function SharedMomentPreview({
 
 function MomentCommentSheet({
   copy,
+  isAuthenticated,
   isOwnMoment,
   locale,
   moment,
@@ -660,61 +800,70 @@ function MomentCommentSheet({
   viewerProfileId,
 }: {
   copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
   isOwnMoment: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
   onClose: () => void;
-  viewerProfileId: string;
+  viewerProfileId: string | null;
 }) {
   const hasMore = moment.commentCount > moment.recentComments.length;
+  const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-[#1D1D1B]/28 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+    <div className="fixed inset-0 z-50 flex items-end bg-[#1D1D1B]/24">
       <button
         type="button"
         className="absolute inset-0"
         aria-label="Close"
         onClick={onClose}
       />
-      <section className="relative mx-auto w-full max-w-md overflow-hidden rounded-t-[1.6rem] border border-[#E3DCC5] bg-[#FEFFF9] shadow-[0_-18px_48px_rgba(29,29,27,0.18)]">
-        <header className="flex items-center justify-between border-b border-[#E8E4D4] px-4 py-3">
-          <h2 className="text-[16px] font-black text-[#111210]">
-            {copy.commentSheetTitle}
-          </h2>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#E3DCC5]"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <section className="relative mx-auto w-full max-w-md overflow-hidden rounded-t-[1.65rem] bg-[#FEFFF9] shadow-[0_-18px_48px_rgba(29,29,27,0.18)]">
+        <header className="px-4 pb-2 pt-3">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#D9D4BE]" />
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-black text-[#111210]">
+              {copy.commentSheetTitle}
+              <span className="ml-1 text-xs font-bold text-[#8E8383]">
+                {moment.commentCount}
+              </span>
+            </h2>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F7F0] text-[#1D1D1B]/72"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </header>
-        <div className="max-h-[46vh] overflow-y-auto px-4 py-3">
+        <div className="max-h-[50vh] overflow-y-auto px-4 pb-3 pt-1">
           {moment.recentComments.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {moment.recentComments.map((comment) => (
-                <div key={comment.id} className="flex items-start gap-3">
+                <div key={comment.id} className="flex items-start gap-2.5">
                   <ProfileAvatar
                     avatarUrl={comment.author.avatarUrl}
                     name={comment.author.nickname}
-                    className="h-9 w-9 text-xs"
+                    className="h-8 w-8 text-[11px]"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-[#E8E4D4]">
-                      <p className="text-xs font-black text-[#156240]">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[13px] font-black text-[#111210]">
                         {comment.author.nickname}
                       </p>
-                      <p className="mt-1 whitespace-pre-wrap text-[13px] font-semibold leading-5 text-[#1D1D1B]/82">
-                        {comment.content}
-                      </p>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 px-2">
-                      <span className="text-[11px] font-semibold text-[#8E8383]">
+                      <span className="shrink-0 text-[11px] font-semibold text-[#A49A8E]">
                         {formatActivityDate(comment.createdAt, locale)}
                       </span>
+                    </div>
+                    <p className="mt-0.5 whitespace-pre-wrap break-words text-[14px] font-semibold leading-5 text-[#1D1D1B]/82">
+                      {comment.content}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
                       <MomentCommentInlineAction
                         commentId={comment.id}
                         copy={copy}
+                        isAuthenticated={isAuthenticated}
                         isDeletable={
                           comment.author.id === viewerProfileId || isOwnMoment
                         }
@@ -727,20 +876,31 @@ function MomentCommentSheet({
               ))}
             </div>
           ) : (
-            <p className="py-5 text-center text-sm font-semibold text-[#8E8383]">
+            <p className="py-8 text-center text-sm font-semibold text-[#8E8383]">
               {copy.commentPlaceholder}
             </p>
           )}
           {hasMore ? (
             <Link
               href={withLocale(locale, `/footprints/${moment.id}`)}
-              className="mt-4 flex h-10 items-center justify-center rounded-full bg-[#F7F7F0] text-sm font-black text-[#156240]"
+              className="mx-auto mt-5 flex h-9 w-fit items-center justify-center rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#156240]"
             >
               {copy.loadMoreComments}
             </Link>
           ) : null}
         </div>
-        <MomentCommentForm copy={copy} locale={locale} momentId={moment.id} />
+        {isAuthenticated ? (
+          <MomentCommentForm copy={copy} locale={locale} momentId={moment.id} />
+        ) : (
+          <div className="border-t border-[#E8E4D4]/70 bg-white/88 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            <Link
+              href={signInHref}
+              className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+            >
+              {copy.signInToInteract}
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -748,29 +908,43 @@ function MomentCommentSheet({
 
 function MomentImageGrid({
   images,
+  onImageClick,
 }: {
   images: MomentFeedItemViewModel["images"];
+  onImageClick: (index: number) => void;
 }) {
-  if (images.length === 1) {
-    const image = images[0];
+  if (images.length === 0) {
+    return null;
+  }
 
-    if (!image) {
-      return null;
-    }
+  if (images.length === 1) {
+    const [image] = images;
 
     return (
       <div className="px-4">
-        <MomentImageFrame imageUrl={image.url} ratio="aspect-[16/8.6]" />
+        <MomentImageFrame
+          imageUrl={image.url}
+          ratio="aspect-[16/8.6]"
+          onClick={() => onImageClick(0)}
+        />
       </div>
     );
   }
 
+  const visibleImages = images.slice(0, 4);
+
   return (
     <div className="grid grid-cols-2 gap-2 px-4">
-      {images.slice(0, 4).map((image, index) => (
+      {visibleImages.map((image, index) => (
         <MomentImageFrame
           key={image.id}
           imageUrl={image.url}
+          moreCount={
+            images.length > visibleImages.length && index === 3
+              ? images.length - visibleImages.length
+              : 0
+          }
+          onClick={() => onImageClick(index)}
           ratio={
             images.length === 3 && index === 0
               ? "aspect-[16/8.6] col-span-2"
@@ -784,17 +958,27 @@ function MomentImageGrid({
 
 function MomentImageFrame({
   imageUrl,
+  moreCount = 0,
+  onClick,
   ratio,
 }: {
   imageUrl: string;
+  moreCount?: number;
+  onClick: () => void;
   ratio: string;
 }) {
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "relative overflow-hidden rounded-[1.1rem] bg-[#F7EDE6]",
+        "relative block w-full overflow-hidden rounded-[1.1rem] bg-[#F7EDE6] text-left transition active:scale-[0.99]",
         ratio,
       )}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      aria-label="Preview image"
     >
       {/* Uploaded moment images can come from public storage domains outside next/image config. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -803,8 +987,182 @@ function MomentImageFrame({
         alt=""
         className="absolute inset-0 h-full w-full object-cover"
       />
+      {moreCount > 0 ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-[#1D1D1B]/42 text-2xl font-black text-white">
+          +{moreCount}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function MomentImagePreview({
+  images,
+  initialIndex,
+  onClose,
+}: {
+  images: MomentFeedItemViewModel["images"];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const suppressNextImageClickRef = useRef(false);
+  const image = images[activeIndex] ?? images[0];
+  const hasMultiple = images.length > 1;
+
+  useEffect(() => {
+    setMounted(true);
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  if (!image) {
+    return null;
+  }
+
+  function goToImage(direction: -1 | 1) {
+    setActiveIndex((current) => {
+      const next = current + direction;
+
+      if (next < 0) {
+        return images.length - 1;
+      }
+
+      if (next >= images.length) {
+        return 0;
+      }
+
+      return next;
+    });
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    if (touchStartX === null || !hasMultiple) {
+      return;
+    }
+
+    const deltaX =
+      (event.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+
+    if (Math.abs(deltaX) > 48) {
+      suppressNextImageClickRef.current = true;
+      goToImage(deltaX < 0 ? 1 : -1);
+      window.setTimeout(() => {
+        suppressNextImageClickRef.current = false;
+      }, 120);
+    }
+
+    setTouchStartX(null);
+  }
+
+  const preview = (
+    <div
+      className="flex flex-col text-white"
+      style={{
+        backgroundColor: "rgba(5, 5, 5, 0.96)",
+        bottom: 0,
+        left: 0,
+        position: "fixed",
+        right: 0,
+        top: 0,
+        zIndex: 2147483647,
+      }}
+      onClick={onClose}
+    >
+      <header className="flex h-[calc(env(safe-area-inset-top)+3.5rem)] shrink-0 items-end justify-between px-4 pb-3">
+        <span className="text-sm font-black">
+          {activeIndex + 1}/{images.length}
+        </span>
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 backdrop-blur"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </header>
+
+      <div
+        className="relative flex min-h-0 flex-1 items-center justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+        onTouchStart={(event) =>
+          setTouchStartX(event.changedTouches[0]?.clientX ?? null)
+        }
+        onTouchEnd={handleTouchEnd}
+      >
+        {hasMultiple ? (
+          <button
+            type="button"
+            className="absolute left-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 backdrop-blur"
+            onClick={(event) => {
+              event.stopPropagation();
+              goToImage(-1);
+            }}
+            aria-label="Previous image"
+          >
+            <ChevronRight className="h-5 w-5 rotate-180" />
+          </button>
+        ) : null}
+
+        {/* Uploaded moment images can come from public storage domains outside next/image config. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={image.id}
+          src={image.url}
+          alt=""
+          className="max-h-full max-w-full select-none object-contain shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (suppressNextImageClickRef.current) {
+              suppressNextImageClickRef.current = false;
+              return;
+            }
+            onClose();
+          }}
+        />
+
+        {hasMultiple ? (
+          <button
+            type="button"
+            className="absolute right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 backdrop-blur"
+            onClick={(event) => {
+              event.stopPropagation();
+              goToImage(1);
+            }}
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        ) : null}
+      </div>
+
+      {hasMultiple ? (
+        <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-0 right-0 flex justify-center gap-1.5">
+          {images.map((item, index) => (
+            <span
+              key={item.id}
+              className={cn(
+                "h-1.5 rounded-full bg-white transition-all",
+                activeIndex === index ? "w-5 opacity-90" : "w-1.5 opacity-35",
+              )}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
+
+  return mounted ? createPortal(preview, document.body) : null;
 }
 
 function ShareMomentButton({
@@ -872,12 +1230,14 @@ function ShareMomentButton({
 function MomentCommentInlineAction({
   commentId,
   copy,
+  isAuthenticated,
   isDeletable,
   locale,
   momentId,
 }: {
   commentId: string;
   copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
   isDeletable: boolean;
   locale: string;
   momentId: string;
@@ -890,7 +1250,7 @@ function MomentCommentInlineAction({
         <input name="momentId" type="hidden" value={momentId} />
         <button
           type="submit"
-          className="rounded-full px-1 text-[11px] font-black text-[#9A2135]"
+          className="text-[11px] font-black text-[#9A2135]/82"
         >
           {copy.delete}
         </button>
@@ -900,8 +1260,8 @@ function MomentCommentInlineAction({
 
   return (
     <ReportDialog
-      className="h-auto rounded-none bg-transparent px-1 text-[11px] font-black text-[#9A2135] ring-0"
-      isAuthenticated
+      className="h-auto rounded-none bg-transparent px-0 text-[11px] font-black text-[#9A2135]/82 ring-0"
+      isAuthenticated={isAuthenticated}
       locale={locale}
       redirectPath={`/footprints/${momentId}`}
       targetId={commentId}
@@ -932,29 +1292,33 @@ function MomentCommentForm({
   );
 
   return (
-    <form action={formAction} className="border-t border-[#E8E4D4] px-4 py-3">
+    <form
+      action={formAction}
+      className="border-t border-[#E8E4D4]/70 bg-white/88 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)] backdrop-blur"
+    >
       <input name="locale" type="hidden" value={locale} />
       <input name="momentId" type="hidden" value={momentId} />
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <input
           key={state.ok ? `${momentId}-comment-empty` : `${momentId}-comment`}
           name="content"
           type="text"
           maxLength={500}
           placeholder={copy.commentPlaceholder}
-          className="min-h-10 min-w-0 flex-1 rounded-full border border-[#E3DCC5] bg-[#FEFFF9] px-4 text-sm font-semibold outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/12"
+          className="min-h-11 min-w-0 flex-1 rounded-full border border-[#E3DCC5] bg-[#FEFFF9] px-4 text-sm font-semibold outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/12"
           defaultValue={state.ok ? "" : state.values?.content}
         />
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex h-10 shrink-0 items-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)] disabled:opacity-60"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-50"
+          aria-label={copy.commentSubmit}
         >
-          {copy.commentSubmit}
+          <SendHorizontal className="h-4 w-4" />
         </button>
       </div>
       {state.formError ? (
-        <p className="mt-2 text-xs font-semibold text-[#9A2135]">
+        <p className="mt-2 px-2 text-xs font-semibold text-[#9A2135]">
           {state.formError}
         </p>
       ) : null}
@@ -962,48 +1326,11 @@ function MomentCommentForm({
   );
 }
 
-function ActionCard({
-  icon,
-  title,
-  description,
-  href,
-  cta,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-[1.25rem] border border-[#E3DCC5] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(21,98,64,0.07)] transition active:scale-[0.99]"
-    >
-      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAF4E7] text-[#156240]">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-black leading-5 text-[#111210]">
-          {title}
-        </span>
-        <span className="mt-1 line-clamp-2 block text-xs font-semibold leading-5 text-[#6C746A]">
-          {description}
-        </span>
-      </span>
-      <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-[#FEFFF9] px-2.5 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-        {cta}
-        <ChevronRight className="h-4 w-4" />
-      </span>
-    </Link>
-  );
-}
-
 const createMomentInitialState: CreateMomentState = {
   values: {
     content: "",
     imageUrls: [],
-    visibility: "FRIENDS",
+    visibility: "PUBLIC",
   },
 };
 
@@ -1049,6 +1376,86 @@ function MomentImageUploadGrid({
   );
 }
 
+function MomentVisibilitySelector({
+  copy,
+  onChange,
+  value,
+}: {
+  copy: ReturnType<typeof getFootprintsCopy>;
+  onChange: (visibility: "FRIENDS" | "PUBLIC") => void;
+  value: "FRIENDS" | "PUBLIC";
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const activeLabel =
+    value === "PUBLIC" ? copy.visibilityPublic : copy.visibilityFriends;
+  const options = [
+    {
+      icon: <Globe2 className="h-3.5 w-3.5" />,
+      label: copy.visibilityPublic,
+      value: "PUBLIC" as const,
+    },
+    {
+      icon: <UserRound className="h-3.5 w-3.5" />,
+      label: copy.visibilityFriends,
+      value: "FRIENDS" as const,
+    },
+  ];
+
+  return (
+    <div
+      className="relative shrink-0"
+      onClick={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-2.5 text-[11px] font-black text-[#156240]/82 transition active:scale-[0.98]"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-label={copy.visibilityLabel}
+      >
+        {value === "PUBLIC" ? (
+          <Globe2 className="h-3.5 w-3.5" />
+        ) : (
+          <UserRound className="h-3.5 w-3.5" />
+        )}
+        <span>{activeLabel}</span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition",
+            isOpen ? "rotate-180" : "rotate-0",
+          )}
+        />
+      </button>
+
+      {isOpen ? (
+        <div className="absolute right-0 z-20 mt-2 w-32 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 shadow-[0_16px_34px_rgba(21,98,64,0.14)]">
+          <p className="px-3 py-1.5 text-[10px] font-black text-[#8E8383]">
+            {copy.visibilityLabel}
+          </p>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-black transition",
+                value === option.value
+                  ? "bg-[#F3F8EB] text-[#156240]"
+                  : "text-[#1D1D1B]/72",
+              )}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              {option.icon}
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MomentComposer({
   copy,
   locale,
@@ -1056,37 +1463,56 @@ function MomentComposer({
 }: {
   copy: ReturnType<typeof getFootprintsCopy>;
   locale: string;
-  profile: FootprintsMobilePageProps["profile"];
+  profile: FootprintsViewerProfile | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [visibility, setVisibility] = useState<"FRIENDS" | "PUBLIC">("FRIENDS");
+  const [visibility, setVisibility] = useState<"FRIENDS" | "PUBLIC">("PUBLIC");
   const [state, formAction, isPending] = useActionState(
     createMomentAction,
     createMomentInitialState,
   );
+  const signInHref = getSignInHref(locale, "/footprints?tab=moment");
 
-  if (!isExpanded) {
+  if (!profile) {
     return (
-      <button
-        type="button"
-        className="group flex w-full items-center gap-3 rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-3 text-left shadow-[0_12px_34px_rgba(21,98,64,0.08)] transition active:scale-[0.99]"
-        onClick={() => setIsExpanded(true)}
+      <Link
+        href={signInHref}
+        className="group flex min-h-[4rem] w-full items-center gap-3 rounded-[1.1rem] border border-[#E3DCC5] bg-white px-4 py-2.5 text-left shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:scale-[0.99]"
       >
-        <ProfileAvatar avatarUrl={profile.avatarUrl} name={profile.nickname} />
         <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
           {copy.composer}
         </span>
-        <span className="relative inline-flex h-14 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
           <Image
             src="/brand/v2_1/friemi-empty-state-mark.png"
             alt=""
             width={56}
             height={56}
-            className="h-11 w-11 object-contain opacity-90"
+            className="h-10 w-10 object-contain opacity-90"
           />
-          <span className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.18)]">
-            <Plus className="h-4 w-4" />
-          </span>
+        </span>
+      </Link>
+    );
+  }
+
+  if (!isExpanded) {
+    return (
+      <button
+        type="button"
+        className="group flex min-h-[4rem] w-full items-center gap-3 rounded-[1.1rem] border border-[#E3DCC5] bg-white px-4 py-2.5 text-left shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:scale-[0.99]"
+        onClick={() => setIsExpanded(true)}
+      >
+        <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
+          {copy.composer}
+        </span>
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+          <Image
+            src="/brand/v2_1/friemi-empty-state-mark.png"
+            alt=""
+            width={56}
+            height={56}
+            className="h-10 w-10 object-contain opacity-90"
+          />
         </span>
       </button>
     );
@@ -1099,39 +1525,28 @@ function MomentComposer({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="visibility" type="hidden" value={visibility} />
-      <div className="flex items-center gap-3">
-        <ProfileAvatar avatarUrl={profile.avatarUrl} name={profile.nickname} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-black leading-5 text-[#111210]">
-            {copy.composerTitle}
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-black">
-            <button
-              type="button"
-              className={cn(
-                "flex h-9 items-center justify-center rounded-full transition",
-                visibility === "FRIENDS"
-                  ? "bg-[#156240] text-white"
-                  : "bg-[#F7F7F0] text-[#156240]",
-              )}
-              onClick={() => setVisibility("FRIENDS")}
-            >
-              {copy.visibilityFriends}
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "flex h-9 items-center justify-center rounded-full transition",
-                visibility === "PUBLIC"
-                  ? "bg-[#156240] text-white"
-                  : "bg-[#F7F7F0] text-[#156240]",
-              )}
-              onClick={() => setVisibility("PUBLIC")}
-            >
-              {copy.visibilityPublic}
-            </button>
+      <div className="flex w-full items-center gap-3">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          onClick={() => setIsExpanded(false)}
+          aria-label={copy.composer}
+        >
+          <ProfileAvatar
+            avatarUrl={profile.avatarUrl}
+            name={profile.nickname}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="min-w-0 text-[15px] font-black leading-5 text-[#111210]">
+              {copy.composerTitle}
+            </p>
           </div>
-        </div>
+        </button>
+        <MomentVisibilitySelector
+          copy={copy}
+          value={visibility}
+          onChange={setVisibility}
+        />
       </div>
 
       <textarea
@@ -1165,7 +1580,7 @@ function MomentComposer({
           className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70"
           onClick={() => setIsExpanded(false)}
         >
-          ×
+          {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
         </button>
         <button
           type="submit"
@@ -1176,6 +1591,33 @@ function MomentComposer({
         </button>
       </div>
     </form>
+  );
+}
+
+function FootprintsAuthPrompt({
+  description,
+  href,
+  title,
+  actionLabel,
+}: {
+  actionLabel: string;
+  description: string;
+  href: string;
+  title: string;
+}) {
+  return (
+    <section className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-5 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)]">
+      <p className="text-[16px] font-black leading-6 text-[#111210]">{title}</p>
+      <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-[#8E8383]">
+        {description}
+      </p>
+      <Link
+        href={href}
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
+      >
+        {actionLabel}
+      </Link>
+    </section>
   );
 }
 
@@ -1313,33 +1755,41 @@ export function FootprintsMobilePage({
   momentFeedError = false,
   moments,
   profile,
+  profileDashboard,
+  profileDashboardError = false,
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
+  const [feedScope, setFeedScope] = useState<MomentFeedScope>("PUBLIC");
+  const isAuthenticated = Boolean(profile);
+  const signInHref = getSignInHref(locale, "/footprints");
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
     { key: "moment", label: copy.tabs.moment },
     { key: "message", label: copy.tabs.message },
     { key: "profile", label: copy.tabs.profile },
   ];
+  const scopedMoments = useMemo(
+    () => moments.filter((moment) => moment.visibility === feedScope),
+    [feedScope, moments],
+  );
+  const feedScopeTabs: Array<{ key: MomentFeedScope; label: string }> = profile
+    ? [
+        { key: "PUBLIC", label: copy.feedPublic },
+        { key: "FRIENDS", label: copy.feedFriends },
+      ]
+    : [{ key: "PUBLIC", label: copy.feedPublic }];
+
+  useEffect(() => {
+    if (!profile && feedScope !== "PUBLIC") {
+      setFeedScope("PUBLIC");
+    }
+  }, [feedScope, profile]);
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB]">
-      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-        <header className="flex items-center justify-between">
-          <h1 className="text-[28px] font-black leading-none tracking-normal text-[#111210]">
-            {copy.title}
-          </h1>
-          <Link
-            href={withLocale(locale, "/profile")}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#1D1D1B] shadow-[0_8px_20px_rgba(21,98,64,0.08)]"
-            aria-label={copy.settings}
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
-        </header>
-
-        <nav className="mt-7 grid grid-cols-3 border-b border-[#E3DCC5] text-center">
+    <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
+        <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
           {tabs.map((tab) => {
             const active = activeTab === tab.key;
 
@@ -1366,40 +1816,48 @@ export function FootprintsMobilePage({
         </nav>
 
         {activeTab === "moment" ? (
-          <section className="mt-5 space-y-5">
-            <MomentComposer copy={copy} locale={locale} profile={profile} />
+          <section className="mt-5 space-y-5 md:mt-8">
+            <div className="md:mx-auto md:max-w-2xl">
+              <MomentComposer copy={copy} locale={locale} profile={profile} />
+            </div>
 
-            <div className="flex items-center justify-between">
-              <h2 className="text-[17px] font-black tracking-normal text-[#156240]">
-                {copy.feedTitle}
-              </h2>
-              <button
-                type="button"
-                className="inline-flex h-9 items-center gap-1 rounded-full bg-[#EAF4E7] px-3 text-xs font-black text-[#156240]"
-              >
-                <Camera className="h-4 w-4" />
-                {copy.publish}
-              </button>
+            <div className="inline-flex h-7 rounded-full bg-[#F7F7F0] p-0.5 text-[11px] font-black text-[#156240]">
+              {feedScopeTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={cn(
+                    "rounded-full px-2.5 transition",
+                    feedScope === tab.key
+                      ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
+                      : "text-[#156240]/62",
+                  )}
+                  onClick={() => setFeedScope(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             {momentFeedError ? (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
+              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
                 {copy.feedError}
               </div>
-            ) : moments.length > 0 ? (
-              <div className="space-y-4">
-                {moments.map((moment) => (
+            ) : scopedMoments.length > 0 ? (
+              <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
+                {scopedMoments.map((moment) => (
                   <FeedCard
                     key={moment.id}
+                    isAuthenticated={isAuthenticated}
                     locale={locale}
                     moment={moment}
                     copy={copy}
-                    viewerProfileId={profile.id}
+                    viewerProfileId={profile?.id ?? null}
                   />
                 ))}
               </div>
             ) : (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)]">
+              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
                 <p className="text-[15px] font-black text-[#111210]">
                   {copy.emptyFeedTitle}
                 </p>
@@ -1412,49 +1870,46 @@ export function FootprintsMobilePage({
         ) : null}
 
         {activeTab === "message" ? (
-          <FootprintsMessageList
-            currentUserProfileId={profile.id}
-            friends={messageFriends}
-            hasError={messageRosterError}
-            locale={locale}
-          />
+          <section className="md:mx-auto md:max-w-2xl">
+            {profile ? (
+              <FootprintsMessageList
+                currentUserProfileId={profile.id}
+                friends={messageFriends}
+                hasError={messageRosterError}
+                locale={locale}
+              />
+            ) : (
+              <div className="mt-5">
+                <FootprintsAuthPrompt
+                  actionLabel={copy.signIn}
+                  description={copy.guestMessageDescription}
+                  href={signInHref}
+                  title={copy.guestMessageTitle}
+                />
+              </div>
+            )}
+          </section>
         ) : null}
 
         {activeTab === "profile" ? (
-          <section className="mt-5 space-y-4">
-            <div className="rounded-[1.45rem] border border-[#E3DCC5] bg-white p-4 shadow-[0_12px_34px_rgba(21,98,64,0.08)]">
-              <div className="flex items-center gap-3">
-                <ProfileAvatar
-                  avatarUrl={profile.avatarUrl}
-                  name={profile.nickname}
-                  className="h-14 w-14 text-base"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[18px] font-black leading-6 text-[#111210]">
-                    {profile.nickname}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-[#6C746A]">
-                    {profile.bio || copy.bioFallback}
-                  </p>
-                </div>
-              </div>
-
-              {profile.friendCode ? (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#F1F2EC] px-3 py-2 text-xs font-black text-[#156240]">
-                  <ShieldCheck className="h-4 w-4" />
-                  {copy.friendCode}
-                  <span className="text-[#1D1D1B]">{profile.friendCode}</span>
-                </div>
-              ) : null}
-            </div>
-
-            <ActionCard
-              icon={<UserRound className="h-5 w-5" />}
-              title={copy.profileTitle}
-              description={copy.profileDescription}
-              href={withLocale(locale, "/profile")}
-              cta={copy.openProfile}
-            />
+          <section className="mt-5 md:mx-auto md:max-w-3xl">
+            {profile ? (
+              <ProfileDashboardView
+                dashboard={profileDashboard}
+                hasDashboardError={profileDashboardError}
+                isAuthenticated
+                isSelf
+                locale={locale}
+                profile={profile}
+              />
+            ) : (
+              <FootprintsAuthPrompt
+                actionLabel={copy.signIn}
+                description={copy.guestProfileDescription}
+                href={signInHref}
+                title={copy.guestProfileTitle}
+              />
+            )}
           </section>
         ) : null}
       </div>
