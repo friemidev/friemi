@@ -17,7 +17,9 @@ type ActivityCoverUploadProps = {
   name?: string;
   onChange?: (url: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
+  splitPreviewClassName?: string;
   splitPreviewBelow?: boolean;
+  uploadEndpoint?: string;
 };
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -40,7 +42,9 @@ export function ActivityCoverUpload({
   name = "coverImageUrl",
   onChange,
   onUploadingChange,
+  splitPreviewClassName,
   splitPreviewBelow = false,
+  uploadEndpoint = "/api/uploads/activity-cover",
 }: ActivityCoverUploadProps) {
   const t = getCopy(locale).form;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +107,7 @@ export function ActivityCoverUpload({
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("/api/uploads/activity-cover", {
+      const response = await fetch(uploadEndpoint, {
         method: "POST",
         body: formData,
       });
@@ -192,7 +196,12 @@ export function ActivityCoverUpload({
           </div>
         ) : null}
         {displayImageUrl ? (
-          <div className="relative col-span-2 overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]",
+              splitPreviewClassName ?? "col-span-2",
+            )}
+          >
             <button
               type="button"
               className={cn(
@@ -232,7 +241,10 @@ export function ActivityCoverUpload({
           </div>
         ) : null}
         {error ? (
-          <p className="col-span-2 text-xs font-medium text-red-600" role="alert">
+          <p
+            className="col-span-2 text-xs font-medium text-red-600"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}

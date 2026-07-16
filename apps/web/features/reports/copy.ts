@@ -33,6 +33,8 @@ const reportCopy = {
       PUBLIC_EVENT: "活动",
       ACTIVITY: "活动 / 组队",
       COMMENT: "评论",
+      MOMENT: "足迹",
+      MOMENT_COMMENT: "足迹评论",
     },
     reasons: {
       SPAM: "垃圾信息",
@@ -128,6 +130,8 @@ const reportCopy = {
       PUBLIC_EVENT: "Activity info",
       ACTIVITY: "Activity / crew",
       COMMENT: "Comment",
+      MOMENT: "Moment",
+      MOMENT_COMMENT: "Moment comment",
     },
     reasons: {
       SPAM: "Spam",
@@ -150,7 +154,8 @@ const reportCopy = {
       emptyTitle: "No reports",
       emptyDescription: "New reports will appear here.",
       emptyFilteredTitle: "No reports in this filter",
-      emptyFilteredDescription: "Switch status filters to review other reports.",
+      emptyFilteredDescription:
+        "Switch status filters to review other reports.",
       total: (count: number) => `${count} report${count === 1 ? "" : "s"}`,
       pending: (count: number) => `${count} pending`,
       target: "Reported content",
@@ -223,6 +228,8 @@ const reportCopy = {
       PUBLIC_EVENT: "Activité",
       ACTIVITY: "Activité / groupe",
       COMMENT: "Commentaire",
+      MOMENT: "Moment",
+      MOMENT_COMMENT: "Commentaire de moment",
     },
     reasons: {
       SPAM: "Spam",
@@ -241,8 +248,7 @@ const reportCopy = {
     admin: {
       eyebrow: "Sécurité et communauté",
       title: "Traitement des signalements",
-      description:
-        "Consultez les signalements et notez la décision prise.",
+      description: "Consultez les signalements et notez la décision prise.",
       emptyTitle: "Aucun signalement",
       emptyDescription: "Les nouveaux signalements apparaîtront ici.",
       emptyFilteredTitle: "Aucun signalement pour ce filtre",

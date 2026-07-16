@@ -7,7 +7,9 @@ import {
   Clock3,
   ExternalLink,
   Flag,
+  Heart,
   MessageCircle,
+  Repeat2,
   Trash2,
   UserMinus,
   UserPlus,
@@ -19,11 +21,7 @@ import { Button } from "@chill-club/ui";
 import { formatActivityDate } from "@chill-club/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useState, useTransition } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FriendRequestActionButtons } from "@/features/friends/components/FriendsDashboard";
 import {
@@ -73,7 +71,16 @@ function getNotificationCategory(
   if (type === "FRIEND_REQUEST") return "social";
   if (type === "DIRECT_MESSAGE") return "message";
   if (type === "ACTIVITY_ANNOUNCEMENT") return "activity";
-  if (type === "ACTIVITY_COMMENTED" || type === "COMMENT_REPLY") return "comment";
+  if (
+    type === "ACTIVITY_COMMENTED" ||
+    type === "COMMENT_REPLY" ||
+    type === "MOMENT_LIKED" ||
+    type === "MOMENT_COMMENTED" ||
+    type === "MOMENT_COMMENT_REPLY" ||
+    type === "MOMENT_REPOSTED"
+  ) {
+    return "comment";
+  }
   if (type === "REPORT_CREATED") return "report";
 
   return "activity";
@@ -87,7 +94,8 @@ function needsUserAction(notification: NotificationViewModel) {
   return (
     notification.type === "FRIEND_REQUEST" ||
     notification.type === "REPORT_CREATED" ||
-    (notification.type === "PARTICIPATION_PENDING" && Boolean(notification.actor))
+    (notification.type === "PARTICIPATION_PENDING" &&
+      Boolean(notification.actor))
   );
 }
 
@@ -139,7 +147,11 @@ function getNotificationText(
     notification.type === "PARTICIPATION_APPROVED" ||
     notification.type === "ACTIVITY_COMMENTED" ||
     notification.type === "COMMENT_REPLY" ||
-    notification.type === "DIRECT_MESSAGE"
+    notification.type === "DIRECT_MESSAGE" ||
+    notification.type === "MOMENT_LIKED" ||
+    notification.type === "MOMENT_COMMENTED" ||
+    notification.type === "MOMENT_COMMENT_REPLY" ||
+    notification.type === "MOMENT_REPOSTED"
   ) {
     const copy = t.types[notification.type];
     return { title: copy.title, body: copy.body(activityTitle, actorName) };
@@ -162,9 +174,13 @@ function getNotificationText(
 
   if ((notification.type as string) === "ACTIVITY_ANNOUNCEMENT") {
     const copy = (
-      t.types as Record<string, { title: string; body: (...args: string[]) => string }>
+      t.types as Record<
+        string,
+        { title: string; body: (...args: string[]) => string }
+      >
     ).ACTIVITY_ANNOUNCEMENT;
-    const announcementPreview = notification.activityAnnouncement?.content.trim();
+    const announcementPreview =
+      notification.activityAnnouncement?.content.trim();
 
     return {
       title: copy.title,
@@ -173,7 +189,7 @@ function getNotificationText(
         actorName ?? "",
         announcementPreview && announcementPreview.length > 120
           ? `${announcementPreview.slice(0, 117)}...`
-          : announcementPreview ?? "",
+          : (announcementPreview ?? ""),
       ),
     };
   }
@@ -192,6 +208,19 @@ function getNotificationActionLabel(
   locale: string,
 ) {
   const t = getCopy(locale).notifications;
+
+  if (
+    notification.type === "MOMENT_LIKED" ||
+    notification.type === "MOMENT_COMMENTED" ||
+    notification.type === "MOMENT_COMMENT_REPLY" ||
+    notification.type === "MOMENT_REPOSTED"
+  ) {
+    return locale === "en"
+      ? "Open Trace"
+      : locale === "fr"
+        ? "Voir Trace"
+        : "查看足迹";
+  }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
   if (notification.type === "REPORT_CREATED") return t.openReports;
@@ -245,7 +274,9 @@ function getNotificationVisual(
     return {
       icon: Clock3,
       iconClassName: isUnread ? "bg-ice text-forest" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -253,7 +284,9 @@ function getNotificationVisual(
     return {
       icon: UserMinus,
       iconClassName: isUnread ? "bg-fog text-forest" : "bg-paper text-outline",
-      cardClassName: isUnread ? "border-sand bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sand bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -261,7 +294,9 @@ function getNotificationVisual(
     return {
       icon: UserPlus,
       iconClassName: isUnread ? "bg-ink text-paper" : "bg-fog text-ink/55",
-      cardClassName: isUnread ? "border-ink/20 bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-ink/20 bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -269,7 +304,9 @@ function getNotificationVisual(
     return {
       icon: Bell,
       iconClassName: isUnread ? "bg-ice text-forest" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -277,15 +314,31 @@ function getNotificationVisual(
     return {
       icon: Bell,
       iconClassName: isUnread ? "bg-cream text-danger" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-rose bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
-  if (type === "ACTIVITY_COMMENTED" || type === "COMMENT_REPLY") {
+  if (
+    type === "ACTIVITY_COMMENTED" ||
+    type === "COMMENT_REPLY" ||
+    type === "MOMENT_COMMENTED" ||
+    type === "MOMENT_COMMENT_REPLY" ||
+    type === "MOMENT_LIKED" ||
+    type === "MOMENT_REPOSTED"
+  ) {
     return {
-      icon: MessageCircle,
+      icon:
+        type === "MOMENT_LIKED"
+          ? Heart
+          : type === "MOMENT_REPOSTED"
+            ? Repeat2
+            : MessageCircle,
       iconClassName: isUnread ? "bg-fog text-forest" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -293,7 +346,9 @@ function getNotificationVisual(
     return {
       icon: MessageCircle,
       iconClassName: isUnread ? "bg-ice text-forest" : "bg-fog text-outline",
-      cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -301,7 +356,9 @@ function getNotificationVisual(
     return {
       icon: Flag,
       iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
-      cardClassName: isUnread ? "border-rose bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
@@ -309,14 +366,18 @@ function getNotificationVisual(
     return {
       icon: type === "ACTIVITY_CANCELLED" ? CalendarX2 : XCircle,
       iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
-      cardClassName: isUnread ? "border-rose bg-paper" : "border-sand bg-paper/62",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
+        : "border-sand bg-paper/62",
     };
   }
 
   return {
     icon: CheckCheck,
     iconClassName: isUnread ? "bg-meadow text-paper" : "bg-fog text-forest",
-    cardClassName: isUnread ? "border-sage bg-paper" : "border-sand bg-paper/62",
+    cardClassName: isUnread
+      ? "border-sage bg-paper"
+      : "border-sand bg-paper/62",
   };
 }
 
@@ -341,11 +402,15 @@ function NotificationCard({
   const NotificationIcon = visual.icon;
   const category = getNotificationCategory(notification.type);
   const hasAction =
-    (notification.type === "FRIEND_REQUEST"
+    notification.type === "FRIEND_REQUEST"
       ? false
       : Boolean(notification.activity) ||
         notification.type === "REPORT_CREATED" ||
-        notification.type === "DIRECT_MESSAGE");
+        notification.type === "DIRECT_MESSAGE" ||
+        notification.type === "MOMENT_LIKED" ||
+        notification.type === "MOMENT_COMMENTED" ||
+        notification.type === "MOMENT_COMMENT_REPLY" ||
+        notification.type === "MOMENT_REPOSTED";
   const canInlineResolveFriendRequest =
     notification.type === "FRIEND_REQUEST" &&
     Boolean(notification.friendRequestId);
@@ -433,7 +498,10 @@ function NotificationCard({
                 {notification.actor ? (
                   <Link
                     className="inline-flex max-w-full items-center gap-1 rounded-full bg-cream/72 px-2 py-0.5 ring-1 ring-sand transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
-                    href={withLocale(locale, `/profile/${notification.actor.id}`)}
+                    href={withLocale(
+                      locale,
+                      `/profile/${notification.actor.id}`,
+                    )}
                   >
                     <dt className="shrink-0 text-outline">{t.actorLabel}</dt>
                     <dd className="truncate font-medium text-ink">
@@ -525,7 +593,8 @@ export function NotificationsCenterClient({
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
   const summaryLabels = getNotificationSummaryLabels(locale);
-  const { setUnreadNotificationCount } = useNotificationBadge(initialUnreadCount);
+  const { setUnreadNotificationCount } =
+    useNotificationBadge(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [isPending, startTransition] = useTransition();
 
@@ -605,12 +674,16 @@ export function NotificationsCenterClient({
   }
 
   function handleDelete(notificationId: string) {
-    if (!notifications.some((notification) => notification.id === notificationId)) {
+    if (
+      !notifications.some((notification) => notification.id === notificationId)
+    ) {
       return;
     }
 
     runOptimisticMutation(
-      notifications.filter((notification) => notification.id !== notificationId),
+      notifications.filter(
+        (notification) => notification.id !== notificationId,
+      ),
       () => deleteNotificationClientAction(locale, notificationId),
     );
   }

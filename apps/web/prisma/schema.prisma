@@ -105,6 +105,10 @@ enum NotificationType {
   ACTIVITY_COMMENTED
   COMMENT_REPLY
   DIRECT_MESSAGE
+  MOMENT_LIKED
+  MOMENT_COMMENTED
+  MOMENT_COMMENT_REPLY
+  MOMENT_REPOSTED
   REPORT_CREATED
 }
 
@@ -113,6 +117,8 @@ enum ReportTargetType {
   PUBLIC_EVENT
   ACTIVITY
   COMMENT
+  MOMENT
+  MOMENT_COMMENT
 }
 
 enum ReportReason {
@@ -129,6 +135,11 @@ enum ReportStatus {
   REVIEWING
   RESOLVED
   DISMISSED
+}
+
+enum MomentVisibility {
+  FRIENDS
+  PUBLIC
 }
 
 enum GameToolKind {
@@ -184,6 +195,9 @@ model UserProfile {
   participations         ActivityParticipant[]
   guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
   comments               Comment[]
+  moments                Moment[]                   @relation("MomentAuthor")
+  momentLikes            MomentLike[]               @relation("MomentLikeUser")
+  momentComments         MomentComment[]            @relation("MomentCommentAuthor")
   notifications          Notification[]             @relation("NotificationRecipient")
   sentNotifications      Notification[]             @relation("NotificationActor")
   favoriteActivities     ActivityFavorite[]
@@ -512,6 +526,79 @@ model Comment {
   @@index([parentId])
 }
 
+model Moment {
+  id               String           @id @default(cuid())
+  authorId         String
+  content          String?          @db.Text
+  visibility       MomentVisibility @default(FRIENDS)
+  likeCount        Int              @default(0)
+  commentCount     Int              @default(0)
+  repostCount      Int              @default(0)
+  resharedMomentId String?
+  deletedAt        DateTime?
+  author           UserProfile      @relation("MomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  resharedMoment   Moment?          @relation("MomentReshares", fields: [resharedMomentId], references: [id], onDelete: SetNull)
+  reshares         Moment[]         @relation("MomentReshares")
+  images           MomentImage[]
+  likes            MomentLike[]
+  comments         MomentComment[]
+  notifications    Notification[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([authorId, createdAt])
+  @@index([visibility, createdAt])
+  @@index([deletedAt, createdAt])
+  @@index([resharedMomentId, createdAt])
+}
+
+model MomentImage {
+  id        String   @id @default(cuid())
+  momentId  String
+  url       String
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([momentId, sortOrder])
+}
+
+model MomentLike {
+  id        String      @id @default(cuid())
+  momentId  String
+  userId    String
+  moment    Moment      @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation("MomentLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([momentId, userId])
+  @@index([userId, createdAt])
+  @@index([momentId, createdAt])
+}
+
+model MomentComment {
+  id            String          @id @default(cuid())
+  momentId      String
+  authorId      String
+  parentId      String?
+  content       String          @db.Text
+  deletedAt     DateTime?
+  editedAt      DateTime?
+  moment        Moment          @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  author        UserProfile     @relation("MomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent        MomentComment?  @relation("MomentCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       MomentComment[] @relation("MomentCommentReplies")
+  notifications Notification[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([momentId, parentId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([parentId])
+}
+
 model ContentTranslation {
   id                   String   @id @default(cuid())
   entityType           String
@@ -542,6 +629,10 @@ model Notification {
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  momentId               String?
+  moment                 Moment?               @relation(fields: [momentId], references: [id], onDelete: SetNull)
+  momentCommentId        String?
+  momentComment          MomentComment?        @relation(fields: [momentCommentId], references: [id], onDelete: SetNull)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -549,6 +640,8 @@ model Notification {
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
   @@index([activityAnnouncementId])
+  @@index([momentId])
+  @@index([momentCommentId])
 }
 
 model ActivityAnnouncement {

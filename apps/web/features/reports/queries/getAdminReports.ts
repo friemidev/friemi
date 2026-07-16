@@ -108,43 +108,71 @@ export async function getAdminReports(
   const publicEventIds = uniqueIds(reports, "PUBLIC_EVENT");
   const activityIds = uniqueIds(reports, "ACTIVITY");
   const commentIds = uniqueIds(reports, "COMMENT");
+  const momentIds = uniqueIds(reports, "MOMENT");
+  const momentCommentIds = uniqueIds(reports, "MOMENT_COMMENT");
 
-  const [users, publicEvents, activities, comments] = await Promise.all([
-    userIds.length
-      ? prisma.userProfile.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, nickname: true },
-        })
-      : [],
-    publicEventIds.length
-      ? prisma.publicEvent.findMany({
-          where: { id: { in: publicEventIds } },
-          select: { id: true, title: true },
-        })
-      : [],
-    activityIds.length
-      ? prisma.activity.findMany({
-          where: { id: { in: activityIds } },
-          select: { id: true, title: true },
-        })
-      : [],
-    commentIds.length
-      ? prisma.comment.findMany({
-          where: { id: { in: commentIds } },
-          select: {
-            id: true,
-            content: true,
-            activityId: true,
-            deletedAt: true,
-          },
-        })
-      : [],
-  ]);
+  const [users, publicEvents, activities, comments, moments, momentComments] =
+    await Promise.all([
+      userIds.length
+        ? prisma.userProfile.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, nickname: true },
+          })
+        : [],
+      publicEventIds.length
+        ? prisma.publicEvent.findMany({
+            where: { id: { in: publicEventIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+      activityIds.length
+        ? prisma.activity.findMany({
+            where: { id: { in: activityIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+      commentIds.length
+        ? prisma.comment.findMany({
+            where: { id: { in: commentIds } },
+            select: {
+              id: true,
+              content: true,
+              activityId: true,
+              deletedAt: true,
+            },
+          })
+        : [],
+      momentIds.length
+        ? prisma.moment.findMany({
+            where: { id: { in: momentIds } },
+            select: { id: true, content: true, deletedAt: true },
+          })
+        : [],
+      momentCommentIds.length
+        ? prisma.momentComment.findMany({
+            where: { id: { in: momentCommentIds } },
+            select: {
+              id: true,
+              content: true,
+              deletedAt: true,
+              momentId: true,
+            },
+          })
+        : [],
+    ]);
 
   const userMap = new Map(users.map((user) => [user.id, user]));
-  const publicEventMap = new Map(publicEvents.map((event) => [event.id, event]));
-  const activityMap = new Map(activities.map((activity) => [activity.id, activity]));
+  const publicEventMap = new Map(
+    publicEvents.map((event) => [event.id, event]),
+  );
+  const activityMap = new Map(
+    activities.map((activity) => [activity.id, activity]),
+  );
   const commentMap = new Map(comments.map((comment) => [comment.id, comment]));
+  const momentMap = new Map(moments.map((moment) => [moment.id, moment]));
+  const momentCommentMap = new Map(
+    momentComments.map((comment) => [comment.id, comment]),
+  );
 
   return reports.map((report) => {
     if (report.targetType === "USER_PROFILE") {
@@ -183,7 +211,37 @@ export async function getAdminReports(
       };
     }
 
-    const comment = commentMap.get(report.targetId);
+    if (report.targetType === "COMMENT") {
+      const comment = commentMap.get(report.targetId);
+      const commentPreview = comment?.deletedAt
+        ? ""
+        : comment?.content.trim().slice(0, 80);
+
+      return {
+        ...report,
+        targetLabel: commentPreview ?? "",
+        targetHref: comment ? getActivityDetailPath(comment.activityId) : null,
+        createdAt: report.createdAt.toISOString(),
+        reviewedAt: report.reviewedAt?.toISOString() ?? null,
+      };
+    }
+
+    if (report.targetType === "MOMENT") {
+      const moment = momentMap.get(report.targetId);
+      const momentPreview = moment?.deletedAt
+        ? ""
+        : moment?.content?.trim().slice(0, 80);
+
+      return {
+        ...report,
+        targetLabel: momentPreview || "Moment",
+        targetHref: moment ? `/footprints/${moment.id}` : null,
+        createdAt: report.createdAt.toISOString(),
+        reviewedAt: report.reviewedAt?.toISOString() ?? null,
+      };
+    }
+
+    const comment = momentCommentMap.get(report.targetId);
     const commentPreview = comment?.deletedAt
       ? ""
       : comment?.content.trim().slice(0, 80);
@@ -191,7 +249,7 @@ export async function getAdminReports(
     return {
       ...report,
       targetLabel: commentPreview ?? "",
-      targetHref: comment ? getActivityDetailPath(comment.activityId) : null,
+      targetHref: comment ? `/footprints/${comment.momentId}` : null,
       createdAt: report.createdAt.toISOString(),
       reviewedAt: report.reviewedAt?.toISOString() ?? null,
     };

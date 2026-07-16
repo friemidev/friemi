@@ -103,10 +103,7 @@ function getSafePathSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-async function ensurePublicBucket(
-  storage: StorageClient,
-  bucket: string,
-) {
+async function ensurePublicBucket(storage: StorageClient, bucket: string) {
   if (readyBuckets.has(bucket)) {
     return true;
   }
@@ -157,16 +154,38 @@ function createActivityCoverStorageClient(config: {
   serviceRoleKey: string;
   supabaseUrl: string;
 }) {
-  return new StorageClient(`${config.supabaseUrl.replace(/\/$/, "")}/storage/v1`, {
-    apikey: config.serviceRoleKey,
-    Authorization: `Bearer ${config.serviceRoleKey}`,
-  });
+  return new StorageClient(
+    `${config.supabaseUrl.replace(/\/$/, "")}/storage/v1`,
+    {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+    },
+  );
 }
 
 export async function uploadActivityCoverBuffer(
   userId: string,
   fileBuffer: Buffer,
   detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType);
+}
+
+export async function uploadMomentImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "moments",
+  });
+}
+
+async function uploadPublicImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+  options: { pathPrefix?: string } = {},
 ): Promise<ActivityCoverUploadResult> {
   const config = getActivityCoverStorageConfig();
 
@@ -182,14 +201,15 @@ export async function uploadActivityCoverBuffer(
   }
 
   const extension = allowedMimeTypes[detectedMimeType];
-  const path = `${getSafePathSegment(userId)}/${randomUUID()}.${extension}`;
-  const uploaded = await storage
-    .from(config.bucket)
-    .upload(path, fileBuffer, {
-      contentType: detectedMimeType,
-      cacheControl: "31536000",
-      upsert: false,
-    });
+  const safeUserId = getSafePathSegment(userId);
+  const path = options.pathPrefix
+    ? `${options.pathPrefix}/${safeUserId}/${randomUUID()}.${extension}`
+    : `${safeUserId}/${randomUUID()}.${extension}`;
+  const uploaded = await storage.from(config.bucket).upload(path, fileBuffer, {
+    contentType: detectedMimeType,
+    cacheControl: "31536000",
+    upsert: false,
+  });
 
   if (uploaded.error) {
     console.error("Failed to upload activity cover image", {

@@ -17,13 +17,20 @@ export function normalizePushLocale(value: string | null): PushCopyLocale {
 
 export function getNotificationPath(input: {
   activityId: string | null;
+  momentId?: string | null;
   type: NotificationType;
 }) {
+  if (
+    input.type === "MOMENT_LIKED" ||
+    input.type === "MOMENT_COMMENTED" ||
+    input.type === "MOMENT_COMMENT_REPLY" ||
+    input.type === "MOMENT_REPOSTED"
+  ) {
+    return input.momentId ? `/footprints/${input.momentId}` : "/footprints";
+  }
+
   if (input.activityId) {
-    if (
-      input.type === "ACTIVITY_COMMENTED" ||
-      input.type === "COMMENT_REPLY"
-    ) {
+    if (input.type === "ACTIVITY_COMMENTED" || input.type === "COMMENT_REPLY") {
       return `${getActivityDetailPath(input.activityId)}#comments`;
     }
 
@@ -73,7 +80,10 @@ export function getNotificationCopy(input: {
         ? "Someone"
         : "Quelqu'un");
 
-  const copy: Record<PushCopyLocale, Partial<Record<NotificationType, string>>> = {
+  const copy: Record<
+    PushCopyLocale,
+    Partial<Record<NotificationType, string>>
+  > = {
     "zh-CN": {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
       ACTIVITY_CANCELLED: `${activityTitle} 已取消`,
@@ -82,6 +92,10 @@ export function getNotificationCopy(input: {
       COMMENT_REPLY: `${actorName} 回复了你`,
       DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
       FRIEND_REQUEST: `${actorName} 想加你为好友`,
+      MOMENT_COMMENTED: `${actorName} 评论了你的足迹`,
+      MOMENT_COMMENT_REPLY: `${actorName} 回复了你的评论`,
+      MOMENT_LIKED: `${actorName} 点赞了你的足迹`,
+      MOMENT_REPOSTED: `${actorName} 转发了你的足迹`,
       PARTICIPATION_APPROVED: `${activityTitle} 已通过你的报名`,
       PARTICIPATION_CANCELLED: `${actorName} 取消了报名`,
       PARTICIPATION_CONFIRMED: `${activityTitle} 报名已确认`,
@@ -97,6 +111,10 @@ export function getNotificationCopy(input: {
       COMMENT_REPLY: `${actorName} replied to you`,
       DIRECT_MESSAGE: `${actorName} sent you a message`,
       FRIEND_REQUEST: `${actorName} sent you a friend request`,
+      MOMENT_COMMENTED: `${actorName} commented on your moment`,
+      MOMENT_COMMENT_REPLY: `${actorName} replied to your comment`,
+      MOMENT_LIKED: `${actorName} liked your moment`,
+      MOMENT_REPOSTED: `${actorName} reposted your moment`,
       PARTICIPATION_APPROVED: `You're approved for ${activityTitle}`,
       PARTICIPATION_CANCELLED: `${actorName} cancelled their join`,
       PARTICIPATION_CONFIRMED: `You're confirmed for ${activityTitle}`,
@@ -112,6 +130,10 @@ export function getNotificationCopy(input: {
       COMMENT_REPLY: `${actorName} vous a répondu`,
       DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
       FRIEND_REQUEST: `${actorName} vous a ajouté en ami`,
+      MOMENT_COMMENTED: `${actorName} a commenté votre moment`,
+      MOMENT_COMMENT_REPLY: `${actorName} a répondu à votre commentaire`,
+      MOMENT_LIKED: `${actorName} a aimé votre moment`,
+      MOMENT_REPOSTED: `${actorName} a republié votre moment`,
       PARTICIPATION_APPROVED: `Votre inscription à ${activityTitle} est validée`,
       PARTICIPATION_CANCELLED: `${actorName} a annulé son inscription`,
       PARTICIPATION_CONFIRMED: `Votre inscription à ${activityTitle} est confirmée`,

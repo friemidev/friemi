@@ -127,6 +127,8 @@ function getCopy(locale: string) {
       qr: "QR codes",
       reportActivity: "Groupes",
       reportComment: "Commentaires",
+      reportMoment: "Moments",
+      reportMomentComment: "Commentaires de moment",
       reportPublicEvent: "Activités",
       reportTargets: "Signalements",
       reportUser: "Utilisateurs",
@@ -230,6 +232,8 @@ function getCopy(locale: string) {
       qr: "QR codes",
       reportActivity: "Crews",
       reportComment: "Comments",
+      reportMoment: "Moments",
+      reportMomentComment: "Moment comments",
       reportPublicEvent: "Activities",
       reportTargets: "Reports",
       reportUser: "Users",
@@ -330,6 +334,8 @@ function getCopy(locale: string) {
     qr: "二维码",
     reportActivity: "组队",
     reportComment: "评论",
+    reportMoment: "足迹",
+    reportMomentComment: "足迹评论",
     reportPublicEvent: "活动",
     reportTargets: "举报对象",
     reportUser: "用户",
@@ -752,6 +758,8 @@ function getReportTargetLabel(
   labels: {
     reportActivity: string;
     reportComment: string;
+    reportMoment: string;
+    reportMomentComment: string;
     reportPublicEvent: string;
     reportUser: string;
   },
@@ -759,6 +767,8 @@ function getReportTargetLabel(
   const targetLabels: Record<string, string> = {
     ACTIVITY: labels.reportActivity,
     COMMENT: labels.reportComment,
+    MOMENT: labels.reportMoment,
+    MOMENT_COMMENT: labels.reportMomentComment,
     PUBLIC_EVENT: labels.reportPublicEvent,
     USER_PROFILE: labels.reportUser,
   };

@@ -16,6 +16,8 @@ const reportTargetTypes = [
   "PUBLIC_EVENT",
   "ACTIVITY",
   "COMMENT",
+  "MOMENT",
+  "MOMENT_COMMENT",
 ] as const satisfies readonly ReportTargetType[];
 
 export type AdminOperationsAnalytics = {
@@ -77,7 +79,9 @@ function calculateAverageReviewHours(
         ? report.reviewedAt.getTime() - report.createdAt.getTime()
         : null,
     )
-    .filter((duration): duration is number => duration !== null && duration >= 0);
+    .filter(
+      (duration): duration is number => duration !== null && duration >= 0,
+    );
 
   if (durations.length === 0) {
     return null;

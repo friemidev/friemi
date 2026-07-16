@@ -13,6 +13,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { buildPrivateActivityFriendAccessWhere } from "@/features/activities/utils/activityShareAccess";
 import { publicActivityVisibility } from "@/features/activities/queries/getActivities";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { getVisibleMomentWhere } from "@/features/moments/queries/getMomentFeed";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -26,6 +27,8 @@ const reportTargetTypes = [
   "PUBLIC_EVENT",
   "ACTIVITY",
   "COMMENT",
+  "MOMENT",
+  "MOMENT_COMMENT",
 ] as const;
 
 const reportReasons = [
@@ -194,28 +197,77 @@ async function canReportTarget({
     return activity.organizerId === reporterId ? "self" : "ok";
   }
 
-  const comment = await prisma.comment.findFirst({
+  if (targetType === "COMMENT") {
+    const comment = await prisma.comment.findFirst({
+      where: {
+        id: targetId,
+        deletedAt: null,
+        author: {
+          status: "ACTIVE",
+        },
+        activity: {
+          ...(await getReportableActivityAccessWhere(reporterId)),
+        },
+      },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    });
+
+    if (!comment) {
+      return "missing";
+    }
+
+    return comment.authorId === reporterId ? "self" : "ok";
+  }
+
+  if (targetType === "MOMENT") {
+    const moment = await prisma.moment.findFirst({
+      where: await getVisibleMomentWhere(targetId, reporterId),
+      select: {
+        authorId: true,
+        id: true,
+      },
+    });
+
+    if (!moment) {
+      return "missing";
+    }
+
+    return moment.authorId === reporterId ? "self" : "ok";
+  }
+
+  const momentComment = await prisma.momentComment.findFirst({
     where: {
       id: targetId,
       deletedAt: null,
       author: {
         status: "ACTIVE",
       },
-      activity: {
-        ...(await getReportableActivityAccessWhere(reporterId)),
-      },
     },
     select: {
-      id: true,
       authorId: true,
+      momentId: true,
     },
   });
 
-  if (!comment) {
+  if (!momentComment) {
     return "missing";
   }
 
-  return comment.authorId === reporterId ? "self" : "ok";
+  const visibleMoment = await prisma.moment.findFirst({
+    where: await getVisibleMomentWhere(momentComment.momentId, reporterId),
+    select: {
+      id: true,
+    },
+  });
+
+  if (!visibleMoment) {
+    return "missing";
+  }
+
+  return momentComment.authorId === reporterId ? "self" : "ok";
 }
 
 export async function createReportAction(
@@ -318,7 +370,9 @@ export async function createReportAction(
       {
         locale: normalizeAnalyticsLocale(locale),
         name: "report_submitted",
-        route: redirectPath?.startsWith("/") ? `/${locale}${redirectPath}` : `/${locale}`,
+        route: redirectPath?.startsWith("/")
+          ? `/${locale}${redirectPath}`
+          : `/${locale}`,
         entityId: report.id,
         entityType: "report",
         sourceSurface: "report_dialog",

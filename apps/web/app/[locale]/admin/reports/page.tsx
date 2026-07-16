@@ -52,6 +52,8 @@ const reportTargetTypeOrder = [
   "PUBLIC_EVENT",
   "ACTIVITY",
   "COMMENT",
+  "MOMENT",
+  "MOMENT_COMMENT",
 ] as const satisfies readonly ReportTargetType[];
 
 type ReportStatusFilter = (typeof reportStatusFilters)[number];
@@ -455,7 +457,9 @@ export default async function AdminReportsPage({
 
       {reports.length === 0 ? (
         <EmptyState
-          actionHref={isFiltered ? withLocale(locale, "/admin/reports") : undefined}
+          actionHref={
+            isFiltered ? withLocale(locale, "/admin/reports") : undefined
+          }
           actionLabel={isFiltered ? t.statusFilters.ALL : undefined}
           title={isFiltered ? t.emptyFilteredTitle : t.emptyTitle}
           description={
