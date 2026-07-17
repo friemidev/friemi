@@ -1109,6 +1109,7 @@ export function ActivityCard({
               ) : (
                 <AnalyticsLink
                   href={actionHref}
+                  prefetch={actionHref === cardHref}
                   detailSource={
                     actionHref === cardHref ? detailSource : undefined
                   }

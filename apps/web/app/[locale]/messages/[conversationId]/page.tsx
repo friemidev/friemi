@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { after } from "next/server";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
@@ -13,6 +14,8 @@ import {
 import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
+import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
+import { createPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 
 type MessageThreadPageProps = {
@@ -34,15 +37,21 @@ export default async function MessageThreadPage({
 }: MessageThreadPageProps) {
   const { locale, conversationId } = await params;
   const { access: accessToken, activityId } = await searchParams;
-  const profile = await ensureCurrentUserProfile(
+  const requestHeaders = await headers();
+  const userAgent = requestHeaders.get("user-agent");
+  const isMobileRequest = isMobileUserAgent(userAgent);
+  const perf = createPerformanceTracker({
     locale,
-    `/messages/${conversationId}`,
+    route: "/messages/[conversationId]",
+  });
+  const profile = await perf.measure("viewer.profile", () =>
+    ensureCurrentUserProfile(locale, `/messages/${conversationId}`),
   );
   const commonCopy = getCopy(locale).common;
-  const conversationResult = await getDirectConversationThread(
-    profile.id,
-    conversationId,
-  )
+  const conversationResult = await perf
+    .measure("messages.thread", () =>
+      getDirectConversationThread(profile.id, conversationId),
+    )
     .then((conversation) => ({ conversation, error: null }))
     .catch((error: unknown) => {
       console.error("Failed to load direct conversation thread", error);
@@ -85,17 +94,38 @@ export default async function MessageThreadPage({
   });
 
   const activityContext = activityId
-    ? await getDirectConversationActivityContext({
-        accessToken,
-        activityId,
-        currentUserProfileId: profile.id,
-        peerProfileId: conversation.peer.id,
-      }).catch((error: unknown) => {
-        console.error("Failed to load direct message activity context", error);
+    ? await perf
+        .measure("messages.activityContext", () =>
+          getDirectConversationActivityContext({
+            accessToken,
+            activityId,
+            currentUserProfileId: profile.id,
+            peerProfileId: conversation.peer.id,
+          }),
+        )
+        .catch((error: unknown) => {
+          console.error(
+            "Failed to load direct message activity context",
+            error,
+          );
 
-        return null;
-      })
+          return null;
+        })
     : null;
+  perf.finish(
+    {
+      hasActivityContext: Boolean(activityContext),
+      isMobileRequest,
+      messageCount: conversation.messages.length,
+    },
+    {
+      route: `/${locale}/messages/${conversationId}`,
+      routeKey: "message_thread",
+      sourceSurface: "messages",
+      userAgent,
+      userProfileId: profile.id,
+    },
+  );
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
@@ -107,16 +137,18 @@ export default async function MessageThreadPage({
           locale={locale}
         />
       </div>
-      <Suspense fallback={<div className="hidden lg:block" />}>
-        <DesktopConversationSidebar
-          accessToken={accessToken}
-          activityId={activityId}
-          currentUserFriendCode={profile.friendCode}
-          currentUserProfileId={profile.id}
-          locale={locale}
-          selectedConversationId={conversation.id}
-        />
-      </Suspense>
+      {isMobileRequest ? null : (
+        <Suspense fallback={<div className="hidden lg:block" />}>
+          <DesktopConversationSidebar
+            accessToken={accessToken}
+            activityId={activityId}
+            currentUserFriendCode={profile.friendCode}
+            currentUserProfileId={profile.id}
+            locale={locale}
+            selectedConversationId={conversation.id}
+          />
+        </Suspense>
+      )}
     </PageContainer>
   );
 }

@@ -292,14 +292,49 @@ export async function getLobbySwipePublicEventActivityPage(
     limit?: number;
   } = {},
 ) {
-  const now = new Date();
-  const limit = Math.min(
-    Math.max(Math.floor(options.limit ?? activityLobbySwipeLimit), 1),
+  const limit = getLobbySwipeLimit(options.limit);
+  const excludePublicEventIds = getLobbySwipeExcludePublicEventIds(
+    options.excludePublicEventIds,
+  );
+
+  if (!viewerProfileId && excludePublicEventIds.length === 0) {
+    return getCachedAnonymousLobbySwipePublicEventActivityPage(limit);
+  }
+
+  return getLobbySwipePublicEventActivityPageUncached(viewerProfileId, {
+    excludePublicEventIds,
+    limit,
+  });
+}
+
+function getLobbySwipeLimit(limit?: number) {
+  return Math.min(
+    Math.max(Math.floor(limit ?? activityLobbySwipeLimit), 1),
     activityLobbySwipeLimit,
   );
-  const excludePublicEventIds = Array.from(
-    new Set((options.excludePublicEventIds ?? []).filter(Boolean)),
-  ).slice(0, activityLobbySwipeExcludeLimit);
+}
+
+function getLobbySwipeExcludePublicEventIds(
+  excludePublicEventIds?: string[],
+) {
+  return Array.from(new Set((excludePublicEventIds ?? []).filter(Boolean))).slice(
+    0,
+    activityLobbySwipeExcludeLimit,
+  );
+}
+
+async function getLobbySwipePublicEventActivityPageUncached(
+  viewerProfileId?: string | null,
+  options: {
+    excludePublicEventIds?: string[];
+    limit?: number;
+  } = {},
+) {
+  const now = new Date();
+  const limit = getLobbySwipeLimit(options.limit);
+  const excludePublicEventIds = getLobbySwipeExcludePublicEventIds(
+    options.excludePublicEventIds,
+  );
   const publicEvents = await prisma.publicEvent.findMany({
     where: {
       id:
@@ -332,6 +367,13 @@ export async function getLobbySwipePublicEventActivityPage(
     hasMore,
   };
 }
+
+const getCachedAnonymousLobbySwipePublicEventActivityPage = unstable_cache(
+  async (limit: number) =>
+    getLobbySwipePublicEventActivityPageUncached(null, { limit }),
+  ["anonymous-lobby-swipe-public-events"],
+  { revalidate: 60 },
+);
 
 function isJoinableTeamCard(activity: ActivityCardViewModel) {
   return activity.type !== "PUBLIC_EVENT" && !activity.isActivityInfo;
@@ -1058,7 +1100,7 @@ export async function getActivityLobby(
   };
 }
 
-export async function getActivityLobbyPreview(category?: ActivityCategory) {
+async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
   const now = new Date();
   const categoryWhere: Prisma.ActivityWhereInput = category
     ? { category }
@@ -1116,4 +1158,15 @@ export async function getActivityLobbyPreview(category?: ActivityCategory) {
         .map((activity) => [activity.id, activity]),
     ).values(),
   ).slice(0, activityLobbyPreviewLimit);
+}
+
+const getCachedActivityLobbyPreview = unstable_cache(
+  async (category?: ActivityCategory) =>
+    getActivityLobbyPreviewUncached(category),
+  ["activity-lobby-preview"],
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
+);
+
+export async function getActivityLobbyPreview(category?: ActivityCategory) {
+  return getCachedActivityLobbyPreview(category);
 }

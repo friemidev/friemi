@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ArrowLeft,
@@ -89,6 +90,7 @@ import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWea
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
+import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -734,18 +736,30 @@ export async function ActivityDetailPageContent({
   }
 
   if (viewerProfile?.id) {
-    await prisma.notification.updateMany({
-      where: {
-        activityId: activity.id,
-        readAt: null,
-        recipientId: viewerProfile.id,
-        type: {
-          in: ["ACTIVITY_COMMENTED", "COMMENT_REPLY"],
-        },
-      },
-      data: {
-        readAt: new Date(),
-      },
+    const notificationActivityId = activity.id;
+    const notificationRecipientId = viewerProfile.id;
+
+    after(() => {
+      prisma.notification
+        .updateMany({
+          where: {
+            activityId: notificationActivityId,
+            readAt: null,
+            recipientId: notificationRecipientId,
+            type: {
+              in: ["ACTIVITY_COMMENTED", "COMMENT_REPLY"],
+            },
+          },
+          data: {
+            readAt: new Date(),
+          },
+        })
+        .catch((error) => {
+          console.error(
+            "Failed to mark activity notifications as read",
+            error,
+          );
+        });
     });
   }
 
@@ -768,6 +782,8 @@ export async function ActivityDetailPageContent({
 
   const requestHeaders = await headers();
   const referrer = requestHeaders.get("referer");
+  const userAgent = requestHeaders.get("user-agent");
+  const isMobileRequest = isMobileUserAgent(userAgent);
   const detailAnalyticsEntity = getAnalyticsEntityForActivityDetail(activity);
   const detailSourceSurface = inferAnalyticsSourceSurfaceFromReferrer(
     referrer,
@@ -800,7 +816,7 @@ export async function ActivityDetailPageContent({
     },
     {
       referrer,
-      userAgent: requestHeaders.get("user-agent"),
+      userAgent,
       userProfileId: viewerProfile?.id,
     },
   );
@@ -833,7 +849,7 @@ export async function ActivityDetailPageContent({
         route: detailRoutePath,
         routeKey: "public_event_detail",
         sourceSurface: "public_event_detail",
-        userAgent: requestHeaders.get("user-agent"),
+        userAgent,
         userProfileId: viewerProfile?.id,
       },
     );
@@ -1182,18 +1198,26 @@ export async function ActivityDetailPageContent({
     comments,
     friendSignal,
     coManagerDashboard,
-  ] = await perf.measure("activity.viewerData", () =>
-    Promise.all([
+  ] = await Promise.all([
+    perf.measure("activity.viewerParticipation", () =>
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
+    ),
+    perf.measure("activity.comments", () =>
       getActivityComments(
         activity.id,
         viewerProfile?.id ?? null,
         viewerFriendIds,
       ),
+    ),
+    perf.measure("activity.friendSignal", () =>
       getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
-      getActivityCoManagerDashboard(activity.id, viewerProfile?.id),
-    ]),
-  );
+    ),
+    perf.measure("activity.coManagerDashboard", () =>
+      activity.viewerCanManage
+        ? getActivityCoManagerDashboard(activity.id, viewerProfile?.id)
+        : Promise.resolve(null),
+    ),
+  ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
@@ -1205,7 +1229,8 @@ export async function ActivityDetailPageContent({
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
   const isCoManager = coManagerDashboard?.role === "CO_MANAGER";
-  const isTeamOperator = isOrganizer || isCoManager;
+  const isTeamOperator =
+    Boolean(activity.viewerCanManage) || isOrganizer || isCoManager;
   const canManageCrewCover =
     isTeamOperator &&
     !activity.isActivityInfo &&
@@ -1322,18 +1347,18 @@ export async function ActivityDetailPageContent({
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
-  const [pendingParticipants, analyticsSummary] = await perf.measure(
-    "activity.organizerData",
-    () =>
-      Promise.all([
-        isTeamOperator && activity.requiresApproval && viewerProfile
-          ? getPendingParticipants(activity.id, viewerProfile.id)
-          : Promise.resolve([]),
-        isTeamOperator
-          ? getActivityAnalyticsSummary(activity.id)
-          : Promise.resolve(null),
-      ]),
-  );
+  const [pendingParticipants, analyticsSummary] = await Promise.all([
+    isTeamOperator && activity.requiresApproval && viewerProfile
+      ? perf.measure("activity.pendingParticipants", () =>
+          getPendingParticipants(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    isTeamOperator && !isMobileRequest
+      ? perf.measure("activity.analyticsSummary", () =>
+          getActivityAnalyticsSummary(activity.id),
+        )
+      : Promise.resolve(null),
+  ]);
   perf.finish(
     {
       commentCount: comments.length,
@@ -1346,7 +1371,7 @@ export async function ActivityDetailPageContent({
       route: detailRoutePath,
       routeKey: "activity_detail",
       sourceSurface: "activity_detail",
-      userAgent: requestHeaders.get("user-agent"),
+      userAgent,
       userProfileId: viewerProfile?.id,
     },
   );

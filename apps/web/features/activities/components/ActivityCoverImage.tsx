@@ -6,12 +6,16 @@ import { cn } from "@/lib/utils";
 
 type ActivityCoverImageProps = {
   alt?: string;
+  fetchPriority?: "auto" | "high" | "low";
+  loading?: "eager" | "lazy";
   overlayClassName?: string;
   src: string | null;
 };
 
 export function ActivityCoverImage({
   alt = "",
+  fetchPriority = "auto",
+  loading = "lazy",
   overlayClassName = "bg-black/20",
   src,
 }: ActivityCoverImageProps) {
@@ -52,7 +56,8 @@ export function ActivityCoverImage({
         alt={alt}
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.035]"
         decoding="async"
-        loading="lazy"
+        fetchPriority={fetchPriority}
+        loading={loading}
         referrerPolicy="no-referrer"
         onError={() => setHasFailed(true)}
       />

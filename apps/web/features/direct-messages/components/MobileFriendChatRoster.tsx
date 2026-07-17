@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
+import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { withLocale } from "@/lib/routes";
 import {
   AddFriendDialog,
@@ -181,13 +182,14 @@ function MobileFriendChatRow({
   return (
     <article className="min-w-0 rounded-[1.1rem] border border-sand bg-white/74 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.06)] transition active:translate-y-px">
       {friend.conversationId ? (
-        <Link
+        <IntentPrefetchLink
           aria-label={t.openConversation(friend.friend.nickname)}
           className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           href={withLocale(locale, `/messages/${friend.conversationId}`)}
+          prefetchOnVisible
         >
           {content}
-        </Link>
+        </IntentPrefetchLink>
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />

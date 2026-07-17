@@ -12,6 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
@@ -605,11 +606,12 @@ function MobileHomeV23Experience({
           </h2>
           <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {newsActivities.length > 0
-              ? newsActivities.map((activity) => (
+              ? newsActivities.map((activity, index) => (
                   <MobileHomeV23NewsActivityCard
                     activity={activity}
                     key={`${activity.type}:${activity.id}:news`}
                     locale={locale}
+                    priority={index === 0}
                   />
                 ))
               : copy.newsCards.map((card) => (
@@ -671,8 +673,9 @@ function MobileHomeV23NewsCard({
   title: string;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={href}
+      prefetchOnVisible
       className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
     >
       <Image
@@ -686,25 +689,30 @@ function MobileHomeV23NewsCard({
       <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
         {title}
       </span>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
 function MobileHomeV23NewsActivityCard({
   activity,
   locale,
+  priority = false,
 }: {
   activity: ActivityCardViewModel;
   locale: string;
+  priority?: boolean;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={getMobileHomeActivityHref(activity, locale)}
+      prefetchOnVisible
       className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
     >
       <ActivityCoverImage
         alt={activity.title}
         src={activity.coverImageUrl}
+        fetchPriority={priority ? "high" : "auto"}
+        loading={priority ? "eager" : "lazy"}
         overlayClassName="bg-gradient-to-t from-black/54 via-black/12 to-black/4"
       />
       <div className="absolute bottom-3 left-3 right-3">
@@ -715,7 +723,7 @@ function MobileHomeV23NewsActivityCard({
           {activity.title}
         </h3>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -765,8 +773,9 @@ function MobileHomeV23ActivityCard({
       : `${activity.participantCount}`;
 
   return (
-    <Link
+    <IntentPrefetchLink
       href={getMobileHomeActivityHref(activity, locale)}
+      prefetchOnVisible
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -794,7 +803,7 @@ function MobileHomeV23ActivityCard({
           <span className="truncate">{getActivityDateLabel(activity, locale)}</span>
         </p>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -806,8 +815,9 @@ function MobileHomeV23FallbackCard({
   locale: string;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={withLocale(locale, card.href)}
+      prefetchOnVisible
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -841,7 +851,7 @@ function MobileHomeV23FallbackCard({
           </span>
         </p>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 

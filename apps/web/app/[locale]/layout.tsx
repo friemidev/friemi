@@ -11,6 +11,7 @@ import { MobileNav } from "@/components/navigation/MobileNav";
 import { MobileNavSectionProvider } from "@/components/navigation/MobileNavSectionContext";
 import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgress";
 import { RouteProgress } from "@/components/navigation/RouteProgress";
+import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
@@ -64,6 +65,7 @@ export default async function LocaleLayout({
           <MobileNavSectionProvider>
             <div className="app-layout-shell min-h-screen pb-24 md:pb-0">
               <RouteProgress />
+              <RouteTransitionMetrics locale={locale} />
               <PortraitOrientationLock />
               <AndroidAppBridge locale={locale} />
               <IOSAppBridge />
@@ -86,7 +88,7 @@ export default async function LocaleLayout({
               <MobileScrollProgress />
               <IdleRoutePrefetcher
                 enabled={Boolean(viewerProfile)}
-                idleDelayMs={4000}
+                idleDelayMs={1600}
                 locale={locale}
               />
               {clerkEnabled ? (
