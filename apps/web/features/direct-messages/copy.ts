@@ -24,6 +24,11 @@ type DirectMessagesCopy = {
   send: string;
   sending: string;
   addEmoji: string;
+  attachImage: string;
+  imageMessage: string;
+  imageUploadFailed: string;
+  imageUploading: string;
+  removeImage: string;
   backToMessages: string;
   viewProfile: string;
   openFriends: string;
@@ -64,8 +69,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       emptyListTitle: "Aucune discussion",
       emptyListDescription: "Ajoutez un ami pour commencer à discuter.",
       emptyFriendListTitle: "Aucun ami pour le moment",
-      emptyFriendListDescription:
-        "Ajoutez un ami pour commencer.",
+      emptyFriendListDescription: "Ajoutez un ami pour commencer.",
       emptyThreadTitle: "Aucun message",
       emptyThreadDescription:
         "Envoyez un premier message court pour préparer la prochaine sortie.",
@@ -80,6 +84,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       send: "Envoyer",
       sending: "Envoi...",
       addEmoji: "Ajouter emoji",
+      attachImage: "Ajouter une image",
+      imageMessage: "Image",
+      imageUploadFailed: "Image impossible à importer.",
+      imageUploading: "Import...",
+      removeImage: "Retirer l'image",
       backToMessages: "Messages",
       viewProfile: "Voir le profil",
       openFriends: "Voir les amis",
@@ -113,6 +122,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         CONVERSATION_UNAVAILABLE: "Cette conversation n'est plus disponible.",
         EMPTY_BODY: "Le message ne peut pas être vide.",
         BODY_TOO_LONG: "Le message est trop long.",
+        TOO_MANY_IMAGES: "Vous pouvez envoyer jusqu'à 4 images à la fois.",
+        INVALID_IMAGE_URL: "Une image n'est pas valide.",
       },
     };
   }
@@ -143,6 +154,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       send: "Send",
       sending: "Sending...",
       addEmoji: "Add emoji",
+      attachImage: "Add image",
+      imageMessage: "Image",
+      imageUploadFailed: "Image could not be uploaded.",
+      imageUploading: "Uploading...",
+      removeImage: "Remove image",
       backToMessages: "Messages",
       viewProfile: "View profile",
       openFriends: "Open friends",
@@ -175,6 +191,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         CONVERSATION_UNAVAILABLE: "This conversation is no longer available.",
         EMPTY_BODY: "Message cannot be empty.",
         BODY_TOO_LONG: "Message is too long.",
+        TOO_MANY_IMAGES: "You can send up to 4 images at a time.",
+        INVALID_IMAGE_URL: "One image is invalid.",
       },
     };
   }
@@ -202,6 +220,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     send: "发送",
     sending: "发送中...",
     addEmoji: "添加表情",
+    attachImage: "添加图片",
+    imageMessage: "图片",
+    imageUploadFailed: "图片上传失败，请稍后再试。",
+    imageUploading: "上传中...",
+    removeImage: "移除图片",
     backToMessages: "消息",
     viewProfile: "查看主页",
     openFriends: "查看好友",
@@ -233,6 +256,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       CONVERSATION_UNAVAILABLE: "这段会话已不可用。",
       EMPTY_BODY: "消息不能为空。",
       BODY_TOO_LONG: "消息内容过长。",
+      TOO_MANY_IMAGES: "一次最多发送 4 张图片。",
+      INVALID_IMAGE_URL: "图片地址无效。",
     },
   };
 }

@@ -8,7 +8,13 @@ import {
   type FormEvent,
 } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle, SendHorizontal, Smile } from "lucide-react";
+import {
+  ImagePlus,
+  LoaderCircle,
+  SendHorizontal,
+  Smile,
+  X,
+} from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +33,7 @@ type MessageComposerProps = {
 const defaultInitialState: DirectMessageActionState = {
   values: {
     body: "",
+    imageUrls: [],
   },
 };
 const emojiOptions = [
@@ -65,15 +72,24 @@ const emojiOptions = [
 ];
 const messageCounterThreshold = 900;
 const messageMaxLength = 1000;
+const messageImageMaxCount = 4;
+const messageImageMaxSize = 4 * 1024 * 1024;
+const allowedMessageImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
-function SubmitButton({ locale }: { locale: string }) {
+function SubmitButton({
+  disabled,
+  locale,
+}: {
+  disabled?: boolean;
+  locale: string;
+}) {
   const { pending } = useFormStatus();
   const t = getDirectMessagesCopy(locale);
 
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5.25rem] sm:px-4"
       aria-busy={pending}
     >
@@ -98,9 +114,13 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const emojiRootRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [bodyLength, setBodyLength] = useState(initialBody?.length ?? 0);
   const [emojiPanelOpen, setEmojiPanelOpen] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageUploadError, setImageUploadError] = useState("");
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [state, formAction] = useActionState(sendDirectMessageAction, {
     ...defaultInitialState,
     values: {
@@ -114,11 +134,14 @@ export function MessageComposer({
       formRef.current?.reset();
       setBodyLength(0);
       setEmojiPanelOpen(false);
+      setImageUrls([]);
+      setImageUploadError("");
       return;
     }
 
     setBodyLength(state.values?.body?.length ?? 0);
-  }, [state.ok, state.values?.body]);
+    setImageUrls(state.values?.imageUrls ?? []);
+  }, [state.ok, state.values?.body, state.values?.imageUrls]);
 
   useEffect(() => {
     if (!emojiPanelOpen) {
@@ -168,10 +191,72 @@ export function MessageComposer({
 
   const showCounter = bodyLength >= messageCounterThreshold;
 
+  async function uploadImage(file: File) {
+    if (!allowedMessageImageTypes.includes(file.type)) {
+      setImageUploadError(t.imageUploadFailed);
+      return;
+    }
+
+    if (file.size > messageImageMaxSize) {
+      setImageUploadError(t.imageUploadFailed);
+      return;
+    }
+
+    if (imageUrls.length >= messageImageMaxCount) {
+      setImageUploadError(t.errors.TOO_MANY_IMAGES);
+      return;
+    }
+
+    setImageUploadError("");
+    setIsImageUploading(true);
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+
+      const response = await fetch("/api/uploads/direct-message-image", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        setImageUploadError(t.imageUploadFailed);
+        return;
+      }
+
+      const json = (await response.json()) as { url?: string };
+
+      if (!json.url) {
+        setImageUploadError(t.imageUploadFailed);
+        return;
+      }
+
+      setImageUrls((current) =>
+        [...current, json.url as string].slice(0, messageImageMaxCount),
+      );
+    } catch {
+      setImageUploadError(t.imageUploadFailed);
+    } finally {
+      setIsImageUploading(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const textarea = textareaRef.current;
 
-    if (textarea && textarea.value.trim().length === 0) {
+    if (isImageUploading) {
+      event.preventDefault();
+      return;
+    }
+
+    if (
+      textarea &&
+      textarea.value.trim().length === 0 &&
+      imageUrls.length === 0
+    ) {
       event.preventDefault();
       textarea.value = "";
       setBodyLength(0);
@@ -190,12 +275,59 @@ export function MessageComposer({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="conversationId" type="hidden" value={conversationId} />
+      {imageUrls.map((imageUrl) => (
+        <input key={imageUrl} name="imageUrls" type="hidden" value={imageUrl} />
+      ))}
+      <input
+        ref={imageInputRef}
+        accept={allowedMessageImageTypes.join(",")}
+        className="hidden"
+        type="file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (file) {
+            void uploadImage(file);
+          }
+        }}
+      />
       {activityId ? (
         <input name="activityId" type="hidden" value={activityId} />
       ) : null}
       {state.formError ? (
         <div className="mb-2 rounded-[0.9rem] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {state.formError}
+        </div>
+      ) : null}
+      {imageUrls.length > 0 ? (
+        <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+          {imageUrls.map((imageUrl, index) => (
+            <div
+              key={imageUrl}
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-sand bg-team-bg shadow-[0_10px_20px_rgba(21,98,64,0.08)]"
+            >
+              {/* Uploaded message images can come from public storage domains outside next/image config. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={`${t.imageMessage} ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+              <button
+                type="button"
+                className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-ink/72 text-white shadow-sm backdrop-blur transition hover:bg-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                aria-label={t.removeImage}
+                title={t.removeImage}
+                onClick={() =>
+                  setImageUrls((current) =>
+                    current.filter((currentUrl) => currentUrl !== imageUrl),
+                  )
+                }
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       ) : null}
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -232,6 +364,22 @@ export function MessageComposer({
             </div>
           ) : null}
         </div>
+        <button
+          type="button"
+          aria-label={isImageUploading ? t.imageUploading : t.attachImage}
+          title={isImageUploading ? t.imageUploading : t.attachImage}
+          disabled={
+            isImageUploading || imageUrls.length >= messageImageMaxCount
+          }
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
+          onClick={() => imageInputRef.current?.click()}
+        >
+          {isImageUploading ? (
+            <LoaderCircle className="h-5 w-5 animate-spin" />
+          ) : (
+            <ImagePlus className="h-5 w-5" />
+          )}
+        </button>
         <label className="min-w-0 flex-1">
           <span className="sr-only">{t.messagePlaceholder}</span>
           <Textarea
@@ -247,8 +395,13 @@ export function MessageComposer({
             }
           />
         </label>
-        <SubmitButton locale={locale} />
+        <SubmitButton disabled={isImageUploading} locale={locale} />
       </div>
+      {imageUploadError ? (
+        <p className="mt-2 text-xs font-semibold text-[#9A2135]">
+          {imageUploadError}
+        </p>
+      ) : null}
       {showCounter ? (
         <p
           className={cn(

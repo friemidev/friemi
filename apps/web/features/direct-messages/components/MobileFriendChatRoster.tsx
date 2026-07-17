@@ -8,10 +8,7 @@ import {
   MessageCircle,
   UserPlus,
 } from "lucide-react";
-import {
-  formatActivityDate,
-  formatActivityDateOnly,
-} from "@chill-club/shared";
+import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
 import { withLocale } from "@/lib/routes";
 import {
@@ -155,9 +152,10 @@ function MobileFriendChatRow({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
+    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
-  const time = lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const time =
+    lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
   const content = (
     <>
       <MessageAvatar
@@ -193,7 +191,11 @@ function MobileFriendChatRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
-          <input name="friendProfileId" type="hidden" value={friend.friend.id} />
+          <input
+            name="friendProfileId"
+            type="hidden"
+            value={friend.friend.id}
+          />
           <button
             type="submit"
             className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"

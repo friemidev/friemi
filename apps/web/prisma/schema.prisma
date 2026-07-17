@@ -748,6 +748,7 @@ model DirectMessage {
   senderId       String
   activityId     String?
   body           String
+  imageUrls      String[]     @default([])
   readAt         DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)

@@ -27,6 +27,7 @@ import type {
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
 import { MessageComposer } from "./MessageComposer";
+import { MessageImagePreviewGrid } from "./MessageImagePreviewGrid";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
 
@@ -117,7 +118,7 @@ function ConversationListItem({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
+    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.lastMessageEmpty;
   const time = lastMessage?.createdAt ?? conversation.createdAt;
 
@@ -369,6 +370,7 @@ export function MessageThread({
                 key={message.id}
                 body={message.body}
                 createdAt={message.createdAt}
+                imageUrls={message.imageUrls}
                 isMine={message.isMine}
                 locale={locale}
                 sender={
@@ -485,16 +487,22 @@ function ReadOnlyMessageComposer({ locale }: { locale: string }) {
 function MessageBubble({
   body,
   createdAt,
+  imageUrls,
   isMine,
   locale,
   sender,
 }: {
   body: string;
   createdAt: string;
+  imageUrls: string[];
   isMine: boolean;
   locale: string;
   sender: DirectMessageUserViewModel;
 }) {
+  const hasBody = body.trim().length > 0;
+  const hasImages = imageUrls.length > 0;
+  const t = getDirectMessagesCopy(locale);
+
   return (
     <div
       className={cn(
@@ -505,16 +513,32 @@ function MessageBubble({
       {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
       <div
         className={cn(
-          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[64%]",
+          "max-w-[76%] rounded-2xl text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[64%]",
+          hasImages ? "p-1.5" : "px-3 py-2",
           isMine
             ? "rounded-tr-md bg-moss text-white"
             : "rounded-tl-md bg-white text-ink ring-1 ring-sand",
         )}
       >
-        <p className="whitespace-pre-wrap break-words">{body}</p>
+        {hasImages ? (
+          <MessageImagePreviewGrid
+            imageLabel={t.imageMessage}
+            imageUrls={imageUrls}
+          />
+        ) : null}
+        {hasBody ? (
+          <p
+            className={cn(
+              "whitespace-pre-wrap break-words",
+              hasImages && "px-1 pt-2",
+            )}
+          >
+            {body}
+          </p>
+        ) : null}
         <p
           className={cn(
-            "mt-1 text-[11px]",
+            "mt-1 px-1 text-[11px]",
             isMine ? "text-white/65" : "text-[#8E8383]",
           )}
         >

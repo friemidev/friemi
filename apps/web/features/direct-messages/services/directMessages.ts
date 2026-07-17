@@ -11,13 +11,16 @@ import {
 } from "../utils/conversation";
 
 export const directMessageBodyMaxLength = 1000;
+export const directMessageImageMaxCount = 4;
 
 export type DirectMessageErrorCode =
   | "SELF_CONVERSATION"
   | "NOT_FRIENDS"
   | "CONVERSATION_UNAVAILABLE"
   | "EMPTY_BODY"
-  | "BODY_TOO_LONG";
+  | "BODY_TOO_LONG"
+  | "TOO_MANY_IMAGES"
+  | "INVALID_IMAGE_URL";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
@@ -45,6 +48,7 @@ const directMessageSelect = {
   senderId: true,
   activityId: true,
   body: true,
+  imageUrls: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -73,10 +77,35 @@ function assertDifferentUsers(userId: string, otherUserId: string) {
   }
 }
 
-function normalizeDirectMessageBody(body: string) {
-  const normalizedBody = body.trim();
+function normalizeDirectMessageImageUrls(imageUrls?: string[]) {
+  const normalizedImageUrls = [...new Set(imageUrls ?? [])]
+    .map((url) => url.trim())
+    .filter(Boolean);
 
-  if (!normalizedBody) {
+  if (normalizedImageUrls.length > directMessageImageMaxCount) {
+    throw new DirectMessageDomainError("TOO_MANY_IMAGES");
+  }
+
+  for (const imageUrl of normalizedImageUrls) {
+    try {
+      const parsedUrl = new URL(imageUrl);
+
+      if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+        throw new DirectMessageDomainError("INVALID_IMAGE_URL");
+      }
+    } catch {
+      throw new DirectMessageDomainError("INVALID_IMAGE_URL");
+    }
+  }
+
+  return normalizedImageUrls;
+}
+
+function normalizeDirectMessagePayload(body: string, imageUrls?: string[]) {
+  const normalizedBody = body.trim();
+  const normalizedImageUrls = normalizeDirectMessageImageUrls(imageUrls);
+
+  if (!normalizedBody && normalizedImageUrls.length === 0) {
     throw new DirectMessageDomainError("EMPTY_BODY");
   }
 
@@ -84,7 +113,10 @@ function normalizeDirectMessageBody(body: string) {
     throw new DirectMessageDomainError("BODY_TOO_LONG");
   }
 
-  return normalizedBody;
+  return {
+    body: normalizedBody,
+    imageUrls: normalizedImageUrls,
+  };
 }
 
 async function assertFriendshipExists(
@@ -376,16 +408,18 @@ export async function sendDirectMessage({
   currentUserProfileId,
   conversationId,
   body,
+  imageUrls,
 }: {
   activityId?: string | null;
   currentUserProfileId: string;
   conversationId: string;
   body: string;
+  imageUrls?: string[];
 }): Promise<{
   conversation: DirectConversationViewModel;
   message: DirectMessageViewModel;
 }> {
-  const normalizedBody = normalizeDirectMessageBody(body);
+  const payload = normalizeDirectMessagePayload(body, imageUrls);
 
   return prisma.$transaction(async (tx) => {
     const conversation = await tx.conversation.findFirst({
@@ -423,7 +457,8 @@ export async function sendDirectMessage({
         conversationId: conversation.id,
         senderId: currentUserProfileId,
         activityId: activityId ?? null,
-        body: normalizedBody,
+        body: payload.body,
+        imageUrls: payload.imageUrls,
       },
       select: directMessageSelect,
     });
@@ -449,15 +484,17 @@ export async function sendDirectMessageToFriend({
   currentUserProfileId,
   friendProfileId,
   body,
+  imageUrls,
 }: {
   currentUserProfileId: string;
   friendProfileId: string;
   body: string;
+  imageUrls?: string[];
 }): Promise<{
   conversation: DirectConversationViewModel;
   message: DirectMessageViewModel;
 }> {
-  const normalizedBody = normalizeDirectMessageBody(body);
+  const payload = normalizeDirectMessagePayload(body, imageUrls);
 
   return prisma.$transaction(async (tx) => {
     await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
@@ -475,7 +512,8 @@ export async function sendDirectMessageToFriend({
       data: {
         conversationId: conversation.id,
         senderId: currentUserProfileId,
-        body: normalizedBody,
+        body: payload.body,
+        imageUrls: payload.imageUrls,
       },
       select: directMessageSelect,
     });
