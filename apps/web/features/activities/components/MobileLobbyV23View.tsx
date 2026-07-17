@@ -258,7 +258,7 @@ function MobileLobbyV23ActivityRow({
 
   return (
     <Link
-      className="group grid grid-cols-[5.75rem_minmax(0,1fr)_2.45rem] items-stretch gap-2.5 rounded-[1.1rem] bg-white px-2.5 py-2.5 transition active:scale-[0.985]"
+      className="group grid grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_2.1rem] items-stretch gap-x-3.5 rounded-[1.1rem] bg-white px-2.5 py-2.5 transition active:scale-[0.985]"
       href={getActivityHref(activity, locale)}
     >
       <div className="relative aspect-square overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]">
@@ -269,7 +269,7 @@ function MobileLobbyV23ActivityRow({
         />
       </div>
 
-      <div className="flex min-w-0 flex-col justify-center py-0.5 pr-1">
+      <div className="flex min-w-0 flex-col justify-center py-0.5 pr-0.5">
         <h2 className="line-clamp-2 text-[15px] font-bold leading-[1.18] tracking-normal text-[#111210]">
           {activity.title}
         </h2>

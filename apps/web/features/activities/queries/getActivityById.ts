@@ -403,6 +403,7 @@ function getActivityDetailViewModel(
     minParticipants: activity.minParticipants,
     requiresApproval: activity.requiresApproval,
     priceType: activity.priceType,
+    viewerCanManage,
     participantCount,
     priceText: activity.priceText,
     status: activity.status,

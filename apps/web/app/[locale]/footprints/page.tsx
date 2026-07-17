@@ -7,6 +7,7 @@ import {
   type ProfileDashboardViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { createPerformanceTracker } from "@/lib/performance";
 
 type FootprintsPageProps = {
   params: Promise<{
@@ -72,11 +73,17 @@ export default async function FootprintsPage({
       : query?.tab === "profile"
         ? "profile"
         : "moment";
-  const profile = await getOptionalCurrentUserProfileSnapshot();
+  const perf = createPerformanceTracker({
+    locale,
+    route: "/footprints",
+  });
+  const profile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfileSnapshot(),
+  );
   const viewerProfileId = profile?.id ?? null;
   const [momentsResult, messageFriendsResult, dashboardResult] =
     await Promise.all([
-      getMomentFeed(viewerProfileId)
+      perf.measure("moments.feed", () => getMomentFeed(viewerProfileId))
         .then((moments) => ({ moments, error: null }))
         .catch((error: unknown) => {
           console.error("Failed to load moment feed", error);
@@ -87,7 +94,10 @@ export default async function FootprintsPage({
           };
         }),
       profile
-        ? getDirectMessageFriendRoster(profile.id)
+        ? perf
+            .measure("messages.friendRoster", () =>
+              getDirectMessageFriendRoster(profile.id),
+            )
             .then((friends) => ({ friends, error: null }))
             .catch((error: unknown) => {
               console.error("Failed to load footprints message roster", error);
@@ -99,7 +109,8 @@ export default async function FootprintsPage({
             })
         : Promise.resolve({ friends: [], error: null }),
       profile
-        ? getProfileDashboard(profile.id)
+        ? perf
+            .measure("profile.dashboard", () => getProfileDashboard(profile.id))
             .then((dashboard) => ({ dashboard, error: null }))
             .catch((error: unknown) => {
               console.error(
@@ -117,6 +128,20 @@ export default async function FootprintsPage({
             error: null,
           }),
     ]);
+  perf.finish(
+    {
+      initialTab,
+      messageFriendCount: messageFriendsResult.friends.length,
+      momentCount: momentsResult.moments.length,
+      profileDashboardLoaded: Boolean(profile),
+    },
+    {
+      route: `/${locale}/footprints`,
+      routeKey: "footprints",
+      sourceSurface: "footprints",
+      userProfileId: viewerProfileId,
+    },
+  );
 
   return (
     <FootprintsMobilePage

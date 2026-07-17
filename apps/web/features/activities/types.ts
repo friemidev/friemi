@@ -106,6 +106,7 @@ export type ActivityDetailViewModel = ActivityCardViewModel & {
   priceType: PriceType;
   shareEnabled?: boolean;
   shareToken?: string | null;
+  viewerCanManage?: boolean;
   organizer: ActivityOrganizerViewModel;
   announcements: ActivityAnnouncementViewModel[];
   publicEvent: {

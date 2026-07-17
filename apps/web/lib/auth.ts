@@ -6,7 +6,6 @@ import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
-import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -446,6 +445,30 @@ function isAdminUser(user: ClerkCurrentUser) {
   });
 }
 
+async function getLayoutCurrentUserWhenNeeded({
+  profile,
+}: {
+  profile: {
+    nickname: string;
+    role?: string | null;
+    status?: string | null;
+  } | null;
+}) {
+  if (!profile) {
+    return currentUser();
+  }
+
+  if (!profile.nickname.trim()) {
+    return currentUser();
+  }
+
+  if (profile.status === "ACTIVE" && profile.role === "ADMIN") {
+    return currentUser();
+  }
+
+  return null;
+}
+
 export const getOptionalLayoutViewerState = cache(
   async (): Promise<LayoutViewerState> => {
     if (!hasClerkKeys()) {
@@ -485,31 +508,23 @@ export const getOptionalLayoutViewerState = cache(
       },
     });
 
-    const user = await currentUser();
+    const user = await getLayoutCurrentUserWhenNeeded({ profile });
     const viewerProfile =
       profile && user
         ? await ensureProfileNicknameFromClerkUser(profile, user)
         : profile;
 
     if (viewerProfile?.status === "ACTIVE" && viewerProfile.role === "ADMIN") {
-      const unreadNotificationCount = await getUnreadNotificationCount(
-        viewerProfile.id,
-      );
-
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: getLayoutViewerProfile(viewerProfile),
         showAdminNav: user ? isAdminUser(user) : true,
       };
     }
 
     if (!user) {
-      const unreadNotificationCount = viewerProfile
-        ? await getUnreadNotificationCount(viewerProfile.id)
-        : 0;
-
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: viewerProfile ? getLayoutViewerProfile(viewerProfile) : null,
         showAdminNav: false,
       };
@@ -517,23 +532,16 @@ export const getOptionalLayoutViewerState = cache(
 
     if (!viewerProfile) {
       const createdProfile = await upsertClerkUserProfile(user);
-      const unreadNotificationCount = await getUnreadNotificationCount(
-        createdProfile.id,
-      );
 
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: getLayoutViewerProfile(createdProfile),
         showAdminNav: isAdminUser(user),
       };
     }
 
-    const unreadNotificationCount = await getUnreadNotificationCount(
-      viewerProfile.id,
-    );
-
     return {
-      initialUnreadNotificationCount: unreadNotificationCount,
+      initialUnreadNotificationCount: 0,
       profile: getLayoutViewerProfile(viewerProfile),
       showAdminNav: isAdminUser(user),
     };
