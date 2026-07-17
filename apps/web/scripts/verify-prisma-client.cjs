@@ -18,6 +18,13 @@ const requiredModels = [
   "MomentImage",
   "MomentLike",
   "MomentComment",
+  "Planet",
+  "PlanetMember",
+  "PlanetMessage",
+  "PlanetMoment",
+  "PlanetMomentComment",
+  "PlanetMomentLike",
+  "PlanetMomentCommentLike",
 ];
 const requiredFields = [
   ["Activity", "coManagers"],
@@ -30,6 +37,10 @@ const requiredFields = [
   ["Moment", "repostCount"],
   ["Notification", "momentId"],
   ["Notification", "momentCommentId"],
+  ["Planet", "inviteCode"],
+  ["Planet", "nameTranslations"],
+  ["PlanetMoment", "likes"],
+  ["PlanetMomentComment", "likes"],
 ];
 
 const missingModels = requiredModels.filter(
