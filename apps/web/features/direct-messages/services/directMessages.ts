@@ -24,6 +24,20 @@ export type DirectMessageErrorCode =
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
+const directMessageTimingEnabled =
+  process.env.DEBUG_DIRECT_MESSAGE_TIMING === "1";
+
+function logDirectMessageServiceTiming(
+  label: string,
+  timings: Record<string, number | string | undefined>,
+) {
+  if (!directMessageTimingEnabled) {
+    return;
+  }
+
+  console.info(`[direct-message service timing] ${label}`, timings);
+}
+
 const organizerMessageActivityStatuses: ActivityStatus[] = [
   "OPEN",
   "FULL",
@@ -42,6 +56,16 @@ const directConversationSelect = {
   updatedAt: true,
 } satisfies Prisma.ConversationSelect;
 
+const directConversationMessageSendSelect = {
+  id: true,
+} satisfies Prisma.ConversationSelect;
+
+const directConversationMessageAccessSelect = {
+  id: true,
+  userAId: true,
+  userBId: true,
+} satisfies Prisma.ConversationSelect;
+
 const directMessageSelect = {
   id: true,
   conversationId: true,
@@ -56,6 +80,11 @@ const directMessageSelect = {
 export type DirectConversationViewModel = Prisma.ConversationGetPayload<{
   select: typeof directConversationSelect;
 }>;
+
+export type DirectMessageSendConversationViewModel =
+  Prisma.ConversationGetPayload<{
+    select: typeof directConversationMessageSendSelect;
+  }>;
 
 export type DirectMessageViewModel = Prisma.DirectMessageGetPayload<{
   select: typeof directMessageSelect;
@@ -416,12 +445,14 @@ export async function sendDirectMessage({
   body: string;
   imageUrls?: string[];
 }): Promise<{
-  conversation: DirectConversationViewModel;
+  conversation: DirectMessageSendConversationViewModel;
   message: DirectMessageViewModel;
 }> {
   const payload = normalizeDirectMessagePayload(body, imageUrls);
 
   return prisma.$transaction(async (tx) => {
+    const transactionStartedAt = Date.now();
+    const findConversationStartedAt = Date.now();
     const conversation = await tx.conversation.findFirst({
       where: {
         id: conversationId,
@@ -434,8 +465,9 @@ export async function sendDirectMessage({
           },
         ],
       },
-      select: directConversationSelect,
+      select: directConversationMessageAccessSelect,
     });
+    const findConversationMs = Date.now() - findConversationStartedAt;
 
     if (!conversation) {
       throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
@@ -446,12 +478,15 @@ export async function sendDirectMessage({
       currentUserProfileId,
     );
 
+    const accessStartedAt = Date.now();
     await assertDirectMessageSendAccess(
       tx,
       currentUserProfileId,
       peerProfileId,
     );
+    const accessMs = Date.now() - accessStartedAt;
 
+    const createMessageStartedAt = Date.now();
     const message = await tx.directMessage.create({
       data: {
         conversationId: conversation.id,
@@ -462,7 +497,9 @@ export async function sendDirectMessage({
       },
       select: directMessageSelect,
     });
+    const createMessageMs = Date.now() - createMessageStartedAt;
 
+    const updateConversationStartedAt = Date.now();
     const updatedConversation = await tx.conversation.update({
       where: {
         id: conversation.id,
@@ -470,7 +507,18 @@ export async function sendDirectMessage({
       data: {
         lastMessageAt: message.createdAt,
       },
-      select: directConversationSelect,
+      select: directConversationMessageSendSelect,
+    });
+    const updateConversationMs = Date.now() - updateConversationStartedAt;
+
+    logDirectMessageServiceTiming("sendDirectMessage", {
+      findConversationMs,
+      accessMs,
+      createMessageMs,
+      updateConversationMs,
+      totalMs: Date.now() - transactionStartedAt,
+      conversationId: updatedConversation.id,
+      imageCount: payload.imageUrls.length,
     });
 
     return {
@@ -491,23 +539,29 @@ export async function sendDirectMessageToFriend({
   body: string;
   imageUrls?: string[];
 }): Promise<{
-  conversation: DirectConversationViewModel;
+  conversation: DirectMessageSendConversationViewModel;
   message: DirectMessageViewModel;
 }> {
   const payload = normalizeDirectMessagePayload(body, imageUrls);
 
   return prisma.$transaction(async (tx) => {
+    const transactionStartedAt = Date.now();
+    const accessStartedAt = Date.now();
     await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
+    const accessMs = Date.now() - accessStartedAt;
 
     const pair = getConversationPair(currentUserProfileId, friendProfileId);
+    const upsertConversationStartedAt = Date.now();
     const conversation = await tx.conversation.upsert({
       where: {
         userAId_userBId: pair,
       },
       create: pair,
       update: {},
-      select: directConversationSelect,
+      select: directConversationMessageSendSelect,
     });
+    const upsertConversationMs = Date.now() - upsertConversationStartedAt;
+    const createMessageStartedAt = Date.now();
     const message = await tx.directMessage.create({
       data: {
         conversationId: conversation.id,
@@ -517,6 +571,8 @@ export async function sendDirectMessageToFriend({
       },
       select: directMessageSelect,
     });
+    const createMessageMs = Date.now() - createMessageStartedAt;
+    const updateConversationStartedAt = Date.now();
     const updatedConversation = await tx.conversation.update({
       where: {
         id: conversation.id,
@@ -524,7 +580,18 @@ export async function sendDirectMessageToFriend({
       data: {
         lastMessageAt: message.createdAt,
       },
-      select: directConversationSelect,
+      select: directConversationMessageSendSelect,
+    });
+    const updateConversationMs = Date.now() - updateConversationStartedAt;
+
+    logDirectMessageServiceTiming("sendDirectMessageToFriend", {
+      accessMs,
+      upsertConversationMs,
+      createMessageMs,
+      updateConversationMs,
+      totalMs: Date.now() - transactionStartedAt,
+      conversationId: updatedConversation.id,
+      imageCount: payload.imageUrls.length,
     });
 
     return {

@@ -23,9 +23,13 @@ type DirectMessagesCopy = {
   readOnlyDescription: string;
   send: string;
   sending: string;
+  sendingStatus: string;
+  sendFailedStatus: string;
+  retrySend: string;
   addEmoji: string;
   attachImage: string;
   imageMessage: string;
+  resetImagePreview: string;
   imageUploadFailed: string;
   imageUploading: string;
   removeImage: string;
@@ -83,9 +87,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "L'historique reste visible, mais vous devez redevenir amis pour envoyer un nouveau message.",
       send: "Envoyer",
       sending: "Envoi...",
+      sendingStatus: "Envoi...",
+      sendFailedStatus: "Échec de l'envoi",
+      retrySend: "Réessayer",
       addEmoji: "Ajouter emoji",
       attachImage: "Ajouter une image",
       imageMessage: "Image",
+      resetImagePreview: "Réinitialiser",
       imageUploadFailed: "Image impossible à importer.",
       imageUploading: "Import...",
       removeImage: "Retirer l'image",
@@ -153,9 +161,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "The history stays visible, but you need to be friends again before sending a new message.",
       send: "Send",
       sending: "Sending...",
+      sendingStatus: "Sending...",
+      sendFailedStatus: "Send failed",
+      retrySend: "Retry",
       addEmoji: "Add emoji",
       attachImage: "Add image",
       imageMessage: "Image",
+      resetImagePreview: "Reset",
       imageUploadFailed: "Image could not be uploaded.",
       imageUploading: "Uploading...",
       removeImage: "Remove image",
@@ -219,9 +231,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     readOnlyDescription: "历史消息仍可查看，但需要重新成为好友后才能继续发送。",
     send: "发送",
     sending: "发送中...",
+    sendingStatus: "发送中...",
+    sendFailedStatus: "发送失败",
+    retrySend: "重试",
     addEmoji: "添加表情",
     attachImage: "添加图片",
     imageMessage: "图片",
+    resetImagePreview: "重置",
     imageUploadFailed: "图片上传失败，请稍后再试。",
     imageUploading: "上传中...",
     removeImage: "移除图片",

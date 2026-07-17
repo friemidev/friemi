@@ -1,9 +1,10 @@
+import { Suspense } from "react";
+import { after } from "next/server";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
-import { IncomingFriendRequestsPanel } from "@/features/friends/components/FriendsDashboard";
 import {
   getDirectConversationActivityContext,
   getDirectConversationThread,
@@ -38,26 +39,15 @@ export default async function MessageThreadPage({
     `/messages/${conversationId}`,
   );
   const commonCopy = getCopy(locale).common;
-  const [conversationResult, friendRosterResult, incomingRequests] =
-    await Promise.all([
-      getDirectConversationThread(profile.id, conversationId)
-        .then((conversation) => ({ conversation, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load direct conversation thread", error);
-          return { conversation: null, error };
-        }),
-      getDirectMessageFriendRoster(profile.id)
-        .then((friends) => ({ friends, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load direct message friend roster", error);
-          return { friends: [], error };
-        }),
-      getPendingIncomingFriendRequests(profile.id).catch((error: unknown) => {
-        console.error("Failed to load incoming friend requests", error);
-
-        return [];
-      }),
-    ]);
+  const conversationResult = await getDirectConversationThread(
+    profile.id,
+    conversationId,
+  )
+    .then((conversation) => ({ conversation, error: null }))
+    .catch((error: unknown) => {
+      console.error("Failed to load direct conversation thread", error);
+      return { conversation: null, error };
+    });
 
   if (conversationResult.error) {
     return (
@@ -74,16 +64,24 @@ export default async function MessageThreadPage({
     notFound();
   }
 
-  await prisma.notification.updateMany({
-    where: {
-      actorId: conversationResult.conversation.peer.id,
-      readAt: null,
-      recipientId: profile.id,
-      type: "DIRECT_MESSAGE",
-    },
-    data: {
-      readAt: new Date(),
-    },
+  const conversation = conversationResult.conversation;
+
+  after(() => {
+    void prisma.notification
+      .updateMany({
+        where: {
+          actorId: conversation.peer.id,
+          readAt: null,
+          recipientId: profile.id,
+          type: "DIRECT_MESSAGE",
+        },
+        data: {
+          readAt: new Date(),
+        },
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to mark direct message notifications read", error);
+      });
   });
 
   const activityContext = activityId
@@ -91,7 +89,7 @@ export default async function MessageThreadPage({
         accessToken,
         activityId,
         currentUserProfileId: profile.id,
-        peerProfileId: conversationResult.conversation.peer.id,
+        peerProfileId: conversation.peer.id,
       }).catch((error: unknown) => {
         console.error("Failed to load direct message activity context", error);
 
@@ -102,45 +100,84 @@ export default async function MessageThreadPage({
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
       <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
-        <IncomingFriendRequestsPanel
-          className="lg:hidden"
-          incomingRequests={incomingRequests}
-          locale={locale}
-          redirectPath={`/messages/${conversationResult.conversation.id}`}
-          returnTo="messages"
-        />
         <MessageThread
           activityContext={activityContext}
           backHref="/footprints?tab=message"
-          conversation={conversationResult.conversation}
+          conversation={conversation}
           locale={locale}
         />
       </div>
-      <div className="hidden lg:block">
-        {friendRosterResult.error ? (
-          <EmptyState
-            title={commonCopy.loadFailed}
-            description={commonCopy.retryDatabase}
-          />
-        ) : (
-          <DesktopFriendRosterPanel
-            activityContextQuery={
-              activityId
-                ? {
-                    accessToken,
-                    activityId,
-                  }
-                : null
-            }
-            currentUserProfileId={profile.id}
-            currentUserFriendCode={profile.friendCode}
-            friends={friendRosterResult.friends}
-            incomingRequests={incomingRequests}
-            locale={locale}
-            selectedConversationId={conversationResult.conversation.id}
-          />
-        )}
-      </div>
+      <Suspense fallback={<div className="hidden lg:block" />}>
+        <DesktopConversationSidebar
+          accessToken={accessToken}
+          activityId={activityId}
+          currentUserFriendCode={profile.friendCode}
+          currentUserProfileId={profile.id}
+          locale={locale}
+          selectedConversationId={conversation.id}
+        />
+      </Suspense>
     </PageContainer>
+  );
+}
+
+async function DesktopConversationSidebar({
+  accessToken,
+  activityId,
+  currentUserFriendCode,
+  currentUserProfileId,
+  locale,
+  selectedConversationId,
+}: {
+  accessToken?: string;
+  activityId?: string;
+  currentUserFriendCode?: string | null;
+  currentUserProfileId: string;
+  locale: string;
+  selectedConversationId: string;
+}) {
+  const commonCopy = getCopy(locale).common;
+  const [friendRosterResult, incomingRequests] = await Promise.all([
+    getDirectMessageFriendRoster(currentUserProfileId)
+      .then((friends) => ({ friends, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load direct message friend roster", error);
+        return { friends: [], error };
+      }),
+    getPendingIncomingFriendRequests(currentUserProfileId).catch(
+      (error: unknown) => {
+        console.error("Failed to load incoming friend requests", error);
+
+        return [];
+      },
+    ),
+  ]);
+
+  return (
+    <div className="hidden lg:block">
+      {friendRosterResult.error ? (
+        <EmptyState
+          title={commonCopy.loadFailed}
+          description={commonCopy.retryDatabase}
+        />
+      ) : (
+        <DesktopFriendRosterPanel
+          activityContextQuery={
+            activityId
+              ? {
+                  accessToken,
+                  activityId,
+                }
+              : null
+          }
+          currentUserProfileId={currentUserProfileId}
+          currentUserFriendCode={currentUserFriendCode}
+          friends={friendRosterResult.friends}
+          incomingRequests={incomingRequests}
+          locale={locale}
+          selectedConversationId={selectedConversationId}
+        />
+      )}
+    </div>
   );
 }

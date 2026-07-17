@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  useActionState,
   useEffect,
   useRef,
   useState,
   type FormEvent,
 } from "react";
-import { useFormStatus } from "react-dom";
 import {
   ImagePlus,
   LoaderCircle,
@@ -23,11 +21,24 @@ import {
 } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 
+export type OptimisticMessagePayload = {
+  body: string;
+  createdAt: string;
+  imageUrls: string[];
+};
+
 type MessageComposerProps = {
   activityId?: string | null;
   conversationId: string;
   initialBody?: string;
   locale: string;
+  onOptimisticCommit?: (input: {
+    clientMessageId: string;
+    createdAt?: string;
+    messageId: string;
+  }) => void;
+  onOptimisticFailure?: (clientMessageId: string) => void;
+  onOptimisticSend?: (payload: OptimisticMessagePayload) => string;
 };
 
 const defaultInitialState: DirectMessageActionState = {
@@ -78,30 +89,33 @@ const allowedMessageImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
 function SubmitButton({
   disabled,
+  isSending,
   locale,
 }: {
   disabled?: boolean;
+  isSending?: boolean;
   locale: string;
 }) {
-  const { pending } = useFormStatus();
   const t = getDirectMessagesCopy(locale);
 
   return (
     <Button
       type="submit"
-      disabled={pending || disabled}
+      disabled={disabled}
       className="h-11 min-w-11 shrink-0 rounded-full bg-moss px-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] hover:bg-[#156240] sm:min-w-[5.25rem] sm:px-4"
-      aria-busy={pending}
+      aria-busy={isSending}
     >
-      {pending ? (
+      {isSending ? (
         <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
       ) : (
         <SendHorizontal className="h-4 w-4" />
       )}
       <span className="hidden whitespace-nowrap sm:inline">
-        {pending ? t.sending : t.send}
+        {isSending ? t.sending : t.send}
       </span>
-      <span className="sr-only sm:hidden">{pending ? t.sending : t.send}</span>
+      <span className="sr-only sm:hidden">
+        {isSending ? t.sending : t.send}
+      </span>
     </Button>
   );
 }
@@ -111,6 +125,9 @@ export function MessageComposer({
   conversationId,
   initialBody,
   locale,
+  onOptimisticCommit,
+  onOptimisticFailure,
+  onOptimisticSend,
 }: MessageComposerProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const emojiRootRef = useRef<HTMLDivElement>(null);
@@ -121,27 +138,13 @@ export function MessageComposer({
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUploadError, setImageUploadError] = useState("");
   const [isImageUploading, setIsImageUploading] = useState(false);
-  const [state, formAction] = useActionState(sendDirectMessageAction, {
-    ...defaultInitialState,
-    values: {
-      body: initialBody ?? "",
-    },
-  });
+  const [formError, setFormError] = useState("");
+  const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
   const t = getDirectMessagesCopy(locale);
 
   useEffect(() => {
-    if (state.ok) {
-      formRef.current?.reset();
-      setBodyLength(0);
-      setEmojiPanelOpen(false);
-      setImageUrls([]);
-      setImageUploadError("");
-      return;
-    }
-
-    setBodyLength(state.values?.body?.length ?? 0);
-    setImageUrls(state.values?.imageUrls ?? []);
-  }, [state.ok, state.values?.body, state.values?.imageUrls]);
+    setBodyLength(initialBody?.length ?? 0);
+  }, [initialBody]);
 
   useEffect(() => {
     if (!emojiPanelOpen) {
@@ -245,29 +248,94 @@ export function MessageComposer({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     const textarea = textareaRef.current;
 
     if (isImageUploading) {
-      event.preventDefault();
       return;
     }
 
+    const body = textarea?.value ?? "";
+    const trimmedBody = body.trim();
+    const submittedImageUrls = [...imageUrls];
+
     if (
       textarea &&
-      textarea.value.trim().length === 0 &&
-      imageUrls.length === 0
+      trimmedBody.length === 0 &&
+      submittedImageUrls.length === 0
     ) {
-      event.preventDefault();
       textarea.value = "";
       setBodyLength(0);
       textarea.focus();
+      setFormError("");
+
+      return;
     }
+
+    const submitFormData = new FormData();
+    submitFormData.set("locale", locale);
+    submitFormData.set("conversationId", conversationId);
+    submitFormData.set("body", body);
+
+    if (activityId) {
+      submitFormData.set("activityId", activityId);
+    }
+
+    for (const imageUrl of submittedImageUrls) {
+      submitFormData.append("imageUrls", imageUrl);
+    }
+
+    const clientMessageId = onOptimisticSend?.({
+      body: trimmedBody,
+      createdAt: new Date().toISOString(),
+      imageUrls: submittedImageUrls,
+    });
+
+    formRef.current?.reset();
+    if (textarea) {
+      textarea.value = "";
+      textarea.focus();
+    }
+    setBodyLength(0);
+    setEmojiPanelOpen(false);
+    setImageUrls([]);
+    setImageUploadError("");
+    setFormError("");
+
+    setPendingSubmissionCount((count) => count + 1);
+    void sendDirectMessageAction(defaultInitialState, submitFormData)
+      .then((result: DirectMessageActionState) => {
+        if (result.ok && result.messageId) {
+          if (clientMessageId) {
+            onOptimisticCommit?.({
+              clientMessageId,
+              createdAt: result.createdAt,
+              messageId: result.messageId,
+            });
+          }
+
+          return;
+        }
+
+        if (clientMessageId) {
+          onOptimisticFailure?.(clientMessageId);
+        }
+        setFormError(result.formError ?? t.failed);
+      })
+      .catch(() => {
+        if (clientMessageId) {
+          onOptimisticFailure?.(clientMessageId);
+        }
+        setFormError(t.failed);
+      })
+      .finally(() => {
+        setPendingSubmissionCount((count) => Math.max(0, count - 1));
+      });
   }
 
   return (
     <form
       ref={formRef}
-      action={formAction}
       className="relative z-20 shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3"
       data-message-composer
       noValidate
@@ -294,9 +362,9 @@ export function MessageComposer({
       {activityId ? (
         <input name="activityId" type="hidden" value={activityId} />
       ) : null}
-      {state.formError ? (
+      {formError ? (
         <div className="mb-2 rounded-[0.9rem] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {state.formError}
+          {formError}
         </div>
       ) : null}
       {imageUrls.length > 0 ? (
@@ -384,10 +452,9 @@ export function MessageComposer({
           <span className="sr-only">{t.messagePlaceholder}</span>
           <Textarea
             ref={textareaRef}
-            key={state.messageId ?? "new-message"}
             name="body"
             maxLength={messageMaxLength}
-            defaultValue={state.ok ? "" : (state.values?.body ?? initialBody)}
+            defaultValue={initialBody}
             placeholder={t.messagePlaceholder}
             className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
             onChange={(event) =>
@@ -395,7 +462,11 @@ export function MessageComposer({
             }
           />
         </label>
-        <SubmitButton disabled={isImageUploading} locale={locale} />
+        <SubmitButton
+          disabled={isImageUploading}
+          isSending={pendingSubmissionCount > 0}
+          locale={locale}
+        />
       </div>
       {imageUploadError ? (
         <p className="mt-2 text-xs font-semibold text-[#9A2135]">

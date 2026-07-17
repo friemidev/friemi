@@ -6,7 +6,10 @@ import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import {
+  ensureCurrentUserProfile,
+  getCurrentUserProfileForMutation,
+} from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
 import {
@@ -23,6 +26,7 @@ import {
 export type DirectMessageActionState = {
   ok?: boolean;
   conversationId?: string;
+  createdAt?: string;
   messageId?: string;
   formError?: string;
   fieldErrors?: Record<string, string[]>;
@@ -83,6 +87,20 @@ const sendDirectMessageToFriendSchema = z
     path: ["body"],
   });
 
+const directMessageTimingEnabled =
+  process.env.DEBUG_DIRECT_MESSAGE_TIMING === "1";
+
+function logDirectMessageTiming(
+  label: string,
+  timings: Record<string, number | string | undefined>,
+) {
+  if (!directMessageTimingEnabled) {
+    return;
+  }
+
+  console.info(`[direct-message timing] ${label}`, timings);
+}
+
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -107,8 +125,6 @@ function getActionErrorMessage(locale: string, error: unknown) {
 }
 
 function refreshConversation(locale: string, conversationId?: string) {
-  revalidatePath(withLocale(locale, "/messages"));
-
   if (conversationId) {
     revalidatePath(withLocale(locale, `/messages/${conversationId}`));
   }
@@ -497,10 +513,14 @@ export async function sendDirectMessageAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(
+    const actionStartedAt = Date.now();
+    const authStartedAt = Date.now();
+    const profile = await getCurrentUserProfileForMutation(
       result.data.locale,
       `/messages/${result.data.conversationId}`,
     );
+    const authMs = Date.now() - authStartedAt;
+    const sendStartedAt = Date.now();
     const { conversation, message } = await sendDirectMessage({
       activityId: result.data.activityId,
       currentUserProfileId: profile.id,
@@ -508,6 +528,8 @@ export async function sendDirectMessageAction(
       body: result.data.body,
       imageUrls: result.data.imageUrls,
     });
+    const sendMs = Date.now() - sendStartedAt;
+    const postWriteStartedAt = Date.now();
 
     queueAnalyticsEvent(
       {
@@ -527,11 +549,21 @@ export async function sendDirectMessageAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
-    revalidatePath(withLocale(result.data.locale, "/notifications"));
+    const postWriteMs = Date.now() - postWriteStartedAt;
+
+    logDirectMessageTiming("sendDirectMessageAction", {
+      authMs,
+      sendMs,
+      postWriteMs,
+      totalMs: Date.now() - actionStartedAt,
+      conversationId: conversation.id,
+      imageCount: result.data.imageUrls.length,
+    });
 
     return {
       ok: true,
       conversationId: conversation.id,
+      createdAt: message.createdAt.toISOString(),
       messageId: message.id,
       values: {
         body: "",
@@ -586,16 +618,22 @@ export async function sendDirectMessageToFriendAction(
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(
+    const actionStartedAt = Date.now();
+    const authStartedAt = Date.now();
+    const profile = await getCurrentUserProfileForMutation(
       result.data.locale,
       "/messages",
     );
+    const authMs = Date.now() - authStartedAt;
+    const sendStartedAt = Date.now();
     const { conversation, message } = await sendDirectMessageToFriend({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
       body: result.data.body,
       imageUrls: result.data.imageUrls,
     });
+    const sendMs = Date.now() - sendStartedAt;
+    const postWriteStartedAt = Date.now();
 
     queueAnalyticsEvent(
       {
@@ -616,10 +654,21 @@ export async function sendDirectMessageToFriendAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    const postWriteMs = Date.now() - postWriteStartedAt;
+
+    logDirectMessageTiming("sendDirectMessageToFriendAction", {
+      authMs,
+      sendMs,
+      postWriteMs,
+      totalMs: Date.now() - actionStartedAt,
+      conversationId: conversation.id,
+      imageCount: result.data.imageUrls.length,
+    });
 
     return {
       ok: true,
       conversationId: conversation.id,
+      createdAt: message.createdAt.toISOString(),
       messageId: message.id,
       values: {
         body: "",
