@@ -181,6 +181,16 @@ export async function uploadMomentImageBuffer(
   });
 }
 
+export async function uploadDirectMessageImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "direct-messages",
+  });
+}
+
 async function uploadPublicImageBuffer(
   userId: string,
   fileBuffer: Buffer,

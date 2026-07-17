@@ -8,10 +8,7 @@ import {
   MessageCircle,
   UserPlus,
 } from "lucide-react";
-import {
-  formatActivityDate,
-  formatActivityDateOnly,
-} from "@chill-club/shared";
+import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
 import {
   AddFriendDialog,
   IncomingFriendRequestsPanel,
@@ -187,7 +184,7 @@ function DesktopFriendRosterRow({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
+    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
@@ -219,10 +216,10 @@ function DesktopFriendRosterRow({
           </span>
         </span>
         <span
-            className={cn(
-              "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-[#156240]" : "text-[#156240]",
-            )}
+          className={cn(
+            "mt-1 block truncate text-xs leading-5",
+            isActive ? "text-[#156240]" : "text-[#156240]",
+          )}
         >
           {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
         </span>
@@ -254,7 +251,11 @@ function DesktopFriendRosterRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
-          <input name="friendProfileId" type="hidden" value={friend.friend.id} />
+          <input
+            name="friendProfileId"
+            type="hidden"
+            value={friend.friend.id}
+          />
           <button
             type="submit"
             className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.85rem] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"

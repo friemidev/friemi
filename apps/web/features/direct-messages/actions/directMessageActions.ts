@@ -6,12 +6,16 @@ import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import {
+  ensureCurrentUserProfile,
+  getCurrentUserProfileForMutation,
+} from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
 import {
   DirectMessageDomainError,
   directMessageBodyMaxLength,
+  directMessageImageMaxCount,
   getOrCreateActivityParticipantConversation,
   getOrCreateActivityOrganizerConversation,
   getOrCreateDirectConversation,
@@ -22,11 +26,13 @@ import {
 export type DirectMessageActionState = {
   ok?: boolean;
   conversationId?: string;
+  createdAt?: string;
   messageId?: string;
   formError?: string;
   fieldErrors?: Record<string, string[]>;
   values?: {
     body?: string;
+    imageUrls?: string[];
   };
 };
 
@@ -52,23 +58,60 @@ const createActivityParticipantConversationSchema = z.object({
   participantProfileId: z.string().min(1),
 });
 
-const sendDirectMessageSchema = z.object({
-  locale: z.string().min(1).default("zh-CN"),
-  conversationId: z.string().min(1),
-  activityId: z.string().trim().optional(),
-  body: z.string().trim().min(1).max(directMessageBodyMaxLength),
-});
+const sendDirectMessageSchema = z
+  .object({
+    locale: z.string().min(1).default("zh-CN"),
+    conversationId: z.string().min(1),
+    activityId: z.string().trim().optional(),
+    body: z.string().trim().max(directMessageBodyMaxLength).default(""),
+    imageUrls: z
+      .array(z.string().trim().url())
+      .max(directMessageImageMaxCount)
+      .default([]),
+  })
+  .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
+    path: ["body"],
+  });
 
-const sendDirectMessageToFriendSchema = z.object({
-  locale: z.string().min(1).default("zh-CN"),
-  friendProfileId: z.string().min(1),
-  body: z.string().trim().min(1).max(directMessageBodyMaxLength),
-});
+const sendDirectMessageToFriendSchema = z
+  .object({
+    locale: z.string().min(1).default("zh-CN"),
+    friendProfileId: z.string().min(1),
+    body: z.string().trim().max(directMessageBodyMaxLength).default(""),
+    imageUrls: z
+      .array(z.string().trim().url())
+      .max(directMessageImageMaxCount)
+      .default([]),
+  })
+  .refine((value) => value.body.length > 0 || value.imageUrls.length > 0, {
+    path: ["body"],
+  });
+
+const directMessageTimingEnabled =
+  process.env.DEBUG_DIRECT_MESSAGE_TIMING === "1";
+
+function logDirectMessageTiming(
+  label: string,
+  timings: Record<string, number | string | undefined>,
+) {
+  if (!directMessageTimingEnabled) {
+    return;
+  }
+
+  console.info(`[direct-message timing] ${label}`, timings);
+}
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function getStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .flatMap((value) => (typeof value === "string" ? [value.trim()] : []))
+    .filter(Boolean);
 }
 
 function getActionErrorMessage(locale: string, error: unknown) {
@@ -82,8 +125,6 @@ function getActionErrorMessage(locale: string, error: unknown) {
 }
 
 function refreshConversation(locale: string, conversationId?: string) {
-  revalidatePath(withLocale(locale, "/messages"));
-
   if (conversationId) {
     revalidatePath(withLocale(locale, `/messages/${conversationId}`));
   }
@@ -261,7 +302,10 @@ export async function openActivityOrganizerConversationAction(
   } catch (error) {
     console.error("Failed to open activity organizer conversation", error);
     redirect(
-      withLocale(result.data.locale, getActivityDetailPath(result.data.activityId)),
+      withLocale(
+        result.data.locale,
+        getActivityDetailPath(result.data.activityId),
+      ),
     );
   }
 
@@ -414,7 +458,10 @@ export async function openActivityParticipantConversationAction(
   } catch (error) {
     console.error("Failed to open activity participant conversation", error);
     redirect(
-      withLocale(result.data.locale, getActivityDetailPath(result.data.activityId)),
+      withLocale(
+        result.data.locale,
+        getActivityDetailPath(result.data.activityId),
+      ),
     );
   }
 
@@ -439,12 +486,17 @@ export async function sendDirectMessageAction(
     conversationId: getString(formData, "conversationId"),
     activityId: getString(formData, "activityId").trim() || undefined,
     body: getString(formData, "body"),
+    imageUrls: [
+      ...getStringList(formData, "imageUrls"),
+      ...getStringList(formData, "imageUrl"),
+    ],
   };
 
-  if (rawInput.body.trim().length === 0) {
+  if (rawInput.body.trim().length === 0 && rawInput.imageUrls.length === 0) {
     return {
       values: {
         body: "",
+        imageUrls: [],
       },
     };
   }
@@ -455,21 +507,29 @@ export async function sendDirectMessageAction(
     return {
       values: {
         body: rawInput.body,
+        imageUrls: rawInput.imageUrls,
       },
     };
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(
+    const actionStartedAt = Date.now();
+    const authStartedAt = Date.now();
+    const profile = await getCurrentUserProfileForMutation(
       result.data.locale,
       `/messages/${result.data.conversationId}`,
     );
+    const authMs = Date.now() - authStartedAt;
+    const sendStartedAt = Date.now();
     const { conversation, message } = await sendDirectMessage({
       activityId: result.data.activityId,
       currentUserProfileId: profile.id,
       conversationId: result.data.conversationId,
       body: result.data.body,
+      imageUrls: result.data.imageUrls,
     });
+    const sendMs = Date.now() - sendStartedAt;
+    const postWriteStartedAt = Date.now();
 
     queueAnalyticsEvent(
       {
@@ -481,6 +541,7 @@ export async function sendDirectMessageAction(
         sourceSurface: "messages",
         properties: {
           body_length: result.data.body.length,
+          image_count: result.data.imageUrls.length,
         },
       },
       {
@@ -488,14 +549,25 @@ export async function sendDirectMessageAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
-    revalidatePath(withLocale(result.data.locale, "/notifications"));
+    const postWriteMs = Date.now() - postWriteStartedAt;
+
+    logDirectMessageTiming("sendDirectMessageAction", {
+      authMs,
+      sendMs,
+      postWriteMs,
+      totalMs: Date.now() - actionStartedAt,
+      conversationId: conversation.id,
+      imageCount: result.data.imageUrls.length,
+    });
 
     return {
       ok: true,
       conversationId: conversation.id,
+      createdAt: message.createdAt.toISOString(),
       messageId: message.id,
       values: {
         body: "",
+        imageUrls: [],
       },
     };
   } catch (error) {
@@ -505,6 +577,7 @@ export async function sendDirectMessageAction(
       formError: getActionErrorMessage(result.data.locale, error),
       values: {
         body: result.data.body,
+        imageUrls: result.data.imageUrls,
       },
     };
   }
@@ -518,12 +591,17 @@ export async function sendDirectMessageToFriendAction(
     locale: getString(formData, "locale") || "zh-CN",
     friendProfileId: getString(formData, "friendProfileId"),
     body: getString(formData, "body"),
+    imageUrls: [
+      ...getStringList(formData, "imageUrls"),
+      ...getStringList(formData, "imageUrl"),
+    ],
   };
 
-  if (rawInput.body.trim().length === 0) {
+  if (rawInput.body.trim().length === 0 && rawInput.imageUrls.length === 0) {
     return {
       values: {
         body: "",
+        imageUrls: [],
       },
     };
   }
@@ -534,20 +612,28 @@ export async function sendDirectMessageToFriendAction(
     return {
       values: {
         body: rawInput.body,
+        imageUrls: rawInput.imageUrls,
       },
     };
   }
 
   try {
-    const profile = await ensureCurrentUserProfile(
+    const actionStartedAt = Date.now();
+    const authStartedAt = Date.now();
+    const profile = await getCurrentUserProfileForMutation(
       result.data.locale,
       "/messages",
     );
+    const authMs = Date.now() - authStartedAt;
+    const sendStartedAt = Date.now();
     const { conversation, message } = await sendDirectMessageToFriend({
       currentUserProfileId: profile.id,
       friendProfileId: result.data.friendProfileId,
       body: result.data.body,
+      imageUrls: result.data.imageUrls,
     });
+    const sendMs = Date.now() - sendStartedAt;
+    const postWriteStartedAt = Date.now();
 
     queueAnalyticsEvent(
       {
@@ -559,6 +645,7 @@ export async function sendDirectMessageToFriendAction(
         sourceSurface: "messages",
         properties: {
           body_length: result.data.body.length,
+          image_count: result.data.imageUrls.length,
           send_mode: "friend_shortcut",
         },
       },
@@ -567,13 +654,25 @@ export async function sendDirectMessageToFriendAction(
       },
     );
     refreshConversation(result.data.locale, conversation.id);
+    const postWriteMs = Date.now() - postWriteStartedAt;
+
+    logDirectMessageTiming("sendDirectMessageToFriendAction", {
+      authMs,
+      sendMs,
+      postWriteMs,
+      totalMs: Date.now() - actionStartedAt,
+      conversationId: conversation.id,
+      imageCount: result.data.imageUrls.length,
+    });
 
     return {
       ok: true,
       conversationId: conversation.id,
+      createdAt: message.createdAt.toISOString(),
       messageId: message.id,
       values: {
         body: "",
+        imageUrls: [],
       },
     };
   } catch (error) {
@@ -583,6 +682,7 @@ export async function sendDirectMessageToFriendAction(
       formError: getActionErrorMessage(result.data.locale, error),
       values: {
         body: result.data.body,
+        imageUrls: result.data.imageUrls,
       },
     };
   }

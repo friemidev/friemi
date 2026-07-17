@@ -27,6 +27,7 @@ const messageSelect = {
   conversationId: true,
   senderId: true,
   body: true,
+  imageUrls: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -100,6 +101,7 @@ export type DirectMessagePreviewViewModel = {
   id: string;
   senderId: string;
   body: string;
+  imageUrls: string[];
   createdAt: string;
   sourceActivity: {
     id: string;
@@ -133,6 +135,7 @@ export type DirectMessageThreadItemViewModel = {
   id: string;
   senderId: string;
   body: string;
+  imageUrls: string[];
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
@@ -213,6 +216,7 @@ function mapLastMessage(
     id: lastMessage.id,
     senderId: lastMessage.senderId,
     body: lastMessage.body,
+    imageUrls: lastMessage.imageUrls,
     createdAt: lastMessage.createdAt.toISOString(),
     sourceActivity: null,
   };
@@ -251,6 +255,7 @@ function mapConversationThread(
       id: message.id,
       senderId: message.senderId,
       body: message.body,
+      imageUrls: message.imageUrls,
       readAt: message.readAt?.toISOString() ?? null,
       createdAt: message.createdAt.toISOString(),
       isMine: message.senderId === currentUserProfileId,
@@ -484,11 +489,7 @@ export async function getDirectConversationThread(
     peerProfileId: peerId,
   });
 
-  return mapConversationThread(
-    conversation,
-    currentUserProfileId,
-    canSend,
-  );
+  return mapConversationThread(conversation, currentUserProfileId, canSend);
 }
 
 export async function getDirectConversationActivityContext({
@@ -548,6 +549,8 @@ export async function getDirectConversationActivityContext({
     id: activity.id,
     title: activity.title,
     startAt: activity.startAt.toISOString(),
-    locationLabel: [activity.city, activity.address].filter(Boolean).join(" · "),
+    locationLabel: [activity.city, activity.address]
+      .filter(Boolean)
+      .join(" · "),
   };
 }

@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronDown,
-  MapPin,
   MessageCircle,
   MoreVertical,
   UserRound,
@@ -23,12 +22,10 @@ import type {
   DirectConversationActivityContextViewModel,
   DirectConversationListItemViewModel,
   DirectConversationThreadViewModel,
-  DirectMessageUserViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
-import { MessageComposer } from "./MessageComposer";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
-import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
+import { MessageThreadClient } from "./MessageThreadClient";
 
 type ConversationListPanelProps = {
   conversations: DirectConversationListItemViewModel[];
@@ -117,7 +114,7 @@ function ConversationListItem({
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
     : null;
   const preview = lastMessage
-    ? `${isMine ? t.youPrefix : ""}${lastMessage.body}`
+    ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.lastMessageEmpty;
   const time = lastMessage?.createdAt ?? conversation.createdAt;
 
@@ -309,8 +306,6 @@ export function MessageThread({
 }) {
   const t = getDirectMessagesCopy(locale);
   const hasMessages = conversation.messages.length > 0;
-  const lastMessageId =
-    conversation.messages[conversation.messages.length - 1]?.id;
 
   return (
     <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
@@ -355,202 +350,21 @@ export function MessageThread({
         </details>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
-        {activityContext ? (
-          <ActivityContextCard
-            activityContext={activityContext}
-            locale={locale}
-          />
-        ) : null}
-        {hasMessages ? (
-          <div className={cn("grid gap-3", activityContext ? "mt-4" : "")}>
-            {conversation.messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                body={message.body}
-                createdAt={message.createdAt}
-                isMine={message.isMine}
-                locale={locale}
-                sender={
-                  message.isMine ? conversation.currentUser : conversation.peer
-                }
-              />
-            ))}
-            <MessageThreadScrollAnchor lastMessageId={lastMessageId} />
-          </div>
-        ) : (
-          <div className="flex min-h-[18rem] items-center justify-center">
-            <div className="max-w-sm p-5 text-center">
-              <h2 className="text-base font-semibold text-ink">
-                {t.emptyThreadTitle}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[#156240]">
-                {conversation.canSend
-                  ? t.emptyThreadDescription
-                  : t.readOnlyDescription}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {conversation.canSend ? (
-        <MessageComposer
-          activityId={activityContext?.id}
-          conversationId={conversation.id}
-          initialBody={
-            activityContext && !hasMessages
-              ? t.activityMessageSuggestion(activityContext.title)
-              : undefined
-          }
-          locale={locale}
-        />
-      ) : (
-        <ReadOnlyMessageComposer locale={locale} />
-      )}
-    </section>
-  );
-}
-
-function ActivityContextCard({
-  activityContext,
-  locale,
-}: {
-  activityContext: DirectConversationActivityContextViewModel;
-  locale: string;
-}) {
-  const t = getDirectMessagesCopy(locale);
-
-  return (
-    <section className="rounded-[1rem] border border-[#8AB68E] bg-white/78 p-3 shadow-[0_10px_24px_rgba(21,98,64,0.08)]">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FEFFF9] text-moss ring-1 ring-[#8AB68E]">
-          <CalendarDays className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#156240]">
-            {t.activityContextLabel}
-          </p>
-          <h2 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-ink">
-            {activityContext.title}
-          </h2>
-          <div className="mt-2 grid gap-1 text-xs leading-5 text-zinc-600">
-            <p className="flex min-w-0 items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-moss" />
-              <span className="min-w-0 truncate">
-                {formatActivityDate(activityContext.startAt, locale)}
-              </span>
-            </p>
-            {activityContext.locationLabel ? (
-              <p className="flex min-w-0 items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-moss" />
-                <span className="min-w-0 truncate">
-                  {activityContext.locationLabel}
-                </span>
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <ContextualDetailLink
-          className="shrink-0 rounded-full bg-[#FEFFF9] px-3 py-1.5 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          href={withLocale(locale, getActivityDetailPath(activityContext.id))}
-          detailSource={{
-            sourceKey: "messages",
-            targetKey: `activity:${activityContext.id}`,
-            targetKind: "activity",
-          }}
-        >
-          {t.activityContextCta}
-        </ContextualDetailLink>
-      </div>
-    </section>
-  );
-}
-
-function ReadOnlyMessageComposer({ locale }: { locale: string }) {
-  const t = getDirectMessagesCopy(locale);
-
-  return (
-    <div className="shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
-      <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
-        <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
-        <p className="mt-1 text-xs leading-5 text-[#156240]">
-          {t.readOnlyDescription}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function MessageBubble({
-  body,
-  createdAt,
-  isMine,
-  locale,
-  sender,
-}: {
-  body: string;
-  createdAt: string;
-  isMine: boolean;
-  locale: string;
-  sender: DirectMessageUserViewModel;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-2",
-        isMine ? "justify-end" : "justify-start",
-      )}
-    >
-      {!isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
-      <div
-        className={cn(
-          "max-w-[76%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[64%]",
-          isMine
-            ? "rounded-tr-md bg-moss text-white"
-            : "rounded-tl-md bg-white text-ink ring-1 ring-sand",
-        )}
-      >
-        <p className="whitespace-pre-wrap break-words">{body}</p>
-        <p
-          className={cn(
-            "mt-1 text-[11px]",
-            isMine ? "text-white/65" : "text-[#8E8383]",
-          )}
-        >
-          {formatActivityDate(createdAt, locale)}
-        </p>
-      </div>
-      {isMine ? <MessageBubbleAvatar locale={locale} user={sender} /> : null}
-    </div>
-  );
-}
-
-function MessageBubbleAvatar({
-  locale,
-  user,
-}: {
-  locale: string;
-  user: DirectMessageUserViewModel;
-}) {
-  return (
-    <ContextualDetailLink
-      aria-label={user.nickname}
-      className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-      href={withLocale(locale, `/profile/${user.id}`)}
-      detailSource={{
-        sourceKey: "messages",
-        targetKey: `profile:${user.id}`,
-        targetKind: "profile",
-      }}
-      title={user.nickname}
-    >
-      <MessageAvatar
-        avatarUrl={user.avatarUrl}
-        name={user.nickname}
-        size="sm"
+      <MessageThreadClient
+        activityContext={activityContext}
+        canSend={conversation.canSend}
+        conversationId={conversation.id}
+        currentUser={conversation.currentUser}
+        initialBody={
+          activityContext && !hasMessages
+            ? t.activityMessageSuggestion(activityContext.title)
+            : undefined
+        }
+        initialMessages={conversation.messages}
+        locale={locale}
+        peer={conversation.peer}
       />
-    </ContextualDetailLink>
+    </section>
   );
 }
 

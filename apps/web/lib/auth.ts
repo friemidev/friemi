@@ -6,6 +6,7 @@ import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
+import { getUnreadNotificationCount } from "@/features/notifications/queries/getNotifications";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -491,12 +492,9 @@ export const getOptionalLayoutViewerState = cache(
         : profile;
 
     if (viewerProfile?.status === "ACTIVE" && viewerProfile.role === "ADMIN") {
-      const unreadNotificationCount = await prisma.notification.count({
-        where: {
-          recipientId: viewerProfile.id,
-          readAt: null,
-        },
-      });
+      const unreadNotificationCount = await getUnreadNotificationCount(
+        viewerProfile.id,
+      );
 
       return {
         initialUnreadNotificationCount: unreadNotificationCount,
@@ -507,12 +505,7 @@ export const getOptionalLayoutViewerState = cache(
 
     if (!user) {
       const unreadNotificationCount = viewerProfile
-        ? await prisma.notification.count({
-            where: {
-              recipientId: viewerProfile.id,
-              readAt: null,
-            },
-          })
+        ? await getUnreadNotificationCount(viewerProfile.id)
         : 0;
 
       return {
@@ -524,12 +517,9 @@ export const getOptionalLayoutViewerState = cache(
 
     if (!viewerProfile) {
       const createdProfile = await upsertClerkUserProfile(user);
-      const unreadNotificationCount = await prisma.notification.count({
-        where: {
-          recipientId: createdProfile.id,
-          readAt: null,
-        },
-      });
+      const unreadNotificationCount = await getUnreadNotificationCount(
+        createdProfile.id,
+      );
 
       return {
         initialUnreadNotificationCount: unreadNotificationCount,
@@ -538,12 +528,9 @@ export const getOptionalLayoutViewerState = cache(
       };
     }
 
-    const unreadNotificationCount = await prisma.notification.count({
-      where: {
-        recipientId: viewerProfile.id,
-        readAt: null,
-      },
-    });
+    const unreadNotificationCount = await getUnreadNotificationCount(
+      viewerProfile.id,
+    );
 
     return {
       initialUnreadNotificationCount: unreadNotificationCount,

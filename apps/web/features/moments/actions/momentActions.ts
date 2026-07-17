@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
-import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -412,17 +411,6 @@ export async function toggleMomentLikeAction(formData: FormData) {
         },
       });
       didLike = true;
-
-      if (moment.authorId !== profile.id) {
-        await createNotifications(tx, [
-          {
-            actorId: profile.id,
-            momentId: moment.id,
-            recipientId: moment.authorId,
-            type: "MOMENT_LIKED",
-          },
-        ]);
-      }
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) {
@@ -523,17 +511,6 @@ export async function repostMomentAction(formData: FormData) {
           },
         },
       });
-
-      if (sourceMoment.authorId !== profile.id) {
-        await createNotifications(tx, [
-          {
-            actorId: profile.id,
-            momentId: sourceMoment.id,
-            recipientId: sourceMoment.authorId,
-            type: "MOMENT_REPOSTED",
-          },
-        ]);
-      }
     });
   } catch (error) {
     console.error("Failed to repost moment", error);
@@ -610,8 +587,6 @@ export async function createMomentCommentAction(
       };
     }
 
-    let parentAuthorId: string | null = null;
-
     if (result.data.parentId) {
       const parentComment = await prisma.momentComment.findFirst({
         where: {
@@ -620,7 +595,6 @@ export async function createMomentCommentAction(
           deletedAt: null,
         },
         select: {
-          authorId: true,
           id: true,
         },
       });
@@ -633,8 +607,6 @@ export async function createMomentCommentAction(
           },
         };
       }
-
-      parentAuthorId = parentComment.authorId;
     }
 
     await prisma.$transaction(async (tx) => {
@@ -661,39 +633,6 @@ export async function createMomentCommentAction(
           },
         },
       });
-
-      const notificationInputs: Array<{
-        actorId: string;
-        momentCommentId?: string;
-        momentId: string;
-        recipientId: string;
-        type: "MOMENT_COMMENTED" | "MOMENT_COMMENT_REPLY";
-      }> = [];
-
-      if (parentAuthorId && parentAuthorId !== profile.id) {
-        notificationInputs.push({
-          actorId: profile.id,
-          momentCommentId: comment.id,
-          momentId: moment.id,
-          recipientId: parentAuthorId,
-          type: "MOMENT_COMMENT_REPLY",
-        });
-      }
-
-      if (
-        moment.authorId !== profile.id &&
-        moment.authorId !== parentAuthorId
-      ) {
-        notificationInputs.push({
-          actorId: profile.id,
-          momentCommentId: comment.id,
-          momentId: moment.id,
-          recipientId: moment.authorId,
-          type: "MOMENT_COMMENTED",
-        });
-      }
-
-      await createNotifications(tx, notificationInputs);
     });
 
     queueAnalyticsEvent(

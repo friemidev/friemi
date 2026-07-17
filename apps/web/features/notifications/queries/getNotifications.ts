@@ -1,6 +1,25 @@
 import type { NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export const notificationCenterExcludedTypes = [
+  "DIRECT_MESSAGE",
+  "MOMENT_LIKED",
+  "MOMENT_COMMENTED",
+  "MOMENT_COMMENT_REPLY",
+  "MOMENT_REPOSTED",
+] satisfies NotificationType[];
+
+export function getVisibleNotificationWhere(
+  where: Prisma.NotificationWhereInput = {},
+): Prisma.NotificationWhereInput {
+  return {
+    ...where,
+    type: {
+      notIn: notificationCenterExcludedTypes,
+    },
+  };
+}
+
 const notificationSelect = {
   id: true,
   type: true,
@@ -120,19 +139,19 @@ function mapNotification(
 
 export async function getUnreadNotificationCount(profileId: string) {
   return prisma.notification.count({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profileId,
       readAt: null,
-    },
+    }),
   });
 }
 
 export async function getNotificationCenter(profileId: string) {
   const [notifications, unreadCount] = await Promise.all([
     prisma.notification.findMany({
-      where: {
+      where: getVisibleNotificationWhere({
         recipientId: profileId,
-      },
+      }),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 50,
       select: notificationSelect,

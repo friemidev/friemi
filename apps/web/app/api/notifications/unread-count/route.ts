@@ -1,5 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  getUnreadNotificationCount,
+  getVisibleNotificationWhere,
+} from "@/features/notifications/queries/getNotifications";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
@@ -15,12 +19,7 @@ export async function GET() {
         return NextResponse.json({ unreadCount: 0 });
       }
 
-      const unreadCount = await prisma.notification.count({
-        where: {
-          recipientId: localProfile.id,
-          readAt: null,
-        },
-      });
+      const unreadCount = await getUnreadNotificationCount(localProfile.id);
 
       return NextResponse.json({
         unreadCount,
@@ -35,12 +34,12 @@ export async function GET() {
     }
 
     const unreadCount = await prisma.notification.count({
-      where: {
+      where: getVisibleNotificationWhere({
         readAt: null,
         recipient: {
           clerkUserId: userId,
         },
-      },
+      }),
     });
 
     return NextResponse.json({
