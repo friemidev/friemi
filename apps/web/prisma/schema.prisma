@@ -142,6 +142,17 @@ enum MomentVisibility {
   PUBLIC
 }
 
+enum PlanetVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum PlanetMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 enum GameToolKind {
   AVALON
   STORYTELLER
@@ -220,6 +231,13 @@ model UserProfile {
   gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
   gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
   gameToolPlayerRecords  GameToolPlayerRecord[]     @relation("GameToolPlayerRecordProfile")
+  ownedPlanets           Planet[]                   @relation("PlanetOwner")
+  planetMemberships      PlanetMember[]
+  planetMessages         PlanetMessage[]            @relation("PlanetMessageAuthor")
+  planetMoments          PlanetMoment[]             @relation("PlanetMomentAuthor")
+  planetMomentComments   PlanetMomentComment[]      @relation("PlanetMomentCommentAuthor")
+  planetMomentLikes      PlanetMomentLike[]         @relation("PlanetMomentLikeProfile")
+  planetCommentLikes     PlanetMomentCommentLike[]  @relation("PlanetCommentLikeProfile")
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
   publicEventFavorites   PublicEventFavorite[]
@@ -232,6 +250,108 @@ model UserProfile {
   @@index([role, status])
 }
 
+model Planet {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  inviteCode  String           @unique @db.VarChar(16)
+  name        String
+  nameTranslations Json?
+  description String?          @db.Text
+  coverImageUrl String?
+  tags        String[]         @default([])
+  visibility  PlanetVisibility @default(PUBLIC)
+  ownerId     String
+  owner       UserProfile      @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     PlanetMember[]
+  messages    PlanetMessage[]
+  moments     PlanetMoment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([visibility, createdAt])
+  @@index([ownerId, createdAt])
+}
+
+model PlanetMember {
+  id        String           @id @default(cuid())
+  planetId  String
+  profileId String
+  role      PlanetMemberRole @default(MEMBER)
+  planet    Planet           @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  profile   UserProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime         @default(now())
+
+  @@unique([planetId, profileId])
+  @@index([profileId, joinedAt])
+}
+
+model PlanetMessage {
+  id        String      @id @default(cuid())
+  planetId  String
+  authorId  String
+  content   String      @db.Text
+  planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author    UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([planetId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMoment {
+  id        String      @id @default(cuid())
+  planetId  String
+  authorId  String
+  content   String      @db.Text
+  imageUrls String[]    @default([])
+  planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author    UserProfile @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments  PlanetMomentComment[]
+  likes     PlanetMomentLike[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([planetId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMomentComment {
+  id        String       @id @default(cuid())
+  momentId  String
+  authorId  String
+  content   String       @db.Text
+  moment    PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  author    UserProfile  @relation("PlanetMomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PlanetMomentCommentLike[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([momentId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMomentLike {
+  id String @id @default(cuid())
+  momentId String
+  profileId String
+  moment PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  profile UserProfile @relation("PlanetMomentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([momentId, profileId])
+  @@index([profileId, createdAt])
+}
+
+model PlanetMomentCommentLike {
+  id String @id @default(cuid())
+  commentId String
+  profileId String
+  comment PlanetMomentComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  profile UserProfile @relation("PlanetCommentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([commentId, profileId])
+  @@index([profileId, createdAt])
+}
 model MobileDevice {
   id            String         @id @default(cuid())
   userProfileId String
