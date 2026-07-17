@@ -13,6 +13,7 @@ const planetSchema = z.object({
   name: z.string().trim().min(2).max(60),
   description: z.string().trim().max(500).optional(),
   tags: z.string().trim().max(160).optional(),
+  coverImageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 const planetIdSchema = z.object({
@@ -115,6 +116,7 @@ export async function createPlanetAction(formData: FormData) {
     name: readString(formData, "name"),
     description: readString(formData, "description"),
     tags: readString(formData, "tags"),
+    coverImageUrl: readString(formData, "coverImageUrl"),
   });
 
   if (!result.success) {
@@ -139,6 +141,7 @@ export async function createPlanetAction(formData: FormData) {
       inviteCode,
       name: result.data.name,
       description: result.data.description || null,
+      coverImageUrl: result.data.coverImageUrl || null,
       tags,
       visibility: "PUBLIC",
       ownerId: profile.id,
