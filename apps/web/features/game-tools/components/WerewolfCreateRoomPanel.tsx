@@ -15,9 +15,9 @@ import { useFormStatus } from "react-dom";
 import jsQR from "jsqr";
 import {
   ArrowRight,
-  Camera,
   Hash,
   Moon,
+  ScanLine,
   Shield,
   Sparkles,
   X,
@@ -35,6 +35,12 @@ import {
   type WerewolfVariant,
 } from "@/features/game-tools/werewolfConfig";
 import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
+import {
+  canUseNativeAndroidQrScanner,
+  getWerewolfRoomCodeFromScan,
+  normalizeScannedRoomCode,
+  parseAndroidQrScanPayload,
+} from "@/features/scan/globalQrScanner";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfCreateRoomPanelProps = {
@@ -265,34 +271,6 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-function normalizeRoomCode(value: string) {
-  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-}
-
-function getRoomCodeFromScan(value: string) {
-  const trimmed = value.trim();
-  const pathMatch = trimmed.match(/\/game-tools\/werewolf\/join\/([^/?#]+)/);
-
-  if (pathMatch?.[1]) {
-    return normalizeRoomCode(decodeURIComponent(pathMatch[1]));
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    const urlMatch = parsed.pathname.match(
-      /\/game-tools\/werewolf\/join\/([^/?#]+)/,
-    );
-
-    if (urlMatch?.[1]) {
-      return normalizeRoomCode(decodeURIComponent(urlMatch[1]));
-    }
-  } catch {
-    // Plain room codes are handled below.
-  }
-
-  return normalizeRoomCode(trimmed);
-}
-
 export function WerewolfCreateRoomPanel({
   locale,
 }: WerewolfCreateRoomPanelProps) {
@@ -309,10 +287,11 @@ export function WerewolfCreateRoomPanel({
     defaultWerewolfVariantKey,
   );
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const nativeScanPendingRef = useRef(false);
   const scanHandledRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const t = copies[locale] ?? copies.en;
-  const normalizedJoinCode = normalizeRoomCode(joinCode);
+  const normalizedJoinCode = normalizeScannedRoomCode(joinCode);
 
   const goToJoinCode = useCallback(
     (code: string) => {
@@ -325,6 +304,39 @@ export function WerewolfCreateRoomPanel({
     },
     [locale, router],
   );
+
+  useEffect(() => {
+    function handleAndroidQrScan(event: Event) {
+      if (!nativeScanPendingRef.current) {
+        return;
+      }
+
+      nativeScanPendingRef.current = false;
+      const payload = parseAndroidQrScanPayload(
+        (event as CustomEvent<unknown>).detail,
+      );
+
+      if (!payload?.ok || !payload.rawValue) {
+        return;
+      }
+
+      const scannedCode = getWerewolfRoomCodeFromScan(payload.rawValue);
+
+      if (scannedCode) {
+        setJoinCode(scannedCode);
+        goToJoinCode(scannedCode);
+        return;
+      }
+
+      setScannerOpen(true);
+    }
+
+    window.addEventListener("friemi:android-qr-scan", handleAndroidQrScan);
+
+    return () => {
+      window.removeEventListener("friemi:android-qr-scan", handleAndroidQrScan);
+    };
+  }, [goToJoinCode]);
 
   useEffect(() => {
     if (!scannerOpen) {
@@ -391,7 +403,9 @@ export function WerewolfCreateRoomPanel({
               canvas.height,
             );
             const result = jsQR(imageData.data, imageData.width, imageData.height);
-            const scannedCode = result ? getRoomCodeFromScan(result.data) : "";
+            const scannedCode = result
+              ? getWerewolfRoomCodeFromScan(result.data)
+              : "";
 
             if (scannedCode) {
               scanHandledRef.current = true;
@@ -424,6 +438,30 @@ export function WerewolfCreateRoomPanel({
       }
     };
   }, [goToJoinCode, scannerOpen, t.scannerPermission, t.scannerUnsupported]);
+
+  function handleScanButtonClick() {
+    if (!canUseNativeAndroidQrScanner()) {
+      setScannerOpen(true);
+      return;
+    }
+
+    nativeScanPendingRef.current = true;
+    setScannerOpen(false);
+
+    try {
+      const payload = parseAndroidQrScanPayload(
+        window.FriemiAndroid?.scanQrCode?.(),
+      );
+
+      if (payload?.supported === false || payload?.ok === false) {
+        nativeScanPendingRef.current = false;
+        setScannerOpen(true);
+      }
+    } catch {
+      nativeScanPendingRef.current = false;
+      setScannerOpen(true);
+    }
+  }
 
   function handleJoinByCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -529,11 +567,11 @@ export function WerewolfCreateRoomPanel({
             <button
               aria-label={t.scanCodeAction}
               className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#D9C7B4] bg-[#FFFDF7] text-[#7A1F2B] transition hover:border-[#7A1F2B] hover:bg-[#FFF7F1]"
-              onClick={() => setScannerOpen(true)}
+              onClick={handleScanButtonClick}
               title={t.scanCodeAction}
               type="button"
             >
-              <Camera className="h-[1.125rem] w-[1.125rem]" />
+              <ScanLine className="h-[1.125rem] w-[1.125rem]" />
             </button>
             <button
               className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"

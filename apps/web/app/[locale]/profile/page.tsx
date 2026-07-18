@@ -23,12 +23,14 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     friendCount: 0,
     followersCount: 0,
     followingCount: 0,
+    momentCount: 0,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
     friends: [],
     followers: [],
     following: [],
+    moments: [],
     werewolfStats: {
       judgeCount: 0,
       lossCount: 0,
@@ -60,7 +62,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     });
 
   return (
-    <PageContainer className="space-y-4">
+    <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
       <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}

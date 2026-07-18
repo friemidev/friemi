@@ -73,6 +73,7 @@ import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewe
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -1404,13 +1405,13 @@ export async function ActivityDetailPageContent({
         locale={locale}
       />
       <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
-        <Link
+        <ActivityHistoryBackButton
           className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/78 text-[#111210]/60 transition active:scale-95"
-          href={withLocale(locale, "/lobby")}
-          aria-label={mobileDetailTitle}
+          fallbackHref={withLocale(locale, "/lobby")}
+          ariaLabel={mobileDetailTitle}
         >
           <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-        </Link>
+        </ActivityHistoryBackButton>
         <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
           {mobileDetailTitle}
         </p>

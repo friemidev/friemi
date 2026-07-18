@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import { Footprints, House, Orbit, Plus, UsersRound } from "lucide-react";
+import { Footprints, House, Plus, UserCircle2, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -75,9 +75,9 @@ export function MobileNav({ locale }: MobileNavProps) {
         tone: "rose",
       },
       {
-        href: "/planets",
-        label: t.nav.planetShort,
-        icon: Orbit,
+        href: "/profile",
+        label: t.nav.profileShort,
+        icon: UserCircle2,
         tone: "cream",
       },
     ],
@@ -86,7 +86,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       t.nav.footprintsShort,
       t.nav.lobbyShort,
       t.nav.newActivity,
-      t.nav.planetShort,
+      t.nav.profileShort,
     ],
   );
 

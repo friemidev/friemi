@@ -1,6 +1,7 @@
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import type {
   ActivityVisibility,
+  MomentVisibility,
   ParticipantStatus,
   Prisma,
 } from "@prisma/client";
@@ -64,6 +65,29 @@ const profilePublicEventFavoriteSelect = {
   },
 } satisfies Prisma.PublicEventFavoriteSelect;
 
+const profileMomentSelect = {
+  id: true,
+  content: true,
+  visibility: true,
+  resharedMomentId: true,
+  likeCount: true,
+  commentCount: true,
+  repostCount: true,
+  createdAt: true,
+  images: {
+    orderBy: {
+      sortOrder: "asc",
+    },
+    take: 1,
+    select: {
+      id: true,
+      url: true,
+      width: true,
+      height: true,
+    },
+  },
+} satisfies Prisma.MomentSelect;
+
 type ProfilePublicEventFavoriteQueryResult =
   Prisma.PublicEventFavoriteGetPayload<{
     select: typeof profilePublicEventFavoriteSelect;
@@ -92,12 +116,14 @@ export type ProfileDashboardViewModel = {
   friendCount: number;
   followersCount: number;
   followingCount: number;
+  momentCount: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
   favoriteActivities: ProfileFavoriteActivityViewModel[];
   friends: ProfileFriendUserViewModel[];
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
+  moments: ProfileMomentViewModel[];
   viewerRelationship: ProfileViewerRelationshipViewModel;
   werewolfStats: ProfileWerewolfStatsViewModel;
 };
@@ -106,6 +132,23 @@ export type ProfileFavoriteActivityViewModel = {
   id: string;
   createdAt: string;
   activity: ActivityCardViewModel;
+};
+
+export type ProfileMomentViewModel = {
+  id: string;
+  content: string | null;
+  visibility: MomentVisibility;
+  resharedMomentId: string | null;
+  likeCount: number;
+  commentCount: number;
+  repostCount: number;
+  createdAt: string;
+  image: {
+    id: string;
+    url: string;
+    width: number | null;
+    height: number | null;
+  } | null;
 };
 
 export type PublicProfileViewModel = {
@@ -201,6 +244,31 @@ function mapPublicEventFavorite(
   };
 }
 
+function mapProfileMoment(
+  moment: Prisma.MomentGetPayload<{ select: typeof profileMomentSelect }>,
+): ProfileMomentViewModel {
+  const image = moment.images[0] ?? null;
+
+  return {
+    id: moment.id,
+    content: moment.content,
+    visibility: moment.visibility,
+    resharedMomentId: moment.resharedMomentId,
+    likeCount: moment.likeCount,
+    commentCount: moment.commentCount,
+    repostCount: moment.repostCount,
+    createdAt: moment.createdAt.toISOString(),
+    image: image
+      ? {
+          id: image.id,
+          url: image.url,
+          width: image.width,
+          height: image.height,
+        }
+      : null,
+  };
+}
+
 function mapFollowUser(user: {
   id: string;
   nickname: string;
@@ -292,6 +360,34 @@ function getCreatedActivitiesWhere({
       },
       isSelf ? getOwnTeamActivityWhere() : getTeamActivityWhere(),
     ],
+  };
+}
+
+function getProfileMomentsWhere({
+  isFriend,
+  isSelf,
+  profileId,
+}: {
+  isFriend: boolean;
+  isSelf: boolean;
+  profileId: string;
+}): Prisma.MomentWhereInput {
+  const visibilityValues: MomentVisibility[] | null = isSelf
+    ? null
+    : isFriend
+      ? ["PUBLIC", "FRIENDS"]
+      : ["PUBLIC"];
+
+  return {
+    authorId: profileId,
+    deletedAt: null,
+    ...(visibilityValues
+      ? {
+          visibility: {
+            in: visibilityValues,
+          },
+        }
+      : {}),
   };
 }
 
@@ -446,6 +542,11 @@ export async function getProfileDashboard(
     isSelf: true,
     profileId,
   });
+  const momentsWhere = getProfileMomentsWhere({
+    isFriend: false,
+    isSelf: true,
+    profileId,
+  });
   const [
     createdActivityCount,
     participationCount,
@@ -454,6 +555,7 @@ export async function getProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities,
     participations,
     favoriteActivities,
@@ -461,6 +563,7 @@ export async function getProfileDashboard(
     friendships,
     followers,
     following,
+    moments,
     werewolfRecords,
   ] = await Promise.all([
     prisma.activity.count({
@@ -497,6 +600,9 @@ export async function getProfileDashboard(
       where: {
         followerId: profileId,
       },
+    }),
+    prisma.moment.count({
+      where: momentsWhere,
     }),
     prisma.activity.findMany({
       where: createdWhere,
@@ -595,6 +701,12 @@ export async function getProfileDashboard(
         },
       },
     }),
+    prisma.moment.findMany({
+      where: momentsWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileMomentSelect,
+    }),
     prisma.gameToolPlayerRecord.findMany({
       where: {
         kind: "WEREWOLF",
@@ -645,6 +757,7 @@ export async function getProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
@@ -659,6 +772,7 @@ export async function getProfileDashboard(
     ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    moments: moments.map(mapProfileMoment),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };
@@ -678,6 +792,11 @@ export async function getPublicProfileDashboard(
     isSelf: viewerProfileId === profileId,
     profileId,
   });
+  const momentsWhere = getProfileMomentsWhere({
+    isFriend: relationship.isFriend,
+    isSelf: viewerProfileId === profileId,
+    profileId,
+  });
   const pastParticipationWhere = getPublicPastParticipationsWhere({
     isFriend: relationship.isFriend,
     now,
@@ -689,11 +808,13 @@ export async function getPublicProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities,
     participations,
     friendships,
     followers,
     following,
+    moments,
     werewolfRecords,
   ] = await Promise.all([
     prisma.activity.count({
@@ -716,6 +837,9 @@ export async function getPublicProfileDashboard(
       where: {
         followerId: profileId,
       },
+    }),
+    prisma.moment.count({
+      where: momentsWhere,
     }),
     prisma.activity.findMany({
       where: createdWhere,
@@ -794,6 +918,12 @@ export async function getPublicProfileDashboard(
         },
       },
     }),
+    prisma.moment.findMany({
+      where: momentsWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileMomentSelect,
+    }),
     prisma.gameToolPlayerRecord.findMany({
       where: {
         kind: "WEREWOLF",
@@ -822,6 +952,7 @@ export async function getPublicProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
@@ -836,6 +967,7 @@ export async function getPublicProfileDashboard(
     ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    moments: moments.map(mapProfileMoment),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };

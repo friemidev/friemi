@@ -131,4 +131,5 @@ dependencies {
     implementation("androidx.browser:browser:1.8.0")
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }

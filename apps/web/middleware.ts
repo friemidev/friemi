@@ -27,7 +27,9 @@ const isProtectedRoute = createRouteMatcher([
   "/:locale/friends(.*)",
   "/:locale/messages(.*)",
   "/:locale/notifications(.*)",
-  "/:locale/profile(.*)",
+  "/:locale/profile",
+  "/:locale/profile/hangouts(.*)",
+  "/:locale/profile/network(.*)",
   "/:locale/public-events/:publicEventId/teams/new(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);

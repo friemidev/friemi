@@ -144,12 +144,15 @@ window.FriemiAndroid?.downloadFile(url)
 window.FriemiAndroid?.share(JSON.stringify({ title, text, url }))
 window.FriemiAndroid?.registerPushToken()
 window.FriemiAndroid?.getStoredPushToken()
+window.FriemiAndroid?.scanQrCode()
 window.FriemiAndroid?.setBackBehavior(JSON.stringify({ hasModal: true }))
 ```
 
 `getAppInfo()` returns a JSON string with platform, version, package, base URL, locale, and push placeholder status. The web app also reports modal / sheet state through `setBackBehavior`, so Android back closes open UI first before navigating away.
 
 `registerPushToken()` is asynchronous. The native shell requests the FCM token and dispatches a `friemi:android-push-token` browser event; the web bridge then posts the token to `/api/mobile/devices/register` using the current WebView login session.
+
+`scanQrCode()` opens the native Android QR scanner and dispatches `friemi:android-qr-scan` with a JSON string payload. The web app parses `rawValue` and decides whether it is a friend code, game room code, or another Friemi QR value.
 
 ## Firebase Cloud Messaging
 

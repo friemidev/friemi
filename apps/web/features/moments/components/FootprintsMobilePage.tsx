@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent, MouseEvent, TouchEvent } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode, TouchEvent } from "react";
 import {
   useActionState,
   useEffect,
@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ChevronDown,
@@ -34,8 +34,8 @@ import { openDirectConversationAction } from "@/features/direct-messages/actions
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
-import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
-import type { ProfileDashboardViewModel } from "@/features/profile/queries/getProfileDashboard";
+import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
+import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import {
   createMomentAction,
   createMomentCommentAction,
@@ -52,8 +52,9 @@ import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-type FootprintsTab = "moment" | "message" | "profile";
+type FootprintsTab = "message" | "moment" | "planet";
 type MomentFeedScope = "PUBLIC" | "FRIENDS";
+type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
 type FootprintsViewerProfile = {
   id: string;
@@ -71,9 +72,10 @@ type FootprintsMobilePageProps = {
   messageRosterError?: boolean;
   momentFeedError?: boolean;
   moments: MomentFeedItemViewModel[];
+  canCreatePlanet: boolean;
+  planets: PlanetSquare;
+  planetSquareError?: boolean;
   profile: FootprintsViewerProfile | null;
-  profileDashboard: ProfileDashboardViewModel;
-  profileDashboardError?: boolean;
 };
 
 type MomentCard = {
@@ -92,9 +94,9 @@ const copyByLocale = {
     title: "足迹",
     settings: "设置",
     tabs: {
-      moment: "Moment",
       message: "消息",
-      profile: "主页",
+      moment: "朋友圈",
+      planet: "星球",
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
@@ -170,9 +172,9 @@ const copyByLocale = {
     title: "Trace",
     settings: "Settings",
     tabs: {
-      moment: "Moment",
       message: "Message",
-      profile: "Profile",
+      moment: "Moments",
+      planet: "Planet",
     },
     composer: "Share a mood or a bright little moment...",
     addPhoto: "Add photo",
@@ -251,9 +253,9 @@ const copyByLocale = {
     title: "Trace",
     settings: "Réglages",
     tabs: {
-      moment: "Moment",
       message: "Message",
-      profile: "Profil",
+      moment: "Moments",
+      planet: "Planète",
     },
     composer: "Partage une humeur ou un instant à garder...",
     addPhoto: "Ajouter une photo",
@@ -735,18 +737,39 @@ function RepostMomentButton({
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="momentId" type="hidden" value={moment.id} />
-      <button
-        type="submit"
-        className={cn(
-          "inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold",
-          !canRepost && "cursor-not-allowed opacity-35",
-        )}
-        disabled={!canRepost}
-        aria-label={copy.repost}
-      >
-        {content}
-      </button>
+      <RepostMomentSubmitButton
+        canRepost={canRepost}
+        label={copy.repost}
+        content={content}
+      />
     </form>
+  );
+}
+
+function RepostMomentSubmitButton({
+  canRepost,
+  content,
+  label,
+}: {
+  canRepost: boolean;
+  content: ReactNode;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+  const disabled = !canRepost || pending;
+
+  return (
+    <button
+      type="submit"
+      className={cn(
+        "inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold",
+        disabled && "cursor-not-allowed opacity-35",
+      )}
+      disabled={disabled}
+      aria-label={label}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -1748,15 +1771,16 @@ function FootprintsMessageRow({
 }
 
 export function FootprintsMobilePage({
-  initialTab = "moment",
+  initialTab = "message",
   locale,
   messageFriends,
   messageRosterError = false,
   momentFeedError = false,
   moments,
+  canCreatePlanet,
+  planets,
+  planetSquareError = false,
   profile,
-  profileDashboard,
-  profileDashboardError = false,
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
@@ -1765,13 +1789,29 @@ export function FootprintsMobilePage({
   const signInHref = getSignInHref(locale, "/footprints");
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
-    { key: "moment", label: copy.tabs.moment },
     { key: "message", label: copy.tabs.message },
-    { key: "profile", label: copy.tabs.profile },
+    { key: "moment", label: copy.tabs.moment },
+    { key: "planet", label: copy.tabs.planet },
   ];
+  const dedupedMoments = useMemo(() => {
+    const seen = new Set<string>();
+
+    return moments.filter((moment) => {
+      const key = moment.resharedMoment
+        ? `repost:${moment.author.id}:${moment.resharedMoment.id}`
+        : `moment:${moment.id}`;
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }, [moments]);
   const scopedMoments = useMemo(
-    () => moments.filter((moment) => moment.visibility === feedScope),
-    [feedScope, moments],
+    () => dedupedMoments.filter((moment) => moment.visibility === feedScope),
+    [dedupedMoments, feedScope],
   );
   const feedScopeTabs: Array<{ key: MomentFeedScope; label: string }> = profile
     ? [
@@ -1891,23 +1931,22 @@ export function FootprintsMobilePage({
           </section>
         ) : null}
 
-        {activeTab === "profile" ? (
+        {activeTab === "planet" ? (
           <section className="mt-5 md:mx-auto md:max-w-3xl">
-            {profile ? (
-              <ProfileDashboardView
-                dashboard={profileDashboard}
-                hasDashboardError={profileDashboardError}
-                isAuthenticated
-                isSelf
-                locale={locale}
-                profile={profile}
-              />
+            {planetSquareError ? (
+              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
+                {locale === "fr"
+                  ? "Les planètes ne se chargent pas pour le moment."
+                  : locale === "en"
+                    ? "Planets could not load right now."
+                    : "星球暂时加载失败，请稍后再试。"}
+              </div>
             ) : (
-              <FootprintsAuthPrompt
-                actionLabel={copy.signIn}
-                description={copy.guestProfileDescription}
-                href={signInHref}
-                title={copy.guestProfileTitle}
+              <PlanetSquarePage
+                canCreate={canCreatePlanet}
+                embedded
+                locale={locale}
+                planets={planets}
               />
             )}
           </section>

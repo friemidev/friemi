@@ -47,6 +47,11 @@ import android.widget.Toast;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
 
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -960,6 +965,68 @@ public final class MainActivity extends Activity {
 
     String getStoredPushTokenFromBridge() {
         return FriemiPushTokenProvider.getStoredTokenPayload(this, resolveLocale(null));
+    }
+
+    String scanQrCodeFromBridge() {
+        mainHandler.post(() -> {
+            try {
+                GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                    .enableAutoZoom()
+                    .build();
+                GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, options);
+
+                scanner.startScan()
+                    .addOnSuccessListener(barcode ->
+                        dispatchQrScanResult(true, barcode.getRawValue(), null)
+                    )
+                    .addOnCanceledListener(() ->
+                        dispatchQrScanResult(false, null, "CANCELLED")
+                    )
+                    .addOnFailureListener(error ->
+                        dispatchQrScanResult(false, null, "FAILED")
+                    );
+            } catch (Exception error) {
+                dispatchQrScanResult(false, null, "FAILED");
+            }
+        });
+
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("ok", true);
+            payload.put("supported", true);
+            payload.put("status", "REQUESTED");
+        } catch (JSONException ignored) {
+            return "{\"ok\":false}";
+        }
+        return payload.toString();
+    }
+
+    private void dispatchQrScanResult(boolean ok, String rawValue, String reason) {
+        if (webView == null) {
+            return;
+        }
+
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("ok", ok);
+            payload.put("platform", "ANDROID");
+            if (!isBlank(rawValue)) {
+                payload.put("rawValue", rawValue);
+            }
+            if (!isBlank(reason)) {
+                payload.put("reason", reason);
+            }
+        } catch (JSONException ignored) {
+            return;
+        }
+
+        mainHandler.post(() -> webView.evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('friemi:android-qr-scan',{detail:"
+                + JSONObject.quote(payload.toString())
+                + "}))",
+            null
+        ));
     }
 
     private void dispatchPushTokenResult(String payloadJson) {

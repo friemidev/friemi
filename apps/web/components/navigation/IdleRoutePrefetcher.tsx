@@ -30,7 +30,7 @@ const coreMobilePrefetchTargets = [
   "/lobby",
   "/activities/new",
   "/footprints",
-  "/planets",
+  "/profile",
 ] as const;
 
 function getNetworkInformation() {
@@ -88,7 +88,7 @@ function getRouteAwarePrefetchTargets(routePath: string) {
   }
 
   if (routePath === "/footprints") {
-    return ["/messages", "/profile", "/lobby"];
+    return ["/messages", "/profile", "/planets", "/lobby"];
   }
 
   if (routePath === "/messages") {

@@ -485,9 +485,34 @@ export async function repostMomentAction(formData: FormData) {
   }
 
   let repostedMomentId: string | null = null;
+  let didCreateRepost = false;
 
   try {
     await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        select pg_advisory_xact_lock(
+          hashtext(${`moment-repost:${profile.id}`}),
+          hashtext(${sourceMoment.id})
+        )
+      `;
+
+      const existingRepost = await tx.moment.findFirst({
+        where: {
+          authorId: profile.id,
+          deletedAt: null,
+          resharedMomentId: sourceMoment.id,
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingRepost) {
+        repostedMomentId = existingRepost.id;
+        return;
+      }
+
       const repost = await tx.moment.create({
         data: {
           authorId: profile.id,
@@ -500,6 +525,7 @@ export async function repostMomentAction(formData: FormData) {
       });
 
       repostedMomentId = repost.id;
+      didCreateRepost = true;
 
       await tx.moment.update({
         where: {
@@ -514,6 +540,14 @@ export async function repostMomentAction(formData: FormData) {
     });
   } catch (error) {
     console.error("Failed to repost moment", error);
+    return;
+  }
+
+  if (!didCreateRepost) {
+    revalidateMomentSurfaces(result.data.locale);
+    revalidatePath(
+      withLocale(result.data.locale, `/footprints/${sourceMoment.id}`),
+    );
     return;
   }
 
