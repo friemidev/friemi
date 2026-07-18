@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
-import {
-  getProfileDashboard,
-  type ProfileDashboardViewModel,
-} from "@/features/profile/queries/getProfileDashboard";
+import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
+import { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 
@@ -19,36 +17,6 @@ type FootprintsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-
-function getEmptyProfileDashboard(): ProfileDashboardViewModel {
-  return {
-    createdActivityCount: 0,
-    participationCount: 0,
-    favoriteActivityCount: 0,
-    friendCount: 0,
-    followersCount: 0,
-    followingCount: 0,
-    createdActivities: [],
-    participations: [],
-    favoriteActivities: [],
-    friends: [],
-    followers: [],
-    following: [],
-    werewolfStats: {
-      judgeCount: 0,
-      lossCount: 0,
-      playerGameCount: 0,
-      winCount: 0,
-      winRate: 0,
-    },
-    viewerRelationship: {
-      friendshipId: null,
-      isFriend: false,
-      isFollowing: false,
-      pendingFriendRequest: null,
-    },
-  };
-}
 
 export async function generateMetadata({
   params,
@@ -70,9 +38,11 @@ export default async function FootprintsPage({
   const initialTab =
     query?.tab === "message"
       ? "message"
-      : query?.tab === "profile"
-        ? "profile"
-        : "moment";
+      : query?.tab === "moment"
+        ? "moment"
+        : query?.tab === "planet" || query?.tab === "profile"
+          ? "planet"
+          : "message";
   const perf = createPerformanceTracker({
     locale,
     route: "/footprints",
@@ -81,7 +51,7 @@ export default async function FootprintsPage({
     getOptionalCurrentUserProfileSnapshot(),
   );
   const viewerProfileId = profile?.id ?? null;
-  const [momentsResult, messageFriendsResult, dashboardResult] =
+  const [momentsResult, messageFriendsResult, planetsResult, canCreateResult] =
     await Promise.all([
       perf.measure("moments.feed", () => getMomentFeed(viewerProfileId))
         .then((moments) => ({ moments, error: null }))
@@ -108,32 +78,36 @@ export default async function FootprintsPage({
               };
             })
         : Promise.resolve({ friends: [], error: null }),
-      profile
-        ? perf
-            .measure("profile.dashboard", () => getProfileDashboard(profile.id))
-            .then((dashboard) => ({ dashboard, error: null }))
-            .catch((error: unknown) => {
-              console.error(
-                "Failed to load footprints profile dashboard",
-                error,
-              );
+      perf
+        .measure("planets.square", () => getPlanetSquare(viewerProfileId))
+        .then((planets) => ({ planets, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load footprints planet square", error);
 
-              return {
-                dashboard: getEmptyProfileDashboard(),
-                error,
-              };
-            })
-        : Promise.resolve({
-            dashboard: getEmptyProfileDashboard(),
-            error: null,
-          }),
+          return {
+            planets: [],
+            error,
+          };
+        }),
+      perf
+        .measure("planets.canCreate", () => canCreatePlanet(profile))
+        .then((canCreate) => ({ canCreate, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to resolve planet creation eligibility", error);
+
+          return {
+            canCreate: false,
+            error,
+          };
+        }),
     ]);
   perf.finish(
     {
       initialTab,
       messageFriendCount: messageFriendsResult.friends.length,
       momentCount: momentsResult.moments.length,
-      profileDashboardLoaded: Boolean(profile),
+      planetCount: planetsResult.planets.length,
+      planetCreationEligibilityLoaded: !canCreateResult.error,
     },
     {
       route: `/${locale}/footprints`,
@@ -163,8 +137,9 @@ export default async function FootprintsPage({
             }
           : null
       }
-      profileDashboard={dashboardResult.dashboard}
-      profileDashboardError={Boolean(dashboardResult.error)}
+      planets={planetsResult.planets}
+      planetSquareError={Boolean(planetsResult.error)}
+      canCreatePlanet={canCreateResult.canCreate}
     />
   );
 }

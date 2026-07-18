@@ -18,7 +18,6 @@ import { createPortal, useFormStatus } from "react-dom";
 import {
   AlertCircle,
   CalendarDays,
-  Camera,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -41,6 +40,10 @@ import { Button, Input, Textarea } from "@chill-club/ui";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import {
+  canUseNativeAndroidQrScanner,
+  parseAndroidQrScanPayload,
+} from "@/features/scan/globalQrScanner";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
@@ -221,6 +224,7 @@ function AddFriendForm({
   );
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const nativeQrScanPendingRef = useRef(false);
   const [preview, setPreview] = useState<FriendPreview>({
     user: null,
     status: null,
@@ -254,6 +258,39 @@ function AddFriendForm({
       setShowSentSuccess(false);
     }
   }, [initialSearchTerm]);
+
+  useEffect(() => {
+    function handleAndroidQrScan(event: Event) {
+      if (!nativeQrScanPendingRef.current) {
+        return;
+      }
+
+      nativeQrScanPendingRef.current = false;
+      const payload = parseAndroidQrScanPayload(
+        (event as CustomEvent<unknown>).detail,
+      );
+
+      if (!payload?.ok || !payload.rawValue) {
+        return;
+      }
+
+      const friendCode = extractFriendCodeFromQrValue(payload.rawValue);
+
+      if (friendCode) {
+        setSearchTerm(friendCode);
+        setShowSentSuccess(false);
+        return;
+      }
+
+      setQrScannerOpen(true);
+    }
+
+    window.addEventListener("friemi:android-qr-scan", handleAndroidQrScan);
+
+    return () => {
+      window.removeEventListener("friemi:android-qr-scan", handleAndroidQrScan);
+    };
+  }, []);
 
   useEffect(() => {
     if (state.formError) {
@@ -320,6 +357,30 @@ function AddFriendForm({
     };
   }, [locale, searchTerm]);
 
+  function handleQrScanButtonClick() {
+    if (!canUseNativeAndroidQrScanner()) {
+      setQrScannerOpen(true);
+      return;
+    }
+
+    nativeQrScanPendingRef.current = true;
+    setQrScannerOpen(false);
+
+    try {
+      const payload = parseAndroidQrScanPayload(
+        window.FriemiAndroid?.scanQrCode?.(),
+      );
+
+      if (payload?.supported === false || payload?.ok === false) {
+        nativeQrScanPendingRef.current = false;
+        setQrScannerOpen(true);
+      }
+    } catch {
+      nativeQrScanPendingRef.current = false;
+      setQrScannerOpen(true);
+    }
+  }
+
   return (
     <section
       className={cn(
@@ -353,7 +414,7 @@ function AddFriendForm({
         <button
           type="button"
           className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#8AB68E] bg-white/82 px-4 text-sm font-semibold text-[#156240] shadow-sm shadow-black/5 transition hover:bg-white"
-          onClick={() => setQrScannerOpen(true)}
+          onClick={handleQrScanButtonClick}
         >
           <ScanLine className="h-4 w-4" aria-hidden="true" />
           {t.scanQrAdd}
@@ -1149,7 +1210,7 @@ function FriendQrScannerDialog({
           )}
           <div className="mt-4 flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
-              <Camera className="h-3.5 w-3.5" />
+              <ScanLine className="h-3.5 w-3.5" />
               {t.scanQrManualFallback}
             </span>
             <button

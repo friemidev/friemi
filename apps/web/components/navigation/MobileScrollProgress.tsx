@@ -13,7 +13,9 @@ function shouldHideMobileScrollProgress(pathname: string) {
 
   if (
     firstRouteSegment === "game-tools" ||
+    firstRouteSegment === "profile" ||
     localizedRouteSegment === "game-tools" ||
+    localizedRouteSegment === "profile" ||
     (segments.length === 2 && firstRouteSegment === "messages") ||
     (segments.length === 3 && localizedRouteSegment === "messages")
   ) {
@@ -25,12 +27,14 @@ function shouldHideMobileScrollProgress(pathname: string) {
       (firstRouteSegment === "mobile-home" ||
         firstRouteSegment === "footprints" ||
         firstRouteSegment === "lobby" ||
-        firstRouteSegment === "planets")) ||
+        firstRouteSegment === "planets" ||
+        firstRouteSegment === "profile")) ||
     (segments.length === 2 &&
       (localizedRouteSegment === "mobile-home" ||
         localizedRouteSegment === "footprints" ||
         localizedRouteSegment === "lobby" ||
-        localizedRouteSegment === "planets")) ||
+        localizedRouteSegment === "planets" ||
+        localizedRouteSegment === "profile")) ||
     (segments.length === 2 &&
       firstRouteSegment === "activities" &&
       segments[1] === "new") ||

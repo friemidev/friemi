@@ -113,28 +113,74 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return <main className="min-h-[100svh] bg-[#f6f1ea] pb-[calc(6.4rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+0.8rem)] text-[#151713] md:bg-[#edf4fa] md:py-10">{children}</main>;
 }
 
-export function PlanetSquarePage({ canCreate, locale, planets }: { canCreate: boolean; locale: string; planets: PlanetSquare }) {
+export function PlanetSquarePage({
+  canCreate,
+  embedded = false,
+  locale,
+  planets,
+}: {
+  canCreate: boolean;
+  embedded?: boolean;
+  locale: string;
+  planets: PlanetSquare;
+}) {
   const copy = getPlanetCopy(locale);
-  return (
-    <PageShell>
-      <section className="mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl">
-        <div className="mb-5 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-[#1f6a4a]" />
-          <div><h1 className="text-xl font-black">{copy.title}</h1><p className="text-xs font-semibold text-[#718075]">{copy.subtitle}</p></div>
+  const content = (
+    <section
+      className={
+        embedded
+          ? "w-full"
+          : "mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl"
+      }
+    >
+      <div className="mb-5 flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-[#1f6a4a]" />
+        <div>
+          <h1 className="text-xl font-black">{copy.title}</h1>
+          <p className="text-xs font-semibold text-[#718075]">
+            {copy.subtitle}
+          </p>
         </div>
-        {planets.length ? <div className="grid grid-cols-2 gap-3">{planets.map((planet, index) => (
-          <Link className="group min-w-0" href={withLocale(locale, `/planets/${planet.slug}`)} key={planet.id}>
+      </div>
+      {planets.length ? (
+        <div className="grid grid-cols-2 gap-3">
+          {planets.map((planet, index) => (
+            <Link
+              className="group min-w-0"
+              href={withLocale(locale, `/planets/${planet.slug}`)}
+              key={planet.id}
+            >
             <PlanetCover coverImageUrl={planet.coverImageUrl} index={index} />
             <h2 className="mt-2 truncate text-sm font-black group-hover:text-[#1f6a4a]">{getPlanetName(planet, locale)}</h2>
             <p className="text-[11px] font-semibold text-[#7e827d]">{planet._count.members} {copy.memberUnit}</p>
           </Link>
-        ))}</div> : <div className="rounded-2xl border border-dashed border-[#d9d4b5] p-8 text-center text-sm text-[#7e827d]">还没有星球，成为第一个创建它的人吧。</div>}
-        {canCreate ? <Link className="mt-4 flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-dashed border-[#c7d5c1] bg-[#fffefb] text-[#216746] shadow-sm" href={withLocale(locale, "/planets/create")}>
-          <Plus className="h-8 w-8" /><span><strong className="block text-base">{copy.create}</strong><small className="font-semibold">{copy.createHint}</small></span>
-        </Link> : <p className="mt-4 rounded-2xl bg-[#edf3ea] px-4 py-3 text-center text-xs font-semibold text-[#58715f]">共创主理人可以创建并管理自己的星球。</p>}
-      </section>
-    </PageShell>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-[#d9d4b5] p-8 text-center text-sm text-[#7e827d]">
+          还没有星球，成为第一个创建它的人吧。
+        </div>
+      )}
+      {canCreate ? (
+        <Link
+          className="mt-4 flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-dashed border-[#c7d5c1] bg-[#fffefb] text-[#216746] shadow-sm"
+          href={withLocale(locale, "/planets/create")}
+        >
+          <Plus className="h-8 w-8" />
+          <span>
+            <strong className="block text-base">{copy.create}</strong>
+            <small className="font-semibold">{copy.createHint}</small>
+          </span>
+        </Link>
+      ) : (
+        <p className="mt-4 rounded-2xl bg-[#edf3ea] px-4 py-3 text-center text-xs font-semibold text-[#58715f]">
+          共创主理人可以创建并管理自己的星球。
+        </p>
+      )}
+    </section>
   );
+
+  return embedded ? content : <PageShell>{content}</PageShell>;
 }
 
 function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRoom }) {

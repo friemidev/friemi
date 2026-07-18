@@ -55,6 +55,11 @@ final class FriemiAndroidBridge {
     }
 
     @JavascriptInterface
+    public String scanQrCode() {
+        return activity.scanQrCodeFromBridge();
+    }
+
+    @JavascriptInterface
     public void setBackBehavior(String behaviorJson) {
         activity.updateBackBehaviorFromBridge(behaviorJson);
     }
