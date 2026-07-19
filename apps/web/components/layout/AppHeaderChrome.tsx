@@ -16,6 +16,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
   const localizedGameToolsPrefix = `${withLocale(locale, "/game-tools")}/`;
   const localizedMessagesPrefix = `${withLocale(locale, "/messages")}/`;
   const localizedProfilePrefix = `${withLocale(locale, "/profile")}/`;
+  const localizedAccountPrefix = `${withLocale(locale, "/account")}/`;
 
   return (
     pathname === withLocale(locale, "/mobile-home") ||
@@ -27,6 +28,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
     pathname.startsWith(localizedLobbyPrefix) ||
     pathname.startsWith(localizedMessagesPrefix) ||
     pathname.startsWith(localizedProfilePrefix) ||
+    pathname.startsWith(localizedAccountPrefix) ||
     pathname === withLocale(locale, "/activities/new") ||
     pathname === withLocale(locale, "/game-tools") ||
     pathname.startsWith(localizedGameToolsPrefix)

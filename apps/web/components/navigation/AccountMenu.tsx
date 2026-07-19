@@ -127,7 +127,7 @@ export function AccountMenu({
   viewerNickname = null,
   incomingFriendRequests = [],
 }: AccountMenuProps) {
-  const { signOut, openUserProfile } = useClerk();
+  const { signOut } = useClerk();
   const { user } = useUser();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -160,6 +160,7 @@ export function AccountMenu({
   const profileHref = withLocale(locale, "/profile");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
+  const accountSettingsHref = withLocale(locale, "/account/settings");
   const accountSecurityHref = withLocale(locale, "/account/security");
   const analyticsOpsHref = withLocale(locale, "/admin/analytics");
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
@@ -440,18 +441,13 @@ export function AccountMenu({
                 />
               </>
             ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                closeMenu();
-                openUserProfile();
-              }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
-            >
-              <Settings className="h-4 w-4 shrink-0 text-zinc-500" />
-              <span className="font-medium">{t.accountSettings}</span>
-            </button>
+            <MenuLink
+              href={accountSettingsHref}
+              icon={Settings}
+              label={t.accountSettings}
+              active={pathname === accountSettingsHref}
+              onClick={closeMenu}
+            />
             <MenuLink
               href={accountSecurityHref}
               icon={KeyRound}

@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
-import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
@@ -244,8 +243,8 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       location: "Paris",
       cityOptions: [
         { label: "Paris", href: "/activities?city=Paris" },
-        { label: "Lyon", href: "/activities?city=Lyon" },
-        { label: "Marseille", href: "/activities?city=Marseille" },
+        { label: "Pekin", href: "/activities?city=Beijing" },
+        { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
         { href: "/lobby?tab=nearby", label: "Tout" },
@@ -313,8 +312,8 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       location: "Paris",
       cityOptions: [
         { label: "Paris", href: "/activities?city=Paris" },
-        { label: "London", href: "/activities?city=London" },
-        { label: "New York", href: "/activities?city=New%20York" },
+        { label: "Beijing", href: "/activities?city=Beijing" },
+        { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
         { href: "/lobby?tab=nearby", label: "All" },
@@ -381,8 +380,8 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     location: "巴黎",
     cityOptions: [
       { label: "巴黎", href: "/activities?city=Paris" },
-      { label: "上海", href: "/activities?city=Shanghai" },
       { label: "北京", href: "/activities?city=Beijing" },
+      { label: "上海", href: "/activities?city=Shanghai" },
     ],
     filters: [
       { href: "/lobby?tab=nearby", label: "全部" },
@@ -554,7 +553,6 @@ function MobileHomeV23Experience({
               currentCity={copy.location}
               locale={locale}
             />
-            <LocaleSwitcher locale={locale} />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>

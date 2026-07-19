@@ -1104,7 +1104,7 @@ function SelfMobileProfileHome({
 
       <section className="mt-7 overflow-hidden rounded-[1rem] bg-white px-4 shadow-[0_12px_30px_rgba(17,18,16,0.05)] ring-1 ring-[#F0EDE2]">
         <MobileSettingRow
-          href={withLocale(locale, "/profile")}
+          href={withLocale(locale, "/account/settings")}
           icon={Settings}
           label={copy.accountSettings}
         />

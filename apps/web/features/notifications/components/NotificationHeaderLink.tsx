@@ -29,6 +29,10 @@ export function NotificationHeaderLink({
     ? `${t.title} (${t.unreadCount(unreadNotificationCount)})`
     : t.title;
 
+  if (active) {
+    return null;
+  }
+
   return (
     <IntentPrefetchLink
       aria-label={label}

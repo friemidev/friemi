@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { AppHeaderChrome } from "@/components/layout/AppHeaderChrome";
+import { AppHeaderCitySwitcher } from "@/components/layout/AppHeaderCitySwitcher";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
-import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
 import { UserMenu } from "@/components/navigation/UserMenu";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import {
@@ -43,7 +43,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <AppHeaderChrome locale={locale}>
-      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-3 sm:h-16 sm:px-4 lg:gap-3 lg:px-8">
+      <div className="mx-auto grid h-14 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-4 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto] lg:gap-3 lg:px-8">
         <Link
           href={withLocale(locale, "/home")}
           className="group flex shrink-0 items-center gap-2"
@@ -56,6 +56,8 @@ export function AppHeader({
           />
         </Link>
 
+        <AppHeaderCitySwitcher locale={locale} />
+
         <DesktopNav locale={locale} />
 
         <div className="flex min-w-0 items-center justify-end gap-1 lg:gap-2">
@@ -64,27 +66,30 @@ export function AppHeader({
             className="hidden min-[1480px]:flex"
             variant="header"
           />
-          <GlobalSearchIconLink locale={locale} />
-          <LocaleSwitcher locale={locale} />
+          <div className="hidden lg:block">
+            <GlobalSearchIconLink locale={locale} />
+          </div>
           {showNotificationNav ? (
             <NotificationHeaderLink
               locale={locale}
               initialUnreadNotificationCount={unreadNotificationCount}
             />
           ) : null}
-          <UserMenu
-            locale={locale}
-            isAuthenticated={isAuthenticated}
-            showAdminLink={showAdminNav}
-            viewerContactEmail={viewerContactEmail}
-            viewerEmail={viewerEmail}
-            viewerFriendCode={viewerFriendCode}
-            viewerPhone={viewerPhone}
-            viewerWechatId={viewerWechatId}
-            viewerNickname={viewerNickname}
-            incomingFriendRequests={incomingFriendRequests}
-            unreadNotificationCount={unreadNotificationCount}
-          />
+          <div className="hidden lg:block">
+            <UserMenu
+              locale={locale}
+              isAuthenticated={isAuthenticated}
+              showAdminLink={showAdminNav}
+              viewerContactEmail={viewerContactEmail}
+              viewerEmail={viewerEmail}
+              viewerFriendCode={viewerFriendCode}
+              viewerPhone={viewerPhone}
+              viewerWechatId={viewerWechatId}
+              viewerNickname={viewerNickname}
+              incomingFriendRequests={incomingFriendRequests}
+              unreadNotificationCount={unreadNotificationCount}
+            />
+          </div>
         </div>
       </div>
     </AppHeaderChrome>
