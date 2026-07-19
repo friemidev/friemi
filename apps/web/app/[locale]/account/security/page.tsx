@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountDeletionEntryCard } from "@/features/account/components/AccountDeletionEntryCard";
 import { AccountContactBindingsSection } from "@/features/account/components/AccountContactBindingsSection";
@@ -151,13 +151,23 @@ export default async function AccountSecurityPage({
   );
 
   return (
-    <PageContainer className="space-y-5 pb-24">
+    <PageContainer className="max-w-4xl space-y-5 px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:pt-8">
+      <div className="flex items-center">
+        <Link
+          href={withLocale(locale, "/account/settings")}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#1D1D1B] shadow-[0_8px_18px_rgba(17,18,16,0.05)] ring-1 ring-[#ECE6D5]"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </Link>
+      </div>
+
       <header className="rounded-2xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_18px_48px_rgba(21,98,64,0.06)] sm:p-6">
         <p className="inline-flex items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           {copy.eyebrow}
         </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
+        <h1 className="mt-4 text-[26px] font-black leading-tight tracking-normal text-ink sm:text-4xl sm:font-semibold">
           {copy.title}
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[#156240] sm:text-base">
