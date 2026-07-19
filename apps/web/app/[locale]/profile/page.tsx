@@ -24,6 +24,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followersCount: 0,
     followingCount: 0,
     momentCount: 0,
+    trustScore: 80,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],

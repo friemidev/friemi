@@ -74,6 +74,18 @@ enum UserRole {
   ADMIN
 }
 
+enum TrustScoreEventType {
+  ACTIVITY_CHECK_IN
+  INVITE_FRIEND
+  PHONE_VERIFIED
+  CLEAN_HALF_YEAR
+  NO_SHOW
+  USER_REPORT
+  MASS_REPORT
+  HARASSMENT_DM
+  ORGANIZER_REPORT
+}
+
 enum MobilePlatform {
   ANDROID
   IOS
@@ -225,9 +237,11 @@ model UserProfile {
   submittedReports       Report[]                   @relation("ReportReporter")
   reviewedReports        Report[]                   @relation("ReportReviewer")
   mobileDevices          MobileDevice[]
+  trustScoreEvents       TrustScoreEvent[]
   hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
   gameToolRoomMembers    GameToolRoomMember[]       @relation("GameToolRoomMemberProfile")
   gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
+  reviewedCheckIns       ActivityParticipant[]      @relation("ActivityCheckInReviewer")
   gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
   gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
   gameToolPlayerRecords  GameToolPlayerRecord[]     @relation("GameToolPlayerRecordProfile")
@@ -251,22 +265,22 @@ model UserProfile {
 }
 
 model Planet {
-  id          String           @id @default(cuid())
-  slug        String           @unique
-  inviteCode  String           @unique @db.VarChar(16)
-  name        String
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  inviteCode       String           @unique @db.VarChar(16)
+  name             String
   nameTranslations Json?
-  description String?          @db.Text
-  coverImageUrl String?
-  tags        String[]         @default([])
-  visibility  PlanetVisibility @default(PUBLIC)
-  ownerId     String
-  owner       UserProfile      @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members     PlanetMember[]
-  messages    PlanetMessage[]
-  moments     PlanetMoment[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  description      String?          @db.Text
+  coverImageUrl    String?
+  tags             String[]         @default([])
+  visibility       PlanetVisibility @default(PUBLIC)
+  ownerId          String
+  owner            UserProfile      @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members          PlanetMember[]
+  messages         PlanetMessage[]
+  moments          PlanetMoment[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([visibility, createdAt])
   @@index([ownerId, createdAt])
@@ -300,58 +314,61 @@ model PlanetMessage {
 }
 
 model PlanetMoment {
-  id        String      @id @default(cuid())
+  id        String                @id @default(cuid())
   planetId  String
   authorId  String
-  content   String      @db.Text
-  imageUrls String[]    @default([])
-  planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
-  author    UserProfile @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String                @db.Text
+  imageUrls String[]              @default([])
+  planet    Planet                @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author    UserProfile           @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   comments  PlanetMomentComment[]
   likes     PlanetMomentLike[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
   @@index([planetId, createdAt])
   @@index([authorId, createdAt])
 }
 
 model PlanetMomentComment {
-  id        String       @id @default(cuid())
+  id        String                    @id @default(cuid())
   momentId  String
   authorId  String
-  content   String       @db.Text
-  moment    PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  author    UserProfile  @relation("PlanetMomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String                    @db.Text
+  moment    PlanetMoment              @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  author    UserProfile               @relation("PlanetMomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   likes     PlanetMomentCommentLike[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
 
   @@index([momentId, createdAt])
   @@index([authorId, createdAt])
 }
 
 model PlanetMomentLike {
-  id String @id @default(cuid())
-  momentId String
+  id        String       @id @default(cuid())
+  momentId  String
   profileId String
-  moment PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  profile UserProfile @relation("PlanetMomentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  moment    PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  profile   UserProfile  @relation("PlanetMomentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
   @@unique([momentId, profileId])
   @@index([profileId, createdAt])
 }
 
 model PlanetMomentCommentLike {
-  id String @id @default(cuid())
+  id        String              @id @default(cuid())
   commentId String
   profileId String
-  comment PlanetMomentComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  profile UserProfile @relation("PlanetCommentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  comment   PlanetMomentComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  profile   UserProfile         @relation("PlanetCommentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+
   @@unique([commentId, profileId])
   @@index([profileId, createdAt])
 }
+
 model MobileDevice {
   id            String         @id @default(cuid())
   userProfileId String
@@ -421,6 +438,7 @@ model Activity {
   managementLogs    ActivityManagementLog[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
+  trustScoreEvents  TrustScoreEvent[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -546,21 +564,43 @@ model ActivitySourceLink {
 }
 
 model ActivityParticipant {
-  id               String                    @id @default(cuid())
-  activityId       String
-  userProfileId    String
-  status           ParticipantStatus         @default(APPROVED)
-  message          String?
-  joinedAt         DateTime                  @default(now())
-  cancelledAt      DateTime?
-  activity         Activity                  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  userProfile      UserProfile               @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
-  guestParticipant GuestActivityParticipant? @relation("GuestLinkedParticipant")
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
+  id                  String                    @id @default(cuid())
+  activityId          String
+  userProfileId       String
+  status              ParticipantStatus         @default(APPROVED)
+  message             String?
+  joinedAt            DateTime                  @default(now())
+  cancelledAt         DateTime?
+  checkInRequestedAt  DateTime?
+  checkedInAt         DateTime?
+  checkInCancelledAt  DateTime?
+  checkInReviewedById String?
+  activity            Activity                  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userProfile         UserProfile               @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  checkInReviewer     UserProfile?              @relation("ActivityCheckInReviewer", fields: [checkInReviewedById], references: [id], onDelete: SetNull)
+  guestParticipant    GuestActivityParticipant? @relation("GuestLinkedParticipant")
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+  @@index([checkInReviewedById])
+}
+
+model TrustScoreEvent {
+  id         String              @id @default(cuid())
+  profileId  String
+  profile    UserProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       TrustScoreEventType
+  delta      Int
+  activityId String?
+  activity   Activity?           @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  note       String?
+  createdAt  DateTime            @default(now())
+
+  @@unique([profileId, type, activityId])
+  @@index([profileId, createdAt])
+  @@index([activityId])
 }
 
 model GuestActivityParticipant {

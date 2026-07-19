@@ -39,6 +39,7 @@ import {
   parseAndroidQrScanPayload,
   resolveGlobalQrScanDestination,
 } from "@/features/scan/globalQrScanner";
+import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -984,8 +985,12 @@ function SelfMobileProfileHome({
             <span className="text-[10px] font-bold text-[#4F574F]">
               {copy.trusted}
             </span>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
-              <BadgeCheck className="h-5 w-5" />
+            <span className="inline-flex min-h-8 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-2 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+              <BadgeCheck className="h-4 w-4 shrink-0" />
+              {dashboard.trustScore}
+            </span>
+            <span className="max-w-[4.75rem] truncate text-[9px] font-bold leading-none text-[#8B907F]">
+              {getTrustLevelLabel(dashboard.trustScore, locale)}
             </span>
           </div>
         </div>

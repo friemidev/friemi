@@ -21,6 +21,7 @@ import {
   getPublicEventCardViewModel,
   publicEventSelect,
 } from "@/features/public-events/queries/getPublicEvents";
+import { calculateTrustScore } from "@/features/trust/trustScore";
 
 export const profileActivityListLimit = 12;
 export const profileFollowListLimit = 12;
@@ -117,6 +118,7 @@ export type ProfileDashboardViewModel = {
   followersCount: number;
   followingCount: number;
   momentCount: number;
+  trustScore: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
   favoriteActivities: ProfileFavoriteActivityViewModel[];
@@ -565,6 +567,7 @@ export async function getProfileDashboard(
     following,
     moments,
     werewolfRecords,
+    trustScoreAggregate,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -717,6 +720,14 @@ export async function getProfileDashboard(
         result: true,
       },
     }),
+    prisma.trustScoreEvent.aggregate({
+      where: {
+        profileId,
+      },
+      _sum: {
+        delta: true,
+      },
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -758,6 +769,7 @@ export async function getProfileDashboard(
     followersCount,
     followingCount,
     momentCount,
+    trustScore: calculateTrustScore(trustScoreAggregate._sum.delta),
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
@@ -816,6 +828,7 @@ export async function getPublicProfileDashboard(
     following,
     moments,
     werewolfRecords,
+    trustScoreAggregate,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -934,6 +947,14 @@ export async function getPublicProfileDashboard(
         result: true,
       },
     }),
+    prisma.trustScoreEvent.aggregate({
+      where: {
+        profileId,
+      },
+      _sum: {
+        delta: true,
+      },
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -953,6 +974,7 @@ export async function getPublicProfileDashboard(
     followersCount,
     followingCount,
     momentCount,
+    trustScore: calculateTrustScore(trustScoreAggregate._sum.delta),
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
