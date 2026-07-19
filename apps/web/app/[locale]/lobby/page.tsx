@@ -157,6 +157,7 @@ export default async function ActivityLobbyPage({
         <MobileLobbyV23View
           activeTab={initialMobileTab}
           activities={previewActivities}
+          initialCategoryFilter={initialCategoryFilter}
           isSignedIn={false}
           locale={locale}
         />
@@ -219,6 +220,7 @@ export default async function ActivityLobbyPage({
           ...lobby.friendJoinedActivities,
           ...lobby.friendHostedActivities,
         ]}
+        initialCategoryFilter={initialCategoryFilter}
         isSignedIn
         locale={locale}
         mineActivities={[

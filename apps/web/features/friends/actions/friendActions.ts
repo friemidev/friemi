@@ -37,13 +37,19 @@ export type FriendActionState = {
 };
 
 type FriendRequestLookupType = "friend_code" | "nickname" | "profile";
-type FriendActionReturnTo = "friends" | "messages";
+type FriendActionReturnTo = "friends" | "messages" | "footprints";
+
+const friendActionReturnToValues = [
+  "friends",
+  "messages",
+  "footprints",
+] as const;
 
 const sendFriendRequestSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   searchTerm: z.string().trim().min(1).max(120),
   message: z.string().trim().max(240).optional(),
-  returnTo: z.enum(["friends", "messages"]).default("friends"),
+  returnTo: z.enum(friendActionReturnToValues).default("friends"),
 });
 
 const sendFriendRequestToProfileSchema = z.object({
@@ -51,14 +57,14 @@ const sendFriendRequestToProfileSchema = z.object({
   targetProfileId: z.string().trim().min(1),
   message: z.string().trim().max(240).optional(),
   redirectPath: z.string().trim().min(1).optional(),
-  returnTo: z.enum(["friends", "messages"]).default("friends"),
+  returnTo: z.enum(friendActionReturnToValues).default("friends"),
 });
 
 const requestActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   requestId: z.string().min(1),
   redirectPath: z.string().trim().min(1).optional(),
-  returnTo: z.enum(["friends", "messages"]).default("friends"),
+  returnTo: z.enum(friendActionReturnToValues).default("friends"),
 });
 
 const friendshipActionSchema = z.object({
@@ -73,9 +79,16 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function normalizeFriendActionReturnTo(rawValue: string): FriendActionReturnTo {
+  return rawValue === "messages" || rawValue === "footprints"
+    ? rawValue
+    : "friends";
+}
+
 function refreshFriends(locale: string) {
   revalidatePath(withLocale(locale, "/friends"));
   revalidatePath(withLocale(locale, "/messages"));
+  revalidatePath(withLocale(locale, "/footprints"));
   revalidatePath(withLocale(locale, "/profile"));
 }
 
@@ -90,15 +103,30 @@ function redirectAfterFriendAction(
 function getFriendAnalyticsSourceSurface(
   returnTo: FriendActionReturnTo,
 ): AnalyticsSourceSurface {
-  return returnTo === "messages" ? "messages" : "profile";
+  return returnTo === "footprints"
+    ? "footprints"
+    : returnTo === "messages"
+      ? "messages"
+      : "profile";
 }
 
 function getFriendActionRoute(locale: string, returnTo: FriendActionReturnTo) {
-  return `/${locale}${returnTo === "messages" ? "/messages" : "/friends"}`;
+  const path =
+    returnTo === "footprints"
+      ? "/footprints"
+      : returnTo === "messages"
+        ? "/messages"
+        : "/friends";
+
+  return `/${locale}${path}`;
 }
 
 function getFriendActionRedirectPath(returnTo: FriendActionReturnTo) {
-  return returnTo === "messages" ? "/messages" : "/friends";
+  return returnTo === "footprints"
+    ? "/footprints?tab=message"
+    : returnTo === "messages"
+      ? "/messages"
+      : "/friends";
 }
 
 function resolveFriendActionRedirectPath(
@@ -448,18 +476,14 @@ export async function sendFriendRequestAction(
   });
 
   if (!result.success) {
-    const route = getFriendActionRoute(
-      fallbackLocale,
-      rawReturnTo === "messages" ? "messages" : "friends",
-    );
+    const fallbackReturnTo = normalizeFriendActionReturnTo(rawReturnTo);
+    const route = getFriendActionRoute(fallbackLocale, fallbackReturnTo);
 
     recordFriendRequestLatency({
       durationMs: getDurationMs(),
       locale: fallbackLocale,
       route,
-      sourceSurface: getFriendAnalyticsSourceSurface(
-        rawReturnTo === "messages" ? "messages" : "friends",
-      ),
+      sourceSurface: getFriendAnalyticsSourceSurface(fallbackReturnTo),
       status: "failed",
       statusReason: "invalid_request",
     });
@@ -550,18 +574,14 @@ export async function sendFriendRequestToProfileAction(
   });
 
   if (!result.success) {
-    const route = getFriendActionRoute(
-      fallbackLocale,
-      rawReturnTo === "messages" ? "messages" : "friends",
-    );
+    const fallbackReturnTo = normalizeFriendActionReturnTo(rawReturnTo);
+    const route = getFriendActionRoute(fallbackLocale, fallbackReturnTo);
 
     recordFriendRequestLatency({
       durationMs: getDurationMs(),
       locale: fallbackLocale,
       route,
-      sourceSurface: getFriendAnalyticsSourceSurface(
-        rawReturnTo === "messages" ? "messages" : "friends",
-      ),
+      sourceSurface: getFriendAnalyticsSourceSurface(fallbackReturnTo),
       status: "failed",
       statusReason: "invalid_request",
     });
