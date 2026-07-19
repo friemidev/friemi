@@ -12,7 +12,7 @@ import {
 } from "@/features/activities/components/MobileLobbyV23View";
 import {
   createEmptyActivityLobbyFeedPage,
-  getActivityLobbyInitial,
+  getActivityLobby,
   getActivityLobbyPreview,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
@@ -173,7 +173,7 @@ export default async function ActivityLobbyPage({
   }
 
   const lobby = await perf.measure("lobby.initialData", () =>
-    getActivityLobbyInitial(profile.id).catch((error: unknown) => {
+    getActivityLobby(profile.id).catch((error: unknown) => {
       console.error("Failed to load activity lobby", error);
 
       return {

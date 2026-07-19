@@ -65,8 +65,10 @@ type MobileLobbyV23Copy = {
   create: string;
   emptyDescription: string;
   emptyTitle: string;
+  friendEmptyTitle: string;
   friendEmptyDescription: string;
   friendGoing: (count: number) => string;
+  mineEmptyTitle: string;
   mineEmptyDescription: string;
   participants: string;
   signIn: string;
@@ -178,8 +180,10 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       create: "Créer",
       emptyDescription: "Les nouvelles sorties apparaîtront ici.",
       emptyTitle: "Aucun groupe pour le moment",
+      friendEmptyTitle: "Aucune sortie d'amis",
       friendEmptyDescription: "Connectez-vous pour voir les sorties de vos amis.",
       friendGoing: (count) => `${count} ami${count > 1 ? "s" : ""} y vont`,
+      mineEmptyTitle: "Aucune de vos sorties",
       mineEmptyDescription:
         "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
       participants: "pers.",
@@ -200,8 +204,10 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       create: "Create",
       emptyDescription: "Fresh hangouts will appear here.",
       emptyTitle: "No hangouts yet",
+      friendEmptyTitle: "No friend hangouts yet",
       friendEmptyDescription: "Sign in to see what friends are joining.",
       friendGoing: (count) => `${count} friend${count > 1 ? "s" : ""} going`,
+      mineEmptyTitle: "No personal hangouts yet",
       mineEmptyDescription:
         "Sign in to see hangouts you're hosting or joining.",
       participants: "people",
@@ -221,8 +227,10 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     create: "发布",
     emptyDescription: "新的组局会显示在这里。",
     emptyTitle: "暂时没有组局",
+    friendEmptyTitle: "暂无好友组局",
     friendEmptyDescription: "登录后可以看到好友参加的组局。",
     friendGoing: (count) => `${count} 位好友参加`,
+    mineEmptyTitle: "暂无我的组局",
     mineEmptyDescription: "登录后可以看到你发起和参加的组局。",
     participants: "人",
     signIn: "登录",
@@ -645,6 +653,18 @@ export function MobileLobbyV23View({
     (activeTab === "friends" || activeTab === "mine") && !isSignedIn;
   const signInPromptDescription =
     activeTab === "mine" ? copy.mineEmptyDescription : copy.friendEmptyDescription;
+  const emptyTitle =
+    activeTab === "friends"
+      ? copy.friendEmptyTitle
+      : activeTab === "mine"
+        ? copy.mineEmptyTitle
+        : copy.emptyTitle;
+  const emptyDescription =
+    activeTab === "friends"
+      ? copy.friendEmptyDescription
+      : activeTab === "mine"
+        ? copy.mineEmptyDescription
+        : copy.emptyDescription;
 
   return (
     <section className="mobile-v23-lobby min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+2.85rem)] text-[#111210] md:hidden">
@@ -716,7 +736,7 @@ export function MobileLobbyV23View({
 
         {showFriendSignIn ? (
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
-            <p className="text-[18px] font-black">{copy.emptyTitle}</p>
+            <p className="text-[18px] font-black">{emptyTitle}</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
               {signInPromptDescription}
             </p>
@@ -741,9 +761,9 @@ export function MobileLobbyV23View({
         ) : (
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
             <MapPin className="mx-auto h-7 w-7 text-[#096B45]" />
-            <p className="mt-3 text-[18px] font-black">{copy.emptyTitle}</p>
+            <p className="mt-3 text-[18px] font-black">{emptyTitle}</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
-              {copy.emptyDescription}
+              {emptyDescription}
             </p>
           </div>
         )}
