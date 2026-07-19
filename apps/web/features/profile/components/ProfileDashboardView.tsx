@@ -8,12 +8,10 @@ import { useClerk } from "@clerk/nextjs";
 import {
   ArrowLeft,
   BadgeCheck,
-  ChevronRight,
   Copy,
   Crown,
   Eye,
   Gift,
-  LogOut,
   Medal,
   MoreHorizontal,
   Package,
@@ -324,31 +322,6 @@ function ComingSoonFeature({
       </span>
       <span className="text-[11px] font-bold text-[#1D1D1B]">{label}</span>
     </button>
-  );
-}
-
-function MobileSettingRow({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 border-b border-[#EEF0EA] px-1 py-3.5 last:border-b-0"
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#8B907F]">
-        <Icon className="h-[1.125rem] w-[1.125rem]" />
-      </span>
-      <span className="min-w-0 flex-1 text-sm font-semibold text-[#1D1D1B]">
-        {label}
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#B8BBAE]" />
-    </Link>
   );
 }
 
@@ -843,34 +816,6 @@ function MobileProfileBioSubmitButton({
   );
 }
 
-function MobileSignOutRow({
-  label,
-  locale,
-}: {
-  label: string;
-  locale: string;
-}) {
-  const { signOut } = useClerk();
-
-  return (
-    <button
-      className="flex w-full items-center gap-3 px-1 py-4 text-left"
-      onClick={() => {
-        void signOut({ redirectUrl: withLocale(locale, "/") });
-      }}
-      type="button"
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFF1F1] text-[#9A2135]">
-        <LogOut className="h-4 w-4" />
-      </span>
-      <span className="min-w-0 flex-1 text-sm font-bold text-[#9A2135]">
-        {label}
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#8B907F]" />
-    </button>
-  );
-}
-
 function SelfMobileProfileHome({
   dashboard,
   locale,
@@ -988,7 +933,7 @@ function SelfMobileProfileHome({
             <ScanLine className="h-[1.125rem] w-[1.125rem]" />
           </button>
           <Link
-            href={withLocale(locale, "/account/security")}
+            href={withLocale(locale, "/account/settings")}
             aria-label={copy.settings}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
           >
@@ -1090,7 +1035,7 @@ function SelfMobileProfileHome({
           soon={copy.soon}
         />
         <Link
-          href={withLocale(locale, "/account/security")}
+          href={withLocale(locale, "/account/settings")}
           className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
         >
           <span className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[#FFF7DC] text-[#5F5743] shadow-[0_10px_18px_rgba(160,128,40,0.12)] ring-1 ring-[#E8D59D]">
@@ -1100,20 +1045,6 @@ function SelfMobileProfileHome({
             {copy.settings}
           </span>
         </Link>
-      </section>
-
-      <section className="mt-7 overflow-hidden rounded-[1rem] bg-white px-4 shadow-[0_12px_30px_rgba(17,18,16,0.05)] ring-1 ring-[#F0EDE2]">
-        <MobileSettingRow
-          href={withLocale(locale, "/account/settings")}
-          icon={Settings}
-          label={copy.accountSettings}
-        />
-        <MobileSettingRow
-          href={withLocale(locale, "/account/security")}
-          icon={ShieldCheck}
-          label={copy.accountSecurity}
-        />
-        <MobileSignOutRow label={copy.signOut} locale={locale} />
       </section>
 
     </div>
