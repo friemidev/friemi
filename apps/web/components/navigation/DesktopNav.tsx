@@ -79,7 +79,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
   }
 
   return (
-    <nav className="hidden h-full min-w-0 items-center justify-center gap-0 md:flex lg:gap-1">
+    <nav className="hidden h-full min-w-0 items-center justify-center gap-0 min-[1024px]:flex lg:gap-1">
       {items.map((item) => {
         const Icon = item.icon;
         const active = isItemActive(item.href);
