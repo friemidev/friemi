@@ -44,7 +44,7 @@ function readString(formData: FormData, key: string) {
 function parseImageUrls(value: string | undefined) {
   if (!value) return [];
   try {
-    const parsed = z.array(z.string().url()).max(4).safeParse(JSON.parse(value));
+    const parsed = z.array(z.string().url()).max(12).safeParse(JSON.parse(value));
     return parsed.success ? parsed.data : [];
   } catch {
     return [];
@@ -247,7 +247,9 @@ export async function createPlanetMomentAction(formData: FormData) {
   if (!result.data.content && imageUrls.length === 0) return;
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
-  await requirePlanetMember(result.data.planetId, profile.id);
+  const membership = await requirePlanetMember(result.data.planetId, profile.id);
+  if (String(membership.role) !== "OWNER") return;
+
   await prisma.planetMoment.create({
     data: {
       planetId: result.data.planetId,

@@ -1155,6 +1155,21 @@ html[data-home-motion-ready="true"]
   }
 }
 
+@keyframes planet-danmaku-drift {
+  0% {
+    transform: translateX(105vw);
+  }
+
+  100% {
+    transform: translateX(-120%);
+  }
+}
+
+.planet-danmaku {
+  animation: planet-danmaku-drift 11s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .co-creator-benefit-row,
   .co-creator-flow-card,
@@ -1168,6 +1183,7 @@ html[data-home-motion-ready="true"]
   .home-luxury-reveal,
   .mobile-home-category,
   .mobile-home-category__art,
+  .planet-danmaku,
   [data-home-reveal],
   .friemi-loading-dots span,
   .friemi-shimmer::after {

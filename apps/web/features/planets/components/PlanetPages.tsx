@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Heart, MessageCircle, Orbit, Plus, Send, Sparkles, Trash2, UsersRound } from "lucide-react";
+import { ArrowLeft, MessageCircle, Orbit, Plus, Send, Sparkles, Trash2, UsersRound } from "lucide-react";
 import {
   createPlanetAction,
   createPlanetMomentAction,
@@ -7,12 +7,11 @@ import {
   joinPlanetAction,
   leavePlanetAction,
   sendPlanetMessageAction,
-  togglePlanetMomentLikeAction,
   deletePlanetMomentAction,
-  togglePlanetCommentLikeAction,
 } from "@/features/planets/actions/planetActions";
 import { withLocale } from "@/lib/routes";
 import { PlanetRoomComposer } from "./PlanetRoomComposer";
+import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
 import type { getPlanetMoment, getPlanetRoom, getPlanetSquare } from "../queries/planetQueries";
@@ -187,6 +186,10 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
   const copy = getPlanetCopy(locale);
   const joined = Boolean(planet.viewerMembership);
 
+  if (String(planet.viewerMembership?.role) === "OWNER") {
+    return null;
+  }
+
   if (joined && planet.viewerMembership?.role !== "OWNER") {
     return <PlanetLeaveButton locale={locale} planetId={planet.id} planetSlug={planet.slug} />;
   }
@@ -274,7 +277,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
           </div>
         </section>
 
-        {joined ? <PlanetRoomComposer locale={locale} planetId={planet.id} planetSlug={planet.slug} /> : <p className="mt-4 rounded-xl bg-[#fff5e9] p-3 text-center text-xs font-semibold text-[#947147]">加入星球后可以参与群聊和发布动态。</p>}
+        {joined ? <PlanetRoomComposer canCreateMoment={String(planet.viewerMembership?.role) === "OWNER"} locale={locale} planetId={planet.id} planetSlug={planet.slug} /> : <p className="mt-4 rounded-xl bg-[#fff5e9] p-3 text-center text-xs font-semibold text-[#947147]">加入星球后可以参与群聊。</p>}
       </section>
     </PageShell>
   );
@@ -285,18 +288,33 @@ function LegacyPlanetMomentPage({ locale, moment }: { locale: string; moment: Pl
 }
 
 export function PlanetMomentPage({ locale, moment }: { locale: string; moment: PlanetMoment }) {
+  const photoUrls = moment.imageUrls.slice(0, 12);
+
   return (
     <PageShell>
       <section className="mx-auto w-full max-w-md px-4 md:rounded-[2rem] md:bg-[#fffefb] md:py-6 md:shadow-xl">
         <header className="flex items-center gap-3"><Link aria-label="返回星球房间" href={withLocale(locale, `/planets/${moment.planet.slug}`)}><ArrowLeft className="h-5 w-5" /></Link><div><h1 className="text-sm font-black">{getPlanetName(moment.planet, locale)}</h1><p className="text-[10px] text-[#778178]">精彩瞬间</p></div></header>
-        <article className="mt-4 rounded-2xl bg-white p-3 shadow-sm">
-          {moment.imageUrls.length ? <div className={`grid gap-1 overflow-hidden rounded-xl ${moment.imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>{moment.imageUrls.slice(0, 4).map((imageUrl, index) => <img alt="星球精彩瞬间" className={`h-32 w-full object-cover ${moment.imageUrls.length === 3 && index === 0 ? "row-span-2 h-full" : ""}`} key={`${imageUrl}-${index}`} src={imageUrl} style={{ objectPosition: `${30 + index * 20}% center` }} />)}</div> : <div className="flex h-48 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#e9d6bb,#b78964)] text-5xl">🪐</div>}
-          <div className="mt-4 flex items-center gap-2"><Avatar avatarUrl={moment.author.avatarUrl} name={moment.author.nickname} /><div><p className="text-sm font-black">{moment.author.nickname}</p><p className="text-[11px] text-[#7d877e]">{moment.createdAt.toLocaleDateString()}</p></div></div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{moment.content}</p>
+        <article className="mt-4">
+          <PlanetMomentCarousel
+            authorName={moment.author.nickname}
+            comments={moment.comments}
+            content={moment.content}
+            createdAtLabel={moment.createdAt.toLocaleDateString()}
+            imageUrls={photoUrls}
+            isLiked={Boolean(moment.likes?.length)}
+            likeCount={moment._count?.likes ?? 0}
+            locale={locale}
+            momentId={moment.id}
+            planetId={moment.planet.id}
+            planetSlug={moment.planet.slug}
+          />
+          <div className="mt-4 rounded-2xl bg-white/80 p-3">
+          <div className="flex items-center gap-2"><Avatar avatarUrl={moment.author.avatarUrl} name={moment.author.nickname} /><div><p className="text-sm font-black">{moment.author.nickname}</p><p className="text-[11px] text-[#7d877e]">{moment.createdAt.toLocaleDateString()}</p></div></div>
+          {moment.content ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{moment.content}</p> : null}
           {moment.isViewerAuthor ? <form action={deletePlanetMomentAction} className="mt-2"><input name="locale" type="hidden" value={locale} /><input name="planetId" type="hidden" value={moment.planet.id} /><input name="planetSlug" type="hidden" value={moment.planet.slug} /><input name="momentId" type="hidden" value={moment.id} /><button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit"><Trash2 className="h-3.5 w-3.5" />删除</button></form> : null}
-          <form action={togglePlanetMomentLikeAction} className="mt-3"><input name="locale" type="hidden" value={locale} /><input name="planetId" type="hidden" value={moment.planet.id} /><input name="planetSlug" type="hidden" value={moment.planet.slug} /><input name="momentId" type="hidden" value={moment.id} /><button aria-label="点赞" className={`inline-flex items-center gap-1 text-sm font-bold ${(moment.likes?.length ?? 0) ? "text-[#ba4439]" : "text-[#718075]"}`}><Heart className={`h-4 w-4 ${(moment.likes?.length ?? 0) ? "fill-current" : ""}`} />{(moment._count?.likes ?? 0) || null}</button></form>
+          </div>
         </article>
-        <section className="mt-5"><h2 className="text-sm font-black">评论 {moment.comments.length}</h2><div className="mt-3 space-y-3">{moment.comments.map((comment) => <div className="flex gap-2" key={comment.id}><Avatar avatarUrl={comment.author.avatarUrl} name={comment.author.nickname} /><div><p className="text-xs font-black">{comment.author.nickname}</p><p className="text-sm">{comment.content}</p></div></div>)}</div>{moment.viewerMembership ? <form action={createPlanetMomentCommentAction} className="mt-4 flex gap-2"><input name="locale" type="hidden" value={locale} /><input name="planetId" type="hidden" value={moment.planet.id} /><input name="planetSlug" type="hidden" value={moment.planet.slug} /><input name="momentId" type="hidden" value={moment.id} /><input className="min-w-0 flex-1 rounded-full bg-white px-4 py-2 text-sm outline-none" maxLength={1000} name="content" placeholder="说点什么..." required /><button aria-label="发送评论" className="rounded-full bg-[#246c4b] p-2 text-white"><Send className="h-4 w-4" /></button></form> : null}</section>
+        <section className="mt-5"><h2 className="text-sm font-black">弹幕 {moment.comments.length}</h2><div className="mt-3 flex flex-wrap gap-2">{moment.comments.map((comment) => <div className="max-w-full rounded-full bg-[#eef4eb] px-3 py-2 text-xs font-bold text-[#245f43]" key={comment.id}>{comment.author.nickname}：{comment.content}</div>)}</div>{moment.viewerMembership ? <form action={createPlanetMomentCommentAction} className="mt-4 flex gap-2"><input name="locale" type="hidden" value={locale} /><input name="planetId" type="hidden" value={moment.planet.id} /><input name="planetSlug" type="hidden" value={moment.planet.slug} /><input name="momentId" type="hidden" value={moment.id} /><input className="min-w-0 flex-1 rounded-full bg-white px-4 py-2 text-sm outline-none" maxLength={1000} name="content" placeholder="发布弹幕..." required /><button aria-label="发布弹幕" className="rounded-full bg-[#246c4b] p-2 text-white"><Send className="h-4 w-4" /></button></form> : null}</section>
       </section>
     </PageShell>
   );
