@@ -297,11 +297,15 @@ async function getFriendPeerIds(
 function sortFriendRosterItems(
   items: DirectMessageFriendRosterItemViewModel[],
 ) {
+  const getLastContactTime = (item: DirectMessageFriendRosterItemViewModel) =>
+    new Date(
+      item.lastMessage?.createdAt ?? item.lastMessageAt ?? item.createdAt,
+    ).getTime();
+
   return [...items].sort((itemA, itemB) => {
-    if (itemA.lastMessageAt && itemB.lastMessageAt) {
+    if (itemA.lastMessage || itemB.lastMessage) {
       return (
-        new Date(itemB.lastMessageAt).getTime() -
-          new Date(itemA.lastMessageAt).getTime() ||
+        getLastContactTime(itemB) - getLastContactTime(itemA) ||
         itemA.friendshipId.localeCompare(itemB.friendshipId)
       );
     }
@@ -421,6 +425,17 @@ export async function getDirectMessageFriendRoster(
               getConversationPair(currentUserProfileId, friendId),
             ),
           },
+          orderBy: [
+            {
+              lastMessageAt: {
+                sort: "desc",
+                nulls: "last",
+              },
+            },
+            {
+              createdAt: "desc",
+            },
+          ],
           select: conversationListSelect,
         }),
     getFriendNearestActivitySignals({
@@ -452,7 +467,10 @@ export async function getDirectMessageFriendRoster(
         friend,
         conversationId: conversation?.id ?? null,
         lastMessage: conversation ? mapLastMessage(conversation) : null,
-        lastMessageAt: conversation?.lastMessageAt?.toISOString() ?? null,
+        lastMessageAt:
+          conversation?.lastMessageAt?.toISOString() ??
+          conversation?.messages[0]?.createdAt.toISOString() ??
+          null,
         createdAt: friendship.createdAt.toISOString(),
         recentActivities: activitiesByFriendId.get(friend.id) ?? [],
       };

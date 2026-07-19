@@ -75,6 +75,7 @@ type FriendAction = (
   previousState: FriendActionState,
   formData: FormData,
 ) => Promise<FriendActionState>;
+type FriendDialogReturnTo = "friends" | "messages" | "footprints";
 
 const initialState: FriendActionState = {};
 
@@ -213,7 +214,7 @@ function AddFriendForm({
   currentUserFriendCode?: string | null;
   initialSearchTerm?: string;
   locale: string;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
   showHeader?: boolean;
 }) {
   const router = useRouter();
@@ -676,7 +677,7 @@ export function AddFriendDialog({
   incomingRequests?: FriendRequestViewModel[];
   locale: string;
   onClose: () => void;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
 }) {
   const t = getFriendsCopy(locale);
   const titleId = "add-friend-dialog-title";
@@ -801,7 +802,7 @@ export function IncomingFriendRequestsPanel({
   incomingRequests: FriendRequestViewModel[];
   locale: string;
   redirectPath?: string;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
 }) {
   const t = getFriendsCopy(locale);
 
@@ -1430,7 +1431,7 @@ export function IncomingRequestCard({
   locale: string;
   redirectPath?: string;
   request: FriendRequestViewModel;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
 }) {
   const t = getFriendsCopy(locale);
 
@@ -1488,7 +1489,7 @@ export function FriendRequestActionButtons({
   locale: string;
   redirectPath?: string;
   requestId: string;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
 }) {
   const t = getFriendsCopy(locale);
 
@@ -1568,7 +1569,7 @@ function SmallActionForm({
   locale: string;
   redirectPath?: string;
   requestId: string;
-  returnTo?: "friends" | "messages";
+  returnTo?: FriendDialogReturnTo;
   variant?: "primary" | "secondary" | "success";
 }) {
   const [state, formAction] = useActionState(action, initialState);

@@ -12,6 +12,7 @@ type AppHeaderChromeProps = {
 
 function shouldHideHeaderOnMobile(pathname: string, locale: string) {
   const localizedLobbyPrefix = `${withLocale(locale, "/lobby")}/`;
+  const localizedFootprintsPrefix = `${withLocale(locale, "/footprints")}/`;
   const localizedGameToolsPrefix = `${withLocale(locale, "/game-tools")}/`;
   const localizedMessagesPrefix = `${withLocale(locale, "/messages")}/`;
   const localizedProfilePrefix = `${withLocale(locale, "/profile")}/`;
@@ -22,6 +23,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
     pathname === withLocale(locale, "/planets") ||
     pathname === withLocale(locale, "/profile") ||
     pathname === withLocale(locale, "/lobby") ||
+    pathname.startsWith(localizedFootprintsPrefix) ||
     pathname.startsWith(localizedLobbyPrefix) ||
     pathname.startsWith(localizedMessagesPrefix) ||
     pathname.startsWith(localizedProfilePrefix) ||

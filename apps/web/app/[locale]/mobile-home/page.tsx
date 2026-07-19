@@ -248,10 +248,10 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         { label: "Marseille", href: "/activities?city=Marseille" },
       ],
       filters: [
-        { href: "/lobby", label: "Tout" },
-        { href: "/activities?city=Paris", label: "Proche" },
-        { href: "/activities?dateRange=TODAY", label: "Aujourd'hui" },
-        { href: "/lobby?filter=friendJoined", label: "Amis" },
+        { href: "/lobby?tab=nearby", label: "Tout" },
+        { href: "/lobby?tab=nearby", label: "Proche" },
+        { href: "/lobby?tab=today", label: "Aujourd'hui" },
+        { href: "/lobby?tab=friends", label: "Amis" },
         { href: "/activities?q=gratuit", label: "Gratuit" },
       ],
       categoriesTitle: "Catégories populaires",
@@ -276,7 +276,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "BOARD_GAME",
           coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          href: "/lobby?category=BOARD_GAME",
+          href: "/lobby?tab=nearby&category=BOARD_GAME",
           meta: "6 / 8 personnes",
           title: "Soirée jeux",
         },
@@ -290,7 +290,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "FOOD",
           coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-          href: "/lobby?category=FOOD",
+          href: "/lobby?tab=nearby&category=FOOD",
           meta: "4 / 6 personnes",
           title: "Café & discussion",
         },
@@ -317,10 +317,10 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         { label: "New York", href: "/activities?city=New%20York" },
       ],
       filters: [
-        { href: "/lobby", label: "All" },
-        { href: "/activities?city=Paris", label: "Nearby" },
-        { href: "/activities?dateRange=TODAY", label: "Today" },
-        { href: "/lobby?filter=friendJoined", label: "Friends" },
+        { href: "/lobby?tab=nearby", label: "All" },
+        { href: "/lobby?tab=nearby", label: "Nearby" },
+        { href: "/lobby?tab=today", label: "Today" },
+        { href: "/lobby?tab=friends", label: "Friends" },
         { href: "/activities?q=free", label: "Free" },
       ],
       categoriesTitle: "Popular Categories",
@@ -345,7 +345,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "BOARD_GAME",
           coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          href: "/lobby?category=BOARD_GAME",
+          href: "/lobby?tab=nearby&category=BOARD_GAME",
           meta: "6 / 8 people",
           title: "Board Game Night",
         },
@@ -359,7 +359,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "FOOD",
           coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-          href: "/lobby?category=FOOD",
+          href: "/lobby?tab=nearby&category=FOOD",
           meta: "4 / 6 people",
           title: "Cafe & Talk",
         },
@@ -385,10 +385,10 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       { label: "北京", href: "/activities?city=Beijing" },
     ],
     filters: [
-      { href: "/lobby", label: "全部" },
-      { href: "/activities?city=Paris", label: "附近" },
-      { href: "/activities?dateRange=TODAY", label: "今天" },
-      { href: "/lobby?filter=friendJoined", label: "好友" },
+      { href: "/lobby?tab=nearby", label: "全部" },
+      { href: "/lobby?tab=nearby", label: "附近" },
+      { href: "/lobby?tab=today", label: "今天" },
+      { href: "/lobby?tab=friends", label: "好友" },
       { href: "/activities?q=免费", label: "免费" },
     ],
     categoriesTitle: "热门分类",
@@ -413,7 +413,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       {
         category: "BOARD_GAME",
         coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-        href: "/lobby?category=BOARD_GAME",
+        href: "/lobby?tab=nearby&category=BOARD_GAME",
         meta: "6 / 8 人",
         title: "今晚桌游局",
       },
@@ -427,7 +427,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       {
         category: "FOOD",
         coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-        href: "/lobby?category=FOOD",
+        href: "/lobby?tab=nearby&category=FOOD",
         meta: "4 / 6 人",
         title: "咖啡聊天",
       },
@@ -931,7 +931,7 @@ function MobileHomeExperience({
                   key={`${category.category}-${category.label}-${index}`}
                   href={withLocale(
                     locale,
-                    `/lobby?category=${category.category}`,
+                    `/lobby?tab=nearby&category=${category.category}`,
                   )}
                   className="mobile-home-category group flex min-h-0 min-w-0 flex-col items-center justify-center text-center md:rounded-[1.45rem] md:bg-[#FEFFF9]/68 md:px-3 md:py-3 md:shadow-[0_16px_34px_rgba(21,98,64,0.08)] md:ring-1 md:ring-[#D6D5B2]/65 md:backdrop-blur-sm md:transition md:hover:-translate-y-1 md:hover:bg-white/88 md:hover:shadow-[0_22px_44px_rgba(21,98,64,0.13)]"
                   style={

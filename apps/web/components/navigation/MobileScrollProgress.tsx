@@ -12,8 +12,10 @@ function shouldHideMobileScrollProgress(pathname: string) {
   const localizedRouteSegment = segments[1];
 
   if (
+    firstRouteSegment === "footprints" ||
     firstRouteSegment === "game-tools" ||
     firstRouteSegment === "profile" ||
+    localizedRouteSegment === "footprints" ||
     localizedRouteSegment === "game-tools" ||
     localizedRouteSegment === "profile" ||
     (segments.length === 2 && firstRouteSegment === "messages") ||

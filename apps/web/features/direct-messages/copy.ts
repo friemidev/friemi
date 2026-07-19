@@ -37,6 +37,7 @@ type DirectMessagesCopy = {
   viewProfile: string;
   openFriends: string;
   openConversation: (name: string) => string;
+  searchPlaceholder: string;
   startConversation: string;
   activityContextLabel: string;
   activityContextCta: string;
@@ -101,6 +102,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       viewProfile: "Voir le profil",
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
+      searchPlaceholder: "Rechercher une discussion",
       startConversation: "Message",
       activityContextLabel: "À propos de cette sortie",
       activityContextCta: "Voir la sortie",
@@ -175,6 +177,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       viewProfile: "View profile",
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
+      searchPlaceholder: "Search chats",
       startConversation: "Message",
       activityContextLabel: "About this activity",
       activityContextCta: "View activity",
@@ -245,6 +248,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     viewProfile: "查看主页",
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
+    searchPlaceholder: "搜索聊天",
     startConversation: "发消息",
     activityContextLabel: "关于这个组局",
     activityContextCta: "查看组局",

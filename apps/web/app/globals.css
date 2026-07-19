@@ -452,6 +452,61 @@ a {
   }
 }
 
+@keyframes mobile-lobby-category-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-lobby-category-panel-in {
+  from {
+    opacity: 0.92;
+    transform: translate3d(100%, 0, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes mobile-lobby-category-item-in {
+  from {
+    opacity: 0;
+    transform: translate3d(1.45rem, 0, 0) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.mobile-lobby-category-drawer__backdrop {
+  animation: mobile-lobby-category-backdrop-in 180ms ease-out both;
+}
+
+.mobile-lobby-category-drawer__panel {
+  animation: mobile-lobby-category-panel-in 320ms cubic-bezier(0.19, 1, 0.22, 1) both;
+  will-change: transform;
+}
+
+.mobile-lobby-category-drawer__item {
+  animation: mobile-lobby-category-item-in 360ms cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-lobby-category-drawer__backdrop,
+  .mobile-lobby-category-drawer__panel,
+  .mobile-lobby-category-drawer__item {
+    animation: none;
+  }
+}
+
 @keyframes avalon-tool-rise {
   from {
     opacity: 0;

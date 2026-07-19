@@ -80,7 +80,10 @@ export function MobileHomeV23CategoryCarousel({
             {page.map((item) => (
               <Link
                 key={`${item.category}-${item.label}`}
-                href={withLocale(locale, `/lobby?category=${item.category}`)}
+                href={withLocale(
+                  locale,
+                  `/lobby?tab=nearby&category=${item.category}`,
+                )}
                 className="group flex h-[7.35rem] min-w-0 flex-col items-center justify-end overflow-hidden rounded-[1rem] bg-white"
                 aria-label={item.label}
               >

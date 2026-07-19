@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
 import { withLocale } from "@/lib/routes";
-import { FeedCard, getFootprintsCopy } from "./FootprintsMobilePage";
+import { MomentDetailContent, getFootprintsCopy } from "./FootprintsMobilePage";
 
 type MomentDetailMobilePageProps = {
   locale: string;
@@ -38,7 +38,7 @@ export function MomentDetailMobilePage({
           <span aria-hidden className="h-11 w-11" />
         </header>
 
-        <FeedCard
+        <MomentDetailContent
           deleteRedirectPath="/footprints?tab=moment"
           isAuthenticated={Boolean(profile)}
           locale={locale}
