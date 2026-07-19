@@ -39,6 +39,8 @@ import { ClaimAutoCreatedActivityButton } from "@/features/activities/components
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
 import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
+import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
+import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
@@ -57,6 +59,7 @@ import {
 } from "@/features/activities/queries/getActivityById";
 import { getActivityComments } from "@/features/activities/queries/getActivityComments";
 import { getActivityCoManagerDashboard } from "@/features/activities/queries/getActivityCoManagerDashboard";
+import { getActivityCheckInRoster } from "@/features/activities/queries/getActivityCheckInRoster";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
@@ -1303,6 +1306,9 @@ export async function ActivityDetailPageContent({
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
+  const canCheckInViewerParticipation =
+    viewerParticipation?.status === "JOINED" ||
+    viewerParticipation?.status === "APPROVED";
   const mobileDetailTitle =
     locale === "fr"
       ? "Détail du groupe"
@@ -1348,7 +1354,7 @@ export async function ActivityDetailPageContent({
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
-  const [pendingParticipants, analyticsSummary] = await Promise.all([
+  const [pendingParticipants, analyticsSummary, checkInRoster] = await Promise.all([
     isTeamOperator && activity.requiresApproval && viewerProfile
       ? perf.measure("activity.pendingParticipants", () =>
           getPendingParticipants(activity.id, viewerProfile.id),
@@ -1359,6 +1365,11 @@ export async function ActivityDetailPageContent({
           getActivityAnalyticsSummary(activity.id),
         )
       : Promise.resolve(null),
+    isTeamOperator && viewerProfile
+      ? perf.measure("activity.checkInRoster", () =>
+          getActivityCheckInRoster(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
   ]);
   perf.finish(
     {
@@ -1530,7 +1541,7 @@ export async function ActivityDetailPageContent({
                   )}
                 </span>
               </UserProfilePreviewPopover>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-[13.5px] font-black leading-tight text-ink">
                   {activity.organizer.nickname}
                 </p>
@@ -1538,6 +1549,19 @@ export async function ActivityDetailPageContent({
                   {activity.organizer.bio ?? t.activityDetail.emptyOrganizerBio}
                 </p>
               </div>
+              {!isTeamOperator && canCheckInViewerParticipation ? (
+                <ActivityCheckInForm
+                  activityId={activity.id}
+                  checkInRequestedAt={
+                    viewerParticipation?.checkInRequestedAt?.toISOString() ??
+                    null
+                  }
+                  checkedInAt={
+                    viewerParticipation?.checkedInAt?.toISOString() ?? null
+                  }
+                  locale={locale}
+                />
+              ) : null}
             </div>
           </div>
           {mobileParticipantPreview.length > 0 ? (
@@ -1925,6 +1949,11 @@ export async function ActivityDetailPageContent({
                     locale={locale}
                   />
                 ) : null}
+                <ActivityCheckInReviewPanel
+                  activityId={activity.id}
+                  locale={locale}
+                  participants={checkInRoster}
+                />
                 <div className="grid gap-2 rounded-2xl border border-sand bg-white/74 p-3">
                   {!isCancelled && !isEndedByTime ? (
                     <p className="text-xs leading-5 text-zinc-500">
@@ -1950,6 +1979,19 @@ export async function ActivityDetailPageContent({
               </div>
             ) : (
               <div className="grid gap-3">
+                {canCheckInViewerParticipation ? (
+                  <ActivityCheckInForm
+                    activityId={activity.id}
+                    checkInRequestedAt={
+                      viewerParticipation?.checkInRequestedAt?.toISOString() ??
+                      null
+                    }
+                    checkedInAt={
+                      viewerParticipation?.checkedInAt?.toISOString() ?? null
+                    }
+                    locale={locale}
+                  />
+                ) : null}
                 <JoinActivityForm
                   activityId={activity.id}
                   activityTitle={activity.title}
@@ -2345,6 +2387,11 @@ export async function ActivityDetailPageContent({
                   locale={locale}
                 />
               ) : null}
+              <ActivityCheckInReviewPanel
+                activityId={activity.id}
+                locale={locale}
+                participants={checkInRoster}
+              />
               <div className="rounded-2xl border border-sand bg-white/76 p-3">
                 {!isCancelled && !isEndedByTime ? (
                   <p className="mb-2 text-xs leading-5 text-zinc-500">
