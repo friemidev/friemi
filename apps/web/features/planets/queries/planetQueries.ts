@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
+const approvedMemberFilter = { status: "APPROVED" as const };
+
 export async function getPlanetSquare(viewerProfileId: string | null) {
   return prisma.planet.findMany({
     where: viewerProfileId
@@ -14,8 +16,10 @@ export async function getPlanetSquare(viewerProfileId: string | null) {
       description: true,
       tags: true,
       visibility: true,
-      _count: { select: { members: true } },
-      members: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { role: true } } : false,
+      _count: { select: { members: { where: approvedMemberFilter } } },
+      members: viewerProfileId
+        ? { where: { profileId: viewerProfileId }, select: { role: true, status: true } }
+        : false,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -39,21 +43,28 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
       tags: true,
       visibility: true,
       owner: { select: { nickname: true } },
-      _count: { select: { members: true } },
+      _count: { select: { members: { where: approvedMemberFilter } } },
       members: {
+        where: approvedMemberFilter,
         take: 5,
         orderBy: { joinedAt: "asc" },
-        select: { profileId: true, role: true, profile: { select: { nickname: true, avatarUrl: true } } },
-      },
-      messages: {
-        take: 40,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, content: true, createdAt: true, authorId: true, author: { select: { nickname: true, avatarUrl: true } } },
+        select: {
+          profileId: true,
+          role: true,
+          profile: { select: { nickname: true, avatarUrl: true } },
+        },
       },
       moments: {
         take: 8,
         orderBy: { createdAt: "desc" },
-        select: { id: true, content: true, imageUrls: true, createdAt: true, author: { select: { nickname: true, avatarUrl: true } }, _count: { select: { comments: true } } },
+        select: {
+          id: true,
+          content: true,
+          imageUrls: true,
+          createdAt: true,
+          author: { select: { nickname: true, avatarUrl: true } },
+          _count: { select: { comments: true } },
+        },
       },
     },
   });
@@ -65,14 +76,45 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
         where: {
           planetId_profileId: { planetId: planet.id, profileId: viewerProfileId },
         },
-        select: { role: true },
+        select: { role: true, status: true },
       })
     : null;
+
+  const canViewChat = viewerMembership?.status === "APPROVED";
+  const messages = canViewChat
+    ? await prisma.planetMessage.findMany({
+        where: { planetId: planet.id },
+        take: 40,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          authorId: true,
+          author: { select: { nickname: true, avatarUrl: true } },
+        },
+      })
+    : [];
+
+  const pendingMembers =
+    viewerMembership?.role === "OWNER" || viewerMembership?.role === "ADMIN"
+      ? await prisma.planetMember.findMany({
+          where: { planetId: planet.id, status: "PENDING" },
+          orderBy: { joinedAt: "asc" },
+          select: {
+            profileId: true,
+            joinedAt: true,
+            profile: { select: { nickname: true, avatarUrl: true } },
+          },
+        })
+      : [];
 
   return {
     ...planet,
     viewerMembership,
-    messages: [...planet.messages].reverse(),
+    canViewChat,
+    pendingMembers,
+    messages: [...messages].reverse(),
   };
 }
 
@@ -97,7 +139,17 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
       _count: { select: { likes: true } },
       likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
       planet: { select: { id: true, slug: true, name: true, nameTranslations: true } },
-      comments: { orderBy: { createdAt: "asc" }, select: { id: true, content: true, createdAt: true, author: { select: { nickname: true, avatarUrl: true } }, _count: { select: { likes: true } }, likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false } },
+      comments: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          author: { select: { nickname: true, avatarUrl: true } },
+          _count: { select: { likes: true } },
+          likes: viewerProfileId ? { where: { profileId: viewerProfileId }, select: { id: true } } : false,
+        },
+      },
     },
   });
 
@@ -107,9 +159,13 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
         where: {
           planetId_profileId: { planetId: moment.planet.id, profileId: viewerProfileId },
         },
-        select: { role: true },
+        select: { role: true, status: true },
       })
     : null;
 
-  return { ...moment, viewerMembership, isViewerAuthor: Boolean(viewerProfileId && moment.authorId === viewerProfileId) };
+  return {
+    ...moment,
+    viewerMembership,
+    isViewerAuthor: Boolean(viewerProfileId && moment.authorId === viewerProfileId),
+  };
 }

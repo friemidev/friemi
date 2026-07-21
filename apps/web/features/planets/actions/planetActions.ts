@@ -36,6 +36,11 @@ const commentSchema = planetIdSchema.extend({
   content: z.string().trim().min(1).max(1000),
 });
 
+const reviewPlanetMemberSchema = planetIdSchema.extend({
+  memberProfileId: z.string().min(1),
+  decision: z.enum(["approve", "reject"]),
+});
+
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
@@ -58,14 +63,22 @@ function revalidatePlanet(locale: string, planetSlug?: string) {
   }
 }
 
-async function requirePlanetMember(planetId: string, profileId: string) {
+async function requirePlanetMembership(
+  planetId: string,
+  profileId: string,
+  options?: { approvedOnly?: boolean },
+) {
   const membership = await prisma.planetMember.findUnique({
     where: { planetId_profileId: { planetId, profileId } },
-    select: { role: true },
+    select: { role: true, status: true },
   });
 
   if (!membership) {
     throw new Error("Planet membership is required.");
+  }
+
+  if (options?.approvedOnly && membership.status !== "APPROVED") {
+    throw new Error("Approved planet membership is required.");
   }
 
   return membership;
@@ -130,7 +143,7 @@ export async function createPlanetAction(formData: FormData) {
   const slug = await createUniqueSlug(result.data.name);
   const inviteCode = await createUniqueInviteCode();
   const tags = (result.data.tags ?? "")
-    .split(/[,，]/)
+    .split(/[,，、/]/)
     .map((tag) => tag.trim())
     .filter(Boolean)
     .slice(0, 5);
@@ -145,7 +158,7 @@ export async function createPlanetAction(formData: FormData) {
       tags,
       visibility: "PUBLIC",
       ownerId: profile.id,
-      members: { create: { profileId: profile.id, role: "OWNER" } },
+      members: { create: { profileId: profile.id, role: "OWNER", status: "APPROVED" } },
     },
   });
 
@@ -164,13 +177,18 @@ export async function joinPlanetAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(result.data.locale);
   const planet = await prisma.planet.findFirst({
     where: { id: result.data.planetId, slug: result.data.planetSlug, visibility: "PUBLIC" },
-    select: { id: true },
+    select: { id: true, ownerId: true },
   });
   if (!planet) return;
 
   await prisma.planetMember.upsert({
     where: { planetId_profileId: { planetId: planet.id, profileId: profile.id } },
-    create: { planetId: planet.id, profileId: profile.id },
+    create: {
+      planetId: planet.id,
+      profileId: profile.id,
+      status: planet.ownerId === profile.id ? "APPROVED" : "PENDING",
+      role: planet.ownerId === profile.id ? "OWNER" : "MEMBER",
+    },
     update: {},
   });
   revalidatePlanet(result.data.locale, result.data.planetSlug);
@@ -184,13 +202,18 @@ export async function joinPlanetByInviteAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(locale);
   const planet = await prisma.planet.findUnique({
     where: { inviteCode },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, ownerId: true },
   });
   if (!planet) return;
 
   await prisma.planetMember.upsert({
     where: { planetId_profileId: { planetId: planet.id, profileId: profile.id } },
-    create: { planetId: planet.id, profileId: profile.id },
+    create: {
+      planetId: planet.id,
+      profileId: profile.id,
+      status: planet.ownerId === profile.id ? "APPROVED" : "PENDING",
+      role: planet.ownerId === profile.id ? "OWNER" : "MEMBER",
+    },
     update: {},
   });
   revalidatePlanet(locale, planet.slug);
@@ -206,7 +229,7 @@ export async function leavePlanetAction(formData: FormData) {
   if (!result.success) return;
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
-  const membership = await requirePlanetMember(result.data.planetId, profile.id);
+  const membership = await requirePlanetMembership(result.data.planetId, profile.id);
   if (membership.role === "OWNER") return;
 
   await prisma.planetMember.delete({
@@ -214,6 +237,56 @@ export async function leavePlanetAction(formData: FormData) {
   });
   revalidatePlanet(result.data.locale, result.data.planetSlug);
   redirect(withLocale(result.data.locale, "/planets"));
+}
+
+export async function reviewPlanetMemberAction(formData: FormData) {
+  const result = reviewPlanetMemberSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+    memberProfileId: readString(formData, "memberProfileId"),
+    decision: readString(formData, "decision"),
+  });
+  if (!result.success) return;
+
+  const profile = await ensureCurrentUserProfile(result.data.locale);
+  const membership = await requirePlanetMembership(result.data.planetId, profile.id);
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
+
+  const targetMembership = await prisma.planetMember.findUnique({
+    where: {
+      planetId_profileId: {
+        planetId: result.data.planetId,
+        profileId: result.data.memberProfileId,
+      },
+    },
+    select: { role: true, status: true },
+  });
+
+  if (!targetMembership || targetMembership.role === "OWNER") return;
+
+  if (result.data.decision === "approve") {
+    await prisma.planetMember.update({
+      where: {
+        planetId_profileId: {
+          planetId: result.data.planetId,
+          profileId: result.data.memberProfileId,
+        },
+      },
+      data: { status: "APPROVED" },
+    });
+  } else {
+    await prisma.planetMember.delete({
+      where: {
+        planetId_profileId: {
+          planetId: result.data.planetId,
+          profileId: result.data.memberProfileId,
+        },
+      },
+    });
+  }
+
+  revalidatePlanet(result.data.locale, result.data.planetSlug);
 }
 
 export async function sendPlanetMessageAction(formData: FormData) {
@@ -226,7 +299,7 @@ export async function sendPlanetMessageAction(formData: FormData) {
   if (!result.success) return;
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
-  await requirePlanetMember(result.data.planetId, profile.id);
+  await requirePlanetMembership(result.data.planetId, profile.id, { approvedOnly: true });
   await prisma.planetMessage.create({
     data: { planetId: result.data.planetId, authorId: profile.id, content: result.data.content },
   });
@@ -247,7 +320,9 @@ export async function createPlanetMomentAction(formData: FormData) {
   if (!result.data.content && imageUrls.length === 0) return;
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
-  const membership = await requirePlanetMember(result.data.planetId, profile.id);
+  const membership = await requirePlanetMembership(result.data.planetId, profile.id, {
+    approvedOnly: true,
+  });
   if (String(membership.role) !== "OWNER") return;
 
   await prisma.planetMoment.create({
@@ -260,6 +335,7 @@ export async function createPlanetMomentAction(formData: FormData) {
   });
   revalidatePlanet(result.data.locale, result.data.planetSlug);
 }
+
 export async function createPlanetMomentCommentAction(formData: FormData) {
   const result = commentSchema.safeParse({
     locale: readString(formData, "locale") || "zh-CN",
@@ -271,7 +347,7 @@ export async function createPlanetMomentCommentAction(formData: FormData) {
   if (!result.success) return;
 
   const profile = await ensureCurrentUserProfile(result.data.locale);
-  await requirePlanetMember(result.data.planetId, profile.id);
+  await requirePlanetMembership(result.data.planetId, profile.id, { approvedOnly: true });
   const moment = await prisma.planetMoment.findFirst({
     where: { id: result.data.momentId, planetId: result.data.planetId },
     select: { id: true },
@@ -285,35 +361,58 @@ export async function createPlanetMomentCommentAction(formData: FormData) {
 }
 
 export async function togglePlanetMomentLikeAction(formData: FormData) {
-  const data = planetIdSchema.safeParse({ locale: readString(formData,"locale") || "zh-CN", planetId: readString(formData,"planetId"), planetSlug: readString(formData,"planetSlug") });
-  const momentId = readString(formData,"momentId");
+  const data = planetIdSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+  });
+  const momentId = readString(formData, "momentId");
   if (!data.success || !momentId) return;
   const profile = await ensureCurrentUserProfile(data.data.locale);
-  await requirePlanetMember(data.data.planetId, profile.id);
+  await requirePlanetMembership(data.data.planetId, profile.id, { approvedOnly: true });
   const key = { momentId_profileId: { momentId, profileId: profile.id } };
   const existing = await prisma.planetMomentLike.findUnique({ where: key, select: { id: true } });
-  if (existing) await prisma.planetMomentLike.delete({ where: key }); else await prisma.planetMomentLike.create({ data: { momentId, profileId: profile.id } });
+  if (existing) {
+    await prisma.planetMomentLike.delete({ where: key });
+  } else {
+    await prisma.planetMomentLike.create({ data: { momentId, profileId: profile.id } });
+  }
   revalidatePlanet(data.data.locale, data.data.planetSlug);
 }
 
 export async function togglePlanetCommentLikeAction(formData: FormData) {
-  const data = planetIdSchema.safeParse({ locale: readString(formData,"locale") || "zh-CN", planetId: readString(formData,"planetId"), planetSlug: readString(formData,"planetSlug") });
-  const commentId = readString(formData,"commentId");
+  const data = planetIdSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+  });
+  const commentId = readString(formData, "commentId");
   if (!data.success || !commentId) return;
   const profile = await ensureCurrentUserProfile(data.data.locale);
-  await requirePlanetMember(data.data.planetId, profile.id);
+  await requirePlanetMembership(data.data.planetId, profile.id, { approvedOnly: true });
   const key = { commentId_profileId: { commentId, profileId: profile.id } };
   const existing = await prisma.planetMomentCommentLike.findUnique({ where: key, select: { id: true } });
-  if (existing) await prisma.planetMomentCommentLike.delete({ where: key }); else await prisma.planetMomentCommentLike.create({ data: { commentId, profileId: profile.id } });
+  if (existing) {
+    await prisma.planetMomentCommentLike.delete({ where: key });
+  } else {
+    await prisma.planetMomentCommentLike.create({ data: { commentId, profileId: profile.id } });
+  }
   revalidatePlanet(data.data.locale, data.data.planetSlug);
 }
 
 export async function deletePlanetMomentAction(formData: FormData) {
-  const data = planetIdSchema.safeParse({ locale: readString(formData, "locale") || "zh-CN", planetId: readString(formData, "planetId"), planetSlug: readString(formData, "planetSlug") });
+  const data = planetIdSchema.safeParse({
+    locale: readString(formData, "locale") || "zh-CN",
+    planetId: readString(formData, "planetId"),
+    planetSlug: readString(formData, "planetSlug"),
+  });
   const momentId = readString(formData, "momentId");
   if (!data.success || !momentId) return;
   const profile = await ensureCurrentUserProfile(data.data.locale);
-  const moment = await prisma.planetMoment.findFirst({ where: { id: momentId, planetId: data.data.planetId, authorId: profile.id }, select: { id: true } });
+  const moment = await prisma.planetMoment.findFirst({
+    where: { id: momentId, planetId: data.data.planetId, authorId: profile.id },
+    select: { id: true },
+  });
   if (!moment) return;
   await prisma.planetMoment.delete({ where: { id: moment.id } });
   revalidatePlanet(data.data.locale, data.data.planetSlug);
