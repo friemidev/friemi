@@ -19,6 +19,7 @@ type ActivityCoverUploadProps = {
   onUploadingChange?: (isUploading: boolean) => void;
   splitPreviewClassName?: string;
   splitPreviewBelow?: boolean;
+  submitFallbackValue?: boolean;
   uploadEndpoint?: string;
 };
 
@@ -44,6 +45,7 @@ export function ActivityCoverUpload({
   onUploadingChange,
   splitPreviewClassName,
   splitPreviewBelow = false,
+  submitFallbackValue = false,
   uploadEndpoint = "/api/uploads/activity-cover",
 }: ActivityCoverUploadProps) {
   const t = getCopy(locale).form;
@@ -55,6 +57,9 @@ export function ActivityCoverUpload({
   const displayImageUrl = getActivityCoverDisplayUrl(
     imageUrl || fallbackPreviewUrl || "",
   );
+  const submittedImageUrl =
+    imageUrl || (submitFallbackValue ? fallbackPreviewUrl : "") || "";
+  const isFallbackPreview = !imageUrl && Boolean(fallbackPreviewUrl);
 
   useEffect(() => {
     setImageUrl(initialUrl ?? "");
@@ -153,7 +158,7 @@ export function ActivityCoverUpload({
   if (buttonOnlyUntilUploaded && splitPreviewBelow) {
     return (
       <div className="contents">
-        <input name={name} type="hidden" value={imageUrl} />
+        <input name={name} type="hidden" value={submittedImageUrl} />
         <input
           ref={inputRef}
           accept={allowedTypes.join(",")}
@@ -218,7 +223,10 @@ export function ActivityCoverUpload({
               <img
                 src={displayImageUrl}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                className={cn(
+                  "absolute inset-0 h-full w-full",
+                  isFallbackPreview ? "object-contain p-3" : "object-cover",
+                )}
               />
               {isUploading ? (
                 <span className="absolute inset-0 grid place-items-center bg-black/24 text-white">
@@ -254,7 +262,7 @@ export function ActivityCoverUpload({
 
   return (
     <div className="grid gap-2">
-      <input name={name} type="hidden" value={imageUrl} />
+      <input name={name} type="hidden" value={submittedImageUrl} />
       <input
         ref={inputRef}
         accept={allowedTypes.join(",")}
@@ -292,7 +300,10 @@ export function ActivityCoverUpload({
                 <img
                   src={displayImageUrl}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className={cn(
+                    "absolute inset-0 h-full w-full",
+                    isFallbackPreview ? "object-contain p-3" : "object-cover",
+                  )}
                 />
               </div>
               {imageUrl ? (
@@ -344,7 +355,10 @@ export function ActivityCoverUpload({
               <img
                 src={displayImageUrl}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                className={cn(
+                  "absolute inset-0 h-full w-full",
+                  isFallbackPreview ? "object-contain p-3" : "object-cover",
+                )}
               />
             ) : (
               <div className="flex flex-col items-center gap-1.5 px-4 text-center text-zinc-600">

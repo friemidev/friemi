@@ -27,12 +27,14 @@ function shouldHideMobileScrollProgress(pathname: string) {
   return (
     (segments.length === 1 &&
       (firstRouteSegment === "mobile-home" ||
+        firstRouteSegment === "activities" ||
         firstRouteSegment === "footprints" ||
         firstRouteSegment === "lobby" ||
         firstRouteSegment === "planets" ||
         firstRouteSegment === "profile")) ||
     (segments.length === 2 &&
       (localizedRouteSegment === "mobile-home" ||
+        localizedRouteSegment === "activities" ||
         localizedRouteSegment === "footprints" ||
         localizedRouteSegment === "lobby" ||
         localizedRouteSegment === "planets" ||
