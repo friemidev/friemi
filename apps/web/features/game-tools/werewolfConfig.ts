@@ -13,7 +13,8 @@ export type WerewolfVariantKey =
   | "nine_player_basic"
   | "seven_player_basic"
   | "ten_player_seer_witch_hunter"
-  | "twelve_player_idiot";
+  | "twelve_player_idiot"
+  | "custom";
 
 export type WerewolfVariant = {
   enabled: boolean;
@@ -167,6 +168,112 @@ export function getEnabledWerewolfVariant(key: string | null | undefined) {
 
 export function getWerewolfVariantLabel(locale: string, variant: WerewolfVariant) {
   return variant.labels[locale] ?? variant.labels.en ?? variant.labels["zh-CN"];
+}
+
+function getCustomWerewolfVariantLabel(locale: string) {
+  if (locale === "fr") {
+    return "Configuration libre";
+  }
+
+  if (locale === "en") {
+    return "Custom setup";
+  }
+
+  return "自定义板子";
+}
+
+function getConfigNumber(
+  config: Record<string, unknown>,
+  key: string,
+  fallback: number,
+) {
+  const value = config[key];
+  const numberValue = typeof value === "number" ? value : Number(value);
+
+  return Number.isInteger(numberValue) && numberValue > 0
+    ? numberValue
+    : fallback;
+}
+
+function getConfigVariantKey(config: unknown) {
+  if (!config || typeof config !== "object") {
+    return null;
+  }
+
+  const value = (config as { variantKey?: unknown }).variantKey;
+
+  return typeof value === "string" ? value : null;
+}
+
+export function normalizeWerewolfRoleDeck(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const roles = value.filter(isWerewolfRoleKey);
+
+  if (roles.length < 5 || roles.length > 15) {
+    return null;
+  }
+
+  const hasWerewolf = roles.some((role) => role === "werewolf");
+  const hasGood = roles.some((role) => role !== "werewolf");
+
+  if (!hasWerewolf || !hasGood) {
+    return null;
+  }
+
+  return roles;
+}
+
+export function getWerewolfVariantFromRoomConfig(
+  config: unknown,
+  locale = "zh-CN",
+) {
+  const configObject =
+    config && typeof config === "object"
+      ? (config as Record<string, unknown>)
+      : null;
+  const variantKey = getConfigVariantKey(config);
+  const customRoleDeck =
+    variantKey === "custom" && configObject
+      ? normalizeWerewolfRoleDeck(configObject.roleDeck)
+      : null;
+
+  if (customRoleDeck && configObject) {
+    const playerSeatCount = customRoleDeck.length;
+    const totalSeats = getConfigNumber(
+      configObject,
+      "totalSeats",
+      playerSeatCount + 1,
+    );
+    const judgeSeatNumber = getConfigNumber(
+      configObject,
+      "judgeSeatNumber",
+      totalSeats,
+    );
+    const label =
+      typeof configObject.variantName === "string" &&
+      configObject.variantName.trim()
+        ? configObject.variantName.trim()
+        : getCustomWerewolfVariantLabel(locale);
+
+    return {
+      enabled: true,
+      judgeSeatNumber,
+      key: "custom",
+      labels: {
+        "zh-CN": label,
+        en: label,
+        fr: label,
+      },
+      playerSeatCount,
+      roles: customRoleDeck,
+      totalSeats,
+    } satisfies WerewolfVariant;
+  }
+
+  return getEnabledWerewolfVariant(variantKey);
 }
 
 export function getWerewolfDefaultRoomTitle(locale: string) {

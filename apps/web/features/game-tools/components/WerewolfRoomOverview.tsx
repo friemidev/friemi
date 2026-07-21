@@ -1,39 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import type { FormEvent } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   Check,
-  Crown,
-  HeartPulse,
   Monitor,
   Moon,
   Plus,
   RotateCcw,
-  Shield,
-  Skull,
   Ticket,
   UserPlus,
-  UsersRound,
 } from "lucide-react";
 import {
   claimWerewolfSeatAction,
   joinWerewolfRoomAction,
   leaveWerewolfSeatAction,
-  manageWerewolfSeatAction,
   startWerewolfRoomAction,
   updateWerewolfReadyAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
-import {
-  getWerewolfRoleCardImage,
-  werewolfUiAssets,
-} from "@/features/game-tools/werewolfCardAssets";
+import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
@@ -44,6 +43,7 @@ type WerewolfRoomOverviewProps = {
     code: string;
     currentMember: {
       avatarLabel: string;
+      avatarUrl: string | null;
       displayName: string;
       id: string;
       isGuest: boolean;
@@ -66,6 +66,7 @@ type WerewolfRoomOverviewProps = {
     isHost: boolean;
     members: Array<{
       avatarLabel: string;
+      avatarUrl: string | null;
       displayName: string;
       id: string;
       isCurrentMember: boolean;
@@ -77,6 +78,7 @@ type WerewolfRoomOverviewProps = {
     }>;
     seats: Array<{
       avatarLabel: string;
+      avatarUrl: string | null;
       displayName: string;
       id: string;
       isClaimed: boolean;
@@ -95,6 +97,7 @@ type WerewolfRoomOverviewProps = {
       winner?: "GOOD" | "WEREWOLF" | null;
     };
     status: string;
+    syncVersion: string;
     title: string;
     variant: {
       label: string;
@@ -104,6 +107,87 @@ type WerewolfRoomOverviewProps = {
   };
   testBotsEnabled?: boolean;
 };
+
+type WerewolfSeat = WerewolfRoomOverviewProps["room"]["seats"][number];
+type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
+
+const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
+const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
+
+type WerewolfRoomSyncPayload = {
+  room?: WerewolfRoomView;
+  status?: string;
+  syncVersion?: string;
+};
+
+type WerewolfRoomBroadcastMessage = {
+  roomId: string;
+  sourceId: string;
+  type: "werewolf-room-changed";
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: {
+    effectiveType?: string;
+    saveData?: boolean;
+  };
+};
+
+function getWerewolfSyncIntervalMs(status: string) {
+  const baseIntervalMs = status === "LOBBY" ? 1800 : 4200;
+
+  if (typeof window === "undefined") {
+    return baseIntervalMs;
+  }
+
+  const connection = (window.navigator as NavigatorWithConnection).connection;
+  const effectiveType = connection?.effectiveType;
+  const isSlowConnection =
+    connection?.saveData === true ||
+    effectiveType === "slow-2g" ||
+    effectiveType === "2g";
+  const isLowEndDevice =
+    typeof window.navigator.hardwareConcurrency === "number" &&
+    window.navigator.hardwareConcurrency > 0 &&
+    window.navigator.hardwareConcurrency <= 4;
+
+  if (isSlowConnection) {
+    return status === "LOBBY" ? 4200 : 8200;
+  }
+
+  if (isLowEndDevice) {
+    return status === "LOBBY" ? 2800 : 6200;
+  }
+
+  return baseIntervalMs;
+}
+
+function WerewolfAvatar({
+  avatarLabel,
+  avatarUrl,
+  className,
+}: {
+  avatarLabel: string;
+  avatarUrl: string | null;
+  className: string;
+}) {
+  return (
+    <span
+      className={`${className} relative grid place-items-center overflow-hidden rounded-full bg-[#111512] text-white shadow-sm`}
+    >
+      {avatarUrl ? (
+        <img
+          alt=""
+          className="h-full w-full object-cover"
+          draggable={false}
+          src={avatarUrl}
+        />
+      ) : (
+        <span className="relative font-black">{avatarLabel}</span>
+      )}
+    </span>
+  );
+}
 
 function getCopy(locale: string) {
   if (locale === "fr") {
@@ -133,6 +217,8 @@ function getCopy(locale: string) {
       joinFirst: "Entrez un nom d'abord",
       joinName: "Nom",
       judge: "Maître",
+      leaveRoom: "Quitter la table",
+      leaveRoomConfirm: "Quitter cette partie en cours ?",
       leaveSeat: "Quitter",
       lobby: "Avant la partie",
       locked: "La partie a commencé.",
@@ -145,6 +231,7 @@ function getCopy(locale: string) {
       noticeSeatClaimed: "Place prise.",
       noticeSeatManaged: "Place mise à jour.",
       noticeUnready: "Prêt annulé.",
+      offline: "Connexion perdue. Réessayez quand le réseau revient.",
       openSeat: "Voir rôle",
       playerSeats: "Places",
       playerUnit: "joueurs",
@@ -159,7 +246,7 @@ function getCopy(locale: string) {
       selectSeat: "Choisir",
       scanJoin: "Scanner pour entrer",
       share: "Invitation",
-      start: "Distribuer",
+      start: "Lancer",
       startConfirm: "Distribuer les rôles et verrouiller les places ?",
       startWaiting: "Attendez que toute la table soit prête.",
       status: "Statut",
@@ -175,8 +262,7 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       back: "All tools",
-      boundary:
-        "Scan in, pick seats, then deal roles when the table is ready.",
+      boundary: "Scan in, pick seats, then deal roles when the table is ready.",
       changeSeat: "Switch",
       claimError: "Could not update the seat.",
       code: "Code",
@@ -199,6 +285,8 @@ function getCopy(locale: string) {
       joinFirst: "Enter a name first",
       joinName: "Name",
       judge: "Judge",
+      leaveRoom: "Leave room",
+      leaveRoomConfirm: "Leave this running game?",
       leaveSeat: "Leave",
       lobby: "Before game",
       locked: "The game has started.",
@@ -211,6 +299,7 @@ function getCopy(locale: string) {
       noticeSeatClaimed: "Seat claimed.",
       noticeSeatManaged: "Seat updated.",
       noticeUnready: "Ready cancelled.",
+      offline: "You are offline. Try again after the network comes back.",
       openSeat: "View role",
       playerSeats: "Player seats",
       playerUnit: "players",
@@ -225,7 +314,7 @@ function getCopy(locale: string) {
       selectSeat: "Choose",
       scanJoin: "Scan to join",
       share: "Invite link",
-      start: "Deal roles",
+      start: "Start game",
       startConfirm: "Deal roles and lock seats?",
       startWaiting: "Wait until the full table is ready.",
       status: "Status",
@@ -263,6 +352,8 @@ function getCopy(locale: string) {
     joinFirst: "先输入昵称",
     joinName: "昵称",
     judge: "法官",
+    leaveRoom: "退出房间",
+    leaveRoomConfirm: "退出这局进行中的房间？",
     leaveSeat: "离座",
     lobby: "开局前",
     locked: "本局已经开始。",
@@ -275,6 +366,7 @@ function getCopy(locale: string) {
     noticeSeatClaimed: "已入座。",
     noticeSeatManaged: "座位已更新。",
     noticeUnready: "已取消准备。",
+    offline: "当前网络已断开，恢复后再操作。",
     openSeat: "查看身份",
     playerSeats: "座位",
     playerUnit: "玩家",
@@ -289,7 +381,7 @@ function getCopy(locale: string) {
     selectSeat: "入座",
     scanJoin: "扫码进入房间",
     share: "邀请链接",
-    start: "发身份",
+    start: "开始游戏",
     startConfirm: "发身份后座位会锁定，确定开局？",
     startWaiting: "等所有人准备。",
     status: "进度",
@@ -327,52 +419,6 @@ function SubmitButton({
       {label}
     </button>
   );
-}
-
-function getStatusLabel({
-  isClaimed,
-  isDead,
-  isLocked,
-  isReady,
-  t,
-}: {
-  isClaimed: boolean;
-  isDead: boolean;
-  isLocked: boolean;
-  isReady: boolean;
-  t: ReturnType<typeof getCopy>;
-}) {
-  if (!isClaimed) {
-    return t.empty;
-  }
-
-  if (isDead) {
-    return t.dead;
-  }
-
-  if (isLocked) {
-    return t.alive;
-  }
-
-  return isReady ? t.ready : t.unready;
-}
-
-function getRoomStatusLabel({
-  room,
-  t,
-}: {
-  room: WerewolfRoomOverviewProps["room"];
-  t: ReturnType<typeof getCopy>;
-}) {
-  if (room.status === "FINISHED") {
-    return t.finished;
-  }
-
-  if (room.status === "IN_PROGRESS") {
-    return t.running;
-  }
-
-  return t.lobby;
 }
 
 function getEventLabel(type: string, locale: string) {
@@ -480,7 +526,10 @@ function getEventTimeLabel(value: string, locale: string) {
   }).format(date);
 }
 
-function getNoticeLabel(notice: string | null | undefined, t: ReturnType<typeof getCopy>) {
+function getNoticeLabel(
+  notice: string | null | undefined,
+  t: ReturnType<typeof getCopy>,
+) {
   switch (notice) {
     case "joined":
       return t.noticeJoined;
@@ -505,10 +554,21 @@ export function WerewolfRoomOverview({
   baseUrl,
   locale,
   notice,
-  room,
+  room: initialRoom,
   testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
   const router = useRouter();
+  const [room, setRoom] = useState(initialRoom);
+  const [, startRefreshTransition] = useTransition();
+  const lastOptimisticMutationAtRef = useRef(0);
+  const lastSyncRefreshAtRef = useRef(0);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const broadcastClientIdRef = useRef(
+    `werewolf-room-${Math.random().toString(36).slice(2)}`,
+  );
+  const syncProbeInFlightRef = useRef(false);
+  const syncVersionRef = useRef(initialRoom.syncVersion);
+  const [localFormError, setLocalFormError] = useState<string | null>(null);
   const [joinState, joinAction] = useActionState(
     joinWerewolfRoomAction,
     initialState,
@@ -519,10 +579,6 @@ export function WerewolfRoomOverview({
   );
   const [leaveState, leaveAction] = useActionState(
     leaveWerewolfSeatAction,
-    initialState,
-  );
-  const [manageState, manageAction] = useActionState(
-    manageWerewolfSeatAction,
     initialState,
   );
   const [readyState, readyAction] = useActionState(
@@ -548,16 +604,13 @@ export function WerewolfRoomOverview({
   );
   const isLobby = room.status === "LOBBY";
   const playerSeats = room.seats.filter((seat) => seat.isPlayerSeat);
-  const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
-  const unseatedMembers = room.members.filter(
-    (member) => !member.seatedSeatNumber,
+  const leftTableSeats = playerSeats.filter(
+    (seat) => seat.seatNumber % 2 === 1,
   );
-  const canManageSeats =
-    isLobby && (room.isHost || Boolean(judgeSeat?.isViewerSeat));
-  const managerPrivateToken =
-    judgeSeat?.isViewerSeat && judgeSeat.privateToken
-      ? judgeSeat.privateToken
-      : "";
+  const rightTableSeats = playerSeats.filter(
+    (seat) => seat.seatNumber % 2 === 0,
+  );
+  const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -569,12 +622,399 @@ export function WerewolfRoomOverview({
       : room.state.winner === "WEREWOLF"
         ? t.winnerWerewolf
         : null;
-  const statusLabel = getRoomStatusLabel({ room, t });
   const currentSeatPrivateToken = room.currentMember?.seatedPrivateToken;
   const startEventId =
     room.events.find((event) => event.type === "werewolf_room_started")?.id ??
     "current";
   const noticeLabel = getNoticeLabel(notice, t);
+
+  const canSubmitOnline = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        event.preventDefault();
+        setLocalFormError(t.offline);
+        return false;
+      }
+
+      setLocalFormError(null);
+      return true;
+    },
+    [t.offline],
+  );
+
+  const broadcastRoomChange = useCallback(() => {
+    broadcastChannelRef.current?.postMessage({
+      roomId: room.id,
+      sourceId: broadcastClientIdRef.current,
+      type: "werewolf-room-changed",
+    } satisfies WerewolfRoomBroadcastMessage);
+  }, [room.id]);
+
+  useEffect(() => {
+    const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+    if (mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+      return;
+    }
+
+    syncVersionRef.current = initialRoom.syncVersion;
+    setRoom(initialRoom);
+  }, [initialRoom]);
+
+  const refreshRoom = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
+
+      const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+      if (!options?.force && mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({
+          include: "room",
+          locale,
+        });
+
+        if (currentMemberToken) {
+          params.set("memberToken", currentMemberToken);
+        }
+
+        const response = await fetch(
+          `/api/game-tools/werewolf/rooms/${room.id}/sync?${params.toString()}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (response.ok) {
+          const payload = (await response.json()) as WerewolfRoomSyncPayload;
+
+          if (payload.room) {
+            syncVersionRef.current =
+              payload.room.syncVersion ??
+              payload.syncVersion ??
+              syncVersionRef.current;
+            setRoom(payload.room);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to a server component refresh as a compatibility backup.
+      }
+
+      startRefreshTransition(() => {
+        router.refresh();
+      });
+    },
+    [currentMemberToken, locale, room.id, router, startRefreshTransition],
+  );
+
+  const pollRoomSync = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
+
+      if (syncProbeInFlightRef.current) {
+        return;
+      }
+
+      const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+      if (!options?.force && mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+        return;
+      }
+
+      syncProbeInFlightRef.current = true;
+
+      try {
+        const response = await fetch(
+          `/api/game-tools/werewolf/rooms/${room.id}/sync`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          syncVersion?: string;
+        };
+
+        if (
+          payload.syncVersion &&
+          payload.syncVersion !== syncVersionRef.current
+        ) {
+          const now = Date.now();
+
+          if (now - lastSyncRefreshAtRef.current > 1500) {
+            lastSyncRefreshAtRef.current = now;
+            void refreshRoom({ force: true });
+          }
+        }
+      } catch {
+        // Keep sync silent. The next focus or interval will retry.
+      } finally {
+        syncProbeInFlightRef.current = false;
+      }
+    },
+    [refreshRoom, room.id],
+  );
+
+  useEffect(() => {
+    if (room.status === "FINISHED") {
+      return;
+    }
+
+    const intervalMs = getWerewolfSyncIntervalMs(room.status);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) {
+        void pollRoomSync();
+      }
+    }, intervalMs);
+    const handleFocus = () => void pollRoomSync({ force: true });
+    const handleOnline = () => void pollRoomSync({ force: true });
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void pollRoomSync({ force: true });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [pollRoomSync, room.status]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") {
+      return;
+    }
+
+    const channel = new BroadcastChannel(WEREWOLF_ROOM_BROADCAST_CHANNEL);
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent<WerewolfRoomBroadcastMessage>) => {
+      const message = event.data;
+
+      if (
+        message?.type !== "werewolf-room-changed" ||
+        message.roomId !== room.id ||
+        message.sourceId === broadcastClientIdRef.current
+      ) {
+        return;
+      }
+
+      void pollRoomSync({ force: true });
+    };
+
+    return () => {
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
+      }
+
+      channel.close();
+    };
+  }, [pollRoomSync, room.id]);
+
+  useEffect(() => {
+    if (
+      seatState.formError ||
+      leaveState.formError ||
+      readyState.formError ||
+      startState.formError
+    ) {
+      lastOptimisticMutationAtRef.current = 0;
+      void refreshRoom({ force: true });
+    }
+  }, [
+    leaveState.formError,
+    readyState.formError,
+    refreshRoom,
+    seatState.formError,
+    startState.formError,
+  ]);
+
+  useEffect(() => {
+    if (
+      seatState.formNotice ||
+      leaveState.formNotice ||
+      readyState.formNotice
+    ) {
+      lastOptimisticMutationAtRef.current = 0;
+      broadcastRoomChange();
+      void refreshRoom({ force: true });
+    }
+  }, [
+    broadcastRoomChange,
+    leaveState.formNotice,
+    readyState.formNotice,
+    refreshRoom,
+    seatState.formNotice,
+  ]);
+
+  const applyOptimisticSeatClaim = useCallback(
+    (seatNumber: number) => {
+      lastOptimisticMutationAtRef.current = Date.now();
+
+      setRoom((previousRoom): WerewolfRoomView => {
+        if (!previousRoom.currentMember || previousRoom.status !== "LOBBY") {
+          return previousRoom;
+        }
+
+        const targetSeat = previousRoom.seats.find(
+          (seat) => seat.seatNumber === seatNumber,
+        );
+
+        if (!targetSeat || (targetSeat.isClaimed && !targetSeat.isViewerSeat)) {
+          return previousRoom;
+        }
+
+        const previousSeatId = previousRoom.currentMember.seatedSeatId;
+        const nextCurrentMember = {
+          ...previousRoom.currentMember,
+          readyAt: null,
+          seatedPrivateToken: targetSeat.privateToken,
+          seatedSeatId: targetSeat.id,
+          seatedSeatNumber: targetSeat.seatNumber,
+        };
+
+        return {
+          ...previousRoom,
+          currentMember: nextCurrentMember,
+          members: previousRoom.members.map((member) =>
+            member.id === nextCurrentMember.id
+              ? {
+                  ...member,
+                  readyAt: null,
+                  seatedSeatId: targetSeat.id,
+                  seatedSeatNumber: targetSeat.seatNumber,
+                }
+              : member,
+          ),
+          seats: previousRoom.seats.map((seat) => {
+            if (seat.id === targetSeat.id) {
+              return {
+                ...seat,
+                avatarLabel: nextCurrentMember.avatarLabel,
+                avatarUrl: nextCurrentMember.avatarUrl,
+                displayName: nextCurrentMember.displayName,
+                isClaimed: true,
+                isViewerSeat: true,
+                readyAt: null,
+              };
+            }
+
+            if (seat.id === previousSeatId) {
+              return {
+                ...seat,
+                avatarLabel: "",
+                avatarUrl: null,
+                displayName: t.empty,
+                isClaimed: false,
+                isViewerSeat: false,
+                readyAt: null,
+              };
+            }
+
+            return {
+              ...seat,
+              isViewerSeat: false,
+            };
+          }),
+        };
+      });
+    },
+    [t.empty],
+  );
+
+  const applyOptimisticReady = useCallback((ready: boolean) => {
+    lastOptimisticMutationAtRef.current = Date.now();
+
+    setRoom((previousRoom): WerewolfRoomView => {
+      const currentMember = previousRoom.currentMember;
+
+      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+        return previousRoom;
+      }
+
+      const readyAt = ready ? new Date().toISOString() : null;
+
+      return {
+        ...previousRoom,
+        currentMember: {
+          ...currentMember,
+          readyAt,
+        },
+        members: previousRoom.members.map((member) =>
+          member.id === currentMember.id ? { ...member, readyAt } : member,
+        ),
+        seats: previousRoom.seats.map((seat) =>
+          seat.id === currentMember.seatedSeatId ? { ...seat, readyAt } : seat,
+        ),
+      };
+    });
+  }, []);
+
+  const applyOptimisticLeaveSeat = useCallback(() => {
+    lastOptimisticMutationAtRef.current = Date.now();
+
+    setRoom((previousRoom): WerewolfRoomView => {
+      const currentMember = previousRoom.currentMember;
+
+      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+        return previousRoom;
+      }
+
+      const previousSeatId = currentMember.seatedSeatId;
+
+      return {
+        ...previousRoom,
+        currentMember: {
+          ...currentMember,
+          readyAt: null,
+          seatedPrivateToken: null,
+          seatedSeatId: null,
+          seatedSeatNumber: null,
+        },
+        members: previousRoom.members.map((member) =>
+          member.id === currentMember.id
+            ? {
+                ...member,
+                readyAt: null,
+                seatedSeatId: null,
+                seatedSeatNumber: null,
+              }
+            : member,
+        ),
+        seats: previousRoom.seats.map((seat) =>
+          seat.id === previousSeatId
+            ? {
+                ...seat,
+                avatarLabel: "",
+                avatarUrl: null,
+                displayName: t.empty,
+                isClaimed: false,
+                isViewerSeat: false,
+                readyAt: null,
+              }
+            : seat,
+        ),
+      };
+    });
+  }, [t.empty]);
 
   useEffect(() => {
     if (room.status !== "IN_PROGRESS" || !currentSeatPrivateToken) {
@@ -589,7 +1029,10 @@ export function WerewolfRoomOverview({
 
     window.sessionStorage.setItem(storageKey, "1");
     router.replace(
-      withLocale(locale, `/game-tools/werewolf/seats/${currentSeatPrivateToken}`),
+      withLocale(
+        locale,
+        `/game-tools/werewolf/seats/${currentSeatPrivateToken}`,
+      ),
     );
   }, [
     currentSeatPrivateToken,
@@ -600,425 +1043,500 @@ export function WerewolfRoomOverview({
     startEventId,
   ]);
 
-  const renderSeatManagement = ({
-    dark = false,
-    displayName,
-    seatNumber,
-  }: {
-    dark?: boolean;
-    displayName: string;
-    seatNumber: number;
-  }) => {
-    if (!canManageSeats) {
-      return null;
+  const currentViewerSeat =
+    room.seats.find(
+      (seat) =>
+        seat.isViewerSeat ||
+        room.currentMember?.seatedSeatNumber === seat.seatNumber,
+    ) ?? null;
+  const judgeIsViewer = Boolean(judgeSeat?.isViewerSeat);
+  const playerReadyCount = playerSeats.filter((seat) => seat.readyAt).length;
+  const playerClaimedCount = playerSeats.filter(
+    (seat) => seat.isClaimed,
+  ).length;
+  const centerTitle =
+    room.status === "FINISHED"
+      ? (winnerLabel ?? t.finished)
+      : room.status === "IN_PROGRESS"
+        ? t.running
+        : t.lobby;
+  const centerSubtitle =
+    room.status === "LOBBY"
+      ? `${playerReadyCount}/${room.seats.length} ${t.ready}`
+      : room.status === "IN_PROGRESS"
+        ? `${playerClaimedCount}/${playerSeats.length} ${t.alive}`
+        : room.variant.label;
+
+  const renderSeatNode = (seat: WerewolfSeat) => {
+    const isCurrentSeat =
+      seat.isViewerSeat ||
+      room.currentMember?.seatedSeatNumber === seat.seatNumber;
+    const emptySeatActionLabel = room.currentMember?.seatedSeatNumber
+      ? t.changeSeat
+      : t.selectSeat;
+    const seatImage = seat.isClaimed
+      ? seat.isDead
+        ? werewolfUiAssets.seatPlayerDead
+        : seat.readyAt || room.status !== "LOBBY"
+          ? werewolfUiAssets.seatPlayerReady
+          : werewolfUiAssets.seatPlayerOccupied
+      : werewolfUiAssets.seatPlayerEmpty;
+    const nodeClass = `relative z-20 mx-auto flex min-h-[5.6rem] w-full max-w-[5.35rem] flex-col items-center justify-start text-center transition ${
+      isCurrentSeat ? "scale-[1.03]" : ""
+    }`;
+    const tokenClass = `relative grid h-16 w-16 place-items-center rounded-full transition ${
+      seat.isDead ? "grayscale opacity-55" : ""
+    } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
+    const seatNumberClass = `absolute -left-1 -top-1 z-20 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10.5px] font-black shadow-sm ring-1 ${
+      isCurrentSeat
+        ? "bg-[#F8DDA8] text-[#153B31] ring-[#F8DDA8]/85"
+        : "bg-[#F8DDA8]/96 text-[#153B31] ring-[#D8A84E]/45"
+    }`;
+    const seatNameClass = `mt-1.5 block w-full truncate text-[10.5px] font-black leading-tight ${
+      seat.isDead
+        ? "text-white/42"
+        : isCurrentSeat
+          ? "text-[#F8DDA8]"
+          : "text-white"
+    }`;
+
+    if (!seat.isClaimed && isLobby && canChooseSeat) {
+      return (
+        <form
+          action={seatAction}
+          className={nodeClass}
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="roomId" type="hidden" value={room.id} />
+          <input name="memberToken" type="hidden" value={currentMemberToken} />
+          <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
+          <button
+            aria-label={`${emptySeatActionLabel} ${seat.seatNumber}`}
+            className="group flex w-full flex-col items-center text-center text-white disabled:cursor-not-allowed disabled:opacity-55"
+            type="submit"
+          >
+            <span className={tokenClass}>
+              <span className={seatNumberClass}>{seat.seatNumber}</span>
+              <img
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full"
+                draggable={false}
+                src={seatImage}
+              />
+              <Plus className="relative h-4 w-4 text-[#F8DDA8] transition group-hover:scale-110" />
+            </span>
+            <span className={seatNameClass}>{emptySeatActionLabel}</span>
+          </button>
+        </form>
+      );
     }
 
-    const baseHiddenFields = (
-      <>
-        <input name="locale" type="hidden" value={locale} />
-        <input name="roomId" type="hidden" value={room.id} />
-        <input name="memberToken" type="hidden" value={currentMemberToken} />
-        <input
-          name="actorPrivateToken"
-          type="hidden"
-          value={managerPrivateToken}
-        />
-        <input name="seatNumber" type="hidden" value={seatNumber} />
-      </>
-    );
-    const secondaryClass = dark
-      ? "border border-white/20 bg-white/10 text-white hover:bg-white/16"
-      : "border border-[#D9C7B4] bg-white text-[#7A1F2B] hover:bg-[#FFF7F1]";
-
     return (
-      <div className="mt-2 grid gap-1.5 border-t border-[#D9C7B4]/55 pt-2 dark:border-white/15">
-        <form action={manageAction} className="grid grid-cols-[minmax(0,1fr)_3.75rem] gap-1.5">
-          {baseHiddenFields}
-          <input name="operation" type="hidden" value="rename" />
-          <input
-            className={`h-8 min-w-0 rounded-full px-2 text-xs font-bold outline-none transition ${
-              dark
-                ? "border border-white/20 bg-white/10 text-white placeholder:text-white/42 focus:border-[#F0C36A]"
-                : "border border-[#D9C7B4] bg-white text-[#1E1718] placeholder:text-[#7A1F2B]/42 focus:border-[#7A1F2B]"
-            }`}
-            maxLength={40}
-            name="displayName"
-            placeholder={t.manageNamePlaceholder}
-            defaultValue={displayName}
+      <div className={nodeClass} key={seat.id}>
+        <span className={tokenClass}>
+          <span className={seatNumberClass}>{seat.seatNumber}</span>
+          <img
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full"
+            draggable={false}
+            src={seatImage}
           />
-          <SubmitButton
-            className={`inline-flex h-8 items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
-              dark
-                ? "bg-[#F0C36A] text-[#1E1718] hover:bg-[#F8D581]"
-                : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
-            }`}
-            label={t.manageRename}
-          />
-        </form>
-        <div className="grid grid-cols-2 gap-1.5">
-          <form
-            action={manageAction}
-            onSubmit={(event) => {
-              if (!window.confirm(t.manageConfirmRelease)) {
-                event.preventDefault();
-              }
-            }}
-          >
-            {baseHiddenFields}
-            <input name="operation" type="hidden" value="release" />
-            <SubmitButton
-              className={`inline-flex h-8 w-full items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${secondaryClass}`}
-              label={t.manageRelease}
+          {seat.isClaimed ? (
+            <WerewolfAvatar
+              avatarLabel={seat.avatarLabel}
+              avatarUrl={seat.avatarUrl}
+              className="relative h-12 w-12 border border-[#F8DDA8]/34 text-sm"
             />
-          </form>
-          <form
-            action={manageAction}
-            onSubmit={(event) => {
-              if (!window.confirm(t.manageConfirmRefresh)) {
-                event.preventDefault();
-              }
-            }}
-          >
-            {baseHiddenFields}
-            <input name="operation" type="hidden" value="refresh_token" />
-            <SubmitButton
-              className={`inline-flex h-8 w-full items-center justify-center rounded-full px-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${secondaryClass}`}
-              label={t.manageRefresh}
-            />
-          </form>
-        </div>
+          ) : (
+            <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-black text-[#F8DDA8] shadow-sm">
+              {seat.seatNumber}
+            </span>
+          )}
+        </span>
+        <span className={seatNameClass}>
+          {seat.isClaimed ? seat.displayName : t.empty}
+        </span>
       </div>
     );
   };
 
   return (
-    <div className="space-y-5">
-      <Link
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-[#D9C7B4] bg-white px-4 text-sm font-bold text-[#7A1F2B] shadow-sm transition hover:bg-[#FFF7F1]"
-        href={withLocale(locale, "/game-tools/werewolf")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t.back}
-      </Link>
+    <div className="mx-auto w-full max-w-[28rem] space-y-4 lg:max-w-[94rem]">
+      <section className="grid gap-5 lg:grid-cols-[minmax(25rem,28rem)_minmax(0,1fr)] lg:items-start">
+        <div
+          className="relative overflow-hidden rounded-[1.75rem] border border-[#D8A84E]/35 bg-[#062A24] p-4 text-white shadow-[0_22px_52px_rgba(6,42,36,0.28)]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 50% 14%, rgba(248,221,168,0.18), transparent 29%), radial-gradient(circle at 50% 58%, rgba(4,74,61,0.78), transparent 46%), linear-gradient(180deg, #062A24 0%, #06372F 52%, #031F1B 100%)",
+          }}
+        >
+          <div className="pointer-events-none absolute inset-x-8 top-2 h-28 rounded-b-full border-b border-[#D8A84E]/16 bg-[#F8DDA8]/5" />
+          <div className="pointer-events-none absolute inset-x-5 bottom-4 h-16 rounded-t-[2rem] border-t border-[#D8A84E]/18" />
 
-      <section className="overflow-hidden rounded-[1.4rem] border border-[#D9C7B4] bg-[#141820] p-4 text-white shadow-[0_18px_48px_rgba(30,23,24,0.12)] sm:p-5">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-white">
-              <Moon className="h-3.5 w-3.5" />
-              {t.foundation}
-            </span>
-            <h1 className="mt-4 text-3xl font-black leading-tight tracking-normal text-white sm:text-4xl">
-              {room.title}
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm font-bold leading-6 text-white/70">
-              {t.boundary}
-            </p>
+          <div className="relative z-10 flex items-center justify-between gap-3">
+            <Link
+              aria-label={t.back}
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#D8A84E]/38 bg-[#0A3B32]/86 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.20)] transition hover:bg-[#11483E]"
+              href={withLocale(locale, "/game-tools/werewolf")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+
+            <div className="min-w-0 text-center">
+              <p className="truncate text-base font-black tracking-normal text-[#F8DDA8]">
+                {room.variant.label}
+              </p>
+              <p className="mt-0.5 text-[11px] font-black text-white/56">
+                {t.code} ·{" "}
+                <span className="font-mono tracking-[0.18em] text-[#F0C36A]">
+                  {room.code}
+                </span>
+              </p>
+            </div>
+
+            <Link
+              aria-label={t.publicScreen}
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#D8A84E]/38 bg-[#0A3B32]/86 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.20)] transition hover:bg-[#11483E]"
+              href={screenHref}
+              target="_blank"
+            >
+              <Monitor className="h-4 w-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 rounded-[1.1rem] border border-white/12 bg-white/10 p-2 text-white backdrop-blur lg:grid-cols-1">
-            <div className="rounded-[0.8rem] bg-white/10 px-3 py-2">
-              <p className="text-[11px] font-black text-white/52">{t.code}</p>
-              <p className="mt-1 font-mono text-base font-black tracking-[0.18em] text-[#F0C36A]">
-                {room.code}
-              </p>
-            </div>
-            <div className="rounded-[0.8rem] bg-white/10 px-3 py-2">
-              <p className="text-[11px] font-black text-white/52">{t.status}</p>
-              <p className="mt-1 truncate text-sm font-black">{statusLabel}</p>
-            </div>
-            <div className="rounded-[0.8rem] bg-white/10 px-3 py-2">
-              <p className="text-[11px] font-black text-white/52">{t.host}</p>
-              <p className="mt-1 truncate text-sm font-black">
-                {room.host.nickname}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {noticeLabel ? (
-        <div className="flex items-center gap-2 rounded-[1.1rem] border border-[#BBD9C2] bg-[#F2FAEF] px-4 py-3 text-sm font-black text-[#36624A] shadow-sm">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#1F8F55] text-white">
-            <Check className="h-4 w-4" />
-          </span>
-          {noticeLabel}
-        </div>
-      ) : null}
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
-        <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm sm:p-5">
-          {room.status === "FINISHED" ? (
-            <div className="mb-4 rounded-[1rem] border border-[#D9C7B4] bg-[#1E1718] px-4 py-3 text-white">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/62">
-                {t.finished}
-              </p>
-              {winnerLabel ? (
-                <p className="mt-1 text-lg font-black text-[#F0C36A]">
-                  {winnerLabel}
-                </p>
-              ) : null}
+          {noticeLabel ? (
+            <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#D8A84E]/28 bg-[#F8DDA8]/12 px-3 py-2 text-xs font-black text-[#F8DDA8]">
+              <Check className="h-4 w-4" />
+              {noticeLabel}
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black text-[#1E1718]">
-                {t.playerSeats}
-              </h2>
-              <p className="mt-1 text-sm font-bold text-[#7A1F2B]/72">
-                {room.variant.label} · {room.variant.playerSeatCount}{" "}
-                {t.playerUnit} + 1 {t.judge}
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#F4ECE6] px-3 py-1.5 text-xs font-black text-[#7A1F2B]">
-              <UsersRound className="h-3.5 w-3.5" />
-              {playerSeats.filter((seat) => seat.isClaimed).length}/
-              {playerSeats.length}
-            </span>
-          </div>
+          <div className="relative z-10 mt-4 overflow-hidden rounded-[1.35rem] border border-[#D8A84E]/30 bg-[#04241F]/68 shadow-inner">
+            <div className="pointer-events-none absolute inset-0 opacity-45 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
+            <div className="pointer-events-none absolute left-6 top-12 h-12 w-12 rounded-full border border-[#F8DDA8]/34 shadow-[inset_-8px_0_0_rgba(248,221,168,0.16)]" />
+            <div className="pointer-events-none absolute right-5 top-20 h-20 w-20 rounded-full bg-[#D8A84E]/8 blur-2xl" />
 
-          {seatState.formError ? (
-            <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-              {seatState.formError || t.claimError}
-            </p>
-          ) : null}
-
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            {playerSeats.map((seat) => {
-              const isCurrentSeat =
-                seat.isViewerSeat ||
-                room.currentMember?.seatedSeatNumber === seat.seatNumber;
-              const emptySeatActionLabel = room.currentMember?.seatedSeatNumber
-                ? t.changeSeat
-                : t.selectSeat;
-              const showSeatStatus =
-                seat.isClaimed || seat.isDead || room.status !== "LOBBY";
-              const statusLabel = getStatusLabel({
-                isClaimed: seat.isClaimed,
-                isDead: seat.isDead,
-                isLocked: room.status !== "LOBBY",
-                isReady: Boolean(seat.readyAt),
-                t,
-              });
-              const roleCard =
-                room.status === "FINISHED"
-                  ? getWerewolfRoleCardImage(seat.roleKey, locale)
-                  : null;
-
-              if (!seat.isClaimed && isLobby && canChooseSeat) {
-                return (
-                  <form action={seatAction} key={seat.id}>
-                    <input name="locale" type="hidden" value={locale} />
-                    <input name="roomId" type="hidden" value={room.id} />
-                    <input
-                      name="memberToken"
-                      type="hidden"
-                      value={currentMemberToken}
-                    />
-                    <input
-                      name="seatNumber"
-                      type="hidden"
-                      value={seat.seatNumber}
-                    />
-                    <button
-                      className="group grid min-h-[7.5rem] w-full content-between overflow-hidden rounded-[1.1rem] border border-dashed border-[#D9C7B4] bg-[#FFFDF7] p-2.5 text-center transition duration-200 hover:border-[#7A1F2B] hover:bg-[#FFF7F1] hover:shadow-[0_12px_26px_rgba(122,31,43,0.10)] disabled:cursor-not-allowed disabled:opacity-55"
-                      type="submit"
+            <div className="relative px-2 py-3">
+              {judgeSeat ? (
+                <div className="relative z-30 mx-auto flex w-full max-w-[5.2rem] flex-col items-center text-center">
+                  <span className="mb-0.5 rounded-full bg-[#062A24]/88 px-3 py-1 text-[11px] font-black text-[#F0C36A] ring-1 ring-[#D8A84E]/35">
+                    {t.judge}
+                  </span>
+                  {judgeSeat.isClaimed ? (
+                    <span
+                      className={`relative grid h-14 w-14 place-items-center drop-shadow-[0_0_12px_rgba(240,195,106,0.42)] ${
+                        judgeSeat.isDead ? "grayscale opacity-55" : ""
+                      }`}
                     >
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-xs font-black text-[#7A1F2B] shadow-sm">
-                        {seat.seatNumber}
-                      </span>
-                      <span className="grid place-items-center gap-1.5">
-                        <span className="relative grid h-14 w-14 place-items-center transition group-hover:scale-105">
-                          <img
-                            alt=""
-                            aria-hidden="true"
-                            className="absolute inset-0 h-full w-full"
-                            draggable={false}
-                            src={werewolfUiAssets.seatPlayerEmpty}
-                          />
-                          <Plus className="relative h-5 w-5 text-[#7A1F2B]" />
-                        </span>
-                        <span className="text-sm font-black text-[#1E1718]">
-                          {emptySeatActionLabel}
-                        </span>
-                      </span>
-                      <span className="h-7" />
-                    </button>
-                  </form>
-                );
-              }
-
-              return (
-                <div
-                  className={`group relative grid min-h-[7.5rem] content-between overflow-hidden rounded-[1.1rem] border p-2.5 text-center transition duration-200 ${
-                    seat.isDead
-                      ? "border-[#C8B9AA] bg-[#E8E1D8] grayscale"
-                      : isCurrentSeat
-                        ? "border-[#7A1F2B] bg-[#FFF7F1] shadow-[0_12px_26px_rgba(122,31,43,0.12)]"
-                        : seat.isClaimed
-                          ? "border-[#D9C7B4] bg-white shadow-sm"
-                          : "border-[#D9C7B4] bg-[#FFFDF7] hover:border-[#7A1F2B]/45"
-                  }`}
-                  key={seat.id}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
-                      {seat.seatNumber}
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full"
+                        draggable={false}
+                        src={werewolfUiAssets.seatJudge}
+                      />
+                      <WerewolfAvatar
+                        avatarLabel={judgeSeat.avatarLabel}
+                        avatarUrl={judgeSeat.avatarUrl}
+                        className="relative h-11 w-11 border border-[#F8DDA8]/34 text-xs"
+                      />
                     </span>
-                    {showSeatStatus ? (
-                      <span
-                        className={`inline-flex h-7 max-w-[5.5rem] items-center gap-1 rounded-full px-2 text-[11px] font-black ${
-                          seat.isDead
-                            ? "bg-[#1E1718] text-white"
-                            : seat.readyAt || room.status !== "LOBBY"
-                              ? "bg-[#EAF6E7] text-[#36624A]"
-                              : "bg-[#F4ECE6] text-[#7A1F2B]"
-                        }`}
-                      >
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="h-4 w-4 shrink-0"
-                          draggable={false}
-                          src={
-                            seat.isDead
-                              ? werewolfUiAssets.seatPlayerDead
-                              : seat.readyAt || room.status !== "LOBBY"
-                                ? werewolfUiAssets.seatPlayerReady
-                                : werewolfUiAssets.seatPlayerOccupied
-                          }
-                        />
-                        {seat.isDead ? (
-                          <Skull className="h-3 w-3" />
-                        ) : seat.isClaimed && room.status !== "LOBBY" ? (
-                          <HeartPulse className="h-3 w-3" />
-                        ) : null}
-                        <span className="truncate">{statusLabel}</span>
-                      </span>
-                    ) : null}
-                  </div>
+                  ) : isLobby && canChooseSeat ? (
+                    <form
+                      action={seatAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
 
-                  <div className="grid place-items-center gap-1">
-                    {roleCard ? (
-                      <span
-                        className={`aspect-[2/3] h-16 overflow-hidden rounded-[0.65rem] border border-[#D9C7B4] bg-white shadow-sm ${
-                          seat.isDead ? "grayscale" : ""
-                        }`}
-                      >
-                        <img
-                          alt={seat.roleLabel ?? ""}
-                          className="h-full w-full object-cover"
-                          draggable={false}
-                          src={roleCard}
-                        />
-                      </span>
-                    ) : (
-                      <span
-                        className="relative grid h-14 w-14 place-items-center text-base font-black"
+                        applyOptimisticSeatClaim(judgeSeat.seatNumber);
+                      }}
+                    >
+                      <input name="locale" type="hidden" value={locale} />
+                      <input name="roomId" type="hidden" value={room.id} />
+                      <input
+                        name="memberToken"
+                        type="hidden"
+                        value={currentMemberToken}
+                      />
+                      <input
+                        name="seatNumber"
+                        type="hidden"
+                        value={judgeSeat.seatNumber}
+                      />
+                      <input name="responseMode" type="hidden" value="inline" />
+                      <button
+                        className="relative grid h-14 w-14 place-items-center transition hover:scale-105"
+                        type="submit"
                       >
                         <img
                           alt=""
                           aria-hidden="true"
                           className="absolute inset-0 h-full w-full"
                           draggable={false}
-                          src={
-                            seat.isClaimed
-                              ? seat.isDead
-                                ? werewolfUiAssets.seatPlayerDead
-                                : seat.readyAt || room.status !== "LOBBY"
-                                  ? werewolfUiAssets.seatPlayerReady
-                                  : werewolfUiAssets.seatPlayerOccupied
-                              : werewolfUiAssets.seatPlayerEmpty
-                          }
+                          src={werewolfUiAssets.seatJudge}
                         />
-                        {seat.isClaimed ? (
-                          <span className="relative grid h-9 w-9 place-items-center rounded-full bg-[#1E1718] text-xs text-white shadow-sm">
-                            {seat.avatarLabel}
-                          </span>
-                        ) : (
-                          <Plus className="relative h-5 w-5 text-[#7A1F2B]" />
-                        )}
+                        <Plus className="relative h-5 w-5 text-[#F8DDA8]" />
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="relative grid h-14 w-14 place-items-center">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full opacity-70"
+                        draggable={false}
+                        src={werewolfUiAssets.seatJudge}
+                      />
+                      <span className="relative text-xs font-black text-[#F8DDA8]">
+                        {t.empty}
                       </span>
-                    )}
-                    <p className="w-full truncate text-sm font-black text-[#1E1718]">
-                      {seat.isClaimed ? seat.displayName : t.empty}
+                    </span>
+                  )}
+                  <span className="mt-1 block max-w-[5.2rem] truncate text-[10.5px] font-black leading-tight text-white">
+                    {judgeSeat.isClaimed ? judgeSeat.displayName : t.empty}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="relative z-20 mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1">
+                <div className="grid content-start gap-2.5">
+                  {leftTableSeats.map((seat) => renderSeatNode(seat))}
+                </div>
+
+                <div className="relative flex min-h-[31.5rem] flex-col items-center justify-between overflow-hidden rounded-[4.25rem] border border-[#D8A84E]/38 bg-[#062A24] px-3 py-5 shadow-[0_0_30px_rgba(0,0,0,0.24),inset_0_0_34px_rgba(216,168,78,0.12)]">
+                  <div className="pointer-events-none absolute inset-1.5 rounded-[3.75rem] border border-[#F8DDA8]/12" />
+                  <div className="pointer-events-none absolute inset-x-2 bottom-7 top-7 rounded-[3.4rem] border border-[#D8A84E]/18 bg-[linear-gradient(90deg,rgba(8,56,47,0.88),rgba(4,34,29,0.96)_34%,rgba(13,72,58,0.78)_50%,rgba(4,34,29,0.96)_66%,rgba(8,56,47,0.88))]" />
+                  <div className="pointer-events-none absolute inset-x-5 top-1/2 h-72 -translate-y-1/2 rounded-full bg-[#F0C36A]/8 blur-xl" />
+                  <div className="pointer-events-none absolute left-1/2 top-10 h-[calc(100%-5rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#F8DDA8]/16 to-transparent" />
+
+                  <Moon className="relative h-6 w-6 text-[#F0C36A]" />
+
+                  <div className="relative grid place-items-center text-center">
+                    <div className="mb-3 grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-[#D8A84E]/34 bg-[#062A24] shadow-[inset_0_0_18px_rgba(248,221,168,0.10)]">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="h-full w-full object-cover opacity-70"
+                        draggable={false}
+                        src="/game-tools/werewolf/werewolf.jpeg"
+                      />
+                      <div className="absolute h-16 w-16 rounded-full bg-[#062A24]/42" />
+                    </div>
+                    <p className="max-w-[5rem] text-center text-lg font-black leading-tight text-[#F8DDA8]">
+                      {centerTitle}
                     </p>
-                    {room.status === "FINISHED" && seat.roleLabel ? (
-                      <p className="max-w-full truncate rounded-full bg-white px-2 py-1 text-[11px] font-black text-[#7A1F2B]">
-                        {seat.roleLabel}
-                      </p>
-                    ) : null}
+                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-black leading-tight text-white/62">
+                      {centerSubtitle}
+                    </p>
                   </div>
 
-                  {isCurrentSeat && seat.privateToken ? (
-                    <div className="mt-3 grid gap-1.5">
-                      {isLobby ? (
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <form action={readyAction}>
-                            <input name="locale" type="hidden" value={locale} />
-                            <input
-                              name="privateToken"
-                              type="hidden"
-                              value={seat.privateToken}
-                            />
-                            <input
-                              name="operation"
-                              type="hidden"
-                              value={seat.readyAt ? "unready" : "ready"}
-                            />
-                            <SubmitButton
-                              className={`inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
-                                seat.readyAt
-                                  ? "border border-[#D9C7B4] bg-white text-[#7A1F2B] hover:bg-[#FFF7F1]"
-                                  : "bg-[#1E1718] text-white hover:bg-[#3A2A2D]"
-                              }`}
-                              label={
-                                seat.readyAt ? t.unreadyAction : t.readyAction
-                              }
-                            />
-                          </form>
-                          <form action={leaveAction}>
-                            <input name="locale" type="hidden" value={locale} />
-                            <input
-                              name="privateToken"
-                              type="hidden"
-                              value={seat.privateToken}
-                            />
-                            <SubmitButton
-                              className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-white px-3 text-xs font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1] disabled:cursor-not-allowed disabled:opacity-55"
-                              label={t.leaveSeat}
-                            />
-                          </form>
-                        </div>
-                      ) : (
-                        <Link
-                          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
-                          href={withLocale(
-                            locale,
-                            `/game-tools/werewolf/seats/${seat.privateToken}`,
-                          )}
-                        >
-                          <Ticket className="h-3.5 w-3.5" />
-                          {t.openSeat}
-                        </Link>
-                      )}
-                    </div>
-                  ) : null}
-                  {seat.isClaimed
-                    ? renderSeatManagement({
-                        displayName: seat.displayName,
-                        seatNumber: seat.seatNumber,
-                      })
-                    : null}
+                  <div className="relative grid h-8 w-8 place-items-center rounded-full border border-[#D8A84E]/30 bg-[#062A24]/84">
+                    <Moon className="h-4 w-4 text-[#F0C36A]" />
+                  </div>
                 </div>
-              );
-            })}
+
+                <div className="grid content-start gap-2.5">
+                  {rightTableSeats.map((seat) => renderSeatNode(seat))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-4 space-y-3">
+            {!room.currentMember && isLobby ? (
+              <form
+                action={joinAction}
+                className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2"
+              >
+                <input name="locale" type="hidden" value={locale} />
+                <input name="roomId" type="hidden" value={room.id} />
+                <input
+                  className="h-12 min-w-0 rounded-full border border-[#D8A84E]/45 bg-[#F8DDA8]/95 px-4 text-sm font-black text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F0C36A]"
+                  maxLength={40}
+                  name="displayName"
+                  placeholder={t.joinName}
+                />
+                <SubmitButton
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F8DDA8] px-4 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                  label={t.enterMember}
+                />
+                {joinState.formError ? (
+                  <p className="col-span-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                    {joinState.formError}
+                  </p>
+                ) : null}
+              </form>
+            ) : null}
+
+            {room.currentMember && currentViewerSeat?.privateToken ? (
+              <div className="grid gap-2">
+                {isLobby ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <form
+                      action={readyAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        applyOptimisticReady(!currentViewerSeat.readyAt);
+                      }}
+                    >
+                      <input name="locale" type="hidden" value={locale} />
+                      <input
+                        name="privateToken"
+                        type="hidden"
+                        value={currentViewerSeat.privateToken}
+                      />
+                      <input
+                        name="operation"
+                        type="hidden"
+                        value={currentViewerSeat.readyAt ? "unready" : "ready"}
+                      />
+                      <input name="responseMode" type="hidden" value="inline" />
+                      <SubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        label={
+                          currentViewerSeat.readyAt
+                            ? t.unreadyAction
+                            : t.readyAction
+                        }
+                      />
+                    </form>
+                    <form
+                      action={leaveAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        applyOptimisticLeaveSeat();
+                      }}
+                    >
+                      <input name="locale" type="hidden" value={locale} />
+                      <input
+                        name="privateToken"
+                        type="hidden"
+                        value={currentViewerSeat.privateToken}
+                      />
+                      <input name="responseMode" type="hidden" value="inline" />
+                      <SubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        label={t.leaveSeat}
+                      />
+                    </form>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7]"
+                      href={withLocale(
+                        locale,
+                        `/game-tools/werewolf/seats/${currentViewerSeat.privateToken}`,
+                      )}
+                    >
+                      <Ticket className="h-4 w-4" />
+                      {t.openSeat}
+                    </Link>
+                    <form
+                      action={leaveAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        if (!window.confirm(t.leaveRoomConfirm)) {
+                          event.preventDefault();
+                        }
+                      }}
+                    >
+                      <input name="locale" type="hidden" value={locale} />
+                      <input
+                        name="privateToken"
+                        type="hidden"
+                        value={currentViewerSeat.privateToken}
+                      />
+                      <input name="responseMode" type="hidden" value="inline" />
+                      <SubmitButton
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-black text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 disabled:cursor-not-allowed disabled:opacity-55"
+                        label={t.leaveRoom}
+                      />
+                    </form>
+                  </div>
+                )}
+
+                {judgeIsViewer && judgeSeat?.privateToken && isLobby ? (
+                  <form
+                    action={startAction}
+                    className="grid gap-1.5"
+                    onSubmit={(event) => {
+                      if (!canSubmitOnline(event)) {
+                        return;
+                      }
+
+                      if (!window.confirm(t.startConfirm)) {
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    <input name="locale" type="hidden" value={locale} />
+                    <input
+                      name="privateToken"
+                      type="hidden"
+                      value={judgeSeat.privateToken}
+                    />
+                    <SubmitButton
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={!allSeatsReady}
+                      label={t.start}
+                    />
+                    {!allSeatsReady ? (
+                      <p className="text-center text-[11px] font-bold text-white/58">
+                        {t.startWaiting}
+                      </p>
+                    ) : null}
+                  </form>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!room.currentMember && !isLobby ? (
+              <p className="rounded-2xl border border-[#D8A84E]/25 bg-[#F8DDA8]/10 px-3 py-2 text-center text-xs font-bold text-[#F8DDA8]">
+                {t.locked}
+              </p>
+            ) : null}
+
+            {localFormError ||
+            seatState.formError ||
+            leaveState.formError ||
+            readyState.formError ||
+            startState.formError ? (
+              <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+                {localFormError ||
+                  seatState.formError ||
+                  leaveState.formError ||
+                  readyState.formError ||
+                  startState.formError ||
+                  t.claimError}
+              </p>
+            ) : null}
           </div>
         </div>
 
         <aside className="space-y-4">
-          <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
+          <div className="rounded-[1.35rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
             <WerewolfQrCode
               codeLabel={t.code}
               copiedLabel={t.copied}
@@ -1051,263 +1569,7 @@ export function WerewolfRoomOverview({
             <WerewolfTestBotPanel locale={locale} room={room} />
           ) : null}
 
-          <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-[#1E1718] p-4 text-white shadow-sm">
-            <span className="inline-flex items-center gap-2 text-sm font-black">
-              <Crown className="h-4 w-4 text-[#F0C36A]" />
-              {t.judge}
-            </span>
-            <div className="mt-4 grid min-h-36 place-items-center rounded-[1rem] border border-white/12 bg-white/8 p-3 text-center">
-              <span className="relative grid h-16 w-16 place-items-center">
-                <img
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 h-full w-full"
-                  draggable={false}
-                  src={werewolfUiAssets.seatJudge}
-                />
-                <span className="relative rounded-full bg-white/90 px-2 py-1 text-sm font-black text-[#1E1718] shadow-sm">
-                  {judgeSeat?.seatNumber ?? "J"}
-                </span>
-              </span>
-              <p className="mt-2 text-sm font-black">
-                {judgeSeat?.isClaimed ? judgeSeat.displayName : t.empty}
-              </p>
-              {judgeSeat?.isClaimed ? (
-                <p className="mt-1 text-xs font-bold text-white/62">
-                  {judgeSeat.readyAt ? t.ready : t.unready}
-                </p>
-              ) : null}
-              {judgeSeat && !judgeSeat.isClaimed && isLobby ? (
-                canChooseSeat ? (
-                  <form action={seatAction} className="mt-3 grid w-full gap-1.5">
-                    <input name="locale" type="hidden" value={locale} />
-                    <input name="roomId" type="hidden" value={room.id} />
-                    <input
-                      name="memberToken"
-                      type="hidden"
-                      value={currentMemberToken}
-                    />
-                    <input
-                      name="seatNumber"
-                      type="hidden"
-                      value={judgeSeat.seatNumber}
-                    />
-                    <SubmitButton
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F4ECE6] disabled:cursor-not-allowed disabled:opacity-55"
-                      label={
-                        room.currentMember?.seatedSeatNumber
-                          ? t.changeSeat
-                          : t.selectSeat
-                      }
-                    />
-                  </form>
-                ) : (
-                  <p className="mt-3 text-xs font-bold text-white/62">
-                    {t.joinFirst}
-                  </p>
-                )
-              ) : null}
-              {judgeSeat?.isViewerSeat && judgeSeat.privateToken ? (
-                <div className="mt-3 grid w-full gap-1.5">
-                  {isLobby ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <form action={readyAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="privateToken"
-                            type="hidden"
-                            value={judgeSeat.privateToken}
-                          />
-                          <input
-                            name="operation"
-                            type="hidden"
-                            value={judgeSeat.readyAt ? "unready" : "ready"}
-                          />
-                          <SubmitButton
-                            className={`inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 ${
-                              judgeSeat.readyAt
-                                ? "border border-white/20 bg-white/10 text-white hover:bg-white/16"
-                                : "bg-white text-[#1E1718] hover:bg-[#F4ECE6]"
-                            }`}
-                            label={
-                              judgeSeat.readyAt
-                                ? t.unreadyAction
-                                : t.readyAction
-                            }
-                          />
-                        </form>
-                        <form action={leaveAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="privateToken"
-                            type="hidden"
-                            value={judgeSeat.privateToken}
-                          />
-                          <SubmitButton
-                            className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-xs font-black text-white transition hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-55"
-                            label={t.leaveSeat}
-                          />
-                        </form>
-                      </div>
-                      <form
-                        action={startAction}
-                        className="grid gap-1.5"
-                        onSubmit={(event) => {
-                          if (!window.confirm(t.startConfirm)) {
-                            event.preventDefault();
-                          }
-                        }}
-                      >
-                        <input name="locale" type="hidden" value={locale} />
-                        <input
-                          name="privateToken"
-                          type="hidden"
-                          value={judgeSeat.privateToken}
-                        />
-                        <SubmitButton
-                          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#F0C36A] px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F8D581] disabled:cursor-not-allowed disabled:opacity-45"
-                          disabled={!allSeatsReady}
-                          label={t.start}
-                        />
-                        {!allSeatsReady ? (
-                          <p className="text-[11px] font-bold text-white/58">
-                            {t.startWaiting}
-                          </p>
-                        ) : null}
-                      </form>
-                    </>
-                  ) : (
-                    <Link
-                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#F4ECE6]"
-                      href={withLocale(
-                        locale,
-                        `/game-tools/werewolf/seats/${judgeSeat.privateToken}`,
-                      )}
-                    >
-                      <Ticket className="h-3.5 w-3.5" />
-                      {t.openSeat}
-                    </Link>
-                  )}
-                </div>
-              ) : null}
-              {judgeSeat?.isClaimed
-                ? renderSeatManagement({
-                    dark: true,
-                    displayName: judgeSeat.displayName,
-                    seatNumber: judgeSeat.seatNumber,
-                  })
-                : null}
-            </div>
-          </div>
-
-          <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
-            <span className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">
-              <Shield className="h-4 w-4 text-[#7A1F2B]" />
-              {t.members}
-            </span>
-
-            {room.currentMember ? (
-              <div className="mt-3 rounded-[1rem] border border-[#D9C7B4] bg-[#FFF7F1] p-3">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A1F2B]/70">
-                  {t.currentMember}
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
-                    {room.currentMember.avatarLabel}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#1E1718]">
-                      {room.currentMember.displayName}
-                    </p>
-                    <p className="text-xs font-bold text-[#7A1F2B]/68">
-                      {room.currentMember.seatedSeatNumber
-                        ? `${t.seatedAt} ${room.currentMember.seatedSeatNumber}`
-                        : t.members}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : isLobby ? (
-              <form
-                action={joinAction}
-                className="mt-3 grid gap-2 rounded-[1rem] border border-[#D9C7B4] bg-[#FFFDF7] p-3"
-              >
-                <input name="locale" type="hidden" value={locale} />
-                <input name="roomId" type="hidden" value={room.id} />
-                <p className="text-sm font-bold leading-6 text-[#7A1F2B]/72">
-                  {t.waitingMember}
-                </p>
-                <input
-                  className="h-10 min-w-0 rounded-full border border-[#D9C7B4] bg-white px-3 text-sm font-bold text-[#1E1718] outline-none focus:border-[#7A1F2B]"
-                  maxLength={40}
-                  name="displayName"
-                  placeholder={t.joinName}
-                />
-                <SubmitButton
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-4 text-sm font-black text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
-                  label={t.enterMember}
-                />
-                {joinState.formError ? (
-                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                    {joinState.formError}
-                  </p>
-                ) : null}
-              </form>
-            ) : (
-              <p className="mt-3 text-sm font-bold leading-6 text-[#7A1F2B]/72">
-                {t.locked}
-              </p>
-            )}
-
-            <div className="mt-3 space-y-2">
-              {unseatedMembers.length ? (
-                unseatedMembers.map((member) => (
-                  <div
-                    className="flex items-center gap-2 rounded-2xl bg-[#F7F3EC] px-3 py-2"
-                    key={member.id}
-                  >
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#1E1718] text-xs font-black text-white">
-                      {member.avatarLabel}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-black text-[#1E1718]">
-                      {member.displayName}
-                    </span>
-                    {member.isCurrentMember ? (
-                      <Check className="h-4 w-4 text-[#7A1F2B]" />
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm font-bold text-[#7A1F2B]/70">
-                  {t.noMembers}
-                </p>
-              )}
-            </div>
-
-            {leaveState.formError ? (
-              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {leaveState.formError}
-              </p>
-            ) : null}
-            {manageState.formError ? (
-              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {manageState.formError}
-              </p>
-            ) : null}
-            {readyState.formError ? (
-              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {readyState.formError}
-              </p>
-            ) : null}
-            {startState.formError ? (
-              <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {startState.formError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="rounded-[1.4rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
+          <div className="rounded-[1.35rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">
               <UserPlus className="h-4 w-4 text-[#7A1F2B]" />
               {t.events}

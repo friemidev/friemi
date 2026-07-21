@@ -25,6 +25,40 @@ import { calculateTrustScore } from "@/features/trust/trustScore";
 
 export const profileActivityListLimit = 12;
 export const profileFollowListLimit = 12;
+type TrustScoreAggregateResult = {
+  _sum: {
+    delta: number | null;
+  };
+};
+
+async function getTrustScoreAggregate(
+  profileId: string,
+): Promise<TrustScoreAggregateResult> {
+  const trustScoreDelegate = (
+    prisma as typeof prisma & {
+      trustScoreEvent?: {
+        aggregate: (args: {
+          where: { profileId: string };
+          _sum: { delta: true };
+        }) => Promise<TrustScoreAggregateResult>;
+      };
+    }
+  ).trustScoreEvent;
+
+  if (!trustScoreDelegate) {
+    return { _sum: { delta: null } };
+  }
+
+  return trustScoreDelegate.aggregate({
+    where: {
+      profileId,
+    },
+    _sum: {
+      delta: true,
+    },
+  });
+}
+
 const publicPastParticipationStatuses: ParticipantStatus[] = [
   "JOINED",
   "APPROVED",
@@ -295,7 +329,9 @@ function buildWerewolfStats(
 ): ProfileWerewolfStatsViewModel {
   const judgeCount = records.filter((record) => record.isJudge).length;
   const playerRecords = records.filter((record) => !record.isJudge);
-  const winCount = playerRecords.filter((record) => record.result === "WIN").length;
+  const winCount = playerRecords.filter(
+    (record) => record.result === "WIN",
+  ).length;
   const lossCount = playerRecords.filter(
     (record) => record.result === "LOSE",
   ).length;
@@ -306,7 +342,8 @@ function buildWerewolfStats(
     lossCount,
     playerGameCount,
     winCount,
-    winRate: playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
+    winRate:
+      playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
   };
 }
 
@@ -720,14 +757,7 @@ export async function getProfileDashboard(
         result: true,
       },
     }),
-    prisma.trustScoreEvent.aggregate({
-      where: {
-        profileId,
-      },
-      _sum: {
-        delta: true,
-      },
-    }),
+    getTrustScoreAggregate(profileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -947,14 +977,7 @@ export async function getPublicProfileDashboard(
         result: true,
       },
     }),
-    prisma.trustScoreEvent.aggregate({
-      where: {
-        profileId,
-      },
-      _sum: {
-        delta: true,
-      },
-    }),
+    getTrustScoreAggregate(profileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import {
   getWerewolfRoleLabel,
-  getWerewolfVariant,
+  getWerewolfVariantFromRoomConfig,
   getWerewolfVariantLabel,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
@@ -26,16 +26,6 @@ function getMemberDisplayName(member: {
   } | null;
 }) {
   return member.profile?.nickname ?? member.guestName ?? "玩家";
-}
-
-function getConfigVariantKey(config: unknown) {
-  if (!config || typeof config !== "object") {
-    return null;
-  }
-
-  const value = (config as { variantKey?: unknown }).variantKey;
-
-  return typeof value === "string" ? value : null;
 }
 
 export const getWerewolfRoomById = cache(
@@ -136,7 +126,7 @@ export const getWerewolfRoomById = cache(
     }
 
     const state = normalizeWerewolfRoomState(room.state);
-    const variant = getWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, locale);
     const isHost = viewerProfile?.id === room.hostId;
     const currentMember =
       (viewerProfile &&
@@ -162,12 +152,14 @@ export const getWerewolfRoomById = cache(
       isHost,
       kind: room.kind,
       locale: room.locale,
+      finishedAt: room.finishedAt,
       currentMember: currentMember
         ? {
             avatarLabel: getSeatAvatarLabel(
               getMemberDisplayName(currentMember),
               currentMember.seatedSeat?.seatNumber ?? 0,
             ),
+            avatarUrl: currentMember.profile?.avatarUrl ?? null,
             displayName: getMemberDisplayName(currentMember),
             id: currentMember.id,
             isGuest: !currentMember.profileId,
@@ -188,6 +180,7 @@ export const getWerewolfRoomById = cache(
             displayName,
             member.seatedSeat?.seatNumber ?? 0,
           ),
+          avatarUrl: member.profile?.avatarUrl ?? null,
           displayName,
           id: member.id,
           isCurrentMember: currentMember?.id === member.id,
@@ -208,6 +201,7 @@ export const getWerewolfRoomById = cache(
 
         return {
           avatarLabel: getSeatAvatarLabel(seat.displayName, seat.seatNumber),
+          avatarUrl: seat.profile?.avatarUrl ?? null,
           displayName: seat.displayName,
           guestName: seat.guestName,
           id: seat.id,

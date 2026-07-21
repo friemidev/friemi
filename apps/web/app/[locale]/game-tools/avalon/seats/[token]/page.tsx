@@ -85,10 +85,14 @@ export default async function AvalonSeatPage({ params }: AvalonSeatPageProps) {
     <PageContainer className="max-w-2xl pb-28 pt-4 sm:pb-12 sm:pt-7">
       <AvalonPrivateRoleCard
         locale={locale}
+        isHostSeat={seat.profileId === seat.room.hostId}
         payload={parsePrivatePayload(seat.privatePayload)}
         privateToken={seat.privateToken}
         roleKey={seat.roleKey}
-        roomHref={withLocale(locale, `/game-tools/avalon/rooms/${seat.room.id}`)}
+        roomHref={withLocale(
+          locale,
+          `/game-tools/avalon/rooms/${seat.room.id}`,
+        )}
         roomSeats={seat.room.seats}
         roomState={normalizeAvalonRoomState(seat.room.state)}
         roomStatus={seat.room.status}

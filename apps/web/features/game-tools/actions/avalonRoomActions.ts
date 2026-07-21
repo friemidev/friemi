@@ -97,6 +97,8 @@ const privateSeatActionSchema = z.object({
   privateToken: z.string().min(16).max(40),
 });
 
+const leaveSeatSchema = privateSeatActionSchema;
+
 const submitTeamVoteSchema = privateSeatActionSchema.extend({
   value: z.enum(["approve", "reject"]),
 });
@@ -145,6 +147,7 @@ function getActionCopy(locale: string) {
       createFailed: "Impossible de créer la table. Réessaie dans un instant.",
       invalidRequest: "La demande n'est pas valide.",
       joinFailed: "Impossible de rejoindre cette place.",
+      leaveFailed: "Impossible de quitter cette place.",
       noSeat: "Cette place n'est plus disponible.",
       roomFull: "La table est complète.",
       roomNotLobby: "La partie a déjà commencé.",
@@ -154,7 +157,8 @@ function getActionCopy(locale: string) {
       submitFailed: "Action impossible pour le moment.",
       seatManageFailed: "Impossible de modifier cette place.",
       seatManageHostOnly: "Seul l'hôte peut modifier les places.",
-      seatManageLobbyOnly: "Les places ne peuvent être modifiées qu'avant le lancement.",
+      seatManageLobbyOnly:
+        "Les places ne peuvent être modifiées qu'avant le lancement.",
       teamInvalid: "Choisis le bon nombre de joueurs.",
       teamLeaderOnly: "Seul le chef actuel peut choisir l'équipe.",
       voteAlreadyDone: "Ton choix est déjà enregistré.",
@@ -166,6 +170,7 @@ function getActionCopy(locale: string) {
       createFailed: "Could not create the table. Try again in a moment.",
       invalidRequest: "The request is not valid.",
       joinFailed: "Could not claim this seat.",
+      leaveFailed: "Could not leave this seat.",
       noSeat: "This seat is no longer available.",
       roomFull: "The table is full.",
       roomNotLobby: "The game has already started.",
@@ -186,6 +191,7 @@ function getActionCopy(locale: string) {
     createFailed: "无法创建房间，请稍后再试。",
     invalidRequest: "请求内容无效。",
     joinFailed: "无法认领这个座位。",
+    leaveFailed: "无法退出这个座位。",
     noSeat: "这个座位已经不可认领。",
     roomFull: "房间已经满员。",
     roomNotLobby: "本局已经开始。",
@@ -390,7 +396,9 @@ async function applyAvalonTeamProposal({
 
   if (
     dedupedTeamSeatNumbers.length !== requiredTeamSize ||
-    dedupedTeamSeatNumbers.some((seatNumber) => !validSeatNumbers.has(seatNumber))
+    dedupedTeamSeatNumbers.some(
+      (seatNumber) => !validSeatNumbers.has(seatNumber),
+    )
   ) {
     return { formError: t.teamInvalid };
   }
@@ -514,10 +522,7 @@ export async function createAvalonRoomAction(
               return {
                 displayName: isHostSeat
                   ? host.nickname
-                  : getDefaultGameToolSeatName(
-                      result.data.locale,
-                      seatNumber,
-                    ),
+                  : getDefaultGameToolSeatName(result.data.locale, seatNumber),
                 privateToken: createGameToolPrivateToken(),
                 profileId: isHostSeat ? host.id : undefined,
                 readyAt: isHostSeat ? new Date() : undefined,
@@ -541,7 +546,9 @@ export async function createAvalonRoomAction(
   }
 
   revalidateAvalonRoom(result.data.locale, roomId);
-  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${roomId}`));
+  redirect(
+    withLocale(result.data.locale, `/game-tools/avalon/rooms/${roomId}`),
+  );
 }
 
 export async function joinAvalonRoomAction(
@@ -597,7 +604,8 @@ export async function joinAvalonRoomAction(
       room.seats.some((seat) => seat.profileId && seat.profileId === profile.id)
     ) {
       privateToken =
-        room.seats.find((seat) => seat.profileId === profile.id)?.privateToken ?? null;
+        room.seats.find((seat) => seat.profileId === profile.id)
+          ?.privateToken ?? null;
       revalidateAvalonRoom(result.data.locale, room.id);
     } else {
       const targetSeat = room.seats.find(
@@ -655,12 +663,18 @@ export async function joinAvalonRoomAction(
 
   if (privateToken) {
     redirect(
-      withLocale(result.data.locale, `/game-tools/avalon/seats/${privateToken}`),
+      withLocale(
+        result.data.locale,
+        `/game-tools/avalon/seats/${privateToken}`,
+      ),
     );
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
   );
 }
 
@@ -739,7 +753,9 @@ export async function manageAvalonLobbySeatAction(
     );
     const displayName =
       result.data.displayName?.trim() ||
-      (result.data.operation === "release_seat" ? defaultSeatName : seat.displayName);
+      (result.data.operation === "release_seat"
+        ? defaultSeatName
+        : seat.displayName);
 
     if (
       result.data.operation === "release_seat" &&
@@ -793,7 +809,135 @@ export async function manageAvalonLobbySeatAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
+  );
+}
+
+export async function leaveAvalonSeatAction(
+  _previousState: AvalonRoomActionState,
+  formData: FormData,
+): Promise<AvalonRoomActionState> {
+  const rawInput = {
+    locale: getString(formData, "locale") || "zh-CN",
+    privateToken: getString(formData, "privateToken"),
+  };
+  const result = leaveSeatSchema.safeParse(rawInput);
+  const t = getActionCopy(rawInput.locale);
+
+  if (!result.success) {
+    return {
+      fieldErrors: result.error.flatten().fieldErrors,
+      formError: t.invalidRequest,
+    };
+  }
+
+  const profile = await getOptionalCurrentUserProfile();
+  let roomId: string | null = null;
+
+  try {
+    const seat = await prisma.gameToolSeat.findUnique({
+      where: { privateToken: result.data.privateToken },
+      include: {
+        room: {
+          select: {
+            hostId: true,
+            id: true,
+            kind: true,
+            locale: true,
+            status: true,
+          },
+        },
+        roomMember: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!seat || seat.room.kind !== "AVALON") {
+      return { formError: t.leaveFailed };
+    }
+
+    if (!seat.profileId && !seat.guestName) {
+      return { formError: t.leaveFailed };
+    }
+
+    if (seat.profileId && profile?.id !== seat.profileId) {
+      return { formError: t.leaveFailed };
+    }
+
+    if (seat.profileId === seat.room.hostId) {
+      return { formError: t.leaveFailed };
+    }
+
+    const now = new Date();
+    const shouldReleaseSeat = seat.room.status === "LOBBY";
+    const defaultSeatName = getDefaultGameToolSeatName(
+      seat.room.locale,
+      seat.seatNumber,
+    );
+
+    await prisma.$transaction([
+      prisma.gameToolSeat.update({
+        where: { id: seat.id },
+        data: shouldReleaseSeat
+          ? {
+              displayName: defaultSeatName,
+              guestName: null,
+              leftAt: now,
+              privatePayload: Prisma.JsonNull,
+              privateToken: createGameToolPrivateToken(),
+              profileId: null,
+              readyAt: null,
+              roleAlignment: null,
+              roleKey: null,
+            }
+          : {
+              guestName: seat.guestName ?? seat.displayName,
+              leftAt: now,
+              profileId: null,
+              readyAt: null,
+            },
+      }),
+      ...(seat.roomMember
+        ? [
+            prisma.gameToolRoomMember.update({
+              where: { id: seat.roomMember.id },
+              data: {
+                lastSeenAt: now,
+                leftAt: shouldReleaseSeat ? null : now,
+                readyAt: null,
+                seatedSeatId: null,
+              },
+            }),
+          ]
+        : []),
+      prisma.gameToolEvent.create({
+        data: {
+          actorId: seat.profileId,
+          payload: {
+            seatNumber: seat.seatNumber,
+          },
+          roomId: seat.room.id,
+          type: "seat_left",
+        },
+      }),
+    ]);
+
+    roomId = seat.room.id;
+    revalidateAvalonRoom(result.data.locale, seat.room.id);
+  } catch (error) {
+    console.error("Failed to leave Avalon seat", error);
+
+    return { formError: t.leaveFailed };
+  }
+
+  redirect(
+    withLocale(result.data.locale, `/game-tools/avalon/rooms/${roomId ?? ""}`),
   );
 }
 
@@ -894,7 +1038,12 @@ export async function startAvalonRoomAction(
     };
   }
 
-  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
+  );
 }
 
 export async function manageAvalonRoomLifecycleAction(
@@ -1004,11 +1153,11 @@ export async function manageAvalonRoomLifecycleAction(
         prisma.gameToolEvent.create({
           data: {
             actorId: profile.id,
-          payload: {
-            operation: result.data.operation,
-            playerCount: room.playerCount,
-            rules,
-          },
+            payload: {
+              operation: result.data.operation,
+              playerCount: room.playerCount,
+              rules,
+            },
             roomId: room.id,
             type: "room_redealt",
           },
@@ -1023,7 +1172,12 @@ export async function manageAvalonRoomLifecycleAction(
     return { formError: t.submitFailed };
   }
 
-  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
+  );
 }
 
 export async function proposeAvalonTeamAction(
@@ -1069,7 +1223,10 @@ export async function proposeAvalonTeamAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
   );
 }
 
@@ -1125,7 +1282,10 @@ export async function proposeAvalonTeamFromSeatAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/seats/${result.data.privateToken}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/seats/${result.data.privateToken}`,
+    ),
   );
 }
 
@@ -1216,9 +1376,7 @@ export async function submitAvalonTeamVoteAction(
       const approve = votes.filter((vote) => vote.value === "approve").length;
       const reject = votes.length - approve;
       const passed = approve > reject;
-      const nextRejectCount = passed
-        ? 0
-        : currentState.teamVoteRejectCount + 1;
+      const nextRejectCount = passed ? 0 : currentState.teamVoteRejectCount + 1;
       const nextLeaderSeatNumber = getNextAvalonLeaderSeatNumber({
         currentLeaderSeatNumber: currentState.currentLeaderSeatNumber,
         playerCount: seat.room.playerCount,
@@ -1252,8 +1410,7 @@ export async function submitAvalonTeamVoteAction(
           data: {
             finishedAt: nextState.phase === "finished" ? new Date() : undefined,
             state: nextState,
-            status:
-              nextState.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
+            status: nextState.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
           },
         }),
         prisma.gameToolEvent.create({
@@ -1284,7 +1441,10 @@ export async function submitAvalonTeamVoteAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/seats/${result.data.privateToken}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/seats/${result.data.privateToken}`,
+    ),
   );
 }
 
@@ -1439,8 +1599,7 @@ export async function submitAvalonMissionCardAction(
           data: {
             finishedAt: nextState.phase === "finished" ? new Date() : undefined,
             state: nextState,
-            status:
-              nextState.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
+            status: nextState.phase === "finished" ? "FINISHED" : "IN_PROGRESS",
           },
         }),
         prisma.gameToolEvent.create({
@@ -1473,7 +1632,10 @@ export async function submitAvalonMissionCardAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/seats/${result.data.privateToken}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/seats/${result.data.privateToken}`,
+    ),
   );
 }
 
@@ -1608,7 +1770,10 @@ export async function submitAvalonAssassinationAction(
   }
 
   redirect(
-    withLocale(result.data.locale, `/game-tools/avalon/seats/${result.data.privateToken}`),
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/seats/${result.data.privateToken}`,
+    ),
   );
 }
 
@@ -1656,10 +1821,9 @@ export async function correctAvalonRoomAction(
     const currentState = normalizeAvalonRoomState(room.state);
     let nextState = currentState;
     let correctedRoundIndex = currentState.roundIndex;
-    const submissionKinds: Array<"ASSASSINATION_TARGET" | "MISSION_CARD" | "TEAM_VOTE"> = [
-      "MISSION_CARD",
-      "TEAM_VOTE",
-    ];
+    const submissionKinds: Array<
+      "ASSASSINATION_TARGET" | "MISSION_CARD" | "TEAM_VOTE"
+    > = ["MISSION_CARD", "TEAM_VOTE"];
 
     if (result.data.correction === "reset_current_round") {
       if (currentState.phase === "finished") {
@@ -1676,7 +1840,11 @@ export async function correctAvalonRoomAction(
     } else {
       let lastMissionIndex = -1;
 
-      for (let index = currentState.missionResults.length - 1; index >= 0; index -= 1) {
+      for (
+        let index = currentState.missionResults.length - 1;
+        index >= 0;
+        index -= 1
+      ) {
         if (currentState.missionResults[index]) {
           lastMissionIndex = index;
           break;
@@ -1742,7 +1910,12 @@ export async function correctAvalonRoomAction(
     return { formError: t.submitFailed };
   }
 
-  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
+  );
 }
 
 export async function rollbackAvalonRoomAction(
@@ -1787,11 +1960,12 @@ export async function rollbackAvalonRoomAction(
     }
 
     const currentState = normalizeAvalonRoomState(room.state);
-    const keepMissionResults = currentState.missionResults.map((missionResult, index) =>
-      index < result.data.roundIndex ? missionResult : null,
+    const keepMissionResults = currentState.missionResults.map(
+      (missionResult, index) =>
+        index < result.data.roundIndex ? missionResult : null,
     );
     const nextLeaderSeatNumber =
-      ((result.data.roundIndex % Math.max(room.playerCount, 1)) + 1);
+      (result.data.roundIndex % Math.max(room.playerCount, 1)) + 1;
     const nextState = {
       ...currentState,
       currentLeaderSeatNumber: nextLeaderSeatNumber,
@@ -1842,5 +2016,10 @@ export async function rollbackAvalonRoomAction(
     return { formError: t.submitFailed };
   }
 
-  redirect(withLocale(result.data.locale, `/game-tools/avalon/rooms/${result.data.roomId}`));
+  redirect(
+    withLocale(
+      result.data.locale,
+      `/game-tools/avalon/rooms/${result.data.roomId}`,
+    ),
+  );
 }
