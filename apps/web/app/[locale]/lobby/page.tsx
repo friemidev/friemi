@@ -33,6 +33,7 @@ type ActivityLobbyPageProps = {
   searchParams?: Promise<{
     category?: string | string[];
     filter?: string | string[];
+    price?: string | string[];
     status?: string | string[];
     tab?: string | string[];
   }>;
@@ -111,6 +112,7 @@ export default async function ActivityLobbyPage({
   const query = (await searchParams) ?? {};
   const categoryParam = getSingleQueryValue(query.category);
   const filterParam = getSingleQueryValue(query.filter);
+  const priceParam = getSingleQueryValue(query.price);
   const statusParam = getSingleQueryValue(query.status);
   const tabParam = getSingleQueryValue(query.tab);
   const initialCategoryFilter =
@@ -124,6 +126,7 @@ export default async function ActivityLobbyPage({
     filter: filterParam,
     tab: tabParam,
   });
+  const initialFreeOnly = priceParam === "free";
   const perf = createPerformanceTracker({
     locale,
     route: "/lobby",
@@ -158,6 +161,7 @@ export default async function ActivityLobbyPage({
           activeTab={initialMobileTab}
           activities={previewActivities}
           initialCategoryFilter={initialCategoryFilter}
+          initialFreeOnly={initialFreeOnly}
           isSignedIn={false}
           locale={locale}
         />
@@ -221,12 +225,10 @@ export default async function ActivityLobbyPage({
           ...lobby.friendHostedActivities,
         ]}
         initialCategoryFilter={initialCategoryFilter}
+        initialFreeOnly={initialFreeOnly}
         isSignedIn
         locale={locale}
-        mineActivities={[
-          ...lobby.createdActivities,
-          ...lobby.joinedActivities,
-        ]}
+        mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView

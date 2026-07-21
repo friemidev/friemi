@@ -31,6 +31,7 @@ import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
 import { getCategoryLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ type MobileLobbyV23ViewProps = {
   activities: ActivityCardViewModel[];
   friendActivities?: ActivityCardViewModel[];
   initialCategoryFilter?: ActivityCategory | null;
+  initialFreeOnly?: boolean;
   isSignedIn: boolean;
   locale: string;
   mineActivities?: ActivityCardViewModel[];
@@ -97,18 +99,6 @@ const mobileLobbyV23CategoryIcons = {
   OTHER: CircleEllipsis,
 } satisfies Record<ActivityCategory, LucideIcon>;
 
-const mobileLobbyV23CategoryImages: Partial<Record<ActivityCategory, string>> = {
-  FOOD: "dining.png",
-  WANDER: "wandering.png",
-  AUDIO_VISUAL: "movies.png",
-  ART: "art.png",
-  BOARD_GAME: "board-games.png",
-  GROWTH: "growth.png",
-  TRAVEL: "travel.png",
-  MUSIC: "music.png",
-  SPORTS: "sports.png",
-};
-
 function getMobileLobbyAllLabel(locale: string) {
   if (locale === "fr") {
     return "Tout";
@@ -135,14 +125,20 @@ function getMobileLobbyCategoryFilterLabel(locale: string) {
 
 function getMobileLobbyTabHref({
   category,
+  freeOnly,
   locale,
   tab,
 }: {
   category: MobileLobbyV23CategoryFilterId;
+  freeOnly?: boolean;
   locale: string;
   tab: MobileLobbyV23TabId;
 }) {
   const params = new URLSearchParams({ tab });
+
+  if (freeOnly) {
+    params.set("price", "free");
+  }
 
   if (category !== "all") {
     params.set("category", category);
@@ -174,6 +170,20 @@ function syncMobileLobbyCategorySearchParam(
   }
 }
 
+function isFreeMobileLobbyActivity(activity: ActivityCardViewModel) {
+  const priceText = activity.priceText.trim().toLowerCase();
+
+  return (
+    priceText.length === 0 ||
+    priceText === "0" ||
+    priceText === "free" ||
+    priceText === "gratuit" ||
+    priceText === "免费" ||
+    priceText.includes("gratuit") ||
+    priceText.includes("free")
+  );
+}
+
 function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
   if (locale === "fr") {
     return {
@@ -181,7 +191,8 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       emptyDescription: "Les nouvelles sorties apparaîtront ici.",
       emptyTitle: "Aucun groupe pour le moment",
       friendEmptyTitle: "Aucune sortie d'amis",
-      friendEmptyDescription: "Connectez-vous pour voir les sorties de vos amis.",
+      friendEmptyDescription:
+        "Connectez-vous pour voir les sorties de vos amis.",
       friendGoing: (count) => `${count} ami${count > 1 ? "s" : ""} y vont`,
       mineEmptyTitle: "Aucune de vos sorties",
       mineEmptyDescription:
@@ -285,7 +296,9 @@ function getParisDateKey(value: string | Date) {
 function getTodayActivities(activities: ActivityCardViewModel[]) {
   const todayKey = getParisDateKey(new Date());
 
-  return activities.filter((activity) => getParisDateKey(activity.startAt) === todayKey);
+  return activities.filter(
+    (activity) => getParisDateKey(activity.startAt) === todayKey,
+  );
 }
 
 function getMobileLobbyDateOnly(value: string, locale: string) {
@@ -310,7 +323,10 @@ function getMobileLobbyDateOnly(value: string, locale: string) {
   }).format(date);
 }
 
-function getMobileLobbyDateLabel(activity: ActivityCardViewModel, locale: string) {
+function getMobileLobbyDateLabel(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
   if (
     activity.endAt &&
     getParisDateKey(activity.startAt) !== getParisDateKey(activity.endAt)
@@ -327,7 +343,9 @@ function getMobileLobbyDateLabel(activity: ActivityCardViewModel, locale: string
 function getPopularActivities(activities: ActivityCardViewModel[]) {
   return [...activities].sort((left, right) => {
     const leftScore =
-      left.participantCount * 2 + left.favoriteCount + (left.friendSignal?.count ?? 0) * 3;
+      left.participantCount * 2 +
+      left.favoriteCount +
+      (left.friendSignal?.count ?? 0) * 3;
     const rightScore =
       right.participantCount * 2 +
       right.favoriteCount +
@@ -378,6 +396,17 @@ function filterMobileLobbyActivitiesByCategory(
   }
 
   return activities.filter((activity) => activity.category === category);
+}
+
+function filterMobileLobbyActivitiesByPrice(
+  activities: ActivityCardViewModel[],
+  freeOnly: boolean,
+) {
+  if (!freeOnly) {
+    return activities;
+  }
+
+  return activities.filter(isFreeMobileLobbyActivity);
 }
 
 function MobileLobbyV23CategoryRail({
@@ -461,7 +490,7 @@ function MobileLobbyV23CategoryRail({
         </div>
 
         <div className="mt-5 flex-1 overflow-y-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {options.map(({ Icon, id, image, label }, index) => {
               const active = id === activeCategory;
               const isAll = id === "all";
@@ -471,9 +500,7 @@ function MobileLobbyV23CategoryRail({
                   key={id}
                   aria-pressed={active}
                   className={cn(
-                    "mobile-lobby-category-drawer__item group relative flex min-h-[8.25rem] flex-col overflow-hidden rounded-[1.35rem] border p-2.5 text-left transition active:scale-[0.97]",
-                    isAll &&
-                      "col-span-2 min-h-[5.7rem] flex-row items-center gap-3",
+                    "mobile-lobby-category-drawer__item group relative flex min-h-[5.75rem] items-center gap-3 overflow-hidden rounded-[1.35rem] border p-2.5 text-left transition active:scale-[0.97]",
                     active
                       ? "border-[#096B45] bg-[#096B45] text-white shadow-[0_18px_36px_rgba(9,107,69,0.22)]"
                       : "border-[#E4DFC9] bg-white text-[#111210] shadow-[0_14px_28px_rgba(17,18,16,0.055)]",
@@ -497,7 +524,7 @@ function MobileLobbyV23CategoryRail({
                   <span
                     className={cn(
                       "relative flex shrink-0 items-center justify-center overflow-hidden rounded-[1.1rem]",
-                      isAll ? "h-14 w-14" : "h-[5.4rem] w-full",
+                      isAll ? "h-14 w-14" : "h-[4.35rem] w-[5.5rem]",
                       active ? "bg-white/16" : "bg-[#F7F4EA]",
                     )}
                   >
@@ -519,16 +546,24 @@ function MobileLobbyV23CategoryRail({
                       />
                     )}
                   </span>
-                  <span
-                    className={cn(
-                      "relative mt-2 min-w-0 text-[15px] font-black leading-tight",
-                      isAll && "mt-0 text-[18px]",
-                    )}
-                  >
-                    {label}
+                  <span className="relative flex min-w-0 flex-1 items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "min-w-0 truncate text-[16px] font-black leading-tight",
+                        isAll && "text-[18px]",
+                      )}
+                    >
+                      {label}
+                    </span>
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        active ? "text-white/82" : "text-[#096B45]/70",
+                      )}
+                    />
                   </span>
                   {active ? (
-                    <span className="relative mt-1 h-1 w-8 rounded-full bg-white/86" />
+                    <span className="absolute bottom-3 right-11 h-1 w-8 rounded-full bg-white/86" />
                   ) : null}
                 </button>
               );
@@ -603,15 +638,14 @@ export function MobileLobbyV23View({
   activities,
   friendActivities,
   initialCategoryFilter = null,
+  initialFreeOnly = false,
   isSignedIn,
   locale,
   mineActivities,
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
   const [activeCategory, setActiveCategory] =
-    useState<MobileLobbyV23CategoryFilterId>(
-      initialCategoryFilter ?? "all",
-    );
+    useState<MobileLobbyV23CategoryFilterId>(initialCategoryFilter ?? "all");
   const [categoryRailOpen, setCategoryRailOpen] = useState(false);
   const categoryFilterOptions = useMemo<MobileLobbyV23CategoryFilterOption[]>(
     () => [
@@ -623,7 +657,7 @@ export function MobileLobbyV23View({
       ...activityCategoryOptions.map((category) => ({
         Icon: mobileLobbyV23CategoryIcons[category],
         id: category,
-        image: mobileLobbyV23CategoryImages[category],
+        image: activityCategoryIllustrationImages[category],
         label: getCategoryLabel(category, locale),
       })),
     ],
@@ -632,14 +666,17 @@ export function MobileLobbyV23View({
   const activeCategoryLabel =
     categoryFilterOptions.find((option) => option.id === activeCategory)
       ?.label ?? getMobileLobbyAllLabel(locale);
-  const visibleActivities = filterMobileLobbyActivitiesByCategory(
-    getVisibleActivities({
-      activeTab,
-      activities,
-      friendActivities,
-      mineActivities,
-    }),
-    activeCategory,
+  const visibleActivities = filterMobileLobbyActivitiesByPrice(
+    filterMobileLobbyActivitiesByCategory(
+      getVisibleActivities({
+        activeTab,
+        activities,
+        friendActivities,
+        mineActivities,
+      }),
+      activeCategory,
+    ),
+    initialFreeOnly,
   ).slice(0, 30);
   const handleSelectCategory = useCallback(
     (category: MobileLobbyV23CategoryFilterId) => {
@@ -652,7 +689,9 @@ export function MobileLobbyV23View({
   const showFriendSignIn =
     (activeTab === "friends" || activeTab === "mine") && !isSignedIn;
   const signInPromptDescription =
-    activeTab === "mine" ? copy.mineEmptyDescription : copy.friendEmptyDescription;
+    activeTab === "mine"
+      ? copy.mineEmptyDescription
+      : copy.friendEmptyDescription;
   const emptyTitle =
     activeTab === "friends"
       ? copy.friendEmptyTitle
@@ -721,6 +760,7 @@ export function MobileLobbyV23View({
               )}
               href={getMobileLobbyTabHref({
                 category: activeCategory,
+                freeOnly: initialFreeOnly,
                 locale,
                 tab,
               })}
@@ -768,7 +808,6 @@ export function MobileLobbyV23View({
           </div>
         )}
       </div>
-
     </section>
   );
 }

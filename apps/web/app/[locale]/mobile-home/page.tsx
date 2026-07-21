@@ -247,15 +247,14 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
-        { href: "/lobby?tab=nearby", label: "Tout" },
-        { href: "/lobby?tab=nearby", label: "Proche" },
+        { href: "/activities", label: "Activités" },
+        { href: "/lobby?tab=nearby", label: "Groupes proches" },
         { href: "/lobby?tab=today", label: "Aujourd'hui" },
-        { href: "/lobby?tab=friends", label: "Amis" },
-        { href: "/activities?q=gratuit", label: "Gratuit" },
+        { href: "/lobby?tab=friends", label: "Groupes d'amis" },
       ],
       categoriesTitle: "Catégories populaires",
-      topNewsTitle: "À la une",
-      trendingTitle: "🔥 Tendance aujourd'hui",
+      topNewsTitle: "🔥 Top News",
+      trendingTitle: "Tendance aujourd'hui",
       seeAll: "Voir tout",
       participantsLabel: "personnes",
       distanceFallback: "800m",
@@ -316,15 +315,14 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
-        { href: "/lobby?tab=nearby", label: "All" },
-        { href: "/lobby?tab=nearby", label: "Nearby" },
+        { href: "/activities", label: "Activities" },
+        { href: "/lobby?tab=nearby", label: "Nearby Hangouts" },
         { href: "/lobby?tab=today", label: "Today" },
-        { href: "/lobby?tab=friends", label: "Friends" },
-        { href: "/activities?q=free", label: "Free" },
+        { href: "/lobby?tab=friends", label: "Friend Hangouts" },
       ],
       categoriesTitle: "Popular Categories",
-      topNewsTitle: "Top News",
-      trendingTitle: "🔥 Trending Today",
+      topNewsTitle: "🔥 Top News",
+      trendingTitle: "Trending Today",
       seeAll: "See all",
       participantsLabel: "people",
       distanceFallback: "800m",
@@ -384,15 +382,14 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       { label: "上海", href: "/activities?city=Shanghai" },
     ],
     filters: [
-      { href: "/lobby?tab=nearby", label: "全部" },
-      { href: "/lobby?tab=nearby", label: "附近" },
-      { href: "/lobby?tab=today", label: "今天" },
-      { href: "/lobby?tab=friends", label: "好友" },
-      { href: "/activities?q=免费", label: "免费" },
+      { href: "/activities", label: "发现活动" },
+      { href: "/lobby?tab=nearby", label: "附近组局" },
+      { href: "/lobby?tab=today", label: "今日组局" },
+      { href: "/lobby?tab=friends", label: "好友组局" },
     ],
     categoriesTitle: "热门分类",
-    topNewsTitle: "最新动态",
-    trendingTitle: "🔥 今日热门",
+    topNewsTitle: "🔥 Top News",
+    trendingTitle: "今日热门",
     seeAll: "查看全部",
     participantsLabel: "人",
     distanceFallback: "800m",
@@ -595,7 +592,10 @@ function MobileHomeV23Experience({
           <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
-          <MobileHomeV23CategoryCarousel categories={categories} locale={locale} />
+          <MobileHomeV23CategoryCarousel
+            categories={categories}
+            locale={locale}
+          />
         </section>
 
         <section className="mt-4">
@@ -638,14 +638,16 @@ function MobileHomeV23Experience({
 
           <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trendingActivities.length > 0
-              ? trendingActivities.slice(0, 5).map((activity) => (
-                  <MobileHomeV23ActivityCard
-                    activity={activity}
-                    key={`${activity.type}:${activity.id}`}
-                    locale={locale}
-                    participantsLabel={copy.participantsLabel}
-                  />
-                ))
+              ? trendingActivities
+                  .slice(0, 5)
+                  .map((activity) => (
+                    <MobileHomeV23ActivityCard
+                      activity={activity}
+                      key={`${activity.type}:${activity.id}`}
+                      locale={locale}
+                      participantsLabel={copy.participantsLabel}
+                    />
+                  ))
               : copy.fallbackCards.map((card) => (
                   <MobileHomeV23FallbackCard
                     card={card}
@@ -656,7 +658,6 @@ function MobileHomeV23Experience({
           </div>
         </section>
       </div>
-
     </section>
   );
 }
@@ -715,7 +716,9 @@ function MobileHomeV23NewsActivityCard({
       />
       <div className="absolute bottom-3 left-3 right-3">
         <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
-          <span className="truncate">{getCategoryLabel(activity.category, locale)}</span>
+          <span className="truncate">
+            {getCategoryLabel(activity.category, locale)}
+          </span>
         </span>
         <h3 className="mt-2 line-clamp-2 text-[17px] font-black leading-5 tracking-normal text-white drop-shadow-sm">
           {activity.title}
@@ -798,7 +801,9 @@ function MobileHomeV23ActivityCard({
         </p>
         <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
           <Clock3 className="h-3 w-3 shrink-0" />
-          <span className="truncate">{getActivityDateLabel(activity, locale)}</span>
+          <span className="truncate">
+            {getActivityDateLabel(activity, locale)}
+          </span>
         </p>
       </div>
     </IntentPrefetchLink>
