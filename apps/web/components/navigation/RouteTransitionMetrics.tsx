@@ -3,6 +3,10 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
+import {
+  saveActivityListEntryFromDocumentReferrer,
+  saveActivityListEntryFromTransition,
+} from "@/features/navigation/activityListEntryReturn";
 
 type PendingNavigation = {
   fromRoute: string;
@@ -81,8 +85,29 @@ function roundDurationMs(value: number) {
 export function RouteTransitionMetrics({ locale }: { locale: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const hasCheckedInitialReferrerRef = useRef(false);
   const pendingNavigationRef = useRef<PendingNavigation | null>(null);
+  const previousRouteKeyRef = useRef<string | null>(null);
   const routeKey = getRouteKey(pathname, searchParams);
+
+  useEffect(() => {
+    if (!hasCheckedInitialReferrerRef.current) {
+      hasCheckedInitialReferrerRef.current = true;
+      saveActivityListEntryFromDocumentReferrer(locale);
+    }
+
+    const previousRouteKey = previousRouteKeyRef.current;
+
+    if (previousRouteKey && previousRouteKey !== routeKey) {
+      saveActivityListEntryFromTransition({
+        fromRoute: previousRouteKey,
+        locale,
+        targetRoute: routeKey,
+      });
+    }
+
+    previousRouteKeyRef.current = routeKey;
+  }, [locale, routeKey]);
 
   useEffect(() => {
     const pendingNavigation = pendingNavigationRef.current;
@@ -139,6 +164,11 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
         startedAt: performance.now(),
         targetRoute,
       };
+      saveActivityListEntryFromTransition({
+        fromRoute: pendingNavigationRef.current.fromRoute,
+        locale,
+        targetRoute,
+      });
     }
 
     document.addEventListener("click", handleClick, true);
@@ -146,7 +176,7 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
     return () => {
       document.removeEventListener("click", handleClick, true);
     };
-  }, []);
+  }, [locale]);
 
   return null;
 }

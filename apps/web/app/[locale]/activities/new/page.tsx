@@ -1,12 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import {
+  ensureCurrentUserProfile,
+  getOptionalCurrentUserProfileSnapshot,
+} from "@/lib/auth";
 import { getActivityCopyValuesById } from "@/features/activities/queries/getActivityById";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
 import { MobileNewActivityEntryView } from "@/features/activities/components/MobileNewActivityEntryView";
 import { getActivityList } from "@/features/activities/queries/getActivities";
 import { normalizeActivityFilterValues } from "@/features/activities/utils/activityFilters";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 
@@ -51,7 +55,6 @@ export default async function NewActivityPage({
   const { locale } = await params;
   const resolvedSearchParams = await searchParams;
   const t = getCopy(locale);
-  const profile = await ensureCurrentUserProfile(locale, "/activities/new");
   const copyActivityId = Array.isArray(resolvedSearchParams.copyActivityId)
     ? resolvedSearchParams.copyActivityId[0]
     : resolvedSearchParams.copyActivityId;
@@ -59,9 +62,16 @@ export default async function NewActivityPage({
     ? resolvedSearchParams.mode[0]
     : resolvedSearchParams.mode;
   const showForm = mode === "form" || Boolean(copyActivityId);
-  const initialValues = copyActivityId
-    ? await getActivityCopyValuesById(copyActivityId, profile.id)
-    : undefined;
+  const profile = await (copyActivityId
+    ? ensureCurrentUserProfile(
+        locale,
+        `/activities/new?copyActivityId=${encodeURIComponent(copyActivityId)}`,
+      )
+    : getOptionalCurrentUserProfileSnapshot());
+  const initialValues =
+    copyActivityId && profile
+      ? await getActivityCopyValuesById(copyActivityId, profile.id)
+      : undefined;
   const activityPreviewList = showForm
     ? null
     : await getActivityList(
@@ -75,7 +85,7 @@ export default async function NewActivityPage({
         {
           pageSize: 6,
           publicInfoOnly: true,
-          viewerProfileId: profile.id,
+          viewerProfileId: profile?.id ?? null,
         },
       ).catch((error: unknown) => {
         console.error("Failed to load mobile new activity preview", error);
@@ -117,8 +127,13 @@ export default async function NewActivityPage({
 
       <NewActivityForm
         formId={formId}
+        isAuthenticated={Boolean(profile)}
         locale={locale}
         initialValues={initialValues ?? undefined}
+        signInHref={getSignInHref(
+          locale,
+          showForm ? "/activities/new?mode=form" : "/activities/new",
+        )}
       />
     </PageContainer>
   );

@@ -66,6 +66,7 @@ type ProfileDashboardViewProps = {
   dashboard: ProfileDashboardViewModel;
   hasDashboardError?: boolean;
   isAuthenticated?: boolean;
+  isGuestPlaceholder?: boolean;
   isSelf?: boolean;
   locale: string;
   profile: PublicProfileViewModel;
@@ -242,6 +243,33 @@ function getMobileProfileCopy(locale: string) {
   };
 }
 
+function getGuestProfileCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      browsePlanets: "Explorer les planètes",
+      settings: "Langue",
+      signIn: "Se connecter",
+      title: "Profil visiteur",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      browsePlanets: "Explore planets",
+      settings: "Language",
+      signIn: "Sign in",
+      title: "Guest profile",
+    };
+  }
+
+  return {
+    browsePlanets: "去星球看看",
+    settings: "语言设置",
+    signIn: "登录",
+    title: "游客主页",
+  };
+}
+
 function ProfileAvatar({
   avatarUrl,
   initial,
@@ -253,7 +281,8 @@ function ProfileAvatar({
   name: string;
   size?: "sm" | "lg";
 }) {
-  const sizeClass = size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
+  const sizeClass =
+    size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
 
   if (avatarUrl) {
     return (
@@ -275,6 +304,136 @@ function ProfileAvatar({
       )}
     >
       {initial}
+    </div>
+  );
+}
+
+function GuestProfilePlaceholder({
+  dashboard,
+  locale,
+  profile,
+  profileInitial,
+}: {
+  dashboard: ProfileDashboardViewModel;
+  locale: string;
+  profile: PublicProfileViewModel;
+  profileInitial: string;
+}) {
+  const copy = getGuestProfileCopy(locale);
+  const mobileCopy = getMobileProfileCopy(locale);
+  const signInHref = getSignInHref(locale, "/profile");
+  const settingsHref = withLocale(locale, "/account/settings");
+  const planetsHref = withLocale(locale, "/footprints?tab=planet");
+  const stats = [
+    { label: mobileCopy.created, value: dashboard.createdActivityCount },
+    { label: mobileCopy.friends, value: dashboard.friendCount },
+    { label: mobileCopy.moments, value: dashboard.momentCount },
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-7xl pb-8">
+      <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5 md:hidden">
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
+            {copy.title}
+          </h1>
+          <Link
+            href={settingsHref}
+            aria-label={copy.settings}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
+          >
+            <Settings className="h-[1.125rem] w-[1.125rem]" />
+          </Link>
+        </header>
+
+        <section className="mt-6">
+          <div className="grid grid-cols-[4rem_minmax(0,1fr)] items-start gap-3">
+            <ProfileAvatar
+              avatarUrl={profile.avatarUrl}
+              initial={profileInitial}
+              name={profile.nickname}
+              size="sm"
+            />
+            <div className="min-w-0">
+              <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+                {profile.nickname}
+              </h2>
+              {profile.bio ? (
+                <p className="mt-3 text-sm font-semibold leading-5 text-[#4F574F]">
+                  {profile.bio}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-3">
+            {stats.map((item) => (
+              <div className="min-w-0 px-2 py-2 text-center" key={item.label}>
+                <p className="text-[22px] font-black leading-none text-[#111210]">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-[10px] font-bold leading-3 text-[#4F574F]">
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-7 grid gap-3">
+            <Link
+              href={signInHref}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95"
+            >
+              {copy.signIn}
+            </Link>
+            <Link
+              href={planetsHref}
+              className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+            >
+              {copy.browsePlanets}
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      <div className="hidden space-y-5 md:block md:space-y-7">
+        <section className="rounded-[1.35rem] border border-[#8AB68E]/40 bg-[linear-gradient(145deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-5 shadow-[0_14px_34px_rgba(21,98,64,0.07)] ring-1 ring-white/70">
+          <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div className="flex min-w-0 items-center gap-4">
+              <ProfileAvatar
+                avatarUrl={profile.avatarUrl}
+                initial={profileInitial}
+                name={profile.nickname}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-moss">{copy.title}</p>
+                <h1 className="mt-1 truncate text-3xl font-semibold tracking-normal text-ink">
+                  {profile.nickname}
+                </h1>
+                {profile.bio ? (
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                    {profile.bio}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-start gap-2 md:justify-end">
+              <Link
+                href={settingsHref}
+                className="inline-flex h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#FEFFF9]"
+              >
+                {copy.settings}
+              </Link>
+              <Link
+                href={signInHref}
+                className="inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0D5A3C]"
+              >
+                {copy.signIn}
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -440,14 +599,16 @@ function PublicMobileTimeline({
       text: moment.content?.trim() || copy.moments,
       type: copy.moments,
     }));
-  const activityItems = dashboard.createdActivities.slice(0, 6).map((activity) => ({
-    date: activity.startAt,
-    href: withLocale(locale, getActivityDetailPath(activity.id)),
-    id: `activity-${activity.id}`,
-    imageUrl: activity.coverImageUrl,
-    text: activity.title,
-    type: copy.created,
-  }));
+  const activityItems = dashboard.createdActivities
+    .slice(0, 6)
+    .map((activity) => ({
+      date: activity.startAt,
+      href: withLocale(locale, getActivityDetailPath(activity.id)),
+      id: `activity-${activity.id}`,
+      imageUrl: activity.coverImageUrl,
+      text: activity.title,
+      type: copy.created,
+    }));
   const timelineItems = [...momentItems, ...activityItems]
     .sort(
       (left, right) =>
@@ -1015,7 +1176,11 @@ function SelfMobileProfileHome({
       </section>
 
       <section className="mt-6 grid grid-cols-3 gap-y-4">
-        <ComingSoonFeature icon={Sparkles} label={copy.charm} soon={copy.soon} />
+        <ComingSoonFeature
+          icon={Sparkles}
+          label={copy.charm}
+          soon={copy.soon}
+        />
         <ComingSoonFeature
           icon={UserRoundPlus}
           label={copy.invite}
@@ -1051,7 +1216,6 @@ function SelfMobileProfileHome({
           </span>
         </Link>
       </section>
-
     </div>
   );
 }
@@ -1112,6 +1276,7 @@ export function ProfileDashboardView({
   dashboard,
   hasDashboardError = false,
   isAuthenticated = false,
+  isGuestPlaceholder = false,
   isSelf = false,
   locale,
   profile,
@@ -1136,10 +1301,25 @@ export function ProfileDashboardView({
       section === "participation" ||
       (isSelf && section === "favorite");
 
-    if (context && isDetailSourceReturnPage(context, "profile") && canRestoreSection) {
+    if (
+      context &&
+      isDetailSourceReturnPage(context, "profile") &&
+      canRestoreSection
+    ) {
       setActiveProfileSection(section);
     }
   }, [isSelf]);
+
+  if (isGuestPlaceholder) {
+    return (
+      <GuestProfilePlaceholder
+        dashboard={dashboard}
+        locale={locale}
+        profile={profile}
+        profileInitial={profileInitial}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
@@ -1163,186 +1343,189 @@ export function ProfileDashboardView({
       </div>
 
       <div className="hidden space-y-5 md:block md:space-y-7">
-      <section
-        className={
-          isSelf
-            ? "border-b border-black/10 pb-4 md:pb-6"
-            : "rounded-[1.35rem] border border-[#8AB68E]/40 bg-[linear-gradient(145deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-3 shadow-[0_14px_34px_rgba(21,98,64,0.07)] ring-1 ring-white/70 sm:rounded-[1.75rem] sm:p-5"
-        }
-      >
-        {isSelf ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] lg:items-start">
-            <div className="grid min-w-0 gap-3">
-              <div className="flex min-w-0 items-center gap-4">
+        <section
+          className={
+            isSelf
+              ? "border-b border-black/10 pb-4 md:pb-6"
+              : "rounded-[1.35rem] border border-[#8AB68E]/40 bg-[linear-gradient(145deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-3 shadow-[0_14px_34px_rgba(21,98,64,0.07)] ring-1 ring-white/70 sm:rounded-[1.75rem] sm:p-5"
+          }
+        >
+          {isSelf ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] lg:items-start">
+              <div className="grid min-w-0 gap-3">
+                <div className="flex min-w-0 items-center gap-4">
+                  {profile.avatarUrl ? (
+                    // User avatars are stored as remote URLs from Clerk/user data.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.avatarUrl}
+                      alt={profile.nickname}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-lg font-semibold text-white sm:h-16 sm:w-16 sm:text-xl">
+                      {profileInitial}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-moss">
+                      {t.profile.title}
+                    </p>
+                    <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
+                      {profile.nickname}
+                    </h1>
+                    {profile.isCoCreator ? (
+                      <CoCreatorIdentityBadge
+                        className="mt-2"
+                        locale={locale}
+                      />
+                    ) : null}
+                    {profile.bio ? (
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-500">
+                        {profile.bio}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {profile.friendCode ? (
+                  <div className="max-w-xl">
+                    <ProfileIdentityForm
+                      bio={profile.bio}
+                      friendCode={profile.friendCode}
+                      locale={locale}
+                      nickname={profile.nickname}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-3">
+                <ProfileOverviewPanel
+                  activeActivitySection={activeProfileSection}
+                  createdCount={dashboard.createdActivityCount}
+                  joinedCount={dashboard.participationCount}
+                  friendCount={dashboard.friendCount}
+                  friends={dashboard.friends}
+                  locale={locale}
+                  createdLabel={selfMetricLabels.created}
+                  joinedLabel={selfMetricLabels.joined}
+                  onActivitySectionChange={setActiveProfileSection}
+                  showFriendCount={isSelf}
+                  showJoinedCount={showPrivateParticipation}
+                />
+                <Link
+                  href={withLocale(locale, "/messages")}
+                  className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
+                >
+                  <UsersRound className="h-4 w-4" />
+                  {friendsCopy.openFriends}
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] md:items-center">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 {profile.avatarUrl ? (
                   // User avatars are stored as remote URLs from Clerk/user data.
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profile.avatarUrl}
                     alt={profile.nickname}
-                    className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
+                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white sm:h-16 sm:w-16"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-lg font-semibold text-white sm:h-16 sm:w-16 sm:text-xl">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-base font-semibold text-white ring-2 ring-white sm:h-16 sm:w-16 sm:text-xl">
                     {profileInitial}
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-moss">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
                     {t.profile.title}
                   </p>
-                  <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
+                  <h1 className="mt-0.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-1 sm:text-3xl">
                     {profile.nickname}
                   </h1>
                   {profile.isCoCreator ? (
                     <CoCreatorIdentityBadge className="mt-2" locale={locale} />
                   ) : null}
                   {profile.bio ? (
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-500">
+                    <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-zinc-500">
                       {profile.bio}
                     </p>
                   ) : null}
                 </div>
               </div>
-              {profile.friendCode ? (
-                <div className="max-w-xl">
-                  <ProfileIdentityForm
-                    bio={profile.bio}
-                    friendCode={profile.friendCode}
-                    locale={locale}
-                    nickname={profile.nickname}
-                  />
+              <div className="grid gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className={cn(
+                      "rounded-2xl border px-3 py-2.5 text-center shadow-[0_8px_18px_rgba(21,98,64,0.04)] transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
+                      activeProfileSection === "created"
+                        ? "border-[#369758] bg-white/85"
+                        : "border-[#8AB68E]/45 bg-white/65",
+                    )}
+                    onClick={() => setActiveProfileSection("created")}
+                    type="button"
+                  >
+                    <p className="text-xl font-semibold leading-none text-[#156240] sm:text-2xl">
+                      {dashboard.createdActivityCount}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-[#1D1D1B]/70">
+                      {selfMetricLabels.created}
+                    </p>
+                  </button>
+                  <button
+                    className={cn(
+                      "rounded-2xl border px-3 py-2.5 text-center shadow-[0_8px_18px_rgba(21,98,64,0.035)] transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
+                      activeProfileSection === "participation"
+                        ? "border-[#369758] bg-white/85"
+                        : "border-[#8AB68E]/35 bg-white/60",
+                    )}
+                    onClick={() => setActiveProfileSection("participation")}
+                    type="button"
+                  >
+                    <p className="text-xl font-semibold leading-none text-[#156240] sm:text-2xl">
+                      {dashboard.participationCount}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-[#1D1D1B]/70">
+                      {selfMetricLabels.pastJoined}
+                    </p>
+                  </button>
                 </div>
-              ) : null}
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-3">
-              <ProfileOverviewPanel
-                activeActivitySection={activeProfileSection}
-                createdCount={dashboard.createdActivityCount}
-                joinedCount={dashboard.participationCount}
-                friendCount={dashboard.friendCount}
-                friends={dashboard.friends}
-                locale={locale}
-                createdLabel={selfMetricLabels.created}
-                joinedLabel={selfMetricLabels.joined}
-                onActivitySectionChange={setActiveProfileSection}
-                showFriendCount={isSelf}
-                showJoinedCount={showPrivateParticipation}
-              />
-              <Link
-                href={withLocale(locale, "/messages")}
-                className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
-              >
-                <UsersRound className="h-4 w-4" />
-                {friendsCopy.openFriends}
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] md:items-center">
-            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-              {profile.avatarUrl ? (
-                // User avatars are stored as remote URLs from Clerk/user data.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.nickname}
-                  className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white sm:h-16 sm:w-16"
+                <ProfileSocialActions
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  profileId={profile.id}
+                  relationship={dashboard.viewerRelationship}
                 />
-              ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-base font-semibold text-white ring-2 ring-white sm:h-16 sm:w-16 sm:text-xl">
-                  {profileInitial}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
-                  {t.profile.title}
-                </p>
-                <h1 className="mt-0.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-1 sm:text-3xl">
-                  {profile.nickname}
-                </h1>
-                {profile.isCoCreator ? (
-                  <CoCreatorIdentityBadge className="mt-2" locale={locale} />
-                ) : null}
-                {profile.bio ? (
-                  <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-zinc-500">
-                    {profile.bio}
-                  </p>
-                ) : null}
               </div>
             </div>
-            <div className="grid gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  className={cn(
-                    "rounded-2xl border px-3 py-2.5 text-center shadow-[0_8px_18px_rgba(21,98,64,0.04)] transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
-                    activeProfileSection === "created"
-                      ? "border-[#369758] bg-white/85"
-                      : "border-[#8AB68E]/45 bg-white/65",
-                  )}
-                  onClick={() => setActiveProfileSection("created")}
-                  type="button"
-                >
-                  <p className="text-xl font-semibold leading-none text-[#156240] sm:text-2xl">
-                    {dashboard.createdActivityCount}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-[#1D1D1B]/70">
-                    {selfMetricLabels.created}
-                  </p>
-                </button>
-                <button
-                  className={cn(
-                    "rounded-2xl border px-3 py-2.5 text-center shadow-[0_8px_18px_rgba(21,98,64,0.035)] transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35",
-                    activeProfileSection === "participation"
-                      ? "border-[#369758] bg-white/85"
-                      : "border-[#8AB68E]/35 bg-white/60",
-                  )}
-                  onClick={() => setActiveProfileSection("participation")}
-                  type="button"
-                >
-                  <p className="text-xl font-semibold leading-none text-[#156240] sm:text-2xl">
-                    {dashboard.participationCount}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-[#1D1D1B]/70">
-                    {selfMetricLabels.pastJoined}
-                  </p>
-                </button>
-              </div>
-              <ProfileSocialActions
-                isAuthenticated={isAuthenticated}
-                locale={locale}
-                profileId={profile.id}
-                relationship={dashboard.viewerRelationship}
-              />
-            </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
 
-      {hasDashboardError ? (
-        <EmptyState
-          title={t.profile.errorTitle}
-          description={t.profile.errorDescription}
-        />
-      ) : (
-        <>
-          {showWerewolfStats ? (
-            <WerewolfStatsPanel
-              locale={locale}
-              stats={dashboard.werewolfStats}
-            />
-          ) : null}
-          <ProfileActivitySections
-            activeSection={activeProfileSection}
-            dashboard={dashboard}
-            isAuthenticated={isAuthenticated}
-            isSelf={showPrivateParticipation}
-            locale={locale}
-            onActiveSectionChange={setActiveProfileSection}
+        {hasDashboardError ? (
+          <EmptyState
+            title={t.profile.errorTitle}
+            description={t.profile.errorDescription}
           />
-        </>
-      )}
+        ) : (
+          <>
+            {showWerewolfStats ? (
+              <WerewolfStatsPanel
+                locale={locale}
+                stats={dashboard.werewolfStats}
+              />
+            ) : null}
+            <ProfileActivitySections
+              activeSection={activeProfileSection}
+              dashboard={dashboard}
+              isAuthenticated={isAuthenticated}
+              isSelf={showPrivateParticipation}
+              locale={locale}
+              onActiveSectionChange={setActiveProfileSection}
+            />
+          </>
+        )}
       </div>
     </div>
   );
