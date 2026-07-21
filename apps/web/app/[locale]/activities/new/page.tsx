@@ -100,9 +100,9 @@ export default async function NewActivityPage({
   const headerCopy = getMobileCreateHeaderCopy(locale);
   const formContent = (
     <PageContainer className="max-w-3xl space-y-5 max-md:px-6">
-      <div className="grid grid-cols-[4rem_minmax(0,1fr)_4rem] items-center py-1">
+      <div className="grid grid-cols-[minmax(3rem,max-content)_minmax(0,1fr)_minmax(3rem,max-content)] items-center gap-2 py-1">
         <Link
-          className="justify-self-start text-sm font-semibold text-zinc-600 transition hover:text-[#156240]"
+          className="max-w-[5.5rem] justify-self-start truncate whitespace-nowrap text-sm font-semibold text-zinc-600 transition hover:text-[#156240]"
           href={withLocale(locale, "/activities/new")}
         >
           {headerCopy.cancel}
@@ -111,11 +111,11 @@ export default async function NewActivityPage({
           {headerCopy.title}
         </h1>
         <button
-          className="h-9 rounded-full bg-[#006F52] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,111,82,0.18)] transition hover:bg-[#075f49]"
+          className="inline-flex h-9 max-w-[5.75rem] items-center justify-center justify-self-end overflow-hidden whitespace-nowrap rounded-full bg-[#006F52] px-3 text-sm font-semibold leading-none text-white shadow-[0_8px_18px_rgba(0,111,82,0.18)] transition hover:bg-[#075f49]"
           form={formId}
           type="submit"
         >
-          {headerCopy.publish}
+          <span className="truncate">{headerCopy.publish}</span>
         </button>
       </div>
 

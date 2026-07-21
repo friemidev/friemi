@@ -3,7 +3,7 @@ import { LocalizedBrandLoader } from "@/components/ui/LocalizedBrandLoader";
 
 export default function PublicEventDetailLoading() {
   return (
-    <PageContainer className="space-y-5 py-4 sm:space-y-6 sm:py-8">
+    <PageContainer className="route-loading-shell space-y-5 py-4 sm:space-y-6 sm:py-8">
       <div className="h-5 w-32 animate-pulse rounded bg-white/70" />
       <div className="relative flex min-h-64 items-end overflow-hidden rounded-[1.5rem] border border-black/10 bg-[#F1F2EC] p-4 shadow-[0_18px_42px_rgba(29,29,27,0.1)] sm:p-6 md:min-h-[26rem]">
         <div className="absolute inset-0 animate-pulse bg-[#F1F2EC]" />
