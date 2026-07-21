@@ -35,14 +35,14 @@ export default async function FootprintsPage({
 }: FootprintsPageProps) {
   const { locale } = await params;
   const query = await searchParams;
-  const initialTab =
+  const requestedTab =
     query?.tab === "message"
       ? "message"
       : query?.tab === "moment"
         ? "moment"
         : query?.tab === "planet" || query?.tab === "profile"
           ? "planet"
-          : "message";
+          : null;
   const perf = createPerformanceTracker({
     locale,
     route: "/footprints",
@@ -50,10 +50,12 @@ export default async function FootprintsPage({
   const profile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
+  const initialTab = requestedTab ?? (profile ? "message" : "planet");
   const viewerProfileId = profile?.id ?? null;
   const [momentsResult, messageFriendsResult, planetsResult, canCreateResult] =
     await Promise.all([
-      perf.measure("moments.feed", () => getMomentFeed(viewerProfileId))
+      perf
+        .measure("moments.feed", () => getMomentFeed(viewerProfileId))
         .then((moments) => ({ moments, error: null }))
         .catch((error: unknown) => {
           console.error("Failed to load moment feed", error);

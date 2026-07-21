@@ -1,10 +1,11 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
-import { ensureCurrentUserProfile } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import {
   getProfileDashboard,
   type ProfileDashboardViewModel,
+  type PublicProfileViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
 
 type ProfilePageProps = {
@@ -48,19 +49,68 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   };
 }
 
+function getGuestProfile(locale: string): PublicProfileViewModel {
+  if (locale === "fr") {
+    return {
+      id: "guest",
+      nickname: "Visiteur",
+      friendCode: null,
+      avatarUrl: null,
+      bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et amis.",
+      isCoCreator: false,
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      id: "guest",
+      nickname: "Guest",
+      friendCode: null,
+      avatarUrl: null,
+      bio: "Sign in when you want to keep your hangouts, traces, and friends together.",
+      isCoCreator: false,
+    };
+  }
+
+  return {
+    id: "guest",
+    nickname: "游客",
+    friendCode: null,
+    avatarUrl: null,
+    bio: "登录后可以同步你的组局、足迹和好友关系。",
+    isCoCreator: false,
+  };
+}
+
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
-  const profile = await ensureCurrentUserProfile(locale, "/profile");
-  const dashboardResult = await getProfileDashboard(profile.id)
-    .then((dashboard) => ({ dashboard, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load profile dashboard", error);
+  const profile = await getOptionalCurrentUserProfileSnapshot();
+  const dashboardResult = profile
+    ? await getProfileDashboard(profile.id)
+        .then((dashboard) => ({ dashboard, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load profile dashboard", error);
 
-      return {
+          return {
+            dashboard: getEmptyProfileDashboard(),
+            error,
+          };
+        })
+    : {
         dashboard: getEmptyProfileDashboard(),
-        error,
+        error: null,
       };
-    });
+  const isAuthenticated = Boolean(profile);
+  const profileViewModel = profile
+    ? {
+        id: profile.id,
+        nickname: profile.nickname,
+        friendCode: profile.friendCode,
+        avatarUrl: profile.avatarUrl,
+        bio: profile.bio,
+        isCoCreator: profile.isCoCreator,
+      }
+    : getGuestProfile(locale);
 
   return (
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
@@ -68,16 +118,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}
-        isSelf
+        isAuthenticated={isAuthenticated}
+        isGuestPlaceholder={!isAuthenticated}
+        isSelf={isAuthenticated}
         locale={locale}
-        profile={{
-          id: profile.id,
-          nickname: profile.nickname,
-          friendCode: profile.friendCode,
-          avatarUrl: profile.avatarUrl,
-          bio: profile.bio,
-          isCoCreator: profile.isCoCreator,
-        }}
+        profile={profileViewModel}
       />
     </PageContainer>
   );

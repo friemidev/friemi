@@ -13,7 +13,8 @@ import {
   getEventPriceLabel,
 } from "@/features/public-events/components/PublicEventCard";
 import { getPublicEventById } from "@/features/public-events/queries/getPublicEvents";
-import { requireUser } from "@/lib/auth";
+import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 
 type NewPublicEventTeamPageProps = {
@@ -97,10 +98,12 @@ export default async function NewPublicEventTeamPage({
   params,
 }: NewPublicEventTeamPageProps) {
   const { locale, publicEventId } = await params;
-  await requireUser(locale, `/public-events/${publicEventId}/teams/new`);
 
   const t = getPublicEventCopy(locale);
-  const publicEvent = await getPublicEventById(publicEventId);
+  const [profile, publicEvent] = await Promise.all([
+    getOptionalCurrentUserProfileSnapshot(),
+    getPublicEventById(publicEventId),
+  ]);
 
   if (!publicEvent) {
     notFound();
@@ -171,7 +174,12 @@ export default async function NewPublicEventTeamPage({
           ) : (
             <NewActivityForm
               initialValues={getInitialValues(publicEvent, locale)}
+              isAuthenticated={Boolean(profile)}
               locale={locale}
+              signInHref={getSignInHref(
+                locale,
+                `/public-events/${publicEvent.id}/teams/new`,
+              )}
             />
           )}
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ActivityCategory } from "@chill-club/shared";
 import type { CSSProperties, FormEvent } from "react";
@@ -39,6 +38,11 @@ import {
   type ActivityTimeState,
 } from "@/features/activities/utils/activityFilters";
 import { getActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
+import {
+  activityListEntryUpdatedEvent,
+  getActivityListFallbackHref,
+  readActivityListEntryHref,
+} from "@/features/navigation/activityListEntryReturn";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -95,10 +99,6 @@ function getMobileActivitiesCopy(locale: string) {
   };
 }
 
-function getMobileActivitiesBackHref(locale: string) {
-  return withLocale(locale, "/mobile-home");
-}
-
 export function MobileActivitiesToolbar({
   cities,
   filters,
@@ -109,8 +109,23 @@ export function MobileActivitiesToolbar({
   const t = getCopy(locale);
   const copy = getMobileActivitiesCopy(locale);
   const activitiesHref = withLocale(locale, "/activities");
+  const fallbackBackHref = getActivityListFallbackHref(locale);
+  const [backHref, setBackHref] = useState(fallbackBackHref);
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState(filters.keyword ?? "");
+
+  useEffect(() => {
+    function syncBackHref() {
+      setBackHref(readActivityListEntryHref(locale) ?? fallbackBackHref);
+    }
+
+    syncBackHref();
+    window.addEventListener(activityListEntryUpdatedEvent, syncBackHref);
+
+    return () => {
+      window.removeEventListener(activityListEntryUpdatedEvent, syncBackHref);
+    };
+  }, [fallbackBackHref, locale]);
 
   useEffect(() => {
     setKeyword(filters.keyword ?? "");
@@ -239,13 +254,14 @@ export function MobileActivitiesToolbar({
   return (
     <div className="space-y-2 md:hidden">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
-        <Link
+        <button
           aria-label={copy.back}
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#111210] shadow-[0_10px_24px_rgba(17,18,16,0.06)] transition active:scale-95"
-          href={getMobileActivitiesBackHref(locale)}
+          type="button"
+          onClick={() => router.push(backHref)}
         >
           <ArrowLeft className="h-[1.12rem] w-[1.12rem]" />
-        </Link>
+        </button>
 
         <form
           action={activitiesHref}

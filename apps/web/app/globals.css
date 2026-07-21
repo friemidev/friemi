@@ -87,6 +87,34 @@ html[data-friemi-ios-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
 
+.app-layout-shell:has(.auth-page-shell) {
+  padding-bottom: 0;
+  background: var(--friemi-palette-paper);
+}
+
+.app-layout-shell:has(.auth-page-shell) > .app-header,
+.app-layout-shell:has(.auth-page-shell) > .app-mobile-nav,
+.app-layout-shell:has(.auth-page-shell) [data-mobile-scroll-progress] {
+  display: none;
+}
+
+.auth-page-shell .cl-footer {
+  overflow: visible !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.auth-page-shell .cl-footerAction,
+.auth-page-shell .cl-footer > div {
+  padding: 0 !important;
+}
+
+.auth-page-shell .cl-footer > div:not(.cl-footerAction),
+.auth-page-shell .cl-footer div:empty {
+  display: none !important;
+}
+
 html[data-friemi-android-app="true"] .app-layout-shell > header,
 html[data-friemi-ios-app="true"] .app-layout-shell > header {
   padding-top: var(--app-top-safe-area);

@@ -41,9 +41,11 @@ type NewActivityFormProps = {
   cancelHref?: string;
   formId?: string;
   initialValues?: ActivityFormValues;
+  isAuthenticated?: boolean;
   locale: string;
   mode?: "create" | "edit";
   showFormActions?: boolean;
+  signInHref?: string;
 };
 
 const initialState: CreateActivityState = {};
@@ -2105,9 +2107,11 @@ export function NewActivityForm({
   cancelHref,
   formId,
   initialValues,
+  isAuthenticated = true,
   locale,
   mode = "create",
   showFormActions = true,
+  signInHref,
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
@@ -2197,6 +2201,12 @@ export function NewActivityForm({
   }, [state.fieldErrors, state.version]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (mode === "create" && !isAuthenticated && signInHref) {
+      event.preventDefault();
+      window.location.assign(signInHref);
+      return;
+    }
+
     if (skipLongDurationConfirmRef.current) {
       skipLongDurationConfirmRef.current = false;
       return;
@@ -2778,6 +2788,7 @@ export function NewActivityForm({
               label={getCoverUploadPrompt(locale)}
               locale={locale}
               onUploadingChange={setIsCoverUploading}
+              signInHref={!isAuthenticated ? signInHref : undefined}
               splitPreviewBelow
               submitFallbackValue
             />

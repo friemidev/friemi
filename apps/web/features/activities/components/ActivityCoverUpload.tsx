@@ -17,6 +17,7 @@ type ActivityCoverUploadProps = {
   name?: string;
   onChange?: (url: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
+  signInHref?: string;
   splitPreviewClassName?: string;
   splitPreviewBelow?: boolean;
   submitFallbackValue?: boolean;
@@ -43,6 +44,7 @@ export function ActivityCoverUpload({
   name = "coverImageUrl",
   onChange,
   onUploadingChange,
+  signInHref,
   splitPreviewClassName,
   splitPreviewBelow = false,
   submitFallbackValue = false,
@@ -94,6 +96,11 @@ export function ActivityCoverUpload({
   }
 
   async function uploadFile(file: File) {
+    if (signInHref) {
+      window.location.assign(signInHref);
+      return;
+    }
+
     if (!allowedTypes.includes(file.type)) {
       setError(t.coverTypeError);
       return;
