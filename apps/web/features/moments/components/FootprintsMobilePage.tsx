@@ -1967,7 +1967,8 @@ function FootprintsMessageList({
         ).getTime();
 
         return (
-          timeB - timeA || friendA.friendshipId.localeCompare(friendB.friendshipId)
+          timeB - timeA ||
+          friendA.friendshipId.localeCompare(friendB.friendshipId)
         );
       }),
     [friends],
@@ -1993,20 +1994,20 @@ function FootprintsMessageList({
     });
   }, [normalizedSearchTerm, sortedFriends]);
   const toolbar = (
-    <div className="mt-4 flex items-center gap-2">
-      <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-[#F7F7F0] px-3 text-[#156240] ring-1 ring-[#E3DCC5]">
-        <Search className="h-4 w-4 shrink-0 text-[#156240]/72" />
+    <div className="mt-4 flex items-center gap-2.5">
+      <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
+        <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
         <input
           type="search"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder={t.searchPlaceholder}
-          className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#8E8383]"
+          className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
         />
       </label>
       <button
         type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)] transition active:scale-[0.97]"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
         aria-label={t.addFriend}
         title={t.addFriend}
         onClick={() => setAddFriendOpen(true)}
@@ -2028,7 +2029,7 @@ function FootprintsMessageList({
     return (
       <section>
         {toolbar}
-        <div className="mt-3 border-y border-[#E8E4D4] bg-white/72 px-1 py-4 text-sm font-semibold leading-6 text-[#8E8383]">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-4 text-sm font-semibold leading-6 text-[#777A74]">
           {t.emptyListDescription}
         </div>
         {addFriendDialog}
@@ -2040,11 +2041,11 @@ function FootprintsMessageList({
     return (
       <section>
         {toolbar}
-        <div className="mt-3 border-y border-[#E8E4D4] bg-white/72 px-1 py-6">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6">
           <h2 className="text-[16px] font-black leading-6 text-[#111210]">
             {t.emptyFriendListTitle}
           </h2>
-          <p className="mt-1 text-sm font-semibold leading-6 text-[#8E8383]">
+          <p className="mt-1 text-sm font-semibold leading-6 text-[#777A74]">
             {t.emptyFriendListDescription}
           </p>
         </div>
@@ -2057,7 +2058,7 @@ function FootprintsMessageList({
     <section>
       {toolbar}
       {visibleFriends.length > 0 ? (
-        <div className="mt-3 divide-y divide-[#E8E4D4] border-y border-[#E8E4D4] bg-white/72">
+        <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent">
           {visibleFriends.map((friend) => (
             <FootprintsMessageRow
               key={friend.friendshipId}
@@ -2068,7 +2069,7 @@ function FootprintsMessageList({
           ))}
         </div>
       ) : (
-        <div className="mt-3 border-y border-[#E8E4D4] bg-white/72 px-1 py-6 text-sm font-semibold leading-6 text-[#8E8383]">
+        <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
           {t.emptyListTitle}
         </div>
       )}
@@ -2105,11 +2106,11 @@ function FootprintsMessageRow({
           <span className="truncate text-[14px] font-black leading-5 text-[#111210]">
             {friend.friend.nickname}
           </span>
-          <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8E8383]">
+          <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
             {formatActivityDate(time, locale)}
           </span>
         </span>
-        <span className="mt-1 block truncate text-[13px] font-semibold leading-5 text-[#156240]">
+        <span className="mt-1 block truncate text-[13px] font-semibold leading-5 text-[#5F635E]">
           {preview}
         </span>
       </span>
@@ -2117,11 +2118,11 @@ function FootprintsMessageRow({
   );
 
   return (
-    <article className="min-w-0 transition active:bg-[#F1F2EC]/72">
+    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
       {friend.conversationId ? (
         <Link
           aria-label={t.openConversation(friend.friend.nickname)}
-          className="flex min-w-0 items-center gap-3 px-1 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
+          className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
           href={withLocale(locale, `/messages/${friend.conversationId}`)}
         >
           {content}
@@ -2136,7 +2137,7 @@ function FootprintsMessageRow({
           />
           <button
             type="submit"
-            className="flex w-full min-w-0 items-center gap-3 px-1 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
+            className="flex w-full min-w-0 items-center gap-3 px-1 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
             aria-label={t.openConversation(friend.friend.nickname)}
           >
             {content}
