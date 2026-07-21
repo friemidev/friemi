@@ -165,6 +165,11 @@ enum PlanetMemberRole {
   MEMBER
 }
 
+enum PlanetMembershipStatus {
+  PENDING
+  APPROVED
+}
+
 enum GameToolKind {
   AVALON
   STORYTELLER
@@ -287,15 +292,17 @@ model Planet {
 }
 
 model PlanetMember {
-  id        String           @id @default(cuid())
+  id        String                 @id @default(cuid())
   planetId  String
   profileId String
-  role      PlanetMemberRole @default(MEMBER)
-  planet    Planet           @relation(fields: [planetId], references: [id], onDelete: Cascade)
-  profile   UserProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  joinedAt  DateTime         @default(now())
+  role      PlanetMemberRole       @default(MEMBER)
+  status    PlanetMembershipStatus @default(APPROVED)
+  planet    Planet                 @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  profile   UserProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime               @default(now())
 
   @@unique([planetId, profileId])
+  @@index([planetId, status, joinedAt])
   @@index([profileId, joinedAt])
 }
 
