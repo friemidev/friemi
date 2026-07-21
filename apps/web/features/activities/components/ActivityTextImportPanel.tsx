@@ -114,13 +114,16 @@ export function ActivityTextImportPanel({
     <>
       <button
         type="button"
-        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#8AB68E]/70 bg-[#E7F1E7] px-3 text-xs font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] transition hover:border-[#156240] hover:bg-[#DDECDD] focus:outline-none focus:ring-2 focus:ring-[#8AB68E]/35 sm:h-9 sm:text-sm"
+        className="inline-flex h-8 max-w-[8.25rem] shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-[#8AB68E]/70 bg-[#E7F1E7] px-2.5 text-xs font-black leading-none text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] transition hover:border-[#156240] hover:bg-[#DDECDD] focus:outline-none focus:ring-2 focus:ring-[#8AB68E]/35 sm:h-9 sm:max-w-[9rem] sm:px-3 sm:text-sm"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         onClick={() => setIsOpen(true)}
       >
-        <WandSparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-        {copy.trigger}
+        <WandSparkles
+          className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+          aria-hidden
+        />
+        <span className="min-w-0 truncate">{copy.trigger}</span>
       </button>
 
       {isOpen ? (
@@ -152,7 +155,7 @@ export function ActivityTextImportPanel({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full border border-[#8AB68E]/60 bg-white px-2.5 py-1 text-xs font-bold text-[#156240]">
+                  <span className="max-w-[5.5rem] truncate whitespace-nowrap rounded-full border border-[#8AB68E]/60 bg-white px-2.5 py-1 text-xs font-bold text-[#156240]">
                     {copy.tag}
                   </span>
                   <button
@@ -180,25 +183,28 @@ export function ActivityTextImportPanel({
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
-                  className="h-10 rounded-full bg-[#369758] px-4 text-sm font-bold text-white hover:bg-[#156240]"
+                  className="h-10 max-w-full whitespace-nowrap rounded-full bg-[#369758] px-4 text-sm font-bold text-white hover:bg-[#156240]"
                   disabled={!trimmedText}
                   onClick={handleParse}
                 >
-                  <WandSparkles className="mr-1.5 h-4 w-4" aria-hidden />
-                  {copy.parse}
+                  <WandSparkles
+                    className="mr-1.5 h-4 w-4 shrink-0"
+                    aria-hidden
+                  />
+                  <span className="min-w-0 truncate">{copy.parse}</span>
                 </Button>
                 {sourceText ? (
                   <button
                     type="button"
-                    className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-bold text-zinc-700 transition hover:border-[#8AB68E] hover:text-[#156240]"
+                    className="inline-flex h-10 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-bold text-zinc-700 transition hover:border-[#8AB68E] hover:text-[#156240]"
                     onClick={() => {
                       setSourceText("");
                       setResult(null);
                       setApplied(false);
                     }}
                   >
-                    <X className="h-4 w-4" aria-hidden />
-                    {copy.clear}
+                    <X className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="min-w-0 truncate">{copy.clear}</span>
                   </button>
                 ) : null}
               </div>
@@ -235,7 +241,7 @@ export function ActivityTextImportPanel({
                         <Button
                           type="button"
                           className={cn(
-                            "h-10 rounded-full px-4 text-sm font-bold",
+                            "h-10 max-w-full whitespace-nowrap rounded-full px-4 text-sm font-bold",
                             applied
                               ? "bg-[#E7F1E7] text-[#156240] hover:bg-[#E7F1E7]"
                               : "bg-[#1D1D1B] text-white hover:bg-[#156240]",
@@ -244,9 +250,12 @@ export function ActivityTextImportPanel({
                           onClick={handleApply}
                         >
                           {applied ? (
-                            <Check className="mr-1.5 h-4 w-4" aria-hidden />
+                            <Check
+                              className="mr-1.5 h-4 w-4 shrink-0"
+                              aria-hidden
+                            />
                           ) : null}
-                          {copy.apply}
+                          <span className="min-w-0 truncate">{copy.apply}</span>
                         </Button>
                       </div>
                     </>

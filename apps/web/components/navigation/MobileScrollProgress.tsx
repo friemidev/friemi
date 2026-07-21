@@ -165,10 +165,10 @@ export function MobileScrollProgress() {
     <div
       aria-hidden="true"
       data-mobile-scroll-progress
-      className="pointer-events-none fixed inset-x-0 top-14 z-[45] h-[3px] bg-[#D6D5B2] sm:top-16 md:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))] top-auto z-[45] h-[2px] bg-[#D6D5B2]/80 md:hidden"
     >
       <div
-        className="h-full origin-left bg-[#369758] shadow-[0_1px_4px_rgba(54,151,88,0.32)] transition-transform duration-100 ease-out"
+        className="h-full origin-left bg-[#369758] shadow-[0_-1px_8px_rgba(54,151,88,0.24)] transition-transform duration-100 ease-out"
         style={{
           transform: `scaleX(${state.progress})`,
         }}

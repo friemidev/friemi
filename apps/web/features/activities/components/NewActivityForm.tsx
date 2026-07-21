@@ -2400,8 +2400,11 @@ export function NewActivityForm({
                 className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
                 data-field-name="title"
               >
-                <div className="flex min-w-0 items-center justify-between gap-3">
-                  <label className="min-w-0" htmlFor={titleInputId}>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <label
+                    className="min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap"
+                    htmlFor={titleInputId}
+                  >
                     <RequiredLabel>
                       {publicEventTeamFormCopy?.title ?? t.form.title}
                     </RequiredLabel>
@@ -2441,7 +2444,7 @@ export function NewActivityForm({
                       <label
                         key={option}
                         className={cn(
-                          "flex h-11 cursor-pointer items-center justify-center rounded-full border px-4 text-base font-semibold transition",
+                          "flex h-11 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border px-3 text-sm font-semibold transition sm:px-4 sm:text-base",
                           active
                             ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
                             : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
@@ -2455,7 +2458,7 @@ export function NewActivityForm({
                           checked={active}
                           onChange={() => setVisibility(option)}
                         />
-                        <span>
+                        <span className="min-w-0 truncate whitespace-nowrap leading-none">
                           {isPrivate
                             ? t.form.visibilityPrivate
                             : t.form.visibilityPublic}
