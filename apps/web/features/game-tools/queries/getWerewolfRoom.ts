@@ -152,6 +152,7 @@ export const getWerewolfRoomById = cache(
       isHost,
       kind: room.kind,
       locale: room.locale,
+      finishedAt: room.finishedAt,
       currentMember: currentMember
         ? {
             avatarLabel: getSeatAvatarLabel(

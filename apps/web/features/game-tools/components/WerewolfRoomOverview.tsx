@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import type { FormEvent } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
@@ -89,6 +97,7 @@ type WerewolfRoomOverviewProps = {
       winner?: "GOOD" | "WEREWOLF" | null;
     };
     status: string;
+    syncVersion: string;
     title: string;
     variant: {
       label: string;
@@ -100,6 +109,58 @@ type WerewolfRoomOverviewProps = {
 };
 
 type WerewolfSeat = WerewolfRoomOverviewProps["room"]["seats"][number];
+type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
+
+const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
+const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
+
+type WerewolfRoomSyncPayload = {
+  room?: WerewolfRoomView;
+  status?: string;
+  syncVersion?: string;
+};
+
+type WerewolfRoomBroadcastMessage = {
+  roomId: string;
+  sourceId: string;
+  type: "werewolf-room-changed";
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: {
+    effectiveType?: string;
+    saveData?: boolean;
+  };
+};
+
+function getWerewolfSyncIntervalMs(status: string) {
+  const baseIntervalMs = status === "LOBBY" ? 1800 : 4200;
+
+  if (typeof window === "undefined") {
+    return baseIntervalMs;
+  }
+
+  const connection = (window.navigator as NavigatorWithConnection).connection;
+  const effectiveType = connection?.effectiveType;
+  const isSlowConnection =
+    connection?.saveData === true ||
+    effectiveType === "slow-2g" ||
+    effectiveType === "2g";
+  const isLowEndDevice =
+    typeof window.navigator.hardwareConcurrency === "number" &&
+    window.navigator.hardwareConcurrency > 0 &&
+    window.navigator.hardwareConcurrency <= 4;
+
+  if (isSlowConnection) {
+    return status === "LOBBY" ? 4200 : 8200;
+  }
+
+  if (isLowEndDevice) {
+    return status === "LOBBY" ? 2800 : 6200;
+  }
+
+  return baseIntervalMs;
+}
 
 function WerewolfAvatar({
   avatarLabel,
@@ -170,6 +231,7 @@ function getCopy(locale: string) {
       noticeSeatClaimed: "Place prise.",
       noticeSeatManaged: "Place mise à jour.",
       noticeUnready: "Prêt annulé.",
+      offline: "Connexion perdue. Réessayez quand le réseau revient.",
       openSeat: "Voir rôle",
       playerSeats: "Places",
       playerUnit: "joueurs",
@@ -237,6 +299,7 @@ function getCopy(locale: string) {
       noticeSeatClaimed: "Seat claimed.",
       noticeSeatManaged: "Seat updated.",
       noticeUnready: "Ready cancelled.",
+      offline: "You are offline. Try again after the network comes back.",
       openSeat: "View role",
       playerSeats: "Player seats",
       playerUnit: "players",
@@ -303,6 +366,7 @@ function getCopy(locale: string) {
     noticeSeatClaimed: "已入座。",
     noticeSeatManaged: "座位已更新。",
     noticeUnready: "已取消准备。",
+    offline: "当前网络已断开，恢复后再操作。",
     openSeat: "查看身份",
     playerSeats: "座位",
     playerUnit: "玩家",
@@ -490,10 +554,21 @@ export function WerewolfRoomOverview({
   baseUrl,
   locale,
   notice,
-  room,
+  room: initialRoom,
   testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
   const router = useRouter();
+  const [room, setRoom] = useState(initialRoom);
+  const [, startRefreshTransition] = useTransition();
+  const lastOptimisticMutationAtRef = useRef(0);
+  const lastSyncRefreshAtRef = useRef(0);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const broadcastClientIdRef = useRef(
+    `werewolf-room-${Math.random().toString(36).slice(2)}`,
+  );
+  const syncProbeInFlightRef = useRef(false);
+  const syncVersionRef = useRef(initialRoom.syncVersion);
+  const [localFormError, setLocalFormError] = useState<string | null>(null);
   const [joinState, joinAction] = useActionState(
     joinWerewolfRoomAction,
     initialState,
@@ -552,6 +627,394 @@ export function WerewolfRoomOverview({
     room.events.find((event) => event.type === "werewolf_room_started")?.id ??
     "current";
   const noticeLabel = getNoticeLabel(notice, t);
+
+  const canSubmitOnline = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        event.preventDefault();
+        setLocalFormError(t.offline);
+        return false;
+      }
+
+      setLocalFormError(null);
+      return true;
+    },
+    [t.offline],
+  );
+
+  const broadcastRoomChange = useCallback(() => {
+    broadcastChannelRef.current?.postMessage({
+      roomId: room.id,
+      sourceId: broadcastClientIdRef.current,
+      type: "werewolf-room-changed",
+    } satisfies WerewolfRoomBroadcastMessage);
+  }, [room.id]);
+
+  useEffect(() => {
+    const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+    if (mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+      return;
+    }
+
+    syncVersionRef.current = initialRoom.syncVersion;
+    setRoom(initialRoom);
+  }, [initialRoom]);
+
+  const refreshRoom = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
+
+      const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+      if (!options?.force && mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({
+          include: "room",
+          locale,
+        });
+
+        if (currentMemberToken) {
+          params.set("memberToken", currentMemberToken);
+        }
+
+        const response = await fetch(
+          `/api/game-tools/werewolf/rooms/${room.id}/sync?${params.toString()}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (response.ok) {
+          const payload = (await response.json()) as WerewolfRoomSyncPayload;
+
+          if (payload.room) {
+            syncVersionRef.current =
+              payload.room.syncVersion ??
+              payload.syncVersion ??
+              syncVersionRef.current;
+            setRoom(payload.room);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to a server component refresh as a compatibility backup.
+      }
+
+      startRefreshTransition(() => {
+        router.refresh();
+      });
+    },
+    [currentMemberToken, locale, room.id, router, startRefreshTransition],
+  );
+
+  const pollRoomSync = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
+
+      if (syncProbeInFlightRef.current) {
+        return;
+      }
+
+      const mutationAge = Date.now() - lastOptimisticMutationAtRef.current;
+
+      if (!options?.force && mutationAge < LOCAL_MUTATION_SYNC_GUARD_MS) {
+        return;
+      }
+
+      syncProbeInFlightRef.current = true;
+
+      try {
+        const response = await fetch(
+          `/api/game-tools/werewolf/rooms/${room.id}/sync`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          syncVersion?: string;
+        };
+
+        if (
+          payload.syncVersion &&
+          payload.syncVersion !== syncVersionRef.current
+        ) {
+          const now = Date.now();
+
+          if (now - lastSyncRefreshAtRef.current > 1500) {
+            lastSyncRefreshAtRef.current = now;
+            void refreshRoom({ force: true });
+          }
+        }
+      } catch {
+        // Keep sync silent. The next focus or interval will retry.
+      } finally {
+        syncProbeInFlightRef.current = false;
+      }
+    },
+    [refreshRoom, room.id],
+  );
+
+  useEffect(() => {
+    if (room.status === "FINISHED") {
+      return;
+    }
+
+    const intervalMs = getWerewolfSyncIntervalMs(room.status);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) {
+        void pollRoomSync();
+      }
+    }, intervalMs);
+    const handleFocus = () => void pollRoomSync({ force: true });
+    const handleOnline = () => void pollRoomSync({ force: true });
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void pollRoomSync({ force: true });
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [pollRoomSync, room.status]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") {
+      return;
+    }
+
+    const channel = new BroadcastChannel(WEREWOLF_ROOM_BROADCAST_CHANNEL);
+    broadcastChannelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent<WerewolfRoomBroadcastMessage>) => {
+      const message = event.data;
+
+      if (
+        message?.type !== "werewolf-room-changed" ||
+        message.roomId !== room.id ||
+        message.sourceId === broadcastClientIdRef.current
+      ) {
+        return;
+      }
+
+      void pollRoomSync({ force: true });
+    };
+
+    return () => {
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
+      }
+
+      channel.close();
+    };
+  }, [pollRoomSync, room.id]);
+
+  useEffect(() => {
+    if (
+      seatState.formError ||
+      leaveState.formError ||
+      readyState.formError ||
+      startState.formError
+    ) {
+      lastOptimisticMutationAtRef.current = 0;
+      void refreshRoom({ force: true });
+    }
+  }, [
+    leaveState.formError,
+    readyState.formError,
+    refreshRoom,
+    seatState.formError,
+    startState.formError,
+  ]);
+
+  useEffect(() => {
+    if (
+      seatState.formNotice ||
+      leaveState.formNotice ||
+      readyState.formNotice
+    ) {
+      lastOptimisticMutationAtRef.current = 0;
+      broadcastRoomChange();
+      void refreshRoom({ force: true });
+    }
+  }, [
+    broadcastRoomChange,
+    leaveState.formNotice,
+    readyState.formNotice,
+    refreshRoom,
+    seatState.formNotice,
+  ]);
+
+  const applyOptimisticSeatClaim = useCallback(
+    (seatNumber: number) => {
+      lastOptimisticMutationAtRef.current = Date.now();
+
+      setRoom((previousRoom): WerewolfRoomView => {
+        if (!previousRoom.currentMember || previousRoom.status !== "LOBBY") {
+          return previousRoom;
+        }
+
+        const targetSeat = previousRoom.seats.find(
+          (seat) => seat.seatNumber === seatNumber,
+        );
+
+        if (!targetSeat || (targetSeat.isClaimed && !targetSeat.isViewerSeat)) {
+          return previousRoom;
+        }
+
+        const previousSeatId = previousRoom.currentMember.seatedSeatId;
+        const nextCurrentMember = {
+          ...previousRoom.currentMember,
+          readyAt: null,
+          seatedPrivateToken: targetSeat.privateToken,
+          seatedSeatId: targetSeat.id,
+          seatedSeatNumber: targetSeat.seatNumber,
+        };
+
+        return {
+          ...previousRoom,
+          currentMember: nextCurrentMember,
+          members: previousRoom.members.map((member) =>
+            member.id === nextCurrentMember.id
+              ? {
+                  ...member,
+                  readyAt: null,
+                  seatedSeatId: targetSeat.id,
+                  seatedSeatNumber: targetSeat.seatNumber,
+                }
+              : member,
+          ),
+          seats: previousRoom.seats.map((seat) => {
+            if (seat.id === targetSeat.id) {
+              return {
+                ...seat,
+                avatarLabel: nextCurrentMember.avatarLabel,
+                avatarUrl: nextCurrentMember.avatarUrl,
+                displayName: nextCurrentMember.displayName,
+                isClaimed: true,
+                isViewerSeat: true,
+                readyAt: null,
+              };
+            }
+
+            if (seat.id === previousSeatId) {
+              return {
+                ...seat,
+                avatarLabel: "",
+                avatarUrl: null,
+                displayName: t.empty,
+                isClaimed: false,
+                isViewerSeat: false,
+                readyAt: null,
+              };
+            }
+
+            return {
+              ...seat,
+              isViewerSeat: false,
+            };
+          }),
+        };
+      });
+    },
+    [t.empty],
+  );
+
+  const applyOptimisticReady = useCallback((ready: boolean) => {
+    lastOptimisticMutationAtRef.current = Date.now();
+
+    setRoom((previousRoom): WerewolfRoomView => {
+      const currentMember = previousRoom.currentMember;
+
+      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+        return previousRoom;
+      }
+
+      const readyAt = ready ? new Date().toISOString() : null;
+
+      return {
+        ...previousRoom,
+        currentMember: {
+          ...currentMember,
+          readyAt,
+        },
+        members: previousRoom.members.map((member) =>
+          member.id === currentMember.id ? { ...member, readyAt } : member,
+        ),
+        seats: previousRoom.seats.map((seat) =>
+          seat.id === currentMember.seatedSeatId ? { ...seat, readyAt } : seat,
+        ),
+      };
+    });
+  }, []);
+
+  const applyOptimisticLeaveSeat = useCallback(() => {
+    lastOptimisticMutationAtRef.current = Date.now();
+
+    setRoom((previousRoom): WerewolfRoomView => {
+      const currentMember = previousRoom.currentMember;
+
+      if (!currentMember?.seatedSeatId || previousRoom.status !== "LOBBY") {
+        return previousRoom;
+      }
+
+      const previousSeatId = currentMember.seatedSeatId;
+
+      return {
+        ...previousRoom,
+        currentMember: {
+          ...currentMember,
+          readyAt: null,
+          seatedPrivateToken: null,
+          seatedSeatId: null,
+          seatedSeatNumber: null,
+        },
+        members: previousRoom.members.map((member) =>
+          member.id === currentMember.id
+            ? {
+                ...member,
+                readyAt: null,
+                seatedSeatId: null,
+                seatedSeatNumber: null,
+              }
+            : member,
+        ),
+        seats: previousRoom.seats.map((seat) =>
+          seat.id === previousSeatId
+            ? {
+                ...seat,
+                avatarLabel: "",
+                avatarUrl: null,
+                displayName: t.empty,
+                isClaimed: false,
+                isViewerSeat: false,
+                readyAt: null,
+              }
+            : seat,
+        ),
+      };
+    });
+  }, [t.empty]);
 
   useEffect(() => {
     if (room.status !== "IN_PROGRESS" || !currentSeatPrivateToken) {
@@ -639,11 +1102,23 @@ export function WerewolfRoomOverview({
 
     if (!seat.isClaimed && isLobby && canChooseSeat) {
       return (
-        <form action={seatAction} className={nodeClass} key={seat.id}>
+        <form
+          action={seatAction}
+          className={nodeClass}
+          key={seat.id}
+          onSubmit={(event) => {
+            if (!canSubmitOnline(event)) {
+              return;
+            }
+
+            applyOptimisticSeatClaim(seat.seatNumber);
+          }}
+        >
           <input name="locale" type="hidden" value={locale} />
           <input name="roomId" type="hidden" value={room.id} />
           <input name="memberToken" type="hidden" value={currentMemberToken} />
           <input name="seatNumber" type="hidden" value={seat.seatNumber} />
+          <input name="responseMode" type="hidden" value="inline" />
           <button
             aria-label={`${emptySeatActionLabel} ${seat.seatNumber}`}
             className="group flex w-full flex-col items-center text-center text-white disabled:cursor-not-allowed disabled:opacity-55"
@@ -778,7 +1253,16 @@ export function WerewolfRoomOverview({
                       />
                     </span>
                   ) : isLobby && canChooseSeat ? (
-                    <form action={seatAction}>
+                    <form
+                      action={seatAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        applyOptimisticSeatClaim(judgeSeat.seatNumber);
+                      }}
+                    >
                       <input name="locale" type="hidden" value={locale} />
                       <input name="roomId" type="hidden" value={room.id} />
                       <input
@@ -791,6 +1275,7 @@ export function WerewolfRoomOverview({
                         type="hidden"
                         value={judgeSeat.seatNumber}
                       />
+                      <input name="responseMode" type="hidden" value="inline" />
                       <button
                         className="relative grid h-14 w-14 place-items-center transition hover:scale-105"
                         type="submit"
@@ -899,7 +1384,16 @@ export function WerewolfRoomOverview({
               <div className="grid gap-2">
                 {isLobby ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <form action={readyAction}>
+                    <form
+                      action={readyAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        applyOptimisticReady(!currentViewerSeat.readyAt);
+                      }}
+                    >
                       <input name="locale" type="hidden" value={locale} />
                       <input
                         name="privateToken"
@@ -911,6 +1405,7 @@ export function WerewolfRoomOverview({
                         type="hidden"
                         value={currentViewerSeat.readyAt ? "unready" : "ready"}
                       />
+                      <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
                         label={
@@ -920,13 +1415,23 @@ export function WerewolfRoomOverview({
                         }
                       />
                     </form>
-                    <form action={leaveAction}>
+                    <form
+                      action={leaveAction}
+                      onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
+                        applyOptimisticLeaveSeat();
+                      }}
+                    >
                       <input name="locale" type="hidden" value={locale} />
                       <input
                         name="privateToken"
                         type="hidden"
                         value={currentViewerSeat.privateToken}
                       />
+                      <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.leaveSeat}
@@ -948,6 +1453,10 @@ export function WerewolfRoomOverview({
                     <form
                       action={leaveAction}
                       onSubmit={(event) => {
+                        if (!canSubmitOnline(event)) {
+                          return;
+                        }
+
                         if (!window.confirm(t.leaveRoomConfirm)) {
                           event.preventDefault();
                         }
@@ -959,6 +1468,7 @@ export function WerewolfRoomOverview({
                         type="hidden"
                         value={currentViewerSeat.privateToken}
                       />
+                      <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-black text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.leaveRoom}
@@ -972,6 +1482,10 @@ export function WerewolfRoomOverview({
                     action={startAction}
                     className="grid gap-1.5"
                     onSubmit={(event) => {
+                      if (!canSubmitOnline(event)) {
+                        return;
+                      }
+
                       if (!window.confirm(t.startConfirm)) {
                         event.preventDefault();
                       }
@@ -1004,12 +1518,14 @@ export function WerewolfRoomOverview({
               </p>
             ) : null}
 
-            {seatState.formError ||
+            {localFormError ||
+            seatState.formError ||
             leaveState.formError ||
             readyState.formError ||
             startState.formError ? (
               <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {seatState.formError ||
+                {localFormError ||
+                  seatState.formError ||
                   leaveState.formError ||
                   readyState.formError ||
                   startState.formError ||

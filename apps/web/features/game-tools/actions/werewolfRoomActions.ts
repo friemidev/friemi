@@ -42,6 +42,7 @@ import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfT
 export type WerewolfRoomActionState = {
   fieldErrors?: Record<string, string[]>;
   formError?: string;
+  formNotice?: string;
 };
 
 const roomTitleMaxLength = 80;
@@ -136,6 +137,10 @@ function getOptionalString(formData: FormData, key: string) {
   return value || undefined;
 }
 
+function shouldReturnInline(formData: FormData) {
+  return getString(formData, "responseMode") === "inline";
+}
+
 function parseCustomWerewolfRoleDeck(value: string | undefined) {
   if (!value) {
     return null;
@@ -168,7 +173,7 @@ function getActionCopy(locale: string) {
       notLobby: "La partie a déjà commencé.",
       notReady: "Attendez que toute la table soit prête.",
       readyFailed: "Impossible de modifier votre prêt.",
-      seatTaken: "Cette place est déjà prise.",
+      seatTaken: "Cette place vient d'être prise par quelqu'un d'autre.",
       startFailed: "Les rôles n'ont pas pu être distribués.",
       statusFailed: "Impossible de modifier cette place.",
     };
@@ -193,7 +198,7 @@ function getActionCopy(locale: string) {
       notLobby: "The game has already started.",
       notReady: "Wait until the full table is ready.",
       readyFailed: "Could not update your ready state.",
-      seatTaken: "This seat is already taken.",
+      seatTaken: "This seat was just taken by someone else.",
       startFailed: "Roles could not be dealt.",
       statusFailed: "Could not update that seat.",
     };
@@ -216,7 +221,7 @@ function getActionCopy(locale: string) {
     notLobby: "本局已经开始。",
     notReady: "等全桌准备好再发身份。",
     readyFailed: "准备状态没改成功。",
-    seatTaken: "这个座位已经有人了。",
+    seatTaken: "这个座位刚刚被别人抢先坐了。",
     startFailed: "身份没发出去，再试一次。",
     statusFailed: "这个座位没改成功。",
   };
@@ -1004,6 +1009,7 @@ export async function claimWerewolfSeatAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     memberToken: getOptionalString(formData, "memberToken"),
@@ -1243,6 +1249,10 @@ export async function claimWerewolfSeatAction(
     console.error("Failed to claim Werewolf seat", error);
 
     return { formError: t.claimFailed };
+  }
+
+  if (returnInline) {
+    return { formNotice: notice };
   }
 
   redirect(
@@ -1494,6 +1504,7 @@ export async function updateWerewolfReadyAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     operation: getString(formData, "operation") || "ready",
@@ -1604,6 +1615,10 @@ export async function updateWerewolfReadyAction(
     return { formError: t.readyFailed };
   }
 
+  if (returnInline) {
+    return { formNotice: notice };
+  }
+
   redirect(
     roomId
       ? getRoomHref({
@@ -1620,6 +1635,7 @@ export async function leaveWerewolfSeatAction(
   _previousState: WerewolfRoomActionState,
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
+  const returnInline = shouldReturnInline(formData);
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     memberToken: getOptionalString(formData, "memberToken"),
@@ -1790,6 +1806,10 @@ export async function leaveWerewolfSeatAction(
     console.error("Failed to leave Werewolf seat", error);
 
     return { formError: t.leaveFailed };
+  }
+
+  if (returnInline) {
+    return { formNotice: "left" };
   }
 
   redirect(

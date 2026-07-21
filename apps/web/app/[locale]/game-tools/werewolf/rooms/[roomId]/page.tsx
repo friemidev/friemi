@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import {
   getActiveGameToolRoomForProfile,
@@ -158,18 +157,20 @@ export default async function WerewolfRoomPage({
     })),
     state: room.state,
     status: room.status,
+    syncVersion: [
+      room.status,
+      room.updatedAt.toISOString(),
+      room.startedAt?.toISOString() ?? "",
+      room.finishedAt?.toISOString() ?? "",
+      room.events[0]?.id ?? "",
+      room.events[0]?.createdAt.toISOString() ?? "",
+    ].join(":"),
     title: room.title,
     variant: room.variant,
   };
 
   return (
     <PageContainer className="max-w-[94rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <AvalonLiveRefresh
-        enabled={room.status !== "FINISHED"}
-        locale={locale}
-        showIndicator={false}
-        variant="inline"
-      />
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}
