@@ -9,10 +9,12 @@ import {
   createWerewolfPrivatePayload,
   getEnabledWerewolfVariant,
   getWerewolfDefaultRoomTitle,
+  getWerewolfVariantFromRoomConfig,
   getWerewolfSeatName,
   getWerewolfVariantLabel,
   isWerewolfJudgeSeat,
   isWerewolfPlayerSeat,
+  normalizeWerewolfRoleDeck,
   type WerewolfRoleKey,
   werewolfRoleAlignments,
   werewolfToolPath,
@@ -32,6 +34,7 @@ import { withLocale } from "@/lib/routes";
 import {
   createGameToolPrivateToken,
   createUniqueGameToolRoomCode,
+  getActiveGameToolRoomForProfile,
   revalidateGameToolRoom,
 } from "@/features/game-tools/gameToolRooms";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
@@ -44,6 +47,7 @@ export type WerewolfRoomActionState = {
 const roomTitleMaxLength = 80;
 
 const createWerewolfRoomSchema = z.object({
+  customRoleDeck: z.string().trim().optional(),
   locale: z.string().min(1).default("zh-CN"),
   title: z.string().trim().max(roomTitleMaxLength).optional(),
   variantKey: z.string().trim().min(1).default("ten_player_seer_witch_hunter"),
@@ -113,9 +117,12 @@ const leaveWerewolfSeatSchema = z
     privateToken: z.string().min(16).max(40).optional(),
     roomId: z.string().min(1).optional(),
   })
-  .refine((input) => input.privateToken || (input.roomId && input.memberToken), {
-    path: ["privateToken"],
-  });
+  .refine(
+    (input) => input.privateToken || (input.roomId && input.memberToken),
+    {
+      path: ["privateToken"],
+    },
+  );
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -129,12 +136,28 @@ function getOptionalString(formData: FormData, key: string) {
   return value || undefined;
 }
 
+function parseCustomWerewolfRoleDeck(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return normalizeWerewolfRoleDeck(JSON.parse(value));
+  } catch {
+    return null;
+  }
+}
+
 function getActionCopy(locale: string) {
   if (locale === "fr") {
     return {
       claimFailed: "Impossible de prendre cette place.",
       createFailed: "La table n'a pas pu s'ouvrir.",
       invalidRequest: "Vérifiez la table.",
+      activeRoomConflict:
+        "Vous êtes déjà dans une partie en cours. Revenez à cette table avant d'en ouvrir une autre.",
+      activeRoomStartConflict:
+        "Un joueur est déjà dans une autre partie en cours.",
       finishFailed: "La partie n'a pas pu se terminer.",
       joinFailed: "Impossible d'entrer dans la table.",
       joinRequired: "Entrez un nom avant de choisir une place.",
@@ -154,6 +177,10 @@ function getActionCopy(locale: string) {
   if (locale === "en") {
     return {
       claimFailed: "Could not claim this seat.",
+      activeRoomConflict:
+        "You are already in a running game. Return to that table before opening another one.",
+      activeRoomStartConflict:
+        "A seated player is already in another running game.",
       createFailed: "The table could not be opened.",
       finishFailed: "The game could not be finished.",
       invalidRequest: "Check the table.",
@@ -174,6 +201,9 @@ function getActionCopy(locale: string) {
 
   return {
     claimFailed: "认领座位失败。",
+    activeRoomConflict:
+      "你已经在一局进行中的桌游里，先回到那局再进入其他房间。",
+    activeRoomStartConflict: "有玩家已经在其他进行中的桌游里，暂时不能开局。",
     createFailed: "这局没开起来，再试一次。",
     finishFailed: "结算没成功，再试一次。",
     invalidRequest: "检查一下这局的信息。",
@@ -202,6 +232,21 @@ function getClaimedDisplayName({
   const trimmed = displayName?.trim();
 
   return trimmed ? trimmed.slice(0, 40) : fallback;
+}
+
+async function hasOtherActiveGameToolRoom({
+  exceptRoomId,
+  profileId,
+}: {
+  exceptRoomId?: string;
+  profileId: string;
+}) {
+  const activeRoom = await getActiveGameToolRoomForProfile({
+    exceptRoomId,
+    profileId,
+  });
+
+  return Boolean(activeRoom);
 }
 
 type WerewolfRoomNotice =
@@ -286,18 +331,10 @@ function buildFinishedWerewolfRoomState({
   };
 }
 
-function getConfigVariantKey(config: unknown) {
-  if (!config || typeof config !== "object") {
-    return null;
-  }
-
-  const value = (config as { variantKey?: unknown }).variantKey;
-
-  return typeof value === "string" ? value : null;
-}
-
 function revalidateWerewolfSeatPath(locale: string, privateToken: string) {
-  revalidatePath(withLocale(locale, `${werewolfToolPath}/seats/${privateToken}`));
+  revalidatePath(
+    withLocale(locale, `${werewolfToolPath}/seats/${privateToken}`),
+  );
 }
 
 function getTestBotActionCopy(locale: string) {
@@ -359,9 +396,7 @@ function getWerewolfTestBotDisplayName({
 }) {
   const t = getTestBotActionCopy(locale);
 
-  return isJudgeSeat
-    ? t.testJudge
-    : `${t.testPlayer} ${seatNumber}`;
+  return isJudgeSeat ? t.testJudge : `${t.testPlayer} ${seatNumber}`;
 }
 
 function isSeatClaimed(seat: {
@@ -417,7 +452,8 @@ function getWerewolfTestBotRuntimeState(
       ? (value as { testBot?: unknown }).testBot
       : null;
   const testBot = source && typeof source === "object" ? source : {};
-  const phase = (testBot as { phase?: unknown }).phase === "DAY" ? "DAY" : "NIGHT";
+  const phase =
+    (testBot as { phase?: unknown }).phase === "DAY" ? "DAY" : "NIGHT";
   const roundValue = Number((testBot as { round?: unknown }).round);
 
   return {
@@ -677,9 +713,11 @@ export async function createWerewolfRoomAction(
   formData: FormData,
 ): Promise<WerewolfRoomActionState> {
   const rawInput = {
+    customRoleDeck: getOptionalString(formData, "customRoleDeck"),
     locale: getString(formData, "locale") || "zh-CN",
     title: getString(formData, "title"),
-    variantKey: getString(formData, "variantKey") || "ten_player_seer_witch_hunter",
+    variantKey:
+      getString(formData, "variantKey") || "ten_player_seer_witch_hunter",
   };
   const result = createWerewolfRoomSchema.safeParse(rawInput);
   const t = getActionCopy(rawInput.locale);
@@ -691,11 +729,49 @@ export async function createWerewolfRoomAction(
     };
   }
 
-  const variant = getEnabledWerewolfVariant(result.data.variantKey);
+  const customRoleDeck =
+    result.data.variantKey === "custom"
+      ? parseCustomWerewolfRoleDeck(result.data.customRoleDeck)
+      : null;
+
+  if (result.data.variantKey === "custom" && !customRoleDeck) {
+    return {
+      formError: t.invalidRequest,
+    };
+  }
+
+  const variant =
+    result.data.variantKey === "custom" && customRoleDeck
+      ? getWerewolfVariantFromRoomConfig(
+          {
+            hasJudge: true,
+            judgeSeatNumber: customRoleDeck.length + 1,
+            kind: "WEREWOLF",
+            playerSeatCount: customRoleDeck.length,
+            roleDeck: customRoleDeck,
+            totalSeats: customRoleDeck.length + 1,
+            variantKey: "custom",
+            variantName:
+              result.data.locale === "zh-CN"
+                ? "自定义板子"
+                : result.data.locale === "fr"
+                  ? "Configuration libre"
+                  : "Custom setup",
+          },
+          result.data.locale,
+        )
+      : getEnabledWerewolfVariant(result.data.variantKey);
   const host = await ensureCurrentUserProfile(
     result.data.locale,
     werewolfToolPath,
   );
+
+  if (await hasOtherActiveGameToolRoom({ profileId: host.id })) {
+    return {
+      formError: t.activeRoomConflict,
+    };
+  }
+
   const roomTitle =
     result.data.title?.trim() ||
     `${getWerewolfDefaultRoomTitle(result.data.locale)} · ${getWerewolfVariantLabel(
@@ -775,7 +851,9 @@ export async function createWerewolfRoomAction(
     roomId,
     toolPath: werewolfToolPath,
   });
-  redirect(withLocale(result.data.locale, `${werewolfToolPath}/rooms/${roomId}`));
+  redirect(
+    withLocale(result.data.locale, `${werewolfToolPath}/rooms/${roomId}`),
+  );
 }
 
 export async function joinWerewolfRoomAction(
@@ -812,6 +890,16 @@ export async function joinWerewolfRoomAction(
 
     if (!room) {
       return { formError: t.joinFailed };
+    }
+
+    if (
+      profile &&
+      (await hasOtherActiveGameToolRoom({
+        exceptRoomId: room.id,
+        profileId: profile.id,
+      }))
+    ) {
+      return { formError: t.activeRoomConflict };
     }
 
     if (room.status !== "LOBBY") {
@@ -976,11 +1064,21 @@ export async function claimWerewolfSeatAction(
       return { formError: t.claimFailed };
     }
 
+    if (
+      profile &&
+      (await hasOtherActiveGameToolRoom({
+        exceptRoomId: room.id,
+        profileId: profile.id,
+      }))
+    ) {
+      return { formError: t.activeRoomConflict };
+    }
+
     if (room.status !== "LOBBY") {
       return { formError: t.notLobby };
     }
 
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
     if (profile) {
       const existingMember = room.members.find(
         (member) => member.profileId === profile.id,
@@ -1211,7 +1309,7 @@ export async function manageWerewolfSeatAction(
       return { formError: t.notLobby };
     }
 
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
     const judgeSeat = room.seats.find((seat) =>
       isWerewolfJudgeSeat(seat.seatNumber, variant),
     );
@@ -1330,7 +1428,9 @@ export async function manageWerewolfSeatAction(
           where: { id: targetSeat.id },
           data: {
             displayName,
-            guestName: targetSeat.profileId ? targetSeat.guestName : displayName,
+            guestName: targetSeat.profileId
+              ? targetSeat.guestName
+              : displayName,
           },
         }),
         prisma.gameToolEvent.create({
@@ -1489,7 +1589,9 @@ export async function updateWerewolfReadyAction(
     await prisma.$transaction(updates);
 
     roomId = seat.room.id;
-    redirectMemberToken = member?.profileId ? null : member?.memberToken ?? null;
+    redirectMemberToken = member?.profileId
+      ? null
+      : (member?.memberToken ?? null);
 
     revalidateGameToolRoom({
       locale: result.data.locale,
@@ -1504,12 +1606,12 @@ export async function updateWerewolfReadyAction(
 
   redirect(
     roomId
-        ? getRoomHref({
-            locale: result.data.locale,
-            memberToken: redirectMemberToken,
-            notice,
-            roomId,
-          })
+      ? getRoomHref({
+          locale: result.data.locale,
+          memberToken: redirectMemberToken,
+          notice,
+          roomId,
+        })
       : withLocale(result.data.locale, werewolfToolPath),
   );
 }
@@ -1611,38 +1713,50 @@ export async function leaveWerewolfSeatAction(
       return { formError: t.leaveFailed };
     }
 
-    if (room.status !== "LOBBY") {
-      return { formError: t.notLobby };
-    }
-
     if (member?.profileId && profile?.id !== member.profileId) {
       return { formError: t.leaveFailed };
     }
 
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
     const now = new Date();
+    const shouldReleaseSeat = room.status === "LOBBY";
 
     await prisma.$transaction([
-      prisma.gameToolSeat.update({
-        where: { id: targetSeat.id },
-        data: {
-          displayName: getWerewolfSeatName({
-            locale: room.locale,
-            seatNumber: targetSeat.seatNumber,
-            variant,
-          }),
-          guestName: null,
-          leftAt: now,
-          profileId: null,
-          readyAt: null,
-        },
-      }),
+      ...(shouldReleaseSeat
+        ? [
+            prisma.gameToolSeat.update({
+              where: { id: targetSeat.id },
+              data: {
+                displayName: getWerewolfSeatName({
+                  locale: room.locale,
+                  seatNumber: targetSeat.seatNumber,
+                  variant,
+                }),
+                guestName: null,
+                leftAt: now,
+                profileId: null,
+                readyAt: null,
+              },
+            }),
+          ]
+        : [
+            prisma.gameToolSeat.update({
+              where: { id: targetSeat.id },
+              data: {
+                guestName: targetSeat.guestName ?? targetSeat.displayName,
+                leftAt: now,
+                profileId: null,
+                readyAt: null,
+              },
+            }),
+          ]),
       ...(member
         ? [
             prisma.gameToolRoomMember.update({
               where: { id: member.id },
               data: {
                 lastSeenAt: now,
+                leftAt: shouldReleaseSeat ? null : now,
                 readyAt: null,
                 seatedSeatId: null,
               },
@@ -1662,7 +1776,10 @@ export async function leaveWerewolfSeatAction(
     ]);
 
     roomId = room.id;
-    redirectMemberToken = member?.profileId ? null : member?.memberToken ?? null;
+    redirectMemberToken =
+      shouldReleaseSeat && !member?.profileId
+        ? (member?.memberToken ?? null)
+        : null;
 
     revalidateGameToolRoom({
       locale: result.data.locale,
@@ -1730,7 +1847,7 @@ export async function startWerewolfRoomAction(
     }
 
     const room = judgeSeat.room;
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
 
     if (!isWerewolfJudgeSeat(judgeSeat.seatNumber, variant)) {
       return { formError: t.notJudge };
@@ -1760,6 +1877,32 @@ export async function startWerewolfRoomAction(
 
     if (!allReady) {
       return { formError: t.notReady };
+    }
+
+    const seatedProfileIds = Array.from(
+      new Set(
+        requiredSeats
+          .map((seat) => seat.profileId)
+          .filter((profileId): profileId is string => Boolean(profileId)),
+      ),
+    );
+
+    if (seatedProfileIds.length > 0) {
+      const conflictingSeat = await prisma.gameToolSeat.findFirst({
+        where: {
+          leftAt: null,
+          profileId: { in: seatedProfileIds },
+          room: {
+            id: { not: room.id },
+            status: "IN_PROGRESS",
+          },
+        },
+        select: { id: true },
+      });
+
+      if (conflictingSeat) {
+        return { formError: t.activeRoomStartConflict };
+      }
     }
 
     const now = new Date();
@@ -1884,7 +2027,7 @@ export async function updateWerewolfPlayerLifeAction(
     }
 
     const room = judgeSeat.room;
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
 
     if (!isWerewolfJudgeSeat(judgeSeat.seatNumber, variant)) {
       return { formError: t.notJudge };
@@ -2013,7 +2156,7 @@ export async function finishWerewolfRoomAction(
     }
 
     const room = judgeSeat.room;
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
 
     if (!isWerewolfJudgeSeat(judgeSeat.seatNumber, variant)) {
       return { formError: t.notJudge };
@@ -2259,17 +2402,14 @@ export async function runWerewolfTestBotAction(
       return { formError: t.hostOnly };
     }
 
-    const variant = getEnabledWerewolfVariant(getConfigVariantKey(room.config));
+    const variant = getWerewolfVariantFromRoomConfig(room.config, room.locale);
     const playerSeats = room.seats.filter((seat) =>
       isWerewolfPlayerSeat(seat.seatNumber, variant),
     );
     const judgeSeat = room.seats.find((seat) =>
       isWerewolfJudgeSeat(seat.seatNumber, variant),
     );
-    const requiredSeats = [
-      ...playerSeats,
-      ...(judgeSeat ? [judgeSeat] : []),
-    ];
+    const requiredSeats = [...playerSeats, ...(judgeSeat ? [judgeSeat] : [])];
     const memberBySeatId = new Map(
       room.members
         .filter((member) => member.seatedSeatId)
@@ -2502,7 +2642,8 @@ export async function runWerewolfTestBotAction(
             });
         const winner = existingWinner ?? simulation?.winner ?? null;
         const runtimeState =
-          simulation?.runtimeState ?? getWerewolfTestBotRuntimeState(room.state);
+          simulation?.runtimeState ??
+          getWerewolfTestBotRuntimeState(room.state);
         const deadSeatNumbers =
           simulation?.deadSeatNumbers ?? currentState.deadSeatNumbers;
         const eventPlayerResults = winner

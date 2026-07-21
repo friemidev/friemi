@@ -16,11 +16,18 @@ import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
 import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
+import { ActiveGameToolFloatingWindow } from "@/features/game-tools/components/ActiveGameToolFloatingWindow";
+import {
+  getActiveGameToolRoomForProfile,
+  getGameToolPrivateSeatPath,
+  getGameToolRoomPath,
+} from "@/features/game-tools/gameToolRooms";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { createPerformanceTracker } from "@/lib/performance";
+import { withLocale } from "@/lib/routes";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -48,6 +55,37 @@ export default async function LocaleLayout({
     perf.measure("viewer.identity", getOptionalLayoutViewerState),
   ]);
   const viewerProfile = viewerState.profile;
+  const activeGameToolRoom = viewerProfile
+    ? await perf.measure("gameTool.activeRoom", () =>
+        getActiveGameToolRoomForProfile({
+          profileId: viewerProfile.id,
+        }),
+      )
+    : null;
+  const activeGameToolPrivateSeatPath = activeGameToolRoom?.privateSeatToken
+    ? getGameToolPrivateSeatPath({
+        kind: activeGameToolRoom.kind,
+        privateSeatToken: activeGameToolRoom.privateSeatToken,
+      })
+    : null;
+  const activeGameToolFloatingRoom = activeGameToolRoom
+    ? {
+        code: activeGameToolRoom.code,
+        href: withLocale(
+          locale,
+          getGameToolRoomPath({
+            kind: activeGameToolRoom.kind,
+            roomId: activeGameToolRoom.id,
+          }),
+        ),
+        kind: activeGameToolRoom.kind,
+        privateSeatHref: activeGameToolPrivateSeatPath
+          ? withLocale(locale, activeGameToolPrivateSeatPath)
+          : null,
+        seatNumber: activeGameToolRoom.seatNumber,
+        title: activeGameToolRoom.title,
+      }
+    : null;
   perf.finish({
     hasViewer: Boolean(viewerProfile),
     showAdminNav: viewerState.showAdminNav,
@@ -99,6 +137,10 @@ export default async function LocaleLayout({
               ) : null}
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
               {children}
+              <ActiveGameToolFloatingWindow
+                activeRoom={activeGameToolFloatingRoom}
+                locale={locale}
+              />
               <MobileNav locale={locale} />
             </div>
             <OrientationLockOverlay locale={locale} />

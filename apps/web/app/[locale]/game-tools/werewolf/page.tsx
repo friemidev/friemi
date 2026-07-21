@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
 import { WerewolfCreateRoomPanel } from "@/features/game-tools/components/WerewolfCreateRoomPanel";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
@@ -55,11 +54,7 @@ export default async function WerewolfToolPage({
   const { locale } = await params;
 
   return (
-    <PageContainer className="max-w-[94rem] space-y-5 overflow-x-hidden pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <GameToolBackButton
-        fallbackHref={withLocale(locale, "/game-tools")}
-        locale={locale}
-      />
+    <PageContainer className="max-w-[34rem] overflow-x-hidden pb-28 pt-3 sm:pb-12 sm:pt-6">
       <WerewolfCreateRoomPanel locale={locale} />
     </PageContainer>
   );

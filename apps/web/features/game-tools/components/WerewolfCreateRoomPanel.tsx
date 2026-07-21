@@ -15,10 +15,10 @@ import { useFormStatus } from "react-dom";
 import jsQR from "jsqr";
 import {
   ArrowRight,
+  ChevronLeft,
+  Clock3,
   Hash,
-  Moon,
   ScanLine,
-  Shield,
   Sparkles,
   X,
   UsersRound,
@@ -29,12 +29,17 @@ import {
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import {
   defaultWerewolfVariantKey,
+  getWerewolfRoleLabel,
   getWerewolfVariantLabel,
+  getWerewolfDefaultRoomTitle,
   werewolfVariants,
   type WerewolfRoleKey,
   type WerewolfVariant,
 } from "@/features/game-tools/werewolfConfig";
-import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
+import {
+  getWerewolfRoleCardImage,
+  werewolfUiAssets,
+} from "@/features/game-tools/werewolfCardAssets";
 import {
   canUseNativeAndroidQrScanner,
   getWerewolfRoomCodeFromScan,
@@ -51,8 +56,15 @@ type Copy = {
   boundary: string;
   chips: string[];
   create: string;
+  customCreate: string;
+  customInvalid: string;
+  customSubtitle: string;
+  customTitle: string;
+  decrease: string;
+  duration: string;
   eyebrow: string;
   helper: string;
+  increase: string;
   joinCodeAction: string;
   joinCodeError: string;
   joinCodeHelper: string;
@@ -62,6 +74,7 @@ type Copy = {
   judge: string;
   players: string;
   preview: string;
+  roleCount: string;
   scanCodeAction: string;
   scannerClose: string;
   scannerHelper: string;
@@ -69,6 +82,7 @@ type Copy = {
   scannerSearching: string;
   scannerTitle: string;
   scannerUnsupported: string;
+  selectMode: string;
   title: string;
   titleLabel: string;
   titlePlaceholder: string;
@@ -80,8 +94,15 @@ const copies: Record<string, Copy> = {
     boundary: "手机发身份、记生死和结算，桌上照常发言、投票、走夜晚。",
     chips: ["扫码入座", "私密身份", "法官记生死"],
     create: "开一局",
+    customCreate: "创建自定义",
+    customInvalid: "至少 5 名玩家，且需要狼人和好人。",
+    customSubtitle: "按你们桌上的规则配置",
+    customTitle: "自定义板子",
+    decrease: "减少",
+    duration: "30-40分钟",
     eyebrow: "狼人杀",
     helper: "选版型，朋友扫码入座。",
+    increase: "增加",
     joinCodeAction: "加入",
     joinCodeError: "输入房号再加入。",
     joinCodeHelper: "朋友发来房号时，可以直接进房。",
@@ -91,6 +112,7 @@ const copies: Record<string, Copy> = {
     judge: "含 1 位法官",
     players: "席",
     preview: "卡牌预览",
+    roleCount: "角色",
     scanCodeAction: "扫码加入",
     scannerClose: "关闭",
     scannerHelper: "对准房间二维码，识别后自动进入。",
@@ -98,6 +120,7 @@ const copies: Record<string, Copy> = {
     scannerSearching: "正在识别二维码",
     scannerTitle: "扫码加入房间",
     scannerUnsupported: "当前浏览器不支持相机扫码，请手动输入房号。",
+    selectMode: "选择模式",
     title: "今晚开狼人杀",
     titleLabel: "这局叫什么",
     titlePlaceholder: "今晚的狼人杀",
@@ -108,8 +131,15 @@ const copies: Record<string, Copy> = {
       "Use phones for seats, private roles, deaths, and results. Keep speeches, votes, and night calls at the table.",
     chips: ["Scan seats", "Private roles", "Judge notes"],
     create: "Start a table",
+    customCreate: "Create custom",
+    customInvalid: "Use at least 5 players, with werewolves and good roles.",
+    customSubtitle: "Build your table rules",
+    customTitle: "Custom setup",
+    decrease: "Decrease",
+    duration: "30-40 min",
     eyebrow: "Werewolf",
     helper: "Pick a setup. Friends scan in.",
+    increase: "Increase",
     joinCodeAction: "Join",
     joinCodeError: "Enter a room code first.",
     joinCodeHelper: "Got a code from a friend? Enter the room here.",
@@ -119,6 +149,7 @@ const copies: Record<string, Copy> = {
     judge: "includes 1 judge",
     players: "Seats",
     preview: "Card preview",
+    roleCount: "Roles",
     scanCodeAction: "Scan",
     scannerClose: "Close",
     scannerHelper: "Point at the room QR code. You'll enter once it is read.",
@@ -128,6 +159,7 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scan room QR",
     scannerUnsupported:
       "This browser cannot scan with the camera. Enter the code instead.",
+    selectMode: "Choose setup",
     title: "Start tonight's Werewolf table",
     titleLabel: "Table name",
     titlePlaceholder: "Tonight's Werewolf",
@@ -138,8 +170,16 @@ const copies: Record<string, Copy> = {
       "Le téléphone garde les places, rôles, morts et résultats. La parole, les votes et la nuit restent autour de la table.",
     chips: ["Places par QR", "Rôles privés", "Notes du maître"],
     create: "Ouvrir la table",
+    customCreate: "Créer",
+    customInvalid:
+      "Ajoutez au moins 5 joueurs, avec des loups et des villageois.",
+    customSubtitle: "Configurez les règles de table",
+    customTitle: "Configuration libre",
+    decrease: "Retirer",
+    duration: "30-40 min",
     eyebrow: "Loups-garous",
     helper: "Choisissez une configuration. Les amis scannent.",
+    increase: "Ajouter",
     joinCodeAction: "Entrer",
     joinCodeError: "Entrez d'abord un code.",
     joinCodeHelper: "Vous avez reçu un code ? Entrez dans la table ici.",
@@ -149,6 +189,7 @@ const copies: Record<string, Copy> = {
     judge: "inclut 1 maître",
     players: "Places",
     preview: "Aperçu cartes",
+    roleCount: "Rôles",
     scanCodeAction: "Scanner",
     scannerClose: "Fermer",
     scannerHelper: "Visez le QR de la table. L'entrée se fait automatiquement.",
@@ -158,6 +199,7 @@ const copies: Record<string, Copy> = {
     scannerTitle: "Scanner le QR",
     scannerUnsupported:
       "Ce navigateur ne peut pas scanner avec la caméra. Entrez le code.",
+    selectMode: "Choisir le mode",
     title: "Lancez la table Loups-garous de ce soir",
     titleLabel: "Nom de table",
     titlePlaceholder: "Loups-garous de ce soir",
@@ -167,107 +209,346 @@ const copies: Record<string, Copy> = {
 
 const initialState: WerewolfRoomActionState = {};
 
-function getRoleMix(roles: WerewolfRoleKey[]) {
-  const wolves = roles.filter((role) => role === "werewolf").length;
-  const villagers = roles.filter((role) => role === "villager").length;
-  const specials = roles.length - wolves - villagers;
+function getVariantHeroRole(variant: WerewolfVariant): WerewolfRoleKey {
+  if (variant.key === "seven_player_basic") {
+    return "seer";
+  }
 
-  return { specials, villagers, wolves };
+  if (variant.key === "eight_player_basic") {
+    return "witch";
+  }
+
+  if (variant.key === "nine_player_basic") {
+    return "hunter";
+  }
+
+  if (variant.key === "twelve_player_idiot") {
+    return "idiot";
+  }
+
+  return "werewolf";
 }
 
-function RoleMixBadges({
-  locale,
-  variant,
-}: {
-  locale: string;
-  variant: WerewolfVariant;
-}) {
-  const mix = getRoleMix(variant.roles);
-  const labels =
-    locale === "zh-CN"
-      ? {
-          specials: "神",
-          villagers: "民",
-          wolves: "狼",
-        }
-      : {
-          specials: "Power",
-          villagers: "Villager",
-          wolves: "Wolf",
-        };
+function getVariantCoreRoleLabels(locale: string, variant: WerewolfVariant) {
+  const preferredOrder: WerewolfRoleKey[] = [
+    "seer",
+    "witch",
+    "hunter",
+    "idiot",
+    "werewolf",
+    "villager",
+  ];
+  const roles = new Set(variant.roles);
 
+  return preferredOrder
+    .filter((role) => roles.has(role))
+    .map((role) => getWerewolfRoleLabel(locale, role))
+    .filter(Boolean)
+    .slice(0, 4)
+    .join(" · ");
+}
+
+function RoleSeatDots({ roles }: { roles: WerewolfRoleKey[] }) {
   return (
-    <div className="mt-2 flex flex-nowrap items-center gap-1.5 overflow-hidden">
-      <RoleMixPill label={labels.wolves} tone="wolf" value={mix.wolves} />
-      <RoleMixPill label={labels.specials} tone="power" value={mix.specials} />
-      <RoleMixPill label={labels.villagers} tone="villager" value={mix.villagers} />
+    <div aria-hidden="true" className="mt-2 flex max-w-[9rem] flex-wrap gap-1">
+      {roles.map((role, index) => (
+        <span
+          className={`h-1.5 w-3 rounded-full ${
+            role === "werewolf"
+              ? "bg-[#7D2B24]"
+              : role === "villager"
+                ? "bg-[#C9A66D]/55"
+                : "bg-[#F4C76D]"
+          }`}
+          key={`${role}-${index}`}
+        />
+      ))}
+      <span className="h-1.5 w-3 rounded-full bg-[#171313]" />
     </div>
   );
 }
 
 function VariantSeatDots({ variant }: { variant: WerewolfVariant }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="mt-2 flex flex-wrap gap-1.5"
-    >
-      {variant.roles.map((role, index) => (
-        <span
-          className={`h-2 w-3.5 rounded-full sm:h-2.5 sm:w-5 ${
-            role === "werewolf"
-              ? "bg-[#7A1F2B]"
-              : role === "villager"
-                ? "bg-[#D9C7B4]"
-                : "bg-[#F0C36A]"
-          }`}
-          key={`${role}-${index}`}
-        />
-      ))}
-      <span className="h-2 w-3.5 rounded-full bg-[#1E1718] sm:h-2.5 sm:w-5" />
-    </div>
-  );
+  return <RoleSeatDots roles={variant.roles} />;
 }
 
-function RoleMixPill({
-  label,
-  tone,
-  value,
-}: {
-  label: string;
-  tone: "power" | "villager" | "wolf";
-  value: number;
-}) {
-  const Icon = tone === "wolf" ? Moon : tone === "power" ? Shield : UsersRound;
-
-  return (
-    <span
-      className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-black leading-none sm:h-7 ${
-        tone === "wolf"
-          ? "bg-[#7A1F2B] text-white"
-          : tone === "power"
-            ? "bg-[#F0C36A]/25 text-[#7A1F2B]"
-            : "bg-[#F4ECE6] text-[#1E1718]/72"
-      }`}
-    >
-      <Icon className="h-3 w-3 shrink-0" />
-      {label}
-      <span className="font-mono">{value}</span>
-    </span>
-  );
-}
-
-function SubmitButton({ label }: { label: string }) {
+function VariantSubmitOverlay({ label }: { label: string }) {
   const { pending } = useFormStatus();
 
   return (
     <button
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#7A1F2B] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(122,31,43,0.22)] transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-60"
+      aria-label={label}
+      className="absolute inset-0 z-20 rounded-[1.15rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F4C76D]/70 disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
+      type="submit"
+    />
+  );
+}
+
+function WerewolfVariantModeCard({
+  formAction,
+  locale,
+  t,
+  variant,
+}: {
+  formAction: (formData: FormData) => void;
+  locale: string;
+  t: Copy;
+  variant: WerewolfVariant;
+}) {
+  const heroRole = getVariantHeroRole(variant);
+  const heroImage =
+    getWerewolfRoleCardImage(heroRole, locale) ??
+    "/game-tools/werewolf/werewolf.jpeg";
+  const title = getWerewolfVariantLabel(locale, variant);
+  const coreRoles = getVariantCoreRoleLabels(locale, variant);
+
+  return (
+    <form
+      action={formAction}
+      className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-3 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F4C76D]/70"
+    >
+      <input name="locale" type="hidden" value={locale} />
+      <input
+        name="title"
+        type="hidden"
+        value={`${getWerewolfDefaultRoomTitle(locale)} · ${title}`}
+      />
+      <input name="variantKey" type="hidden" value={variant.key} />
+      <VariantSubmitOverlay label={`${title} ${t.create}`} />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+      />
+      <Image
+        alt=""
+        className="absolute -left-4 bottom-0 h-[8.4rem] w-[7.5rem] object-contain opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+        height={360}
+        src={heroImage}
+        width={252}
+      />
+      <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
+        <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-black leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+          {title}
+        </span>
+        <p className="max-w-[10.5rem] truncate text-[11px] font-black text-[#F5E7C8]/82">
+          {coreRoles}
+        </p>
+        <VariantSeatDots variant={variant} />
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-black text-[#F2E1B8]/76">
+          <span className="inline-flex items-center gap-1">
+            <UsersRound className="h-3 w-3 text-[#EAC36D]" />
+            {variant.totalSeats}
+            {locale === "zh-CN" ? "人" : ""}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Clock3 className="h-3 w-3 text-[#EAC36D]" />
+            {t.duration}
+          </span>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+const customRoleOptions: WerewolfRoleKey[] = [
+  "werewolf",
+  "seer",
+  "witch",
+  "hunter",
+  "idiot",
+  "villager",
+];
+
+const defaultCustomRoleCounts: Record<WerewolfRoleKey, number> = {
+  hunter: 1,
+  idiot: 0,
+  seer: 1,
+  villager: 3,
+  werewolf: 3,
+  witch: 1,
+};
+
+function buildCustomRoleDeck(counts: Record<WerewolfRoleKey, number>) {
+  return customRoleOptions.flatMap((role) =>
+    Array.from({ length: counts[role] }, () => role),
+  );
+}
+
+function CustomSubmitButton({
+  disabled,
+  label,
+}: {
+  disabled: boolean;
+  label: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-black text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={disabled || pending}
       type="submit"
     >
       {label}
-      <ArrowRight className="h-4 w-4" />
     </button>
+  );
+}
+
+function CustomModeCard({
+  formAction,
+  locale,
+  t,
+}: {
+  formAction: (formData: FormData) => void;
+  locale: string;
+  t: Copy;
+}) {
+  const [open, setOpen] = useState(false);
+  const [roleCounts, setRoleCounts] = useState(defaultCustomRoleCounts);
+  const roleDeck = buildCustomRoleDeck(roleCounts);
+  const hasWerewolf = roleCounts.werewolf > 0;
+  const hasGood = roleDeck.some((role) => role !== "werewolf");
+  const isValid =
+    roleDeck.length >= 5 && roleDeck.length <= 15 && hasWerewolf && hasGood;
+
+  function updateRoleCount(role: WerewolfRoleKey, nextValue: number) {
+    setRoleCounts((current) => ({
+      ...current,
+      [role]: Math.max(0, Math.min(9, nextValue)),
+    }));
+  }
+
+  if (!open) {
+    return (
+      <button
+        className="group relative min-h-[8.1rem] cursor-pointer overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)] transition hover:-translate-y-0.5 hover:border-[#F4C76D]/70"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.18),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%)]" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+        />
+        <Image
+          alt=""
+          className="pointer-events-none absolute -left-4 bottom-0 h-[8.4rem] w-[7.5rem] object-contain opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+          height={360}
+          src="/game-tools/werewolf/recto/villager_en.png"
+          width={252}
+        />
+        <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
+          <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-black leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+            {t.customTitle}
+          </span>
+          <p className="max-w-[10.5rem] truncate text-[11px] font-black text-[#F5E7C8]/82">
+            {t.customSubtitle}
+          </p>
+          <RoleSeatDots roles={roleDeck} />
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-black text-[#F2E1B8]/76">
+            <span className="inline-flex items-center gap-1">
+              <UsersRound className="h-3 w-3 text-[#EAC36D]" />
+              {roleDeck.length}
+              {locale === "zh-CN" ? "人" : ""}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="h-3 w-3 text-[#EAC36D]" />
+              {t.duration}
+            </span>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={formAction}
+      className="relative overflow-hidden rounded-[1.15rem] border border-[#B68B50]/55 bg-[#083C34]/88 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.08),0_16px_34px_rgba(0,0,0,0.23)]"
+    >
+      <input name="locale" type="hidden" value={locale} />
+      <input
+        name="title"
+        type="hidden"
+        value={`${getWerewolfDefaultRoomTitle(locale)} · ${t.customTitle}`}
+      />
+      <input name="variantKey" type="hidden" value="custom" />
+      <input
+        name="customRoleDeck"
+        type="hidden"
+        value={JSON.stringify(roleDeck)}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(244,199,109,0.13),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_42%)]" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-4 top-3 h-px bg-gradient-to-r from-transparent via-[#CFA76A]/45 to-transparent"
+      />
+      <div className="relative flex items-start justify-between gap-3 pt-1">
+        <div>
+          <h3 className="text-lg font-black text-[#F8E9C8]">{t.customTitle}</h3>
+          <p className="text-xs font-bold text-[#F5E7C8]/68">
+            {roleDeck.length}
+            {locale === "zh-CN" ? "人" : ` ${t.roleCount}`}
+          </p>
+        </div>
+        <button
+          aria-label={locale === "zh-CN" ? "收起" : "Close"}
+          className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/55 bg-[#08231F] text-[#F8E9C8] transition hover:bg-[#0A3A32]"
+          onClick={() => setOpen(false)}
+          type="button"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="relative mt-4 grid grid-cols-2 gap-2">
+        {customRoleOptions.map((role) => (
+          <div
+            className="rounded-2xl border border-[#CFA76A]/28 bg-[#F9ECD2]/8 p-2"
+            key={role}
+          >
+            <p className="truncate text-[11px] font-black text-[#F8E9C8]">
+              {getWerewolfRoleLabel(locale, role)}
+            </p>
+            <div className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-1">
+              <button
+                aria-label={`${t.decrease} ${getWerewolfRoleLabel(locale, role)}`}
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-black text-[#F8E9C8] disabled:opacity-35"
+                disabled={roleCounts[role] <= 0}
+                onClick={() => updateRoleCount(role, roleCounts[role] - 1)}
+                type="button"
+              >
+                -
+              </button>
+              <span className="text-center text-sm font-black text-[#F4C76D]">
+                {roleCounts[role]}
+              </span>
+              <button
+                aria-label={`${t.increase} ${getWerewolfRoleLabel(locale, role)}`}
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-black text-[#F8E9C8] disabled:opacity-35"
+                disabled={roleDeck.length >= 15}
+                onClick={() => updateRoleCount(role, roleCounts[role] + 1)}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!isValid ? (
+        <p className="relative mt-3 rounded-xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-xs font-bold text-red-100">
+          {t.customInvalid}
+        </p>
+      ) : null}
+
+      <div className="relative mt-4 flex justify-end">
+        <CustomSubmitButton disabled={!isValid} label={t.customCreate} />
+      </div>
+    </form>
   );
 }
 
@@ -283,15 +564,21 @@ export function WerewolfCreateRoomPanel({
   const [joinCodeError, setJoinCodeError] = useState("");
   const [scannerError, setScannerError] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [selectedVariantKey, setSelectedVariantKey] = useState(
-    defaultWerewolfVariantKey,
-  );
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const nativeScanPendingRef = useRef(false);
   const scanHandledRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const t = copies[locale] ?? copies.en;
   const normalizedJoinCode = normalizeScannedRoomCode(joinCode);
+  const featuredVariants = [
+    "seven_player_basic",
+    defaultWerewolfVariantKey,
+    "twelve_player_idiot",
+    "nine_player_basic",
+    "eight_player_basic",
+  ]
+    .map((key) => werewolfVariants.find((variant) => variant.key === key))
+    .filter((variant): variant is WerewolfVariant => Boolean(variant));
 
   const goToJoinCode = useCallback(
     (code: string) => {
@@ -402,7 +689,11 @@ export function WerewolfCreateRoomPanel({
               canvas.width,
               canvas.height,
             );
-            const result = jsQR(imageData.data, imageData.width, imageData.height);
+            const result = jsQR(
+              imageData.data,
+              imageData.width,
+              imageData.height,
+            );
             const scannedCode = result
               ? getWerewolfRoomCodeFromScan(result.data)
               : "";
@@ -476,260 +767,179 @@ export function WerewolfCreateRoomPanel({
   }
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(25rem,0.95fr)] lg:items-stretch">
-      <div className="overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#141820] text-white shadow-[0_24px_70px_rgba(30,23,24,0.18)]">
-        <div className="relative min-h-[22rem]">
-          <Image
-            alt=""
-            className="h-full min-h-[22rem] w-full object-cover opacity-70"
-            height={720}
-            priority={false}
-            src="/game-tools/werewolf/werewolf.jpeg"
-            width={960}
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,24,32,0.12),rgba(20,24,32,0.88))]" />
-          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-white backdrop-blur">
-              <Moon className="h-3.5 w-3.5" />
-              {t.eyebrow}
-            </span>
-            <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.04] tracking-normal sm:text-5xl">
-              {t.title}
-            </h1>
-            <p className="mt-4 max-w-xl text-sm font-semibold leading-6 text-white/78 sm:text-base">
-              {t.helper}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {t.chips.map((chip) => (
-                <span
-                  className="inline-flex h-9 items-center gap-2 rounded-full border border-white/18 bg-white/12 px-3 text-xs font-black text-white backdrop-blur"
-                  key={chip}
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-[#F0C36A]" />
-                  {chip}
-                </span>
-              ))}
-              <Link
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-[#1E1718] shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition hover:bg-[#F4ECE6]"
-                href={withLocale(locale, "/game-tools/werewolf/card-preview")}
-              >
-                <img
-                  alt=""
-                  aria-hidden="true"
-                  className="h-5 w-5"
-                  draggable={false}
-                  src={werewolfUiAssets.actionRevealCard}
-                />
-                {t.preview}
-              </Link>
-            </div>
+    <section className="mx-auto w-full">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#CFA76A]/45 bg-[#042F2C] px-3.5 pb-5 pt-3 text-[#F8E9C8] shadow-[0_28px_80px_rgba(4,47,44,0.26)] sm:px-5 sm:pb-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(239,200,112,0.22),transparent_28%),radial-gradient(circle_at_86%_18%,rgba(81,167,130,0.16),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.32))]" />
+        <div className="pointer-events-none absolute inset-x-6 top-0 h-28 rounded-b-full border-b border-[#CFA76A]/20 bg-[#F2D17B]/5 blur-[1px]" />
+        <div className="relative">
+          <div className="flex items-center justify-between">
+            <button
+              aria-label={locale === "zh-CN" ? "返回" : "Back"}
+              className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/65 bg-[#06231F]/72 text-[#F8E9C8] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  router.back();
+                  return;
+                }
+
+                router.push(withLocale(locale, "/game-tools"));
+              }}
+              type="button"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <Link
+              aria-label={t.preview}
+              className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/65 bg-[#06231F]/72 text-[#F8E9C8] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
+              href={withLocale(locale, "/game-tools/werewolf/card-preview")}
+            >
+              <img
+                alt=""
+                aria-hidden="true"
+                className="h-5 w-5"
+                draggable={false}
+                src={werewolfUiAssets.actionRevealCard}
+              />
+            </Link>
           </div>
+
+          <div className="mt-1 text-center">
+            <div className="flex items-center justify-center gap-2 text-[#DAB866]">
+              <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#DAB866]/75" />
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#DAB866]/75" />
+            </div>
+            <p className="mt-1 text-[11px] font-black uppercase tracking-[0.24em] text-[#DAB866]/90">
+              {locale === "zh-CN" ? "WEREWOLF" : t.eyebrow}
+            </p>
+            <h1 className="mt-0.5 text-2xl font-black tracking-[0.18em] text-[#F8E9C8]">
+              {t.eyebrow}
+            </h1>
+          </div>
+
+          <form
+            className="mx-auto mt-3 max-w-[21rem] rounded-[1rem] border border-[#CFA76A]/36 bg-[#061E1B]/72 p-2.5 shadow-[inset_0_0_0_1px_rgba(255,242,190,0.05)]"
+            onSubmit={handleJoinByCode}
+          >
+            <div className="grid grid-cols-[minmax(0,1fr)_2.55rem_4.6rem] gap-1.5">
+              <label className="relative">
+                <Hash className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#DAB866]/78" />
+                <span className="sr-only">{t.joinCodeLabel}</span>
+                <input
+                  autoCapitalize="characters"
+                  className="h-10 w-full rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] pl-8 pr-2 text-xs font-black uppercase tracking-[0.18em] text-[#10332D] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#10332D]/42 focus:border-[#F4C76D] focus:ring-2 focus:ring-[#F4C76D]/20"
+                  inputMode="text"
+                  maxLength={12}
+                  onChange={(event) => {
+                    setJoinCode(event.target.value.toUpperCase());
+                    if (joinCodeError) {
+                      setJoinCodeError("");
+                    }
+                  }}
+                  placeholder={t.joinCodePlaceholder}
+                  spellCheck={false}
+                  value={joinCode}
+                />
+              </label>
+              <button
+                aria-label={t.scanCodeAction}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] text-[#10332D] transition hover:bg-white"
+                onClick={handleScanButtonClick}
+                title={t.scanCodeAction}
+                type="button"
+              >
+                <ScanLine className="h-4 w-4" />
+              </button>
+              <button
+                className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#EAF5FF] px-2 text-[11px] font-black text-[#173346] shadow-[0_6px_0_rgba(8,22,28,0.35)] transition hover:bg-white"
+                type="submit"
+              >
+                {t.joinCodeAction}
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+            {joinCodeError ? (
+              <p className="mt-2 rounded-xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-xs font-bold text-red-100">
+                {joinCodeError}
+              </p>
+            ) : null}
+          </form>
+
+          <div className="mx-auto mt-3 flex max-w-[17rem] items-center gap-2">
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#CFA76A]/65" />
+            <span className="rounded-full border border-[#CFA76A]/50 bg-[#F7DCA0] px-8 py-2 text-sm font-black text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
+              {t.selectMode}
+            </span>
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#CFA76A]/65" />
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {featuredVariants.map((variant) => (
+              <WerewolfVariantModeCard
+                formAction={formAction}
+                key={variant.key}
+                locale={locale}
+                t={t}
+                variant={variant}
+              />
+            ))}
+            <CustomModeCard formAction={formAction} locale={locale} t={t} />
+          </div>
+
+          {state.formError ? (
+            <p className="mt-3 rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
+              {state.formError}
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-4">
-        <form
-          className="rounded-[1.35rem] border border-[#D9C7B4] bg-white p-3 shadow-[0_14px_34px_rgba(30,23,24,0.07)] sm:p-4"
-          onSubmit={handleJoinByCode}
-        >
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-[#7A1F2B] text-white shadow-[0_10px_22px_rgba(122,31,43,0.18)]">
-              <Hash className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-sm font-black text-[#1E1718]">
-                {t.joinCodeTitle}
-              </h2>
-              <p className="truncate text-xs font-bold text-[#7A1F2B]/68">
-                {t.joinCodeHelper}
-              </p>
+      {scannerOpen ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-[#1E1718]/78 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm overflow-hidden rounded-[1.5rem] border border-white/16 bg-[#141820] text-white shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
+            <div className="flex items-start justify-between gap-3 p-4">
+              <div>
+                <h2 className="text-base font-black">{t.scannerTitle}</h2>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/62">
+                  {t.scannerHelper}
+                </p>
+              </div>
+              <button
+                aria-label={t.scannerClose}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/16 bg-white/10 text-white transition hover:bg-white/18"
+                onClick={() => setScannerOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-          </div>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_3rem_5.75rem] gap-2">
-            <label className="grid gap-1">
-              <span className="sr-only">{t.joinCodeLabel}</span>
-              <input
-                autoCapitalize="characters"
-                className="h-11 min-w-0 rounded-2xl border border-[#D9C7B4] bg-[#FFFDF7] px-3 text-sm font-black uppercase tracking-[0.18em] text-[#1E1718] outline-none transition placeholder:normal-case placeholder:tracking-normal focus:border-[#7A1F2B] focus:ring-2 focus:ring-[#7A1F2B]/15"
-                inputMode="text"
-                maxLength={12}
-                onChange={(event) => {
-                  setJoinCode(event.target.value.toUpperCase());
-                  if (joinCodeError) {
-                    setJoinCodeError("");
-                  }
-                }}
-                placeholder={t.joinCodePlaceholder}
-                spellCheck={false}
-                value={joinCode}
+            <div className="relative mx-4 aspect-square overflow-hidden rounded-[1.15rem] border border-[#F0C36A]/32 bg-black">
+              <video
+                className="h-full w-full object-cover"
+                muted
+                playsInline
+                ref={videoRef}
               />
-            </label>
-            <button
-              aria-label={t.scanCodeAction}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#D9C7B4] bg-[#FFFDF7] text-[#7A1F2B] transition hover:border-[#7A1F2B] hover:bg-[#FFF7F1]"
-              onClick={handleScanButtonClick}
-              title={t.scanCodeAction}
-              type="button"
-            >
-              <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-            </button>
-            <button
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
-              type="submit"
-            >
-              {t.joinCodeAction}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          {joinCodeError ? (
-            <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-              {joinCodeError}
-            </p>
-          ) : null}
-        </form>
-
-        {scannerOpen ? (
-          <div className="fixed inset-0 z-[80] grid place-items-center bg-[#1E1718]/78 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm overflow-hidden rounded-[1.5rem] border border-white/16 bg-[#141820] text-white shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
-              <div className="flex items-start justify-between gap-3 p-4">
-                <div>
-                  <h2 className="text-base font-black">{t.scannerTitle}</h2>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-white/62">
-                    {t.scannerHelper}
-                  </p>
-                </div>
-                <button
-                  aria-label={t.scannerClose}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/16 bg-white/10 text-white transition hover:bg-white/18"
-                  onClick={() => setScannerOpen(false)}
-                  type="button"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              <canvas className="hidden" ref={canvasRef} />
+              <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                <div className="h-[72%] w-[72%] rounded-[1rem] border border-[#F0C36A] shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
               </div>
-              <div className="relative mx-4 aspect-square overflow-hidden rounded-[1.15rem] border border-[#F0C36A]/32 bg-black">
-                <video
-                  className="h-full w-full object-cover"
-                  muted
-                  playsInline
-                  ref={videoRef}
-                />
-                <canvas className="hidden" ref={canvasRef} />
-                <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                  <div className="h-[72%] w-[72%] rounded-[1rem] border border-[#F0C36A] shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
-                </div>
-                <div className="pointer-events-none absolute inset-x-[18%] top-1/2 h-px bg-[#F0C36A]/90 shadow-[0_0_18px_rgba(240,195,106,0.85)]" />
-              </div>
-              <div className="p-4">
-                {scannerError ? (
-                  <p className="rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
-                    {scannerError}
-                  </p>
-                ) : (
-                  <p className="text-center text-xs font-black uppercase tracking-[0.16em] text-[#F0C36A]">
-                    {t.scannerSearching}
-                  </p>
-                )}
-              </div>
+              <div className="pointer-events-none absolute inset-x-[18%] top-1/2 h-px bg-[#F0C36A]/90 shadow-[0_0_18px_rgba(240,195,106,0.85)]" />
+            </div>
+            <div className="p-4">
+              {scannerError ? (
+                <p className="rounded-2xl border border-red-200/20 bg-red-500/12 px-3 py-2 text-sm font-bold text-red-100">
+                  {scannerError}
+                </p>
+              ) : (
+                <p className="text-center text-xs font-black uppercase tracking-[0.16em] text-[#F0C36A]">
+                  {t.scannerSearching}
+                </p>
+              )}
             </div>
           </div>
-        ) : null}
-
-        <form
-          action={formAction}
-          className="grid content-between gap-5 rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] p-4 shadow-[0_18px_48px_rgba(30,23,24,0.08)] sm:p-5"
-        >
-          <input name="locale" type="hidden" value={locale} />
-          <input name="variantKey" type="hidden" value={selectedVariantKey} />
-
-          <div className="grid gap-4">
-            <label className="grid gap-1.5">
-              <span className="text-xs font-black text-[#7A1F2B]">
-                {t.titleLabel}
-              </span>
-              <input
-                className="h-12 rounded-2xl border border-[#D9C7B4] bg-white px-4 text-sm font-bold text-[#1E1718] outline-none transition focus:border-[#7A1F2B] focus:ring-2 focus:ring-[#7A1F2B]/15"
-                maxLength={80}
-                name="title"
-                placeholder={t.titlePlaceholder}
-              />
-            </label>
-
-            <div className="rounded-[1.2rem] border border-[#D9C7B4] bg-white p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-black text-[#1E1718]">
-                  {t.variants}
-                </h2>
-                <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-[#F4ECE6] px-2.5 py-1 text-[11px] font-black text-[#7A1F2B] sm:text-xs">
-                  <img
-                    alt=""
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0"
-                    draggable={false}
-                    src={werewolfUiAssets.seatJudge}
-                  />
-                  <span className="truncate">{t.judge}</span>
-                </span>
-              </div>
-
-              <div className="mt-3 grid gap-2">
-                {werewolfVariants.map((variant) => (
-                  <label
-                    className={`grid min-h-14 cursor-pointer grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-2 rounded-2xl border px-2.5 py-2.5 transition sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-3 sm:px-3 ${
-                      selectedVariantKey === variant.key
-                        ? "border-[#7A1F2B] bg-[#FFF7F1] shadow-[0_10px_22px_rgba(122,31,43,0.08)]"
-                        : "border-[#D9C7B4] bg-[#F7F3EC] text-[#1E1718]/70 hover:bg-[#FFFDF7]"
-                    } ${variant.enabled ? "" : "cursor-not-allowed opacity-60"}`}
-                    key={variant.key}
-                  >
-                    <input
-                      checked={selectedVariantKey === variant.key}
-                      className="sr-only"
-                      disabled={!variant.enabled}
-                      name="variantChoice"
-                      onChange={() => setSelectedVariantKey(variant.key)}
-                      type="radio"
-                      value={variant.key}
-                    />
-                    <span className="relative mt-0.5 grid h-9 w-9 shrink-0 place-items-center sm:h-12 sm:w-12">
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full"
-                        draggable={false}
-                        src={werewolfUiAssets.seatPlayerOccupied}
-                      />
-                      <span className="relative text-xs font-black text-white sm:text-sm">
-                        {variant.roles.length}
-                      </span>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-[#1E1718]">
-                        {getWerewolfVariantLabel(locale, variant)}
-                      </p>
-                      <p className="text-xs font-bold text-[#7A1F2B]/70">
-                        {variant.totalSeats}
-                        {locale === "zh-CN" ? "" : " "}
-                        {t.players}
-                      </p>
-                      <VariantSeatDots variant={variant} />
-                      <RoleMixBadges locale={locale} variant={variant} />
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {state.formError ? (
-              <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
-                {state.formError}
-              </p>
-            ) : null}
-          </div>
-
-          <SubmitButton label={t.create} />
-        </form>
-      </div>
+        </div>
+      ) : null}
     </section>
   );
 }

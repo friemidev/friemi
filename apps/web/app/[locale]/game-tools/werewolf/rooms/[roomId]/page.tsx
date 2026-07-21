@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
+import {
+  getActiveGameToolRoomForProfile,
+  getGameToolPrivateSeatPath,
+  getGameToolRoomPath,
+} from "@/features/game-tools/gameToolRooms";
 import { getWerewolfRoomById } from "@/features/game-tools/queries/getWerewolfRoom";
 import { isWerewolfTestBotFeatureEnabled } from "@/features/game-tools/werewolfTestBots";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
@@ -49,12 +54,11 @@ export default async function WerewolfRoomPage({
   const memberToken = Array.isArray(query.memberToken)
     ? query.memberToken[0]
     : query.memberToken;
-  const notice = Array.isArray(query.notice)
-    ? query.notice[0]
-    : query.notice;
+  const notice = Array.isArray(query.notice) ? query.notice[0] : query.notice;
   const requestHeaders = await headers();
   const baseUrl = getRequestBaseUrl(requestHeaders).replace(/\/$/, "");
   const viewerProfile = await getOptionalCurrentUserProfile();
+
   const room = await getWerewolfRoomById({
     locale,
     memberToken,
@@ -64,6 +68,37 @@ export default async function WerewolfRoomPage({
 
   if (!room) {
     notFound();
+  }
+
+  const viewerBelongsToCurrentRoom = Boolean(
+    room.isHost || room.currentMember || room.viewerSeatId,
+  );
+
+  if (viewerProfile && !viewerBelongsToCurrentRoom) {
+    const activeRoom = await getActiveGameToolRoomForProfile({
+      exceptRoomId: roomId,
+      profileId: viewerProfile.id,
+    });
+
+    if (activeRoom) {
+      const privateSeatPath = activeRoom.privateSeatToken
+        ? getGameToolPrivateSeatPath({
+            kind: activeRoom.kind,
+            privateSeatToken: activeRoom.privateSeatToken,
+          })
+        : null;
+
+      redirect(
+        withLocale(
+          locale,
+          privateSeatPath ??
+            getGameToolRoomPath({
+              kind: activeRoom.kind,
+              roomId: activeRoom.id,
+            }),
+        ),
+      );
+    }
   }
 
   const roomForClient = {
@@ -126,13 +161,12 @@ export default async function WerewolfRoomPage({
 
   return (
     <PageContainer className="max-w-[94rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
-      <div className="mb-3 flex justify-end">
-        <AvalonLiveRefresh
-          enabled={room.status !== "FINISHED"}
-          locale={locale}
-          variant="inline"
-        />
-      </div>
+      <AvalonLiveRefresh
+        enabled={room.status !== "FINISHED"}
+        locale={locale}
+        showIndicator={false}
+        variant="inline"
+      />
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}

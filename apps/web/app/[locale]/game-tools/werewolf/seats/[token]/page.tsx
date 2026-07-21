@@ -1,10 +1,15 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AvalonLiveRefresh } from "@/features/game-tools/components/AvalonLiveRefresh";
 import { MobileChromeFullscreenOverride } from "@/features/game-tools/components/MobileChromeFullscreenOverride";
 import { WerewolfPrivateSeatCard } from "@/features/game-tools/components/WerewolfPrivateSeatCard";
 import {
-  getWerewolfVariant,
+  getActiveGameToolRoomForProfile,
+  getGameToolPrivateSeatPath,
+  getGameToolRoomPath,
+} from "@/features/game-tools/gameToolRooms";
+import {
+  getWerewolfVariantFromRoomConfig,
   getWerewolfVariantLabel,
   getWerewolfRoleLabel,
   isWerewolfRoleKey,
@@ -15,6 +20,7 @@ import {
 } from "@/features/game-tools/werewolfConfig";
 import { normalizeWerewolfRoomState } from "@/features/game-tools/werewolfRoomState";
 import { getWerewolfSeatByToken } from "@/features/game-tools/queries/getWerewolfRoom";
+import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfSeatPageProps = {
@@ -23,16 +29,6 @@ type WerewolfSeatPageProps = {
     token: string;
   }>;
 };
-
-function getConfigVariantKey(config: unknown) {
-  if (!config || typeof config !== "object") {
-    return null;
-  }
-
-  const value = (config as { variantKey?: unknown }).variantKey;
-
-  return typeof value === "string" ? value : null;
-}
 
 function parsePrivatePayload({
   roleKey,
@@ -77,8 +73,49 @@ export default async function WerewolfSeatPage({
     notFound();
   }
 
+  const viewerProfile = await getOptionalCurrentUserProfile();
+
+  const viewerOwnsPrivateSeat = Boolean(
+    viewerProfile &&
+    (seat.profileId === viewerProfile.id ||
+      seat.room.members.some(
+        (member) =>
+          member.profileId === viewerProfile.id &&
+          member.seatedSeatId === seat.id,
+      )),
+  );
+
+  if (viewerProfile && !viewerOwnsPrivateSeat) {
+    const activeRoom = await getActiveGameToolRoomForProfile({
+      profileId: viewerProfile.id,
+    });
+
+    if (activeRoom) {
+      const privateSeatPath = activeRoom.privateSeatToken
+        ? getGameToolPrivateSeatPath({
+            kind: activeRoom.kind,
+            privateSeatToken: activeRoom.privateSeatToken,
+          })
+        : null;
+
+      redirect(
+        withLocale(
+          locale,
+          privateSeatPath ??
+            getGameToolRoomPath({
+              kind: activeRoom.kind,
+              roomId: activeRoom.id,
+            }),
+        ),
+      );
+    }
+  }
+
   const roomState = normalizeWerewolfRoomState(seat.room.state);
-  const variant = getWerewolfVariant(getConfigVariantKey(seat.room.config));
+  const variant = getWerewolfVariantFromRoomConfig(
+    seat.room.config,
+    seat.room.locale,
+  );
   const isCurrentSeatJudge = isWerewolfJudgeSeat(seat.seatNumber, variant);
   const deadSeatSet = new Set(roomState.deadSeatNumbers);
   const seatMember = seat.room.members.find(

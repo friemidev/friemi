@@ -25,6 +25,7 @@ import {
 import {
   correctAvalonRoomAction,
   joinAvalonRoomAction,
+  leaveAvalonSeatAction,
   manageAvalonLobbySeatAction,
   manageAvalonRoomLifecycleAction,
   proposeAvalonTeamAction,
@@ -102,6 +103,9 @@ type Copy = {
   host: string;
   joinHint: string;
   leader: string;
+  leaveRoom: string;
+  leaveRoomConfirm: string;
+  leaveSeat: string;
   lobby: string;
   log: string;
   lifecycle: string;
@@ -171,10 +175,14 @@ const copies: Record<string, Copy> = {
     fail: "失败",
     finished: "结算",
     goodWins: "圆桌胜利",
-    helper: "把房号或链接发给玩家。房主可以先开局，再把每个座位的私密身份链接交给对应玩家。",
+    helper:
+      "把房号或链接发给玩家。房主可以先开局，再把每个座位的私密身份链接交给对应玩家。",
     host: "房主",
     joinHint: "输入一个桌上好认的名字，认领后本座位会绑定到你。",
     leader: "队长",
+    leaveRoom: "退出房间",
+    leaveRoomConfirm: "退出这局进行中的房间？",
+    leaveSeat: "离座",
     lobby: "候场",
     log: "记录",
     lifecycle: "重开",
@@ -187,7 +195,8 @@ const copies: Record<string, Copy> = {
     players: "玩家",
     privateLink: "身份链接",
     privateLinks: "私密身份链接",
-    privateLinksHint: "只把对应座位链接发给本人。游戏开始后链接里会显示身份和可见信息。",
+    privateLinksHint:
+      "只把对应座位链接发给本人。游戏开始后链接里会显示身份和可见信息。",
     proposeTeam: "提交队伍",
     progress: "进度",
     recapPage: "复盘页",
@@ -217,7 +226,8 @@ const copies: Record<string, Copy> = {
     selectTeam: "选择本轮队伍",
     start: "开始发身份",
     started: "进行中",
-    startHint: "开局后身份会写入每个座位的私密链接。公共房间页不会暴露所有身份。",
+    startHint:
+      "开局后身份会写入每个座位的私密链接。公共房间页不会暴露所有身份。",
     success: "成功",
     table: "圆桌座位",
     target: "刺杀",
@@ -231,8 +241,10 @@ const copies: Record<string, Copy> = {
     claim: "Claim",
     claimSeat: "Claim seat",
     code: "Code",
-    confirmRedeal: "Redeal roles? Current roles, submissions, and progress will be cleared.",
-    confirmRestart: "Return to lobby? Current roles, submissions, and progress will be cleared.",
+    confirmRedeal:
+      "Redeal roles? Current roles, submissions, and progress will be cleared.",
+    confirmRestart:
+      "Return to lobby? Current roles, submissions, and progress will be cleared.",
     copied: "Copied",
     copy: "Copy",
     current: "Now",
@@ -246,6 +258,9 @@ const copies: Record<string, Copy> = {
     host: "Host",
     joinHint: "Use a table nickname players can recognize.",
     leader: "Leader",
+    leaveRoom: "Leave room",
+    leaveRoomConfirm: "Leave this running game?",
+    leaveSeat: "Leave seat",
     lobby: "Lobby",
     log: "Log",
     lifecycle: "Restart",
@@ -304,8 +319,10 @@ const copies: Record<string, Copy> = {
     claim: "Prendre",
     claimSeat: "Prendre la place",
     code: "Code",
-    confirmRedeal: "Redistribuer les rôles ? Les rôles, choix et progrès actuels seront effacés.",
-    confirmRestart: "Revenir à l'accueil ? Les rôles, choix et progrès actuels seront effacés.",
+    confirmRedeal:
+      "Redistribuer les rôles ? Les rôles, choix et progrès actuels seront effacés.",
+    confirmRestart:
+      "Revenir à l'accueil ? Les rôles, choix et progrès actuels seront effacés.",
     copied: "Copié",
     copy: "Copier",
     current: "Maintenant",
@@ -319,6 +336,9 @@ const copies: Record<string, Copy> = {
     host: "Hôte",
     joinHint: "Choisis un nom facile à reconnaître autour de la table.",
     leader: "Chef",
+    leaveRoom: "Quitter la table",
+    leaveRoomConfirm: "Quitter cette partie en cours ?",
+    leaveSeat: "Quitter",
     lobby: "Accueil",
     log: "Journal",
     lifecycle: "Relancer",
@@ -442,7 +462,11 @@ export function AvalonRoomLobby({
                   </code>
                 </div>
               </div>
-              <CopyButton label={t.copy} successLabel={t.copied} value={joinUrl} />
+              <CopyButton
+                label={t.copy}
+                successLabel={t.copied}
+                value={joinUrl}
+              />
             </div>
           </div>
 
@@ -455,7 +479,9 @@ export function AvalonRoomLobby({
           <MissionBoard progress={room.progress} state={room.state} t={t} />
         ) : null}
 
-        {room.events.length > 0 ? <AvalonEventRail events={room.events} t={t} /> : null}
+        {room.events.length > 0 ? (
+          <AvalonEventRail events={room.events} t={t} />
+        ) : null}
 
         <div className="relative mt-6">
           <div className="mb-3 flex items-center gap-2">
@@ -610,7 +636,11 @@ export function AvalonRoomLobby({
                 {roomUrl}
               </p>
             </div>
-            <CopyButton label={t.copy} successLabel={t.copied} value={roomUrl} />
+            <CopyButton
+              label={t.copy}
+              successLabel={t.copied}
+              value={roomUrl}
+            />
           </div>
         </section>
       </aside>
@@ -630,7 +660,9 @@ function MissionBoard({
   const successCount = state.missionResults.filter(
     (result) => result === "success",
   ).length;
-  const failCount = state.missionResults.filter((result) => result === "fail").length;
+  const failCount = state.missionResults.filter(
+    (result) => result === "fail",
+  ).length;
 
   return (
     <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/75 p-3 shadow-inner sm:p-4">
@@ -710,7 +742,11 @@ function MissionBoard({
         <div className="grid grid-cols-3 gap-2 text-center">
           <StatPill tone="good" label={t.success} value={successCount} />
           <StatPill tone="evil" label={t.fail} value={failCount} />
-          <StatPill tone="team" label={t.rejectTrack} value={state.teamVoteRejectCount} />
+          <StatPill
+            tone="team"
+            label={t.rejectTrack}
+            value={state.teamVoteRejectCount}
+          />
         </div>
       </div>
 
@@ -806,11 +842,7 @@ function PhaseSnapshot({
   );
 }
 
-function getPhaseSnapshot(
-  room: AvalonRoomView,
-  t: Copy,
-  claimedCount: number,
-) {
+function getPhaseSnapshot(room: AvalonRoomView, t: Copy, claimedCount: number) {
   const roundNumber = room.state.roundIndex + 1;
   const baseChips = [
     { label: t.round, value: roundNumber },
@@ -860,7 +892,10 @@ function getPhaseSnapshot(
   if (room.state.phase === "mission") {
     return {
       chips: [
-        { label: t.missionCards, value: room.progress.missionCardSubmissionCount },
+        {
+          label: t.missionCards,
+          value: room.progress.missionCardSubmissionCount,
+        },
         { label: t.team, value: room.state.proposedTeamSeatNumbers.length },
         { label: t.fail, value: room.progress.failureThreshold },
       ],
@@ -1051,7 +1086,9 @@ function getEventLabel(type: string, t: Copy) {
   return t.log;
 }
 
-function isEventPayloadRecord(value: unknown): value is Record<string, unknown> {
+function isEventPayloadRecord(
+  value: unknown,
+): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
@@ -1168,7 +1205,8 @@ function LobbySeatManagementPanel({
           </h2>
         </div>
         <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-          {room.seats.filter((seat) => seat.isClaimed).length}/{room.playerCount}
+          {room.seats.filter((seat) => seat.isClaimed).length}/
+          {room.playerCount}
         </span>
       </div>
       <div className="grid gap-2">
@@ -1224,7 +1262,10 @@ function LobbySeatManagementRow({
         ) : null}
       </div>
 
-      <form action={formAction} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+      <form
+        action={formAction}
+        className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"
+      >
         <input name="locale" type="hidden" value={locale} />
         <input name="roomId" type="hidden" value={roomId} />
         <input name="seatId" type="hidden" value={seat.id} />
@@ -1661,7 +1702,10 @@ function GameControlPanel({
           label={t.votes}
           value={`${room.progress.teamVoteSubmissionCount}/${room.playerCount}`}
         />
-        <StatusToken label={t.team} value={room.state.proposedTeamSeatNumbers.length} />
+        <StatusToken
+          label={t.team}
+          value={room.state.proposedTeamSeatNumbers.length}
+        />
       </div>
     );
   }
@@ -1712,7 +1756,13 @@ function VoteImageCard({
   return (
     <div className="overflow-hidden rounded-[1.5rem] border border-[#D6D5B2] bg-white text-center shadow-sm">
       <div className="grid min-h-24 place-items-center bg-[#F1F2EC]/55 p-3">
-        <Image alt="" className="h-16 w-16 drop-shadow-md" height={72} src={image} width={72} />
+        <Image
+          alt=""
+          className="h-16 w-16 drop-shadow-md"
+          height={72}
+          src={image}
+          width={72}
+        />
       </div>
       <div className="px-3 py-2">
         <p className="text-xl font-black text-[#0E2A5A]">{value}</p>
@@ -1722,7 +1772,13 @@ function VoteImageCard({
   );
 }
 
-function StatusToken({ label, value }: { label: string; value: number | string }) {
+function StatusToken({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
   return (
     <div className="mt-4 rounded-[1.5rem] border border-[#D6D5B2] bg-[#F1F2EC]/70 p-4 text-center shadow-inner">
       <p className="text-3xl font-black text-[#0E2A5A]">{value}</p>
@@ -1848,9 +1904,9 @@ function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
                   ? "border-[#369758] shadow-[#156240]/25 ring-4 ring-[#8AB68E]/20"
                   : seat.isOnProposedTeam
                     ? "border-[#F09182] shadow-[#F09182]/25 ring-4 ring-[#F09182]/15"
-                  : seat.isClaimed
-                    ? "border-[#8AB68E]/60 shadow-[#156240]/15"
-                    : "border-[#D6D5B2] opacity-75",
+                    : seat.isClaimed
+                      ? "border-[#8AB68E]/60 shadow-[#156240]/15"
+                      : "border-[#D6D5B2] opacity-75",
               )}
             >
               <div
@@ -1894,6 +1950,13 @@ function SeatCard({
   t: Copy;
 }) {
   const canClaim = roomStatus === "LOBBY" && !seat.isClaimed;
+  const canLeave = Boolean(
+    seat.isViewerSeat && seat.privateToken && !seat.isHostSeat,
+  );
+  const [leaveState, leaveFormAction] = useActionState(
+    leaveAvalonSeatAction,
+    initialState,
+  );
 
   return (
     <article
@@ -1903,7 +1966,7 @@ function SeatCard({
           ? "border-[#369758] shadow-[#156240]/20"
           : seat.isOnProposedTeam
             ? "border-[#F09182] shadow-[#F09182]/15"
-          : "border-[#D6D5B2]",
+            : "border-[#D6D5B2]",
       )}
     >
       <div
@@ -1960,13 +2023,43 @@ function SeatCard({
             {seat.roleLabel ?? t.roleHidden}
           </p>
           {seat.privateToken ? (
-            <a
-              className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#156240] px-3 text-xs font-black text-white shadow-lg shadow-[#156240]/15 transition hover:-translate-y-0.5"
-              href={`/${locale}/game-tools/avalon/seats/${seat.privateToken}`}
-            >
-              <LockKeyhole className="h-3.5 w-3.5" />
-              {t.myIdentity}
-            </a>
+            <div className={cn("mt-3 grid gap-2", canLeave && "grid-cols-2")}>
+              <a
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#156240] px-3 text-xs font-black text-white shadow-lg shadow-[#156240]/15 transition hover:-translate-y-0.5"
+                href={`/${locale}/game-tools/avalon/seats/${seat.privateToken}`}
+              >
+                <LockKeyhole className="h-3.5 w-3.5" />
+                {t.myIdentity}
+              </a>
+              {canLeave ? (
+                <form
+                  action={leaveFormAction}
+                  onSubmit={(event) => {
+                    if (
+                      roomStatus !== "LOBBY" &&
+                      !window.confirm(t.leaveRoomConfirm)
+                    ) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="privateToken"
+                    type="hidden"
+                    value={seat.privateToken}
+                  />
+                  <LeaveSeatSubmitButton
+                    label={roomStatus === "LOBBY" ? t.leaveSeat : t.leaveRoom}
+                  />
+                </form>
+              ) : null}
+            </div>
+          ) : null}
+          {leaveState.formError ? (
+            <p className="mt-2 rounded-2xl bg-[#F09182]/12 px-3 py-2 text-xs font-semibold text-[#B5301F]">
+              {leaveState.formError}
+            </p>
           ) : null}
         </div>
       </div>
@@ -1975,6 +2068,21 @@ function SeatCard({
         <ClaimSeatForm locale={locale} roomId={roomId} seat={seat} t={t} />
       ) : null}
     </article>
+  );
+}
+
+function LeaveSeatSubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl border border-[#F09182] bg-white px-3 text-xs font-black text-[#B5301F] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF0EC] disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={pending}
+      type="submit"
+    >
+      <UserMinus className="h-3.5 w-3.5" />
+      {pending ? "..." : label}
+    </button>
   );
 }
 
@@ -1989,7 +2097,10 @@ function ClaimSeatForm({
   seat: AvalonRoomSeat;
   t: Copy;
 }) {
-  const [state, formAction] = useActionState(joinAvalonRoomAction, initialState);
+  const [state, formAction] = useActionState(
+    joinAvalonRoomAction,
+    initialState,
+  );
 
   return (
     <form action={formAction} className="mt-3 grid gap-2">
@@ -2090,7 +2201,11 @@ function CopyButton({
   value: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const icon = copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />;
+  const icon = copied ? (
+    <Check className="h-4 w-4" />
+  ) : (
+    <Clipboard className="h-4 w-4" />
+  );
   const buttonLabel = copied ? successLabel : label;
   const canCopy = Boolean(value);
   const handleCopy = async () => {
