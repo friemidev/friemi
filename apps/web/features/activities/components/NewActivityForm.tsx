@@ -8,7 +8,7 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from "react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { flushSync, useFormStatus } from "react-dom";
 import {
   CircleAlert,
@@ -33,8 +33,10 @@ import {
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
+import type { ActivityTextImportDraft } from "../utils/activityTextImport";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
 import { ActivityPlacePicker } from "./ActivityPlacePicker";
+import { ActivityTextImportPanel } from "./ActivityTextImportPanel";
 
 type NewActivityFormProps = {
   activityId?: string;
@@ -2115,7 +2117,14 @@ export function NewActivityForm({
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
-  const values = state.values ?? initialValues;
+  const baseValues = state.values ?? initialValues;
+  const [textImportValues, setTextImportValues] = useState<
+    Partial<ActivityFormValues>
+  >({});
+  const [formDraftVersion, setFormDraftVersion] = useState(0);
+  const values = Object.keys(textImportValues).length
+    ? { ...baseValues, ...textImportValues }
+    : baseValues;
   const activityType = values?.type ?? "LOCAL";
   const [category, setCategory] = useState(values?.category ?? "");
   const [city, setCity] = useState(values?.city?.trim() || "Paris");
@@ -2130,6 +2139,7 @@ export function NewActivityForm({
   );
   const [ticketUrl, setTicketUrl] = useState(values?.ticketUrl ?? "");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const titleInputId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const skipLongDurationConfirmRef = useRef(false);
   const [longDurationConfirmation, setLongDurationConfirmation] =
@@ -2243,11 +2253,60 @@ export function NewActivityForm({
     }, 0);
   }
 
+  function handleTextImportApply(draft: ActivityTextImportDraft) {
+    const nextValues: Partial<ActivityFormValues> = { ...draft };
+
+    if (draft.priceType) {
+      nextValues.priceType = normalizePriceTypeForSimpleMode(draft.priceType);
+    }
+
+    setTextImportValues((currentValues) => ({
+      ...currentValues,
+      ...nextValues,
+    }));
+
+    if (draft.category) {
+      setCategory(draft.category);
+    }
+
+    if (draft.city) {
+      setCity(draft.city);
+    }
+
+    if (draft.visibility === "PUBLIC" || draft.visibility === "PRIVATE") {
+      setVisibility(draft.visibility);
+    }
+
+    if (draft.priceType) {
+      setPriceType(normalizePriceTypeForSimpleMode(draft.priceType));
+    }
+
+    if (draft.ticketUrl) {
+      setTicketUrl(draft.ticketUrl);
+      setTicketLinkKind(
+        draft.ticketLabel === "VIEW_DETAILS" ? "VIEW_DETAILS" : "RESERVE_SPOT",
+      );
+    } else if (draft.ticketLabel) {
+      setTicketLinkKind(draft.ticketLabel);
+    }
+
+    if (draft.capacityLimitEnabled !== undefined) {
+      setIsCapacityLimited(draft.capacityLimitEnabled);
+    } else if (Number(draft.capacity ?? 0) > 0) {
+      setIsCapacityLimited(true);
+    }
+
+    setFormDraftVersion((currentVersion) => currentVersion + 1);
+    window.setTimeout(() => {
+      focusFieldAfterSectionSwitch(formRef.current, "title");
+    }, 0);
+  }
+
   return (
     <Card className="w-full min-w-0 overflow-visible border-0 bg-transparent shadow-none">
       <CardContent className="min-w-0 bg-transparent p-0">
         <form
-          key={state.version ?? 0}
+          key={`${state.version ?? 0}-${formDraftVersion}`}
           action={formAction}
           className="grid min-w-0 gap-5 sm:gap-6"
           id={formId}
@@ -2337,14 +2396,25 @@ export function NewActivityForm({
 
           <div className="min-w-0">
             <FormSection errorCount={sectionErrorCounts["activity-content"]}>
-              <label
+              <div
                 className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
                 data-field-name="title"
               >
-                <RequiredLabel>
-                  {publicEventTeamFormCopy?.title ?? t.form.title}
-                </RequiredLabel>
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <label className="min-w-0" htmlFor={titleInputId}>
+                    <RequiredLabel>
+                      {publicEventTeamFormCopy?.title ?? t.form.title}
+                    </RequiredLabel>
+                  </label>
+                  {mode === "create" && !isPublicEventTeam ? (
+                    <ActivityTextImportPanel
+                      locale={locale}
+                      onApply={handleTextImportApply}
+                    />
+                  ) : null}
+                </div>
                 <Input
+                  id={titleInputId}
                   className={cn(
                     compactInputClassName,
                     state.fieldErrors?.title?.length && invalidControlClassName,
@@ -2359,7 +2429,7 @@ export function NewActivityForm({
                   required
                 />
                 <FieldError errors={state.fieldErrors?.title} />
-              </label>
+              </div>
 
               <div className="grid gap-3" data-field-name="visibility">
                 <div className="grid grid-cols-2 gap-2">

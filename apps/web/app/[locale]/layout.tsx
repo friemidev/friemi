@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { locales } from "@chill-club/shared";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AndroidAuthReturnRefresh } from "@/features/auth/components/AndroidAuthReturnRefresh";
+import { AuthSessionRefresh } from "@/features/auth/components/AuthSessionRefresh";
 import { OrientationLockOverlay } from "@/components/layout/OrientationLockOverlay";
 import { PortraitOrientationLock } from "@/components/layout/PortraitOrientationLock";
 import { MobileNav } from "@/components/navigation/MobileNav";
@@ -130,10 +131,15 @@ export default async function LocaleLayout({
                 locale={locale}
               />
               {clerkEnabled ? (
-                <AndroidAuthReturnRefresh
-                  locale={locale}
-                  serverAuthenticated={Boolean(viewerProfile)}
-                />
+                <>
+                  <AndroidAuthReturnRefresh
+                    locale={locale}
+                    serverAuthenticated={Boolean(viewerProfile)}
+                  />
+                  <AuthSessionRefresh
+                    serverAuthenticated={Boolean(viewerProfile)}
+                  />
+                </>
               ) : null}
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
               {children}
