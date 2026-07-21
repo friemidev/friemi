@@ -117,6 +117,7 @@ export default async function WerewolfRoomPage({
     currentMember: room.currentMember
       ? {
           avatarLabel: room.currentMember.avatarLabel,
+          avatarUrl: room.currentMember.avatarUrl,
           displayName: room.currentMember.displayName,
           id: room.currentMember.id,
           isGuest: room.currentMember.isGuest,
@@ -129,6 +130,7 @@ export default async function WerewolfRoomPage({
       : null,
     members: room.members.map((member) => ({
       avatarLabel: member.avatarLabel,
+      avatarUrl: member.avatarUrl,
       displayName: member.displayName,
       id: member.id,
       isCurrentMember: member.isCurrentMember,
@@ -140,6 +142,7 @@ export default async function WerewolfRoomPage({
     })),
     seats: room.seats.map((seat) => ({
       avatarLabel: seat.avatarLabel,
+      avatarUrl: seat.avatarUrl,
       displayName: seat.displayName,
       id: seat.id,
       isClaimed: seat.isClaimed,

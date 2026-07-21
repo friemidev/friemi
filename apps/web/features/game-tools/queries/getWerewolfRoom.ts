@@ -158,6 +158,7 @@ export const getWerewolfRoomById = cache(
               getMemberDisplayName(currentMember),
               currentMember.seatedSeat?.seatNumber ?? 0,
             ),
+            avatarUrl: currentMember.profile?.avatarUrl ?? null,
             displayName: getMemberDisplayName(currentMember),
             id: currentMember.id,
             isGuest: !currentMember.profileId,
@@ -178,6 +179,7 @@ export const getWerewolfRoomById = cache(
             displayName,
             member.seatedSeat?.seatNumber ?? 0,
           ),
+          avatarUrl: member.profile?.avatarUrl ?? null,
           displayName,
           id: member.id,
           isCurrentMember: currentMember?.id === member.id,
@@ -198,6 +200,7 @@ export const getWerewolfRoomById = cache(
 
         return {
           avatarLabel: getSeatAvatarLabel(seat.displayName, seat.seatNumber),
+          avatarUrl: seat.profile?.avatarUrl ?? null,
           displayName: seat.displayName,
           guestName: seat.guestName,
           id: seat.id,
