@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Compass,
+  MapPin,
+  UsersRound,
+} from "lucide-react";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
@@ -42,6 +49,22 @@ function getLocationLabel(activity: ActivityCardViewModel) {
   }
 
   return `${activity.city} · ${activity.address}`;
+}
+
+function isActivityInfoCard(activity: ActivityCardViewModel) {
+  return activity.type === "PUBLIC_EVENT" || Boolean(activity.isActivityInfo);
+}
+
+function getActivityKindCopy(locale: string, isActivityInfo: boolean) {
+  if (locale === "fr") {
+    return isActivityInfo ? "Activité" : "Groupe";
+  }
+
+  if (locale === "en") {
+    return isActivityInfo ? "Event" : "Crew";
+  }
+
+  return isActivityInfo ? "活动" : "组局";
 }
 
 export function HomeActivityCarousel({
@@ -119,9 +142,12 @@ export function HomeActivityCarousel({
         left: nextCard.offsetLeft - viewport.offsetLeft,
       });
       updateActiveIndex(nextIndex);
-      programmaticScrollTimeoutRef.current = window.setTimeout(() => {
-        programmaticScrollTimeoutRef.current = null;
-      }, prefersReducedMotion ? 0 : 720);
+      programmaticScrollTimeoutRef.current = window.setTimeout(
+        () => {
+          programmaticScrollTimeoutRef.current = null;
+        },
+        prefersReducedMotion ? 0 : 720,
+      );
     },
     [activities.length, pauseAutoplay, prefersReducedMotion, updateActiveIndex],
   );
@@ -142,12 +168,7 @@ export function HomeActivityCarousel({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [
-    activeIndex,
-    hasMultipleActivities,
-    prefersReducedMotion,
-    scrollToIndex,
-  ]);
+  }, [activeIndex, hasMultipleActivities, prefersReducedMotion, scrollToIndex]);
 
   const markManualInteraction = () => {
     pauseAutoplay();
@@ -222,65 +243,115 @@ export function HomeActivityCarousel({
         onWheel={markManualInteraction}
         onScroll={updateActiveCard}
       >
-        {activities.map((activity, index) => (
-          <Link
-            key={`${activity.type}:${activity.id}`}
-            data-carousel-index={index}
-            data-active-card={index === activeIndex ? "true" : undefined}
-            href={getActivityHref(activity, locale)}
-            className={cn(
-              "home-carousel-card group relative flex min-h-[19.5rem] shrink-0 basis-[72%] snap-start flex-col overflow-hidden rounded-[1.35rem] border border-white/35 bg-[#FFF5E6] shadow-[0_18px_48px_rgba(29,29,27,0.1)] transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40 sm:min-h-[24rem] sm:basis-[46%] sm:rounded-[1.75rem] sm:shadow-[0_22px_70px_rgba(29,29,27,0.11)] lg:basis-[31%]",
-              index === activeIndex
-                ? "ring-1 ring-[#8AB68E]/70"
-                : "ring-1 ring-black/5",
-            )}
-          >
-            <div className="home-carousel-card__media relative aspect-[16/10] overflow-hidden bg-[#F1F2EC] sm:aspect-[5/4]">
-              <ActivityCoverImage
-                alt={activity.title}
-                src={activity.coverImageUrl}
-                overlayClassName="bg-gradient-to-t from-black/52 via-black/10 to-transparent"
-              />
-              <div className="absolute left-3 top-3 rounded-full bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[#156240] shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:text-[11px]">
-                {getCategoryLabel(activity.category, locale)}
-              </div>
-              <span className="absolute bottom-3 left-3 rounded-full border border-white/30 bg-black/42 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur sm:bottom-4 sm:left-4 sm:px-3 sm:text-[11px]">
-                {activity.type === "PUBLIC_EVENT" ? "Activity" : "Team"}
-              </span>
-            </div>
+        {activities.map((activity, index) => {
+          const isActivityInfo = isActivityInfoCard(activity);
+          const kindLabel = getActivityKindCopy(locale, isActivityInfo);
+          const KindIcon = isActivityInfo ? Compass : UsersRound;
 
-            <div className="flex flex-1 flex-col p-4 sm:p-6">
-              <h3 className="line-clamp-2 font-serif text-xl leading-tight text-[#1D1D1B] transition group-hover:text-[#156240] sm:text-2xl">
-                {activity.title}
-              </h3>
-              <div className="mt-4 grid gap-2.5 text-xs leading-5 text-[#156240] sm:mt-5 sm:gap-3 sm:text-sm">
-                <p className="flex gap-2">
-                  <CalendarDays
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#369758] sm:h-4 sm:w-4"
-                    aria-hidden="true"
-                  />
-                  <span>{getActivityDateLabel(activity, locale)}</span>
-                </p>
-                <p className="flex gap-2">
-                  <MapPin
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#369758] sm:h-4 sm:w-4"
-                    aria-hidden="true"
-                  />
-                  <span className="line-clamp-2">
-                    {getLocationLabel(activity)}
-                  </span>
-                </p>
-              </div>
-              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-xs font-semibold text-[#156240] sm:pt-7 sm:text-sm">
-                {labels.viewActivity}
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition group-hover:translate-x-1 sm:h-4 sm:w-4"
-                  aria-hidden="true"
+          return (
+            <Link
+              key={`${activity.type}:${activity.id}`}
+              data-carousel-index={index}
+              data-active-card={index === activeIndex ? "true" : undefined}
+              href={getActivityHref(activity, locale)}
+              className={cn(
+                "home-carousel-card group relative flex min-h-[19.5rem] shrink-0 basis-[72%] snap-start flex-col overflow-hidden rounded-[1.35rem] border border-white/35 shadow-[0_18px_48px_rgba(29,29,27,0.1)] transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/40 sm:min-h-[24rem] sm:basis-[46%] sm:rounded-[1.75rem] sm:shadow-[0_22px_70px_rgba(29,29,27,0.11)] lg:basis-[31%]",
+                isActivityInfo
+                  ? "bg-[#F8FBFF] ring-[#BFD4F4]/70"
+                  : "bg-[#FFF9EF] ring-[#F2C28D]/80",
+                index === activeIndex
+                  ? isActivityInfo
+                    ? "ring-2 ring-[#0E2A66]/32"
+                    : "ring-2 ring-[#F09182]/46"
+                  : "ring-1",
+              )}
+            >
+              <div
+                className={cn(
+                  "home-carousel-card__media relative aspect-[16/10] overflow-hidden sm:aspect-[5/4]",
+                  isActivityInfo ? "bg-[#EAF2FF]" : "bg-[#FFEEDC]",
+                )}
+              >
+                <ActivityCoverImage
+                  alt={activity.title}
+                  src={activity.coverImageUrl}
+                  overlayClassName="bg-gradient-to-t from-black/52 via-black/10 to-transparent"
                 />
-              </span>
-            </div>
-          </Link>
-        ))}
+                <div
+                  className={cn(
+                    "absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold shadow-sm backdrop-blur sm:left-4 sm:top-4 sm:px-3 sm:text-[11px]",
+                    isActivityInfo ? "text-[#0E2A66]" : "text-[#7A341A]",
+                  )}
+                >
+                  {getCategoryLabel(activity.category, locale)}
+                </div>
+                <span
+                  className={cn(
+                    "absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full border border-white/35 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur sm:bottom-4 sm:left-4 sm:px-3 sm:text-[11px]",
+                    isActivityInfo ? "bg-[#0E2A66]/88" : "bg-[#1D1D1B]/88",
+                  )}
+                >
+                  <KindIcon className="h-3 w-3" aria-hidden="true" />
+                  {kindLabel}
+                </span>
+              </div>
+
+              <div className="flex flex-1 flex-col p-4 sm:p-6">
+                <h3
+                  className={cn(
+                    "line-clamp-2 font-serif text-xl leading-tight text-[#1D1D1B] transition sm:text-2xl",
+                    isActivityInfo
+                      ? "group-hover:text-[#0E2A66]"
+                      : "group-hover:text-[#B5301F]",
+                  )}
+                >
+                  {activity.title}
+                </h3>
+                <div
+                  className={cn(
+                    "mt-4 grid gap-2.5 text-xs leading-5 sm:mt-5 sm:gap-3 sm:text-sm",
+                    isActivityInfo ? "text-[#0E2A66]" : "text-[#5B321C]",
+                  )}
+                >
+                  <p className="flex gap-2">
+                    <CalendarDays
+                      className={cn(
+                        "mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4",
+                        isActivityInfo ? "text-[#0E2A66]" : "text-[#B5301F]",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span>{getActivityDateLabel(activity, locale)}</span>
+                  </p>
+                  <p className="flex gap-2">
+                    <MapPin
+                      className={cn(
+                        "mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4",
+                        isActivityInfo ? "text-[#0E2A66]" : "text-[#B5301F]",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="line-clamp-2">
+                      {getLocationLabel(activity)}
+                    </span>
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "mt-auto inline-flex items-center gap-2 pt-5 text-xs font-semibold sm:pt-7 sm:text-sm",
+                    isActivityInfo ? "text-[#0E2A66]" : "text-[#B5301F]",
+                  )}
+                >
+                  {labels.viewActivity}
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition group-hover:translate-x-1 sm:h-4 sm:w-4"
+                    aria-hidden="true"
+                  />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {hasMultipleActivities ? (

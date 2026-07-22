@@ -47,6 +47,7 @@ type ActivityLobbyViewProps = {
   initialStatusFilter?: LobbyStatusFilterId;
   starterActivities: ActivityCardViewModel[];
   locale: string;
+  swipeActivities: ActivityCardViewModel[];
 };
 
 type LobbyFilterId =
@@ -151,12 +152,12 @@ function getLobbySwipeActivityKey(activity: ActivityCardViewModel) {
   return `activity:${activity.id}`;
 }
 
-function getLobbySwipePublicEventId(activity: ActivityCardViewModel) {
-  if (activity.type !== "PUBLIC_EVENT") {
-    return null;
+function getLobbySwipeExcludeId(activity: ActivityCardViewModel) {
+  if (isPublicEventCard(activity)) {
+    return `public:${activity.publicEventId ?? activity.id}`;
   }
 
-  return activity.publicEventId ?? activity.id;
+  return `activity:${activity.id}`;
 }
 
 function mergeUniqueLobbySwipeActivities(
@@ -1287,10 +1288,10 @@ export function LazyLobbySwipeDiscovery({
 
       if (mode === "append") {
         activitiesRef.current.forEach((activity) => {
-          const publicEventId = getLobbySwipePublicEventId(activity);
+          const excludeId = getLobbySwipeExcludeId(activity);
 
-          if (publicEventId) {
-            params.append("exclude", publicEventId);
+          if (excludeId) {
+            params.append("exclude", excludeId);
           }
         });
       }
@@ -1566,10 +1567,12 @@ export function ActivityLobbyPreviewView({
   activities,
   initialCategoryFilter = null,
   locale,
+  swipeActivities,
 }: {
   activities: ActivityCardViewModel[];
   initialCategoryFilter?: ActivityCategory | null;
   locale: string;
+  swipeActivities: ActivityCardViewModel[];
 }) {
   const previewCopy = getActivityLobbyPreviewCopy(locale);
   const [activeTypeFilter, setActiveTypeFilter] = useState<LobbyTypeFilterId>(
@@ -1652,6 +1655,13 @@ export function ActivityLobbyPreviewView({
   return (
     <div className="space-y-6">
       <DetailSourceRestore sourceKey="lobby" />
+      <LazyLobbySwipeDiscovery
+        className="rounded-[1.5rem] border border-[#D6D5B2]/75 bg-[#FEFFF9]/72 p-4 shadow-[0_14px_34px_rgba(29,29,27,0.07)]"
+        favoriteRedirectPath="/lobby"
+        initialActivities={swipeActivities}
+        isAuthenticated={false}
+        locale={locale}
+      />
 
       <section
         id="lobby-preview-results"
@@ -1771,6 +1781,7 @@ export function ActivityLobbyView({
   initialStatusFilter = "all",
   starterActivities,
   locale,
+  swipeActivities,
 }: ActivityLobbyViewProps) {
   const appCopy = getCopy(locale);
   const t = appCopy.activityLobby;
@@ -2612,6 +2623,13 @@ export function ActivityLobbyView({
   return (
     <div className="space-y-3">
       <DetailSourceRestore sourceKey="lobby" />
+      <LazyLobbySwipeDiscovery
+        className="rounded-[1.5rem] border border-[#D6D5B2]/75 bg-[#FEFFF9]/72 p-4 shadow-[0_14px_34px_rgba(29,29,27,0.07)]"
+        favoriteRedirectPath="/lobby"
+        initialActivities={swipeActivities}
+        isAuthenticated
+        locale={locale}
+      />
       <MobileLobbyFilterSheet
         activeFilter={activeFilter}
         activeStatusFilter={activeStatusFilter}

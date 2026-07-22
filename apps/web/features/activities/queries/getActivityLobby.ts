@@ -27,6 +27,8 @@ const activityLobbyPreviewLimit = activityLobbyFeedPageSize * 2;
 const activityLobbyStarterLimit = 8;
 const activityLobbySwipeLimit = 24;
 const activityLobbySwipeExcludeLimit = 160;
+const activityLobbySwipePublicEventRatio = 3;
+const activityLobbySwipeTeamRatio = 1;
 const visibleLobbyParticipationStatuses = [
   "JOINED",
   "APPROVED",
@@ -273,7 +275,7 @@ function mapPublicEventToActivityCard(
 export async function getLobbySwipePublicEventActivities(
   viewerProfileId?: string | null,
   options: {
-    excludePublicEventIds?: string[];
+    excludeIds?: string[];
     limit?: number;
   } = {},
 ) {
@@ -288,21 +290,23 @@ export async function getLobbySwipePublicEventActivities(
 export async function getLobbySwipePublicEventActivityPage(
   viewerProfileId?: string | null,
   options: {
-    excludePublicEventIds?: string[];
+    excludeIds?: string[];
     limit?: number;
   } = {},
 ) {
   const limit = getLobbySwipeLimit(options.limit);
-  const excludePublicEventIds = getLobbySwipeExcludePublicEventIds(
-    options.excludePublicEventIds,
-  );
+  const excludeIds = getLobbySwipeExcludeIds(options.excludeIds);
 
-  if (!viewerProfileId && excludePublicEventIds.length === 0) {
+  if (
+    !viewerProfileId &&
+    excludeIds.activityIds.length === 0 &&
+    excludeIds.publicEventIds.length === 0
+  ) {
     return getCachedAnonymousLobbySwipePublicEventActivityPage(limit);
   }
 
   return getLobbySwipePublicEventActivityPageUncached(viewerProfileId, {
-    excludePublicEventIds,
+    excludeIds,
     limit,
   });
 }
@@ -314,64 +318,193 @@ function getLobbySwipeLimit(limit?: number) {
   );
 }
 
-function getLobbySwipeExcludePublicEventIds(
-  excludePublicEventIds?: string[],
-) {
-  return Array.from(new Set((excludePublicEventIds ?? []).filter(Boolean))).slice(
-    0,
-    activityLobbySwipeExcludeLimit,
-  );
+function getLobbySwipeExcludeIds(excludeIds?: string[]) {
+  const activityIds = new Set<string>();
+  const publicEventIds = new Set<string>();
+
+  for (const rawId of excludeIds ?? []) {
+    const id = rawId.trim();
+
+    if (!id) {
+      continue;
+    }
+
+    if (id.startsWith("activity:")) {
+      activityIds.add(id.slice("activity:".length));
+      continue;
+    }
+
+    if (id.startsWith("public:")) {
+      publicEventIds.add(id.slice("public:".length));
+      continue;
+    }
+
+    activityIds.add(id);
+    publicEventIds.add(id);
+  }
+
+  return {
+    activityIds: Array.from(activityIds).slice(0, activityLobbySwipeExcludeLimit),
+    publicEventIds: Array.from(publicEventIds).slice(
+      0,
+      activityLobbySwipeExcludeLimit,
+    ),
+  };
+}
+
+function getRatioedLobbySwipeActivities({
+  limit,
+  publicEventActivities,
+  teamActivities,
+}: {
+  limit: number;
+  publicEventActivities: ActivityCardViewModel[];
+  teamActivities: ActivityCardViewModel[];
+}) {
+  const activities: ActivityCardViewModel[] = [];
+  const targetCount = limit + 1;
+  let publicEventIndex = 0;
+  let teamIndex = 0;
+
+  while (
+    activities.length < targetCount &&
+    (publicEventIndex < publicEventActivities.length ||
+      teamIndex < teamActivities.length)
+  ) {
+    let added = 0;
+
+    for (
+      let count = 0;
+      count < activityLobbySwipePublicEventRatio &&
+      activities.length < targetCount &&
+      publicEventIndex < publicEventActivities.length;
+      count += 1
+    ) {
+      activities.push(publicEventActivities[publicEventIndex]);
+      publicEventIndex += 1;
+      added += 1;
+    }
+
+    for (
+      let count = 0;
+      count < activityLobbySwipeTeamRatio &&
+      activities.length < targetCount &&
+      teamIndex < teamActivities.length;
+      count += 1
+    ) {
+      activities.push(teamActivities[teamIndex]);
+      teamIndex += 1;
+      added += 1;
+    }
+
+    if (added === 0) {
+      break;
+    }
+  }
+
+  return {
+    activities: activities.slice(0, limit),
+    hasMore:
+      activities.length > limit ||
+      publicEventIndex < publicEventActivities.length ||
+      teamIndex < teamActivities.length,
+  };
 }
 
 async function getLobbySwipePublicEventActivityPageUncached(
   viewerProfileId?: string | null,
   options: {
-    excludePublicEventIds?: string[];
+    excludeIds?: ReturnType<typeof getLobbySwipeExcludeIds>;
     limit?: number;
   } = {},
 ) {
   const now = new Date();
   const limit = getLobbySwipeLimit(options.limit);
-  const excludePublicEventIds = getLobbySwipeExcludePublicEventIds(
-    options.excludePublicEventIds,
-  );
-  const publicEvents = await prisma.publicEvent.findMany({
-    where: {
-      id:
-        excludePublicEventIds.length > 0
-          ? {
-              notIn: excludePublicEventIds,
-            }
-          : undefined,
-      startAt: {
-        gt: now,
+  const excludeIds = options.excludeIds ?? getLobbySwipeExcludeIds();
+  const [publicEvents, teamActivities] = await Promise.all([
+    prisma.publicEvent.findMany({
+      where: {
+        id:
+          excludeIds.publicEventIds.length > 0
+            ? {
+                notIn: excludeIds.publicEventIds,
+              }
+            : undefined,
+        OR: [
+          {
+            startAt: {
+              gt: now,
+            },
+          },
+          {
+            endAt: {
+              gte: now,
+            },
+          },
+        ],
+        status: "SCHEDULED",
+        visibility: "PUBLIC",
       },
-      status: "SCHEDULED",
-      visibility: "PUBLIC",
-    },
-    orderBy: [{ startAt: "asc" }, { id: "asc" }],
-    take: limit + 1,
-    select: publicEventSelect,
-  });
-  const hasMore = publicEvents.length > limit;
-  const publicEventCards = publicEvents
-    .slice(0, limit)
-    .map(getPublicEventCardViewModel);
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: limit + 1,
+      select: publicEventSelect,
+    }),
+    prisma.activity.findMany({
+      where: {
+        AND: [
+          getVisibleActivityWhere({
+            includeEnded: false,
+            includePast: false,
+            visibility: null,
+          }),
+          { visibility: "PUBLIC" },
+          strictTeamCardWhere,
+          excludeIds.activityIds.length > 0
+            ? {
+                id: {
+                  notIn: excludeIds.activityIds,
+                },
+              }
+            : {},
+        ],
+      },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      take: limit + 1,
+      select: activityCardSelect,
+    }),
+  ]);
+  const publicEventCards = publicEvents.map(getPublicEventCardViewModel);
   const cardsWithFavoriteState = await attachPublicEventFavoriteStates(
     publicEventCards,
     viewerProfileId,
   );
+  const teamCards = teamActivities.map(getActivityCardViewModel);
+  const decoratedTeamCards = viewerProfileId
+    ? await decorateLobbyActivities(
+        teamCards,
+        viewerProfileId,
+        await getViewerFriendIds(viewerProfileId),
+      )
+    : teamCards;
+  const publicEventActivities = cardsWithFavoriteState.map(
+    mapPublicEventToActivityCard,
+  );
+  const ratioedActivities = getRatioedLobbySwipeActivities({
+    limit,
+    publicEventActivities,
+    teamActivities: decoratedTeamCards,
+  });
 
   return {
-    activities: cardsWithFavoriteState.map(mapPublicEventToActivityCard),
-    hasMore,
+    activities: ratioedActivities.activities,
+    hasMore: ratioedActivities.hasMore,
   };
 }
 
 const getCachedAnonymousLobbySwipePublicEventActivityPage = unstable_cache(
   async (limit: number) =>
     getLobbySwipePublicEventActivityPageUncached(null, { limit }),
-  ["anonymous-lobby-swipe-public-events"],
+  ["anonymous-lobby-swipe-mixed-activities-v2"],
   { revalidate: 60 },
 );
 

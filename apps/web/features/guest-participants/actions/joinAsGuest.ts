@@ -20,6 +20,10 @@ import {
   normalizeGuestPhone,
   normalizeGuestWechatId,
 } from "../utils/contactIdentity";
+import {
+  guestJoinRateLimitWindowMs,
+  isGuestJoinRateLimited,
+} from "../utils/guestJoinRateLimit";
 
 const activeParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
 const existingGuestStatuses: ParticipantStatus[] = [
@@ -34,9 +38,6 @@ const joinableActivityVisibility: ActivityVisibility[] = [
   "PRIVATE",
 ];
 const activeOrganizerStatuses: UserProfileStatus[] = ["ACTIVE"];
-const guestJoinRateLimitWindowMs = 60 * 60 * 1000;
-const maxGuestJoinsPerActivityPerFingerprint = 4;
-const maxGuestJoinsGlobalPerFingerprint = 12;
 
 const guestJoinSchema = z.object({
   activityId: z.string().min(1, "活动不存在"),
@@ -282,8 +283,10 @@ export async function joinActivityAsGuestAction(
             ]);
 
           if (
-            activityAttemptCount >= maxGuestJoinsPerActivityPerFingerprint ||
-            globalAttemptCount >= maxGuestJoinsGlobalPerFingerprint
+            isGuestJoinRateLimited({
+              activityAttemptCount,
+              globalAttemptCount,
+            })
           ) {
             return {
               ok: false as const,
