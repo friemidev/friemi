@@ -525,28 +525,18 @@ export function PlanetMomentPage({ locale, moment }: { locale: string; moment: P
             planetId={moment.planet.id}
             planetSlug={moment.planet.slug}
           />
-          <div className="mt-4 rounded-2xl bg-white/80 p-3">
-            <div className="flex items-center gap-2">
-              <Avatar avatarUrl={moment.author.avatarUrl} name={moment.author.nickname} />
-              <div>
-                <p className="text-sm font-black">{moment.author.nickname}</p>
-                <p className="text-[11px] text-[#7d877e]">{moment.createdAt.toLocaleDateString()}</p>
-              </div>
-            </div>
-            {moment.content ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{moment.content}</p> : null}
-            {moment.isViewerAuthor ? (
-              <form action={deletePlanetMomentAction} className="mt-2">
-                <input name="locale" type="hidden" value={locale} />
-                <input name="planetId" type="hidden" value={moment.planet.id} />
-                <input name="planetSlug" type="hidden" value={moment.planet.slug} />
-                <input name="momentId" type="hidden" value={moment.id} />
-                <button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {copy.delete}
-                </button>
-              </form>
-            ) : null}
-          </div>
+          {moment.isViewerAuthor ? (
+            <form action={deletePlanetMomentAction} className="mt-3 px-2">
+              <input name="locale" type="hidden" value={locale} />
+              <input name="planetId" type="hidden" value={moment.planet.id} />
+              <input name="planetSlug" type="hidden" value={moment.planet.slug} />
+              <input name="momentId" type="hidden" value={moment.id} />
+              <button className="inline-flex items-center gap-1 text-xs font-bold text-[#b4473c]" type="submit">
+                <Trash2 className="h-3.5 w-3.5" />
+                {copy.delete}
+              </button>
+            </form>
+          ) : null}
         </article>
         <section className="mt-5">
           <h2 className="text-sm font-black">

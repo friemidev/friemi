@@ -68,8 +68,8 @@ async function requirePlanetMembership(
   profileId: string,
   options?: { approvedOnly?: boolean },
 ) {
-  const membership = await prisma.planetMember.findUnique({
-    where: { planetId_profileId: { planetId, profileId } },
+  const membership = await prisma.planetMember.findFirst({
+    where: { planetId, profileId },
     select: { role: true, status: true },
   });
 
@@ -253,12 +253,10 @@ export async function reviewPlanetMemberAction(formData: FormData) {
   const membership = await requirePlanetMembership(result.data.planetId, profile.id);
   if (membership.role !== "OWNER" && membership.role !== "ADMIN") return;
 
-  const targetMembership = await prisma.planetMember.findUnique({
+  const targetMembership = await prisma.planetMember.findFirst({
     where: {
-      planetId_profileId: {
-        planetId: result.data.planetId,
-        profileId: result.data.memberProfileId,
-      },
+      planetId: result.data.planetId,
+      profileId: result.data.memberProfileId,
     },
     select: { role: true, status: true },
   });
