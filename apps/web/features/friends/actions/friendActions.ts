@@ -15,6 +15,7 @@ import {
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { applyInviteFriendTrustScore } from "@/features/trust/trustScoreEvents";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { getFriendsCopy } from "../copy";
@@ -672,6 +673,7 @@ export async function acceptFriendRequestAction(
     locale,
     resolveFriendActionRedirectPath(returnTo, redirectPath),
   );
+  let acceptedRequesterId: string | null = null;
 
   try {
     const request = await prisma.friendRequest.findUnique({
@@ -697,6 +699,7 @@ export async function acceptFriendRequestAction(
     }
 
     const pair = getFriendshipPair(request.requesterId, request.receiverId);
+    acceptedRequesterId = request.requesterId;
 
     await prisma.$transaction([
       prisma.friendRequest.update({
@@ -745,6 +748,13 @@ export async function acceptFriendRequestAction(
   refreshFriends(locale);
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
+
+  if (acceptedRequesterId) {
+    await applyInviteFriendTrustScore(acceptedRequesterId).catch((error) => {
+      console.error("Failed to award invite friend trust score", error);
+    });
+  }
+
   redirectAfterFriendAction(locale, returnTo, redirectPath);
 }
 

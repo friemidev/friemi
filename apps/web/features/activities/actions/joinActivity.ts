@@ -18,6 +18,8 @@ import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { isLowTrustScore } from "@/features/trust/trustScore";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -458,12 +460,14 @@ export async function joinActivityAction(
             );
           }
 
+          const trustScore = await getTrustScore(tx, profile.id);
+          const requiresTrustReview = isLowTrustScore(trustScore);
           const nextStatus: ParticipantStatus =
             activity.visibility === "PRIVATE" &&
             !hasFriendshipAccess &&
             hasSharedLinkAccess
               ? "PENDING"
-              : activity.requiresApproval
+              : activity.requiresApproval || requiresTrustReview
                 ? "PENDING"
                 : "APPROVED";
 
@@ -495,7 +499,7 @@ export async function joinActivityAction(
             activityId: activity.id,
             organizerId: activity.organizerId,
             participantStatus: nextStatus,
-            requiresApproval: activity.requiresApproval,
+            requiresApproval: activity.requiresApproval || requiresTrustReview,
           };
         },
         {

@@ -15,6 +15,10 @@ import { publicActivityVisibility } from "@/features/activities/queries/getActiv
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
 import { getVisibleMomentWhere } from "@/features/moments/queries/getMomentFeed";
 import { createNotifications } from "@/features/notifications/utils/createNotification";
+import {
+  applyManualModerationTrustScoreEvent,
+  applyResolvedUserReportTrustScoreEvent,
+} from "@/features/trust/trustScoreEvents";
 import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -455,6 +459,8 @@ export async function reviewReportAction(
       },
       select: {
         status: true,
+        targetId: true,
+        targetType: true,
       },
     });
 
@@ -479,6 +485,32 @@ export async function reviewReportAction(
         reviewedAt: isFinalStatus ? new Date() : null,
       },
     });
+
+    if (
+      result.data.status === "RESOLVED" &&
+      existingReport.targetType === "USER_PROFILE"
+    ) {
+      await applyResolvedUserReportTrustScoreEvent({
+        profileId: existingReport.targetId,
+        reportId: result.data.reportId,
+      });
+
+      const resolvedReportCount = await prisma.report.count({
+        where: {
+          status: "RESOLVED",
+          targetId: existingReport.targetId,
+          targetType: "USER_PROFILE",
+        },
+      });
+
+      if (resolvedReportCount >= 5) {
+        await applyManualModerationTrustScoreEvent({
+          note: "Five or more resolved user reports",
+          profileId: existingReport.targetId,
+          type: "MASS_REPORT",
+        });
+      }
+    }
 
     queueAnalyticsEvent(
       {

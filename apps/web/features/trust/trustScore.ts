@@ -1,4 +1,6 @@
 export const initialTrustScore = 80;
+export const lowTrustScoreThreshold = 60;
+export const largeActivityCapacityThreshold = 15;
 
 export type TrustLevel =
   | "TRUSTED"
@@ -13,6 +15,14 @@ export function clampTrustScore(score: number) {
 
 export function calculateTrustScore(deltaSum: number | null | undefined) {
   return clampTrustScore(initialTrustScore + (deltaSum ?? 0));
+}
+
+export function isLowTrustScore(score: number) {
+  return score < lowTrustScoreThreshold;
+}
+
+export function isLargeActivityCapacity(capacity: number | null | undefined) {
+  return Number(capacity ?? 0) >= largeActivityCapacityThreshold;
 }
 
 export function getTrustLevel(score: number): TrustLevel {
