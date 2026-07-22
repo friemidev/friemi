@@ -5,13 +5,12 @@ import {
   createPlanetMomentCommentAction,
   joinPlanetAction,
   leavePlanetAction,
-  reviewPlanetMemberAction,
   deletePlanetMomentAction,
 } from "@/features/planets/actions/planetActions";
 import { withLocale } from "@/lib/routes";
 import { buildCanonicalSiteUrl } from "@/lib/site-url";
 import { PlanetRoomComposer } from "./PlanetRoomComposer";
-import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
+import { PlanetRoomFloatingActions } from "./PlanetRoomFloatingActions";
 import { PlanetMomentCarousel } from "./PlanetMomentCarousel";
 import { PlanetCoverUpload } from "./PlanetCoverUpload";
 import { PlanetLeaveButton } from "./PlanetLeaveButton";
@@ -344,64 +343,6 @@ function PlanetChatLockedNotice({
   );
 }
 
-function ReviewPlanetMembersSection({ locale, planet }: { locale: string; planet: PlanetRoom }) {
-  const copy = getPlanetCopy(locale);
-
-  if (planet.viewerMembership?.role !== "OWNER" && planet.viewerMembership?.role !== "ADMIN") {
-    return null;
-  }
-
-  return (
-    <section className="mt-5 rounded-2xl border border-[#e7decd] bg-[#fffaf3] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-black text-[#7a5623]">{copy.reviewTitle}</h2>
-        <span className="rounded-full bg-[#f3e4c5] px-2.5 py-1 text-[11px] font-bold text-[#8d641f]">
-          {planet.pendingMembers.length}
-        </span>
-      </div>
-      {planet.pendingMembers.length ? (
-        <div className="mt-3 space-y-3">
-          {planet.pendingMembers.map((member) => (
-            <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/80 p-3" key={member.profileId}>
-              <div className="flex min-w-0 items-center gap-2">
-                <Avatar avatarUrl={member.profile.avatarUrl} name={member.profile.nickname} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black">{member.profile.nickname}</p>
-                  <p className="text-[11px] text-[#8b8578]">{member.joinedAt.toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <form action={reviewPlanetMemberAction}>
-                  <input name="locale" type="hidden" value={locale} />
-                  <input name="planetId" type="hidden" value={planet.id} />
-                  <input name="planetSlug" type="hidden" value={planet.slug} />
-                  <input name="memberProfileId" type="hidden" value={member.profileId} />
-                  <input name="decision" type="hidden" value="approve" />
-                  <button className="rounded-full bg-[#246c4b] px-3 py-1.5 text-xs font-black text-white" type="submit">
-                    {copy.approve}
-                  </button>
-                </form>
-                <form action={reviewPlanetMemberAction}>
-                  <input name="locale" type="hidden" value={locale} />
-                  <input name="planetId" type="hidden" value={planet.id} />
-                  <input name="planetSlug" type="hidden" value={planet.slug} />
-                  <input name="memberProfileId" type="hidden" value={member.profileId} />
-                  <input name="decision" type="hidden" value="reject" />
-                  <button className="rounded-full border border-[#e6c0bc] bg-[#fff8f7] px-3 py-1.5 text-xs font-black text-[#b4473c]" type="submit">
-                    {copy.reject}
-                  </button>
-                </form>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-[#8b8578]">{copy.reviewEmpty}</p>
-      )}
-    </section>
-  );
-}
-
 function MomentOrbitCard({
   index,
   locale,
@@ -445,16 +386,23 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
   const inviteUrl = buildCanonicalSiteUrl(withLocale(locale, `/planets/invite/${planet.inviteCode}`));
   const pendingChatHint = locale === "fr" ? "En attente de validation" : locale === "en" ? "Pending approval" : "\u7b49\u5f85\u901a\u8fc7";
   const pendingChatBody = locale === "fr"
-    ? "D?s que le cr?ateur valide votre demande, les messages et la zone d'?criture apparaissent ici."
+    ? "D?s que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici."
     : locale === "en"
       ? "Once the creator approves you, the messages and composer will appear here automatically."
       : "\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u53ef\u4ee5\u5728\u8fd9\u91cc\u770b\u5230\u7fa4\u804a\uff0c\u4e5f\u80fd\u4e00\u8d77\u804a\u5929\u4e86\u3002";
-  const joinChatHint = locale === "fr" ? "Rejoignez la planete" : locale === "en" ? "Join this planet first" : "\u5148\u52a0\u5165\u661f\u7403";
+  const joinChatHint = locale === "fr" ? "Rejoignez la planete" : locale === "en" ? "Join to view chat" : "\u901a\u8fc7\u540e\u53ef\u89c1";
   const joinChatBody = locale === "fr"
-    ? "Commencez par envoyer une demande. Apr?s validation, vous pourrez lire et rejoindre le chat."
+    ? "Commencez par envoyer une demande. Apres validation, vous pourrez lire et rejoindre le chat."
     : locale === "en"
       ? "Send a join request first. After approval, you will be able to read and join the chat."
-      : "\u5148\u63d0\u4ea4\u52a0\u5165\u7533\u8bf7\uff0c\u7b49\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u80fd\u770b\u5230\u8fd9\u91cc\u7684\u7fa4\u804a\u3002";
+      : "\u7533\u8bf7\u901a\u8fc7\u540e\uff0c\u5c31\u80fd\u5728\u8fd9\u91cc\u804a\u5929\u3002";
+  const reviewerRole = membership?.role === "OWNER" || membership?.role === "ADMIN" ? membership.role : null;
+  const pendingMembers = planet.pendingMembers.map((member) => ({
+    avatarUrl: member.profile.avatarUrl,
+    joinedAtLabel: member.joinedAt.toLocaleDateString(),
+    nickname: member.profile.nickname,
+    profileId: member.profileId,
+  }));
 
   return (
     <PageShell>
@@ -479,10 +427,6 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
           <p className="mt-4 rounded-2xl bg-[#fff5de] px-4 py-3 text-xs font-semibold leading-5 text-[#91661f]">
             {copy.pendingNotice}
           </p>
-        ) : !membership ? (
-          <p className="mt-4 rounded-2xl bg-[#edf3ea] px-4 py-3 text-xs font-semibold leading-5 text-[#58715f]">
-            {copy.joinNotice}
-          </p>
         ) : null}
 
         <section className="mt-5">
@@ -497,24 +441,6 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
             <p className="mt-2 text-xs text-[#889188]">{copy.firstMoment}</p>
           )}
         </section>
-
-        {membership?.role === "OWNER" ? (
-          <section className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-[#edf3ea] px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-[#276949]">{copy.inviteLink}</p>
-              <p className="text-[11px] text-[#6c7f72]">{locale === "fr" ? "Copiez le lien pour inviter." : locale === "en" ? "Copy the link to invite people." : "\u70b9\u4e00\u4e0b\u590d\u5236\u9080\u8bf7\u94fe\u63a5"}</p>
-            </div>
-            <ActivityCopyButton
-              className="h-8 w-8 rounded-full bg-white text-[#276949] ring-1 ring-[#cfe0d1] hover:bg-[#f8fbf8] hover:text-[#1d5a3f]"
-              failedLabel={locale === "fr" ? "Copie impossible. Selectionnez le lien manuellement." : locale === "en" ? "Copy failed. Select the link manually." : "\u590d\u5236\u5931\u8d25\uff0c\u8bf7\u624b\u52a8\u590d\u5236\u94fe\u63a5\u3002"}
-              label={locale === "fr" ? "Copier le lien d'invitation" : locale === "en" ? "Copy invite link" : "\u590d\u5236\u9080\u8bf7\u94fe\u63a5"}
-              successLabel={locale === "fr" ? "Lien copie" : locale === "en" ? "Invite link copied" : "\u9080\u8bf7\u94fe\u63a5\u5df2\u590d\u5236"}
-              value={inviteUrl}
-            />
-          </section>
-        ) : null}
-
-        <ReviewPlanetMembersSection locale={locale} planet={planet} />
 
         <section className="mt-5 border-t border-[#ece8dc] pt-4">
           <h2 className="text-sm font-black">{copy.chat}</h2>
@@ -550,6 +476,17 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
             locale={locale}
             planetId={planet.id}
             planetSlug={planet.slug}
+          />
+        ) : null}
+
+        {reviewerRole ? (
+          <PlanetRoomFloatingActions
+            inviteUrl={inviteUrl}
+            locale={locale}
+            pendingMembers={pendingMembers}
+            planetId={planet.id}
+            planetSlug={planet.slug}
+            viewerRole={reviewerRole}
           />
         ) : null}
       </section>
