@@ -26,6 +26,7 @@ import type {
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
+import { getAvatarInitial, sanitizeDisplayText } from "@/lib/display-text";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { getActivityDetailPath } from "../utils/activityRoutes";
@@ -237,10 +238,6 @@ function getStableAvatarTone(value: string) {
   const total = [...value].reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
   return avatarTones[total % avatarTones.length];
-}
-
-function getAvatarInitial(nickname: string) {
-  return nickname.trim().charAt(0).toUpperCase() || "N";
 }
 
 function getParticipationActionLabel(
@@ -675,32 +672,36 @@ export function ActivityCard({
   const participantAvatarStack =
     participantPreview.length > 0 ? (
       <span className="flex shrink-0 -space-x-2">
-        {participantPreview.slice(0, 4).map((participant) => (
-          <span
-            key={participant.id}
-            className={cn(
-              "flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold ring-2 max-[639px]:h-5 max-[639px]:w-5 max-[639px]:text-[9px]",
-              participant.avatarUrl
-                ? "bg-white"
-                : getStableAvatarTone(participant.id),
-              isTeamCard ? "ring-paper" : "ring-ice",
-              isInactiveCard ? "ring-zinc-50 grayscale" : null,
-            )}
-            title={participant.nickname}
-          >
-            {participant.avatarUrl ? (
-              // User avatars are stored as remote profile URLs.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={participant.avatarUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              getAvatarInitial(participant.nickname)
-            )}
-          </span>
-        ))}
+        {participantPreview.slice(0, 4).map((participant) => {
+          const nickname = sanitizeDisplayText(participant.nickname) || "N";
+
+          return (
+            <span
+              key={participant.id}
+              className={cn(
+                "flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold ring-2 max-[639px]:h-5 max-[639px]:w-5 max-[639px]:text-[9px]",
+                participant.avatarUrl
+                  ? "bg-white"
+                  : getStableAvatarTone(participant.id),
+                isTeamCard ? "ring-paper" : "ring-ice",
+                isInactiveCard ? "ring-zinc-50 grayscale" : null,
+              )}
+              title={nickname}
+            >
+              {participant.avatarUrl ? (
+                // User avatars are stored as remote profile URLs.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={participant.avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                getAvatarInitial(nickname)
+              )}
+            </span>
+          );
+        })}
         {participantExtraCount > 0 ? (
           <span
             className={cn(

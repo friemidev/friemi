@@ -86,6 +86,32 @@ enum TrustScoreEventType {
   ORGANIZER_REPORT
 }
 
+enum CharmGiftSurface {
+  PROFILE
+  ACTIVITY
+  MOMENT
+  PLANET
+  DIRECT_MESSAGE
+  SYSTEM
+  OTHER
+}
+
+enum FriemiCheckType {
+  WELCOME
+  BLIND_BOX
+}
+
+enum FriemiCheckStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
+enum BlindBoxFragmentEventType {
+  SUCCESSFUL_ACTIVITY
+  MANUAL_ADJUSTMENT
+}
+
 enum MobilePlatform {
   ANDROID
   IOS
@@ -190,76 +216,82 @@ enum GameToolSubmissionKind {
 }
 
 model UserProfile {
-  id                     String                     @id @default(cuid())
-  clerkUserId            String                     @unique
-  email                  String?
-  emailVerifiedAt        DateTime?
-  contactEmail           String?
-  normalizedContactEmail String?
-  phone                  String?
-  normalizedPhone        String?
-  friendCode             String?                    @unique @db.Char(6)
-  nickname               String
-  firstName              String?
-  lastName               String?
-  username               String?
-  wechatId               String?
-  normalizedWechatId     String?
-  avatarUrl              String?
-  bio                    String?
-  interests              String[]                   @default([])
-  status                 UserProfileStatus          @default(ACTIVE)
-  role                   UserRole                   @default(USER)
-  isCoCreator            Boolean                    @default(false)
-  lastSignInAt           DateTime?
-  clerkCreatedAt         DateTime?
-  clerkUpdatedAt         DateTime?
-  clerkDeletedAt         DateTime?
-  syncedAt               DateTime?
-  activities             Activity[]                 @relation("ActivityOrganizer")
-  managedActivities      ActivityCoManager[]        @relation("ActivityCoManagerProfile")
-  addedCoManagers        ActivityCoManager[]        @relation("ActivityCoManagerAddedBy")
-  activityManagementLogs ActivityManagementLog[]    @relation("ActivityManagementLogActor")
-  participations         ActivityParticipant[]
-  guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
-  comments               Comment[]
-  moments                Moment[]                   @relation("MomentAuthor")
-  momentLikes            MomentLike[]               @relation("MomentLikeUser")
-  momentComments         MomentComment[]            @relation("MomentCommentAuthor")
-  notifications          Notification[]             @relation("NotificationRecipient")
-  sentNotifications      Notification[]             @relation("NotificationActor")
-  favoriteActivities     ActivityFavorite[]
-  following              UserFollow[]               @relation("UserFollowing")
-  followers              UserFollow[]               @relation("UserFollowers")
-  sentFriendRequests     FriendRequest[]            @relation("FriendRequestRequester")
-  receivedFriendRequests FriendRequest[]            @relation("FriendRequestReceiver")
-  friendshipsAsUserA     Friendship[]               @relation("FriendshipUserA")
-  friendshipsAsUserB     Friendship[]               @relation("FriendshipUserB")
-  conversationsAsUserA   Conversation[]             @relation("ConversationUserA")
-  conversationsAsUserB   Conversation[]             @relation("ConversationUserB")
-  sentDirectMessages     DirectMessage[]            @relation("DirectMessageSender")
-  authoredAnnouncements  ActivityAnnouncement[]     @relation("ActivityAnnouncementAuthor")
-  submittedReports       Report[]                   @relation("ReportReporter")
-  reviewedReports        Report[]                   @relation("ReportReviewer")
-  mobileDevices          MobileDevice[]
-  trustScoreEvents       TrustScoreEvent[]
-  hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
-  gameToolRoomMembers    GameToolRoomMember[]       @relation("GameToolRoomMemberProfile")
-  gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
-  reviewedCheckIns       ActivityParticipant[]      @relation("ActivityCheckInReviewer")
-  gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
-  gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
-  gameToolPlayerRecords  GameToolPlayerRecord[]     @relation("GameToolPlayerRecordProfile")
-  ownedPlanets           Planet[]                   @relation("PlanetOwner")
-  planetMemberships      PlanetMember[]
-  planetMessages         PlanetMessage[]            @relation("PlanetMessageAuthor")
-  planetMoments          PlanetMoment[]             @relation("PlanetMomentAuthor")
-  planetMomentComments   PlanetMomentComment[]      @relation("PlanetMomentCommentAuthor")
-  planetMomentLikes      PlanetMomentLike[]         @relation("PlanetMomentLikeProfile")
-  planetCommentLikes     PlanetMomentCommentLike[]  @relation("PlanetCommentLikeProfile")
-  createdAt              DateTime                   @default(now())
-  updatedAt              DateTime                   @updatedAt
-  publicEventFavorites   PublicEventFavorite[]
+  id                      String                       @id @default(cuid())
+  clerkUserId             String                       @unique
+  email                   String?
+  emailVerifiedAt         DateTime?
+  contactEmail            String?
+  normalizedContactEmail  String?
+  phone                   String?
+  normalizedPhone         String?
+  friendCode              String?                      @unique @db.Char(6)
+  nickname                String
+  firstName               String?
+  lastName                String?
+  username                String?
+  wechatId                String?
+  normalizedWechatId      String?
+  avatarUrl               String?
+  bio                     String?
+  interests               String[]                     @default([])
+  status                  UserProfileStatus            @default(ACTIVE)
+  role                    UserRole                     @default(USER)
+  isCoCreator             Boolean                      @default(false)
+  lastSignInAt            DateTime?
+  clerkCreatedAt          DateTime?
+  clerkUpdatedAt          DateTime?
+  clerkDeletedAt          DateTime?
+  syncedAt                DateTime?
+  activities              Activity[]                   @relation("ActivityOrganizer")
+  managedActivities       ActivityCoManager[]          @relation("ActivityCoManagerProfile")
+  addedCoManagers         ActivityCoManager[]          @relation("ActivityCoManagerAddedBy")
+  activityManagementLogs  ActivityManagementLog[]      @relation("ActivityManagementLogActor")
+  participations          ActivityParticipant[]
+  guestParticipations     GuestActivityParticipant[]   @relation("GuestLinkedUser")
+  comments                Comment[]
+  moments                 Moment[]                     @relation("MomentAuthor")
+  momentLikes             MomentLike[]                 @relation("MomentLikeUser")
+  momentComments          MomentComment[]              @relation("MomentCommentAuthor")
+  notifications           Notification[]               @relation("NotificationRecipient")
+  sentNotifications       Notification[]               @relation("NotificationActor")
+  favoriteActivities      ActivityFavorite[]
+  following               UserFollow[]                 @relation("UserFollowing")
+  followers               UserFollow[]                 @relation("UserFollowers")
+  sentFriendRequests      FriendRequest[]              @relation("FriendRequestRequester")
+  receivedFriendRequests  FriendRequest[]              @relation("FriendRequestReceiver")
+  friendshipsAsUserA      Friendship[]                 @relation("FriendshipUserA")
+  friendshipsAsUserB      Friendship[]                 @relation("FriendshipUserB")
+  conversationsAsUserA    Conversation[]               @relation("ConversationUserA")
+  conversationsAsUserB    Conversation[]               @relation("ConversationUserB")
+  sentDirectMessages      DirectMessage[]              @relation("DirectMessageSender")
+  authoredAnnouncements   ActivityAnnouncement[]       @relation("ActivityAnnouncementAuthor")
+  submittedReports        Report[]                     @relation("ReportReporter")
+  reviewedReports         Report[]                     @relation("ReportReviewer")
+  mobileDevices           MobileDevice[]
+  trustScoreEvents        TrustScoreEvent[]
+  charmBalance            UserCharmBalance?
+  sentCharmGiftEvents     CharmGiftEvent[]             @relation("CharmGiftSender")
+  receivedCharmGiftEvents CharmGiftEvent[]             @relation("CharmGiftRecipient")
+  friemiChecks            FriemiCheck[]
+  blindBoxFragmentBalance UserBlindBoxFragmentBalance?
+  blindBoxFragmentEvents  BlindBoxFragmentEvent[]
+  hostedGameToolRooms     GameToolRoom[]               @relation("GameToolRoomHost")
+  gameToolRoomMembers     GameToolRoomMember[]         @relation("GameToolRoomMemberProfile")
+  gameToolSeats           GameToolSeat[]               @relation("GameToolSeatProfile")
+  reviewedCheckIns        ActivityParticipant[]        @relation("ActivityCheckInReviewer")
+  gameToolEvents          GameToolEvent[]              @relation("GameToolEventActor")
+  gameToolSubmissions     GameToolSubmission[]         @relation("GameToolSubmissionProfile")
+  gameToolPlayerRecords   GameToolPlayerRecord[]       @relation("GameToolPlayerRecordProfile")
+  ownedPlanets            Planet[]                     @relation("PlanetOwner")
+  planetMemberships       PlanetMember[]
+  planetMessages          PlanetMessage[]              @relation("PlanetMessageAuthor")
+  planetMoments           PlanetMoment[]               @relation("PlanetMomentAuthor")
+  planetMomentComments    PlanetMomentComment[]        @relation("PlanetMomentCommentAuthor")
+  planetMomentLikes       PlanetMomentLike[]           @relation("PlanetMomentLikeProfile")
+  planetCommentLikes      PlanetMomentCommentLike[]    @relation("PlanetCommentLikeProfile")
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  publicEventFavorites    PublicEventFavorite[]
 
   @@index([nickname])
   @@index([normalizedContactEmail])
@@ -606,6 +638,82 @@ model TrustScoreEvent {
   createdAt  DateTime            @default(now())
 
   @@unique([profileId, type, activityId])
+  @@index([profileId, createdAt])
+  @@index([activityId])
+}
+
+model UserCharmBalance {
+  profileId  String      @id
+  profile    UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  score      Int         @default(0)
+  giftCount  Int         @default(0)
+  lastGiftAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model CharmGiftEvent {
+  id                 String           @id @default(cuid())
+  senderProfileId    String?
+  recipientProfileId String
+  giftId             String
+  giftEmoji          String
+  giftLabel          String
+  charmDelta         Int
+  quantity           Int              @default(1)
+  totalCharmDelta    Int
+  coinCost           Int?
+  sourceSurface      CharmGiftSurface @default(PROFILE)
+  sourceContextId    String?
+  sender             UserProfile?     @relation("CharmGiftSender", fields: [senderProfileId], references: [id], onDelete: SetNull)
+  recipient          UserProfile      @relation("CharmGiftRecipient", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@index([recipientProfileId, createdAt])
+  @@index([senderProfileId, createdAt])
+  @@index([giftId, createdAt])
+  @@index([sourceSurface, sourceContextId])
+}
+
+model FriemiCheck {
+  id         String            @id @default(cuid())
+  profileId  String
+  profile    UserProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       FriemiCheckType
+  status     FriemiCheckStatus @default(AVAILABLE)
+  sourceKey  String?
+  note       String?
+  redeemedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@unique([profileId, sourceKey])
+  @@index([profileId, status, createdAt])
+}
+
+model UserBlindBoxFragmentBalance {
+  profileId             String      @id
+  profile               UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  fragmentCount         Int         @default(0)
+  redeemedBlindBoxCount Int         @default(0)
+  lastEarnedAt          DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model BlindBoxFragmentEvent {
+  id         String                    @id @default(cuid())
+  profileId  String
+  profile    UserProfile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       BlindBoxFragmentEventType
+  delta      Int
+  activityId String?
+  sourceKey  String?
+  note       String?
+  createdAt  DateTime                  @default(now())
+
+  @@unique([profileId, sourceKey])
   @@index([profileId, createdAt])
   @@index([activityId])
 }
