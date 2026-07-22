@@ -37,8 +37,7 @@ export function PlanetMomentCarousel({
   planetId,
   planetSlug,
 }: PlanetMomentCarouselProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const isAutoScrollingRef = useRef(false);
+  const touchStartXRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const visibleComments = comments.slice(0, 6);
@@ -49,124 +48,121 @@ export function PlanetMomentCarousel({
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const timer = window.setInterval(() => {
-      const scroller = scrollerRef.current;
-      if (!scroller) return;
-      const nextIndex = (activeIndex + 1) % imageUrls.length;
-      isAutoScrollingRef.current = true;
-      scroller.scrollTo({
-        behavior: "smooth",
-        left: nextIndex * scroller.clientWidth,
-      });
-      setActiveIndex(nextIndex);
-      window.setTimeout(() => {
-        isAutoScrollingRef.current = false;
-      }, 700);
+      setActiveIndex((current) => (current + 1) % imageUrls.length);
     }, 3600);
 
     return () => window.clearInterval(timer);
-  }, [activeIndex, hasMultipleImages, hasUserInteracted, imageUrls.length]);
+  }, [hasMultipleImages, hasUserInteracted, imageUrls.length]);
 
   function stopAutoSlide() {
     setHasUserInteracted(true);
   }
 
-  function updateActiveIndex() {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    if (!isAutoScrollingRef.current && hasMultipleImages) {
-      setHasUserInteracted(true);
-    }
-    setActiveIndex(Math.round(scroller.scrollLeft / scroller.clientWidth));
+  function goToImage(nextIndex: number) {
+    if (!hasMultipleImages) return;
+    stopAutoSlide();
+    setActiveIndex((nextIndex + imageUrls.length) % imageUrls.length);
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const startX = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (startX === null) return;
+
+    const deltaX = event.changedTouches[0].clientX - startX;
+    if (Math.abs(deltaX) < 32) return;
+    goToImage(activeIndex + (deltaX < 0 ? 1 : -1));
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] bg-[#ebe5d9] p-2 shadow-[0_18px_42px_rgba(54,47,35,0.14)]">
-      {imageUrls.length ? (
-        <div
-          className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-[1.35rem] bg-[#f8f6ef] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          onKeyDown={stopAutoSlide}
-          onScroll={updateActiveIndex}
-          onWheel={stopAutoSlide}
-          ref={scrollerRef}
-          tabIndex={0}
-        >
-          {imageUrls.map((imageUrl, index) => (
-            <div
-              className="relative flex aspect-[4/5] w-full shrink-0 snap-center items-center justify-center bg-[#f8f6ef]"
-              key={`${imageUrl}-${index}`}
-            >
-              <img
-                alt="星球精彩瞬间"
-                className="max-h-full max-w-full object-contain"
-                src={imageUrl}
-              />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex aspect-[4/5] items-center justify-center rounded-[1.35rem] bg-[linear-gradient(145deg,#e9d6bb,#b78964)] text-6xl">
-          🪐
-        </div>
-      )}
-
-      <div className="absolute inset-x-2 bottom-2 rounded-b-[1.35rem] bg-gradient-to-t from-black/62 via-black/28 to-transparent p-4 pt-16">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 text-white">
-            <p className="truncate text-lg font-black">{content || "精彩瞬间"}</p>
-            <p className="mt-1 text-xs font-semibold text-white/78">
-              {authorName} · {createdAtLabel}
-            </p>
+    <div className="rounded-[1.75rem] bg-[#fffefa] p-2 shadow-[0_18px_42px_rgba(54,47,35,0.12)] ring-1 ring-[#e7e0d5]">
+      <div className="relative overflow-hidden rounded-[1.35rem] bg-[#f6f1ea]">
+        {imageUrls.length ? (
+          <div
+            className="flex transition-transform duration-500 ease-out"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") goToImage(activeIndex - 1);
+              if (event.key === "ArrowRight") goToImage(activeIndex + 1);
+            }}
+            onTouchEnd={handleTouchEnd}
+            onTouchStart={(event) => {
+              touchStartXRef.current = event.touches[0].clientX;
+            }}
+            tabIndex={0}
+            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+          >
+            {imageUrls.map((imageUrl, index) => (
+              <div
+                className="relative flex aspect-[4/5] w-full shrink-0 items-center justify-center bg-[#f6f1ea]"
+                key={`${imageUrl}-${index}`}
+              >
+                <img alt="星球精彩瞬间" className="max-h-full max-w-full object-contain" src={imageUrl} />
+              </div>
+            ))}
           </div>
-          <form action={togglePlanetMomentLikeAction} className="shrink-0">
-            <input name="locale" type="hidden" value={locale} />
-            <input name="planetId" type="hidden" value={planetId} />
-            <input name="planetSlug" type="hidden" value={planetSlug} />
-            <input name="momentId" type="hidden" value={momentId} />
-            <button
-              aria-label="点赞"
-              className={`inline-flex h-11 min-w-11 items-center justify-center gap-1 rounded-full bg-white/92 px-3 text-sm font-black ${isLiked ? "text-[#ba4439]" : "text-[#1f211e]"}`}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-              {likeCount || null}
-            </button>
-          </form>
-        </div>
+        ) : (
+          <div className="flex aspect-[4/5] items-center justify-center rounded-[1.35rem] bg-[linear-gradient(145deg,#e9d6bb,#b78964)] text-6xl">
+            🪐
+          </div>
+        )}
+
+        {hasMultipleImages ? (
+          <div className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-black text-[#245f43] shadow-sm backdrop-blur-sm">
+            {activeIndex + 1}/{imageUrls.length}
+          </div>
+        ) : null}
+
+        {hasMultipleImages ? (
+          <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+            {imageUrls.map((imageUrl, index) => (
+              <span
+                className={`h-1.5 rounded-full shadow-sm transition-all ${activeIndex === index ? "w-5 bg-[#1f6a4a]" : "w-1.5 bg-white/80"}`}
+                key={`${imageUrl}-dot-${index}`}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {visibleComments.length ? (
+          <div className="pointer-events-none absolute inset-x-2 top-5 h-32 overflow-hidden rounded-t-[1.35rem]">
+            {visibleComments.map((comment, index) => (
+              <div
+                className="planet-danmaku absolute left-0 max-w-[86%] whitespace-nowrap rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-sm"
+                key={comment.id}
+                style={{
+                  animationDelay: `${index * 1.6}s`,
+                  animationDuration: `${10 + (index % 3) * 1.5}s`,
+                  top: `${(index % 4) * 1.85}rem`,
+                }}
+              >
+                {comment.author.nickname}：{comment.content}
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      {hasMultipleImages ? (
-        <div className="absolute right-5 top-5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur-sm">
-          {activeIndex + 1}/{imageUrls.length}
+      <div className="mt-3 flex items-center justify-between gap-3 px-2 pb-1">
+        <div className="min-w-0">
+          <p className="truncate text-base font-black text-[#1f211e]">{content || "精彩瞬间"}</p>
+          <p className="mt-0.5 text-xs font-semibold text-[#768078]">
+            {authorName} · {createdAtLabel}
+          </p>
         </div>
-      ) : null}
-
-      {hasMultipleImages ? (
-        <div className="absolute inset-x-0 bottom-24 flex justify-center gap-1.5">
-          {imageUrls.map((imageUrl, index) => (
-            <span
-              className={`h-1.5 rounded-full transition-all ${activeIndex === index ? "w-5 bg-white" : "w-1.5 bg-white/55"}`}
-              key={`${imageUrl}-dot-${index}`}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {visibleComments.length ? (
-        <div className="pointer-events-none absolute inset-x-2 top-5 h-32 overflow-hidden rounded-t-[1.35rem]">
-          {visibleComments.map((comment, index) => (
-            <div
-              className="planet-danmaku absolute left-0 max-w-[86%] whitespace-nowrap rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-sm"
-              key={comment.id}
-              style={{
-                animationDelay: `${index * 1.6}s`,
-                animationDuration: `${10 + (index % 3) * 1.5}s`,
-                top: `${(index % 4) * 1.85}rem`,
-              }}
-            >
-              {comment.author.nickname}：{comment.content}
-            </div>
-          ))}
-        </div>
-      ) : null}
+        <form action={togglePlanetMomentLikeAction} className="shrink-0">
+          <input name="locale" type="hidden" value={locale} />
+          <input name="planetId" type="hidden" value={planetId} />
+          <input name="planetSlug" type="hidden" value={planetSlug} />
+          <input name="momentId" type="hidden" value={momentId} />
+          <button
+            aria-label="点赞"
+            className={`inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full border border-[#eadfd4] bg-white px-3 text-sm font-black shadow-sm ${isLiked ? "text-[#ba4439]" : "text-[#1f211e]"}`}
+          >
+            <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
+            {likeCount || null}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -72,10 +72,8 @@ export async function getPlanetRoom(planetSlug: string, viewerProfileId: string 
   if (!planet) return null;
 
   const viewerMembership = viewerProfileId
-    ? await prisma.planetMember.findUnique({
-        where: {
-          planetId_profileId: { planetId: planet.id, profileId: viewerProfileId },
-        },
+    ? await prisma.planetMember.findFirst({
+        where: { planetId: planet.id, profileId: viewerProfileId },
         select: { role: true, status: true },
       })
     : null;
@@ -155,10 +153,8 @@ export async function getPlanetMoment(momentId: string, planetSlug: string, view
 
   if (!moment) return null;
   const viewerMembership = viewerProfileId
-    ? await prisma.planetMember.findUnique({
-        where: {
-          planetId_profileId: { planetId: moment.planet.id, profileId: viewerProfileId },
-        },
+    ? await prisma.planetMember.findFirst({
+        where: { planetId: moment.planet.id, profileId: viewerProfileId },
         select: { role: true, status: true },
       })
     : null;
