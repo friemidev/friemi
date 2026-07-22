@@ -6,6 +6,7 @@ import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
+import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -39,6 +40,14 @@ async function finalizeUserProfile<
   });
 
   return ensuredProfile;
+}
+
+async function grantWelcomeCheckForNewProfile(profileId: string) {
+  try {
+    await grantWelcomeFriemiCheck(profileId);
+  } catch (error) {
+    console.error("Failed to grant welcome Friemi check", error);
+  }
 }
 
 export async function getCurrentUser() {
@@ -180,9 +189,15 @@ async function upsertLocalUserProfile(clerkUserId: string) {
     },
   });
 
-  return finalizeUserProfile(profile, {
+  const finalizedProfile = await finalizeUserProfile(profile, {
     verifiedEmail: profile.email,
   });
+
+  if (!existing) {
+    await grantWelcomeCheckForNewProfile(finalizedProfile.id);
+  }
+
+  return finalizedProfile;
 }
 
 async function upsertClerkUserProfile(user: ClerkCurrentUser) {
@@ -243,7 +258,13 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     },
   });
 
-  return finalizeUserProfile(profile, { verifiedEmail });
+  const finalizedProfile = await finalizeUserProfile(profile, { verifiedEmail });
+
+  if (!existing) {
+    await grantWelcomeCheckForNewProfile(finalizedProfile.id);
+  }
+
+  return finalizedProfile;
 }
 
 export async function ensureCurrentUserProfile(

@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
+import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkEmailAddressLike = {
@@ -84,6 +85,14 @@ function getDisplayName(user: ClerkUserLike) {
   return fullName || user.username || getPrimaryEmail(user) || "未命名用户";
 }
 
+async function grantWelcomeCheckForNewProfile(profileId: string) {
+  try {
+    await grantWelcomeFriemiCheck(profileId);
+  } catch (error) {
+    console.error("Failed to grant welcome Friemi check", error);
+  }
+}
+
 export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
   const email = getPrimaryEmail(user);
   const verifiedEmail = getVerifiedEmail(user);
@@ -155,6 +164,10 @@ export async function upsertUserProfileFromClerk(user: ClerkUserLike) {
   }).catch((error) => {
     console.error("Failed to link guest participations from Clerk webhook", error);
   });
+
+  if (!existing) {
+    await grantWelcomeCheckForNewProfile(profile.id);
+  }
 
   return profile;
 }

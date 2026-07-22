@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
+    charmScore: 0,
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
@@ -31,6 +32,7 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
     followers: [],
     following: [],
     moments: [],
+    recentCharmGifts: [],
     werewolfStats: {
       judgeCount: 0,
       lossCount: 0,

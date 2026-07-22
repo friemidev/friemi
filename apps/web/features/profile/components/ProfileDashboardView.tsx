@@ -39,6 +39,11 @@ import {
   parseAndroidQrScanPayload,
   resolveGlobalQrScanDestination,
 } from "@/features/scan/globalQrScanner";
+import {
+  getCharmLevelLabel,
+  getCharmProgress,
+} from "@/features/charm/charm";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -146,14 +151,17 @@ function getMobileProfileCopy(locale: string) {
       giftWall: "Cadeaux",
       hangoutsTitle: "Mes sorties",
       invite: "Inviter",
+      maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
       more: "Plus",
       networkTitle: "Mes amis",
       noTimeline: "Aucune activité publique pour le moment.",
+      nextCharm: "Prochain",
       pendingFriend: "Demandé",
       profileTitle: "Profile",
       publicTimeline: "Activité",
+      recentGifts: "Reçus",
       scan: "Scanner",
       scanUnavailable: "Le scan est disponible dans l'app Friemi.",
       scanUnknown: "Ce QR code n'est pas reconnu.",
@@ -184,14 +192,17 @@ function getMobileProfileCopy(locale: string) {
       giftWall: "Gifts",
       hangoutsTitle: "My Hangouts",
       invite: "Invite",
+      maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
       more: "More",
       networkTitle: "My Friends",
       noTimeline: "No public activity yet.",
+      nextCharm: "Next",
       pendingFriend: "Requested",
       profileTitle: "Profile",
       publicTimeline: "Activity",
+      recentGifts: "Received",
       scan: "Scan",
       scanUnavailable: "Scanning is available in the Friemi app.",
       scanUnknown: "This QR code is not recognized.",
@@ -221,14 +232,17 @@ function getMobileProfileCopy(locale: string) {
     giftWall: "礼物墙",
     hangoutsTitle: "我的组局",
     invite: "邀请好友",
+    maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
     more: "更多",
     networkTitle: "我的好友",
     noTimeline: "暂时没有公开动态。",
+    nextCharm: "下一等级",
     pendingFriend: "已申请",
     profileTitle: "Profile",
     publicTimeline: "动态",
+    recentGifts: "最近收到",
     scan: "扫码",
     scanUnavailable: "请在 Friemi App 中使用扫码。",
     scanUnknown: "没有识别出可用的 Friemi 二维码。",
@@ -569,6 +583,75 @@ function PublicMobileProfileActions({
   );
 }
 
+function RecentCharmGifts({
+  className,
+  gifts,
+  label,
+}: {
+  className?: string;
+  gifts: ProfileDashboardViewModel["recentCharmGifts"];
+  label: string;
+}) {
+  const visibleGifts = gifts.slice(0, 4);
+
+  if (visibleGifts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-1.5",
+        className,
+      )}
+    >
+      <span className="mr-0.5 text-[11px] font-bold text-[#8B907F]">
+        {label}
+      </span>
+      {visibleGifts.map((gift) => (
+        <span
+          className="inline-flex h-7 items-center gap-1 rounded-full bg-white/78 px-2 text-[11px] font-black text-[#1D1D1B] ring-1 ring-[#E8E0C8]"
+          key={gift.id}
+          title={`${gift.giftLabel} +${gift.totalCharmDelta}`}
+        >
+          <span aria-hidden="true">{gift.giftEmoji}</span>
+          <span>+{gift.totalCharmDelta}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SelfCharmFeature({
+  dashboard,
+  locale,
+  label,
+}: {
+  dashboard: ProfileDashboardViewModel;
+  label: string;
+  locale: string;
+}) {
+  const progress = getCharmProgress(dashboard.charmScore);
+  const levelLabel = getCharmLevelLabel(progress.current, locale);
+
+  return (
+    <div className="grid min-w-0 justify-items-center gap-1.5 px-1 py-1.5 text-center">
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[radial-gradient(circle_at_30%_25%,#F6EEFF_0%,#EFE7FF_46%,#FFF4EA_100%)] text-[#8A61CE] shadow-[0_10px_18px_rgba(138,97,206,0.12)] ring-1 ring-[#DBC8F3]">
+        <Sparkles className="h-[1.125rem] w-[1.125rem]" />
+        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FEFFF9] px-1 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
+          {progress.current.icon}
+        </span>
+      </span>
+      <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
+        {label}
+      </span>
+      <span className="max-w-full truncate whitespace-nowrap text-[10px] font-black text-[#8A61CE]">
+        {dashboard.charmScore} / {levelLabel}
+      </span>
+    </div>
+  );
+}
+
 function PublicMobileTimeline({
   dashboard,
   locale,
@@ -692,10 +775,12 @@ function PublicMobileProfileHome({
   profileInitial: string;
 }) {
   const copy = getMobileProfileCopy(locale);
-  const charmScore = Math.max(
-    120,
-    dashboard.momentCount * 8 + dashboard.friendCount * 6,
-  );
+  const charmProgress = getCharmProgress(dashboard.charmScore);
+  const charmLevelLabel = getCharmLevelLabel(charmProgress.current, locale);
+  const nextCharmLabel = charmProgress.next
+    ? `${charmProgress.score} / ${charmProgress.next.minScore}`
+    : charmLevelLabel;
+  const charmProgressWidth = `${Math.max(3, Math.round(charmProgress.progressRatio * 100))}%`;
 
   return (
     <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5">
@@ -777,28 +862,40 @@ function PublicMobileProfileHome({
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[26px] font-black leading-none text-[#A57AEB]">
-                {charmScore}
+                {charmProgress.score}
               </p>
               <p className="mt-1 text-xs font-black text-[#8B78B9]">
-                {copy.charm}
+                {charmProgress.current.icon} {charmLevelLabel}
               </p>
             </div>
-            <p className="text-xs font-bold text-[#7A8276]">400 / 800</p>
+            <p className="text-xs font-bold text-[#7A8276]">
+              {nextCharmLabel}
+            </p>
           </div>
           <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
-            <div className="h-full w-1/3 rounded-full bg-[#BFAAF4]" />
+            <div
+              className="h-full rounded-full bg-[#BFAAF4]"
+              style={{ width: charmProgressWidth }}
+            />
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold text-[#8B907F]">{copy.soon}</p>
-            <button
-              className="inline-flex items-center gap-1 text-xs font-black text-[#9A2135]"
-              onClick={() => window.alert(copy.soon)}
-              type="button"
-            >
-              <Gift className="h-4 w-4" />
-              {copy.giftWall}
-            </button>
+            <p className="min-w-0 truncate text-xs font-semibold text-[#8B907F]">
+              {charmProgress.next
+                ? `${copy.nextCharm} ${charmProgress.next.icon} ${getCharmLevelLabel(charmProgress.next, locale)}`
+                : copy.maxCharm}
+            </p>
+            <CharmGiftDialog
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              recipientName={profile.nickname}
+              recipientProfileId={profile.id}
+            />
           </div>
+          <RecentCharmGifts
+            className="mt-3"
+            gifts={dashboard.recentCharmGifts}
+            label={copy.recentGifts}
+          />
         </div>
       </section>
 
@@ -1176,10 +1273,10 @@ function SelfMobileProfileHome({
       </section>
 
       <section className="mt-6 grid grid-cols-3 gap-y-4">
-        <ComingSoonFeature
-          icon={Sparkles}
+        <SelfCharmFeature
+          dashboard={dashboard}
           label={copy.charm}
-          soon={copy.soon}
+          locale={locale}
         />
         <ComingSoonFeature
           icon={UserRoundPlus}
@@ -1283,12 +1380,18 @@ export function ProfileDashboardView({
 }: ProfileDashboardViewProps) {
   const t = getCopy(locale);
   const friendsCopy = getFriendsCopy(locale);
+  const mobileCopy = getMobileProfileCopy(locale);
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
   const showPrivateParticipation = isSelf;
   const showWerewolfStats =
     dashboard.werewolfStats.playerGameCount > 0 ||
     dashboard.werewolfStats.judgeCount > 0;
+  const profileCharmProgress = getCharmProgress(dashboard.charmScore);
+  const profileCharmLevelLabel = getCharmLevelLabel(
+    profileCharmProgress.current,
+    locale,
+  );
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
 
@@ -1413,6 +1516,25 @@ export function ProfileDashboardView({
                   showFriendCount={isSelf}
                   showJoinedCount={showPrivateParticipation}
                 />
+                <div className="rounded-2xl bg-white/72 px-4 py-3 ring-1 ring-[#E6DEC6]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#1D1D1B]">
+                        {profileCharmProgress.current.icon}{" "}
+                        {profileCharmLevelLabel}
+                      </p>
+                      <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
+                        {dashboard.charmScore} {mobileCopy.charm}
+                      </p>
+                    </div>
+                    <Sparkles className="h-5 w-5 shrink-0 text-[#8A61CE]" />
+                  </div>
+                  <RecentCharmGifts
+                    className="mt-2"
+                    gifts={dashboard.recentCharmGifts}
+                    label={mobileCopy.recentGifts}
+                  />
+                </div>
                 <Link
                   href={withLocale(locale, "/messages")}
                   className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
@@ -1497,6 +1619,29 @@ export function ProfileDashboardView({
                   locale={locale}
                   profileId={profile.id}
                   relationship={dashboard.viewerRelationship}
+                />
+                <div className="flex items-center justify-between gap-3 border-t border-[#D6D5B2]/55 pt-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#1D1D1B]">
+                      {profileCharmProgress.current.icon}{" "}
+                      {profileCharmLevelLabel}
+                    </p>
+                    <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
+                      {dashboard.charmScore} {mobileCopy.charm}
+                    </p>
+                  </div>
+                  <CharmGiftDialog
+                    isAuthenticated={isAuthenticated}
+                    locale={locale}
+                    recipientName={profile.nickname}
+                    recipientProfileId={profile.id}
+                    triggerClassName="bg-white/80 ring-1 ring-[#E6DEC6]"
+                  />
+                </div>
+                <RecentCharmGifts
+                  className="border-t border-[#D6D5B2]/45 pt-2"
+                  gifts={dashboard.recentCharmGifts}
+                  label={mobileCopy.recentGifts}
                 />
               </div>
             </div>

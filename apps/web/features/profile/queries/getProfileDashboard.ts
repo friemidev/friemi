@@ -24,6 +24,7 @@ import {
 import { calculateTrustScore } from "@/features/trust/trustScore";
 
 export const profileActivityListLimit = 12;
+export const profileCharmGiftListLimit = 6;
 export const profileFollowListLimit = 12;
 type TrustScoreAggregateResult = {
   _sum: {
@@ -123,10 +124,32 @@ const profileMomentSelect = {
   },
 } satisfies Prisma.MomentSelect;
 
+const profileCharmGiftSelect = {
+  id: true,
+  giftId: true,
+  giftEmoji: true,
+  giftLabel: true,
+  charmDelta: true,
+  quantity: true,
+  totalCharmDelta: true,
+  createdAt: true,
+  sender: {
+    select: {
+      id: true,
+      nickname: true,
+      avatarUrl: true,
+    },
+  },
+} satisfies Prisma.CharmGiftEventSelect;
+
 type ProfilePublicEventFavoriteQueryResult =
   Prisma.PublicEventFavoriteGetPayload<{
     select: typeof profilePublicEventFavoriteSelect;
   }>;
+
+type ProfileCharmGiftQueryResult = Prisma.CharmGiftEventGetPayload<{
+  select: typeof profileCharmGiftSelect;
+}>;
 
 export type ProfileParticipationViewModel = {
   id: string;
@@ -145,6 +168,7 @@ export type ProfileWerewolfStatsViewModel = {
 };
 
 export type ProfileDashboardViewModel = {
+  charmScore: number;
   createdActivityCount: number;
   participationCount: number;
   favoriteActivityCount: number;
@@ -160,6 +184,7 @@ export type ProfileDashboardViewModel = {
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
   moments: ProfileMomentViewModel[];
+  recentCharmGifts: ProfileCharmGiftViewModel[];
   viewerRelationship: ProfileViewerRelationshipViewModel;
   werewolfStats: ProfileWerewolfStatsViewModel;
 };
@@ -184,6 +209,22 @@ export type ProfileMomentViewModel = {
     url: string;
     width: number | null;
     height: number | null;
+  } | null;
+};
+
+export type ProfileCharmGiftViewModel = {
+  id: string;
+  giftId: string;
+  giftEmoji: string;
+  giftLabel: string;
+  charmDelta: number;
+  quantity: number;
+  totalCharmDelta: number;
+  createdAt: string;
+  sender: {
+    id: string;
+    nickname: string;
+    avatarUrl: string | null;
   } | null;
 };
 
@@ -302,6 +343,22 @@ function mapProfileMoment(
           height: image.height,
         }
       : null,
+  };
+}
+
+function mapProfileCharmGift(
+  gift: ProfileCharmGiftQueryResult,
+): ProfileCharmGiftViewModel {
+  return {
+    id: gift.id,
+    giftId: gift.giftId,
+    giftEmoji: gift.giftEmoji,
+    giftLabel: gift.giftLabel,
+    charmDelta: gift.charmDelta,
+    quantity: gift.quantity,
+    totalCharmDelta: gift.totalCharmDelta,
+    createdAt: gift.createdAt.toISOString(),
+    sender: gift.sender,
   };
 }
 
@@ -605,6 +662,8 @@ export async function getProfileDashboard(
     moments,
     werewolfRecords,
     trustScoreAggregate,
+    charmBalance,
+    recentCharmGifts,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -758,6 +817,22 @@ export async function getProfileDashboard(
       },
     }),
     getTrustScoreAggregate(profileId),
+    prisma.userCharmBalance.findUnique({
+      where: {
+        profileId,
+      },
+      select: {
+        score: true,
+      },
+    }),
+    prisma.charmGiftEvent.findMany({
+      where: {
+        recipientProfileId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: profileCharmGiftListLimit,
+      select: profileCharmGiftSelect,
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -792,6 +867,7 @@ export async function getProfileDashboard(
     .slice(0, profileActivityListLimit);
 
   return {
+    charmScore: charmBalance?.score ?? 0,
     createdActivityCount,
     participationCount,
     favoriteActivityCount: favoriteActivityCount + publicEventFavoriteCount,
@@ -815,6 +891,7 @@ export async function getProfileDashboard(
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
     moments: moments.map(mapProfileMoment),
+    recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };
@@ -859,6 +936,8 @@ export async function getPublicProfileDashboard(
     moments,
     werewolfRecords,
     trustScoreAggregate,
+    charmBalance,
+    recentCharmGifts,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -978,6 +1057,22 @@ export async function getPublicProfileDashboard(
       },
     }),
     getTrustScoreAggregate(profileId),
+    prisma.userCharmBalance.findUnique({
+      where: {
+        profileId,
+      },
+      select: {
+        score: true,
+      },
+    }),
+    prisma.charmGiftEvent.findMany({
+      where: {
+        recipientProfileId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: profileCharmGiftListLimit,
+      select: profileCharmGiftSelect,
+    }),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -990,6 +1085,7 @@ export async function getPublicProfileDashboard(
   );
 
   return {
+    charmScore: charmBalance?.score ?? 0,
     createdActivityCount,
     participationCount,
     favoriteActivityCount: 0,
@@ -1013,6 +1109,7 @@ export async function getPublicProfileDashboard(
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
     moments: moments.map(mapProfileMoment),
+    recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };
