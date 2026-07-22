@@ -28,6 +28,12 @@ import type { ActivityStatus } from "@prisma/client";
 import { generateActivityShareToken } from "@/features/activities/utils/activityShareAccess";
 import { mergeActivityAddressPrivacy } from "@/features/activities/utils/activityAddressPrivacy";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import {
+  isLargeActivityCapacity,
+  isLowTrustScore,
+  largeActivityCapacityThreshold,
+} from "@/features/trust/trustScore";
+import { getTrustScore } from "@/features/trust/trustScoreEvents";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -39,7 +45,8 @@ type CreateActivityFailureReasonCode =
   | "event_unavailable"
   | "required_field_missing"
   | "schedule_invalid"
-  | "submit_failed";
+  | "submit_failed"
+  | "trust_score_restricted";
 
 async function trackCreateActivityFailure({
   locale,
@@ -359,6 +366,31 @@ export async function createActivityAction(
   const submittedMinParticipants = result.data.capacityLimitEnabled
     ? (result.data.minParticipants ?? null)
     : null;
+  const trustScore = await getTrustScore(prisma, profile.id);
+
+  if (
+    isLowTrustScore(trustScore) &&
+    isLargeActivityCapacity(submittedCapacity)
+  ) {
+    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型组局。`;
+
+    recordLatency({
+      status: "failed",
+      statusReason: "trust_score_restricted",
+      userProfileId: profile.id,
+    });
+
+    await trackCreateActivityFailure({
+      locale,
+      publicEventId: publicEvent?.id ?? result.data.publicEventId,
+      reasonCode: "trust_score_restricted",
+      userProfileId: profile.id,
+    });
+
+    return buildActivityErrorState(previousState, rawInput, message, {
+      capacity: [message],
+    });
+  }
 
   try {
     const activity = await prisma.activity.create({

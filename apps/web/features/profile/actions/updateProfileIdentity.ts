@@ -10,6 +10,7 @@ import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -334,6 +335,9 @@ export async function updateProfileContactBindingsAction(
   const normalizedContactEmail = normalizeGuestEmail(trimmedContactEmail);
   const normalizedPhone = normalizeGuestPhone(trimmedPhone);
   const normalizedWechatId = normalizeGuestWechatId(trimmedWechatId);
+  const shouldAwardPhoneTrustScore = Boolean(
+    normalizedPhone && !profile.normalizedPhone,
+  );
 
   if (trimmedContactEmail && !normalizedContactEmail) {
     return {
@@ -421,6 +425,12 @@ export async function updateProfileContactBindingsAction(
     );
     return { linked: 0 };
   });
+
+  if (shouldAwardPhoneTrustScore) {
+    await applyPhoneVerifiedTrustScore(profile.id).catch((error) => {
+      console.error("Failed to award phone trust score", error);
+    });
+  }
 
   revalidateNicknamePaths(locale);
 

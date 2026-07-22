@@ -3,6 +3,10 @@
 import { z } from "zod";
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  applyStandardTrustScoreEvent,
+  removeTrustScoreEvent,
+} from "@/features/trust/trustScoreEvents";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const reviewActivityCheckInSchema = z.object({
@@ -196,22 +200,16 @@ export async function reviewActivityCheckInAction(
           },
         });
 
-        await tx.trustScoreEvent.upsert({
-          where: {
-            profileId_type_activityId: {
-              activityId: result.data.activityId,
-              profileId: participation.userProfileId,
-              type: "ACTIVITY_CHECK_IN",
-            },
-          },
-          create: {
-            activityId: result.data.activityId,
-            delta: 1,
-            note: "Hangout check-in confirmed by organizer or manager",
-            profileId: participation.userProfileId,
-            type: "ACTIVITY_CHECK_IN",
-          },
-          update: {},
+        await applyStandardTrustScoreEvent(tx, {
+          activityId: result.data.activityId,
+          note: "Hangout check-in confirmed by organizer or manager",
+          profileId: participation.userProfileId,
+          type: "ACTIVITY_CHECK_IN",
+        });
+        await removeTrustScoreEvent(tx, {
+          activityId: result.data.activityId,
+          profileId: participation.userProfileId,
+          type: "NO_SHOW",
         });
 
         return { ok: true as const };
@@ -229,12 +227,10 @@ export async function reviewActivityCheckInAction(
         },
       });
 
-      await tx.trustScoreEvent.deleteMany({
-        where: {
-          activityId: result.data.activityId,
-          profileId: participation.userProfileId,
-          type: "ACTIVITY_CHECK_IN",
-        },
+      await removeTrustScoreEvent(tx, {
+        activityId: result.data.activityId,
+        profileId: participation.userProfileId,
+        type: "ACTIVITY_CHECK_IN",
       });
 
       return { ok: true as const };
@@ -329,23 +325,18 @@ export async function confirmAllPendingActivityCheckInsAction(
 
       await Promise.all(
         pendingParticipants.map((participant) =>
-          tx.trustScoreEvent.upsert({
-            where: {
-              profileId_type_activityId: {
-                activityId: result.data.activityId,
-                profileId: participant.userProfileId,
-                type: "ACTIVITY_CHECK_IN",
-              },
-            },
-            create: {
+          applyStandardTrustScoreEvent(tx, {
+            activityId: result.data.activityId,
+            note: "Hangout check-in confirmed in batch",
+            profileId: participant.userProfileId,
+            type: "ACTIVITY_CHECK_IN",
+          }).then(() =>
+            removeTrustScoreEvent(tx, {
               activityId: result.data.activityId,
-              delta: 1,
-              note: "Hangout check-in confirmed in batch",
               profileId: participant.userProfileId,
-              type: "ACTIVITY_CHECK_IN",
-            },
-            update: {},
-          }),
+              type: "NO_SHOW",
+            }),
+          ),
         ),
       );
 
@@ -443,23 +434,18 @@ export async function confirmSelectedActivityCheckInsAction(
 
         await Promise.all(
           selectedParticipants.map((participant) =>
-            tx.trustScoreEvent.upsert({
-              where: {
-                profileId_type_activityId: {
-                  activityId: result.data.activityId,
-                  profileId: participant.userProfileId,
-                  type: "ACTIVITY_CHECK_IN",
-                },
-              },
-              create: {
+            applyStandardTrustScoreEvent(tx, {
+              activityId: result.data.activityId,
+              note: "Hangout check-in confirmed from roster",
+              profileId: participant.userProfileId,
+              type: "ACTIVITY_CHECK_IN",
+            }).then(() =>
+              removeTrustScoreEvent(tx, {
                 activityId: result.data.activityId,
-                delta: 1,
-                note: "Hangout check-in confirmed from roster",
                 profileId: participant.userProfileId,
-                type: "ACTIVITY_CHECK_IN",
-              },
-              update: {},
-            }),
+                type: "NO_SHOW",
+              }),
+            ),
           ),
         );
       }
@@ -491,17 +477,15 @@ export async function confirmSelectedActivityCheckInsAction(
           },
         });
 
-        await tx.trustScoreEvent.deleteMany({
-          where: {
-            activityId: result.data.activityId,
-            profileId: {
-              in: cancelledParticipants.map(
-                (participant) => participant.userProfileId,
-              ),
-            },
-            type: "ACTIVITY_CHECK_IN",
-          },
-        });
+        await Promise.all(
+          cancelledParticipants.map((participant) =>
+            removeTrustScoreEvent(tx, {
+              activityId: result.data.activityId,
+              profileId: participant.userProfileId,
+              type: "ACTIVITY_CHECK_IN",
+            }),
+          ),
+        );
       }
 
       return {

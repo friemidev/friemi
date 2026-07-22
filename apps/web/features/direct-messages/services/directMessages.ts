@@ -5,6 +5,8 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "@/features/activities/utils/activityShareAccess";
+import { isLowTrustScore } from "@/features/trust/trustScore";
+import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -281,6 +283,37 @@ async function findExistingConversation(
   });
 }
 
+async function hasPeerReplied(
+  db: DbClient,
+  conversationId: string,
+  peerProfileId: string,
+) {
+  const reply = await db.directMessage.findFirst({
+    where: {
+      conversationId,
+      senderId: peerProfileId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return Boolean(reply);
+}
+
+async function countCurrentUserNonFriendMessages(
+  db: DbClient,
+  conversationId: string,
+  currentUserProfileId: string,
+) {
+  return db.directMessage.count({
+    where: {
+      conversationId,
+      senderId: currentUserProfileId,
+    },
+  });
+}
+
 async function assertDirectMessageSendAccess(
   db: DbClient,
   userId: string,
@@ -295,7 +328,35 @@ async function assertDirectMessageSendAccess(
       findExistingConversation(db, userId, otherUserId),
     ]);
 
-  if (!friendship && !organizerActivity && !existingConversation) {
+  if (friendship) {
+    return;
+  }
+
+  const trustScore = await getTrustScore(db, userId);
+
+  if (isLowTrustScore(trustScore)) {
+    throw new DirectMessageDomainError("NOT_FRIENDS");
+  }
+
+  if (!organizerActivity && !existingConversation) {
+    throw new DirectMessageDomainError("NOT_FRIENDS");
+  }
+
+  if (!existingConversation) {
+    return;
+  }
+
+  if (await hasPeerReplied(db, existingConversation.id, otherUserId)) {
+    return;
+  }
+
+  const currentUserMessageCount = await countCurrentUserNonFriendMessages(
+    db,
+    existingConversation.id,
+    userId,
+  );
+
+  if (currentUserMessageCount >= 2) {
     throw new DirectMessageDomainError("NOT_FRIENDS");
   }
 }
