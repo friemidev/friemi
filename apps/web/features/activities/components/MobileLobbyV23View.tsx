@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
@@ -52,6 +53,7 @@ type MobileLobbyV23ViewProps = {
   isSignedIn: boolean;
   locale: string;
   mineActivities?: ActivityCardViewModel[];
+  swipeActivities?: ActivityCardViewModel[];
 };
 
 type MobileLobbyV23CategoryFilterId = ActivityCategory | "all";
@@ -73,7 +75,6 @@ type MobileLobbyV23Copy = {
   mineEmptyTitle: string;
   mineEmptyDescription: string;
   participants: string;
-  signIn: string;
   tabs: Record<MobileLobbyV23TabId, string>;
   title: string;
 };
@@ -85,6 +86,11 @@ const mobileLobbyV23Tabs: MobileLobbyV23TabId[] = [
   "today",
   "popular",
 ];
+const publicMobileLobbyV23Tabs = mobileLobbyV23Tabs.filter(
+  (tab) => tab !== "mine" && tab !== "friends",
+);
+const mobileLobbySparseResultThreshold = 3;
+const mobileLobbySwipePreviewLimit = 8;
 
 const mobileLobbyV23CategoryIcons = {
   FOOD: Utensils,
@@ -198,7 +204,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       mineEmptyDescription:
         "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
       participants: "pers.",
-      signIn: "Se connecter",
       tabs: {
         nearby: "Proche",
         friends: "Amis",
@@ -222,7 +227,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       mineEmptyDescription:
         "Sign in to see hangouts you're hosting or joining.",
       participants: "people",
-      signIn: "Sign in",
       tabs: {
         nearby: "Nearby",
         friends: "Friends",
@@ -244,7 +248,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     mineEmptyTitle: "暂无我的组局",
     mineEmptyDescription: "登录后可以看到你发起和参加的组局。",
     participants: "人",
-    signIn: "登录",
     tabs: {
       nearby: "附近",
       friends: "好友",
@@ -282,6 +285,41 @@ function dedupeActivities(activities: ActivityCardViewModel[]) {
 
     return true;
   });
+}
+
+function getPrioritizedMobileLobbySwipeActivities({
+  activities,
+  category,
+  excludedActivities,
+}: {
+  activities: ActivityCardViewModel[];
+  category: MobileLobbyV23CategoryFilterId;
+  excludedActivities: ActivityCardViewModel[];
+}) {
+  const seen = new Set(excludedActivities.map(getActivityKey));
+  const matchingCategoryActivities: ActivityCardViewModel[] = [];
+  const fallbackActivities: ActivityCardViewModel[] = [];
+
+  for (const activity of activities) {
+    const key = getActivityKey(activity);
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+
+    if (category !== "all" && activity.category === category) {
+      matchingCategoryActivities.push(activity);
+    } else {
+      fallbackActivities.push(activity);
+    }
+  }
+
+  return [...matchingCategoryActivities, ...fallbackActivities].slice(
+    0,
+    mobileLobbySwipePreviewLimit,
+  );
 }
 
 function getParisDateKey(value: string | Date) {
@@ -642,6 +680,7 @@ export function MobileLobbyV23View({
   isSignedIn,
   locale,
   mineActivities,
+  swipeActivities = [],
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
   const [activeCategory, setActiveCategory] =
@@ -666,10 +705,16 @@ export function MobileLobbyV23View({
   const activeCategoryLabel =
     categoryFilterOptions.find((option) => option.id === activeCategory)
       ?.label ?? getMobileLobbyAllLabel(locale);
+  const visibleTabs = isSignedIn
+    ? mobileLobbyV23Tabs
+    : publicMobileLobbyV23Tabs;
+  const displayedActiveTab = visibleTabs.includes(activeTab)
+    ? activeTab
+    : "nearby";
   const visibleActivities = filterMobileLobbyActivitiesByPrice(
     filterMobileLobbyActivitiesByCategory(
       getVisibleActivities({
-        activeTab,
+        activeTab: displayedActiveTab,
         activities,
         friendActivities,
         mineActivities,
@@ -678,6 +723,31 @@ export function MobileLobbyV23View({
     ),
     initialFreeOnly,
   ).slice(0, 30);
+  const canShowColdStartSwipe =
+    displayedActiveTab !== "friends" && displayedActiveTab !== "mine";
+  const shouldShowColdStartSwipe =
+    canShowColdStartSwipe &&
+    (visibleActivities.length === 0 ||
+      (activeCategory !== "all" &&
+        visibleActivities.length < mobileLobbySparseResultThreshold));
+  const coldStartSwipeActivities = useMemo(
+    () =>
+      shouldShowColdStartSwipe
+        ? getPrioritizedMobileLobbySwipeActivities({
+            activities: [...swipeActivities, ...activities],
+            category: activeCategory,
+            excludedActivities:
+              visibleActivities.length > 0 ? visibleActivities : [],
+          })
+        : [],
+    [
+      activeCategory,
+      activities,
+      shouldShowColdStartSwipe,
+      swipeActivities,
+      visibleActivities,
+    ],
+  );
   const handleSelectCategory = useCallback(
     (category: MobileLobbyV23CategoryFilterId) => {
       setActiveCategory(category);
@@ -686,22 +756,16 @@ export function MobileLobbyV23View({
     },
     [],
   );
-  const showFriendSignIn =
-    (activeTab === "friends" || activeTab === "mine") && !isSignedIn;
-  const signInPromptDescription =
-    activeTab === "mine"
-      ? copy.mineEmptyDescription
-      : copy.friendEmptyDescription;
   const emptyTitle =
-    activeTab === "friends"
+    displayedActiveTab === "friends"
       ? copy.friendEmptyTitle
-      : activeTab === "mine"
+      : displayedActiveTab === "mine"
         ? copy.mineEmptyTitle
         : copy.emptyTitle;
   const emptyDescription =
-    activeTab === "friends"
+    displayedActiveTab === "friends"
       ? copy.friendEmptyDescription
-      : activeTab === "mine"
+      : displayedActiveTab === "mine"
         ? copy.mineEmptyDescription
         : copy.emptyDescription;
 
@@ -751,12 +815,14 @@ export function MobileLobbyV23View({
           aria-label={copy.title}
           className="-mx-5 mt-9 flex gap-8 overflow-x-auto border-b border-[#EEEDE4] px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {mobileLobbyV23Tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <Link
-              aria-current={activeTab === tab ? "page" : undefined}
+              aria-current={displayedActiveTab === tab ? "page" : undefined}
               className={cn(
                 "relative shrink-0 pb-4 text-[19px] font-black tracking-normal transition",
-                activeTab === tab ? "text-[#111210]" : "text-[#111210]/28",
+                displayedActiveTab === tab
+                  ? "text-[#111210]"
+                  : "text-[#111210]/28",
               )}
               href={getMobileLobbyTabHref({
                 category: activeCategory,
@@ -767,45 +833,60 @@ export function MobileLobbyV23View({
               key={tab}
             >
               {copy.tabs[tab]}
-              {activeTab === tab ? (
+              {displayedActiveTab === tab ? (
                 <span className="absolute bottom-0 left-0 h-1.5 w-full rounded-full bg-[#369758] shadow-[0_7px_15px_rgba(54,151,88,0.28)]" />
               ) : null}
             </Link>
           ))}
         </nav>
 
-        {showFriendSignIn ? (
-          <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
-            <p className="text-[18px] font-black">{emptyTitle}</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
-              {signInPromptDescription}
-            </p>
-            <Link
-              href={withLocale(locale, "/sign-in")}
-              className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#096B45] px-5 text-sm font-black text-white"
-            >
-              {copy.signIn}
-            </Link>
-          </div>
-        ) : visibleActivities.length > 0 ? (
-          <div className="mt-5 grid gap-5">
-            {visibleActivities.map((activity) => (
-              <MobileLobbyV23ActivityRow
-                activity={activity}
-                copy={copy}
-                key={getActivityKey(activity)}
-                locale={locale}
-              />
-            ))}
-          </div>
+        {visibleActivities.length > 0 ? (
+          <>
+            <div className="mt-5 grid gap-5">
+              {visibleActivities.map((activity) => (
+                <MobileLobbyV23ActivityRow
+                  activity={activity}
+                  copy={copy}
+                  key={getActivityKey(activity)}
+                  locale={locale}
+                />
+              ))}
+            </div>
+            {coldStartSwipeActivities.length > 0 ? (
+              <div className="mt-7 border-t border-[#EEEDE4] pb-10 pt-5">
+                <ActivitySwipeDiscovery
+                  activities={coldStartSwipeActivities}
+                  favoriteRedirectPath="/lobby"
+                  isAuthenticated={isSignedIn}
+                  locale={locale}
+                  shuffleDeck={false}
+                  sourceSurface="activity_list"
+                />
+              </div>
+            ) : null}
+          </>
         ) : (
-          <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
-            <MapPin className="mx-auto h-7 w-7 text-[#096B45]" />
-            <p className="mt-3 text-[18px] font-black">{emptyTitle}</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
-              {emptyDescription}
-            </p>
-          </div>
+          <>
+            <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
+              <MapPin className="mx-auto h-7 w-7 text-[#096B45]" />
+              <p className="mt-3 text-[18px] font-black">{emptyTitle}</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
+                {emptyDescription}
+              </p>
+            </div>
+            {coldStartSwipeActivities.length > 0 ? (
+              <div className="mt-7 pb-10">
+                <ActivitySwipeDiscovery
+                  activities={coldStartSwipeActivities}
+                  favoriteRedirectPath="/lobby"
+                  isAuthenticated={isSignedIn}
+                  locale={locale}
+                  shuffleDeck={false}
+                  sourceSurface="activity_list"
+                />
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </section>

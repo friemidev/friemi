@@ -661,7 +661,7 @@ export function ActivitySwipeDiscovery({
         className={cn(
           "relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
           !isHomeVariant
-            ? "mt-0 h-[20.75rem] w-full max-w-[52rem] lg:mx-0"
+            ? "mt-0 h-[18rem] w-full max-w-[52rem] md:h-[20.75rem] lg:mx-0"
             : null,
           isHomeVariant
             ? "mt-0 h-[var(--home-swipe-height)] max-w-none md:mx-0"
@@ -741,7 +741,7 @@ export function ActivitySwipeDiscovery({
                 className={cn(
                   "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.13)] ring-1 ring-[#D6D5B2]/75",
                   !isHomeVariant
-                    ? "grid grid-cols-[minmax(18rem,0.92fr)_minmax(0,1fr)] rounded-[1.35rem] shadow-[0_20px_50px_rgba(29,29,27,0.12)]"
+                    ? "rounded-[1.35rem] shadow-[0_20px_50px_rgba(29,29,27,0.12)] md:grid md:grid-cols-[minmax(18rem,0.92fr)_minmax(0,1fr)]"
                     : null,
                   !isHomeVariant && isActivityInfo
                     ? "bg-[#F8FBFF] ring-[#BFD4F4]"
@@ -771,7 +771,7 @@ export function ActivitySwipeDiscovery({
                 <div
                   className={cn(
                     "relative h-32 overflow-hidden bg-[#DEEBFF]",
-                    !isHomeVariant ? "h-full min-h-0 bg-[#EAF2FF]" : null,
+                    !isHomeVariant ? "bg-[#EAF2FF] md:h-full md:min-h-0" : null,
                     !isHomeVariant && !isActivityInfo ? "bg-[#FFEEDC]" : null,
                     isHomeVariant ? "h-[var(--home-swipe-cover-height)]" : null,
                     isHomeVariant && isActivityInfo ? "bg-[#EAF2FF]" : null,
@@ -822,7 +822,7 @@ export function ActivitySwipeDiscovery({
                       className={cn(
                         "rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70",
                         !isHomeVariant
-                          ? "bg-white/92 text-[#1D1D1B] ring-white"
+                          ? "bg-[#1D1D1B]/88 text-white ring-white/75 backdrop-blur-sm md:bg-white/92 md:text-[#1D1D1B] md:ring-white"
                           : null,
                         isHomeVariant
                           ? "px-2 py-0.5 text-[9px] md:px-2.5 md:py-1 md:text-[10px]"
@@ -835,7 +835,7 @@ export function ActivitySwipeDiscovery({
                       className={cn(
                         "inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35",
                         !isHomeVariant
-                          ? "bg-white/92 shadow-[0_8px_22px_rgba(0,0,0,0.22)] ring-white"
+                          ? "bg-[#156240]/92 text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] ring-white/75 backdrop-blur-sm md:bg-white/92 md:text-[#1D1D1B] md:shadow-[0_8px_22px_rgba(0,0,0,0.22)] md:ring-white"
                           : null,
                         isHomeVariant
                           ? "min-h-[1.15rem] px-2 py-0.5 text-[9px] md:min-h-[1.55rem] md:px-2.5 md:py-1 md:text-[10px]"
@@ -875,7 +875,7 @@ export function ActivitySwipeDiscovery({
                   className={cn(
                     "grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5",
                     !isHomeVariant
-                      ? "h-full grid-rows-[auto_1fr_auto] gap-4 p-5"
+                      ? "md:h-full md:grid-rows-[auto_1fr_auto] md:gap-4 md:p-5"
                       : null,
                     isHomeVariant
                       ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-2 p-3 md:gap-3 md:p-4"
@@ -883,7 +883,7 @@ export function ActivitySwipeDiscovery({
                   )}
                 >
                   {!isHomeVariant ? (
-                    <div className="flex min-w-0 items-center justify-between gap-3">
+                    <div className="hidden min-w-0 items-center justify-between gap-3 md:flex">
                       <span
                         className={cn(
                           "inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold",
@@ -905,7 +905,7 @@ export function ActivitySwipeDiscovery({
                         "text-lg font-semibold leading-[1.12] text-ink",
                         isHomeVariant
                           ? "line-clamp-3 text-[15px] leading-[1.13] md:line-clamp-2 md:text-xl md:leading-[1.14]"
-                          : "line-clamp-3 text-[1.55rem] leading-[1.06]",
+                          : "line-clamp-2 md:line-clamp-3 md:text-[1.55rem] md:leading-[1.06]",
                       )}
                     >
                       {activity.title}
@@ -913,7 +913,9 @@ export function ActivitySwipeDiscovery({
                     <div
                       className={cn(
                         "mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600",
-                        !isHomeVariant ? "mt-4 gap-2 text-sm leading-5" : null,
+                        !isHomeVariant
+                          ? "md:mt-4 md:gap-2 md:text-sm md:leading-5"
+                          : null,
                         isHomeVariant
                           ? "mt-1.5 grid-cols-1 text-[11px] leading-4 md:mt-2 md:text-sm md:leading-6"
                           : null,
@@ -1056,7 +1058,7 @@ export function ActivitySwipeDiscovery({
       <div
         className={cn(
           "mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500",
-          isHomeVariant ? "hidden" : null,
+          isHomeVariant ? "hidden" : "hidden md:flex",
         )}
       >
         {loadMoreFailed && onRetryLoadMore ? (

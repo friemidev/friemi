@@ -177,13 +177,13 @@ export default async function ActivityLobbyPage({
           initialFreeOnly={initialFreeOnly}
           isSignedIn={false}
           locale={locale}
+          swipeActivities={swipeActivities}
         />
         <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
           <ActivityLobbyPreviewView
             activities={previewActivities}
             initialCategoryFilter={initialCategoryFilter}
             locale={locale}
-            swipeActivities={swipeActivities}
           />
         </PageContainer>
       </>
@@ -255,6 +255,7 @@ export default async function ActivityLobbyPage({
         isSignedIn
         locale={locale}
         mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
+        swipeActivities={swipeActivities}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView
@@ -272,7 +273,6 @@ export default async function ActivityLobbyPage({
           initialStatusFilter={initialStatusFilter}
           starterActivities={lobby.starterActivities}
           locale={locale}
-          swipeActivities={swipeActivities}
         />
       </PageContainer>
     </>
