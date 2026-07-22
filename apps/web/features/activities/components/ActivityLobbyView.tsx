@@ -151,12 +151,12 @@ function getLobbySwipeActivityKey(activity: ActivityCardViewModel) {
   return `activity:${activity.id}`;
 }
 
-function getLobbySwipePublicEventId(activity: ActivityCardViewModel) {
-  if (activity.type !== "PUBLIC_EVENT") {
-    return null;
+function getLobbySwipeExcludeId(activity: ActivityCardViewModel) {
+  if (isPublicEventCard(activity)) {
+    return `public:${activity.publicEventId ?? activity.id}`;
   }
 
-  return activity.publicEventId ?? activity.id;
+  return `activity:${activity.id}`;
 }
 
 function mergeUniqueLobbySwipeActivities(
@@ -1287,10 +1287,10 @@ export function LazyLobbySwipeDiscovery({
 
       if (mode === "append") {
         activitiesRef.current.forEach((activity) => {
-          const publicEventId = getLobbySwipePublicEventId(activity);
+          const excludeId = getLobbySwipeExcludeId(activity);
 
-          if (publicEventId) {
-            params.append("exclude", publicEventId);
+          if (excludeId) {
+            params.append("exclude", excludeId);
           }
         });
       }
@@ -1774,7 +1774,8 @@ export function ActivityLobbyView({
 }: ActivityLobbyViewProps) {
   const appCopy = getCopy(locale);
   const t = appCopy.activityLobby;
-  const [activeFilter, setActiveFilter] = useState<LobbyFilterId>(initialFilter);
+  const [activeFilter, setActiveFilter] =
+    useState<LobbyFilterId>(initialFilter);
   const [activeStatusFilter, setActiveStatusFilter] =
     useState<LobbyStatusFilterId>(initialStatusFilter);
   const [activeTypeFilter, setActiveTypeFilter] = useState<LobbyTypeFilterId>(

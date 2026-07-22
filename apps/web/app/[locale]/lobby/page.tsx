@@ -14,6 +14,7 @@ import {
   createEmptyActivityLobbyFeedPage,
   getActivityLobby,
   getActivityLobbyPreview,
+  getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { brand } from "@/lib/brand";
@@ -137,17 +138,29 @@ export default async function ActivityLobbyPage({
   const profile = viewerState.profile;
 
   if (!profile) {
-    const previewActivities = await perf.measure("lobby.preview", () =>
-      getActivityLobbyPreview().catch((error: unknown) => {
-        console.error("Failed to load public activity lobby preview", error);
+    const [previewActivities, swipeActivities] = await Promise.all([
+      perf.measure("lobby.preview", () =>
+        getActivityLobbyPreview().catch((error: unknown) => {
+          console.error("Failed to load public activity lobby preview", error);
 
-        return [];
-      }),
-    );
+          return [];
+        }),
+      ),
+      perf.measure("lobby.swipe", () =>
+        getLobbySwipePublicEventActivities(null, { limit: 8 }).catch(
+          (error: unknown) => {
+            console.error("Failed to load lobby swipe activities", error);
+
+            return [];
+          },
+        ),
+      ),
+    ]);
     perf.finish(
       {
         hasViewer: false,
         previewCount: previewActivities.length,
+        swipeCount: swipeActivities.length,
       },
       {
         route: `/${locale}/lobby`,
@@ -164,6 +177,7 @@ export default async function ActivityLobbyPage({
           initialFreeOnly={initialFreeOnly}
           isSignedIn={false}
           locale={locale}
+          swipeActivities={swipeActivities}
         />
         <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
           <ActivityLobbyPreviewView
@@ -176,23 +190,34 @@ export default async function ActivityLobbyPage({
     );
   }
 
-  const lobby = await perf.measure("lobby.initialData", () =>
-    getActivityLobby(profile.id).catch((error: unknown) => {
-      console.error("Failed to load activity lobby", error);
+  const [lobby, swipeActivities] = await Promise.all([
+    perf.measure("lobby.initialData", () =>
+      getActivityLobby(profile.id).catch((error: unknown) => {
+        console.error("Failed to load activity lobby", error);
 
-      return {
-        allActivities: [],
-        allActivityFeed: createEmptyActivityLobbyFeedPage(),
-        openActivities: [],
-        createdActivities: [],
-        joinedActivities: [],
-        favoriteActivities: [],
-        friendHostedActivities: [],
-        friendJoinedActivities: [],
-        starterActivities: [],
-      };
-    }),
-  );
+        return {
+          allActivities: [],
+          allActivityFeed: createEmptyActivityLobbyFeedPage(),
+          openActivities: [],
+          createdActivities: [],
+          joinedActivities: [],
+          favoriteActivities: [],
+          friendHostedActivities: [],
+          friendJoinedActivities: [],
+          starterActivities: [],
+        };
+      }),
+    ),
+    perf.measure("lobby.swipe", () =>
+      getLobbySwipePublicEventActivities(profile.id, { limit: 8 }).catch(
+        (error: unknown) => {
+          console.error("Failed to load lobby swipe activities", error);
+
+          return [];
+        },
+      ),
+    ),
+  ]);
   perf.finish(
     {
       createdCount: lobby.createdActivities.length,
@@ -200,6 +225,7 @@ export default async function ActivityLobbyPage({
       favoriteCount: lobby.favoriteActivities.length,
       hasViewer: true,
       joinedCount: lobby.joinedActivities.length,
+      swipeCount: swipeActivities.length,
     },
     {
       route: `/${locale}/lobby`,
@@ -229,6 +255,7 @@ export default async function ActivityLobbyPage({
         isSignedIn
         locale={locale}
         mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
+        swipeActivities={swipeActivities}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView

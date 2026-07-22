@@ -17,7 +17,7 @@ function parseLobbySwipeLimit(value: string | null) {
   return Math.min(Math.max(Math.floor(parsed), 1), 24);
 }
 
-function parseExcludedPublicEventIds(searchParams: URLSearchParams) {
+function parseExcludedSwipeIds(searchParams: URLSearchParams) {
   return Array.from(
     new Set(
       searchParams
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const viewerProfileId = await getOptionalAuthenticatedProfileId();
     const page = await getLobbySwipePublicEventActivityPage(viewerProfileId, {
-      excludePublicEventIds: parseExcludedPublicEventIds(searchParams),
+      excludeIds: parseExcludedSwipeIds(searchParams),
       limit: parseLobbySwipeLimit(searchParams.get("limit")),
     });
 
