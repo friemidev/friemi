@@ -102,6 +102,13 @@ export function getAndroidAuthCompleteHref(
   locale: string,
   redirectTarget?: string | string[] | null,
 ) {
+  return getNativeAuthCompleteHref(locale, redirectTarget);
+}
+
+export function getNativeAuthCompleteHref(
+  locale: string,
+  redirectTarget?: string | string[] | null,
+) {
   const target = normalizeAuthRedirectTarget(locale, redirectTarget);
   const query = new URLSearchParams({
     [androidAuthCompleteTargetParamName]: target,

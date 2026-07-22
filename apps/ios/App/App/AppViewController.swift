@@ -4,18 +4,176 @@ import WebKit
 
 class AppViewController: CAPBridgeViewController {
     private var capacitorUIDelegate: WKUIDelegate?
+    private let fallbackBaseUrl = "https://www.friemi.com"
+    private let fallbackLocale = "zh-CN"
+    private let supportedLocales = ["zh-CN", "en", "fr"]
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(FriemiNavigationPlugin())
         capacitorUIDelegate = webView?.uiDelegate
         webView?.uiDelegate = self
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAuthCompleteNotification(_:)),
+            name: .friemiAuthCompleteURL,
+            object: nil
+        )
         CAPLog.print("Friemi iOS navigation plugin registered v2")
     }
 
     override func viewDidLoad() {
         installFriemiNavigationGuard()
         super.viewDidLoad()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        consumePendingAuthCompleteURL()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleAuthCompleteNotification(_ notification: Notification) {
+        guard let url = notification.object as? URL else {
+            consumePendingAuthCompleteURL()
+            return
+        }
+
+        openAuthCompleteURL(url)
+    }
+
+    private func consumePendingAuthCompleteURL() {
+        guard let rawUrl = UserDefaults.standard.string(forKey: friemiPendingAuthCompleteURLKey),
+              let url = URL(string: rawUrl)
+        else {
+            return
+        }
+
+        UserDefaults.standard.removeObject(forKey: friemiPendingAuthCompleteURLKey)
+        openAuthCompleteURL(url)
+    }
+
+    private func openAuthCompleteURL(_ url: URL) {
+        guard let targetUrl = buildWebUrlFromAuthCompleteURL(url) else {
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.load(URLRequest(url: targetUrl))
+        }
+    }
+
+    private func buildWebUrlFromAuthCompleteURL(_ url: URL) -> URL? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let target = components.queryItems?.first(where: { $0.name == "target" })?.value
+        else {
+            return nil
+        }
+
+        let route = normalizeAuthCompleteTarget(target)
+        let webBaseUrl = getTrustedWebBase(from: components) ?? getCurrentBaseUrl()
+        guard var webComponents = URLComponents(string: "\(webBaseUrl)\(route)") else {
+            return nil
+        }
+
+        var queryItems = webComponents.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "__friemi_android_auth_return", value: "1"))
+        queryItems.append(
+            URLQueryItem(name: "__friemi_ios_auth_ts", value: String(Int(Date().timeIntervalSince1970 * 1000)))
+        )
+        webComponents.queryItems = queryItems
+
+        return webComponents.url
+    }
+
+    private func getTrustedWebBase(from components: URLComponents) -> String? {
+        guard let rawWebBase = components.queryItems?.first(where: { $0.name == "webBase" })?.value,
+              let webBaseComponents = URLComponents(string: rawWebBase),
+              let scheme = webBaseComponents.scheme,
+              let host = webBaseComponents.host,
+              (scheme == "https" || scheme == "http"),
+              shouldKeepInApp(host)
+        else {
+            return nil
+        }
+
+        var originComponents = URLComponents()
+        originComponents.scheme = scheme
+        originComponents.host = host
+        originComponents.port = webBaseComponents.port
+
+        return originComponents.url?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private func normalizeAuthCompleteTarget(_ target: String) -> String {
+        let trimmedTarget = target.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedTarget.isEmpty,
+              !trimmedTarget.lowercased().hasPrefix("http://"),
+              !trimmedTarget.lowercased().hasPrefix("https://"),
+              !trimmedTarget.hasPrefix("//")
+        else {
+            return "/\(getCurrentLocale())/mobile-home"
+        }
+
+        var route = trimmedTarget.hasPrefix("/") ? trimmedTarget : "/\(trimmedTarget)"
+        let path = route.split(separator: "?", maxSplits: 1).first.map(String.init) ?? route
+
+        if isAuthPath(path) {
+            return "/\(getCurrentLocale())/mobile-home"
+        }
+
+        if getLocaleFromPath(path) == nil {
+            route = "/\(getCurrentLocale())\(route)"
+        }
+
+        return route
+    }
+
+    private func isAuthPath(_ path: String) -> Bool {
+        let segments = path.split(separator: "/").map(String.init)
+        let pathWithoutLocale = supportedLocales.contains(segments.first ?? "")
+            ? "/" + segments.dropFirst().joined(separator: "/")
+            : path
+
+        return pathWithoutLocale == "/sign-in" ||
+            pathWithoutLocale.hasPrefix("/sign-in/") ||
+            pathWithoutLocale == "/sign-up" ||
+            pathWithoutLocale.hasPrefix("/sign-up/")
+    }
+
+    private func getLocaleFromPath(_ path: String) -> String? {
+        let firstSegment = path.split(separator: "/").first.map(String.init)
+        return supportedLocales.first(where: { $0 == firstSegment })
+    }
+
+    private func getCurrentLocale() -> String {
+        guard let url = webView?.url else {
+            return fallbackLocale
+        }
+
+        return getLocaleFromPath(url.path) ?? fallbackLocale
+    }
+
+    private func getCurrentBaseUrl() -> String {
+        guard let url = webView?.url,
+              let scheme = url.scheme,
+              let host = url.host,
+              (scheme == "https" || scheme == "http"),
+              shouldKeepInApp(host)
+        else {
+            return fallbackBaseUrl
+        }
+
+        var components = URLComponents()
+        components.scheme = scheme
+        components.host = host
+        components.port = url.port
+
+        return components.url?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) ?? fallbackBaseUrl
     }
 
     private func installFriemiNavigationGuard() {

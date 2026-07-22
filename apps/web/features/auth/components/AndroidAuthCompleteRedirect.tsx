@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrandLoader } from "@/components/ui/BrandLoader";
 
 type AndroidAuthCompleteRedirectProps = {
@@ -13,18 +13,26 @@ export function AndroidAuthCompleteRedirect({
   locale,
   target,
 }: AndroidAuthCompleteRedirectProps) {
-  const appHref = useMemo(() => {
+  const fallbackAppHref = useMemo(() => {
     const query = new URLSearchParams({ target });
     return `friemi://auth-complete?${query.toString()}`;
   }, [target]);
+  const [appHref, setAppHref] = useState(fallbackAppHref);
 
   useEffect(() => {
+    const query = new URLSearchParams({
+      target,
+      webBase: window.location.origin,
+    });
+    const nextAppHref = `friemi://auth-complete?${query.toString()}`;
+    setAppHref(nextAppHref);
+
     const timeout = window.setTimeout(() => {
-      window.location.replace(appHref);
+      window.location.replace(nextAppHref);
     }, 180);
 
     return () => window.clearTimeout(timeout);
-  }, [appHref]);
+  }, [target]);
 
   const copy =
     locale === "zh-CN"

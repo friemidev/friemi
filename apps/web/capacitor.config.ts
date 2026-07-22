@@ -52,7 +52,6 @@ const config: CapacitorConfig = {
     : {}),
   server: {
     url: isIOSCommand ? iosServerUrl : "https://friemi.com/zh-CN/mobile-home",
-    ...(isIOSCommand ? { errorPath: "error.html" } : {}),
     cleartext: isIOSCommand && iosServerUrl.startsWith("http://"),
     allowNavigation: isIOSCommand
       ? iosAllowNavigationWithServerHost
