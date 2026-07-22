@@ -4,8 +4,8 @@ import { ClerkAuthMountGuard } from "@/features/auth/components/ClerkAuthMountGu
 import { WechatWebViewGuide } from "@/features/auth/components/WechatWebViewGuide";
 import {
   authRedirectParamName,
-  getAndroidAuthCompleteHref,
   getAuthRedirectFallback,
+  getNativeAuthCompleteHref,
   getSignInHref,
   normalizeAuthRedirectTarget,
 } from "@/lib/auth-redirect";
@@ -31,6 +31,10 @@ function isFriemiAndroidApp(userAgent: string | null) {
   return /FriemiAndroid\//i.test(userAgent ?? "");
 }
 
+function isFriemiIOSApp(userAgent: string | null) {
+  return /FriemiIOS\//i.test(userAgent ?? "");
+}
+
 export default async function SignUpPage({
   params,
   searchParams,
@@ -45,9 +49,10 @@ export default async function SignUpPage({
   const t = getCopy(locale);
   const requestHeaders = await headers();
   const userAgent = requestHeaders.get("user-agent");
-  const forceRedirectUrl = isFriemiAndroidApp(userAgent)
-    ? getAndroidAuthCompleteHref(locale, redirectTarget)
-    : redirectTarget;
+  const forceRedirectUrl =
+    isFriemiAndroidApp(userAgent) || isFriemiIOSApp(userAgent)
+      ? getNativeAuthCompleteHref(locale, redirectTarget)
+      : redirectTarget;
 
   if (isWechatWebView(userAgent)) {
     return (

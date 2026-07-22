@@ -58,13 +58,6 @@ const sharedAuthAppearance = {
   },
 };
 
-const iosHiddenSocialElements = {
-  dividerRow: "hidden",
-  socialButtons: "hidden",
-  socialButtonsBlockButton: "hidden",
-  socialButtonsBlockButtonText: "hidden",
-};
-
 export function ClerkAuthMountGuard({
   fallbackRedirectUrl,
   forceRedirectUrl,
@@ -74,11 +67,9 @@ export function ClerkAuthMountGuard({
   locale,
 }: ClerkAuthMountGuardProps) {
   const [mounted, setMounted] = useState(false);
-  const [isFriemiIOSApp, setIsFriemiIOSApp] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setIsFriemiIOSApp(/FriemiIOS\//i.test(window.navigator.userAgent));
   }, []);
 
   const authAppearance = {
@@ -86,7 +77,6 @@ export function ClerkAuthMountGuard({
     elements: {
       ...sharedAuthAppearance.elements,
       ...(mode === "sign-in" ? { header: "hidden" } : {}),
-      ...(isFriemiIOSApp ? iosHiddenSocialElements : {}),
     },
   };
 
@@ -110,6 +100,8 @@ export function ClerkAuthMountGuard({
         forceRedirectUrl={forceRedirectUrl}
         path={path}
         routing="path"
+        signUpFallbackRedirectUrl={forceRedirectUrl}
+        signUpForceRedirectUrl={forceRedirectUrl}
         signUpUrl={secondaryUrl}
       />
     );
@@ -122,6 +114,8 @@ export function ClerkAuthMountGuard({
       forceRedirectUrl={forceRedirectUrl}
       path={path}
       routing="path"
+      signInFallbackRedirectUrl={fallbackRedirectUrl}
+      signInForceRedirectUrl={forceRedirectUrl}
       signInUrl={secondaryUrl}
     />
   );
