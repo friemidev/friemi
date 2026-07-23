@@ -15,6 +15,7 @@ type ActivityCoverUploadProps = {
   label?: string;
   locale: string;
   name?: string;
+  onAuthRequired?: () => void;
   onChange?: (url: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
   signInHref?: string;
@@ -42,6 +43,7 @@ export function ActivityCoverUpload({
   label,
   locale,
   name = "coverImageUrl",
+  onAuthRequired,
   onChange,
   onUploadingChange,
   signInHref,
@@ -97,6 +99,7 @@ export function ActivityCoverUpload({
 
   async function uploadFile(file: File) {
     if (signInHref) {
+      onAuthRequired?.();
       window.location.assign(signInHref);
       return;
     }

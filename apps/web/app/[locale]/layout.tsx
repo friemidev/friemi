@@ -14,6 +14,7 @@ import { MobileScrollProgress } from "@/components/navigation/MobileScrollProgre
 import { RouteProgress } from "@/components/navigation/RouteProgress";
 import { RouteTransitionMetrics } from "@/components/navigation/RouteTransitionMetrics";
 import { IdleRoutePrefetcher } from "@/components/navigation/IdleRoutePrefetcher";
+import { FriemiAlertProvider } from "@/components/ui/FriemiAlertProvider";
 import { NotificationBadgeProvider } from "@/features/notifications/components/NotificationBadgeProvider";
 import { AndroidAppBridge } from "@/features/mobile/components/AndroidAppBridge";
 import { IOSAppBridge } from "@/features/mobile/components/IOSAppBridge";
@@ -148,6 +149,7 @@ export default async function LocaleLayout({
                 locale={locale}
               />
               <MobileNav locale={locale} />
+              <FriemiAlertProvider locale={locale} />
             </div>
             <OrientationLockOverlay locale={locale} />
           </MobileNavSectionProvider>

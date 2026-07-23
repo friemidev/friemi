@@ -16,7 +16,8 @@ const priceTypeValues = Object.keys(priceTypes) as [
   ...(keyof typeof priceTypes)[],
 ];
 const activityCategorySchema = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
   z.enum(activityCategoryValues, {
     invalid_type_error: "请选择组局主题",
     required_error: "请选择组局主题",
@@ -42,7 +43,12 @@ const optionalImageUrl = z
   .trim()
   .max(1000, "图片地址过长")
   .refine(
-    (value) => value.length === 0 || /^https?:\/\/.+/i.test(value),
+    (value) =>
+      value.length === 0 ||
+      /^https?:\/\/.+/i.test(value) ||
+      /^\/illustrations\/(?:design\.png|(?:png|vector)\/[A-Za-z0-9_-]+\.(?:png|svg))$/i.test(
+        value,
+      ),
     "图片地址无效",
   )
   .transform((value) => (value.length > 0 ? value : null));
@@ -81,10 +87,13 @@ export const createActivitySchema = z
         typeof value === "string"
           ? clampActivityDescription(value, MAX_ACTIVITY_DESCRIPTION_LENGTH)
           : value,
-      z.string().trim().max(
-        MAX_ACTIVITY_DESCRIPTION_LENGTH,
-        `描述最多 ${MAX_ACTIVITY_DESCRIPTION_LENGTH} 个字`,
-      ),
+      z
+        .string()
+        .trim()
+        .max(
+          MAX_ACTIVITY_DESCRIPTION_LENGTH,
+          `描述最多 ${MAX_ACTIVITY_DESCRIPTION_LENGTH} 个字`,
+        ),
     ),
     itinerary: optionalText,
     coverImageUrl: optionalImageUrl,

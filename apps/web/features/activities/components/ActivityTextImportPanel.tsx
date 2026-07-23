@@ -128,18 +128,18 @@ export function ActivityTextImportPanel({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-[#1D1D1B]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6"
+          className="fixed inset-0 z-[120] flex items-end justify-center overflow-hidden bg-[#1D1D1B]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6"
           role="presentation"
           onClick={() => setIsOpen(false)}
         >
           <section
             aria-labelledby="activity-text-import-title"
             aria-modal="true"
-            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.15rem] border border-[#D6D5B2] bg-[#FEFFF9] shadow-[0_24px_80px_rgba(29,29,27,0.22)]"
+            className="max-h-[calc(100svh-env(safe-area-inset-bottom)-1.5rem)] w-full max-w-[min(32rem,calc(100vw-1.5rem))] overflow-y-auto overflow-x-hidden rounded-[1.15rem] border border-[#D6D5B2] bg-[#FEFFF9] shadow-[0_24px_80px_rgba(29,29,27,0.22)]"
             role="dialog"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="grid gap-4 px-4 py-4 sm:px-5 sm:py-5">
+            <div className="grid min-w-0 gap-4 px-4 py-4 sm:px-5 sm:py-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E7F1E7] text-[#156240]">
@@ -210,19 +210,19 @@ export function ActivityTextImportPanel({
               </div>
 
               {result ? (
-                <div className="grid gap-3 border-t border-[#E9E2CE] pt-3">
+                <div className="grid min-w-0 gap-3 overflow-hidden border-t border-[#E9E2CE] pt-3">
                   {result.fields.length ? (
                     <>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex min-w-0 flex-wrap gap-2 overflow-hidden">
                         {result.fields.map((field) => (
                           <span
                             key={field.key}
-                            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#F1F2EC] px-3 py-1.5 text-xs font-bold text-zinc-700 ring-1 ring-[#D6D5B2]"
+                            className="inline-flex max-w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-full bg-[#F1F2EC] px-3 py-1.5 text-xs font-bold text-zinc-700 ring-1 ring-[#D6D5B2]"
                           >
                             <span className="shrink-0 text-[#156240]">
                               {getImportFieldLabel(field.key, locale)}
                             </span>
-                            <span className="min-w-0 truncate">
+                            <span className="min-w-0 max-w-[min(15rem,52vw)] truncate">
                               {formatImportValue(
                                 field.key,
                                 field.value,
