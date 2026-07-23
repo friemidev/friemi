@@ -584,11 +584,36 @@ function withPrivateNoIndex(metadata: Metadata): Metadata {
   };
 }
 
+function withArchiveNoIndex(metadata: Metadata): Metadata {
+  return {
+    ...metadata,
+    robots: {
+      follow: true,
+      index: false,
+    },
+  };
+}
+
+function isIndexableActivityDate({
+  endAt,
+  startAt,
+  status,
+}: {
+  endAt: string | null;
+  startAt: string;
+  status: string;
+}) {
+  if (status === "ENDED" || status === "CANCELLED") {
+    return false;
+  }
+
+  const effectiveEndAt = new Date(endAt ?? startAt).getTime();
+
+  return Number.isFinite(effectiveEndAt) && effectiveEndAt >= Date.now();
+}
+
 export async function generateActivityDetailMetadata(
-  {
-    params,
-    searchParams,
-  }: ActivityDetailPageProps,
+  { params, searchParams }: ActivityDetailPageProps,
   routeKind: ActivityDetailRouteKind = "legacy",
 ): Promise<Metadata> {
   const { locale, activityId } = await params;
@@ -660,7 +685,9 @@ export async function generateActivityDetailMetadata(
 
     return activity.visibility === "PRIVATE"
       ? withPrivateNoIndex(metadata)
-      : metadata;
+      : isIndexableActivityDate(activity)
+        ? metadata
+        : withArchiveNoIndex(metadata);
   }
 
   const metadata = buildDetailShareMetadata({
@@ -675,7 +702,9 @@ export async function generateActivityDetailMetadata(
 
   return activity.visibility === "PRIVATE"
     ? withPrivateNoIndex(metadata)
-    : metadata;
+    : isIndexableActivityDate(activity)
+      ? metadata
+      : withArchiveNoIndex(metadata);
 }
 
 export async function generateLobbyActivityDetailMetadata(
@@ -759,10 +788,7 @@ export async function ActivityDetailPageContent({
           },
         })
         .catch((error) => {
-          console.error(
-            "Failed to mark activity notifications as read",
-            error,
-          );
+          console.error("Failed to mark activity notifications as read", error);
         });
     });
   }
@@ -793,11 +819,7 @@ export async function ActivityDetailPageContent({
     referrer,
     "activity_list",
   );
-  const detailRoutePath = getActivityRoutePath(
-    locale,
-    activity.id,
-    routeKind,
-  );
+  const detailRoutePath = getActivityRoutePath(locale, activity.id, routeKind);
   const lobbyActivityDetailPath = getActivityDetailPath(activity.id);
   const legacyActivityDetailPath = getLegacyActivityDetailPath(activity.id);
 
@@ -1197,31 +1219,31 @@ export async function ActivityDetailPageContent({
     );
   }
 
-  const [
-    viewerParticipation,
-    comments,
-    friendSignal,
-    coManagerDashboard,
-  ] = await Promise.all([
-    perf.measure("activity.viewerParticipation", () =>
-      getActivityViewerParticipation(activity.id, viewerProfile?.id),
-    ),
-    perf.measure("activity.comments", () =>
-      getActivityComments(
-        activity.id,
-        viewerProfile?.id ?? null,
-        viewerFriendIds,
+  const [viewerParticipation, comments, friendSignal, coManagerDashboard] =
+    await Promise.all([
+      perf.measure("activity.viewerParticipation", () =>
+        getActivityViewerParticipation(activity.id, viewerProfile?.id),
       ),
-    ),
-    perf.measure("activity.friendSignal", () =>
-      getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
-    ),
-    perf.measure("activity.coManagerDashboard", () =>
-      activity.viewerCanManage
-        ? getActivityCoManagerDashboard(activity.id, viewerProfile?.id)
-        : Promise.resolve(null),
-    ),
-  ]);
+      perf.measure("activity.comments", () =>
+        getActivityComments(
+          activity.id,
+          viewerProfile?.id ?? null,
+          viewerFriendIds,
+        ),
+      ),
+      perf.measure("activity.friendSignal", () =>
+        getActivityFriendSignal(
+          activity.id,
+          viewerProfile?.id,
+          viewerFriendIds,
+        ),
+      ),
+      perf.measure("activity.coManagerDashboard", () =>
+        activity.viewerCanManage
+          ? getActivityCoManagerDashboard(activity.id, viewerProfile?.id)
+          : Promise.resolve(null),
+      ),
+    ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
@@ -1354,23 +1376,24 @@ export async function ActivityDetailPageContent({
   const teamOperatorSpaceTitle = isCoManager
     ? teamOwnerCtaCopy.managerTitle
     : teamOwnerCtaCopy.title;
-  const [pendingParticipants, analyticsSummary, checkInRoster] = await Promise.all([
-    isTeamOperator && activity.requiresApproval && viewerProfile
-      ? perf.measure("activity.pendingParticipants", () =>
-          getPendingParticipants(activity.id, viewerProfile.id),
-        )
-      : Promise.resolve([]),
-    isTeamOperator && !isMobileRequest
-      ? perf.measure("activity.analyticsSummary", () =>
-          getActivityAnalyticsSummary(activity.id),
-        )
-      : Promise.resolve(null),
-    isTeamOperator && viewerProfile
-      ? perf.measure("activity.checkInRoster", () =>
-          getActivityCheckInRoster(activity.id, viewerProfile.id),
-        )
-      : Promise.resolve([]),
-  ]);
+  const [pendingParticipants, analyticsSummary, checkInRoster] =
+    await Promise.all([
+      isTeamOperator && activity.requiresApproval && viewerProfile
+        ? perf.measure("activity.pendingParticipants", () =>
+            getPendingParticipants(activity.id, viewerProfile.id),
+          )
+        : Promise.resolve([]),
+      isTeamOperator && !isMobileRequest
+        ? perf.measure("activity.analyticsSummary", () =>
+            getActivityAnalyticsSummary(activity.id),
+          )
+        : Promise.resolve(null),
+      isTeamOperator && viewerProfile
+        ? perf.measure("activity.checkInRoster", () =>
+            getActivityCheckInRoster(activity.id, viewerProfile.id),
+          )
+        : Promise.resolve([]),
+    ]);
   perf.finish(
     {
       commentCount: comments.length,
@@ -1484,9 +1507,7 @@ export async function ActivityDetailPageContent({
             </span>
             <span className="inline-flex min-w-0 items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
-              <span className="line-clamp-1">
-                {activityShareLocationLabel}
-              </span>
+              <span className="line-clamp-1">{activityShareLocationLabel}</span>
             </span>
             {activityPriceLabel ? (
               <span className="inline-flex items-center gap-1.5">
@@ -2419,7 +2440,6 @@ export async function ActivityDetailPageContent({
     </PageContainer>
   );
 }
-
 
 function ContactOrganizerForm({
   accessToken,

@@ -30,6 +30,9 @@ const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
 const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
+const isDirectMessagesApiRoute = createRouteMatcher([
+  "/api/direct-messages(.*)",
+]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
@@ -175,6 +178,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isDirectMessagesApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   if (isNotificationsApiRoute(request)) {
     return NextResponse.next();
   }
@@ -211,6 +218,7 @@ export const config = {
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
+    "/api/direct-messages/:path*",
     "/api/notifications/:path*",
     "/api/lobby/:path*",
     "/api/analytics/:path*",

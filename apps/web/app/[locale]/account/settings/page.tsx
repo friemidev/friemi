@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountLanguageSettingsSection } from "@/features/account/components/AccountLanguageSettingsSection";
 import { AccountSettingsActionList } from "@/features/account/components/AccountSettingsActionList";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
@@ -20,6 +21,7 @@ const accountSettingsCopy = {
     description: "管理语言偏好、账号资料、安全和登录状态。",
     accountSettings: "账号设置",
     accountSecurity: "账号与安全",
+    topNewsAdmin: "Top News 管理",
     language: "语言",
     signOut: "退出登录",
   },
@@ -30,6 +32,7 @@ const accountSettingsCopy = {
       "Manage language, account profile, security, and sign-in state.",
     accountSettings: "Account settings",
     accountSecurity: "Account & security",
+    topNewsAdmin: "Top News admin",
     language: "Language",
     signOut: "Sign out",
   },
@@ -39,6 +42,7 @@ const accountSettingsCopy = {
     description: "Gerez la langue, le profil, la securite et la connexion.",
     accountSettings: "Parametres du compte",
     accountSecurity: "Compte et securite",
+    topNewsAdmin: "Admin Top News",
     language: "Langue",
     signOut: "Deconnexion",
   },
@@ -66,11 +70,17 @@ export default async function AccountSettingsPage({
     accountSettingsCopy[locale as keyof typeof accountSettingsCopy] ??
     accountSettingsCopy["zh-CN"];
 
-  const profile = await getOptionalCurrentUserProfileSnapshot();
+  const [profile, isAdmin] = await Promise.all([
+    getOptionalCurrentUserProfileSnapshot(),
+    isCurrentUserAdmin(),
+  ]);
 
   return (
     <PageContainer className="relative isolate min-h-[calc(100svh-5.15rem)] max-w-xl overflow-hidden px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.15rem)] md:min-h-[70vh] md:pb-12 md:pt-10">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
         <div className="absolute inset-x-0 top-0 h-56 bg-[linear-gradient(180deg,#FFF5E6_0%,rgba(254,255,249,0)_100%)]" />
         <div className="absolute -right-20 top-20 h-48 w-48 rounded-full bg-[#DEEBFF]/70 blur-3xl" />
         <div className="absolute -left-24 bottom-16 h-56 w-56 rounded-full bg-[#8AB68E]/24 blur-3xl" />
@@ -99,6 +109,7 @@ export default async function AccountSettingsPage({
           <AccountSettingsActionList
             accountSecurityLabel={copy.accountSecurity}
             accountSettingsLabel={copy.accountSettings}
+            adminTopNewsLabel={isAdmin ? copy.topNewsAdmin : undefined}
             locale={locale}
             signOutLabel={copy.signOut}
           />

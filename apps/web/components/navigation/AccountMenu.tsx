@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  Newspaper,
   Settings,
   ShieldCheck,
   ShieldAlert,
@@ -25,7 +26,10 @@ import { getFriendsCopy } from "@/features/friends/copy";
 import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { ProfileContactBindingDialog } from "@/features/profile/components/ProfileContactBindingDialog";
-import { isFriemiIOSApp, unregisterIOSMobileDevice } from "@/features/mobile/push/clientPush";
+import {
+  isFriemiIOSApp,
+  unregisterIOSMobileDevice,
+} from "@/features/mobile/push/clientPush";
 import { useViewerProfile } from "@/features/profile/components/ViewerProfileProvider";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
@@ -166,6 +170,7 @@ export function AccountMenu({
   const activityOpsHref = withLocale(locale, "/admin/data-scraper");
   const merchantOpsHref = withLocale(locale, "/admin/merchants");
   const reportOpsHref = withLocale(locale, "/admin/reports");
+  const topNewsOpsHref = withLocale(locale, "/admin/top-news");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
   const contactBindingCount = [
@@ -430,6 +435,13 @@ export function AccountMenu({
                   icon={Building2}
                   label={t.merchantOps}
                   active={pathname.startsWith(merchantOpsHref)}
+                  onClick={closeMenu}
+                />
+                <MenuLink
+                  href={topNewsOpsHref}
+                  icon={Newspaper}
+                  label={t.topNewsOps}
+                  active={pathname.startsWith(topNewsOpsHref)}
                   onClick={closeMenu}
                 />
                 <MenuLink

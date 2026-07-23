@@ -30,9 +30,9 @@ function normalizeSiteUrl(value: string | null | undefined) {
 
 export function getCanonicalSiteUrl() {
   return (
-    normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
     normalizeSiteUrl(process.env.CANONICAL_SITE_URL) ??
     normalizeSiteUrl(process.env.SITE_URL) ??
+    normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
     productionSiteUrl
   );
 }

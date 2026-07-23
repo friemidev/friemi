@@ -63,22 +63,47 @@ type PublicEventDetailPageProps = {
 
 export const dynamic = "force-dynamic";
 
+function withArchiveNoIndex(metadata: Metadata): Metadata {
+  return {
+    ...metadata,
+    robots: {
+      follow: true,
+      index: false,
+    },
+  };
+}
+
+function isIndexablePublicEventDate({
+  endAt,
+  startAt,
+  status,
+}: {
+  endAt: string | null;
+  startAt: string;
+  status: string;
+}) {
+  if (status !== "SCHEDULED") {
+    return false;
+  }
+
+  const effectiveEndAt = new Date(endAt ?? startAt).getTime();
+
+  return Number.isFinite(effectiveEndAt) && effectiveEndAt >= Date.now();
+}
+
 export async function generateMetadata({
   params,
 }: PublicEventDetailPageProps): Promise<Metadata> {
   const { locale, publicEventId } = await params;
   const baseUrl = getCanonicalMetadataBaseUrl();
-  const publicEventPath = withLocale(
-    locale,
-    `/public-events/${publicEventId}`,
-  );
+  const publicEventPath = withLocale(locale, `/public-events/${publicEventId}`);
   const publicEvent = await getPublicEventShareMetadataById(publicEventId);
 
   if (!publicEvent) {
     return buildFallbackShareMetadata(baseUrl, publicEventPath);
   }
 
-  return buildDetailShareMetadata({
+  const metadata = buildDetailShareMetadata({
     canonicalUrl: buildCanonicalUrl(baseUrl, publicEventPath),
     coverImageUrl: publicEvent.coverImageUrl,
     dateLabel: getShareDateLabel({
@@ -95,6 +120,10 @@ export async function generateMetadata({
     ),
     title: publicEvent.title,
   });
+
+  return isIndexablePublicEventDate(publicEvent)
+    ? metadata
+    : withArchiveNoIndex(metadata);
 }
 
 export default async function PublicEventDetailPage({
@@ -126,7 +155,10 @@ export default async function PublicEventDetailPage({
   const protocol =
     requestHeaders.get("x-forwarded-proto") ??
     (host?.startsWith("localhost") ? "http" : "https");
-  const publicEventPath = withLocale(locale, `/public-events/${publicEvent.id}`);
+  const publicEventPath = withLocale(
+    locale,
+    `/public-events/${publicEvent.id}`,
+  );
   const publicEventUrl = host
     ? `${protocol}://${host}${publicEventPath}`
     : publicEventPath;

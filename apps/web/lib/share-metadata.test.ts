@@ -60,9 +60,35 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   );
   assert.equal(metadata.openGraph?.url, "https://www.friemi.com/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
+  assert.deepEqual(metadata.alternates?.languages, {
+    en: "https://www.friemi.com/en/home",
+    fr: "https://www.friemi.com/fr/home",
+    "x-default": "https://www.friemi.com/zh-CN/home",
+    "zh-CN": "https://www.friemi.com/zh-CN/home",
+  });
   assert.deepEqual(metadata.twitter?.images, [
     "https://www.friemi.com/brand/v2_1/friemi-og-default-1200x630.png",
   ]);
+});
+
+test("buildTeamShareMetadata skips hreflang alternates for private token URLs", () => {
+  const metadata = buildTeamShareMetadata({
+    canonicalUrl:
+      "https://friemi.example/zh-CN/activities/activity_1?access=private",
+    capacity: 8,
+    coverImageUrl: "https://images.example.com/team-cover.jpg",
+    dateLabel: "6月20日 18:00",
+    locale: "zh-CN",
+    locationLabel: "Paris",
+    participantCount: 3,
+    title: "周末野餐组局",
+  });
+
+  assert.equal(
+    metadata.alternates?.canonical,
+    "https://friemi.example/zh-CN/activities/activity_1?access=private",
+  );
+  assert.equal(metadata.alternates?.languages, undefined);
 });
 
 test("getShareDescription removes raw URLs and keeps useful event context", () => {
