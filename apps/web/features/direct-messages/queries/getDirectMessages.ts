@@ -478,6 +478,55 @@ export async function getDirectMessageFriendRoster(
   );
 }
 
+export async function getUnreadDirectMessageConversationCount(
+  currentUserProfileId: string,
+) {
+  const unreadConversations = await prisma.directMessage.findMany({
+    where: {
+      readAt: null,
+      senderId: {
+        not: currentUserProfileId,
+      },
+      conversation: {
+        OR: [
+          {
+            userAId: currentUserProfileId,
+          },
+          {
+            userBId: currentUserProfileId,
+          },
+        ],
+      },
+    },
+    distinct: ["conversationId"],
+    select: {
+      conversationId: true,
+    },
+    take: 100,
+  });
+
+  return unreadConversations.length;
+}
+
+export async function markDirectConversationRead({
+  conversationId,
+  peerProfileId,
+}: {
+  conversationId: string;
+  peerProfileId: string;
+}) {
+  return prisma.directMessage.updateMany({
+    where: {
+      conversationId,
+      readAt: null,
+      senderId: peerProfileId,
+    },
+    data: {
+      readAt: new Date(),
+    },
+  });
+}
+
 export async function getDirectConversationThread(
   currentUserProfileId: string,
   conversationId: string,

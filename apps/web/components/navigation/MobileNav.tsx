@@ -41,12 +41,12 @@ export function MobileNav({ locale }: MobileNavProps) {
   const t = getCopy(locale);
   const pathname = usePathname();
   const { sectionOverride } = useMobileNavSection();
-  const { unreadNotificationCount } = useNotificationBadge();
+  const { unreadDirectMessageCount } = useNotificationBadge();
   const currentLocale = locales.includes(locale as (typeof locales)[number])
     ? locale
     : "zh-CN";
   const unreadBadgeText =
-    unreadNotificationCount > 99 ? "99+" : String(unreadNotificationCount);
+    unreadDirectMessageCount > 99 ? "99+" : String(unreadDirectMessageCount);
   const items = useMemo(
     () => [
       {
@@ -127,7 +127,7 @@ export function MobileNav({ locale }: MobileNavProps) {
           const Icon = item.icon;
           const active = isItemActive(item.href);
           const showUnreadBadge =
-            item.href === "/footprints" && unreadNotificationCount > 0;
+            item.href === "/footprints" && unreadDirectMessageCount > 0;
 
           return (
             <IntentPrefetchLink

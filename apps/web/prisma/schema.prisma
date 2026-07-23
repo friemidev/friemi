@@ -1032,6 +1032,7 @@ model DirectMessage {
   updatedAt      DateTime     @updatedAt
 
   @@index([conversationId, createdAt])
+  @@index([conversationId, senderId, readAt])
   @@index([senderId, createdAt])
   @@index([activityId])
 }

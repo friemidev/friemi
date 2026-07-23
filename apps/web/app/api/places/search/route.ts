@@ -15,11 +15,7 @@ type PlaceSearchResult = {
   longitude: number;
 };
 
-const acceptLanguages: Record<string, string> = {
-  "zh-CN": "zh-CN,zh;q=0.9,en;q=0.7,fr;q=0.6",
-  en: "en,fr;q=0.8",
-  fr: "fr,en;q=0.8",
-};
+const placeLabelAcceptLanguage = "fr,en;q=0.8";
 
 function normalizeLimit(value: string | null) {
   const parsed = value ? Number.parseInt(value, 10) : 5;
@@ -31,22 +27,18 @@ function normalizeLimit(value: string | null) {
   return Math.min(Math.max(parsed, 1), 8);
 }
 
-function normalizeAcceptLanguage(value: string | null) {
-  return acceptLanguages[value ?? ""] ?? acceptLanguages["zh-CN"];
-}
-
 function buildSearchQueries(query: string, city: string | undefined) {
   const normalizedCity = city?.trim() ?? "";
 
   return buildGeocodingQueries(query, normalizedCity);
 }
 
-async function searchNominatim(query: string, acceptLanguage: string, limit: number) {
+async function searchNominatim(query: string, limit: number) {
   const nominatimUrl = new URL("https://nominatim.openstreetmap.org/search");
   nominatimUrl.searchParams.set("format", "jsonv2");
   nominatimUrl.searchParams.set("addressdetails", "1");
   nominatimUrl.searchParams.set("dedupe", "1");
-  nominatimUrl.searchParams.set("accept-language", acceptLanguage);
+  nominatimUrl.searchParams.set("accept-language", placeLabelAcceptLanguage);
   nominatimUrl.searchParams.set("limit", String(limit));
   nominatimUrl.searchParams.set("countrycodes", "fr");
   nominatimUrl.searchParams.set("q", query);
@@ -54,7 +46,7 @@ async function searchNominatim(query: string, acceptLanguage: string, limit: num
   const response = await fetch(nominatimUrl, {
     headers: {
       Accept: "application/json",
-      "Accept-Language": acceptLanguage,
+      "Accept-Language": placeLabelAcceptLanguage,
       "User-Agent": "Friemi/1.0 location-search",
     },
     next: {
@@ -106,7 +98,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim();
   const city = searchParams.get("city")?.trim();
-  const acceptLanguage = normalizeAcceptLanguage(searchParams.get("locale"));
 
   if (!query || query.length < 3) {
     return NextResponse.json({ places: [] });
@@ -124,11 +115,7 @@ export async function GET(request: Request) {
         break;
       }
 
-      const batch = await searchNominatim(
-        searchQuery,
-        acceptLanguage,
-        limit - places.length,
-      );
+      const batch = await searchNominatim(searchQuery, limit - places.length);
 
       for (const place of batch) {
         const key = `${place.latitude.toFixed(5)}:${place.longitude.toFixed(5)}`;

@@ -14,7 +14,11 @@ export const activityCategoryIllustrationImages: Partial<
   SPORTS: "sports.png",
 };
 
-const defaultActivityCategoryIllustrationSrc = "/illustrations/design.png";
+export const defaultActivityCategoryIllustrationSrc =
+  "/brand/v2_1/friemi-icon-square-1024.png";
+
+const legacyDefaultActivityCategoryIllustrationSrc =
+  "/illustrations/design.png";
 
 export function getActivityCategoryIllustrationSrc(
   category: string | null | undefined,
@@ -27,4 +31,23 @@ export function getActivityCategoryIllustrationSrc(
   return image
     ? `/illustrations/png/${image}`
     : defaultActivityCategoryIllustrationSrc;
+}
+
+export function isActivityCategoryIllustrationSrc(
+  imageUrl: string | null | undefined,
+) {
+  if (!imageUrl) {
+    return false;
+  }
+
+  if (
+    imageUrl === defaultActivityCategoryIllustrationSrc ||
+    imageUrl === legacyDefaultActivityCategoryIllustrationSrc
+  ) {
+    return true;
+  }
+
+  return /^\/illustrations\/(?:png|vector)\/[A-Za-z0-9_-]+\.(?:png|svg)$/i.test(
+    imageUrl,
+  );
 }

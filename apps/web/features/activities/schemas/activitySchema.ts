@@ -46,6 +46,7 @@ const optionalImageUrl = z
     (value) =>
       value.length === 0 ||
       /^https?:\/\/.+/i.test(value) ||
+      value === "/brand/v2_1/friemi-icon-square-1024.png" ||
       /^\/illustrations\/(?:design\.png|(?:png|vector)\/[A-Za-z0-9_-]+\.(?:png|svg))$/i.test(
         value,
       ),
