@@ -1,15 +1,116 @@
+import AuthenticationServices
 import Capacitor
+import GoogleSignIn
 import UIKit
 import WebKit
 
 @objc(FriemiNavigationPlugin)
-class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
+class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    private let googleClientId = "114440097515-l4nse3gdjm6s12n5vu78a22gmch41560.apps.googleusercontent.com"
+    private var appleSignInCall: CAPPluginCall?
+
     let identifier = "FriemiNavigationPlugin"
     let jsName = "FriemiNavigation"
-    let pluginMethods: [CAPPluginMethod] = []
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "signInWithGoogle", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise),
+    ]
 
     override func load() {
         CAPLog.print("Friemi iOS navigation plugin loaded")
+    }
+
+    @objc func signInWithGoogle(_ call: CAPPluginCall) {
+        guard let presentingViewController = bridge?.viewController else {
+            call.reject("Unable to present Google sign-in.")
+            return
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: googleClientId)
+
+        DispatchQueue.main.async {
+            GIDSignIn.sharedInstance.signIn(withPresenting: presentingViewController) { result, error in
+                if let error = error {
+                    call.reject(error.localizedDescription)
+                    return
+                }
+
+                guard let user = result?.user,
+                      let idToken = user.idToken?.tokenString
+                else {
+                    call.reject("Google sign-in did not return an ID token.")
+                    return
+                }
+
+                call.resolve([
+                    "idToken": idToken,
+                    "accessToken": user.accessToken.tokenString,
+                    "email": user.profile?.email ?? "",
+                    "name": user.profile?.name ?? "",
+                    "firstName": user.profile?.givenName ?? "",
+                    "lastName": user.profile?.familyName ?? "",
+                ])
+            }
+        }
+    }
+
+    @objc func signInWithApple(_ call: CAPPluginCall) {
+        appleSignInCall = call
+
+        let provider = ASAuthorizationAppleIDProvider()
+        let request = provider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let call = appleSignInCall else {
+            return
+        }
+        appleSignInCall = nil
+
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let identityTokenData = credential.identityToken,
+              let identityToken = String(data: identityTokenData, encoding: .utf8)
+        else {
+            call.reject("Apple sign-in did not return an identity token.")
+            return
+        }
+
+        let authorizationCode = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+
+        call.resolve([
+            "identityToken": identityToken,
+            "authorizationCode": authorizationCode,
+            "email": credential.email ?? "",
+            "firstName": credential.fullName?.givenName ?? "",
+            "lastName": credential.fullName?.familyName ?? "",
+            "userIdentifier": credential.user,
+        ])
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        appleSignInCall?.reject(error.localizedDescription)
+        appleSignInCall = nil
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        if let window = bridge?.viewController?.view.window {
+            return window
+        }
+
+        for scene in UIApplication.shared.connectedScenes {
+            if let windowScene = scene as? UIWindowScene,
+               let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                return window
+            }
+        }
+
+        return ASPresentationAnchor()
     }
 
     override func shouldOverrideLoad(_ navigationAction: WKNavigationAction) -> NSNumber? {
@@ -55,6 +156,10 @@ class FriemiNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
             normalizedHost == "accounts.dev" ||
             normalizedHost.hasSuffix(".accounts.dev") ||
             normalizedHost == "clerk.shared.lcl.dev" ||
+            normalizedHost == "appleid.apple.com" ||
+            normalizedHost.hasSuffix(".appleid.apple.com") ||
+            normalizedHost == "idmsa.apple.com" ||
+            normalizedHost.hasSuffix(".idmsa.apple.com") ||
             normalizedHost == "localhost" ||
             normalizedHost == "127.0.0.1" ||
             isPrivateIPv4Host(normalizedHost) ||

@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import GoogleSignIn
 
 extension Notification.Name {
     static let friemiAuthCompleteURL = Notification.Name("FriemiAuthCompleteURL")
@@ -48,6 +49,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
         if handleFriemiAuthComplete(url) {
+            return true
+        }
+
+        if GIDSignIn.sharedInstance.handle(url) {
             return true
         }
 

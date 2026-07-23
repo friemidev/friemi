@@ -17,7 +17,7 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  pod 'GoogleSignIn'
 end
 
 post_install do |installer|
