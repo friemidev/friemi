@@ -197,6 +197,12 @@ class AppViewController: CAPBridgeViewController {
             hostname.endsWith(".accounts.dev") ||
             hostname === "clerk.shared.lcl.dev";
 
+          const isAppleAuthHost = (hostname) =>
+            hostname === "appleid.apple.com" ||
+            hostname.endsWith(".appleid.apple.com") ||
+            hostname === "idmsa.apple.com" ||
+            hostname.endsWith(".idmsa.apple.com");
+
           const isLocalHost = (hostname) =>
             hostname === "localhost" ||
             hostname === "127.0.0.1";
@@ -212,6 +218,7 @@ class AppViewController: CAPBridgeViewController {
           const shouldKeepInApp = (hostname) =>
             isFriemiHost(hostname) ||
             isClerkHost(hostname) ||
+            isAppleAuthHost(hostname) ||
             isLocalHost(hostname) ||
             isPrivateIPv4Host(hostname) ||
             isPreviewHost(hostname);
@@ -289,6 +296,10 @@ class AppViewController: CAPBridgeViewController {
             normalizedHost == "accounts.dev" ||
             normalizedHost.hasSuffix(".accounts.dev") ||
             normalizedHost == "clerk.shared.lcl.dev" ||
+            normalizedHost == "appleid.apple.com" ||
+            normalizedHost.hasSuffix(".appleid.apple.com") ||
+            normalizedHost == "idmsa.apple.com" ||
+            normalizedHost.hasSuffix(".idmsa.apple.com") ||
             normalizedHost == "localhost" ||
             normalizedHost == "127.0.0.1" ||
             isPrivateIPv4Host(normalizedHost) ||

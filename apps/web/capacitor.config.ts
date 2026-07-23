@@ -9,6 +9,10 @@ const iosInAppAuthNavigation = [
   "accounts.dev",
   "*.accounts.dev",
   "clerk.shared.lcl.dev",
+  "appleid.apple.com",
+  "*.appleid.apple.com",
+  "idmsa.apple.com",
+  "*.idmsa.apple.com",
 ];
 // Third-party OAuth providers such as Google should not be forced into the
 // embedded WebView. The iOS navigation plugin opens non-Friemi/Clerk hosts
