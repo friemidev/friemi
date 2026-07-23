@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import type { ActivityStatus } from "@prisma/client";
-import { locales } from "@chill-club/shared";
+import { defaultLocale, locales } from "@chill-club/shared";
 import { versionUpdates } from "@/features/updates/versionUpdates";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { prisma } from "@/lib/prisma";
@@ -13,17 +13,23 @@ const staticLocalePaths = [
   "/activities",
   "/lobby",
   "/co-creators",
+  "/game-tools",
+  "/game-tools/werewolf",
+  "/game-tools/avalon",
+  "/privacy",
+  "/safety",
   "/updates",
 ] as const;
 
-const publicActivityStatuses: ActivityStatus[] = [
+const indexableActivityStatuses: ActivityStatus[] = [
   "OPEN",
   "RECRUITING",
   "CONFIRMED",
   "FULL",
-  "ENDED",
 ];
-const dynamicEntryLimit = 20_000;
+const activityEntryLimit = 2_000;
+const publicEventEntryLimit = 1_000;
+const merchantEntryLimit = 500;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
@@ -35,12 +41,16 @@ function getLocalizedPath(locale: string, path: string) {
 
 function getAlternates(path: string): SitemapEntry["alternates"] {
   return {
-    languages: Object.fromEntries(
-      locales.map((locale) => [
+    languages: Object.fromEntries([
+      ...locales.map((locale) => [
         locale,
         buildCanonicalSiteUrl(getLocalizedPath(locale, path)),
       ]),
-    ),
+      [
+        "x-default",
+        buildCanonicalSiteUrl(getLocalizedPath(defaultLocale, path)),
+      ],
+    ]),
   };
 }
 
@@ -68,6 +78,13 @@ function createLocalizedEntries({
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const latestReleaseDate = versionUpdates
+    .map((update) => update.releasedAt)
+    .sort()
+    .at(-1);
+  const staticLastModified = latestReleaseDate
+    ? new Date(latestReleaseDate)
+    : now;
   const [activities, publicEvents, merchants] = await Promise.all([
     prisma.activity.findMany({
       orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
@@ -75,13 +92,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         id: true,
         updatedAt: true,
       },
-      take: dynamicEntryLimit,
+      take: activityEntryLimit,
       where: {
+        OR: [
+          {
+            endAt: {
+              gte: now,
+            },
+          },
+          {
+            endAt: null,
+            startAt: {
+              gte: now,
+            },
+          },
+        ],
         organizer: {
           status: "ACTIVE",
         },
+        publicEventId: null,
         status: {
-          in: publicActivityStatuses,
+          in: indexableActivityStatuses,
         },
         visibility: "PUBLIC",
       },
@@ -92,8 +123,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         id: true,
         updatedAt: true,
       },
-      take: dynamicEntryLimit,
+      take: publicEventEntryLimit,
       where: {
+        OR: [
+          {
+            endAt: {
+              gte: now,
+            },
+          },
+          {
+            endAt: null,
+            startAt: {
+              gte: now,
+            },
+          },
+        ],
         status: "SCHEDULED",
         visibility: "PUBLIC",
       },
@@ -104,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         slug: true,
         updatedAt: true,
       },
-      take: 5000,
+      take: merchantEntryLimit,
       where: {
         isActive: true,
       },
@@ -114,7 +158,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries = staticLocalePaths.flatMap((path) =>
     createLocalizedEntries({
       changeFrequency: path === "/home" ? "daily" : "weekly",
-      lastModified: now,
+      lastModified: staticLastModified,
       path,
       priority: path === "/home" ? 1 : 0.72,
     }),

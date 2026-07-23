@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { PriceType } from "@prisma/client";
+import { defaultLocale, locales } from "@chill-club/shared";
 import {
   formatActivityDate,
   formatActivityDateOnly,
@@ -371,6 +372,55 @@ export function buildCanonicalUrl(
   return url.toString();
 }
 
+function getLocalizedAlternateLanguages(canonicalUrl: string) {
+  let url: URL;
+
+  try {
+    url = new URL(canonicalUrl);
+  } catch {
+    return undefined;
+  }
+
+  if (url.search || url.hash) {
+    return undefined;
+  }
+
+  const segments = url.pathname.split("/").filter(Boolean);
+  const currentLocale = segments[0];
+
+  if (!locales.includes(currentLocale as (typeof locales)[number])) {
+    return undefined;
+  }
+
+  const localizedPath = `/${segments.slice(1).join("/")}`;
+
+  return Object.fromEntries([
+    ...locales.map((locale) => [
+      locale,
+      new URL(
+        `/${locale}${localizedPath === "/" ? "" : localizedPath}`,
+        url,
+      ).toString(),
+    ]),
+    [
+      "x-default",
+      new URL(
+        `/${defaultLocale}${localizedPath === "/" ? "" : localizedPath}`,
+        url,
+      ).toString(),
+    ],
+  ]);
+}
+
+function getCanonicalAlternates(canonicalUrl: string): Metadata["alternates"] {
+  const languages = getLocalizedAlternateLanguages(canonicalUrl);
+
+  return {
+    canonical: canonicalUrl,
+    ...(languages ? { languages } : {}),
+  };
+}
+
 export function buildDetailShareMetadata({
   canonicalUrl,
   coverImageUrl,
@@ -392,9 +442,7 @@ export function buildDetailShareMetadata({
   const imageUrl = resolveShareImageUrl(coverImageUrl, baseUrl);
 
   return {
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    alternates: getCanonicalAlternates(canonicalUrl),
     description: metadataDescription,
     openGraph: {
       description: metadataDescription,
@@ -475,9 +523,7 @@ export function buildTeamShareMetadata({
         ];
 
   return {
-    alternates: {
-      canonical: canonicalUrl,
-    },
+    alternates: getCanonicalAlternates(canonicalUrl),
     description: metadataDescription,
     openGraph: {
       description: metadataDescription,

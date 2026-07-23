@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { BrandBackdrop } from "@/components/brand/BrandBackdrop";
 import { HomeFooter } from "@/components/layout/HomeFooter";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeHeroMedia } from "@/features/home/components/HomeHeroMedia";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
@@ -28,6 +29,7 @@ import {
   getCanonicalMetadataBaseUrl,
   getGeneralPageShareDescription,
 } from "@/lib/share-metadata";
+import { createSiteStructuredData } from "@/lib/structured-data";
 
 type HomePageProps = {
   params: Promise<{
@@ -379,6 +381,7 @@ export default async function HomePage({
 
   return (
     <>
+      <JsonLd data={createSiteStructuredData(locale)} />
       <HomeLuxuryMotion />
       <DetailSourceRestore sourceKey="home" />
       <main className="overflow-hidden bg-[#FEFFF9] text-[#1D1D1B]">
