@@ -10,6 +10,7 @@ import { ActivityAgendaList } from "@/features/activities/components/ActivityAge
 import { ActivityResultsFilterBar } from "@/features/activities/components/ActivityResultsFilterBar";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
+import { MobileActivitiesToolbar } from "@/features/activities/components/MobileActivitiesToolbar";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import {
   getActivityList,
@@ -351,17 +352,25 @@ export default async function ActivitiesPage({
   );
 
   return (
-    <PageContainer className="space-y-4 py-5 sm:space-y-6 sm:py-8">
+    <PageContainer className="space-y-4 py-5 max-md:pb-[calc(6.6rem+env(safe-area-inset-bottom))] max-md:pt-[calc(0.95rem+env(safe-area-inset-top))] sm:space-y-6 sm:py-8">
       <DetailSourceRestore sourceKey="activity_list" />
-      <ActivityFilters
+      <MobileActivitiesToolbar
         cities={filterOptions.cities}
         filters={filters}
         locale={locale}
-        publicInfoOnly
         resultCount={activitiesResult.list?.totalCount ?? 0}
       />
+      <div className="hidden md:block">
+        <ActivityFilters
+          cities={filterOptions.cities}
+          filters={filters}
+          locale={locale}
+          publicInfoOnly
+          resultCount={activitiesResult.list?.totalCount ?? 0}
+        />
+      </div>
 
-      <div className="flex flex-col items-center gap-2 px-1 text-center sm:gap-3">
+      <div className="hidden flex-col items-center gap-2 px-1 text-center sm:gap-3 md:flex">
         <p className="max-w-[42rem] text-base font-medium leading-7 text-ink [text-wrap:balance] sm:text-[1.05rem] sm:leading-8">
           {t.activities.description}
         </p>
@@ -391,7 +400,7 @@ export default async function ActivitiesPage({
           }
         />
       ) : (
-        <section className="space-y-3 border-t border-sand pt-4 sm:space-y-4">
+        <section className="space-y-3 md:border-t md:border-sand md:pt-4 sm:space-y-4">
           <div className="flex items-end justify-between gap-2 px-1 sm:gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold leading-tight text-ink sm:text-xl">

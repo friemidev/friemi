@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Compass,
   MapPin,
+  UsersRound,
 } from "lucide-react";
 import {
   useEffect,
@@ -20,12 +21,14 @@ import {
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
 import type { AnalyticsSourceSurface } from "@/features/analytics/events";
 import { getAnalyticsEntityForActivity } from "@/features/analytics/utils";
+import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { getCategoryLabel, getStatusLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "../types";
 import { isPublicEventCard } from "../utils/activityCardKind";
+import { getActivityDetailPath } from "../utils/activityRoutes";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
@@ -111,8 +114,42 @@ function getSwipeCopy(locale: string) {
   };
 }
 
+function getSwipeKindCopy(locale: string, isActivityInfo: boolean) {
+  if (locale === "fr") {
+    return isActivityInfo
+      ? { label: "Activite", note: "Programme public" }
+      : { label: "Groupe", note: "Organise par des membres" };
+  }
+
+  if (locale === "en") {
+    return isActivityInfo
+      ? { label: "Event", note: "Public program" }
+      : { label: "Crew", note: "Member plan" };
+  }
+
+  return isActivityInfo
+    ? { label: "活动", note: "公开活动" }
+    : { label: "组局", note: "用户发起" };
+}
+
+function getSwipeMixCopy(locale: string) {
+  if (locale === "fr") {
+    return { activity: "Activite 3", team: "Groupe 1" };
+  }
+
+  if (locale === "en") {
+    return { activity: "Event 3", team: "Crew 1" };
+  }
+
+  return { activity: "活动 3", team: "组局 1" };
+}
+
 function getSwipeActivityKey(activity: ActivityCardViewModel) {
-  return `public:${activity.publicEventId ?? activity.id}`;
+  if (isPublicEventCard(activity)) {
+    return `public:${activity.publicEventId ?? activity.id}`;
+  }
+
+  return `activity:${activity.id}`;
 }
 
 function getSwipeDeckSignature(activities: ActivityCardViewModel[]) {
@@ -268,25 +305,26 @@ function usePrefersReducedMotion() {
 }
 
 function getSwipeActivityHref(activity: ActivityCardViewModel, locale: string) {
-  return withLocale(
-    locale,
-    `/public-events/${activity.publicEventId ?? activity.id}`,
-  );
+  if (isPublicEventCard(activity)) {
+    return withLocale(
+      locale,
+      `/public-events/${activity.publicEventId ?? activity.id}`,
+    );
+  }
+
+  return withLocale(locale, getActivityDetailPath(activity.id));
 }
 
 function prepareSwipeActivities(activities: ActivityCardViewModel[]) {
   const seen = new Set<string>();
-  const now = Date.now();
 
   return activities
     .filter((activity) => {
       const status = getActivityDisplayStatus(activity);
-      const startsInFuture = new Date(activity.startAt).getTime() > now;
+      const timeState = getActivityTimeState(activity);
 
       return (
-        isPublicEventCard(activity) &&
-        Boolean(activity.publicEventId) &&
-        startsInFuture &&
+        (timeState === "ONGOING" || timeState === "UPCOMING") &&
         status !== "ENDED" &&
         status !== "CANCELLED"
       );
@@ -304,7 +342,10 @@ function prepareSwipeActivities(activities: ActivityCardViewModel[]) {
 }
 
 function getVisibleCards(deck: ActivityCardViewModel[], index: number) {
-  return deck.slice(index, index + 3);
+  return Array.from(
+    { length: Math.min(deck.length, 3) },
+    (_, offset) => deck[(index + offset) % deck.length],
+  );
 }
 
 function getNextIndex(
@@ -317,10 +358,10 @@ function getNextIndex(
   }
 
   if (direction === "next") {
-    return Math.min(currentIndex + 1, deckLength - 1);
+    return (currentIndex + 1) % deckLength;
   }
 
-  return Math.max(currentIndex - 1, 0);
+  return (currentIndex - 1 + deckLength) % deckLength;
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -499,9 +540,34 @@ export function ActivitySwipeDiscovery({
     });
   }
 
+  function requestMoreIfNearDeckEnd(nextIndex: number) {
+    if (
+      !onRequestMore ||
+      !hasMoreActivities ||
+      isLoadingMore ||
+      loadMoreFailed ||
+      deck.length === 0
+    ) {
+      return;
+    }
+
+    const remainingCards = deck.length - nextIndex - 1;
+
+    if (remainingCards <= swipeLoadMoreRemainingThreshold) {
+      onRequestMore();
+    }
+  }
+
   function navigateCard(direction: SwipeDirection) {
+    const nextIndex = getNextIndex(index, direction, deck.length);
+
     resetDragState();
-    setIndex((current) => getNextIndex(current, direction, deck.length));
+
+    if (direction === "next") {
+      requestMoreIfNearDeckEnd(nextIndex);
+    }
+
+    setIndex(nextIndex);
   }
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -546,15 +612,9 @@ export function ActivitySwipeDiscovery({
   }
 
   const visibleCards = getVisibleCards(deck, index);
-  const canGoPrevious = index > 0;
-  const canGoNext = index < deck.length - 1;
-  const hasPaginatedDiscovery = Boolean(onRequestMore || onRetryLoadMore);
-  const showEndState =
-    hasPaginatedDiscovery &&
-    !hasMoreActivities &&
-    !isLoadingMore &&
-    index >= deck.length - 1;
+  const canLoopCards = deck.length > 1;
   const isHomeVariant = variant === "home";
+  const mixCopy = getSwipeMixCopy(locale);
 
   if (deck.length === 0) {
     return null;
@@ -564,6 +624,9 @@ export function ActivitySwipeDiscovery({
     <section
       className={cn(
         "overflow-visible px-0 py-1",
+        !isHomeVariant
+          ? "grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)] lg:items-center"
+          : null,
         isHomeVariant
           ? "overflow-visible rounded-[1.3rem] border border-[#8AB68E] bg-transparent p-0"
           : null,
@@ -571,17 +634,25 @@ export function ActivitySwipeDiscovery({
       )}
     >
       {!isHomeVariant ? (
-        <div className="flex items-center gap-2 px-1">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-sm ring-1 ring-[#8AB68E]">
+        <div className="flex items-center gap-3 px-1 lg:block lg:self-stretch lg:px-0">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-sm ring-1 ring-[#8AB68E] lg:h-11 lg:w-11">
             <Compass className="h-4 w-4" />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 lg:mt-4">
             <p className="text-[10px] font-semibold text-[#B5301F]">
               {copy.eyebrow}
             </p>
-            <h2 className="text-[1.35rem] font-semibold leading-[1.05] text-ink">
+            <h2 className="text-[1.45rem] font-semibold leading-[1.02] text-ink lg:text-[2rem]">
               {copy.title}
             </h2>
+            <div className="mt-3 hidden gap-2 lg:grid">
+              <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#EAF2FF] px-3 text-[11px] font-bold text-[#0E2A66] ring-1 ring-[#BFD4F4]">
+                {mixCopy.activity}
+              </span>
+              <span className="inline-flex h-7 w-fit items-center rounded-full bg-[#FFF5E6] px-3 text-[11px] font-bold text-[#7A341A] ring-1 ring-[#F2C28D]">
+                {mixCopy.team}
+              </span>
+            </div>
           </div>
         </div>
       ) : null}
@@ -589,6 +660,9 @@ export function ActivitySwipeDiscovery({
       <div
         className={cn(
           "relative mx-auto mt-2 h-[19rem] max-w-[22.5rem] touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-coral/55",
+          !isHomeVariant
+            ? "mt-0 h-[18rem] w-full max-w-[52rem] md:h-[20.75rem] lg:mx-0"
+            : null,
           isHomeVariant
             ? "mt-0 h-[var(--home-swipe-height)] max-w-none md:mx-0"
             : null,
@@ -637,6 +711,8 @@ export function ActivitySwipeDiscovery({
             const categoryLabel = getCategoryLabel(activity.category, locale);
             const statusLabel = getStatusLabel(displayStatus, locale);
             const href = getSwipeActivityHref(activity, locale);
+            const kindCopy = getSwipeKindCopy(locale, isActivityInfo);
+            const KindIcon = isActivityInfo ? Compass : UsersRound;
             const analyticsEntity = isTopCard
               ? getAnalyticsEntityForActivity(activity)
               : null;
@@ -664,8 +740,20 @@ export function ActivitySwipeDiscovery({
                 aria-hidden={!isTopCard}
                 className={cn(
                   "absolute inset-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.13)] ring-1 ring-[#D6D5B2]/75",
-                  isHomeVariant
-                    ? "rounded-[1.28rem] bg-[#FEFFF9]/92 shadow-[0_16px_34px_rgba(21,98,64,0.16)] ring-white/80 backdrop-blur-sm"
+                  !isHomeVariant
+                    ? "rounded-[1.35rem] shadow-[0_20px_50px_rgba(29,29,27,0.12)] md:grid md:grid-cols-[minmax(18rem,0.92fr)_minmax(0,1fr)]"
+                    : null,
+                  !isHomeVariant && isActivityInfo
+                    ? "bg-[#F8FBFF] ring-[#BFD4F4]"
+                    : null,
+                  !isHomeVariant && !isActivityInfo
+                    ? "bg-[#FFF9EF] ring-[#F2C28D]"
+                    : null,
+                  isHomeVariant && isActivityInfo
+                    ? "rounded-[1.28rem] bg-[#F8FBFF]/95 shadow-[0_16px_34px_rgba(14,42,102,0.14)] ring-[#BFD4F4]/82 backdrop-blur-sm"
+                    : null,
+                  isHomeVariant && !isActivityInfo
+                    ? "rounded-[1.28rem] bg-[#FFF9EF]/95 shadow-[0_16px_34px_rgba(181,48,31,0.14)] ring-[#F2C28D]/85 backdrop-blur-sm"
                     : null,
                   isTopCard ? "cursor-grab active:cursor-grabbing" : null,
                   !isTopCard ? "pointer-events-none" : null,
@@ -683,12 +771,28 @@ export function ActivitySwipeDiscovery({
                 <div
                   className={cn(
                     "relative h-32 overflow-hidden bg-[#DEEBFF]",
+                    !isHomeVariant ? "bg-[#EAF2FF] md:h-full md:min-h-0" : null,
+                    !isHomeVariant && !isActivityInfo ? "bg-[#FFEEDC]" : null,
                     isHomeVariant ? "h-[var(--home-swipe-cover-height)]" : null,
+                    isHomeVariant && isActivityInfo ? "bg-[#EAF2FF]" : null,
+                    isHomeVariant && !isActivityInfo ? "bg-[#FFEEDC]" : null,
                   )}
                 >
                   <ActivityCoverImage
                     src={isTopCard ? activity.coverImageUrl : null}
-                    overlayClassName="bg-gradient-to-t from-black/58 via-black/12 to-transparent"
+                    overlayClassName={cn(
+                      "bg-gradient-to-t from-black/58 via-black/12 to-transparent",
+                      !isHomeVariant
+                        ? "bg-[linear-gradient(90deg,rgba(0,0,0,0.54),rgba(0,0,0,0.08)_52%,rgba(0,0,0,0.18))]"
+                        : null,
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "absolute inset-y-0 left-0 w-1.5",
+                      isActivityInfo ? "bg-[#0E2A66]" : "bg-[#F09182]",
+                    )}
+                    aria-hidden
                   />
                   <div
                     className={cn(
@@ -698,7 +802,28 @@ export function ActivitySwipeDiscovery({
                   >
                     <span
                       className={cn(
+                        "inline-flex min-h-[1.75rem] items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] ring-1 ring-white/70",
+                        isActivityInfo ? "bg-[#0E2A66]" : "bg-[#1D1D1B]",
+                        isHomeVariant
+                          ? "min-h-[1.15rem] gap-1 px-2 py-0.5 text-[9px] shadow-[0_6px_16px_rgba(0,0,0,0.26)] md:min-h-[1.55rem] md:px-2.5 md:py-1 md:text-[10px]"
+                          : null,
+                      )}
+                    >
+                      <KindIcon
+                        className={cn(
+                          "h-3.5 w-3.5",
+                          isHomeVariant ? "h-3 w-3 md:h-3.5 md:w-3.5" : null,
+                        )}
+                        aria-hidden
+                      />
+                      {kindCopy.label}
+                    </span>
+                    <span
+                      className={cn(
                         "rounded-full bg-[#1D1D1B] px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.36)] ring-1 ring-white/70",
+                        !isHomeVariant
+                          ? "bg-[#1D1D1B]/88 text-white ring-white/75 backdrop-blur-sm md:bg-white/92 md:text-[#1D1D1B] md:ring-white"
+                          : null,
                         isHomeVariant
                           ? "px-2 py-0.5 text-[9px] md:px-2.5 md:py-1 md:text-[10px]"
                           : null,
@@ -709,6 +834,9 @@ export function ActivitySwipeDiscovery({
                     <span
                       className={cn(
                         "inline-flex min-h-[1.5rem] items-center rounded-full bg-[#FEFFF9] px-2.5 py-1 text-[10px] font-semibold leading-[1.15] text-[#1D1D1B] shadow-[0_6px_18px_rgba(0,0,0,0.28)] ring-1 ring-black/35",
+                        !isHomeVariant
+                          ? "bg-[#156240]/92 text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] ring-white/75 backdrop-blur-sm md:bg-white/92 md:text-[#1D1D1B] md:shadow-[0_8px_22px_rgba(0,0,0,0.22)] md:ring-white"
+                          : null,
                         isHomeVariant
                           ? "min-h-[1.15rem] px-2 py-0.5 text-[9px] md:min-h-[1.55rem] md:px-2.5 md:py-1 md:text-[10px]"
                           : null,
@@ -722,7 +850,7 @@ export function ActivitySwipeDiscovery({
                       <div
                         className="absolute inset-y-0 left-0 flex w-1/2 items-center justify-center bg-[#1D1D1B]/22 text-white"
                         style={{
-                          opacity: dragX < 0 && canGoNext ? dragOpacity : 0,
+                          opacity: dragX < 0 && canLoopCards ? dragOpacity : 0,
                         }}
                       >
                         <span className="rotate-[-8deg] rounded-full border-2 border-white px-4 py-2 text-base font-bold">
@@ -732,7 +860,7 @@ export function ActivitySwipeDiscovery({
                       <div
                         className="absolute inset-y-0 right-0 flex w-1/2 items-center justify-center bg-[#369758]/26 text-white"
                         style={{
-                          opacity: dragX > 0 && canGoPrevious ? dragOpacity : 0,
+                          opacity: dragX > 0 && canLoopCards ? dragOpacity : 0,
                         }}
                       >
                         <span className="rotate-[8deg] rounded-full border-2 border-white px-4 py-2 text-base font-bold">
@@ -746,18 +874,38 @@ export function ActivitySwipeDiscovery({
                 <div
                   className={cn(
                     "grid h-[calc(100%-8rem)] grid-rows-[1fr_auto] gap-2 p-3.5",
+                    !isHomeVariant
+                      ? "md:h-full md:grid-rows-[auto_1fr_auto] md:gap-4 md:p-5"
+                      : null,
                     isHomeVariant
                       ? "h-[calc(100%-var(--home-swipe-cover-height))] gap-2 p-3 md:gap-3 md:p-4"
                       : null,
                   )}
                 >
+                  {!isHomeVariant ? (
+                    <div className="hidden min-w-0 items-center justify-between gap-3 md:flex">
+                      <span
+                        className={cn(
+                          "inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold",
+                          isActivityInfo
+                            ? "bg-[#EAF2FF] text-[#0E2A66] ring-1 ring-[#BFD4F4]"
+                            : "bg-[#FFEAD5] text-[#7A341A] ring-1 ring-[#F2C28D]",
+                        )}
+                      >
+                        {kindCopy.note}
+                      </span>
+                      <span className="truncate text-[11px] font-semibold text-[#1D1D1B]/50">
+                        {categoryLabel}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="min-w-0">
                     <h3
                       className={cn(
                         "text-lg font-semibold leading-[1.12] text-ink",
                         isHomeVariant
                           ? "line-clamp-3 text-[15px] leading-[1.13] md:line-clamp-2 md:text-xl md:leading-[1.14]"
-                          : "line-clamp-2",
+                          : "line-clamp-2 md:line-clamp-3 md:text-[1.55rem] md:leading-[1.06]",
                       )}
                     >
                       {activity.title}
@@ -765,18 +913,50 @@ export function ActivitySwipeDiscovery({
                     <div
                       className={cn(
                         "mt-2 grid gap-1 text-[13px] leading-5 text-zinc-600",
+                        !isHomeVariant
+                          ? "md:mt-4 md:gap-2 md:text-sm md:leading-5"
+                          : null,
                         isHomeVariant
                           ? "mt-1.5 grid-cols-1 text-[11px] leading-4 md:mt-2 md:text-sm md:leading-6"
+                          : null,
+                        isHomeVariant && isActivityInfo
+                          ? "text-[#0E2A66]"
+                          : null,
+                        isHomeVariant && !isActivityInfo
+                          ? "text-[#5B321C]"
                           : null,
                       )}
                     >
                       <span className="flex min-w-0 items-start gap-2">
-                        <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
+                        <CalendarDays
+                          className={cn(
+                            "mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]",
+                            !isHomeVariant && isActivityInfo
+                              ? "text-[#0E2A66]"
+                              : null,
+                            !isHomeVariant && !isActivityInfo
+                              ? "text-[#B5301F]"
+                              : null,
+                            isHomeVariant && isActivityInfo
+                              ? "text-[#0E2A66]"
+                              : null,
+                            isHomeVariant && !isActivityInfo
+                              ? "text-[#B5301F]"
+                              : null,
+                          )}
+                        />
                         <span className="line-clamp-1">{dateLabel}</span>
                       </span>
-                      {isActivityInfo && !isHomeVariant ? (
+                      {!isHomeVariant ? (
                         <span className="flex min-w-0 items-start gap-2">
-                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#156240]" />
+                          <MapPin
+                            className={cn(
+                              "mt-0.5 h-3.5 w-3.5 shrink-0",
+                              isActivityInfo
+                                ? "text-[#0E2A66]"
+                                : "text-[#B5301F]",
+                            )}
+                          />
                           <span className="line-clamp-1">{locationLabel}</span>
                         </span>
                       ) : null}
@@ -788,8 +968,17 @@ export function ActivitySwipeDiscovery({
                       <Link
                         className={cn(
                           "inline-flex h-10 items-center justify-center rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-zinc-800",
-                          isHomeVariant
-                            ? "h-8 bg-[#156240] text-[11px] shadow-[0_8px_16px_rgba(21,98,64,0.18)] hover:bg-[#369758] md:h-11 md:text-sm"
+                          !isHomeVariant && isActivityInfo
+                            ? "bg-[#0E2A66] hover:bg-[#163E83]"
+                            : null,
+                          !isHomeVariant && !isActivityInfo
+                            ? "bg-[#1D1D1B] hover:bg-[#3A3028]"
+                            : null,
+                          isHomeVariant && isActivityInfo
+                            ? "h-8 bg-[#0E2A66] text-[11px] shadow-[0_8px_16px_rgba(14,42,102,0.18)] hover:bg-[#163E83] md:h-11 md:text-sm"
+                            : null,
+                          isHomeVariant && !isActivityInfo
+                            ? "h-8 bg-[#1D1D1B] text-[11px] shadow-[0_8px_16px_rgba(29,29,27,0.16)] hover:bg-[#3A3028] md:h-11 md:text-sm"
                             : null,
                         )}
                         href={href}
@@ -811,22 +1000,47 @@ export function ActivitySwipeDiscovery({
                       >
                         {copy.detail}
                       </Link>
-                      <PublicEventFavoriteButton
-                        className={cn(
-                          "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
-                          isHomeVariant
-                            ? "size-9 min-h-9 min-w-9 bg-[#FEFFF9]/92 shadow-sm ring-[#8AB68E]/70 md:size-11 md:min-h-11 md:min-w-11"
-                            : null,
-                        )}
-                        favoriteCount={activity.favoriteCount}
-                        isAuthenticated={isAuthenticated}
-                        isFavorited={Boolean(activity.isFavorited)}
-                        labelOverrides={{ favorite: copy.favoriteHint }}
-                        locale={locale}
-                        publicEventId={publicEventId}
-                        redirectPath={favoriteRedirectPath}
-                        sourceSurface={sourceSurface}
-                      />
+                      {isActivityInfo ? (
+                        <PublicEventFavoriteButton
+                          className={cn(
+                            "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
+                            !isHomeVariant
+                              ? "text-[#0E2A66] ring-[#BFD4F4] hover:bg-[#F8FBFF]"
+                              : null,
+                            isHomeVariant
+                              ? "size-9 min-h-9 min-w-9 bg-[#FEFFF9]/92 text-[#0E2A66] shadow-sm ring-[#BFD4F4]/85 hover:bg-[#F8FBFF] md:size-11 md:min-h-11 md:min-w-11"
+                              : null,
+                          )}
+                          favoriteCount={activity.favoriteCount}
+                          isAuthenticated={isAuthenticated}
+                          isFavorited={Boolean(activity.isFavorited)}
+                          labelOverrides={{ favorite: copy.favoriteHint }}
+                          locale={locale}
+                          publicEventId={publicEventId}
+                          redirectPath={favoriteRedirectPath}
+                          sourceSurface={sourceSurface}
+                        />
+                      ) : (
+                        <ActivityFavoriteButton
+                          activityId={activity.id}
+                          className={cn(
+                            "size-10 min-h-10 min-w-10 bg-white text-coral ring-[#8AB68E] hover:bg-[#FEFFF9]",
+                            !isHomeVariant
+                              ? "text-[#B5301F] ring-[#F2C28D] hover:bg-[#FFF9EF]"
+                              : null,
+                            isHomeVariant
+                              ? "size-9 min-h-9 min-w-9 bg-[#FEFFF9]/92 text-[#B5301F] shadow-sm ring-[#F2C28D]/90 hover:bg-[#FFF9EF] md:size-11 md:min-h-11 md:min-w-11"
+                              : null,
+                          )}
+                          favoriteCount={activity.favoriteCount}
+                          isAuthenticated={isAuthenticated}
+                          isFavorited={Boolean(activity.isFavorited)}
+                          labelOverrides={{ favorite: copy.favoriteHint }}
+                          locale={locale}
+                          redirectPath={favoriteRedirectPath}
+                          sourceSurface={sourceSurface}
+                        />
+                      )}
                     </div>
                   ) : (
                     <div
@@ -844,7 +1058,7 @@ export function ActivitySwipeDiscovery({
       <div
         className={cn(
           "mt-2 flex items-center justify-center gap-2 px-1 text-[11px] text-zinc-500",
-          isHomeVariant ? "hidden" : null,
+          isHomeVariant ? "hidden" : "hidden md:flex",
         )}
       >
         {loadMoreFailed && onRetryLoadMore ? (
@@ -858,13 +1072,7 @@ export function ActivitySwipeDiscovery({
         ) : (
           <>
             <ArrowLeft className="h-3 w-3" />
-            <span>
-              {isLoadingMore
-                ? copy.loadingMore
-                : showEndState
-                  ? copy.end
-                  : copy.swipeHint}
-            </span>
+            <span>{isLoadingMore ? copy.loadingMore : copy.swipeHint}</span>
             <ArrowRight className="h-3 w-3" />
           </>
         )}

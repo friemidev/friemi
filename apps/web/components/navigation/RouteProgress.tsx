@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 function isPlainLeftClick(event: MouseEvent) {
   return (
@@ -53,9 +54,30 @@ function isInternalNavigation(anchor: HTMLAnchorElement) {
   }
 }
 
+function hasStandardMobileNavOffset(pathname: string) {
+  const segments = pathname.split("/").filter(Boolean);
+  const firstRouteSegment = segments[0];
+  const localizedRouteSegment = segments[1];
+
+  if (
+    firstRouteSegment === "sign-in" ||
+    firstRouteSegment === "sign-up" ||
+    localizedRouteSegment === "sign-in" ||
+    localizedRouteSegment === "sign-up"
+  ) {
+    return false;
+  }
+
+  return !(
+    (segments.length >= 2 && firstRouteSegment === "messages") ||
+    (segments.length >= 3 && localizedRouteSegment === "messages")
+  );
+}
+
 export function RouteProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const hasMobileNavOffset = hasStandardMobileNavOffset(pathname);
   const [isActive, setIsActive] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -153,10 +175,17 @@ export function RouteProgress() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-1"
+      data-route-progress
+      className={cn(
+        "pointer-events-none fixed inset-x-0 top-0 z-[70] h-1",
+        "max-md:top-auto max-md:z-[45] max-md:h-[2px]",
+        hasMobileNavOffset
+          ? "max-md:bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))]"
+          : "max-md:bottom-[var(--app-bottom-safe-area)]",
+      )}
     >
       <div
-        className="h-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out"
+        className="h-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.24)]"
         style={{
           opacity: isActive ? (isFinishing ? 0.55 : 1) : 0,
           width: `${progress}%`,

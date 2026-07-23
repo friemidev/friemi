@@ -117,7 +117,6 @@ export function HomeFooter({ locale }: HomeFooterProps) {
             </p>
           </div>
         </div>
-
       </div>
     </footer>
   );

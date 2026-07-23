@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, Copy, Pencil, Save, X } from "lucide-react";
-import { Button, Input } from "@chill-club/ui";
+import { Button, Input, Textarea } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
 import {
   updateProfileIdentityAction,
@@ -12,6 +12,7 @@ import {
 import { useViewerProfile } from "./ViewerProfileProvider";
 
 type ProfileIdentityFormProps = {
+  bio?: string | null;
   friendCode: string;
   locale: string;
   nickname: string;
@@ -20,6 +21,7 @@ type ProfileIdentityFormProps = {
 const initialState: UpdateProfileIdentityState = {};
 
 export function ProfileIdentityForm({
+  bio = null,
   friendCode,
   locale,
   nickname,
@@ -30,6 +32,7 @@ export function ProfileIdentityForm({
     initialState,
   );
   const [editing, setEditing] = useState(false);
+  const [bioValue, setBioValue] = useState(bio ?? "");
   const [nicknameValue, setNicknameValue] = useState(nickname);
   const [copied, setCopied] = useState(false);
   const t = getCopy(locale).profile;
@@ -41,10 +44,22 @@ export function ProfileIdentityForm({
         : "编辑昵称";
   const cancelLabel =
     locale === "en" ? "Cancel" : locale === "fr" ? "Annuler" : "取消";
+  const bioLabel =
+    locale === "en" ? "Bio" : locale === "fr" ? "Bio" : "简介";
+  const bioPlaceholder =
+    locale === "en"
+      ? "Write a short intro"
+      : locale === "fr"
+        ? "Ajoutez une courte présentation"
+        : "简单介绍一下自己";
 
   useEffect(() => {
     setNicknameValue(nickname);
   }, [nickname]);
+
+  useEffect(() => {
+    setBioValue(bio ?? "");
+  }, [bio]);
 
   useEffect(() => {
     if (!state.success || !state.nickname) {
@@ -52,6 +67,9 @@ export function ProfileIdentityForm({
     }
 
     setNickname(state.nickname);
+    if (state.bio !== undefined) {
+      setBioValue(state.bio ?? "");
+    }
     setNicknameValue(state.nickname);
     setEditing(false);
   }, [setNickname, state.nickname, state.success]);
@@ -125,6 +143,19 @@ export function ProfileIdentityForm({
               placeholder={t.nicknamePlaceholder}
               className="h-10 bg-white"
               onChange={(event) => setNicknameValue(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-1.5">
+            <span className="text-xs font-medium text-zinc-500">
+              {bioLabel}
+            </span>
+            <Textarea
+              name="bio"
+              value={bioValue}
+              maxLength={160}
+              placeholder={bioPlaceholder}
+              className="min-h-20 resize-none bg-white"
+              onChange={(event) => setBioValue(event.target.value)}
             />
           </label>
           {state.formError ? (

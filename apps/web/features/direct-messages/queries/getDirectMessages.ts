@@ -27,6 +27,7 @@ const messageSelect = {
   conversationId: true,
   senderId: true,
   body: true,
+  imageUrls: true,
   readAt: true,
   createdAt: true,
 } satisfies Prisma.DirectMessageSelect;
@@ -100,6 +101,7 @@ export type DirectMessagePreviewViewModel = {
   id: string;
   senderId: string;
   body: string;
+  imageUrls: string[];
   createdAt: string;
   sourceActivity: {
     id: string;
@@ -133,6 +135,7 @@ export type DirectMessageThreadItemViewModel = {
   id: string;
   senderId: string;
   body: string;
+  imageUrls: string[];
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
@@ -213,6 +216,7 @@ function mapLastMessage(
     id: lastMessage.id,
     senderId: lastMessage.senderId,
     body: lastMessage.body,
+    imageUrls: lastMessage.imageUrls,
     createdAt: lastMessage.createdAt.toISOString(),
     sourceActivity: null,
   };
@@ -251,6 +255,7 @@ function mapConversationThread(
       id: message.id,
       senderId: message.senderId,
       body: message.body,
+      imageUrls: message.imageUrls,
       readAt: message.readAt?.toISOString() ?? null,
       createdAt: message.createdAt.toISOString(),
       isMine: message.senderId === currentUserProfileId,
@@ -292,11 +297,15 @@ async function getFriendPeerIds(
 function sortFriendRosterItems(
   items: DirectMessageFriendRosterItemViewModel[],
 ) {
+  const getLastContactTime = (item: DirectMessageFriendRosterItemViewModel) =>
+    new Date(
+      item.lastMessage?.createdAt ?? item.lastMessageAt ?? item.createdAt,
+    ).getTime();
+
   return [...items].sort((itemA, itemB) => {
-    if (itemA.lastMessageAt && itemB.lastMessageAt) {
+    if (itemA.lastMessage || itemB.lastMessage) {
       return (
-        new Date(itemB.lastMessageAt).getTime() -
-          new Date(itemA.lastMessageAt).getTime() ||
+        getLastContactTime(itemB) - getLastContactTime(itemA) ||
         itemA.friendshipId.localeCompare(itemB.friendshipId)
       );
     }
@@ -416,6 +425,17 @@ export async function getDirectMessageFriendRoster(
               getConversationPair(currentUserProfileId, friendId),
             ),
           },
+          orderBy: [
+            {
+              lastMessageAt: {
+                sort: "desc",
+                nulls: "last",
+              },
+            },
+            {
+              createdAt: "desc",
+            },
+          ],
           select: conversationListSelect,
         }),
     getFriendNearestActivitySignals({
@@ -447,7 +467,10 @@ export async function getDirectMessageFriendRoster(
         friend,
         conversationId: conversation?.id ?? null,
         lastMessage: conversation ? mapLastMessage(conversation) : null,
-        lastMessageAt: conversation?.lastMessageAt?.toISOString() ?? null,
+        lastMessageAt:
+          conversation?.lastMessageAt?.toISOString() ??
+          conversation?.messages[0]?.createdAt.toISOString() ??
+          null,
         createdAt: friendship.createdAt.toISOString(),
         recentActivities: activitiesByFriendId.get(friend.id) ?? [],
       };
@@ -484,11 +507,7 @@ export async function getDirectConversationThread(
     peerProfileId: peerId,
   });
 
-  return mapConversationThread(
-    conversation,
-    currentUserProfileId,
-    canSend,
-  );
+  return mapConversationThread(conversation, currentUserProfileId, canSend);
 }
 
 export async function getDirectConversationActivityContext({
@@ -548,6 +567,8 @@ export async function getDirectConversationActivityContext({
     id: activity.id,
     title: activity.title,
     startAt: activity.startAt.toISOString(),
-    locationLabel: [activity.city, activity.address].filter(Boolean).join(" · "),
+    locationLabel: [activity.city, activity.address]
+      .filter(Boolean)
+      .join(" · "),
   };
 }

@@ -67,6 +67,14 @@ function isFriemiAndroidWebView() {
   return /FriemiAndroid\//i.test(window.navigator.userAgent);
 }
 
+function isFriemiIOSWebView() {
+  return /FriemiIOS\//i.test(window.navigator.userAgent);
+}
+
+function isFriemiNativeWebView() {
+  return isFriemiAndroidWebView() || isFriemiIOSWebView();
+}
+
 function withoutAndroidAuthParams(pathname: string, searchParams: URLSearchParams) {
   const nextParams = new URLSearchParams(searchParams.toString());
   nextParams.delete(androidAuthReturnParamName);
@@ -105,7 +113,7 @@ export function AndroidAuthReturnRefresh({
   );
 
   useEffect(() => {
-    if (!isAndroidAuthReturn || !isFriemiAndroidWebView()) {
+    if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       setVisible(false);
       activatedAtRef.current = null;
       return;
@@ -127,7 +135,7 @@ export function AndroidAuthReturnRefresh({
   }, [isAndroidAuthReturn, routeKey, router]);
 
   useEffect(() => {
-    if (!isAndroidAuthReturn || !isFriemiAndroidWebView()) {
+    if (!isAndroidAuthReturn || !isFriemiNativeWebView()) {
       return;
     }
 

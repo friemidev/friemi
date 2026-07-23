@@ -12,7 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
-import { LocaleSwitcher } from "@/components/navigation/LocaleSwitcher";
+import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
 import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
@@ -243,19 +243,18 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       location: "Paris",
       cityOptions: [
         { label: "Paris", href: "/activities?city=Paris" },
-        { label: "Lyon", href: "/activities?city=Lyon" },
-        { label: "Marseille", href: "/activities?city=Marseille" },
+        { label: "Pekin", href: "/activities?city=Beijing" },
+        { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
-        { href: "/lobby", label: "Tout" },
-        { href: "/activities?city=Paris", label: "Proche" },
-        { href: "/activities?dateRange=TODAY", label: "Aujourd'hui" },
-        { href: "/lobby?filter=friendJoined", label: "Amis" },
-        { href: "/activities?q=gratuit", label: "Gratuit" },
+        { href: "/activities", label: "Activités" },
+        { href: "/lobby?tab=nearby", label: "Groupes proches" },
+        { href: "/lobby?tab=today", label: "Aujourd'hui" },
+        { href: "/lobby?tab=friends", label: "Groupes d'amis" },
       ],
       categoriesTitle: "Catégories populaires",
-      topNewsTitle: "À la une",
-      trendingTitle: "🔥 Tendance aujourd'hui",
+      topNewsTitle: "🔥 Top News",
+      trendingTitle: "Tendance aujourd'hui",
       seeAll: "Voir tout",
       participantsLabel: "personnes",
       distanceFallback: "800m",
@@ -275,7 +274,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "BOARD_GAME",
           coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          href: "/lobby?category=BOARD_GAME",
+          href: "/lobby?tab=nearby&category=BOARD_GAME",
           meta: "6 / 8 personnes",
           title: "Soirée jeux",
         },
@@ -289,7 +288,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "FOOD",
           coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-          href: "/lobby?category=FOOD",
+          href: "/lobby?tab=nearby&category=FOOD",
           meta: "4 / 6 personnes",
           title: "Café & discussion",
         },
@@ -312,19 +311,18 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       location: "Paris",
       cityOptions: [
         { label: "Paris", href: "/activities?city=Paris" },
-        { label: "London", href: "/activities?city=London" },
-        { label: "New York", href: "/activities?city=New%20York" },
+        { label: "Beijing", href: "/activities?city=Beijing" },
+        { label: "Shanghai", href: "/activities?city=Shanghai" },
       ],
       filters: [
-        { href: "/lobby", label: "All" },
-        { href: "/activities?city=Paris", label: "Nearby" },
-        { href: "/activities?dateRange=TODAY", label: "Today" },
-        { href: "/lobby?filter=friendJoined", label: "Friends" },
-        { href: "/activities?q=free", label: "Free" },
+        { href: "/activities", label: "Activities" },
+        { href: "/lobby?tab=nearby", label: "Nearby Hangouts" },
+        { href: "/lobby?tab=today", label: "Today" },
+        { href: "/lobby?tab=friends", label: "Friend Hangouts" },
       ],
       categoriesTitle: "Popular Categories",
-      topNewsTitle: "Top News",
-      trendingTitle: "🔥 Trending Today",
+      topNewsTitle: "🔥 Top News",
+      trendingTitle: "Trending Today",
       seeAll: "See all",
       participantsLabel: "people",
       distanceFallback: "800m",
@@ -344,7 +342,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "BOARD_GAME",
           coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          href: "/lobby?category=BOARD_GAME",
+          href: "/lobby?tab=nearby&category=BOARD_GAME",
           meta: "6 / 8 people",
           title: "Board Game Night",
         },
@@ -358,7 +356,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         {
           category: "FOOD",
           coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-          href: "/lobby?category=FOOD",
+          href: "/lobby?tab=nearby&category=FOOD",
           meta: "4 / 6 people",
           title: "Cafe & Talk",
         },
@@ -380,19 +378,18 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     location: "巴黎",
     cityOptions: [
       { label: "巴黎", href: "/activities?city=Paris" },
-      { label: "上海", href: "/activities?city=Shanghai" },
       { label: "北京", href: "/activities?city=Beijing" },
+      { label: "上海", href: "/activities?city=Shanghai" },
     ],
     filters: [
-      { href: "/lobby", label: "全部" },
-      { href: "/activities?city=Paris", label: "附近" },
-      { href: "/activities?dateRange=TODAY", label: "今天" },
-      { href: "/lobby?filter=friendJoined", label: "好友" },
-      { href: "/activities?q=免费", label: "免费" },
+      { href: "/activities", label: "发现活动" },
+      { href: "/lobby?tab=nearby", label: "附近组局" },
+      { href: "/lobby?tab=today", label: "今日组局" },
+      { href: "/lobby?tab=friends", label: "好友组局" },
     ],
     categoriesTitle: "热门分类",
-    topNewsTitle: "最新动态",
-    trendingTitle: "🔥 今日热门",
+    topNewsTitle: "🔥 Top News",
+    trendingTitle: "今日热门",
     seeAll: "查看全部",
     participantsLabel: "人",
     distanceFallback: "800m",
@@ -412,7 +409,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       {
         category: "BOARD_GAME",
         coverImageUrl: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-        href: "/lobby?category=BOARD_GAME",
+        href: "/lobby?tab=nearby&category=BOARD_GAME",
         meta: "6 / 8 人",
         title: "今晚桌游局",
       },
@@ -426,7 +423,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       {
         category: "FOOD",
         coverImageUrl: "/home/v2_1/friemi-home-v21-creator-hosting.jpg",
-        href: "/lobby?category=FOOD",
+        href: "/lobby?tab=nearby&category=FOOD",
         meta: "4 / 6 人",
         title: "咖啡聊天",
       },
@@ -553,7 +550,6 @@ function MobileHomeV23Experience({
               currentCity={copy.location}
               locale={locale}
             />
-            <LocaleSwitcher locale={locale} />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
@@ -596,7 +592,10 @@ function MobileHomeV23Experience({
           <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
-          <MobileHomeV23CategoryCarousel categories={categories} locale={locale} />
+          <MobileHomeV23CategoryCarousel
+            categories={categories}
+            locale={locale}
+          />
         </section>
 
         <section className="mt-4">
@@ -605,11 +604,12 @@ function MobileHomeV23Experience({
           </h2>
           <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {newsActivities.length > 0
-              ? newsActivities.map((activity) => (
+              ? newsActivities.map((activity, index) => (
                   <MobileHomeV23NewsActivityCard
                     activity={activity}
                     key={`${activity.type}:${activity.id}:news`}
                     locale={locale}
+                    priority={index === 0}
                   />
                 ))
               : copy.newsCards.map((card) => (
@@ -638,14 +638,16 @@ function MobileHomeV23Experience({
 
           <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trendingActivities.length > 0
-              ? trendingActivities.slice(0, 5).map((activity) => (
-                  <MobileHomeV23ActivityCard
-                    activity={activity}
-                    key={`${activity.type}:${activity.id}`}
-                    locale={locale}
-                    participantsLabel={copy.participantsLabel}
-                  />
-                ))
+              ? trendingActivities
+                  .slice(0, 5)
+                  .map((activity) => (
+                    <MobileHomeV23ActivityCard
+                      activity={activity}
+                      key={`${activity.type}:${activity.id}`}
+                      locale={locale}
+                      participantsLabel={copy.participantsLabel}
+                    />
+                  ))
               : copy.fallbackCards.map((card) => (
                   <MobileHomeV23FallbackCard
                     card={card}
@@ -656,7 +658,6 @@ function MobileHomeV23Experience({
           </div>
         </section>
       </div>
-
     </section>
   );
 }
@@ -671,8 +672,9 @@ function MobileHomeV23NewsCard({
   title: string;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={href}
+      prefetchOnVisible
       className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
     >
       <Image
@@ -686,36 +688,43 @@ function MobileHomeV23NewsCard({
       <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
         {title}
       </span>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
 function MobileHomeV23NewsActivityCard({
   activity,
   locale,
+  priority = false,
 }: {
   activity: ActivityCardViewModel;
   locale: string;
+  priority?: boolean;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={getMobileHomeActivityHref(activity, locale)}
+      prefetchOnVisible
       className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
     >
       <ActivityCoverImage
         alt={activity.title}
         src={activity.coverImageUrl}
+        fetchPriority={priority ? "high" : "auto"}
+        loading={priority ? "eager" : "lazy"}
         overlayClassName="bg-gradient-to-t from-black/54 via-black/12 to-black/4"
       />
       <div className="absolute bottom-3 left-3 right-3">
         <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
-          <span className="truncate">{getCategoryLabel(activity.category, locale)}</span>
+          <span className="truncate">
+            {getCategoryLabel(activity.category, locale)}
+          </span>
         </span>
         <h3 className="mt-2 line-clamp-2 text-[17px] font-black leading-5 tracking-normal text-white drop-shadow-sm">
           {activity.title}
         </h3>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -765,8 +774,9 @@ function MobileHomeV23ActivityCard({
       : `${activity.participantCount}`;
 
   return (
-    <Link
+    <IntentPrefetchLink
       href={getMobileHomeActivityHref(activity, locale)}
+      prefetchOnVisible
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -791,10 +801,12 @@ function MobileHomeV23ActivityCard({
         </p>
         <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#111210]/62">
           <Clock3 className="h-3 w-3 shrink-0" />
-          <span className="truncate">{getActivityDateLabel(activity, locale)}</span>
+          <span className="truncate">
+            {getActivityDateLabel(activity, locale)}
+          </span>
         </p>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -806,8 +818,9 @@ function MobileHomeV23FallbackCard({
   locale: string;
 }) {
   return (
-    <Link
+    <IntentPrefetchLink
       href={withLocale(locale, card.href)}
+      prefetchOnVisible
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -841,7 +854,7 @@ function MobileHomeV23FallbackCard({
           </span>
         </p>
       </div>
-    </Link>
+    </IntentPrefetchLink>
   );
 }
 
@@ -921,7 +934,7 @@ function MobileHomeExperience({
                   key={`${category.category}-${category.label}-${index}`}
                   href={withLocale(
                     locale,
-                    `/lobby?category=${category.category}`,
+                    `/lobby?tab=nearby&category=${category.category}`,
                   )}
                   className="mobile-home-category group flex min-h-0 min-w-0 flex-col items-center justify-center text-center md:rounded-[1.45rem] md:bg-[#FEFFF9]/68 md:px-3 md:py-3 md:shadow-[0_16px_34px_rgba(21,98,64,0.08)] md:ring-1 md:ring-[#D6D5B2]/65 md:backdrop-blur-sm md:transition md:hover:-translate-y-1 md:hover:bg-white/88 md:hover:shadow-[0_22px_44px_rgba(21,98,64,0.13)]"
                   style={

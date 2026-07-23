@@ -10,6 +10,7 @@ import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -17,6 +18,7 @@ import {
 } from "@/features/guest-participants/utils/contactIdentity";
 
 export type UpdateProfileIdentityState = {
+  bio?: string | null;
   formError?: string;
   nickname?: string;
   success?: boolean;
@@ -40,6 +42,7 @@ export type UpdateProfileContactBindingsState = {
 
 const updateProfileIdentitySchema = z.object({
   afterSave: z.enum(["refresh", "redirect"]).default("redirect"),
+  bio: z.string().trim().max(160).optional(),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
   returnTo: z.string().optional(),
@@ -83,6 +86,7 @@ export async function updateProfileIdentityAction(
   const t = getCopy(fallbackLocale).profile;
   const result = updateProfileIdentitySchema.safeParse({
     afterSave: getString(formData, "afterSave") || "redirect",
+    bio: formData.has("bio") ? getString(formData, "bio") : undefined,
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
     returnTo: getString(formData, "returnTo"),
@@ -94,7 +98,7 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { afterSave, locale, nickname, returnTo } = result.data;
+  const { afterSave, bio, locale, nickname, returnTo } = result.data;
   const perf = createActionPerformanceTracker({
     action: "updateProfileIdentity",
   });
@@ -109,6 +113,7 @@ export async function updateProfileIdentityAction(
         id: profile.id,
       },
       data: {
+        ...(bio !== undefined ? { bio: bio || null } : {}),
         nickname,
       },
     }),
@@ -120,6 +125,7 @@ export async function updateProfileIdentityAction(
     });
 
     return {
+      bio: bio !== undefined ? bio || null : undefined,
       nickname,
       success: true,
     };
@@ -329,6 +335,9 @@ export async function updateProfileContactBindingsAction(
   const normalizedContactEmail = normalizeGuestEmail(trimmedContactEmail);
   const normalizedPhone = normalizeGuestPhone(trimmedPhone);
   const normalizedWechatId = normalizeGuestWechatId(trimmedWechatId);
+  const shouldAwardPhoneTrustScore = Boolean(
+    normalizedPhone && !profile.normalizedPhone,
+  );
 
   if (trimmedContactEmail && !normalizedContactEmail) {
     return {
@@ -416,6 +425,12 @@ export async function updateProfileContactBindingsAction(
     );
     return { linked: 0 };
   });
+
+  if (shouldAwardPhoneTrustScore) {
+    await applyPhoneVerifiedTrustScore(profile.id).catch((error) => {
+      console.error("Failed to award phone trust score", error);
+    });
+  }
 
   revalidateNicknamePaths(locale);
 

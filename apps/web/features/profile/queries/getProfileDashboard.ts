@@ -1,6 +1,7 @@
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import type {
   ActivityVisibility,
+  MomentVisibility,
   ParticipantStatus,
   Prisma,
 } from "@prisma/client";
@@ -20,9 +21,45 @@ import {
   getPublicEventCardViewModel,
   publicEventSelect,
 } from "@/features/public-events/queries/getPublicEvents";
+import { calculateTrustScore } from "@/features/trust/trustScore";
 
 export const profileActivityListLimit = 12;
+export const profileCharmGiftListLimit = 6;
 export const profileFollowListLimit = 12;
+type TrustScoreAggregateResult = {
+  _sum: {
+    delta: number | null;
+  };
+};
+
+async function getTrustScoreAggregate(
+  profileId: string,
+): Promise<TrustScoreAggregateResult> {
+  const trustScoreDelegate = (
+    prisma as typeof prisma & {
+      trustScoreEvent?: {
+        aggregate: (args: {
+          where: { profileId: string };
+          _sum: { delta: true };
+        }) => Promise<TrustScoreAggregateResult>;
+      };
+    }
+  ).trustScoreEvent;
+
+  if (!trustScoreDelegate) {
+    return { _sum: { delta: null } };
+  }
+
+  return trustScoreDelegate.aggregate({
+    where: {
+      profileId,
+    },
+    _sum: {
+      delta: true,
+    },
+  });
+}
+
 const publicPastParticipationStatuses: ParticipantStatus[] = [
   "JOINED",
   "APPROVED",
@@ -64,10 +101,55 @@ const profilePublicEventFavoriteSelect = {
   },
 } satisfies Prisma.PublicEventFavoriteSelect;
 
+const profileMomentSelect = {
+  id: true,
+  content: true,
+  visibility: true,
+  resharedMomentId: true,
+  likeCount: true,
+  commentCount: true,
+  repostCount: true,
+  createdAt: true,
+  images: {
+    orderBy: {
+      sortOrder: "asc",
+    },
+    take: 1,
+    select: {
+      id: true,
+      url: true,
+      width: true,
+      height: true,
+    },
+  },
+} satisfies Prisma.MomentSelect;
+
+const profileCharmGiftSelect = {
+  id: true,
+  giftId: true,
+  giftEmoji: true,
+  giftLabel: true,
+  charmDelta: true,
+  quantity: true,
+  totalCharmDelta: true,
+  createdAt: true,
+  sender: {
+    select: {
+      id: true,
+      nickname: true,
+      avatarUrl: true,
+    },
+  },
+} satisfies Prisma.CharmGiftEventSelect;
+
 type ProfilePublicEventFavoriteQueryResult =
   Prisma.PublicEventFavoriteGetPayload<{
     select: typeof profilePublicEventFavoriteSelect;
   }>;
+
+type ProfileCharmGiftQueryResult = Prisma.CharmGiftEventGetPayload<{
+  select: typeof profileCharmGiftSelect;
+}>;
 
 export type ProfileParticipationViewModel = {
   id: string;
@@ -86,18 +168,23 @@ export type ProfileWerewolfStatsViewModel = {
 };
 
 export type ProfileDashboardViewModel = {
+  charmScore: number;
   createdActivityCount: number;
   participationCount: number;
   favoriteActivityCount: number;
   friendCount: number;
   followersCount: number;
   followingCount: number;
+  momentCount: number;
+  trustScore: number;
   createdActivities: ActivityCardViewModel[];
   participations: ProfileParticipationViewModel[];
   favoriteActivities: ProfileFavoriteActivityViewModel[];
   friends: ProfileFriendUserViewModel[];
   followers: ProfileFollowUserViewModel[];
   following: ProfileFollowUserViewModel[];
+  moments: ProfileMomentViewModel[];
+  recentCharmGifts: ProfileCharmGiftViewModel[];
   viewerRelationship: ProfileViewerRelationshipViewModel;
   werewolfStats: ProfileWerewolfStatsViewModel;
 };
@@ -106,6 +193,39 @@ export type ProfileFavoriteActivityViewModel = {
   id: string;
   createdAt: string;
   activity: ActivityCardViewModel;
+};
+
+export type ProfileMomentViewModel = {
+  id: string;
+  content: string | null;
+  visibility: MomentVisibility;
+  resharedMomentId: string | null;
+  likeCount: number;
+  commentCount: number;
+  repostCount: number;
+  createdAt: string;
+  image: {
+    id: string;
+    url: string;
+    width: number | null;
+    height: number | null;
+  } | null;
+};
+
+export type ProfileCharmGiftViewModel = {
+  id: string;
+  giftId: string;
+  giftEmoji: string;
+  giftLabel: string;
+  charmDelta: number;
+  quantity: number;
+  totalCharmDelta: number;
+  createdAt: string;
+  sender: {
+    id: string;
+    nickname: string;
+    avatarUrl: string | null;
+  } | null;
 };
 
 export type PublicProfileViewModel = {
@@ -201,6 +321,47 @@ function mapPublicEventFavorite(
   };
 }
 
+function mapProfileMoment(
+  moment: Prisma.MomentGetPayload<{ select: typeof profileMomentSelect }>,
+): ProfileMomentViewModel {
+  const image = moment.images[0] ?? null;
+
+  return {
+    id: moment.id,
+    content: moment.content,
+    visibility: moment.visibility,
+    resharedMomentId: moment.resharedMomentId,
+    likeCount: moment.likeCount,
+    commentCount: moment.commentCount,
+    repostCount: moment.repostCount,
+    createdAt: moment.createdAt.toISOString(),
+    image: image
+      ? {
+          id: image.id,
+          url: image.url,
+          width: image.width,
+          height: image.height,
+        }
+      : null,
+  };
+}
+
+function mapProfileCharmGift(
+  gift: ProfileCharmGiftQueryResult,
+): ProfileCharmGiftViewModel {
+  return {
+    id: gift.id,
+    giftId: gift.giftId,
+    giftEmoji: gift.giftEmoji,
+    giftLabel: gift.giftLabel,
+    charmDelta: gift.charmDelta,
+    quantity: gift.quantity,
+    totalCharmDelta: gift.totalCharmDelta,
+    createdAt: gift.createdAt.toISOString(),
+    sender: gift.sender,
+  };
+}
+
 function mapFollowUser(user: {
   id: string;
   nickname: string;
@@ -225,7 +386,9 @@ function buildWerewolfStats(
 ): ProfileWerewolfStatsViewModel {
   const judgeCount = records.filter((record) => record.isJudge).length;
   const playerRecords = records.filter((record) => !record.isJudge);
-  const winCount = playerRecords.filter((record) => record.result === "WIN").length;
+  const winCount = playerRecords.filter(
+    (record) => record.result === "WIN",
+  ).length;
   const lossCount = playerRecords.filter(
     (record) => record.result === "LOSE",
   ).length;
@@ -236,7 +399,8 @@ function buildWerewolfStats(
     lossCount,
     playerGameCount,
     winCount,
-    winRate: playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
+    winRate:
+      playerGameCount > 0 ? Math.round((winCount / playerGameCount) * 100) : 0,
   };
 }
 
@@ -292,6 +456,34 @@ function getCreatedActivitiesWhere({
       },
       isSelf ? getOwnTeamActivityWhere() : getTeamActivityWhere(),
     ],
+  };
+}
+
+function getProfileMomentsWhere({
+  isFriend,
+  isSelf,
+  profileId,
+}: {
+  isFriend: boolean;
+  isSelf: boolean;
+  profileId: string;
+}): Prisma.MomentWhereInput {
+  const visibilityValues: MomentVisibility[] | null = isSelf
+    ? null
+    : isFriend
+      ? ["PUBLIC", "FRIENDS"]
+      : ["PUBLIC"];
+
+  return {
+    authorId: profileId,
+    deletedAt: null,
+    ...(visibilityValues
+      ? {
+          visibility: {
+            in: visibilityValues,
+          },
+        }
+      : {}),
   };
 }
 
@@ -446,6 +638,11 @@ export async function getProfileDashboard(
     isSelf: true,
     profileId,
   });
+  const momentsWhere = getProfileMomentsWhere({
+    isFriend: false,
+    isSelf: true,
+    profileId,
+  });
   const [
     createdActivityCount,
     participationCount,
@@ -454,6 +651,7 @@ export async function getProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities,
     participations,
     favoriteActivities,
@@ -461,7 +659,11 @@ export async function getProfileDashboard(
     friendships,
     followers,
     following,
+    moments,
     werewolfRecords,
+    trustScoreAggregate,
+    charmBalance,
+    recentCharmGifts,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -497,6 +699,9 @@ export async function getProfileDashboard(
       where: {
         followerId: profileId,
       },
+    }),
+    prisma.moment.count({
+      where: momentsWhere,
     }),
     prisma.activity.findMany({
       where: createdWhere,
@@ -595,6 +800,12 @@ export async function getProfileDashboard(
         },
       },
     }),
+    prisma.moment.findMany({
+      where: momentsWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileMomentSelect,
+    }),
     prisma.gameToolPlayerRecord.findMany({
       where: {
         kind: "WEREWOLF",
@@ -604,6 +815,23 @@ export async function getProfileDashboard(
         isJudge: true,
         result: true,
       },
+    }),
+    getTrustScoreAggregate(profileId),
+    prisma.userCharmBalance.findUnique({
+      where: {
+        profileId,
+      },
+      select: {
+        score: true,
+      },
+    }),
+    prisma.charmGiftEvent.findMany({
+      where: {
+        recipientProfileId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: profileCharmGiftListLimit,
+      select: profileCharmGiftSelect,
     }),
   ]);
 
@@ -639,12 +867,15 @@ export async function getProfileDashboard(
     .slice(0, profileActivityListLimit);
 
   return {
+    charmScore: charmBalance?.score ?? 0,
     createdActivityCount,
     participationCount,
     favoriteActivityCount: favoriteActivityCount + publicEventFavoriteCount,
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
+    trustScore: calculateTrustScore(trustScoreAggregate._sum.delta),
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
@@ -659,6 +890,8 @@ export async function getProfileDashboard(
     ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    moments: moments.map(mapProfileMoment),
+    recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };
@@ -678,6 +911,11 @@ export async function getPublicProfileDashboard(
     isSelf: viewerProfileId === profileId,
     profileId,
   });
+  const momentsWhere = getProfileMomentsWhere({
+    isFriend: relationship.isFriend,
+    isSelf: viewerProfileId === profileId,
+    profileId,
+  });
   const pastParticipationWhere = getPublicPastParticipationsWhere({
     isFriend: relationship.isFriend,
     now,
@@ -689,12 +927,17 @@ export async function getPublicProfileDashboard(
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
     createdActivities,
     participations,
     friendships,
     followers,
     following,
+    moments,
     werewolfRecords,
+    trustScoreAggregate,
+    charmBalance,
+    recentCharmGifts,
   ] = await Promise.all([
     prisma.activity.count({
       where: createdWhere,
@@ -716,6 +959,9 @@ export async function getPublicProfileDashboard(
       where: {
         followerId: profileId,
       },
+    }),
+    prisma.moment.count({
+      where: momentsWhere,
     }),
     prisma.activity.findMany({
       where: createdWhere,
@@ -794,6 +1040,12 @@ export async function getPublicProfileDashboard(
         },
       },
     }),
+    prisma.moment.findMany({
+      where: momentsWhere,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: profileActivityListLimit,
+      select: profileMomentSelect,
+    }),
     prisma.gameToolPlayerRecord.findMany({
       where: {
         kind: "WEREWOLF",
@@ -803,6 +1055,23 @@ export async function getPublicProfileDashboard(
         isJudge: true,
         result: true,
       },
+    }),
+    getTrustScoreAggregate(profileId),
+    prisma.userCharmBalance.findUnique({
+      where: {
+        profileId,
+      },
+      select: {
+        score: true,
+      },
+    }),
+    prisma.charmGiftEvent.findMany({
+      where: {
+        recipientProfileId: profileId,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: profileCharmGiftListLimit,
+      select: profileCharmGiftSelect,
     }),
   ]);
 
@@ -816,12 +1085,15 @@ export async function getPublicProfileDashboard(
   );
 
   return {
+    charmScore: charmBalance?.score ?? 0,
     createdActivityCount,
     participationCount,
     favoriteActivityCount: 0,
     friendCount,
     followersCount,
     followingCount,
+    momentCount,
+    trustScore: calculateTrustScore(trustScoreAggregate._sum.delta),
     createdActivities: createdActivityCards,
     participations: participations.map((participation, index) => ({
       id: participation.id,
@@ -836,6 +1108,8 @@ export async function getPublicProfileDashboard(
     ),
     followers: followers.map((item) => mapFollowUser(item.follower)),
     following: following.map((item) => mapFollowUser(item.following)),
+    moments: moments.map(mapProfileMoment),
+    recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
   };

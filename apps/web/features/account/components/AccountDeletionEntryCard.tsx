@@ -65,14 +65,16 @@ export function AccountDeletionEntryCard({
             {copy.body}
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-red-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
-          onClick={() => setConfirmOpen(true)}
-        >
-          <Trash2 className="h-4 w-4" aria-hidden="true" />
-          {copy.openConfirm}
-        </button>
+        {!confirmOpen ? (
+          <button
+            type="button"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-red-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            {copy.openConfirm}
+          </button>
+        ) : null}
       </div>
 
       {confirmOpen ? (

@@ -6,6 +6,7 @@ import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
+import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -39,6 +40,14 @@ async function finalizeUserProfile<
   });
 
   return ensuredProfile;
+}
+
+async function grantWelcomeCheckForNewProfile(profileId: string) {
+  try {
+    await grantWelcomeFriemiCheck(profileId);
+  } catch (error) {
+    console.error("Failed to grant welcome Friemi check", error);
+  }
 }
 
 export async function getCurrentUser() {
@@ -180,9 +189,15 @@ async function upsertLocalUserProfile(clerkUserId: string) {
     },
   });
 
-  return finalizeUserProfile(profile, {
+  const finalizedProfile = await finalizeUserProfile(profile, {
     verifiedEmail: profile.email,
   });
+
+  if (!existing) {
+    await grantWelcomeCheckForNewProfile(finalizedProfile.id);
+  }
+
+  return finalizedProfile;
 }
 
 async function upsertClerkUserProfile(user: ClerkCurrentUser) {
@@ -232,7 +247,9 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
       emailVerifiedAt: updatedEmailVerifiedAt,
       firstName: profileFields.firstName,
       lastName: profileFields.lastName,
-      ...(existing?.nickname?.trim() ? {} : { nickname: profileFields.nickname }),
+      ...(existing?.nickname?.trim()
+        ? {}
+        : { nickname: profileFields.nickname }),
       username: profileFields.username,
       avatarUrl: profileFields.avatarUrl,
       status: profileFields.status,
@@ -241,26 +258,20 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
     },
   });
 
-  return finalizeUserProfile(profile, { verifiedEmail });
+  const finalizedProfile = await finalizeUserProfile(profile, { verifiedEmail });
+
+  if (!existing) {
+    await grantWelcomeCheckForNewProfile(finalizedProfile.id);
+  }
+
+  return finalizedProfile;
 }
 
 export async function ensureCurrentUserProfile(
   locale = "zh-CN",
   redirectPath?: string,
 ) {
-  const clerkUserId = await requireUser(locale, redirectPath);
-
-  if (!hasClerkKeys()) {
-    return upsertLocalUserProfile(clerkUserId);
-  }
-
-  const user = await currentUser();
-
-  if (!user) {
-    redirect(getSignInHref(locale, redirectPath));
-  }
-
-  return upsertClerkUserProfile(user);
+  return ensureCurrentUserProfileSnapshot(locale, redirectPath);
 }
 
 export async function getOptionalCurrentUserProfile() {
@@ -455,6 +466,30 @@ function isAdminUser(user: ClerkCurrentUser) {
   });
 }
 
+async function getLayoutCurrentUserWhenNeeded({
+  profile,
+}: {
+  profile: {
+    nickname: string;
+    role?: string | null;
+    status?: string | null;
+  } | null;
+}) {
+  if (!profile) {
+    return currentUser();
+  }
+
+  if (!profile.nickname.trim()) {
+    return currentUser();
+  }
+
+  if (profile.status === "ACTIVE" && profile.role === "ADMIN") {
+    return currentUser();
+  }
+
+  return null;
+}
+
 export const getOptionalLayoutViewerState = cache(
   async (): Promise<LayoutViewerState> => {
     if (!hasClerkKeys()) {
@@ -494,39 +529,23 @@ export const getOptionalLayoutViewerState = cache(
       },
     });
 
-    const user = await currentUser();
+    const user = await getLayoutCurrentUserWhenNeeded({ profile });
     const viewerProfile =
       profile && user
         ? await ensureProfileNicknameFromClerkUser(profile, user)
         : profile;
 
     if (viewerProfile?.status === "ACTIVE" && viewerProfile.role === "ADMIN") {
-      const unreadNotificationCount = await prisma.notification.count({
-        where: {
-          recipientId: viewerProfile.id,
-          readAt: null,
-        },
-      });
-
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: getLayoutViewerProfile(viewerProfile),
         showAdminNav: user ? isAdminUser(user) : true,
       };
     }
 
     if (!user) {
-      const unreadNotificationCount = viewerProfile
-        ? await prisma.notification.count({
-            where: {
-              recipientId: viewerProfile.id,
-              readAt: null,
-            },
-          })
-        : 0;
-
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: viewerProfile ? getLayoutViewerProfile(viewerProfile) : null,
         showAdminNav: false,
       };
@@ -534,29 +553,16 @@ export const getOptionalLayoutViewerState = cache(
 
     if (!viewerProfile) {
       const createdProfile = await upsertClerkUserProfile(user);
-      const unreadNotificationCount = await prisma.notification.count({
-        where: {
-          recipientId: createdProfile.id,
-          readAt: null,
-        },
-      });
 
       return {
-        initialUnreadNotificationCount: unreadNotificationCount,
+        initialUnreadNotificationCount: 0,
         profile: getLayoutViewerProfile(createdProfile),
         showAdminNav: isAdminUser(user),
       };
     }
 
-    const unreadNotificationCount = await prisma.notification.count({
-      where: {
-        recipientId: viewerProfile.id,
-        readAt: null,
-      },
-    });
-
     return {
-      initialUnreadNotificationCount: unreadNotificationCount,
+      initialUnreadNotificationCount: 0,
       profile: getLayoutViewerProfile(viewerProfile),
       showAdminNav: isAdminUser(user),
     };

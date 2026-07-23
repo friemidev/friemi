@@ -17,7 +17,7 @@ import { HomeFooter } from "@/components/layout/HomeFooter";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeHeroMedia } from "@/features/home/components/HomeHeroMedia";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
-import { getUpcomingHomeActivities } from "@/features/activities/queries/getActivities";
+import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
@@ -339,7 +339,10 @@ export async function generateMetadata({
   });
 }
 
-export default async function HomePage({ params, searchParams }: HomePageProps) {
+export default async function HomePage({
+  params,
+  searchParams,
+}: HomePageProps) {
   const { locale } = await params;
   const query = (await searchParams) ?? {};
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
@@ -358,7 +361,7 @@ export default async function HomePage({ params, searchParams }: HomePageProps) 
     route: "/home",
   });
   const activitiesResult = await perf.measure("home.activities", () =>
-    getUpcomingHomeActivities({
+    getLobbySwipePublicEventActivities(null, {
       limit: homeActivityPreviewLimit,
     })
       .then((activities) => ({ activities, error: null }))
@@ -674,7 +677,10 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
                   } as CSSProperties
                 }
               >
-                <Icon className="h-4 w-4 text-[#F09182] sm:h-5 sm:w-5" aria-hidden="true" />
+                <Icon
+                  className="h-4 w-4 text-[#F09182] sm:h-5 sm:w-5"
+                  aria-hidden="true"
+                />
                 <p className="mt-3 text-xs font-semibold text-white sm:mt-4 sm:text-sm">
                   {benefit}
                 </p>
@@ -746,7 +752,10 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           imageClassName="home-luxury-intro-backdrop object-cover"
           variant="desktop-wide"
         />
-        <div className="relative z-10 mx-auto max-w-4xl text-center" data-home-reveal="up">
+        <div
+          className="relative z-10 mx-auto max-w-4xl text-center"
+          data-home-reveal="up"
+        >
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
             {t.introEyebrow}
           </p>

@@ -8,7 +8,12 @@ import {
   UsersRound,
 } from "lucide-react";
 
-export type GameToolKind = "AVALON" | "STORYTELLER" | "WEREWOLF";
+export type GameToolKind =
+  | "AVALON"
+  | "BOTC"
+  | "OTHER"
+  | "STORYTELLER"
+  | "WEREWOLF";
 
 export type GameToolDefinition = {
   accent: string;
@@ -26,31 +31,6 @@ export type GameToolDefinition = {
 
 export const gameToolDefinitions: GameToolDefinition[] = [
   {
-    accent: "#F09182",
-    availability: "available",
-    description: {
-      "zh-CN": "5-10 人隐藏身份桌游。开房、入座、发身份、选队伍和记任务都能在 Friemi 里完成。",
-      en: "A 5-10 player hidden-role table game. Open a room, claim seats, deal roles, pick teams, and track quests.",
-      fr: "Un jeu à rôles cachés pour 5 à 10 joueurs. Ouvrez une table, prenez les places, distribuez les rôles et suivez les quêtes.",
-    },
-    href: "/game-tools/avalon",
-    icon: Dice5,
-    imageSrc: "/game-tools/avalon/avalon.jpeg",
-    kind: "AVALON",
-    maxPlayers: 10,
-    minPlayers: 5,
-    phase: {
-      "zh-CN": "已可试玩",
-      en: "Playable",
-      fr: "Jouable",
-    },
-    title: {
-      "zh-CN": "阿瓦隆",
-      en: "The Resistance: Avalon",
-      fr: "The Resistance: Avalon",
-    },
-  },
-  {
     accent: "#7A1F2B",
     availability: "available",
     description: {
@@ -65,9 +45,9 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     maxPlayers: 10,
     minPlayers: 10,
     phase: {
-      "zh-CN": "已可使用",
-      en: "Playable",
-      fr: "Jouable",
+      "zh-CN": "已开放",
+      en: "Open",
+      fr: "Ouvert",
     },
     title: {
       "zh-CN": "狼人杀",
@@ -76,28 +56,79 @@ export const gameToolDefinitions: GameToolDefinition[] = [
     },
   },
   {
-    accent: "#156240",
+    accent: "#F09182",
     availability: "planned",
     description: {
-      "zh-CN": "面向说书人的魔典、座位、状态、夜晚流程和公共屏底座，后续复用同一套房间能力。",
-      en: "A shared room foundation for storytellers: grimoire, seats, states, night flow, and public screen.",
-      fr: "Une base commune pour conteurs : grimoire, places, états, nuit et écran public.",
+      "zh-CN": "阿瓦隆工具暂时锁定，后续重新整理后开放。",
+      en: "Avalon is locked for now and will reopen after the next pass.",
+      fr: "Avalon est verrouillé pour le moment et rouvrira après la prochaine passe.",
+    },
+    href: "/game-tools/avalon",
+    icon: Dice5,
+    imageSrc: "/game-tools/avalon/avalon.jpeg",
+    kind: "AVALON",
+    maxPlayers: 10,
+    minPlayers: 5,
+    phase: {
+      "zh-CN": "敬请期待",
+      en: "Coming soon",
+      fr: "Bientôt",
+    },
+    title: {
+      "zh-CN": "阿瓦隆",
+      en: "The Resistance: Avalon",
+      fr: "The Resistance: Avalon",
+    },
+  },
+  {
+    accent: "#9A1F35",
+    availability: "planned",
+    description: {
+      "zh-CN": "血染钟楼工具还在规划中，暂不开放。",
+      en: "Blood on the Clocktower tools are still planned and not open yet.",
+      fr: "Les outils Blood on the Clocktower sont encore prévus et pas encore ouverts.",
     },
     href: "/game-tools/storyteller",
     icon: BookOpenCheck,
-    imageSrc: "/game-tools/avalon/states/public-screen-token.svg",
-    kind: "STORYTELLER",
+    imageSrc:
+      "/game-tools/blood_on_the_clockTower/blood_on_the_clockTower.jpeg",
+    kind: "BOTC",
     maxPlayers: 20,
     minPlayers: 5,
     phase: {
-      "zh-CN": "规划中",
-      en: "Planned",
-      fr: "Prévu",
+      "zh-CN": "敬请期待",
+      en: "Coming soon",
+      fr: "Bientôt",
     },
     title: {
-      "zh-CN": "说书人工具",
-      en: "Storyteller",
-      fr: "Conteur",
+      "zh-CN": "血染钟楼",
+      en: "Blood on the Clocktower",
+      fr: "Blood on the Clocktower",
+    },
+  },
+  {
+    accent: "#156240",
+    availability: "planned",
+    description: {
+      "zh-CN": "更多线下桌游工具会继续接入。",
+      en: "More offline table tools will be added later.",
+      fr: "D'autres outils de table seront ajoutés plus tard.",
+    },
+    href: "/game-tools",
+    icon: Sparkles,
+    imageSrc: "/game-tools/avalon/states/public-screen-token.svg",
+    kind: "OTHER",
+    maxPlayers: 20,
+    minPlayers: 5,
+    phase: {
+      "zh-CN": "敬请期待",
+      en: "Coming soon",
+      fr: "Bientôt",
+    },
+    title: {
+      "zh-CN": "其他工具",
+      en: "Other tools",
+      fr: "Autres outils",
     },
   },
 ];
@@ -121,8 +152,7 @@ export function getGameToolHubCopy(locale: string) {
       foundation: "Une seule base de salle",
       foundationBody:
         "Code court, places, hôte, événements, écran public et liens privés restent communs. Chaque jeu ajoute seulement ses règles et son interface.",
-      hero:
-        "Ouvre une table, fais entrer les joueurs, puis laisse l'outil suivre ce qui doit rester discret.",
+      hero: "Ouvre une table, fais entrer les joueurs, puis laisse l'outil suivre ce qui doit rester discret.",
       planned: "À venir",
       primary: "Ouvrir",
       range: "joueurs",
@@ -143,8 +173,7 @@ export function getGameToolHubCopy(locale: string) {
       foundation: "One shared room layer",
       foundationBody:
         "Short codes, seats, host control, events, public screens, and private links stay shared. Each game only adds its rules and interface.",
-      hero:
-        "Open a table, bring players in, and let the tool track what should stay private.",
+      hero: "Open a table, bring players in, and let the tool track what should stay private.",
       planned: "Coming",
       primary: "Open",
       range: "players",

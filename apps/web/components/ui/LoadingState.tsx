@@ -33,7 +33,7 @@ export function LoadingPageShell({
   loaderClassName?: string;
 }) {
   return (
-    <PageContainer className={cn("space-y-6", className)}>
+    <PageContainer className={cn("route-loading-shell space-y-6", className)}>
       <div className={cn("flex justify-center py-2", loaderClassName)}>
         <LocalizedBrandLoader size="sm" showLabel />
       </div>

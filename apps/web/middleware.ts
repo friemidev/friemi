@@ -2,10 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { defaultLocale, locales } from "@chill-club/shared";
-import {
-  getRequestRedirectTarget,
-  getSignInHref,
-} from "./lib/auth-redirect";
+import { getRequestRedirectTarget, getSignInHref } from "./lib/auth-redirect";
 import { hasClerkKeys } from "./lib/clerk";
 import {
   getMobileRootLobbyRedirectPath,
@@ -21,14 +18,12 @@ const canonicalProductionHost = "www.friemi.com";
 const productionHostRedirects = new Set(["friemi.com", "friemi.vercel.app"]);
 
 const isProtectedRoute = createRouteMatcher([
-  "/:locale/activities/new(.*)",
   "/:locale/activities/:activityId/edit(.*)",
-  "/:locale/activities/:activityId/teams/new(.*)",
   "/:locale/friends(.*)",
   "/:locale/messages(.*)",
   "/:locale/notifications(.*)",
-  "/:locale/profile(.*)",
-  "/:locale/public-events/:publicEventId/teams/new(.*)",
+  "/:locale/profile/hangouts(.*)",
+  "/:locale/profile/network(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);

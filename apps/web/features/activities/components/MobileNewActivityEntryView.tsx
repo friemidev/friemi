@@ -6,6 +6,7 @@ import {
   getActivityFloatingNow,
   getActivityTimeState,
 } from "@/features/activities/utils/activityDisplay";
+import { isPublicEventCard } from "@/features/activities/utils/activityCardKind";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -87,7 +88,9 @@ function getMobileEntryCopy(locale: string) {
 type MobileEntryCopy = ReturnType<typeof getMobileEntryCopy>;
 
 function getActivityReferenceNow(activity: ActivityCardViewModel) {
-  return activity.type === "PUBLIC_EVENT" ? new Date() : getActivityFloatingNow();
+  return activity.type === "PUBLIC_EVENT"
+    ? new Date()
+    : getActivityFloatingNow();
 }
 
 function getRelativeTimingLabel(
@@ -128,9 +131,7 @@ function getRelativeTimingLabel(
       return mode === "starts" ? copy.startsToday : copy.endsToday;
     }
 
-    return mode === "starts"
-      ? copy.startsInDays(days)
-      : copy.endsInDays(days);
+    return mode === "starts" ? copy.startsInDays(days) : copy.endsInDays(days);
   }
 
   if (timeState === "UPCOMING") {
@@ -144,6 +145,22 @@ function getRelativeTimingLabel(
   }
 
   return copy.ended;
+}
+
+function getPreviewActivityHref(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
+  if (isPublicEventCard(activity)) {
+    return withLocale(
+      locale,
+      activity.publicEventId
+        ? `/public-events/${activity.publicEventId}`
+        : `/activities/${activity.id}`,
+    );
+  }
+
+  return withLocale(locale, getActivityDetailPath(activity.id));
 }
 
 function MobileCreateOption({
@@ -206,21 +223,21 @@ function MobileActivityPreviewCard({
 }) {
   return (
     <Link
-      className="group overflow-hidden rounded-[1.15rem] border border-[#D6D5B2]/78 bg-white shadow-[0_12px_26px_rgba(29,29,27,0.07)] transition active:scale-[0.985]"
-      href={withLocale(locale, getActivityDetailPath(activity.id))}
+      className="group flex aspect-square min-w-0 flex-col overflow-hidden rounded-[1rem] border border-[#D6D5B2]/78 bg-white shadow-[0_10px_22px_rgba(29,29,27,0.07)] transition active:scale-[0.985]"
+      href={getPreviewActivityHref(activity, locale)}
     >
-      <div className="relative aspect-[1.18/0.78] overflow-hidden bg-[#F1F2EC]">
+      <div className="relative h-[56%] shrink-0 overflow-hidden bg-[#F1F2EC]">
         <ActivityCoverImage
           alt={activity.title}
           overlayClassName="bg-gradient-to-t from-black/34 via-black/4 to-transparent"
           src={activity.coverImageUrl}
         />
       </div>
-      <div className="px-2.5 pb-2.5 pt-2">
-        <h3 className="line-clamp-3 h-[2.7rem] overflow-hidden text-[12px] font-extrabold leading-[0.9rem] text-[#123D31]">
+      <div className="flex min-h-0 flex-1 flex-col justify-between px-2.5 py-2">
+        <h3 className="line-clamp-2 overflow-hidden text-[12px] font-extrabold leading-[0.95rem] text-[#111210]">
           {activity.title}
         </h3>
-        <p className="mt-1.5 flex items-center gap-1 text-[11.5px] font-semibold text-[#123D31]/88">
+        <p className="mt-1 flex min-w-0 items-center gap-1 text-[10.5px] font-semibold text-[#111210]/62">
           <Clock3 className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{statusLabel}</span>
         </p>
@@ -267,9 +284,9 @@ export function MobileNewActivityEntryView({
         </header>
 
         {activities.length > 0 ? (
-          <section className="mt-12">
+          <section className="mt-10">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-[28px] font-black leading-none tracking-normal text-[#0D5A3C]">
+              <h2 className="text-[24px] font-black leading-none tracking-normal text-[#111210]">
                 {copy.activity}
               </h2>
               <Link

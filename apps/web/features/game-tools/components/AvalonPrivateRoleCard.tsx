@@ -16,11 +16,13 @@ import {
   History,
   ShieldAlert,
   Swords,
+  UserMinus,
   Users,
   Vote,
   X,
 } from "lucide-react";
 import {
+  leaveAvalonSeatAction,
   proposeAvalonTeamFromSeatAction,
   submitAvalonAssassinationAction,
   submitAvalonMissionCardAction,
@@ -38,6 +40,7 @@ import { cn } from "@/lib/utils";
 type AvalonPrivateRoleCardProps = {
   locale: string;
   payload: AvalonPrivatePayload | null;
+  isHostSeat: boolean;
   privateToken: string;
   roleKey: string | null;
   roomHref: string;
@@ -95,6 +98,9 @@ type Copy = {
   hidden: string;
   history: string;
   identityPocket: string;
+  leaveRoom: string;
+  leaveRoomConfirm: string;
+  leaveSeat: string;
   mission: string;
   missionResult: string;
   noRole: string;
@@ -137,6 +143,9 @@ const copies: Record<string, Copy> = {
     hidden: "先确认周围没人偷看，再揭开身份。",
     history: "回看",
     identityPocket: "身份口袋",
+    leaveRoom: "退出房间",
+    leaveRoomConfirm: "退出这局进行中的房间？",
+    leaveSeat: "离座",
     mission: "任务牌",
     missionResult: "任务结果",
     noRole: "房主还没有开始发身份。",
@@ -177,6 +186,9 @@ const copies: Record<string, Copy> = {
     hidden: "Check the room before revealing your identity.",
     history: "History",
     identityPocket: "Identity",
+    leaveRoom: "Leave room",
+    leaveRoomConfirm: "Leave this running game?",
+    leaveSeat: "Leave seat",
     mission: "Quest card",
     missionResult: "Quest result",
     noRole: "The host has not dealt roles yet.",
@@ -217,6 +229,9 @@ const copies: Record<string, Copy> = {
     hidden: "Vérifie autour de toi avant de révéler ton identité.",
     history: "Historique",
     identityPocket: "Rôle",
+    leaveRoom: "Quitter la table",
+    leaveRoomConfirm: "Quitter cette partie en cours ?",
+    leaveSeat: "Quitter",
     mission: "Carte quête",
     missionResult: "Résultat",
     noRole: "L'hôte n'a pas encore distribué les rôles.",
@@ -313,7 +328,8 @@ function getPlayerStage({
   }
 
   if (roomState.phase === "mission") {
-    const isOnMissionTeam = roomState.proposedTeamSeatNumbers.includes(seatNumber);
+    const isOnMissionTeam =
+      roomState.proposedTeamSeatNumbers.includes(seatNumber);
 
     return {
       detail: isOnMissionTeam
@@ -350,6 +366,7 @@ function getPlayerStage({
 export function AvalonPrivateRoleCard({
   locale,
   payload,
+  isHostSeat,
   privateToken,
   roleKey,
   roomHref,
@@ -365,9 +382,16 @@ export function AvalonPrivateRoleCard({
 }: AvalonPrivateRoleCardProps) {
   const [revealed, setRevealed] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [selectedRoundIndex, setSelectedRoundIndex] = useState(roomState.roundIndex);
+  const [selectedRoundIndex, setSelectedRoundIndex] = useState(
+    roomState.roundIndex,
+  );
+  const [leaveState, leaveFormAction] = useActionState(
+    leaveAvalonSeatAction,
+    initialState,
+  );
   const t = copies[locale] ?? copies.en;
   const canReveal = roomStatus === "IN_PROGRESS" && Boolean(payload);
+  const canLeaveSeat = !isHostSeat;
   const stage = getPlayerStage({
     roleKey,
     roomState,
@@ -380,7 +404,8 @@ export function AvalonPrivateRoleCard({
     () =>
       roomState.missionResults.map((result, index) => ({
         index,
-        isCurrent: index === roomState.roundIndex && roomState.phase !== "finished",
+        isCurrent:
+          index === roomState.roundIndex && roomState.phase !== "finished",
         isUnlocked: index <= roomState.roundIndex || result !== null,
         result,
       })),
@@ -434,7 +459,35 @@ export function AvalonPrivateRoleCard({
                   <Home className="h-3.5 w-3.5" />
                   {t.backToHall}
                 </Link>
+                {canLeaveSeat ? (
+                  <form
+                    action={leaveFormAction}
+                    onSubmit={(event) => {
+                      if (
+                        roomStatus !== "LOBBY" &&
+                        !window.confirm(t.leaveRoomConfirm)
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    <input name="locale" type="hidden" value={locale} />
+                    <input
+                      name="privateToken"
+                      type="hidden"
+                      value={privateToken}
+                    />
+                    <LeaveAvalonPrivateSeatSubmit
+                      label={roomStatus === "LOBBY" ? t.leaveSeat : t.leaveRoom}
+                    />
+                  </form>
+                ) : null}
               </nav>
+              {leaveState.formError ? (
+                <p className="mt-1.5 text-[0.68rem] font-black text-[#9A1F35]">
+                  {leaveState.formError}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -492,8 +545,25 @@ export function AvalonPrivateRoleCard({
         />
       </div>
 
-      {helpOpen ? <HelpDialog onClose={() => setHelpOpen(false)} t={t} /> : null}
+      {helpOpen ? (
+        <HelpDialog onClose={() => setHelpOpen(false)} t={t} />
+      ) : null}
     </section>
+  );
+}
+
+function LeaveAvalonPrivateSeatSubmit({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#F09182]/65 bg-white px-2.5 text-[0.68rem] font-black text-[#9A1F35] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF3EF] disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={pending}
+      type="submit"
+    >
+      <UserMinus className="h-3.5 w-3.5" />
+      {pending ? "..." : label}
+    </button>
   );
 }
 
@@ -699,7 +769,9 @@ function RolePocket({
           <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#156240]/70">
             {t.identityPocket}
           </p>
-          <p className="text-sm font-black leading-5 text-[#0E2A5A]">{t.noRole}</p>
+          <p className="text-sm font-black leading-5 text-[#0E2A5A]">
+            {t.noRole}
+          </p>
         </div>
       </section>
     );
@@ -846,8 +918,14 @@ function HelpDialog({ onClose, t }: { onClose: () => void; t: Copy }) {
         <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4">
           <div className="grid grid-cols-3 gap-2">
             <MiniHintCard icon={<Vote className="h-5 w-5" />} label={t.vote} />
-            <MiniHintCard icon={<Flag className="h-5 w-5" />} label={t.mission} />
-            <MiniHintCard icon={<Swords className="h-5 w-5" />} label={t.target} />
+            <MiniHintCard
+              icon={<Flag className="h-5 w-5" />}
+              label={t.mission}
+            />
+            <MiniHintCard
+              icon={<Swords className="h-5 w-5" />}
+              label={t.target}
+            />
           </div>
           <p className="text-sm font-semibold leading-6 text-[#1D1D1B]/72">
             {t.helpBody}
@@ -920,7 +998,8 @@ function PrivateActionPanel({
   }
 
   const hasVoted = selectedRoundSubmissions.some(
-    (submission) => submission.kind === "TEAM_VOTE" && submission.seatId === seatId,
+    (submission) =>
+      submission.kind === "TEAM_VOTE" && submission.seatId === seatId,
   );
   const hasMissionCard = selectedRoundSubmissions.some(
     (submission) =>
@@ -928,9 +1007,11 @@ function PrivateActionPanel({
   );
   const hasAssassinated = roomSubmissions.some(
     (submission) =>
-      submission.kind === "ASSASSINATION_TARGET" && submission.seatId === seatId,
+      submission.kind === "ASSASSINATION_TARGET" &&
+      submission.seatId === seatId,
   );
-  const isOnMissionTeam = roomState.proposedTeamSeatNumbers.includes(seatNumber);
+  const isOnMissionTeam =
+    roomState.proposedTeamSeatNumbers.includes(seatNumber);
 
   if (roomState.phase === "team_building") {
     if (roomState.currentLeaderSeatNumber === seatNumber) {
@@ -1033,7 +1114,11 @@ function LeaderTeamProposalPanel({
 
       <div className="relative grid grid-cols-5 gap-2">
         {roomSeats.map((seat) => (
-          <label className="group cursor-pointer" key={seat.id} title={seat.displayName}>
+          <label
+            className="group cursor-pointer"
+            key={seat.id}
+            title={seat.displayName}
+          >
             <input
               className="peer sr-only"
               name="teamSeatNumbers"
@@ -1078,7 +1163,8 @@ function RoundHistoryPanel({
   t: Copy;
 }) {
   const ownVote = submissions.find(
-    (submission) => submission.kind === "TEAM_VOTE" && submission.seatId === seatId,
+    (submission) =>
+      submission.kind === "TEAM_VOTE" && submission.seatId === seatId,
   );
   const ownMissionCard = submissions.find(
     (submission) =>
@@ -1276,7 +1362,9 @@ function PassiveRoundPanel({
         <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-[#156240]/70">
           {visual.title}
         </p>
-        <p className="mt-1 text-base font-black text-[#0E2A5A]">{visual.label}</p>
+        <p className="mt-1 text-base font-black text-[#0E2A5A]">
+          {visual.label}
+        </p>
       </div>
     </section>
   );
@@ -1349,7 +1437,9 @@ function MissionCardPanel({
         image="/game-tools/avalon/states/mission-pending-token.svg"
         title={t.mission}
       />
-      <div className={cn("grid gap-3", canFail ? "grid-cols-2" : "grid-cols-1")}>
+      <div
+        className={cn("grid gap-3", canFail ? "grid-cols-2" : "grid-cols-1")}
+      >
         <PrivateImageAction
           action={formAction}
           image="/game-tools/avalon/states/mission-success-token.svg"
@@ -1404,7 +1494,11 @@ function AssassinationPanel({
       />
       <div className="relative grid grid-cols-5 gap-2">
         {roomSeats.map((seat) => (
-          <label className="cursor-pointer" key={seat.id} title={seat.displayName}>
+          <label
+            className="cursor-pointer"
+            key={seat.id}
+            title={seat.displayName}
+          >
             <input
               className="peer sr-only"
               name="targetSeatNumber"

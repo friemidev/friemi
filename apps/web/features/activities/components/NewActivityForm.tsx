@@ -8,7 +8,7 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from "react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { flushSync, useFormStatus } from "react-dom";
 import {
   CircleAlert,
@@ -19,16 +19,11 @@ import {
   Clock3,
   LoaderCircle,
 } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardContent,
-  Input,
-  Textarea,
-} from "@chill-club/ui";
+import { Button, Card, CardContent, Input, Textarea } from "@chill-club/ui";
 import { activityCategories, type ActivityCategory } from "@chill-club/shared";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { getActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
 import {
   createActivityAction,
   type CreateActivityState,
@@ -38,17 +33,21 @@ import {
   type ActivityFormValues,
 } from "../actions/activityActionUtils";
 import { updateActivityAction } from "../actions/updateActivity";
+import type { ActivityTextImportDraft } from "../utils/activityTextImport";
 import { ActivityCoverUpload } from "./ActivityCoverUpload";
 import { ActivityPlacePicker } from "./ActivityPlacePicker";
+import { ActivityTextImportPanel } from "./ActivityTextImportPanel";
 
 type NewActivityFormProps = {
   activityId?: string;
   cancelHref?: string;
   formId?: string;
   initialValues?: ActivityFormValues;
+  isAuthenticated?: boolean;
   locale: string;
   mode?: "create" | "edit";
   showFormActions?: boolean;
+  signInHref?: string;
 };
 
 const initialState: CreateActivityState = {};
@@ -156,6 +155,131 @@ const compactInputClassName =
 const compactTextareaClassName =
   "min-h-24 rounded-xl border border-[#D8D2C2] bg-white px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
+const newActivityDraftStorageKey = "friemi:new-activity-form-draft:v1";
+const newActivityDraftMaxAgeMs = 24 * 60 * 60 * 1000;
+
+type StoredNewActivityDraft = {
+  locale: string;
+  savedAt: number;
+  values: Partial<ActivityFormValues>;
+};
+
+function getFormDataText(formData: FormData, key: keyof ActivityFormValues) {
+  const value = formData.get(key);
+
+  return typeof value === "string" ? value : "";
+}
+
+function getFormDataBoolean(formData: FormData, key: keyof ActivityFormValues) {
+  const value = formData.get(key);
+
+  return value === "on" || value === "true";
+}
+
+function getNewActivityDraftValues(
+  form: HTMLFormElement,
+): Partial<ActivityFormValues> {
+  const formData = new FormData(form);
+
+  return {
+    address: getFormDataText(formData, "address"),
+    capacity: getFormDataText(formData, "capacity"),
+    capacityLimitEnabled: getFormDataBoolean(formData, "capacityLimitEnabled"),
+    category: getFormDataText(formData, "category"),
+    city: getFormDataText(formData, "city"),
+    coverImageUrl: getFormDataText(formData, "coverImageUrl"),
+    description: getFormDataText(formData, "description"),
+    destination: getFormDataText(formData, "destination"),
+    endAt: getFormDataText(formData, "endAt"),
+    hideAddressFromNonParticipants: getFormDataBoolean(
+      formData,
+      "hideAddressFromNonParticipants",
+    ),
+    importSourceUrl: getFormDataText(formData, "importSourceUrl"),
+    itinerary: getFormDataText(formData, "itinerary"),
+    latitude: getFormDataText(formData, "latitude"),
+    longitude: getFormDataText(formData, "longitude"),
+    minParticipants: getFormDataText(formData, "minParticipants"),
+    otherCategoryText: getFormDataText(formData, "otherCategoryText"),
+    priceText: getFormDataText(formData, "priceText"),
+    priceType: getFormDataText(formData, "priceType"),
+    publicEventId: getFormDataText(formData, "publicEventId"),
+    requiresApproval: getFormDataBoolean(formData, "requiresApproval"),
+    startAt: getFormDataText(formData, "startAt"),
+    ticketLabel: getFormDataText(formData, "ticketLabel"),
+    ticketUrl: getFormDataText(formData, "ticketUrl"),
+    title: getFormDataText(formData, "title"),
+    type: getFormDataText(formData, "type"),
+    visibility: getFormDataText(formData, "visibility") || "PUBLIC",
+  };
+}
+
+function saveNewActivityDraft(locale: string, form: HTMLFormElement | null) {
+  if (!form || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const draft: StoredNewActivityDraft = {
+      locale,
+      savedAt: Date.now(),
+      values: getNewActivityDraftValues(form),
+    };
+
+    window.localStorage.setItem(
+      newActivityDraftStorageKey,
+      JSON.stringify(draft),
+    );
+  } catch {
+    // Draft saving is best-effort; sign-in should not be blocked by storage.
+  }
+}
+
+function clearNewActivityDraft() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(newActivityDraftStorageKey);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function readNewActivityDraft(locale: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawDraft = window.localStorage.getItem(newActivityDraftStorageKey);
+
+    if (!rawDraft) {
+      return null;
+    }
+
+    const draft = JSON.parse(rawDraft) as Partial<StoredNewActivityDraft>;
+    const savedAt =
+      typeof draft.savedAt === "number" ? draft.savedAt : Number.NaN;
+
+    if (
+      draft.locale !== locale ||
+      !Number.isFinite(savedAt) ||
+      Date.now() - savedAt > newActivityDraftMaxAgeMs ||
+      !draft.values ||
+      typeof draft.values !== "object"
+    ) {
+      clearNewActivityDraft();
+      return null;
+    }
+
+    return draft.values;
+  } catch {
+    clearNewActivityDraft();
+    return null;
+  }
+}
 
 function getCategoryPlaceholder(locale: string) {
   if (locale === "fr") {
@@ -299,10 +423,7 @@ function getCityPickerCopy(locale: string) {
   };
 }
 
-type TeamFormSectionId =
-  | "activity-content"
-  | "time-location"
-  | "people-price";
+type TeamFormSectionId = "activity-content" | "time-location" | "people-price";
 type FieldErrorMap = NonNullable<CreateActivityState["fieldErrors"]>;
 
 const teamFormSectionOrder: TeamFormSectionId[] = [
@@ -409,7 +530,9 @@ function getFormValidationCopy(locale: string) {
   if (locale === "en") {
     return {
       errorStepLabel: (count: number) =>
-        count > 1 ? `${count} fields need attention` : "1 field needs attention",
+        count > 1
+          ? `${count} fields need attention`
+          : "1 field needs attention",
       formErrorPrefix: "Needs attention",
       jumpToStep: "Go to field",
     };
@@ -1313,7 +1436,11 @@ function DateTimeRangePickerField({
   }
 
   return (
-    <div className="relative grid gap-2" data-field-name={startName} ref={pickerRef}>
+    <div
+      className="relative grid gap-2"
+      data-field-name={startName}
+      ref={pickerRef}
+    >
       <input name={startName} type="hidden" value={startValue} />
       <input name={endName} type="hidden" value={endValue} />
       <button
@@ -1334,7 +1461,9 @@ function DateTimeRangePickerField({
         }}
       >
         <span className="min-w-0">
-          <span className={cn("block truncate", !startValue && "text-zinc-400")}>
+          <span
+            className={cn("block truncate", !startValue && "text-zinc-400")}
+          >
             {displayStart}
           </span>
           {displayEnd ? (
@@ -1413,9 +1542,7 @@ function DateTimeRangePickerField({
                     !isDisabled
                       ? "text-zinc-800 hover:bg-[#F1F2EC]"
                       : "text-zinc-300 opacity-45",
-                    isInRange &&
-                      !isDisabled &&
-                      "bg-[#E4F0DF] text-[#156240]",
+                    isInRange && !isDisabled && "bg-[#E4F0DF] text-[#156240]",
                     (isRangeStart || isRangeEnd) &&
                       !isDisabled &&
                       "bg-[#369758] text-white hover:bg-[#369758]",
@@ -1819,7 +1946,8 @@ function FormSection({
     <section
       className={cn(
         "min-w-0 border-b border-[#E9E2CE] pb-5 last:border-b-0 last:pb-0",
-        hasErrors && "rounded-2xl bg-[#FFF7F5]/72 px-3 py-3 ring-1 ring-[#F09182]/45",
+        hasErrors &&
+          "rounded-2xl bg-[#FFF7F5]/72 px-3 py-3 ring-1 ring-[#F09182]/45",
       )}
     >
       {hasErrors ? (
@@ -2106,13 +2234,22 @@ export function NewActivityForm({
   cancelHref,
   formId,
   initialValues,
+  isAuthenticated = true,
   locale,
   mode = "create",
   showFormActions = true,
+  signInHref,
 }: NewActivityFormProps) {
   const action = mode === "edit" ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(action, initialState);
-  const values = state.values ?? initialValues;
+  const baseValues = state.values ?? initialValues;
+  const [textImportValues, setTextImportValues] = useState<
+    Partial<ActivityFormValues>
+  >({});
+  const [formDraftVersion, setFormDraftVersion] = useState(0);
+  const values = Object.keys(textImportValues).length
+    ? { ...baseValues, ...textImportValues }
+    : baseValues;
   const activityType = values?.type ?? "LOCAL";
   const [category, setCategory] = useState(values?.category ?? "");
   const [city, setCity] = useState(values?.city?.trim() || "Paris");
@@ -2127,12 +2264,15 @@ export function NewActivityForm({
   );
   const [ticketUrl, setTicketUrl] = useState(values?.ticketUrl ?? "");
   const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const titleInputId = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const draftRestoredRef = useRef(false);
   const skipLongDurationConfirmRef = useRef(false);
   const [longDurationConfirmation, setLongDurationConfirmation] =
     useState<LongDurationConfirmation | null>(null);
   const t = getCopy(locale);
   const validationCopy = getFormValidationCopy(locale);
+  const defaultCoverImageUrl = getActivityCategoryIllustrationSrc(category);
   const publicEventTeamFormCopy = values?.publicEventId
     ? getPublicEventTeamFormCopy(locale)
     : null;
@@ -2147,10 +2287,8 @@ export function NewActivityForm({
       "activity-content",
       state.fieldErrors,
     ).length,
-    "time-location": getSectionErrorFields(
-      "time-location",
-      state.fieldErrors,
-    ).length,
+    "time-location": getSectionErrorFields("time-location", state.fieldErrors)
+      .length,
     "people-price": getSectionErrorFields("people-price", state.fieldErrors)
       .length,
   } satisfies Record<TeamFormSectionId, number>;
@@ -2181,7 +2319,40 @@ export function NewActivityForm({
     },
   ];
   useEffect(() => {
-    if (!state.version || lastHandledErrorVersionRef.current === state.version) {
+    if (
+      mode !== "create" ||
+      !isAuthenticated ||
+      initialValues ||
+      draftRestoredRef.current
+    ) {
+      return;
+    }
+
+    const draftValues = readNewActivityDraft(locale);
+
+    if (!draftValues) {
+      return;
+    }
+
+    draftRestoredRef.current = true;
+    setTextImportValues(draftValues);
+    setCategory(draftValues.category ?? "");
+    setCity(draftValues.city?.trim() || "Paris");
+    setVisibility(draftValues.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC");
+    setPriceType(normalizePriceTypeForSimpleMode(draftValues.priceType));
+    setTicketUrl(draftValues.ticketUrl ?? "");
+    setTicketLinkKind(getInitialTicketLinkKind(draftValues));
+    setIsCapacityLimited(
+      draftValues.capacityLimitEnabled ?? Number(draftValues.capacity ?? 0) > 0,
+    );
+    setFormDraftVersion((currentVersion) => currentVersion + 1);
+  }, [initialValues, isAuthenticated, locale, mode]);
+
+  useEffect(() => {
+    if (
+      !state.version ||
+      lastHandledErrorVersionRef.current === state.version
+    ) {
       return;
     }
 
@@ -2196,8 +2367,18 @@ export function NewActivityForm({
   }, [state.fieldErrors, state.version]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (mode === "create" && !isAuthenticated && signInHref) {
+      event.preventDefault();
+      saveNewActivityDraft(locale, event.currentTarget);
+      window.location.assign(signInHref);
+      return;
+    }
+
     if (skipLongDurationConfirmRef.current) {
       skipLongDurationConfirmRef.current = false;
+      if (mode === "create" && isAuthenticated) {
+        clearNewActivityDraft();
+      }
       return;
     }
 
@@ -2211,6 +2392,9 @@ export function NewActivityForm({
     );
 
     if (!confirmation) {
+      if (isAuthenticated) {
+        clearNewActivityDraft();
+      }
       return;
     }
 
@@ -2232,11 +2416,66 @@ export function NewActivityForm({
     }, 0);
   }
 
+  function saveCurrentDraftBeforeAuth() {
+    if (mode === "create") {
+      saveNewActivityDraft(locale, formRef.current);
+    }
+  }
+
+  function handleTextImportApply(draft: ActivityTextImportDraft) {
+    const nextValues: Partial<ActivityFormValues> = { ...draft };
+
+    if (draft.priceType) {
+      nextValues.priceType = normalizePriceTypeForSimpleMode(draft.priceType);
+    }
+
+    setTextImportValues((currentValues) => ({
+      ...currentValues,
+      ...nextValues,
+    }));
+
+    if (draft.category) {
+      setCategory(draft.category);
+    }
+
+    if (draft.city) {
+      setCity(draft.city);
+    }
+
+    if (draft.visibility === "PUBLIC" || draft.visibility === "PRIVATE") {
+      setVisibility(draft.visibility);
+    }
+
+    if (draft.priceType) {
+      setPriceType(normalizePriceTypeForSimpleMode(draft.priceType));
+    }
+
+    if (draft.ticketUrl) {
+      setTicketUrl(draft.ticketUrl);
+      setTicketLinkKind(
+        draft.ticketLabel === "VIEW_DETAILS" ? "VIEW_DETAILS" : "RESERVE_SPOT",
+      );
+    } else if (draft.ticketLabel) {
+      setTicketLinkKind(draft.ticketLabel);
+    }
+
+    if (draft.capacityLimitEnabled !== undefined) {
+      setIsCapacityLimited(draft.capacityLimitEnabled);
+    } else if (Number(draft.capacity ?? 0) > 0) {
+      setIsCapacityLimited(true);
+    }
+
+    setFormDraftVersion((currentVersion) => currentVersion + 1);
+    window.setTimeout(() => {
+      focusFieldAfterSectionSwitch(formRef.current, "title");
+    }, 0);
+  }
+
   return (
     <Card className="w-full min-w-0 overflow-visible border-0 bg-transparent shadow-none">
       <CardContent className="min-w-0 bg-transparent p-0">
         <form
-          key={state.version ?? 0}
+          key={`${state.version ?? 0}-${formDraftVersion}`}
           action={formAction}
           className="grid min-w-0 gap-5 sm:gap-6"
           id={formId}
@@ -2325,467 +2564,478 @@ export function NewActivityForm({
           ) : null}
 
           <div className="min-w-0">
-            <FormSection
-              errorCount={sectionErrorCounts["activity-content"]}
-            >
-            <div className="grid gap-2" data-field-name="coverImageUrl">
-              <ActivityCoverUpload
-                buttonOnlyUntilUploaded
-                initialUrl={values?.coverImageUrl}
-                label={getCoverUploadPrompt(locale)}
-                locale={locale}
-                onUploadingChange={setIsCoverUploading}
-                splitPreviewBelow
-              />
-              <FieldError errors={state.fieldErrors?.coverImageUrl} />
-            </div>
-
-            <label
-              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-              data-field-name="title"
-            >
-              <RequiredLabel>
-                {publicEventTeamFormCopy?.title ?? t.form.title}
-              </RequiredLabel>
-              <Input
-                className={cn(
-                  compactInputClassName,
-                  state.fieldErrors?.title?.length && invalidControlClassName,
-                )}
-                name="title"
-                aria-invalid={Boolean(state.fieldErrors?.title)}
-                defaultValue={values?.title}
-                placeholder={
-                  publicEventTeamFormCopy?.titlePlaceholder ??
-                  t.form.titlePlaceholder
-                }
-                required
-              />
-              <FieldError errors={state.fieldErrors?.title} />
-            </label>
-
-            <div className="grid gap-3" data-field-name="visibility">
-              <div className="grid grid-cols-2 gap-2">
-                {visibilityOptions.map((option) => {
-                  const active = visibility === option;
-                  const isPrivate = option === "PRIVATE";
-
-                  return (
-                    <label
-                      key={option}
-                      className={cn(
-                        "flex h-11 cursor-pointer items-center justify-center rounded-full border px-4 text-base font-semibold transition",
-                        active
-                          ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
-                          : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
-                      )}
-                    >
-                      <input
-                        className="sr-only"
-                        name="visibility"
-                        type="radio"
-                        value={option}
-                        checked={active}
-                        onChange={() => setVisibility(option)}
-                      />
-                      <span>
-                        {isPrivate
-                          ? t.form.visibilityPrivate
-                          : t.form.visibilityPublic}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <FieldError errors={state.fieldErrors?.visibility} />
-            </div>
-
-            <label
-              className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-              data-field-name="description"
-            >
-              <span>
-                {publicEventTeamFormCopy?.description ?? t.form.description}
-              </span>
-              <Textarea
-                className={cn(
-                  compactTextareaClassName,
-                  state.fieldErrors?.description?.length &&
-                    invalidControlClassName,
-                )}
-                name="description"
-                aria-invalid={Boolean(state.fieldErrors?.description)}
-                defaultValue={values?.description}
-                placeholder={
-                  publicEventTeamFormCopy?.descriptionPlaceholder ??
-                  t.form.descriptionPlaceholder
-                }
-              />
-              <FieldError errors={state.fieldErrors?.description} />
-            </label>
-
-            <input name="itinerary" type="hidden" value="" />
-
-            <div className="grid gap-3">
-              {!isPublicEventTeam ? (
-                <>
-                <input name="type" type="hidden" value={activityType} />
-                <input name="category" type="hidden" value={category} />
-                <div
-                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-                  data-field-name="category"
-                >
-                  <RequiredLabel>
-                    {getActivityCategoryFieldLabel(locale)}
-                  </RequiredLabel>
-                  <MobileOptionPickerField
-                    ariaInvalid={Boolean(state.fieldErrors?.category)}
-                    label={getActivityCategoryFieldLabel(locale)}
-                    onValueChange={setCategory}
-                    options={categoryOptions.map((option) => ({
-                      label: getCategoryLabel(option, locale),
-                      value: option,
-                    }))}
-                    placeholder={getCategoryPlaceholder(locale)}
-                    value={category}
-                  />
-                  <Select
-                    aria-invalid={Boolean(state.fieldErrors?.category)}
-                    className={cn(
-                      "hidden md:block",
-                      state.fieldErrors?.category?.length &&
-                        invalidControlClassName,
-                    )}
-                    onChange={(event) => setCategory(event.target.value)}
-                    required
-                    value={category}
+            <FormSection errorCount={sectionErrorCounts["activity-content"]}>
+              <div
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="title"
+              >
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <label
+                    className="min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap"
+                    htmlFor={titleInputId}
                   >
-                    <option value="" disabled>
-                      {getCategoryPlaceholder(locale)}
-                    </option>
-                    {categoryOptions.map((value) => (
-                      <option key={value} value={value}>
-                        {getCategoryLabel(value, locale)}
-                      </option>
-                    ))}
-                  </Select>
-                  <FieldError errors={state.fieldErrors?.category} />
-                </div>
-                </>
-              ) : (
-                <span />
-              )}
-            </div>
-
-            {!isPublicEventTeam && category === "OTHER" ? (
-              <label
-                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-                data-field-name="otherCategoryText"
-              >
-                <RequiredLabel>
-                  {getOtherActivityCategoryFieldLabel(locale)}
-                </RequiredLabel>
-                <Input
-                  className={cn(
-                    compactInputClassName,
-                    state.fieldErrors?.otherCategoryText?.length &&
-                      invalidControlClassName,
-                  )}
-                  name="otherCategoryText"
-                  aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
-                  defaultValue={values?.otherCategoryText}
-                  maxLength={40}
-                  placeholder={t.form.otherCategoryPlaceholder}
-                  required
-                />
-                <FieldError errors={state.fieldErrors?.otherCategoryText} />
-              </label>
-            ) : null}
-            </FormSection>
-          </div>
-
-          <div className="min-w-0">
-            <FormSection
-              errorCount={sectionErrorCounts["time-location"]}
-            >
-            <CityPickerField
-              errors={state.fieldErrors?.city}
-              label={t.form.city}
-              locale={locale}
-              onCityChange={setCity}
-              required
-              value={city}
-            />
-
-            {activityType === "TRIP" ? (
-              <label
-                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-                data-field-name="destination"
-              >
-                <RequiredLabel>{t.form.destination}</RequiredLabel>
-                <Input
-                  className={cn(
-                    compactInputClassName,
-                    state.fieldErrors?.destination?.length &&
-                      invalidControlClassName,
-                  )}
-                  name="destination"
-                  aria-invalid={Boolean(state.fieldErrors?.destination)}
-                  defaultValue={values?.destination}
-                  placeholder={t.form.destinationPlaceholder}
-                  required
-                />
-                <FieldError errors={state.fieldErrors?.destination} />
-              </label>
-            ) : null}
-
-            <div data-field-name="latitude">
-              <ActivityPlacePicker
-                addressErrors={state.fieldErrors?.address}
-                addressFooter={
-                  <label className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-[#D6D5B2] bg-white/82 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:text-[#156240]">
-                    <input
-                      className="peer sr-only"
-                      defaultChecked={values?.hideAddressFromNonParticipants}
-                      name="hideAddressFromNonParticipants"
-                      type="checkbox"
-                    />
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#8E8383]/70 bg-white text-white transition peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:[&>svg]:opacity-100">
-                      <Check className="h-3 w-3 opacity-0 transition" />
-                    </span>
-                    <span className="min-w-0 truncate">
-                      {t.form.hideAddressFromNonParticipants}
-                    </span>
+                    <RequiredLabel>
+                      {publicEventTeamFormCopy?.title ?? t.form.title}
+                    </RequiredLabel>
                   </label>
-                }
-                addressInputClassName={cn(
-                  compactInputClassName,
-                  state.fieldErrors?.address?.length &&
-                    invalidControlClassName,
+                  {mode === "create" && !isPublicEventTeam ? (
+                    <ActivityTextImportPanel
+                      locale={locale}
+                      onApply={handleTextImportApply}
+                    />
+                  ) : null}
+                </div>
+                <Input
+                  id={titleInputId}
+                  className={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.title?.length && invalidControlClassName,
+                  )}
+                  name="title"
+                  aria-invalid={Boolean(state.fieldErrors?.title)}
+                  defaultValue={values?.title}
+                  placeholder={
+                    publicEventTeamFormCopy?.titlePlaceholder ??
+                    t.form.titlePlaceholder
+                  }
+                  required
+                />
+                <FieldError errors={state.fieldErrors?.title} />
+              </div>
+
+              <div className="grid gap-3" data-field-name="visibility">
+                <div className="grid grid-cols-2 gap-2">
+                  {visibilityOptions.map((option) => {
+                    const active = visibility === option;
+                    const isPrivate = option === "PRIVATE";
+
+                    return (
+                      <label
+                        key={option}
+                        className={cn(
+                          "flex h-11 min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border px-3 text-sm font-semibold transition sm:px-4 sm:text-base",
+                          active
+                            ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
+                            : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+                        )}
+                      >
+                        <input
+                          className="sr-only"
+                          name="visibility"
+                          type="radio"
+                          value={option}
+                          checked={active}
+                          onChange={() => setVisibility(option)}
+                        />
+                        <span className="min-w-0 truncate whitespace-nowrap leading-none">
+                          {isPrivate
+                            ? t.form.visibilityPrivate
+                            : t.form.visibilityPublic}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <FieldError errors={state.fieldErrors?.visibility} />
+              </div>
+
+              <label
+                className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                data-field-name="description"
+              >
+                <span>
+                  {publicEventTeamFormCopy?.description ?? t.form.description}
+                </span>
+                <Textarea
+                  className={cn(
+                    compactTextareaClassName,
+                    state.fieldErrors?.description?.length &&
+                      invalidControlClassName,
+                  )}
+                  name="description"
+                  aria-invalid={Boolean(state.fieldErrors?.description)}
+                  defaultValue={values?.description}
+                  placeholder={
+                    publicEventTeamFormCopy?.descriptionPlaceholder ??
+                    t.form.descriptionPlaceholder
+                  }
+                />
+                <FieldError errors={state.fieldErrors?.description} />
+              </label>
+
+              <input name="itinerary" type="hidden" value="" />
+
+              <div className="grid gap-3">
+                {!isPublicEventTeam ? (
+                  <>
+                    <input name="type" type="hidden" value={activityType} />
+                    <input name="category" type="hidden" value={category} />
+                    <div
+                      className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                      data-field-name="category"
+                    >
+                      <RequiredLabel>
+                        {getActivityCategoryFieldLabel(locale)}
+                      </RequiredLabel>
+                      <MobileOptionPickerField
+                        ariaInvalid={Boolean(state.fieldErrors?.category)}
+                        label={getActivityCategoryFieldLabel(locale)}
+                        onValueChange={setCategory}
+                        options={categoryOptions.map((option) => ({
+                          label: getCategoryLabel(option, locale),
+                          value: option,
+                        }))}
+                        placeholder={getCategoryPlaceholder(locale)}
+                        value={category}
+                      />
+                      <Select
+                        aria-invalid={Boolean(state.fieldErrors?.category)}
+                        className={cn(
+                          "hidden md:block",
+                          state.fieldErrors?.category?.length &&
+                            invalidControlClassName,
+                        )}
+                        onChange={(event) => setCategory(event.target.value)}
+                        required
+                        value={category}
+                      >
+                        <option value="" disabled>
+                          {getCategoryPlaceholder(locale)}
+                        </option>
+                        {categoryOptions.map((value) => (
+                          <option key={value} value={value}>
+                            {getCategoryLabel(value, locale)}
+                          </option>
+                        ))}
+                      </Select>
+                      <FieldError errors={state.fieldErrors?.category} />
+                    </div>
+                  </>
+                ) : (
+                  <span />
                 )}
-                addressLabel={t.form.address}
-                addressPlaceholder="République, Paris"
-                addressRequired
-                initialAddress={values?.address}
-                initialLatitude={values?.latitude}
-                initialLongitude={values?.longitude}
-                latitudeErrors={state.fieldErrors?.latitude}
-                locale={locale}
-                longitudeErrors={state.fieldErrors?.longitude}
-              />
-            </div>
+              </div>
 
-            <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
-              <RequiredLabel>{t.form.startAt}</RequiredLabel>
-              <DateTimeRangePickerField
-                endDefaultValue={values?.endAt}
-                endErrors={state.fieldErrors?.endAt}
-                endLabel={t.form.endAt}
-                endName="endAt"
-                locale={locale}
-                startDefaultValue={values?.startAt}
-                startErrors={state.fieldErrors?.startAt}
-                startLabel={t.form.startAt}
-                startName="startAt"
-              />
-            </div>
-            </FormSection>
-          </div>
-
-          <div className="min-w-0">
-            <FormSection
-              errorCount={sectionErrorCounts["people-price"]}
-            >
-            <SettingCheckbox
-              checked={isCapacityLimited}
-              name="capacityLimitEnabled"
-              onChange={(event) => setIsCapacityLimited(event.target.checked)}
-              title={t.form.capacityLimitToggle}
-            />
-
-            {isCapacityLimited ? (
-              <div className="grid max-w-sm gap-3">
+              {!isPublicEventTeam && category === "OTHER" ? (
                 <label
                   className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
-                  data-field-name="capacity"
+                  data-field-name="otherCategoryText"
                 >
                   <RequiredLabel>
-                    {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
+                    {getOtherActivityCategoryFieldLabel(locale)}
                   </RequiredLabel>
                   <Input
                     className={cn(
                       compactInputClassName,
-                      state.fieldErrors?.capacity?.length &&
+                      state.fieldErrors?.otherCategoryText?.length &&
                         invalidControlClassName,
                     )}
-                    name="capacity"
-                    aria-invalid={Boolean(state.fieldErrors?.capacity)}
-                    type="number"
-                    min={2}
-                    max={100}
-                    defaultValue={
-                      Number(values?.capacity ?? 0) > 0 ? values?.capacity : ""
-                    }
-                    placeholder={t.form.capacityPlaceholder}
+                    name="otherCategoryText"
+                    aria-invalid={Boolean(state.fieldErrors?.otherCategoryText)}
+                    defaultValue={values?.otherCategoryText}
+                    maxLength={40}
+                    placeholder={t.form.otherCategoryPlaceholder}
                     required
                   />
-                  <FieldError errors={state.fieldErrors?.capacity} />
+                  <FieldError errors={state.fieldErrors?.otherCategoryText} />
                 </label>
-                <input name="minParticipants" type="hidden" value="" />
+              ) : null}
+            </FormSection>
+          </div>
+
+          <div className="min-w-0">
+            <FormSection errorCount={sectionErrorCounts["time-location"]}>
+              <CityPickerField
+                errors={state.fieldErrors?.city}
+                label={t.form.city}
+                locale={locale}
+                onCityChange={setCity}
+                required
+                value={city}
+              />
+
+              {activityType === "TRIP" ? (
+                <label
+                  className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                  data-field-name="destination"
+                >
+                  <RequiredLabel>{t.form.destination}</RequiredLabel>
+                  <Input
+                    className={cn(
+                      compactInputClassName,
+                      state.fieldErrors?.destination?.length &&
+                        invalidControlClassName,
+                    )}
+                    name="destination"
+                    aria-invalid={Boolean(state.fieldErrors?.destination)}
+                    defaultValue={values?.destination}
+                    placeholder={t.form.destinationPlaceholder}
+                    required
+                  />
+                  <FieldError errors={state.fieldErrors?.destination} />
+                </label>
+              ) : null}
+
+              <div data-field-name="latitude">
+                <ActivityPlacePicker
+                  addressErrors={state.fieldErrors?.address}
+                  addressFooter={
+                    <label className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-[#D6D5B2] bg-white/82 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:text-[#156240]">
+                      <input
+                        className="peer sr-only"
+                        defaultChecked={values?.hideAddressFromNonParticipants}
+                        name="hideAddressFromNonParticipants"
+                        type="checkbox"
+                      />
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#8E8383]/70 bg-white text-white transition peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:[&>svg]:opacity-100">
+                        <Check className="h-3 w-3 opacity-0 transition" />
+                      </span>
+                      <span className="min-w-0 truncate">
+                        {t.form.hideAddressFromNonParticipants}
+                      </span>
+                    </label>
+                  }
+                  addressInputClassName={cn(
+                    compactInputClassName,
+                    state.fieldErrors?.address?.length &&
+                      invalidControlClassName,
+                  )}
+                  addressLabel={t.form.address}
+                  addressPlaceholder="République, Paris"
+                  addressRequired
+                  initialAddress={values?.address}
+                  initialLatitude={values?.latitude}
+                  initialLongitude={values?.longitude}
+                  latitudeErrors={state.fieldErrors?.latitude}
+                  locale={locale}
+                  longitudeErrors={state.fieldErrors?.longitude}
+                />
               </div>
-            ) : (
-              <>
-                <input name="capacity" type="hidden" value="0" />
-                <input name="minParticipants" type="hidden" value="" />
-              </>
-            )}
 
-            <div className="grid gap-3" data-field-name="priceType">
-              <span className="text-base font-semibold text-zinc-700 sm:text-lg">
-                {t.form.priceType}
-              </span>
-              <input name="priceType" type="hidden" value={priceType} />
-              <div
-                className={cn(
-                  "grid items-start gap-2",
-                  priceType === "FREE"
-                    ? "grid-cols-2 sm:grid-cols-[10rem_10rem]"
-                    : "grid-cols-[0.78fr_0.78fr_1.18fr]",
-                )}
-              >
-                {(["FREE", "FIXED"] as const).map((value) => {
-                  const active = priceType === value;
-                  const priceModeCopy = getPriceModeCopy(locale);
+              <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+                <RequiredLabel>{t.form.startAt}</RequiredLabel>
+                <DateTimeRangePickerField
+                  endDefaultValue={values?.endAt}
+                  endErrors={state.fieldErrors?.endAt}
+                  endLabel={t.form.endAt}
+                  endName="endAt"
+                  locale={locale}
+                  startDefaultValue={values?.startAt}
+                  startErrors={state.fieldErrors?.startAt}
+                  startLabel={t.form.startAt}
+                  startName="startAt"
+                />
+              </div>
+            </FormSection>
+          </div>
 
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      className={cn(
-                        "h-11 rounded-full border px-4 text-base font-semibold transition",
-                        active
-                          ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
-                          : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
-                      )}
-                      aria-pressed={active}
-                      onClick={() => setPriceType(value)}
-                    >
-                      {value === "FREE"
-                        ? priceModeCopy.free
-                        : priceModeCopy.paid}
-                    </button>
-                  );
-                })}
+          <div className="min-w-0">
+            <FormSection errorCount={sectionErrorCounts["people-price"]}>
+              <SettingCheckbox
+                checked={isCapacityLimited}
+                name="capacityLimitEnabled"
+                onChange={(event) => setIsCapacityLimited(event.target.checked)}
+                title={t.form.capacityLimitToggle}
+              />
 
-                {priceType !== "FREE" ? (
+              {isCapacityLimited ? (
+                <div className="grid max-w-sm gap-3">
                   <label
-                    className="grid gap-2"
-                    data-field-name="priceText"
+                    className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg"
+                    data-field-name="capacity"
                   >
-                    <span className="sr-only">
-                      {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
-                    </span>
+                    <RequiredLabel>
+                      {publicEventTeamFormCopy?.capacity ?? t.form.capacity}
+                    </RequiredLabel>
                     <Input
                       className={cn(
                         compactInputClassName,
-                        state.fieldErrors?.priceText?.length &&
+                        state.fieldErrors?.capacity?.length &&
                           invalidControlClassName,
                       )}
-                      name="priceText"
-                      aria-invalid={Boolean(state.fieldErrors?.priceText)}
+                      name="capacity"
+                      aria-invalid={Boolean(state.fieldErrors?.capacity)}
+                      type="number"
+                      min={2}
+                      max={100}
                       defaultValue={
-                        values?.priceType === "FREE" ? "" : values?.priceText
+                        Number(values?.capacity ?? 0) > 0
+                          ? values?.capacity
+                          : ""
                       }
-                      placeholder={getPriceModeCopy(locale).paidAmount}
+                      placeholder={t.form.capacityPlaceholder}
                       required
                     />
-                    <FieldError errors={state.fieldErrors?.priceText} />
+                    <FieldError errors={state.fieldErrors?.capacity} />
                   </label>
-                ) : (
-                  <input name="priceText" type="hidden" value="" />
-                )}
-              </div>
-              <FieldError errors={state.fieldErrors?.priceType} />
-            </div>
-
-            <div className="grid gap-3" data-field-name="ticketUrl">
-              <span className="text-base font-semibold text-zinc-700 sm:text-lg">
-                {ticketLinkCopy.title}
-              </span>
-              <input
-                name="ticketLabel"
-                type="hidden"
-                value={ticketLinkKind}
-              />
-              {!ticketLinkKind ? (
+                  <input name="minParticipants" type="hidden" value="" />
+                </div>
+              ) : (
                 <>
-                  <input name="ticketUrl" type="hidden" value="" />
+                  <input name="capacity" type="hidden" value="0" />
+                  <input name="minParticipants" type="hidden" value="" />
                 </>
-              ) : null}
+              )}
 
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    ["RESERVE_SPOT", ticketLinkCopy.reserve],
-                    ["VIEW_DETAILS", ticketLinkCopy.details],
-                  ] as const
-                ).map(([value, label]) => {
-                  const active = ticketLinkKind === value;
+              <div className="grid gap-3" data-field-name="priceType">
+                <span className="text-base font-semibold text-zinc-700 sm:text-lg">
+                  {t.form.priceType}
+                </span>
+                <input name="priceType" type="hidden" value={priceType} />
+                <div
+                  className={cn(
+                    "grid items-start gap-2",
+                    priceType === "FREE"
+                      ? "grid-cols-2 sm:grid-cols-[10rem_10rem]"
+                      : "grid-cols-[0.78fr_0.78fr_1.18fr]",
+                  )}
+                >
+                  {(["FREE", "FIXED"] as const).map((value) => {
+                    const active = priceType === value;
+                    const priceModeCopy = getPriceModeCopy(locale);
 
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      className={cn(
-                        "h-11 rounded-full border px-3 text-sm font-semibold transition sm:text-base",
-                        active
-                          ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
-                          : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
-                      )}
-                      aria-pressed={active}
-                      onClick={() =>
-                        setTicketLinkKind((currentKind) =>
-                          currentKind === value ? "" : value,
-                        )
-                      }
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        className={cn(
+                          "h-11 rounded-full border px-4 text-base font-semibold transition",
+                          active
+                            ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
+                            : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+                        )}
+                        aria-pressed={active}
+                        onClick={() => setPriceType(value)}
+                      >
+                        {value === "FREE"
+                          ? priceModeCopy.free
+                          : priceModeCopy.paid}
+                      </button>
+                    );
+                  })}
+
+                  {priceType !== "FREE" ? (
+                    <label className="grid gap-2" data-field-name="priceText">
+                      <span className="sr-only">
+                        {publicEventTeamFormCopy?.priceText ?? t.form.priceText}
+                      </span>
+                      <Input
+                        className={cn(
+                          compactInputClassName,
+                          state.fieldErrors?.priceText?.length &&
+                            invalidControlClassName,
+                        )}
+                        name="priceText"
+                        aria-invalid={Boolean(state.fieldErrors?.priceText)}
+                        defaultValue={
+                          values?.priceType === "FREE" ? "" : values?.priceText
+                        }
+                        placeholder={getPriceModeCopy(locale).paidAmount}
+                        required
+                      />
+                      <FieldError errors={state.fieldErrors?.priceText} />
+                    </label>
+                  ) : (
+                    <input name="priceText" type="hidden" value="" />
+                  )}
+                </div>
+                <FieldError errors={state.fieldErrors?.priceType} />
               </div>
 
-              {ticketLinkKind ? (
-                <label className="grid gap-2">
-                  <span className="sr-only">{t.form.ticketUrl}</span>
-                  <Input
-                    className={cn(
-                      compactInputClassName,
-                      state.fieldErrors?.ticketUrl?.length &&
-                        invalidControlClassName,
-                    )}
-                    name="ticketUrl"
-                    aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
-                    inputMode="url"
-                    onChange={(event) => setTicketUrl(event.target.value)}
-                    placeholder={t.form.ticketUrlPlaceholder}
-                    required
-                    type="url"
-                    value={ticketUrl}
-                  />
-                </label>
-              ) : null}
+              <div className="grid gap-3" data-field-name="ticketUrl">
+                <span className="text-base font-semibold text-zinc-700 sm:text-lg">
+                  {ticketLinkCopy.title}
+                </span>
+                <input
+                  name="ticketLabel"
+                  type="hidden"
+                  value={ticketLinkKind}
+                />
+                {!ticketLinkKind ? (
+                  <>
+                    <input name="ticketUrl" type="hidden" value="" />
+                  </>
+                ) : null}
 
-              <FieldError errors={state.fieldErrors?.ticketUrl} />
-              <FieldError errors={state.fieldErrors?.ticketLabel} />
-            </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      ["RESERVE_SPOT", ticketLinkCopy.reserve],
+                      ["VIEW_DETAILS", ticketLinkCopy.details],
+                    ] as const
+                  ).map(([value, label]) => {
+                    const active = ticketLinkKind === value;
 
-            <SettingCheckbox
-              defaultChecked={values?.requiresApproval}
-              name="requiresApproval"
-              title={t.form.requiresApproval}
-            />
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        className={cn(
+                          "h-11 rounded-full border px-3 text-sm font-semibold transition sm:text-base",
+                          active
+                            ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
+                            : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
+                        )}
+                        aria-pressed={active}
+                        onClick={() =>
+                          setTicketLinkKind((currentKind) =>
+                            currentKind === value ? "" : value,
+                          )
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {ticketLinkKind ? (
+                  <label className="grid gap-2">
+                    <span className="sr-only">{t.form.ticketUrl}</span>
+                    <Input
+                      className={cn(
+                        compactInputClassName,
+                        state.fieldErrors?.ticketUrl?.length &&
+                          invalidControlClassName,
+                      )}
+                      name="ticketUrl"
+                      aria-invalid={Boolean(state.fieldErrors?.ticketUrl)}
+                      inputMode="url"
+                      onChange={(event) => setTicketUrl(event.target.value)}
+                      placeholder={t.form.ticketUrlPlaceholder}
+                      required
+                      type="url"
+                      value={ticketUrl}
+                    />
+                  </label>
+                ) : null}
+
+                <FieldError errors={state.fieldErrors?.ticketUrl} />
+                <FieldError errors={state.fieldErrors?.ticketLabel} />
+              </div>
+
+              <SettingCheckbox
+                defaultChecked={values?.requiresApproval}
+                name="requiresApproval"
+                title={t.form.requiresApproval}
+              />
             </FormSection>
+          </div>
+
+          <div className="grid gap-2" data-field-name="coverImageUrl">
+            <ActivityCoverUpload
+              buttonOnlyUntilUploaded
+              fallbackPreviewUrl={defaultCoverImageUrl}
+              initialUrl={values?.coverImageUrl}
+              label={getCoverUploadPrompt(locale)}
+              locale={locale}
+              onUploadingChange={setIsCoverUploading}
+              onAuthRequired={saveCurrentDraftBeforeAuth}
+              signInHref={!isAuthenticated ? signInHref : undefined}
+              splitPreviewBelow
+              submitFallbackValue
+            />
+            <FieldError errors={state.fieldErrors?.coverImageUrl} />
           </div>
 
           {showFormActions ? (

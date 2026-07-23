@@ -11,16 +11,41 @@ function hasField(modelName, fieldName) {
   return Boolean(model?.fields.some((field) => field.name === fieldName));
 }
 
-const requiredModels = ["ActivityCoManager", "ActivityManagementLog"];
+const requiredModels = [
+  "ActivityCoManager",
+  "ActivityManagementLog",
+  "Moment",
+  "MomentImage",
+  "MomentLike",
+  "MomentComment",
+  "Planet",
+  "PlanetMember",
+  "PlanetMessage",
+  "PlanetMoment",
+  "PlanetMomentComment",
+  "PlanetMomentLike",
+  "PlanetMomentCommentLike",
+];
 const requiredFields = [
   ["Activity", "coManagers"],
   ["Activity", "managementLogs"],
   ["UserProfile", "managedActivities"],
   ["UserProfile", "addedCoManagers"],
   ["UserProfile", "activityManagementLogs"],
+  ["UserProfile", "moments"],
+  ["Moment", "resharedMomentId"],
+  ["Moment", "repostCount"],
+  ["Notification", "momentId"],
+  ["Notification", "momentCommentId"],
+  ["Planet", "inviteCode"],
+  ["Planet", "nameTranslations"],
+  ["PlanetMoment", "likes"],
+  ["PlanetMomentComment", "likes"],
 ];
 
-const missingModels = requiredModels.filter((modelName) => !getModel(modelName));
+const missingModels = requiredModels.filter(
+  (modelName) => !getModel(modelName),
+);
 const missingFields = requiredFields.filter(
   ([modelName, fieldName]) => !hasField(modelName, fieldName),
 );
@@ -50,4 +75,4 @@ if (missingModels.length > 0 || missingFields.length > 0) {
   process.exit(1);
 }
 
-console.log("Prisma Client verified against activity co-manager schema.");
+console.log("Prisma Client verified against required application schema.");

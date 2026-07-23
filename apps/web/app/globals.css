@@ -39,6 +39,7 @@
   --app-top-safe-area: env(safe-area-inset-top);
   --app-bottom-safe-area: env(safe-area-inset-bottom);
   --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
+  --app-mobile-nav-height: 5.15rem;
 }
 
 * {
@@ -58,6 +59,41 @@ body {
   color: var(--friemi-palette-ink);
 }
 
+.friemi-alert-overlay {
+  animation: friemi-alert-overlay-in 150ms ease-out both;
+}
+
+.friemi-alert-card {
+  animation: friemi-alert-card-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes friemi-alert-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes friemi-alert-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friemi-alert-overlay,
+  .friemi-alert-card {
+    animation: none;
+  }
+}
+
 html[data-friemi-android-app="true"],
 html[data-friemi-android-app="true"] body {
   overscroll-behavior-y: contain;
@@ -73,9 +109,10 @@ html[data-friemi-android-app="true"] * {
 }
 
 html[data-friemi-ios-app="true"] {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
-    ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", ui-sans-serif,
+    system-ui, sans-serif;
   overscroll-behavior-y: contain;
 }
 
@@ -87,14 +124,39 @@ html[data-friemi-ios-app="true"] * {
   -webkit-tap-highlight-color: transparent;
 }
 
+.app-layout-shell:has(.auth-page-shell) {
+  padding-bottom: 0;
+  background: var(--friemi-palette-paper);
+}
+
+.app-layout-shell:has(.auth-page-shell) > .app-header,
+.app-layout-shell:has(.auth-page-shell) > .app-mobile-nav,
+.app-layout-shell:has(.auth-page-shell) [data-mobile-scroll-progress],
+.app-layout-shell:has(.auth-page-shell) [data-route-progress],
+.app-layout-shell:has(.route-loading-shell) [data-route-progress] {
+  display: none;
+}
+
+.auth-page-shell .cl-footer {
+  overflow: visible !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.auth-page-shell .cl-footerAction,
+.auth-page-shell .cl-footer > div {
+  padding: 0 !important;
+}
+
+.auth-page-shell .cl-footer > div:not(.cl-footerAction),
+.auth-page-shell .cl-footer div:empty {
+  display: none !important;
+}
+
 html[data-friemi-android-app="true"] .app-layout-shell > header,
 html[data-friemi-ios-app="true"] .app-layout-shell > header {
   padding-top: var(--app-top-safe-area);
-}
-
-html[data-friemi-android-app="true"] [data-mobile-scroll-progress],
-html[data-friemi-ios-app="true"] [data-mobile-scroll-progress] {
-  top: var(--app-mobile-header-height);
 }
 
 html[data-friemi-android-app="true"] .app-layout-shell > nav {
@@ -112,12 +174,16 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
 
   .app-layout-shell:has(.mobile-v23-home) > .app-header,
   .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-home) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-lobby) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-lobby) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-create) > .app-header,
-  .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress] {
+  .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-create) [data-route-progress] {
     display: none;
   }
 }
@@ -449,6 +515,63 @@ a {
 
   50% {
     transform: translate3d(0, -0.22rem, 0) rotate(0.5deg);
+  }
+}
+
+@keyframes mobile-lobby-category-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-lobby-category-panel-in {
+  from {
+    opacity: 0.92;
+    transform: translate3d(100%, 0, 0) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes mobile-lobby-category-item-in {
+  from {
+    opacity: 0;
+    transform: translate3d(1.45rem, 0, 0) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.mobile-lobby-category-drawer__backdrop {
+  animation: mobile-lobby-category-backdrop-in 180ms ease-out both;
+}
+
+.mobile-lobby-category-drawer__panel {
+  animation: mobile-lobby-category-panel-in 320ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
+  will-change: transform;
+}
+
+.mobile-lobby-category-drawer__item {
+  animation: mobile-lobby-category-item-in 360ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-lobby-category-drawer__backdrop,
+  .mobile-lobby-category-drawer__panel,
+  .mobile-lobby-category-drawer__item {
+    animation: none;
   }
 }
 
@@ -815,11 +938,7 @@ a {
 
 @media (min-width: 390px) and (max-width: 767.98px) {
   .mobile-home-viewport {
-    --mobile-home-swipe-height: clamp(
-      16.65rem,
-      calc(38svh - 0.25rem),
-      18.1rem
-    );
+    --mobile-home-swipe-height: clamp(16.65rem, calc(38svh - 0.25rem), 18.1rem);
     --mobile-home-swipe-cover-height: clamp(
       8.05rem,
       calc(19.5svh - 0.25rem),
@@ -1046,8 +1165,7 @@ html[data-home-motion-ready="true"]
   100% {
     opacity: 0;
     transform: translate3d(var(--claim-confetti-drift), 10.5rem, 0)
-      rotate(310deg)
-      scale(1);
+      rotate(310deg) scale(1);
   }
 }
 
@@ -1100,6 +1218,21 @@ html[data-home-motion-ready="true"]
   }
 }
 
+@keyframes planet-danmaku-drift {
+  0% {
+    transform: translateX(105vw);
+  }
+
+  100% {
+    transform: translateX(-120%);
+  }
+}
+
+.planet-danmaku {
+  animation: planet-danmaku-drift 11s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .co-creator-benefit-row,
   .co-creator-flow-card,
@@ -1113,6 +1246,7 @@ html[data-home-motion-ready="true"]
   .home-luxury-reveal,
   .mobile-home-category,
   .mobile-home-category__art,
+  .planet-danmaku,
   [data-home-reveal],
   .friemi-loading-dots span,
   .friemi-shimmer::after {

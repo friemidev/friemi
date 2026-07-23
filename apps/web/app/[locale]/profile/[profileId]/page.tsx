@@ -21,18 +21,23 @@ export const dynamic = "force-dynamic";
 
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
+    charmScore: 0,
     createdActivityCount: 0,
     participationCount: 0,
     favoriteActivityCount: 0,
     friendCount: 0,
     followersCount: 0,
     followingCount: 0,
+    momentCount: 0,
+    trustScore: 80,
     createdActivities: [],
     participations: [],
     favoriteActivities: [],
     friends: [],
     followers: [],
     following: [],
+    moments: [],
+    recentCharmGifts: [],
     werewolfStats: {
       judgeCount: 0,
       lossCount: 0,
@@ -78,7 +83,7 @@ export default async function PublicProfilePage({
     });
 
   return (
-    <PageContainer className="space-y-4">
+    <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
       <DetailSourceReturnLink locale={locale} />
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}

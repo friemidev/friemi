@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { ChevronUp, X } from "lucide-react";
+import { ChevronUp, LockKeyhole, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ type BoardGameToolCopy = {
   avalonTitle: string;
   avalonSubtitle: string;
   botcTitle: string;
+  otherTitle: string;
   close: string;
   comingSoon: string;
   description: string;
@@ -33,11 +34,13 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
     return {
       action: "Ouvrir",
       avalonTitle: "The Resistance: Avalon",
-      avalonSubtitle: "Disponible",
+      avalonSubtitle: "Bientôt",
       botcTitle: "Blood on the Clocktower",
+      otherTitle: "Autres outils",
       close: "Fermer",
       comingSoon: "Bientôt",
-      description: "Choisis l'outil qui accompagne la partie autour de la table.",
+      description:
+        "Choisis l'outil qui accompagne la partie autour de la table.",
       eyebrow: "Débloqué",
       werewolfTitle: "Loup-garou",
       open: "Outils jeu",
@@ -50,8 +53,9 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
     return {
       action: "Open",
       avalonTitle: "The Resistance: Avalon",
-      avalonSubtitle: "Ready",
+      avalonSubtitle: "Coming soon",
       botcTitle: "Blood on the Clocktower",
+      otherTitle: "Other tools",
       close: "Close",
       comingSoon: "Coming soon",
       description: "Pick a table tool for the game you are running.",
@@ -66,8 +70,9 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
   return {
     action: "打开",
     avalonTitle: "阿瓦隆",
-    avalonSubtitle: "已开放",
+    avalonSubtitle: "敬请期待",
     botcTitle: "血染钟楼",
+    otherTitle: "其他工具",
     close: "关闭",
     comingSoon: "敬请期待",
     description: "选择Friemi 桌游应用，开启你的桌游世界。",
@@ -80,7 +85,6 @@ function getBoardGameToolCopy(locale: string): BoardGameToolCopy {
 }
 
 export function BoardGameToolFloatingEntry({
-  avalonHref,
   locale,
   werewolfHref,
 }: BoardGameToolFloatingEntryProps) {
@@ -96,7 +100,6 @@ export function BoardGameToolFloatingEntry({
       title: copy.werewolfTitle,
     },
     {
-      href: avalonHref,
       icon: "/game-tools/avalon/avalon.jpeg",
       key: "avalon",
       status: copy.avalonSubtitle,
@@ -107,6 +110,12 @@ export function BoardGameToolFloatingEntry({
       key: "botc",
       status: copy.comingSoon,
       title: copy.botcTitle,
+    },
+    {
+      icon: "/game-tools/avalon/states/public-screen-token.svg",
+      key: "other",
+      status: copy.comingSoon,
+      title: copy.otherTitle,
     },
   ];
 
@@ -176,7 +185,7 @@ export function BoardGameToolFloatingEntry({
             </div>
 
             <div className="relative grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-5 pb-6 pt-7 md:gap-5 md:py-5">
-              <div className="grid grid-cols-3 items-start gap-3 md:gap-3">
+              <div className="grid grid-cols-4 items-start gap-2 md:gap-3">
                 {tools.map((tool) =>
                   tool.href ? (
                     <Link
@@ -185,7 +194,7 @@ export function BoardGameToolFloatingEntry({
                       key={tool.key}
                       tabIndex={isOpen ? undefined : -1}
                     >
-                      <span className="relative grid h-[clamp(5.6rem,25vw,7rem)] w-[clamp(4.2rem,18vw,5.25rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_18px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#D6D5B2] transition group-hover:shadow-[0_22px_46px_rgba(21,98,64,0.22)] md:h-24 md:w-[4.6rem]">
+                      <span className="relative grid h-[clamp(4.8rem,21vw,6.25rem)] w-[clamp(3.7rem,16vw,4.85rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_18px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#D6D5B2] transition group-hover:shadow-[0_22px_46px_rgba(21,98,64,0.22)] md:h-24 md:w-[4.6rem]">
                         <Image
                           alt=""
                           className="h-full w-full rounded-[1.1rem] object-contain"
@@ -194,7 +203,7 @@ export function BoardGameToolFloatingEntry({
                           width={112}
                         />
                       </span>
-                      <span className="grid min-w-0 max-w-[6.25rem] gap-1">
+                      <span className="grid min-w-0 max-w-[5.6rem] gap-1">
                         <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
                           {tool.title}
                         </span>
@@ -212,20 +221,21 @@ export function BoardGameToolFloatingEntry({
                       tabIndex={isOpen ? undefined : -1}
                       type="button"
                     >
-                      <span className="grid h-[clamp(5.6rem,25vw,7rem)] w-[clamp(4.2rem,18vw,5.25rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.12)] ring-1 ring-[#D6D5B2] md:h-24 md:w-[4.6rem]">
+                      <span className="grid h-[clamp(4.8rem,21vw,6.25rem)] w-[clamp(3.7rem,16vw,4.85rem)] place-items-center overflow-hidden rounded-[1.1rem] bg-white shadow-[0_14px_32px_rgba(29,29,27,0.12)] ring-1 ring-[#D6D5B2] md:h-24 md:w-[4.6rem]">
                         <Image
                           alt=""
-                          className="h-full w-full rounded-[1.1rem] object-contain grayscale-[0.18]"
+                          className="h-full w-full rounded-[1.1rem] object-contain grayscale-[0.2]"
                           height={112}
                           src={tool.icon}
                           width={112}
                         />
                       </span>
-                      <span className="grid min-w-0 max-w-[6.25rem] gap-1">
+                      <span className="grid min-w-0 max-w-[5.6rem] gap-1">
                         <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
                           {tool.title}
                         </span>
-                        <span className="text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#B5301F]/72">
+                        <span className="inline-flex items-center justify-center gap-1 text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#B5301F]/72">
+                          <LockKeyhole className="h-3 w-3" />
                           {tool.status}
                         </span>
                       </span>

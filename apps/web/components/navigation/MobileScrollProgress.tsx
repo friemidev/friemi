@@ -12,8 +12,14 @@ function shouldHideMobileScrollProgress(pathname: string) {
   const localizedRouteSegment = segments[1];
 
   if (
+    firstRouteSegment === "footprints" ||
     firstRouteSegment === "game-tools" ||
-    localizedRouteSegment === "game-tools"
+    firstRouteSegment === "profile" ||
+    localizedRouteSegment === "footprints" ||
+    localizedRouteSegment === "game-tools" ||
+    localizedRouteSegment === "profile" ||
+    (segments.length === 2 && firstRouteSegment === "messages") ||
+    (segments.length === 3 && localizedRouteSegment === "messages")
   ) {
     return true;
   }
@@ -21,10 +27,18 @@ function shouldHideMobileScrollProgress(pathname: string) {
   return (
     (segments.length === 1 &&
       (firstRouteSegment === "mobile-home" ||
-        firstRouteSegment === "lobby")) ||
+        firstRouteSegment === "activities" ||
+        firstRouteSegment === "footprints" ||
+        firstRouteSegment === "lobby" ||
+        firstRouteSegment === "planets" ||
+        firstRouteSegment === "profile")) ||
     (segments.length === 2 &&
       (localizedRouteSegment === "mobile-home" ||
-        localizedRouteSegment === "lobby")) ||
+        localizedRouteSegment === "activities" ||
+        localizedRouteSegment === "footprints" ||
+        localizedRouteSegment === "lobby" ||
+        localizedRouteSegment === "planets" ||
+        localizedRouteSegment === "profile")) ||
     (segments.length === 2 &&
       firstRouteSegment === "activities" &&
       segments[1] === "new") ||
@@ -151,10 +165,10 @@ export function MobileScrollProgress() {
     <div
       aria-hidden="true"
       data-mobile-scroll-progress
-      className="pointer-events-none fixed inset-x-0 top-14 z-[45] h-[3px] bg-[#D6D5B2] sm:top-16 md:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))] top-auto z-[45] h-[2px] bg-[#D6D5B2]/80 md:hidden"
     >
       <div
-        className="h-full origin-left bg-[#369758] shadow-[0_1px_4px_rgba(54,151,88,0.32)] transition-transform duration-100 ease-out"
+        className="h-full origin-left bg-[#369758] shadow-[0_-1px_8px_rgba(54,151,88,0.24)] transition-transform duration-100 ease-out"
         style={{
           transform: `scaleX(${state.progress})`,
         }}

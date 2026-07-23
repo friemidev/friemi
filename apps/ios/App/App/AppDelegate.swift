@@ -1,6 +1,12 @@
 import UIKit
 import Capacitor
 
+extension Notification.Name {
+    static let friemiAuthCompleteURL = Notification.Name("FriemiAuthCompleteURL")
+}
+
+let friemiPendingAuthCompleteURLKey = "FriemiPendingAuthCompleteURL"
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -41,6 +47,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
+        if handleFriemiAuthComplete(url) {
+            return true
+        }
+
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
@@ -49,6 +59,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Feel free to add additional processing here, but if you want the App API to support
         // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+
+    private func handleFriemiAuthComplete(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "friemi",
+              url.host?.lowercased() == "auth-complete"
+        else {
+            return false
+        }
+
+        UserDefaults.standard.set(url.absoluteString, forKey: friemiPendingAuthCompleteURLKey)
+        NotificationCenter.default.post(name: .friemiAuthCompleteURL, object: url)
+        return true
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

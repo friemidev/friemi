@@ -74,6 +74,44 @@ enum UserRole {
   ADMIN
 }
 
+enum TrustScoreEventType {
+  ACTIVITY_CHECK_IN
+  INVITE_FRIEND
+  PHONE_VERIFIED
+  CLEAN_HALF_YEAR
+  NO_SHOW
+  USER_REPORT
+  MASS_REPORT
+  HARASSMENT_DM
+  ORGANIZER_REPORT
+}
+
+enum CharmGiftSurface {
+  PROFILE
+  ACTIVITY
+  MOMENT
+  PLANET
+  DIRECT_MESSAGE
+  SYSTEM
+  OTHER
+}
+
+enum FriemiCheckType {
+  WELCOME
+  BLIND_BOX
+}
+
+enum FriemiCheckStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
+enum BlindBoxFragmentEventType {
+  SUCCESSFUL_ACTIVITY
+  MANUAL_ADJUSTMENT
+}
+
 enum MobilePlatform {
   ANDROID
   IOS
@@ -105,6 +143,10 @@ enum NotificationType {
   ACTIVITY_COMMENTED
   COMMENT_REPLY
   DIRECT_MESSAGE
+  MOMENT_LIKED
+  MOMENT_COMMENTED
+  MOMENT_COMMENT_REPLY
+  MOMENT_REPOSTED
   REPORT_CREATED
 }
 
@@ -113,6 +155,8 @@ enum ReportTargetType {
   PUBLIC_EVENT
   ACTIVITY
   COMMENT
+  MOMENT
+  MOMENT_COMMENT
 }
 
 enum ReportReason {
@@ -129,6 +173,27 @@ enum ReportStatus {
   REVIEWING
   RESOLVED
   DISMISSED
+}
+
+enum MomentVisibility {
+  FRIENDS
+  PUBLIC
+}
+
+enum PlanetVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum PlanetMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum PlanetMembershipStatus {
+  PENDING
+  APPROVED
 }
 
 enum GameToolKind {
@@ -151,64 +216,82 @@ enum GameToolSubmissionKind {
 }
 
 model UserProfile {
-  id                     String                     @id @default(cuid())
-  clerkUserId            String                     @unique
-  email                  String?
-  emailVerifiedAt        DateTime?
-  contactEmail           String?
-  normalizedContactEmail String?
-  phone                  String?
-  normalizedPhone        String?
-  friendCode             String?                    @unique @db.Char(6)
-  nickname               String
-  firstName              String?
-  lastName               String?
-  username               String?
-  wechatId               String?
-  normalizedWechatId     String?
-  avatarUrl              String?
-  bio                    String?
-  interests              String[]                   @default([])
-  status                 UserProfileStatus          @default(ACTIVE)
-  role                   UserRole                   @default(USER)
-  isCoCreator            Boolean                    @default(false)
-  lastSignInAt           DateTime?
-  clerkCreatedAt         DateTime?
-  clerkUpdatedAt         DateTime?
-  clerkDeletedAt         DateTime?
-  syncedAt               DateTime?
-  activities             Activity[]                 @relation("ActivityOrganizer")
-  managedActivities      ActivityCoManager[]        @relation("ActivityCoManagerProfile")
-  addedCoManagers        ActivityCoManager[]        @relation("ActivityCoManagerAddedBy")
-  activityManagementLogs ActivityManagementLog[]    @relation("ActivityManagementLogActor")
-  participations         ActivityParticipant[]
-  guestParticipations    GuestActivityParticipant[] @relation("GuestLinkedUser")
-  comments               Comment[]
-  notifications          Notification[]             @relation("NotificationRecipient")
-  sentNotifications      Notification[]             @relation("NotificationActor")
-  favoriteActivities     ActivityFavorite[]
-  following              UserFollow[]               @relation("UserFollowing")
-  followers              UserFollow[]               @relation("UserFollowers")
-  sentFriendRequests     FriendRequest[]            @relation("FriendRequestRequester")
-  receivedFriendRequests FriendRequest[]            @relation("FriendRequestReceiver")
-  friendshipsAsUserA     Friendship[]               @relation("FriendshipUserA")
-  friendshipsAsUserB     Friendship[]               @relation("FriendshipUserB")
-  conversationsAsUserA   Conversation[]             @relation("ConversationUserA")
-  conversationsAsUserB   Conversation[]             @relation("ConversationUserB")
-  sentDirectMessages     DirectMessage[]            @relation("DirectMessageSender")
-  authoredAnnouncements  ActivityAnnouncement[]     @relation("ActivityAnnouncementAuthor")
-  submittedReports       Report[]                   @relation("ReportReporter")
-  reviewedReports        Report[]                   @relation("ReportReviewer")
-  mobileDevices          MobileDevice[]
-  hostedGameToolRooms    GameToolRoom[]             @relation("GameToolRoomHost")
-  gameToolRoomMembers    GameToolRoomMember[]       @relation("GameToolRoomMemberProfile")
-  gameToolSeats          GameToolSeat[]             @relation("GameToolSeatProfile")
-  gameToolEvents         GameToolEvent[]            @relation("GameToolEventActor")
-  gameToolSubmissions    GameToolSubmission[]       @relation("GameToolSubmissionProfile")
-  gameToolPlayerRecords  GameToolPlayerRecord[]     @relation("GameToolPlayerRecordProfile")
-  createdAt              DateTime                   @default(now())
-  updatedAt              DateTime                   @updatedAt
-  publicEventFavorites   PublicEventFavorite[]
+  id                      String                       @id @default(cuid())
+  clerkUserId             String                       @unique
+  email                   String?
+  emailVerifiedAt         DateTime?
+  contactEmail            String?
+  normalizedContactEmail  String?
+  phone                   String?
+  normalizedPhone         String?
+  friendCode              String?                      @unique @db.Char(6)
+  nickname                String
+  firstName               String?
+  lastName                String?
+  username                String?
+  wechatId                String?
+  normalizedWechatId      String?
+  avatarUrl               String?
+  bio                     String?
+  interests               String[]                     @default([])
+  status                  UserProfileStatus            @default(ACTIVE)
+  role                    UserRole                     @default(USER)
+  isCoCreator             Boolean                      @default(false)
+  lastSignInAt            DateTime?
+  clerkCreatedAt          DateTime?
+  clerkUpdatedAt          DateTime?
+  clerkDeletedAt          DateTime?
+  syncedAt                DateTime?
+  activities              Activity[]                   @relation("ActivityOrganizer")
+  managedActivities       ActivityCoManager[]          @relation("ActivityCoManagerProfile")
+  addedCoManagers         ActivityCoManager[]          @relation("ActivityCoManagerAddedBy")
+  activityManagementLogs  ActivityManagementLog[]      @relation("ActivityManagementLogActor")
+  participations          ActivityParticipant[]
+  guestParticipations     GuestActivityParticipant[]   @relation("GuestLinkedUser")
+  comments                Comment[]
+  moments                 Moment[]                     @relation("MomentAuthor")
+  momentLikes             MomentLike[]                 @relation("MomentLikeUser")
+  momentComments          MomentComment[]              @relation("MomentCommentAuthor")
+  notifications           Notification[]               @relation("NotificationRecipient")
+  sentNotifications       Notification[]               @relation("NotificationActor")
+  favoriteActivities      ActivityFavorite[]
+  following               UserFollow[]                 @relation("UserFollowing")
+  followers               UserFollow[]                 @relation("UserFollowers")
+  sentFriendRequests      FriendRequest[]              @relation("FriendRequestRequester")
+  receivedFriendRequests  FriendRequest[]              @relation("FriendRequestReceiver")
+  friendshipsAsUserA      Friendship[]                 @relation("FriendshipUserA")
+  friendshipsAsUserB      Friendship[]                 @relation("FriendshipUserB")
+  conversationsAsUserA    Conversation[]               @relation("ConversationUserA")
+  conversationsAsUserB    Conversation[]               @relation("ConversationUserB")
+  sentDirectMessages      DirectMessage[]              @relation("DirectMessageSender")
+  authoredAnnouncements   ActivityAnnouncement[]       @relation("ActivityAnnouncementAuthor")
+  submittedReports        Report[]                     @relation("ReportReporter")
+  reviewedReports         Report[]                     @relation("ReportReviewer")
+  mobileDevices           MobileDevice[]
+  trustScoreEvents        TrustScoreEvent[]
+  charmBalance            UserCharmBalance?
+  sentCharmGiftEvents     CharmGiftEvent[]             @relation("CharmGiftSender")
+  receivedCharmGiftEvents CharmGiftEvent[]             @relation("CharmGiftRecipient")
+  friemiChecks            FriemiCheck[]
+  blindBoxFragmentBalance UserBlindBoxFragmentBalance?
+  blindBoxFragmentEvents  BlindBoxFragmentEvent[]
+  hostedGameToolRooms     GameToolRoom[]               @relation("GameToolRoomHost")
+  gameToolRoomMembers     GameToolRoomMember[]         @relation("GameToolRoomMemberProfile")
+  gameToolSeats           GameToolSeat[]               @relation("GameToolSeatProfile")
+  reviewedCheckIns        ActivityParticipant[]        @relation("ActivityCheckInReviewer")
+  gameToolEvents          GameToolEvent[]              @relation("GameToolEventActor")
+  gameToolSubmissions     GameToolSubmission[]         @relation("GameToolSubmissionProfile")
+  gameToolPlayerRecords   GameToolPlayerRecord[]       @relation("GameToolPlayerRecordProfile")
+  ownedPlanets            Planet[]                     @relation("PlanetOwner")
+  planetMemberships       PlanetMember[]
+  planetMessages          PlanetMessage[]              @relation("PlanetMessageAuthor")
+  planetMoments           PlanetMoment[]               @relation("PlanetMomentAuthor")
+  planetMomentComments    PlanetMomentComment[]        @relation("PlanetMomentCommentAuthor")
+  planetMomentLikes       PlanetMomentLike[]           @relation("PlanetMomentLikeProfile")
+  planetCommentLikes      PlanetMomentCommentLike[]    @relation("PlanetCommentLikeProfile")
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  publicEventFavorites    PublicEventFavorite[]
 
   @@index([nickname])
   @@index([normalizedContactEmail])
@@ -216,6 +299,113 @@ model UserProfile {
   @@index([normalizedWechatId])
   @@index([isCoCreator, status])
   @@index([role, status])
+}
+
+model Planet {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  inviteCode       String           @unique @db.VarChar(16)
+  name             String
+  nameTranslations Json?
+  description      String?          @db.Text
+  coverImageUrl    String?
+  tags             String[]         @default([])
+  visibility       PlanetVisibility @default(PUBLIC)
+  ownerId          String
+  owner            UserProfile      @relation("PlanetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members          PlanetMember[]
+  messages         PlanetMessage[]
+  moments          PlanetMoment[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([visibility, createdAt])
+  @@index([ownerId, createdAt])
+}
+
+model PlanetMember {
+  id        String                 @id @default(cuid())
+  planetId  String
+  profileId String
+  role      PlanetMemberRole       @default(MEMBER)
+  status    PlanetMembershipStatus @default(APPROVED)
+  planet    Planet                 @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  profile   UserProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime               @default(now())
+
+  @@unique([planetId, profileId])
+  @@index([planetId, status, joinedAt])
+  @@index([profileId, joinedAt])
+}
+
+model PlanetMessage {
+  id        String      @id @default(cuid())
+  planetId  String
+  authorId  String
+  content   String      @db.Text
+  planet    Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author    UserProfile @relation("PlanetMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([planetId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMoment {
+  id        String                @id @default(cuid())
+  planetId  String
+  authorId  String
+  content   String                @db.Text
+  imageUrls String[]              @default([])
+  planet    Planet                @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  author    UserProfile           @relation("PlanetMomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments  PlanetMomentComment[]
+  likes     PlanetMomentLike[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([planetId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMomentComment {
+  id        String                    @id @default(cuid())
+  momentId  String
+  authorId  String
+  content   String                    @db.Text
+  moment    PlanetMoment              @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  author    UserProfile               @relation("PlanetMomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PlanetMomentCommentLike[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@index([momentId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PlanetMomentLike {
+  id        String       @id @default(cuid())
+  momentId  String
+  profileId String
+  moment    PlanetMoment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  profile   UserProfile  @relation("PlanetMomentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([momentId, profileId])
+  @@index([profileId, createdAt])
+}
+
+model PlanetMomentCommentLike {
+  id        String              @id @default(cuid())
+  commentId String
+  profileId String
+  comment   PlanetMomentComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  profile   UserProfile         @relation("PlanetCommentLikeProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+
+  @@unique([commentId, profileId])
+  @@index([profileId, createdAt])
 }
 
 model MobileDevice {
@@ -287,6 +477,7 @@ model Activity {
   managementLogs    ActivityManagementLog[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
+  trustScoreEvents  TrustScoreEvent[]
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -412,21 +603,119 @@ model ActivitySourceLink {
 }
 
 model ActivityParticipant {
-  id               String                    @id @default(cuid())
-  activityId       String
-  userProfileId    String
-  status           ParticipantStatus         @default(APPROVED)
-  message          String?
-  joinedAt         DateTime                  @default(now())
-  cancelledAt      DateTime?
-  activity         Activity                  @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  userProfile      UserProfile               @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
-  guestParticipant GuestActivityParticipant? @relation("GuestLinkedParticipant")
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
+  id                  String                    @id @default(cuid())
+  activityId          String
+  userProfileId       String
+  status              ParticipantStatus         @default(APPROVED)
+  message             String?
+  joinedAt            DateTime                  @default(now())
+  cancelledAt         DateTime?
+  checkInRequestedAt  DateTime?
+  checkedInAt         DateTime?
+  checkInCancelledAt  DateTime?
+  checkInReviewedById String?
+  activity            Activity                  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userProfile         UserProfile               @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  checkInReviewer     UserProfile?              @relation("ActivityCheckInReviewer", fields: [checkInReviewedById], references: [id], onDelete: SetNull)
+  guestParticipant    GuestActivityParticipant? @relation("GuestLinkedParticipant")
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
+  @@index([checkInReviewedById])
+}
+
+model TrustScoreEvent {
+  id         String              @id @default(cuid())
+  profileId  String
+  profile    UserProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       TrustScoreEventType
+  delta      Int
+  activityId String?
+  activity   Activity?           @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  note       String?
+  createdAt  DateTime            @default(now())
+
+  @@unique([profileId, type, activityId])
+  @@index([profileId, createdAt])
+  @@index([activityId])
+}
+
+model UserCharmBalance {
+  profileId  String      @id
+  profile    UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  score      Int         @default(0)
+  giftCount  Int         @default(0)
+  lastGiftAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model CharmGiftEvent {
+  id                 String           @id @default(cuid())
+  senderProfileId    String?
+  recipientProfileId String
+  giftId             String
+  giftEmoji          String
+  giftLabel          String
+  charmDelta         Int
+  quantity           Int              @default(1)
+  totalCharmDelta    Int
+  coinCost           Int?
+  sourceSurface      CharmGiftSurface @default(PROFILE)
+  sourceContextId    String?
+  sender             UserProfile?     @relation("CharmGiftSender", fields: [senderProfileId], references: [id], onDelete: SetNull)
+  recipient          UserProfile      @relation("CharmGiftRecipient", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@index([recipientProfileId, createdAt])
+  @@index([senderProfileId, createdAt])
+  @@index([giftId, createdAt])
+  @@index([sourceSurface, sourceContextId])
+}
+
+model FriemiCheck {
+  id         String            @id @default(cuid())
+  profileId  String
+  profile    UserProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       FriemiCheckType
+  status     FriemiCheckStatus @default(AVAILABLE)
+  sourceKey  String?
+  note       String?
+  redeemedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@unique([profileId, sourceKey])
+  @@index([profileId, status, createdAt])
+}
+
+model UserBlindBoxFragmentBalance {
+  profileId             String      @id
+  profile               UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  fragmentCount         Int         @default(0)
+  redeemedBlindBoxCount Int         @default(0)
+  lastEarnedAt          DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model BlindBoxFragmentEvent {
+  id         String                    @id @default(cuid())
+  profileId  String
+  profile    UserProfile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type       BlindBoxFragmentEventType
+  delta      Int
+  activityId String?
+  sourceKey  String?
+  note       String?
+  createdAt  DateTime                  @default(now())
+
+  @@unique([profileId, sourceKey])
+  @@index([profileId, createdAt])
+  @@index([activityId])
 }
 
 model GuestActivityParticipant {
@@ -512,6 +801,79 @@ model Comment {
   @@index([parentId])
 }
 
+model Moment {
+  id               String           @id @default(cuid())
+  authorId         String
+  content          String?          @db.Text
+  visibility       MomentVisibility @default(FRIENDS)
+  likeCount        Int              @default(0)
+  commentCount     Int              @default(0)
+  repostCount      Int              @default(0)
+  resharedMomentId String?
+  deletedAt        DateTime?
+  author           UserProfile      @relation("MomentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  resharedMoment   Moment?          @relation("MomentReshares", fields: [resharedMomentId], references: [id], onDelete: SetNull)
+  reshares         Moment[]         @relation("MomentReshares")
+  images           MomentImage[]
+  likes            MomentLike[]
+  comments         MomentComment[]
+  notifications    Notification[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([authorId, createdAt])
+  @@index([visibility, createdAt])
+  @@index([deletedAt, createdAt])
+  @@index([resharedMomentId, createdAt])
+}
+
+model MomentImage {
+  id        String   @id @default(cuid())
+  momentId  String
+  url       String
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([momentId, sortOrder])
+}
+
+model MomentLike {
+  id        String      @id @default(cuid())
+  momentId  String
+  userId    String
+  moment    Moment      @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  user      UserProfile @relation("MomentLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([momentId, userId])
+  @@index([userId, createdAt])
+  @@index([momentId, createdAt])
+}
+
+model MomentComment {
+  id            String          @id @default(cuid())
+  momentId      String
+  authorId      String
+  parentId      String?
+  content       String          @db.Text
+  deletedAt     DateTime?
+  editedAt      DateTime?
+  moment        Moment          @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  author        UserProfile     @relation("MomentCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent        MomentComment?  @relation("MomentCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       MomentComment[] @relation("MomentCommentReplies")
+  notifications Notification[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([momentId, parentId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([parentId])
+}
+
 model ContentTranslation {
   id                   String   @id @default(cuid())
   entityType           String
@@ -542,6 +904,10 @@ model Notification {
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  momentId               String?
+  moment                 Moment?               @relation(fields: [momentId], references: [id], onDelete: SetNull)
+  momentCommentId        String?
+  momentComment          MomentComment?        @relation(fields: [momentCommentId], references: [id], onDelete: SetNull)
   readAt                 DateTime?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
@@ -549,6 +915,8 @@ model Notification {
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
   @@index([activityAnnouncementId])
+  @@index([momentId])
+  @@index([momentCommentId])
 }
 
 model ActivityAnnouncement {
@@ -655,6 +1023,7 @@ model DirectMessage {
   senderId       String
   activityId     String?
   body           String
+  imageUrls      String[]     @default([])
   readAt         DateTime?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         UserProfile  @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)

@@ -12,6 +12,7 @@ type AndroidBridge = {
   openMap?: (url: string) => void;
   registerPushToken?: () => string;
   saveLocale?: (locale: string) => void;
+  scanQrCode?: () => string;
   setBackBehavior?: (payloadJson: string) => void;
   share?: (payloadJson: string) => void;
 };

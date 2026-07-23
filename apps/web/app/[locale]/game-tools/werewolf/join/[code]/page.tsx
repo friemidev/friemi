@@ -2,6 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { GameToolBackButton } from "@/features/game-tools/components/GameToolBackButton";
+import {
+  getActiveGameToolRoomForProfile,
+  getGameToolPrivateSeatPath,
+  getGameToolRoomPath,
+} from "@/features/game-tools/gameToolRooms";
 import { getWerewolfRoomByCode } from "@/features/game-tools/queries/getWerewolfRoom";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
@@ -81,6 +86,40 @@ export default async function WerewolfJoinPage({
         title={t.notFoundTitle}
       />
     );
+  }
+
+  const viewerBelongsToJoinedRoom = Boolean(
+    room.isHost || room.currentMember || room.viewerSeatId,
+  );
+
+  if (viewerProfile && !viewerBelongsToJoinedRoom) {
+    const activeRoom = await getActiveGameToolRoomForProfile({
+      profileId: viewerProfile.id,
+    });
+
+    if (activeRoom) {
+      const privateSeatPath = activeRoom.privateSeatToken
+        ? getGameToolPrivateSeatPath({
+            kind: activeRoom.kind,
+            privateSeatToken: activeRoom.privateSeatToken,
+          })
+        : null;
+
+      redirect(
+        withLocale(
+          locale,
+          privateSeatPath ??
+            getGameToolRoomPath({
+              kind: activeRoom.kind,
+              roomId: activeRoom.id,
+            }),
+        ),
+      );
+    }
+  }
+
+  if (viewerBelongsToJoinedRoom) {
+    redirect(withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`));
   }
 
   if (room.status === "FINISHED") {

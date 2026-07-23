@@ -1,6 +1,25 @@
 import type { NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export const notificationCenterExcludedTypes = [
+  "DIRECT_MESSAGE",
+  "MOMENT_LIKED",
+  "MOMENT_COMMENTED",
+  "MOMENT_COMMENT_REPLY",
+  "MOMENT_REPOSTED",
+] satisfies NotificationType[];
+
+export function getVisibleNotificationWhere(
+  where: Prisma.NotificationWhereInput = {},
+): Prisma.NotificationWhereInput {
+  return {
+    ...where,
+    type: {
+      notIn: notificationCenterExcludedTypes,
+    },
+  };
+}
+
 const notificationSelect = {
   id: true,
   type: true,
@@ -20,6 +39,19 @@ const notificationSelect = {
     },
   },
   activityAnnouncement: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+    },
+  },
+  moment: {
+    select: {
+      id: true,
+      content: true,
+    },
+  },
+  momentComment: {
     select: {
       id: true,
       content: true,
@@ -52,6 +84,15 @@ export type NotificationViewModel = {
     content: string;
     createdAt: string;
   } | null;
+  moment: {
+    id: string;
+    content: string | null;
+  } | null;
+  momentComment: {
+    id: string;
+    content: string;
+    createdAt: string;
+  } | null;
 };
 
 function mapNotification(
@@ -80,24 +121,37 @@ function mapNotification(
           createdAt: notification.activityAnnouncement.createdAt.toISOString(),
         }
       : null,
+    moment: notification.moment
+      ? {
+          id: notification.moment.id,
+          content: notification.moment.content,
+        }
+      : null,
+    momentComment: notification.momentComment
+      ? {
+          id: notification.momentComment.id,
+          content: notification.momentComment.content,
+          createdAt: notification.momentComment.createdAt.toISOString(),
+        }
+      : null,
   };
 }
 
 export async function getUnreadNotificationCount(profileId: string) {
   return prisma.notification.count({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profileId,
       readAt: null,
-    },
+    }),
   });
 }
 
 export async function getNotificationCenter(profileId: string) {
   const [notifications, unreadCount] = await Promise.all([
     prisma.notification.findMany({
-      where: {
+      where: getVisibleNotificationWhere({
         recipientId: profileId,
-      },
+      }),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 50,
       select: notificationSelect,
@@ -157,7 +211,9 @@ export async function getNotificationCenter(profileId: string) {
             },
             managerProfileId: {
               in: Array.from(
-                new Set(notificationActorActivityPairs.map((pair) => pair.actorId)),
+                new Set(
+                  notificationActorActivityPairs.map((pair) => pair.actorId),
+                ),
               ),
             },
           },
@@ -168,9 +224,7 @@ export async function getNotificationCenter(profileId: string) {
         })
       : [];
   const coManagerRoleKeys = new Set(
-    coManagerRoles.map(
-      (role) => `${role.activityId}:${role.managerProfileId}`,
-    ),
+    coManagerRoles.map((role) => `${role.activityId}:${role.managerProfileId}`),
   );
 
   return {
@@ -180,14 +234,17 @@ export async function getNotificationCenter(profileId: string) {
       const actorActivityRole =
         actorId && activityId && notification.activity?.organizerId === actorId
           ? "ORGANIZER"
-          : actorId && activityId && coManagerRoleKeys.has(`${activityId}:${actorId}`)
+          : actorId &&
+              activityId &&
+              coManagerRoleKeys.has(`${activityId}:${actorId}`)
             ? "CO_MANAGER"
             : null;
 
       return mapNotification(
         notification,
         notification.type === "FRIEND_REQUEST" && notification.actor?.id
-          ? pendingFriendRequestIdByRequesterId.get(notification.actor.id) ?? null
+          ? (pendingFriendRequestIdByRequesterId.get(notification.actor.id) ??
+              null)
           : null,
         actorActivityRole,
       );

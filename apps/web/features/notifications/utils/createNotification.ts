@@ -9,6 +9,8 @@ type CreateNotificationInput = {
   activityId?: string | null;
   activityAnnouncementId?: string | null;
   dedupe?: boolean;
+  momentCommentId?: string | null;
+  momentId?: string | null;
   recipientId: string;
   type: NotificationType;
 };
@@ -18,6 +20,8 @@ function getNotificationIdentity(input: CreateNotificationInput) {
     actorId: input.actorId ?? null,
     activityId: input.activityId ?? null,
     activityAnnouncementId: input.activityAnnouncementId ?? null,
+    momentCommentId: input.momentCommentId ?? null,
+    momentId: input.momentId ?? null,
     recipientId: input.recipientId,
     type: input.type,
   };

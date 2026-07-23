@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
-import { requireUser } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
 type NewActivityInfoTeamPageProps = {
@@ -16,7 +15,6 @@ export default async function NewActivityInfoTeamPage({
   params,
 }: NewActivityInfoTeamPageProps) {
   const { locale, activityId } = await params;
-  await requireUser(locale, `/activities/${activityId}/teams/new`);
 
   const publicEventId = await ensurePublicEventFromActivityInfo(activityId);
 

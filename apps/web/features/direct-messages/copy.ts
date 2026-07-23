@@ -23,11 +23,21 @@ type DirectMessagesCopy = {
   readOnlyDescription: string;
   send: string;
   sending: string;
+  sendingStatus: string;
+  sendFailedStatus: string;
+  retrySend: string;
   addEmoji: string;
+  attachImage: string;
+  imageMessage: string;
+  resetImagePreview: string;
+  imageUploadFailed: string;
+  imageUploading: string;
+  removeImage: string;
   backToMessages: string;
   viewProfile: string;
   openFriends: string;
   openConversation: (name: string) => string;
+  searchPlaceholder: string;
   startConversation: string;
   activityContextLabel: string;
   activityContextCta: string;
@@ -64,8 +74,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       emptyListTitle: "Aucune discussion",
       emptyListDescription: "Ajoutez un ami pour commencer à discuter.",
       emptyFriendListTitle: "Aucun ami pour le moment",
-      emptyFriendListDescription:
-        "Ajoutez un ami pour commencer.",
+      emptyFriendListDescription: "Ajoutez un ami pour commencer.",
       emptyThreadTitle: "Aucun message",
       emptyThreadDescription:
         "Envoyez un premier message court pour préparer la prochaine sortie.",
@@ -79,11 +88,21 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "L'historique reste visible, mais vous devez redevenir amis pour envoyer un nouveau message.",
       send: "Envoyer",
       sending: "Envoi...",
+      sendingStatus: "Envoi...",
+      sendFailedStatus: "Échec de l'envoi",
+      retrySend: "Réessayer",
       addEmoji: "Ajouter emoji",
+      attachImage: "Ajouter une image",
+      imageMessage: "Image",
+      resetImagePreview: "Réinitialiser",
+      imageUploadFailed: "Image impossible à importer.",
+      imageUploading: "Import...",
+      removeImage: "Retirer l'image",
       backToMessages: "Messages",
       viewProfile: "Voir le profil",
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
+      searchPlaceholder: "Rechercher une discussion",
       startConversation: "Message",
       activityContextLabel: "À propos de cette sortie",
       activityContextCta: "Voir la sortie",
@@ -113,6 +132,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         CONVERSATION_UNAVAILABLE: "Cette conversation n'est plus disponible.",
         EMPTY_BODY: "Le message ne peut pas être vide.",
         BODY_TOO_LONG: "Le message est trop long.",
+        TOO_MANY_IMAGES: "Vous pouvez envoyer jusqu'à 4 images à la fois.",
+        INVALID_IMAGE_URL: "Une image n'est pas valide.",
       },
     };
   }
@@ -142,11 +163,21 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         "The history stays visible, but you need to be friends again before sending a new message.",
       send: "Send",
       sending: "Sending...",
+      sendingStatus: "Sending...",
+      sendFailedStatus: "Send failed",
+      retrySend: "Retry",
       addEmoji: "Add emoji",
+      attachImage: "Add image",
+      imageMessage: "Image",
+      resetImagePreview: "Reset",
+      imageUploadFailed: "Image could not be uploaded.",
+      imageUploading: "Uploading...",
+      removeImage: "Remove image",
       backToMessages: "Messages",
       viewProfile: "View profile",
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
+      searchPlaceholder: "Search chats",
       startConversation: "Message",
       activityContextLabel: "About this activity",
       activityContextCta: "View activity",
@@ -175,6 +206,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         CONVERSATION_UNAVAILABLE: "This conversation is no longer available.",
         EMPTY_BODY: "Message cannot be empty.",
         BODY_TOO_LONG: "Message is too long.",
+        TOO_MANY_IMAGES: "You can send up to 4 images at a time.",
+        INVALID_IMAGE_URL: "One image is invalid.",
       },
     };
   }
@@ -201,11 +234,21 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     readOnlyDescription: "历史消息仍可查看，但需要重新成为好友后才能继续发送。",
     send: "发送",
     sending: "发送中...",
+    sendingStatus: "发送中...",
+    sendFailedStatus: "发送失败",
+    retrySend: "重试",
     addEmoji: "添加表情",
+    attachImage: "添加图片",
+    imageMessage: "图片",
+    resetImagePreview: "重置",
+    imageUploadFailed: "图片上传失败，请稍后再试。",
+    imageUploading: "上传中...",
+    removeImage: "移除图片",
     backToMessages: "消息",
     viewProfile: "查看主页",
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
+    searchPlaceholder: "搜索聊天",
     startConversation: "发消息",
     activityContextLabel: "关于这个组局",
     activityContextCta: "查看组局",
@@ -233,6 +276,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       CONVERSATION_UNAVAILABLE: "这段会话已不可用。",
       EMPTY_BODY: "消息不能为空。",
       BODY_TOO_LONG: "消息内容过长。",
+      TOO_MANY_IMAGES: "一次最多发送 4 张图片。",
+      INVALID_IMAGE_URL: "图片地址无效。",
     },
   };
 }
