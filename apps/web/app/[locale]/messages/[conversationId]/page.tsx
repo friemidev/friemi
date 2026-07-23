@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
 import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
 import {
   getDirectConversationActivityContext,
   getDirectConversationThread,
   getDirectMessageFriendRoster,
+  getUnreadDirectMessageConversationCount,
+  markDirectConversationRead,
 } from "@/features/direct-messages/queries/getDirectMessages";
 import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -74,6 +77,16 @@ export default async function MessageThreadPage({
   }
 
   const conversation = conversationResult.conversation;
+  await perf.measure("messages.markRead", () =>
+    markDirectConversationRead({
+      conversationId: conversation.id,
+      peerProfileId: conversation.peer.id,
+    }),
+  );
+  const unreadDirectMessageCount = await perf.measure(
+    "messages.unreadDirectMessageCount",
+    () => getUnreadDirectMessageConversationCount(profile.id),
+  );
 
   after(() => {
     void prisma.notification
@@ -89,7 +102,10 @@ export default async function MessageThreadPage({
         },
       })
       .catch((error: unknown) => {
-        console.error("Failed to mark direct message notifications read", error);
+        console.error(
+          "Failed to mark direct message notifications read",
+          error,
+        );
       });
   });
 
@@ -129,6 +145,9 @@ export default async function MessageThreadPage({
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+      <DirectMessageUnreadCountHydrator
+        unreadCount={unreadDirectMessageCount}
+      />
       <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
         <MessageThread
           activityContext={activityContext}

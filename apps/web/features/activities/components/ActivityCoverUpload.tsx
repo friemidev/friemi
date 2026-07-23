@@ -4,6 +4,10 @@ import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import {
+  defaultActivityCategoryIllustrationSrc,
+  isActivityCategoryIllustrationSrc,
+} from "@/features/activities/utils/activityCategoryVisuals";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,12 @@ type UploadErrorCode =
   | "BUCKET_NOT_AVAILABLE"
   | "UPLOAD_FAILED";
 
+function normalizeUploadedCoverUrl(url: string | null | undefined) {
+  const trimmedUrl = url?.trim() ?? "";
+
+  return isActivityCategoryIllustrationSrc(trimmedUrl) ? "" : trimmedUrl;
+}
+
 export function ActivityCoverUpload({
   buttonOnlyUntilUploaded = false,
   fallbackPreviewUrl,
@@ -54,7 +64,9 @@ export function ActivityCoverUpload({
 }: ActivityCoverUploadProps) {
   const t = getCopy(locale).form;
   const inputRef = useRef<HTMLInputElement>(null);
-  const [imageUrl, setImageUrl] = useState(initialUrl ?? "");
+  const [imageUrl, setImageUrl] = useState(() =>
+    normalizeUploadedCoverUrl(initialUrl),
+  );
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -64,9 +76,15 @@ export function ActivityCoverUpload({
   const submittedImageUrl =
     imageUrl || (submitFallbackValue ? fallbackPreviewUrl : "") || "";
   const isFallbackPreview = !imageUrl && Boolean(fallbackPreviewUrl);
+  const isDefaultFallbackPreview =
+    isFallbackPreview &&
+    fallbackPreviewUrl === defaultActivityCategoryIllustrationSrc;
+  const fallbackImageClassName = isDefaultFallbackPreview
+    ? "object-contain p-8 sm:p-10"
+    : "object-contain p-3";
 
   useEffect(() => {
-    setImageUrl(initialUrl ?? "");
+    setImageUrl(normalizeUploadedCoverUrl(initialUrl));
   }, [initialUrl]);
 
   function updateImageUrl(url: string) {
@@ -235,7 +253,7 @@ export function ActivityCoverUpload({
                 alt=""
                 className={cn(
                   "absolute inset-0 h-full w-full",
-                  isFallbackPreview ? "object-contain p-3" : "object-cover",
+                  isFallbackPreview ? fallbackImageClassName : "object-cover",
                 )}
               />
               {isUploading ? (
@@ -312,7 +330,7 @@ export function ActivityCoverUpload({
                   alt=""
                   className={cn(
                     "absolute inset-0 h-full w-full",
-                    isFallbackPreview ? "object-contain p-3" : "object-cover",
+                    isFallbackPreview ? fallbackImageClassName : "object-cover",
                   )}
                 />
               </div>
@@ -367,7 +385,7 @@ export function ActivityCoverUpload({
                 alt=""
                 className={cn(
                   "absolute inset-0 h-full w-full",
-                  isFallbackPreview ? "object-contain p-3" : "object-cover",
+                  isFallbackPreview ? fallbackImageClassName : "object-cover",
                 )}
               />
             ) : (

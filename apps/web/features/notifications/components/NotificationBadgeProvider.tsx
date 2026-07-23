@@ -19,8 +19,11 @@ const NOTIFICATION_BADGE_POLL_INTERVAL_MS =
 const NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS = 1200;
 
 type NotificationBadgeContextValue = {
+  refreshUnreadDirectMessageCount: () => Promise<void>;
   refreshUnreadNotificationCount: () => Promise<void>;
+  setUnreadDirectMessageCount: (count: number) => void;
   setUnreadNotificationCount: (count: number) => void;
+  unreadDirectMessageCount: number;
   unreadNotificationCount: number;
 };
 
@@ -42,10 +45,12 @@ function normalizeUnreadCount(value: unknown) {
 export function NotificationBadgeProvider({
   children,
   enabled,
+  initialUnreadDirectMessageCount = 0,
   initialUnreadNotificationCount,
 }: {
   children: ReactNode;
   enabled: boolean;
+  initialUnreadDirectMessageCount?: number;
   initialUnreadNotificationCount: number;
 }) {
   const pathname = usePathname();
@@ -54,9 +59,16 @@ export function NotificationBadgeProvider({
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     () => normalizeUnreadCount(initialUnreadNotificationCount),
   );
+  const [unreadDirectMessageCount, setUnreadDirectMessageCountState] = useState(
+    () => normalizeUnreadCount(initialUnreadDirectMessageCount),
+  );
 
   const setUnreadNotificationCount = useCallback((count: number) => {
     setUnreadNotificationCountState(normalizeUnreadCount(count));
+  }, []);
+
+  const setUnreadDirectMessageCount = useCallback((count: number) => {
+    setUnreadDirectMessageCountState(normalizeUnreadCount(count));
   }, []);
 
   const refreshUnreadNotificationCount = useCallback(async () => {
@@ -93,11 +105,44 @@ export function NotificationBadgeProvider({
     }
   }, [enabled]);
 
+  const refreshUnreadDirectMessageCount = useCallback(async () => {
+    if (!enabled) {
+      setUnreadDirectMessageCountState(0);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/direct-messages/unread-count", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setUnreadDirectMessageCountState(0);
+        }
+        return;
+      }
+
+      const payload = (await response.json()) as { unreadCount?: unknown };
+      setUnreadDirectMessageCountState(
+        normalizeUnreadCount(payload.unreadCount),
+      );
+    } catch {
+      // Keep the last known value; this badge is non-critical.
+    }
+  }, [enabled]);
+
   useEffect(() => {
     setUnreadNotificationCountState(
       normalizeUnreadCount(initialUnreadNotificationCount),
     );
   }, [initialUnreadNotificationCount]);
+
+  useEffect(() => {
+    setUnreadDirectMessageCountState(
+      normalizeUnreadCount(initialUnreadDirectMessageCount),
+    );
+  }, [initialUnreadDirectMessageCount]);
 
   useEffect(() => {
     if (!enabled) {
@@ -111,39 +156,56 @@ export function NotificationBadgeProvider({
       hasScheduledInitialRefreshRef.current = true;
       const timeoutId = window.setTimeout(() => {
         void refreshUnreadNotificationCount();
+        void refreshUnreadDirectMessageCount();
       }, NOTIFICATION_BADGE_INITIAL_REFRESH_DELAY_MS);
 
       return () => window.clearTimeout(timeoutId);
     }
 
     void refreshUnreadNotificationCount();
-  }, [enabled, pathname, refreshUnreadNotificationCount]);
+    void refreshUnreadDirectMessageCount();
+  }, [
+    enabled,
+    pathname,
+    refreshUnreadDirectMessageCount,
+    refreshUnreadNotificationCount,
+  ]);
 
   useEffect(() => {
     if (!enabled) return;
 
     function refreshWhenVisible(event?: Event) {
-      if (
-        event instanceof CustomEvent &&
-        typeof event.detail?.unreadCount === "number"
-      ) {
-        setUnreadNotificationCountState(
-          normalizeUnreadCount(event.detail.unreadCount),
-        );
-        return;
+      if (event instanceof CustomEvent) {
+        let handledPayload = false;
+
+        if (typeof event.detail?.unreadCount === "number") {
+          setUnreadNotificationCountState(
+            normalizeUnreadCount(event.detail.unreadCount),
+          );
+          handledPayload = true;
+        }
+
+        if (typeof event.detail?.unreadDirectMessageCount === "number") {
+          setUnreadDirectMessageCountState(
+            normalizeUnreadCount(event.detail.unreadDirectMessageCount),
+          );
+          handledPayload = true;
+        }
+
+        if (handledPayload) {
+          return;
+        }
       }
 
       if (document.visibilityState === "visible") {
         void refreshUnreadNotificationCount();
+        void refreshUnreadDirectMessageCount();
       }
     }
 
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
-    window.addEventListener(
-      "friemi:notifications-refresh",
-      refreshWhenVisible,
-    );
+    window.addEventListener("friemi:notifications-refresh", refreshWhenVisible);
 
     const intervalId = window.setInterval(
       refreshWhenVisible,
@@ -160,7 +222,11 @@ export function NotificationBadgeProvider({
       window.clearInterval(intervalId);
       abortControllerRef.current?.abort();
     };
-  }, [enabled, refreshUnreadNotificationCount]);
+  }, [
+    enabled,
+    refreshUnreadDirectMessageCount,
+    refreshUnreadNotificationCount,
+  ]);
 
   useEffect(() => {
     if (!isFriemiIOSApp()) {
@@ -181,13 +247,19 @@ export function NotificationBadgeProvider({
 
   const value = useMemo(
     () => ({
+      refreshUnreadDirectMessageCount,
       refreshUnreadNotificationCount,
+      setUnreadDirectMessageCount,
       setUnreadNotificationCount,
+      unreadDirectMessageCount,
       unreadNotificationCount,
     }),
     [
+      refreshUnreadDirectMessageCount,
       refreshUnreadNotificationCount,
+      setUnreadDirectMessageCount,
       setUnreadNotificationCount,
+      unreadDirectMessageCount,
       unreadNotificationCount,
     ],
   );
@@ -207,8 +279,11 @@ export function useNotificationBadge(fallbackUnreadCount = 0) {
   }
 
   return {
+    refreshUnreadDirectMessageCount: async () => undefined,
     refreshUnreadNotificationCount: async () => undefined,
+    setUnreadDirectMessageCount: () => undefined,
     setUnreadNotificationCount: () => undefined,
+    unreadDirectMessageCount: 0,
     unreadNotificationCount: normalizeUnreadCount(fallbackUnreadCount),
   };
 }

@@ -139,7 +139,6 @@ export function ActivityPlacePicker({
       const searchParams = new URLSearchParams({
         q: query,
         city,
-        locale,
         limit: "5",
       });
       const response = await fetch(`/api/places/search?${searchParams}`, {
@@ -160,7 +159,9 @@ export function ActivityPlacePicker({
 
       setResults(places);
       setIsSuggestionOpen(openResults && places.length > 0);
-      setError(showEmptyError && places.length === 0 ? t.placeSearchEmpty : null);
+      setError(
+        showEmptyError && places.length === 0 ? t.placeSearchEmpty : null,
+      );
     } catch {
       if (requestId !== searchRequestIdRef.current) {
         return;
@@ -186,7 +187,9 @@ export function ActivityPlacePicker({
     setLatitude(String(place.latitude));
     setLongitude(String(place.longitude));
     setSelectedLabel(nextAddress);
-    setMatchedQuery(getPlaceQuery(formatImportedAddressForForm(nextAddress), city));
+    setMatchedQuery(
+      getPlaceQuery(formatImportedAddressForForm(nextAddress), city),
+    );
     setResults([]);
     setIsSuggestionOpen(false);
     setError(null);
@@ -206,7 +209,10 @@ export function ActivityPlacePicker({
     const nextAddress = event.target.value;
     const form = containerRef.current?.closest("form") ?? null;
     const city = getFormValue(form, "city");
-    const currentQuery = getPlaceQuery(formatImportedAddressForForm(nextAddress), city);
+    const currentQuery = getPlaceQuery(
+      formatImportedAddressForForm(nextAddress),
+      city,
+    );
 
     setAddressInput(nextAddress);
 
@@ -245,7 +251,10 @@ export function ActivityPlacePicker({
 
       const address = addressInput.trim();
       const city = getFormValue(formElement, "city");
-      const currentQuery = getPlaceQuery(formatImportedAddressForForm(address), city);
+      const currentQuery = getPlaceQuery(
+        formatImportedAddressForForm(address),
+        city,
+      );
 
       if (hasCoordinateInput && matchedQuery && currentQuery !== matchedQuery) {
         setLatitude("");
@@ -301,7 +310,10 @@ export function ActivityPlacePicker({
 
     const address = addressInput.trim();
     const city = getFormValue(formElement, "city");
-    const currentQuery = getPlaceQuery(formatImportedAddressForForm(address), city);
+    const currentQuery = getPlaceQuery(
+      formatImportedAddressForForm(address),
+      city,
+    );
 
     if (currentQuery) {
       setMatchedQuery(currentQuery);
@@ -309,10 +321,7 @@ export function ActivityPlacePicker({
   }, [addressInput, hasCoordinateInput, matchedQuery]);
 
   return (
-    <div
-      ref={containerRef}
-      className="grid gap-3"
-    >
+    <div ref={containerRef} className="grid gap-3">
       <input name="latitude" type="hidden" value={latitude} />
       <input name="longitude" type="hidden" value={longitude} />
 
@@ -382,24 +391,24 @@ export function ActivityPlacePicker({
 
       {hasCoordinateInput ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <MapPin className="h-4 w-4 text-moss" />
-            {t.placePickerTitle}
-          </p>
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <MapPin className="h-4 w-4 text-moss" />
+              {t.placePickerTitle}
+            </p>
+          </div>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+            <Button
+              className="h-9 flex-1 whitespace-nowrap px-3 text-xs sm:flex-none"
+              type="button"
+              variant="secondary"
+              onClick={clearPlace}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              {t.placeClear}
+            </Button>
+          </div>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
-          <Button
-            className="h-9 flex-1 whitespace-nowrap px-3 text-xs sm:flex-none"
-            type="button"
-            variant="secondary"
-            onClick={clearPlace}
-          >
-            <X className="mr-1.5 h-3.5 w-3.5" />
-            {t.placeClear}
-          </Button>
-        </div>
-      </div>
       ) : null}
 
       {hasCoordinateInput ? (

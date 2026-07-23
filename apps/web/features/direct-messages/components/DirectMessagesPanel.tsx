@@ -24,6 +24,7 @@ import type {
   DirectConversationThreadViewModel,
 } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
+import { MessageThreadBackButton } from "./MessageThreadBackButton";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadClient } from "./MessageThreadClient";
 
@@ -313,14 +314,14 @@ export function MessageThread({
       <MessageThreadAutoRefresh conversationId={conversation.id} />
       <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
         <div className="flex h-9 w-9 items-center justify-start">
-          <Link
-            href={withLocale(locale, backHref)}
+          <MessageThreadBackButton
+            fallbackHref={withLocale(locale, backHref)}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:bg-team-bg lg:hidden"
-            aria-label={t.backToMessages}
+            ariaLabel={t.backToMessages}
             title={t.backToMessages}
           >
             <ArrowLeft className="h-5 w-5" />
-          </Link>
+          </MessageThreadBackButton>
         </div>
         <h1 className="min-w-0 truncate text-center text-lg font-semibold text-ink">
           {conversation.peer.nickname}

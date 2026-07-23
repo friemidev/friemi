@@ -25,6 +25,7 @@ import type {
   DirectConversationActivitySignalViewModel,
   DirectMessageFriendRosterItemViewModel,
 } from "../queries/getDirectMessages";
+import { saveMessageThreadReturnHref } from "../utils/messageThreadReturn";
 import { MessageAvatar } from "./MessageAvatar";
 
 type MobileFriendChatRosterProps = {
@@ -186,6 +187,7 @@ function MobileFriendChatRow({
           aria-label={t.openConversation(friend.friend.nickname)}
           className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-[0.9rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
           href={withLocale(locale, `/messages/${friend.conversationId}`)}
+          onClick={() => saveMessageThreadReturnHref()}
           prefetchOnVisible
         >
           {content}
