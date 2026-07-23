@@ -1,8 +1,36 @@
 "use client";
 
-import { SignIn, SignUp } from "@clerk/nextjs";
+import { registerPlugin } from "@capacitor/core";
+import { SignIn, SignUp, useSignIn } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { BrandLoader, getLoadingLabel } from "@/components/ui/BrandLoader";
+
+type NativeAuthProvider = "apple" | "google";
+
+type NativeGoogleSignInResult = {
+  accessToken?: string;
+  email?: string;
+  firstName?: string;
+  idToken: string;
+  lastName?: string;
+  name?: string;
+};
+
+type NativeAppleSignInResult = {
+  authorizationCode?: string;
+  email?: string;
+  firstName?: string;
+  identityToken: string;
+  lastName?: string;
+  userIdentifier?: string;
+};
+
+type FriemiNavigationPlugin = {
+  signInWithApple: () => Promise<NativeAppleSignInResult>;
+  signInWithGoogle: () => Promise<NativeGoogleSignInResult>;
+};
+
+const FriemiNavigation = registerPlugin<FriemiNavigationPlugin>("FriemiNavigation");
 
 type ClerkAuthMountGuardProps = {
   fallbackRedirectUrl: string;
@@ -67,9 +95,11 @@ export function ClerkAuthMountGuard({
   locale,
 }: ClerkAuthMountGuardProps) {
   const [mounted, setMounted] = useState(false);
+  const [isFriemiIOSApp, setIsFriemiIOSApp] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    setIsFriemiIOSApp(/\bFriemiIOS\//i.test(window.navigator.userAgent));
   }, []);
 
   const authAppearance = {
@@ -77,6 +107,14 @@ export function ClerkAuthMountGuard({
     elements: {
       ...sharedAuthAppearance.elements,
       ...(mode === "sign-in" ? { header: "hidden" } : {}),
+      ...(isFriemiIOSApp
+        ? {
+            socialButtons: "hidden",
+            socialButtonsBlockButton: "hidden",
+            socialButtonsBlockButtonText: "hidden",
+            socialButtonsProviderIcon: "hidden",
+          }
+        : {}),
     },
   };
 
@@ -94,29 +132,185 @@ export function ClerkAuthMountGuard({
 
   if (mode === "sign-in") {
     return (
-      <SignIn
+      <>
+        {isFriemiIOSApp ? (
+          <NativeIOSAuthButtons
+            forceRedirectUrl={forceRedirectUrl}
+            locale={locale}
+            mode={mode}
+          />
+        ) : null}
+        <SignIn
+          appearance={authAppearance}
+          fallbackRedirectUrl={fallbackRedirectUrl}
+          forceRedirectUrl={forceRedirectUrl}
+          path={path}
+          routing="path"
+          signUpFallbackRedirectUrl={forceRedirectUrl}
+          signUpForceRedirectUrl={forceRedirectUrl}
+          signUpUrl={secondaryUrl}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {isFriemiIOSApp ? (
+        <NativeIOSAuthButtons
+          forceRedirectUrl={forceRedirectUrl}
+          locale={locale}
+          mode={mode}
+        />
+      ) : null}
+      <SignUp
         appearance={authAppearance}
         fallbackRedirectUrl={fallbackRedirectUrl}
         forceRedirectUrl={forceRedirectUrl}
         path={path}
         routing="path"
-        signUpFallbackRedirectUrl={forceRedirectUrl}
-        signUpForceRedirectUrl={forceRedirectUrl}
-        signUpUrl={secondaryUrl}
+        signInFallbackRedirectUrl={fallbackRedirectUrl}
+        signInForceRedirectUrl={forceRedirectUrl}
+        signInUrl={secondaryUrl}
       />
-    );
+    </>
+  );
+}
+
+function NativeIOSAuthButtons({
+  forceRedirectUrl,
+  locale,
+  mode,
+}: {
+  forceRedirectUrl: string;
+  locale: string;
+  mode: "sign-in" | "sign-up";
+}) {
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const [busyProvider, setBusyProvider] = useState<NativeAuthProvider | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const copy = getNativeAuthCopy(locale, mode);
+
+  async function handleNativeSignIn(provider: NativeAuthProvider) {
+    if (!isLoaded || !signIn || !setActive || busyProvider) {
+      return;
+    }
+
+    setBusyProvider(provider);
+    setErrorMessage(null);
+
+    try {
+      const nativeResult =
+        provider === "google"
+          ? await FriemiNavigation.signInWithGoogle()
+          : await FriemiNavigation.signInWithApple();
+      const response = await fetch("/api/auth/native-oauth", {
+        body: JSON.stringify({
+          ...nativeResult,
+          provider,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        signInUrl?: string;
+        ticket?: string;
+      };
+
+      if (!response.ok || !payload.ticket) {
+        throw new Error(payload.error ?? copy.error);
+      }
+
+      const signInAttempt = await signIn.create({
+        strategy: "ticket",
+        ticket: payload.ticket,
+      });
+
+      if (signInAttempt.status === "complete" && signInAttempt.createdSessionId) {
+        await setActive({ session: signInAttempt.createdSessionId });
+        window.location.assign(forceRedirectUrl);
+        return;
+      }
+
+      if (payload.signInUrl) {
+        window.location.assign(payload.signInUrl);
+        return;
+      }
+
+      throw new Error(copy.error);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : copy.error);
+    } finally {
+      setBusyProvider(null);
+    }
   }
 
   return (
-    <SignUp
-      appearance={authAppearance}
-      fallbackRedirectUrl={fallbackRedirectUrl}
-      forceRedirectUrl={forceRedirectUrl}
-      path={path}
-      routing="path"
-      signInFallbackRedirectUrl={fallbackRedirectUrl}
-      signInForceRedirectUrl={forceRedirectUrl}
-      signInUrl={secondaryUrl}
-    />
+    <div className="mb-5 space-y-3 rounded-[1.15rem] border border-[#D6D5B2]/70 bg-[#FEFFF9]/80 p-3 shadow-[0_14px_30px_rgba(21,98,64,0.08)]">
+      <p className="text-center text-[13px] font-black text-[#156240]">
+        {copy.title}
+      </p>
+      <div className="grid grid-cols-1 gap-2">
+        <button
+          className="flex h-12 items-center justify-center gap-3 rounded-full border border-[#D6D5B2]/80 bg-white text-sm font-black text-[#1D1D1B] shadow-[0_10px_22px_rgba(21,98,64,0.08)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={Boolean(busyProvider)}
+          onClick={() => void handleNativeSignIn("google")}
+          type="button"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#F7F3EA] text-base font-black text-[#4285F4]">
+            G
+          </span>
+          <span>{busyProvider === "google" ? copy.loading : copy.google}</span>
+        </button>
+        <button
+          className="flex h-12 items-center justify-center gap-3 rounded-full bg-[#1D1D1B] text-sm font-black text-white shadow-[0_10px_22px_rgba(29,29,27,0.16)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={Boolean(busyProvider)}
+          onClick={() => void handleNativeSignIn("apple")}
+          type="button"
+        >
+          <span className="text-lg leading-none"></span>
+          <span>{busyProvider === "apple" ? copy.loading : copy.apple}</span>
+        </button>
+      </div>
+      {errorMessage ? (
+        <p className="rounded-[0.9rem] bg-[#FFF1EF] px-3 py-2 text-center text-xs font-bold text-[#B5301F]">
+          {errorMessage}
+        </p>
+      ) : null}
+    </div>
   );
+}
+
+function getNativeAuthCopy(locale: string, mode: "sign-in" | "sign-up") {
+  if (locale.startsWith("zh")) {
+    return {
+      apple: "使用 Apple 继续",
+      error: "登录失败，请稍后再试。",
+      google: "使用 Google 继续",
+      loading: "正在打开...",
+      title: mode === "sign-up" ? "在 App 内注册" : "在 App 内登录",
+    };
+  }
+
+  if (locale.startsWith("fr")) {
+    return {
+      apple: "Continuer avec Apple",
+      error: "La connexion a échoué. Réessayez plus tard.",
+      google: "Continuer avec Google",
+      loading: "Ouverture...",
+      title: mode === "sign-up" ? "Inscription dans l'app" : "Connexion dans l'app",
+    };
+  }
+
+  return {
+    apple: "Continue with Apple",
+    error: "Sign-in failed. Please try again.",
+    google: "Continue with Google",
+    loading: "Opening...",
+    title: mode === "sign-up" ? "Sign up in app" : "Sign in in app",
+  };
 }
