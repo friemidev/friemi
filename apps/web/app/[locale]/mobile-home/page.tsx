@@ -5,7 +5,6 @@ import type { CSSProperties } from "react";
 import {
   ArrowRight,
   CalendarPlus,
-  ChevronDown,
   Clock3,
   Heart,
   MapPin,
@@ -21,6 +20,10 @@ import { getActivityDateLabel } from "@/features/activities/utils/activityDispla
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { HomeActivityCarousel } from "@/features/home/components/HomeActivityCarousel";
 import { HomeLuxuryMotion } from "@/features/home/components/HomeLuxuryMotion";
+import {
+  getMobileHomeTopNewsItems,
+  type MobileHomeTopNewsItem,
+} from "@/features/home/queries/getMobileHomeTopNews";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { brand } from "@/lib/brand";
@@ -81,6 +84,7 @@ type MobileHomeExperienceProps = {
 };
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
+  topNewsItems: MobileHomeTopNewsItem[];
   viewerName: string | null;
 };
 
@@ -241,11 +245,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "Qu'avez-vous envie de faire aujourd'hui ?",
       searchPlaceholder: "Rechercher activités ou personnes...",
       location: "Paris",
-      cityOptions: [
-        { label: "Paris", href: "/activities?city=Paris" },
-        { label: "Pekin", href: "/activities?city=Beijing" },
-        { label: "Shanghai", href: "/activities?city=Shanghai" },
-      ],
       filters: [
         { href: "/activities", label: "Activités" },
         { href: "/lobby?tab=nearby", label: "Groupes proches" },
@@ -258,18 +257,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       seeAll: "Voir tout",
       participantsLabel: "personnes",
       distanceFallback: "800m",
-      newsCards: [
-        {
-          href: "/game-tools/werewolf",
-          image: "/game-tools/werewolf/werewolf.jpeg",
-          title: "Soirée loup-garou",
-        },
-        {
-          href: "/game-tools",
-          image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          title: "Outils de table",
-        },
-      ],
       fallbackCards: [
         {
           category: "BOARD_GAME",
@@ -309,11 +296,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "What are you up to today?",
       searchPlaceholder: "Search activities or people...",
       location: "Paris",
-      cityOptions: [
-        { label: "Paris", href: "/activities?city=Paris" },
-        { label: "Beijing", href: "/activities?city=Beijing" },
-        { label: "Shanghai", href: "/activities?city=Shanghai" },
-      ],
       filters: [
         { href: "/activities", label: "Activities" },
         { href: "/lobby?tab=nearby", label: "Nearby Hangouts" },
@@ -326,18 +308,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       seeAll: "See all",
       participantsLabel: "people",
       distanceFallback: "800m",
-      newsCards: [
-        {
-          href: "/game-tools/werewolf",
-          image: "/game-tools/werewolf/werewolf.jpeg",
-          title: "Werewolf Night",
-        },
-        {
-          href: "/game-tools",
-          image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-          title: "Board Game Tools",
-        },
-      ],
       fallbackCards: [
         {
           category: "BOARD_GAME",
@@ -376,11 +346,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     subtitle: "今天想做点什么？",
     searchPlaceholder: "搜索活动或用户...",
     location: "巴黎",
-    cityOptions: [
-      { label: "巴黎", href: "/activities?city=Paris" },
-      { label: "北京", href: "/activities?city=Beijing" },
-      { label: "上海", href: "/activities?city=Shanghai" },
-    ],
     filters: [
       { href: "/activities", label: "发现活动" },
       { href: "/lobby?tab=nearby", label: "附近组局" },
@@ -393,18 +358,6 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     seeAll: "查看全部",
     participantsLabel: "人",
     distanceFallback: "800m",
-    newsCards: [
-      {
-        href: "/game-tools/werewolf",
-        image: "/game-tools/werewolf/werewolf.jpeg",
-        title: "今晚狼人杀",
-      },
-      {
-        href: "/game-tools",
-        image: "/home/v2_1/friemi-home-v21-events-mood.jpg",
-        title: "桌游工具",
-      },
-    ],
     fallbackCards: [
       {
         category: "BOARD_GAME",
@@ -465,7 +418,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
     locale,
     route: "/mobile-home",
   });
-  const [activitiesResult, viewerProfile] = await perf.measure(
+  const [activitiesResult, viewerProfile, topNewsItems] = await perf.measure(
     "mobileHome.bootstrap",
     () =>
       Promise.all([
@@ -482,6 +435,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
           console.error("Failed to load mobile home viewer profile", error);
           return null;
         }),
+        getMobileHomeTopNewsItems(locale),
       ]),
   );
 
@@ -498,6 +452,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
         <MobileHomeV23Experience
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
+          topNewsItems={topNewsItems}
           viewerName={viewerProfile?.nickname ?? null}
         />
         <div className="hidden md:block">
@@ -525,11 +480,11 @@ function getMobileHomeActivityHref(
 function MobileHomeV23Experience({
   locale,
   swipeActivities,
+  topNewsItems,
   viewerName,
 }: MobileHomeV23ExperienceProps) {
   const copy = getMobileHomeV23Copy(locale, viewerName);
   const categories = getMobileHomeCopy(locale).categories;
-  const newsActivities = swipeActivities.slice(0, 2);
   const trendingActivities = swipeActivities.slice(2, 8);
 
   return (
@@ -545,11 +500,7 @@ function MobileHomeV23Experience({
           </Link>
 
           <div className="flex min-w-0 items-center justify-end gap-1.5 pt-4">
-            <MobileHomeV23CitySelector
-              cityOptions={copy.cityOptions}
-              currentCity={copy.location}
-              locale={locale}
-            />
+            <MobileHomeV23CitySelector currentCity={copy.location} />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
@@ -598,30 +549,23 @@ function MobileHomeV23Experience({
           />
         </section>
 
-        <section className="mt-4">
-          <h2 className="text-[19px] font-black tracking-normal text-[#064133]">
-            {copy.topNewsTitle}
-          </h2>
-          <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {newsActivities.length > 0
-              ? newsActivities.map((activity, index) => (
-                  <MobileHomeV23NewsActivityCard
-                    activity={activity}
-                    key={`${activity.type}:${activity.id}:news`}
-                    locale={locale}
-                    priority={index === 0}
-                  />
-                ))
-              : copy.newsCards.map((card) => (
-                  <MobileHomeV23NewsCard
-                    href={withLocale(locale, card.href)}
-                    image={card.image}
-                    key={card.href}
-                    title={card.title}
-                  />
-                ))}
-          </div>
-        </section>
+        {topNewsItems.length > 0 ? (
+          <section className="mt-4">
+            <h2 className="text-[19px] font-black tracking-normal text-[#064133]">
+              {copy.topNewsTitle}
+            </h2>
+            <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {topNewsItems.map((item) => (
+                <MobileHomeV23NewsCard
+                  href={withLocale(locale, item.href)}
+                  image={item.image}
+                  key={item.id}
+                  title={item.title}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-6">
           <div className="flex items-center justify-between gap-3">
@@ -677,12 +621,12 @@ function MobileHomeV23NewsCard({
       prefetchOnVisible
       className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
     >
-      <Image
+      {/* Admin-managed images can be local paths or HTTPS URLs. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={image}
         alt=""
-        fill
-        sizes="320px"
-        className="object-cover transition duration-500 group-active:scale-[1.03]"
+        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-active:scale-[1.03]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
       <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
@@ -692,70 +636,16 @@ function MobileHomeV23NewsCard({
   );
 }
 
-function MobileHomeV23NewsActivityCard({
-  activity,
-  locale,
-  priority = false,
-}: {
-  activity: ActivityCardViewModel;
-  locale: string;
-  priority?: boolean;
-}) {
+function MobileHomeV23CitySelector({ currentCity }: { currentCity: string }) {
   return (
-    <IntentPrefetchLink
-      href={getMobileHomeActivityHref(activity, locale)}
-      prefetchOnVisible
-      className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
+    <span
+      className="inline-flex h-9 min-w-0 cursor-default select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-extrabold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
+      aria-label={currentCity}
+      title={currentCity}
     >
-      <ActivityCoverImage
-        alt={activity.title}
-        src={activity.coverImageUrl}
-        fetchPriority={priority ? "high" : "auto"}
-        loading={priority ? "eager" : "lazy"}
-        overlayClassName="bg-gradient-to-t from-black/54 via-black/12 to-black/4"
-      />
-      <div className="absolute bottom-3 left-3 right-3">
-        <span className="inline-flex max-w-full rounded-full bg-white/92 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
-          <span className="truncate">
-            {getCategoryLabel(activity.category, locale)}
-          </span>
-        </span>
-        <h3 className="mt-2 line-clamp-2 text-[17px] font-black leading-5 tracking-normal text-white drop-shadow-sm">
-          {activity.title}
-        </h3>
-      </div>
-    </IntentPrefetchLink>
-  );
-}
-
-function MobileHomeV23CitySelector({
-  cityOptions,
-  currentCity,
-  locale,
-}: {
-  cityOptions: ReturnType<typeof getMobileHomeV23Copy>["cityOptions"];
-  currentCity: string;
-  locale: string;
-}) {
-  return (
-    <details className="group relative">
-      <summary className="inline-flex h-9 min-w-0 cursor-pointer list-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-extrabold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35 [&::-webkit-details-marker]:hidden">
-        <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
-        <span className="max-w-[4.4rem] truncate">{currentCity}</span>
-        <ChevronDown className="h-3 w-3 shrink-0 text-[#123D31]/72 transition group-open:rotate-180" />
-      </summary>
-      <div className="absolute right-0 top-11 z-[60] grid min-w-[8.5rem] gap-1 rounded-[1rem] border border-[#D7D5C8] bg-white p-1.5 shadow-[0_18px_36px_rgba(17,18,16,0.12)]">
-        {cityOptions.map((city) => (
-          <Link
-            key={city.label}
-            href={withLocale(locale, city.href)}
-            className="rounded-[0.75rem] px-3 py-2 text-[13px] font-extrabold text-[#123D31] transition hover:bg-[#F5F4EC]"
-          >
-            {city.label}
-          </Link>
-        ))}
-      </div>
-    </details>
+      <MapPin className="h-3.5 w-3.5 shrink-0 fill-[#F56D62] text-[#F56D62]" />
+      <span className="max-w-[4.4rem] truncate">{currentCity}</span>
+    </span>
   );
 }
 

@@ -191,6 +191,16 @@ export async function uploadDirectMessageImageBuffer(
   });
 }
 
+export async function uploadTopNewsImageBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "top-news",
+  });
+}
+
 async function uploadPublicImageBuffer(
   userId: string,
   fileBuffer: Buffer,

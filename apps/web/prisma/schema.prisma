@@ -591,6 +591,25 @@ model Merchant {
   @@index([importedAt])
 }
 
+model TopNewsItem {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  titleZh            String
+  titleEn            String
+  titleFr            String
+  href               String
+  imageUrl           String
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+  createdByProfileId String?
+  updatedByProfileId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([updatedAt])
+}
+
 model ActivitySourceLink {
   id         String   @id @default(cuid())
   activityId String
