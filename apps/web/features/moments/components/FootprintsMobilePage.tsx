@@ -98,7 +98,7 @@ const copyByLocale = {
     settings: "设置",
     tabs: {
       message: "消息",
-      moment: "朋友圈",
+      moment: "晒晒",
       planet: "星球",
     },
     composer: "分享此刻的心情或精彩瞬间...",

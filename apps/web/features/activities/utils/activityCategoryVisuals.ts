@@ -14,6 +14,8 @@ export const activityCategoryIllustrationImages: Partial<
   SPORTS: "sports.png",
 };
 
+const defaultActivityCategoryIllustrationSrc = "/illustrations/design.png";
+
 export function getActivityCategoryIllustrationSrc(
   category: string | null | undefined,
 ) {
@@ -22,5 +24,7 @@ export function getActivityCategoryIllustrationSrc(
       ? activityCategoryIllustrationImages[category as ActivityCategory]
       : null;
 
-  return image ? `/illustrations/png/${image}` : null;
+  return image
+    ? `/illustrations/png/${image}`
+    : defaultActivityCategoryIllustrationSrc;
 }

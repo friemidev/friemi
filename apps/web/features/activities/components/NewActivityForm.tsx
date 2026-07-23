@@ -155,6 +155,131 @@ const compactInputClassName =
 const compactTextareaClassName =
   "min-h-24 rounded-xl border border-[#D8D2C2] bg-white px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
+const newActivityDraftStorageKey = "friemi:new-activity-form-draft:v1";
+const newActivityDraftMaxAgeMs = 24 * 60 * 60 * 1000;
+
+type StoredNewActivityDraft = {
+  locale: string;
+  savedAt: number;
+  values: Partial<ActivityFormValues>;
+};
+
+function getFormDataText(formData: FormData, key: keyof ActivityFormValues) {
+  const value = formData.get(key);
+
+  return typeof value === "string" ? value : "";
+}
+
+function getFormDataBoolean(formData: FormData, key: keyof ActivityFormValues) {
+  const value = formData.get(key);
+
+  return value === "on" || value === "true";
+}
+
+function getNewActivityDraftValues(
+  form: HTMLFormElement,
+): Partial<ActivityFormValues> {
+  const formData = new FormData(form);
+
+  return {
+    address: getFormDataText(formData, "address"),
+    capacity: getFormDataText(formData, "capacity"),
+    capacityLimitEnabled: getFormDataBoolean(formData, "capacityLimitEnabled"),
+    category: getFormDataText(formData, "category"),
+    city: getFormDataText(formData, "city"),
+    coverImageUrl: getFormDataText(formData, "coverImageUrl"),
+    description: getFormDataText(formData, "description"),
+    destination: getFormDataText(formData, "destination"),
+    endAt: getFormDataText(formData, "endAt"),
+    hideAddressFromNonParticipants: getFormDataBoolean(
+      formData,
+      "hideAddressFromNonParticipants",
+    ),
+    importSourceUrl: getFormDataText(formData, "importSourceUrl"),
+    itinerary: getFormDataText(formData, "itinerary"),
+    latitude: getFormDataText(formData, "latitude"),
+    longitude: getFormDataText(formData, "longitude"),
+    minParticipants: getFormDataText(formData, "minParticipants"),
+    otherCategoryText: getFormDataText(formData, "otherCategoryText"),
+    priceText: getFormDataText(formData, "priceText"),
+    priceType: getFormDataText(formData, "priceType"),
+    publicEventId: getFormDataText(formData, "publicEventId"),
+    requiresApproval: getFormDataBoolean(formData, "requiresApproval"),
+    startAt: getFormDataText(formData, "startAt"),
+    ticketLabel: getFormDataText(formData, "ticketLabel"),
+    ticketUrl: getFormDataText(formData, "ticketUrl"),
+    title: getFormDataText(formData, "title"),
+    type: getFormDataText(formData, "type"),
+    visibility: getFormDataText(formData, "visibility") || "PUBLIC",
+  };
+}
+
+function saveNewActivityDraft(locale: string, form: HTMLFormElement | null) {
+  if (!form || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const draft: StoredNewActivityDraft = {
+      locale,
+      savedAt: Date.now(),
+      values: getNewActivityDraftValues(form),
+    };
+
+    window.localStorage.setItem(
+      newActivityDraftStorageKey,
+      JSON.stringify(draft),
+    );
+  } catch {
+    // Draft saving is best-effort; sign-in should not be blocked by storage.
+  }
+}
+
+function clearNewActivityDraft() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(newActivityDraftStorageKey);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function readNewActivityDraft(locale: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawDraft = window.localStorage.getItem(newActivityDraftStorageKey);
+
+    if (!rawDraft) {
+      return null;
+    }
+
+    const draft = JSON.parse(rawDraft) as Partial<StoredNewActivityDraft>;
+    const savedAt =
+      typeof draft.savedAt === "number" ? draft.savedAt : Number.NaN;
+
+    if (
+      draft.locale !== locale ||
+      !Number.isFinite(savedAt) ||
+      Date.now() - savedAt > newActivityDraftMaxAgeMs ||
+      !draft.values ||
+      typeof draft.values !== "object"
+    ) {
+      clearNewActivityDraft();
+      return null;
+    }
+
+    return draft.values;
+  } catch {
+    clearNewActivityDraft();
+    return null;
+  }
+}
 
 function getCategoryPlaceholder(locale: string) {
   if (locale === "fr") {
@@ -2141,6 +2266,7 @@ export function NewActivityForm({
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const titleInputId = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const draftRestoredRef = useRef(false);
   const skipLongDurationConfirmRef = useRef(false);
   const [longDurationConfirmation, setLongDurationConfirmation] =
     useState<LongDurationConfirmation | null>(null);
@@ -2194,6 +2320,36 @@ export function NewActivityForm({
   ];
   useEffect(() => {
     if (
+      mode !== "create" ||
+      !isAuthenticated ||
+      initialValues ||
+      draftRestoredRef.current
+    ) {
+      return;
+    }
+
+    const draftValues = readNewActivityDraft(locale);
+
+    if (!draftValues) {
+      return;
+    }
+
+    draftRestoredRef.current = true;
+    setTextImportValues(draftValues);
+    setCategory(draftValues.category ?? "");
+    setCity(draftValues.city?.trim() || "Paris");
+    setVisibility(draftValues.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC");
+    setPriceType(normalizePriceTypeForSimpleMode(draftValues.priceType));
+    setTicketUrl(draftValues.ticketUrl ?? "");
+    setTicketLinkKind(getInitialTicketLinkKind(draftValues));
+    setIsCapacityLimited(
+      draftValues.capacityLimitEnabled ?? Number(draftValues.capacity ?? 0) > 0,
+    );
+    setFormDraftVersion((currentVersion) => currentVersion + 1);
+  }, [initialValues, isAuthenticated, locale, mode]);
+
+  useEffect(() => {
+    if (
       !state.version ||
       lastHandledErrorVersionRef.current === state.version
     ) {
@@ -2213,12 +2369,16 @@ export function NewActivityForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (mode === "create" && !isAuthenticated && signInHref) {
       event.preventDefault();
+      saveNewActivityDraft(locale, event.currentTarget);
       window.location.assign(signInHref);
       return;
     }
 
     if (skipLongDurationConfirmRef.current) {
       skipLongDurationConfirmRef.current = false;
+      if (mode === "create" && isAuthenticated) {
+        clearNewActivityDraft();
+      }
       return;
     }
 
@@ -2232,6 +2392,9 @@ export function NewActivityForm({
     );
 
     if (!confirmation) {
+      if (isAuthenticated) {
+        clearNewActivityDraft();
+      }
       return;
     }
 
@@ -2251,6 +2414,12 @@ export function NewActivityForm({
         skipLongDurationConfirmRef.current = false;
       }, 0);
     }, 0);
+  }
+
+  function saveCurrentDraftBeforeAuth() {
+    if (mode === "create") {
+      saveNewActivityDraft(locale, formRef.current);
+    }
   }
 
   function handleTextImportApply(draft: ActivityTextImportDraft) {
@@ -2861,6 +3030,7 @@ export function NewActivityForm({
               label={getCoverUploadPrompt(locale)}
               locale={locale}
               onUploadingChange={setIsCoverUploading}
+              onAuthRequired={saveCurrentDraftBeforeAuth}
               signInHref={!isAuthenticated ? signInHref : undefined}
               splitPreviewBelow
               submitFallbackValue

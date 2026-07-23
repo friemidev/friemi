@@ -59,6 +59,41 @@ body {
   color: var(--friemi-palette-ink);
 }
 
+.friemi-alert-overlay {
+  animation: friemi-alert-overlay-in 150ms ease-out both;
+}
+
+.friemi-alert-card {
+  animation: friemi-alert-card-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes friemi-alert-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes friemi-alert-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friemi-alert-overlay,
+  .friemi-alert-card {
+    animation: none;
+  }
+}
+
 html[data-friemi-android-app="true"],
 html[data-friemi-android-app="true"] body {
   overscroll-behavior-y: contain;
@@ -74,9 +109,10 @@ html[data-friemi-android-app="true"] * {
 }
 
 html[data-friemi-ios-app="true"] {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
-    ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", ui-sans-serif,
+    system-ui, sans-serif;
   overscroll-behavior-y: contain;
 }
 
@@ -521,12 +557,14 @@ a {
 }
 
 .mobile-lobby-category-drawer__panel {
-  animation: mobile-lobby-category-panel-in 320ms cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation: mobile-lobby-category-panel-in 320ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
   will-change: transform;
 }
 
 .mobile-lobby-category-drawer__item {
-  animation: mobile-lobby-category-item-in 360ms cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation: mobile-lobby-category-item-in 360ms cubic-bezier(0.19, 1, 0.22, 1)
+    both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -900,11 +938,7 @@ a {
 
 @media (min-width: 390px) and (max-width: 767.98px) {
   .mobile-home-viewport {
-    --mobile-home-swipe-height: clamp(
-      16.65rem,
-      calc(38svh - 0.25rem),
-      18.1rem
-    );
+    --mobile-home-swipe-height: clamp(16.65rem, calc(38svh - 0.25rem), 18.1rem);
     --mobile-home-swipe-cover-height: clamp(
       8.05rem,
       calc(19.5svh - 0.25rem),
@@ -1131,8 +1165,7 @@ html[data-home-motion-ready="true"]
   100% {
     opacity: 0;
     transform: translate3d(var(--claim-confetti-drift), 10.5rem, 0)
-      rotate(310deg)
-      scale(1);
+      rotate(310deg) scale(1);
   }
 }
 
