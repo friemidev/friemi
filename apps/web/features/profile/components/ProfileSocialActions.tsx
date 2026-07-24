@@ -12,6 +12,7 @@ import {
 } from "@/features/friends/actions/friendActions";
 import { getFriendsCopy } from "@/features/friends/copy";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import type { ProfileViewerRelationshipViewModel } from "../queries/getProfileDashboard";
@@ -33,6 +34,7 @@ function getProfileSocialActionCopy(locale: string) {
       incomingRequest: "Demande reçue",
       signInToAddFriend: "Connexion ami",
       alreadyFriend: "Déjà ami",
+      message: "Message",
     };
   }
 
@@ -43,6 +45,7 @@ function getProfileSocialActionCopy(locale: string) {
       incomingRequest: "Request received",
       signInToAddFriend: "Sign in to add",
       alreadyFriend: "Friends",
+      message: "Message",
     };
   }
 
@@ -52,6 +55,7 @@ function getProfileSocialActionCopy(locale: string) {
     incomingRequest: "收到申请",
     signInToAddFriend: "登录后添加",
     alreadyFriend: "已是好友",
+    message: "发消息",
   };
 }
 
@@ -224,9 +228,10 @@ export function ProfileSocialActions({
   relationship,
 }: ProfileSocialActionsProps) {
   const redirectPath = `/profile/${profileId}`;
+  const actionCopy = getProfileSocialActionCopy(locale);
 
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2">
       <div className="grid gap-2">
         <FriendAction
           isAuthenticated={isAuthenticated}
@@ -235,6 +240,15 @@ export function ProfileSocialActions({
           relationship={relationship}
         />
       </div>
+      <StartDirectConversationButton
+        buttonClassName="h-10 w-full bg-white/72 px-4 text-[#156240] shadow-none ring-1 ring-[#8AB68E] hover:bg-white hover:text-[#111210]"
+        className="min-w-0"
+        errorClassName="px-1"
+        label={actionCopy.message}
+        locale={locale}
+        peerProfileId={profileId}
+        redirectPath={redirectPath}
+      />
       <ReportDialog
         className="h-10 bg-white/65 px-3 text-xs text-zinc-600 ring-[#D6D5B2] hover:bg-white"
         isAuthenticated={isAuthenticated}

@@ -602,6 +602,11 @@ function PublicMobileProfileActions({
       <form action={openDirectConversationAction}>
         <input name="locale" type="hidden" value={locale} />
         <input name="friendProfileId" type="hidden" value={profileId} />
+        <input
+          name="redirectPath"
+          type="hidden"
+          value={`/profile/${profileId}`}
+        />
         <button
           className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)]"
           type="submit"

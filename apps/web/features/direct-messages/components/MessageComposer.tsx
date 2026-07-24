@@ -30,6 +30,7 @@ export type OptimisticMessagePayload = {
 type MessageComposerProps = {
   activityId?: string | null;
   conversationId: string;
+  disabled?: boolean;
   initialBody?: string;
   locale: string;
   onOptimisticCommit?: (input: {
@@ -123,6 +124,7 @@ function SubmitButton({
 export function MessageComposer({
   activityId,
   conversationId,
+  disabled = false,
   initialBody,
   locale,
   onOptimisticCommit,
@@ -251,7 +253,7 @@ export function MessageComposer({
     event.preventDefault();
     const textarea = textareaRef.current;
 
-    if (isImageUploading) {
+    if (disabled || isImageUploading) {
       return;
     }
 
@@ -405,12 +407,13 @@ export function MessageComposer({
             aria-expanded={emojiPanelOpen}
             aria-label={t.addEmoji}
             title={t.addEmoji}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
+            disabled={disabled}
             onClick={() => setEmojiPanelOpen((current) => !current)}
           >
             <Smile className="h-5 w-5" />
           </button>
-          {emojiPanelOpen ? (
+          {emojiPanelOpen && !disabled ? (
             <div className="absolute bottom-[calc(100%+0.5rem)] left-0 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[1.1rem] border border-sand bg-white p-3 shadow-[0_18px_34px_rgba(21,98,64,0.14)]">
               <p className="px-1 text-xs font-medium text-[#156240]">
                 {t.addEmoji}
@@ -437,7 +440,9 @@ export function MessageComposer({
           aria-label={isImageUploading ? t.imageUploading : t.attachImage}
           title={isImageUploading ? t.imageUploading : t.attachImage}
           disabled={
-            isImageUploading || imageUrls.length >= messageImageMaxCount
+            disabled ||
+            isImageUploading ||
+            imageUrls.length >= messageImageMaxCount
           }
           className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-team-bg text-moss ring-1 ring-sand transition hover:bg-white hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30 disabled:cursor-not-allowed disabled:opacity-55"
           onClick={() => imageInputRef.current?.click()}
@@ -455,6 +460,7 @@ export function MessageComposer({
             name="body"
             maxLength={messageMaxLength}
             defaultValue={initialBody}
+            disabled={disabled}
             placeholder={t.messagePlaceholder}
             className="max-h-32 min-h-11 resize-none rounded-2xl border-sand bg-[#FEFFF9] py-2.5 leading-6 shadow-inner focus-visible:ring-moss/30"
             onChange={(event) =>
@@ -463,7 +469,7 @@ export function MessageComposer({
           />
         </label>
         <SubmitButton
-          disabled={isImageUploading}
+          disabled={disabled || isImageUploading}
           isSending={pendingSubmissionCount > 0}
           locale={locale}
         />

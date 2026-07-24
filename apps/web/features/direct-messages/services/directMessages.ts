@@ -594,6 +594,8 @@ export async function getOrCreateOpenDirectConversation({
   peerProfileId: string;
 }): Promise<DirectConversationViewModel> {
   return prisma.$transaction(async (tx) => {
+    assertDifferentUsers(currentUserProfileId, peerProfileId);
+
     const peerProfile = await tx.userProfile.findFirst({
       where: {
         id: peerProfileId,
@@ -608,13 +610,23 @@ export async function getOrCreateOpenDirectConversation({
       throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
     }
 
+    const pair = getConversationPair(currentUserProfileId, peerProfileId);
+    const existingConversation = await tx.conversation.findUnique({
+      where: {
+        userAId_userBId: pair,
+      },
+      select: directConversationSelect,
+    });
+
+    if (existingConversation) {
+      return existingConversation;
+    }
+
     await assertDirectMessageSendAccess(
       tx,
       currentUserProfileId,
       peerProfileId,
     );
-
-    const pair = getConversationPair(currentUserProfileId, peerProfileId);
 
     return tx.conversation.upsert({
       where: {

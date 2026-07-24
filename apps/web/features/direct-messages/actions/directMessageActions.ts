@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
@@ -10,6 +10,7 @@ import {
   ensureCurrentUserProfile,
   getCurrentUserProfileForMutation,
 } from "@/lib/auth";
+import { normalizeAuthRedirectTarget } from "@/lib/auth-redirect";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
 import {
@@ -43,6 +44,7 @@ export type OpenActivityOrganizerConversationState = {
 const createDirectConversationSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   friendProfileId: z.string().min(1),
+  redirectPath: z.string().trim().max(300).optional(),
 });
 
 const createActivityOrganizerConversationSchema = z.object({
@@ -124,6 +126,10 @@ function getActionErrorMessage(locale: string, error: unknown) {
   return t.failed;
 }
 
+function getDirectConversationRedirectPath(locale: string, value?: string) {
+  return normalizeAuthRedirectTarget(locale, value || "/messages");
+}
+
 function refreshConversation(locale: string, conversationId?: string) {
   if (conversationId) {
     revalidatePath(withLocale(locale, `/messages/${conversationId}`));
@@ -166,6 +172,7 @@ export async function createDirectConversationAction(
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     friendProfileId: getString(formData, "friendProfileId"),
+    redirectPath: getString(formData, "redirectPath").trim() || undefined,
   };
   const result = createDirectConversationSchema.safeParse(rawInput);
   const t = getDirectMessagesCopy(rawInput.locale);
@@ -180,7 +187,10 @@ export async function createDirectConversationAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      "/messages",
+      getDirectConversationRedirectPath(
+        result.data.locale,
+        result.data.redirectPath,
+      ),
     );
     const conversation = await getOrCreateOpenDirectConversation({
       currentUserProfileId: profile.id,
@@ -200,6 +210,7 @@ export async function createDirectConversationAction(
       conversationId: conversation.id,
     };
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to create direct conversation", error);
 
     return {
@@ -214,11 +225,17 @@ export async function openDirectConversationAction(
   const rawInput = {
     locale: getString(formData, "locale") || "zh-CN",
     friendProfileId: getString(formData, "friendProfileId"),
+    redirectPath: getString(formData, "redirectPath").trim() || undefined,
   };
   const result = createDirectConversationSchema.safeParse(rawInput);
 
   if (!result.success) {
-    redirect(withLocale(rawInput.locale, "/friends"));
+    redirect(
+      getDirectConversationRedirectPath(
+        rawInput.locale,
+        rawInput.redirectPath,
+      ),
+    );
   }
 
   let conversationId: string;
@@ -226,7 +243,10 @@ export async function openDirectConversationAction(
   try {
     const profile = await ensureCurrentUserProfile(
       result.data.locale,
-      "/messages",
+      getDirectConversationRedirectPath(
+        result.data.locale,
+        result.data.redirectPath,
+      ),
     );
     const conversation = await getOrCreateOpenDirectConversation({
       currentUserProfileId: profile.id,
@@ -242,8 +262,14 @@ export async function openDirectConversationAction(
     });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to open direct conversation", error);
-    redirect(withLocale(result.data.locale, "/messages"));
+    redirect(
+      getDirectConversationRedirectPath(
+        result.data.locale,
+        result.data.redirectPath,
+      ),
+    );
   }
 
   redirect(withLocale(result.data.locale, `/messages/${conversationId}`));
@@ -300,6 +326,7 @@ export async function openActivityOrganizerConversationAction(
     });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to open activity organizer conversation", error);
     redirect(
       withLocale(
@@ -380,6 +407,7 @@ export async function openActivityOrganizerConversationFormAction(
     });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to open activity organizer conversation", error);
 
     return {
@@ -456,6 +484,7 @@ export async function openActivityParticipantConversationAction(
     });
     refreshConversation(result.data.locale, conversation.id);
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to open activity participant conversation", error);
     redirect(
       withLocale(
@@ -504,7 +533,10 @@ export async function sendDirectMessageAction(
   const result = sendDirectMessageSchema.safeParse(rawInput);
 
   if (!result.success) {
+    const t = getDirectMessagesCopy(rawInput.locale);
+
     return {
+      formError: t.invalidRequest,
       values: {
         body: rawInput.body,
         imageUrls: rawInput.imageUrls,
@@ -571,6 +603,7 @@ export async function sendDirectMessageAction(
       },
     };
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to send direct message", error);
 
     return {
@@ -609,7 +642,10 @@ export async function sendDirectMessageToFriendAction(
   const result = sendDirectMessageToFriendSchema.safeParse(rawInput);
 
   if (!result.success) {
+    const t = getDirectMessagesCopy(rawInput.locale);
+
     return {
+      formError: t.invalidRequest,
       values: {
         body: rawInput.body,
         imageUrls: rawInput.imageUrls,
@@ -676,6 +712,7 @@ export async function sendDirectMessageToFriendAction(
       },
     };
   } catch (error) {
+    unstable_rethrow(error);
     console.error("Failed to send direct message to friend", error);
 
     return {

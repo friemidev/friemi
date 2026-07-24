@@ -15,7 +15,6 @@ import { DetailSourceRestore } from "@/features/navigation/components/DetailSour
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
-import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
@@ -27,6 +26,7 @@ import { MessageAvatar } from "./MessageAvatar";
 import { MessageThreadBackButton } from "./MessageThreadBackButton";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadClient } from "./MessageThreadClient";
+import { StartDirectConversationButton } from "./StartDirectConversationButton";
 
 type ConversationListPanelProps = {
   conversations: DirectConversationListItemViewModel[];
@@ -364,6 +364,7 @@ export function MessageThread({
         initialMessages={conversation.messages}
         locale={locale}
         peer={conversation.peer}
+        sendPolicy={conversation.sendPolicy}
       />
     </section>
   );
@@ -379,13 +380,12 @@ export function StartConversationButton({
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <form action={openDirectConversationAction} className="grid">
-      <input name="locale" type="hidden" value={locale} />
-      <input name="friendProfileId" type="hidden" value={friendProfileId} />
-      <Button type="submit" variant="secondary" className="gap-2">
-        <MessageCircle className="h-4 w-4" />
-        {t.startConversation}
-      </Button>
-    </form>
+    <StartDirectConversationButton
+      buttonClassName="w-full bg-white/72 text-[#156240] shadow-none ring-1 ring-[#8AB68E] hover:bg-white hover:text-[#111210]"
+      label={t.startConversation}
+      locale={locale}
+      peerProfileId={friendProfileId}
+      redirectPath="/messages"
+    />
   );
 }

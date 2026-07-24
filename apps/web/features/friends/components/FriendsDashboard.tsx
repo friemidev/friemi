@@ -1301,6 +1301,7 @@ function FriendCard({
       ) : null}
       <form action={openDirectConversationAction} className="mt-3 grid">
         <input name="locale" type="hidden" value={locale} />
+        <input name="redirectPath" type="hidden" value="/friends" />
         <input name="friendProfileId" type="hidden" value={user.id} />
         <SubmitButton
           icon={MessageCircle}

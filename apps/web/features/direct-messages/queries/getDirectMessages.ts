@@ -6,7 +6,10 @@ import {
   type FriendNearestActivitySignalViewModel,
 } from "@/features/friends/queries/getFriendNearestActivitySignals";
 import { buildPrivateActivityShareAccessWhere } from "@/features/activities/utils/activityShareAccess";
-import { canSendDirectMessageToProfile } from "../services/directMessages";
+import {
+  getDirectMessageSendPolicy,
+  type DirectMessageSendPolicy,
+} from "../services/directMessages";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -146,6 +149,7 @@ export type DirectConversationThreadViewModel =
     canSend: boolean;
     currentUser: DirectMessageUserViewModel;
     messages: DirectMessageThreadItemViewModel[];
+    sendPolicy: DirectMessageSendPolicy;
   };
 
 export type DirectConversationActivityContextViewModel = {
@@ -240,7 +244,7 @@ function mapConversationListItem(
 function mapConversationThread(
   conversation: ConversationThreadResult,
   currentUserProfileId: string,
-  canSend: boolean,
+  sendPolicy: DirectMessageSendPolicy,
 ): DirectConversationThreadViewModel {
   const currentUser =
     currentUserProfileId === conversation.userAId
@@ -249,7 +253,7 @@ function mapConversationThread(
 
   return {
     ...mapConversationListItem(conversation, currentUserProfileId),
-    canSend,
+    canSend: sendPolicy.canSend,
     currentUser: mapUserProfile(currentUser),
     messages: [...conversation.messages].reverse().map((message) => ({
       id: message.id,
@@ -260,6 +264,7 @@ function mapConversationThread(
       createdAt: message.createdAt.toISOString(),
       isMine: message.senderId === currentUserProfileId,
     })),
+    sendPolicy,
   };
 }
 
@@ -551,12 +556,12 @@ export async function getDirectConversationThread(
   }
 
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
-  const canSend = await canSendDirectMessageToProfile({
+  const sendPolicy = await getDirectMessageSendPolicy(
     currentUserProfileId,
-    peerProfileId: peerId,
-  });
+    peerId,
+  );
 
-  return mapConversationThread(conversation, currentUserProfileId, canSend);
+  return mapConversationThread(conversation, currentUserProfileId, sendPolicy);
 }
 
 export async function getDirectConversationActivityContext({

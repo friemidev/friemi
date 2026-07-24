@@ -196,6 +196,11 @@ function MobileFriendChatRow({
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
           <input
+            name="redirectPath"
+            type="hidden"
+            value="/footprints?tab=message"
+          />
+          <input
             name="friendProfileId"
             type="hidden"
             value={friend.friend.id}
