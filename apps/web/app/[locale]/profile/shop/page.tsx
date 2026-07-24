@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { getProfileShopGiftCatalog } from "@/features/charm/queries/getProfileShop";
 import { ProfileShopPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 
@@ -17,14 +18,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function ProfileShopPage({ params }: ProfileShopPageProps) {
+export default async function ProfileShopPage({
+  params,
+}: ProfileShopPageProps) {
   const { locale } = await params;
 
   await ensureCurrentUserProfile(locale, "/profile/shop");
+  const gifts = getProfileShopGiftCatalog(locale);
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0 md:py-8">
-      <ProfileShopPageView locale={locale} />
+      <ProfileShopPageView gifts={gifts} locale={locale} />
     </PageContainer>
   );
 }

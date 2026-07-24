@@ -377,6 +377,16 @@ export function normalizeGiftQuantity(quantity: number | null | undefined) {
   return Math.max(1, Math.min(99, Math.floor(quantity ?? 1)));
 }
 
+export function canRedeemBlindBoxFragments(
+  fragmentCount: number | null | undefined,
+) {
+  if (!Number.isFinite(fragmentCount)) {
+    return false;
+  }
+
+  return Math.floor(fragmentCount ?? 0) >= blindBoxFragmentExchangeCount;
+}
+
 export function calculateCharmDeltaFromGift({
   allowDisabledGifts = false,
   giftId,

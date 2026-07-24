@@ -39,10 +39,7 @@ import {
   parseAndroidQrScanPayload,
   resolveGlobalQrScanDestination,
 } from "@/features/scan/globalQrScanner";
-import {
-  getCharmLevelLabel,
-  getCharmProgress,
-} from "@/features/charm/charm";
+import { getCharmLevelLabel, getCharmProgress } from "@/features/charm/charm";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
@@ -175,7 +172,6 @@ function getMobileProfileCopy(locale: string) {
       shop: "Boutique",
       signOut: "Déconnexion",
       soon: "Bientôt disponible",
-      soonStatus: "Bientôt",
       trusted: "Fiable",
       visitors: "Visites",
       wallet: "Recharge",
@@ -218,7 +214,6 @@ function getMobileProfileCopy(locale: string) {
       shop: "Shop",
       signOut: "Sign out",
       soon: "Coming soon",
-      soonStatus: "Soon",
       trusted: "Trusted",
       visitors: "Visits",
       wallet: "Top up",
@@ -260,7 +255,6 @@ function getMobileProfileCopy(locale: string) {
     shop: "商城",
     signOut: "退出登录",
     soon: "敬请期待",
-    soonStatus: "待上线",
     trusted: "信用值",
     visitors: "访客记录",
     wallet: "充值",
@@ -655,10 +649,7 @@ function RecentCharmGifts({
 
   return (
     <div
-      className={cn(
-        "flex min-w-0 flex-wrap items-center gap-1.5",
-        className,
-      )}
+      className={cn("flex min-w-0 flex-wrap items-center gap-1.5", className)}
     >
       <span className="mr-0.5 text-[11px] font-bold text-[#8B907F]">
         {label}
@@ -925,9 +916,7 @@ function PublicMobileProfileHome({
                 {charmProgress.current.icon} {charmLevelLabel}
               </p>
             </div>
-            <p className="text-xs font-bold text-[#7A8276]">
-              {nextCharmLabel}
-            </p>
+            <p className="text-xs font-bold text-[#7A8276]">{nextCharmLabel}</p>
           </div>
           <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
             <div
@@ -1368,14 +1357,10 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
-          status={copy.soonStatus}
+          status={copy.available}
           tone="gold"
         />
-        <ComingSoonFeature
-          icon={Gift}
-          label={copy.giftWall}
-          soon={copy.soon}
-        />
+        <ComingSoonFeature icon={Gift} label={copy.giftWall} soon={copy.soon} />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
