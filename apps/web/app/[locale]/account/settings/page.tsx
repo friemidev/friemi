@@ -76,7 +76,7 @@ export default async function AccountSettingsPage({
   ]);
 
   return (
-    <PageContainer className="relative isolate min-h-[calc(100svh-5.15rem)] max-w-xl overflow-hidden px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.15rem)] md:min-h-[70vh] md:pb-12 md:pt-10">
+    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1.15rem] [--app-mobile-page-bottom-gap:1.75rem] relative isolate max-w-xl overflow-hidden px-5 md:min-h-[70vh] md:pb-12 md:pt-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"

@@ -253,7 +253,7 @@ export function MobileNewActivityEntryView({
   const copy = getMobileEntryCopy(locale);
 
   return (
-    <main className="mobile-v23-create min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.2rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.55rem)] text-[#111210] md:hidden">
+    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.05rem] bg-[#FEFFF9] text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>

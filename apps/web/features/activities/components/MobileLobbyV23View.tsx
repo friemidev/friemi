@@ -770,7 +770,7 @@ export function MobileLobbyV23View({
         : copy.emptyDescription;
 
   return (
-    <section className="mobile-v23-lobby min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+2.85rem)] text-[#111210] md:hidden">
+    <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
       <MobileLobbyV23CategoryRail
         activeCategory={activeCategory}
         isOpen={categoryRailOpen}

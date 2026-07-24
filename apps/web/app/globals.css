@@ -168,6 +168,13 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: calc(6rem + var(--app-bottom-safe-area));
   }
 
+  .app-mobile-page-shell {
+    min-height: calc(100svh - var(--app-bottom-safe-area));
+    min-height: calc(100dvh - var(--app-bottom-safe-area));
+    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem));
+    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem));
+  }
+
   .app-layout-shell:has(.mobile-v23-home) {
     padding-bottom: 0;
   }
