@@ -5,7 +5,10 @@ import {
   buildPrivateActivityFriendAccessWhere,
   buildPrivateActivityShareAccessWhere,
 } from "@/features/activities/utils/activityShareAccess";
-import { isLowTrustScore } from "@/features/trust/trustScore";
+import {
+  initialTrustScore,
+  isLowTrustScore,
+} from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import {
   getConversationPair,
@@ -14,10 +17,14 @@ import {
 
 export const directMessageBodyMaxLength = 1000;
 export const directMessageImageMaxCount = 4;
+export const nonFriendDirectMessageLimit = 2;
 
 export type DirectMessageErrorCode =
+  | "AUTH_REQUIRED"
   | "SELF_CONVERSATION"
+  | "LOW_TRUST"
   | "NOT_FRIENDS"
+  | "NON_FRIEND_LIMIT_REACHED"
   | "CONVERSATION_UNAVAILABLE"
   | "EMPTY_BODY"
   | "BODY_TOO_LONG"
@@ -25,6 +32,29 @@ export type DirectMessageErrorCode =
   | "INVALID_IMAGE_URL";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
+
+export type DirectMessageSendPolicyReason = "ALLOWED" | DirectMessageErrorCode;
+
+export type DirectMessageSendPolicy = {
+  canSend: boolean;
+  conversationId: string | null;
+  hasPeerReplied: boolean;
+  isFriend: boolean;
+  reason: DirectMessageSendPolicyReason;
+  remainingNonFriendMessages: number | null;
+  trustScore: number;
+};
+
+type ResolveDirectMessageSendPolicyInput = {
+  conversationId?: string | null;
+  currentUserMessageCount?: number;
+  currentUserProfileId: string;
+  hasOrganizerActivity?: boolean;
+  hasPeerReplied?: boolean;
+  isFriend?: boolean;
+  peerProfileId: string;
+  trustScore?: number;
+};
 
 const directMessageTimingEnabled =
   process.env.DEBUG_DIRECT_MESSAGE_TIMING === "1";
@@ -314,6 +344,154 @@ async function countCurrentUserNonFriendMessages(
   });
 }
 
+export function resolveDirectMessageSendPolicy({
+  conversationId = null,
+  currentUserMessageCount = 0,
+  currentUserProfileId,
+  hasOrganizerActivity = false,
+  hasPeerReplied = false,
+  isFriend = false,
+  peerProfileId,
+  trustScore = initialTrustScore,
+}: ResolveDirectMessageSendPolicyInput): DirectMessageSendPolicy {
+  if (currentUserProfileId === peerProfileId) {
+    return {
+      canSend: false,
+      conversationId,
+      hasPeerReplied: false,
+      isFriend: false,
+      reason: "SELF_CONVERSATION",
+      remainingNonFriendMessages: 0,
+      trustScore,
+    };
+  }
+
+  if (isFriend) {
+    return {
+      canSend: true,
+      conversationId,
+      hasPeerReplied,
+      isFriend: true,
+      reason: "ALLOWED",
+      remainingNonFriendMessages: null,
+      trustScore,
+    };
+  }
+
+  if (isLowTrustScore(trustScore)) {
+    return {
+      canSend: false,
+      conversationId,
+      hasPeerReplied,
+      isFriend: false,
+      reason: "LOW_TRUST",
+      remainingNonFriendMessages: 0,
+      trustScore,
+    };
+  }
+
+  if (!hasOrganizerActivity && !conversationId) {
+    return {
+      canSend: false,
+      conversationId,
+      hasPeerReplied,
+      isFriend: false,
+      reason: "NOT_FRIENDS",
+      remainingNonFriendMessages: 0,
+      trustScore,
+    };
+  }
+
+  if (hasPeerReplied) {
+    return {
+      canSend: true,
+      conversationId,
+      hasPeerReplied: true,
+      isFriend: false,
+      reason: "ALLOWED",
+      remainingNonFriendMessages: null,
+      trustScore,
+    };
+  }
+
+  const remainingNonFriendMessages = Math.max(
+    0,
+    nonFriendDirectMessageLimit - currentUserMessageCount,
+  );
+
+  return {
+    canSend: remainingNonFriendMessages > 0,
+    conversationId,
+    hasPeerReplied: false,
+    isFriend: false,
+    reason:
+      remainingNonFriendMessages > 0 ? "ALLOWED" : "NON_FRIEND_LIMIT_REACHED",
+    remainingNonFriendMessages,
+    trustScore,
+  };
+}
+
+export async function getDirectMessageSendPolicy(
+  currentUserProfileId: string,
+  peerProfileId: string,
+): Promise<DirectMessageSendPolicy> {
+  if (currentUserProfileId === peerProfileId) {
+    const trustScore = await getTrustScore(prisma, currentUserProfileId).catch(
+      () => initialTrustScore,
+    );
+
+    return resolveDirectMessageSendPolicy({
+      currentUserProfileId,
+      peerProfileId,
+      trustScore,
+    });
+  }
+
+  const [friendship, organizerActivity, existingConversation, trustScore] =
+    await Promise.all([
+      findFriendship(prisma, currentUserProfileId, peerProfileId),
+      findOrganizerMessageActivity(
+        prisma,
+        currentUserProfileId,
+        peerProfileId,
+        [],
+      ),
+      findExistingConversation(prisma, currentUserProfileId, peerProfileId),
+      getTrustScore(prisma, currentUserProfileId),
+    ]);
+
+  if (friendship || !existingConversation) {
+    return resolveDirectMessageSendPolicy({
+      conversationId: existingConversation?.id ?? null,
+      currentUserProfileId,
+      hasOrganizerActivity: Boolean(organizerActivity),
+      isFriend: Boolean(friendship),
+      peerProfileId,
+      trustScore,
+    });
+  }
+
+  const [peerReplied, currentUserMessageCount] = await Promise.all([
+    hasPeerReplied(prisma, existingConversation.id, peerProfileId),
+    countCurrentUserNonFriendMessages(
+      prisma,
+      existingConversation.id,
+      currentUserProfileId,
+    ),
+  ]);
+
+  return resolveDirectMessageSendPolicy({
+    conversationId: existingConversation.id,
+    currentUserMessageCount,
+    currentUserProfileId,
+    hasOrganizerActivity: Boolean(organizerActivity),
+    hasPeerReplied: peerReplied,
+    isFriend: false,
+    peerProfileId,
+    trustScore,
+  });
+}
+
 async function assertDirectMessageSendAccess(
   db: DbClient,
   userId: string,
@@ -334,30 +512,42 @@ async function assertDirectMessageSendAccess(
 
   const trustScore = await getTrustScore(db, userId);
 
-  if (isLowTrustScore(trustScore)) {
-    throw new DirectMessageDomainError("NOT_FRIENDS");
-  }
-
-  if (!organizerActivity && !existingConversation) {
-    throw new DirectMessageDomainError("NOT_FRIENDS");
-  }
-
   if (!existingConversation) {
+    const policy = resolveDirectMessageSendPolicy({
+      conversationId: null,
+      currentUserProfileId: userId,
+      hasOrganizerActivity: Boolean(organizerActivity),
+      isFriend: false,
+      peerProfileId: otherUserId,
+      trustScore,
+    });
+
+    if (!policy.canSend) {
+      throw new DirectMessageDomainError(
+        policy.reason as DirectMessageErrorCode,
+      );
+    }
+
     return;
   }
 
-  if (await hasPeerReplied(db, existingConversation.id, otherUserId)) {
-    return;
-  }
+  const [peerReplied, currentUserMessageCount] = await Promise.all([
+    hasPeerReplied(db, existingConversation.id, otherUserId),
+    countCurrentUserNonFriendMessages(db, existingConversation.id, userId),
+  ]);
+  const policy = resolveDirectMessageSendPolicy({
+    conversationId: existingConversation.id,
+    currentUserMessageCount,
+    currentUserProfileId: userId,
+    hasOrganizerActivity: Boolean(organizerActivity),
+    hasPeerReplied: peerReplied,
+    isFriend: false,
+    peerProfileId: otherUserId,
+    trustScore,
+  });
 
-  const currentUserMessageCount = await countCurrentUserNonFriendMessages(
-    db,
-    existingConversation.id,
-    userId,
-  );
-
-  if (currentUserMessageCount >= 2) {
-    throw new DirectMessageDomainError("NOT_FRIENDS");
+  if (!policy.canSend) {
+    throw new DirectMessageDomainError(policy.reason as DirectMessageErrorCode);
   }
 }
 
