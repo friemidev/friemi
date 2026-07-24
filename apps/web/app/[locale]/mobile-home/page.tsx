@@ -488,7 +488,7 @@ function MobileHomeV23Experience({
   const trendingActivities = swipeActivities.slice(2, 8);
 
   return (
-    <section className="mobile-v23-home min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.15rem)] text-[#111210] md:hidden">
+    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:1.15rem] [--app-mobile-page-bottom-gap:1.1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="flex min-h-[6.75rem] items-start justify-between gap-4 pt-2">
           <Link

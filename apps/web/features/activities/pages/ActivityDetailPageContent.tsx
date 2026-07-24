@@ -1430,7 +1430,7 @@ export async function ActivityDetailPageContent({
   );
 
   return (
-    <PageContainer className="mobile-v23-lobby-detail space-y-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.1rem)] md:space-y-6 md:py-8">
+    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:1.1rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 md:space-y-6 md:py-8">
       <MobileNavSectionOverride section="lobby" />
       <DetailSourceRestore sourceKey="activity_detail" />
       <ClaimAutoCreatedActivityCelebration

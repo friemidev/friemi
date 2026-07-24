@@ -346,7 +346,7 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5 md:hidden">
+      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
           <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.title}
@@ -783,7 +783,7 @@ function PublicMobileProfileHome({
   const charmProgressWidth = `${Math.max(3, Math.round(charmProgress.progressRatio * 100))}%`;
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5">
+    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5">
       <header className="flex items-center justify-between gap-3">
         <button
           aria-label="Back"
