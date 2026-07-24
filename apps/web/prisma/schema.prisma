@@ -264,6 +264,13 @@ model UserProfile {
   conversationsAsUserA    Conversation[]               @relation("ConversationUserA")
   conversationsAsUserB    Conversation[]               @relation("ConversationUserB")
   sentDirectMessages      DirectMessage[]              @relation("DirectMessageSender")
+  activityRoomMessages    ActivityRoomMessage[]        @relation("ActivityRoomMessageSender")
+  deletedRoomMessages     ActivityRoomMessage[]        @relation("ActivityRoomMessageDeletedBy")
+  achievements            UserAchievement[]
+  sentReferrals           UserReferral[]               @relation("UserReferralInviter")
+  receivedReferral        UserReferral?                @relation("UserReferralInvitee")
+  profileVisitsReceived   ProfileVisit[]               @relation("ProfileVisitTarget")
+  profileVisitsMade       ProfileVisit[]               @relation("ProfileVisitVisitor")
   authoredAnnouncements   ActivityAnnouncement[]       @relation("ActivityAnnouncementAuthor")
   submittedReports        Report[]                     @relation("ReportReporter")
   reviewedReports         Report[]                     @relation("ReportReviewer")
@@ -475,6 +482,7 @@ model Activity {
   favorites         ActivityFavorite[]
   coManagers        ActivityCoManager[]
   managementLogs    ActivityManagementLog[]
+  roomMessages      ActivityRoomMessage[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
   trustScoreEvents  TrustScoreEvent[]
@@ -520,6 +528,24 @@ model ActivityManagementLog {
 
   @@index([activityId, createdAt])
   @@index([actorId, createdAt])
+}
+
+model ActivityRoomMessage {
+  id          String       @id @default(cuid())
+  activityId  String
+  senderId    String
+  body        String       @db.Text
+  deletedAt   DateTime?
+  deletedById String?
+  activity    Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  sender      UserProfile  @relation("ActivityRoomMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  deletedBy   UserProfile? @relation("ActivityRoomMessageDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([activityId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([deletedById])
 }
 
 model PublicEvent {
@@ -643,6 +669,56 @@ model ActivityParticipant {
   @@unique([activityId, userProfileId])
   @@index([userProfileId])
   @@index([checkInReviewedById])
+}
+
+model UserAchievement {
+  id             String      @id @default(cuid())
+  profileId      String
+  achievementKey String
+  sourceType     String?
+  sourceId       String?
+  profile        UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  unlockedAt     DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+
+  @@unique([profileId, achievementKey])
+  @@index([profileId, unlockedAt])
+  @@index([achievementKey, unlockedAt])
+}
+
+model UserReferral {
+  id                   String      @id @default(cuid())
+  inviterId            String
+  inviteeId            String      @unique
+  inviteCode           String
+  source               String?
+  registeredAt         DateTime    @default(now())
+  friendshipAcceptedAt DateTime?
+  firstParticipationAt DateTime?
+  inviter              UserProfile @relation("UserReferralInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee              UserProfile @relation("UserReferralInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([inviterId, createdAt])
+  @@index([inviteCode, createdAt])
+}
+
+model ProfileVisit {
+  id            String      @id @default(cuid())
+  profileId     String
+  visitorId     String
+  visitDate     DateTime    @db.Date
+  viewCount     Int         @default(1)
+  lastVisitedAt DateTime    @default(now())
+  profile       UserProfile @relation("ProfileVisitTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  visitor       UserProfile @relation("ProfileVisitVisitor", fields: [visitorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([profileId, visitorId, visitDate])
+  @@index([profileId, lastVisitedAt])
+  @@index([visitorId, lastVisitedAt])
 }
 
 model TrustScoreEvent {

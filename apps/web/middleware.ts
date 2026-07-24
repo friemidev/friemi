@@ -22,18 +22,31 @@ const isProtectedRoute = createRouteMatcher([
   "/:locale/friends(.*)",
   "/:locale/messages(.*)",
   "/:locale/notifications(.*)",
+  "/:locale/lobby/:activityId/room(.*)",
+  "/:locale/profile/achievements(.*)",
+  "/:locale/profile/bag(.*)",
   "/:locale/profile/hangouts(.*)",
+  "/:locale/profile/invite(.*)",
   "/:locale/profile/network(.*)",
+  "/:locale/profile/shop(.*)",
+  "/:locale/profile/visitors(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
 const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
+const isActivityRoomChatApiRoute = createRouteMatcher([
+  "/api/activity-room-chat(.*)",
+]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isDirectMessagesApiRoute = createRouteMatcher([
   "/api/direct-messages(.*)",
 ]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
+const isProfileVisitsApiRoute = createRouteMatcher([
+  "/api/profile-visits(.*)",
+]);
+const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
@@ -170,6 +183,10 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
+  if (isActivityRoomChatApiRoute(request)) {
+    return NextResponse.next();
+  }
+
   if (isUserPreviewApiRoute(request)) {
     return NextResponse.next();
   }
@@ -183,6 +200,14 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   if (isNotificationsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
+  if (isProfileVisitsApiRoute(request)) {
+    return NextResponse.next();
+  }
+
+  if (isReferralsApiRoute(request)) {
     return NextResponse.next();
   }
 
@@ -215,11 +240,14 @@ export const config = {
     "/:locale/updates",
     "/:locale/updates/:path*",
     "/api/admin/:path*",
+    "/api/activity-room-chat/:path*",
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
     "/api/direct-messages/:path*",
     "/api/notifications/:path*",
+    "/api/profile-visits/:path*",
+    "/api/referrals/:path*",
     "/api/lobby/:path*",
     "/api/analytics/:path*",
     "/api/search/:path*",
