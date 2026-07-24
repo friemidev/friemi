@@ -36,7 +36,7 @@ import {
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import {
   redeemBlindBoxCheckAction,
   type RedeemBlindBoxCheckState,
@@ -1173,27 +1173,6 @@ function ShareInviteButton({
   );
 }
 
-function VisitorMessageSubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      aria-busy={pending}
-      aria-label={label}
-      title={label}
-      disabled={pending}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
-    >
-      {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" />
-      ) : (
-        <MessageCircle className="h-4 w-4" />
-      )}
-    </button>
-  );
-}
-
 function FriemiToast({ message }: { message: string | null }) {
   if (!message) {
     return null;
@@ -1455,15 +1434,15 @@ export function ProfileVisitorsPageView({
                 <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-black text-[#143376] ring-1 ring-[#C8D9F5]">
                   {visit.viewCount}
                 </span>
-                <form action={openDirectConversationAction}>
-                  <input name="locale" type="hidden" value={locale} />
-                  <input
-                    name="friendProfileId"
-                    type="hidden"
-                    value={visit.visitor.id}
-                  />
-                  <VisitorMessageSubmitButton label={copy.visitors.message} />
-                </form>
+                <StartDirectConversationButton
+                  buttonClassName="h-8 w-8 px-0 shadow-[0_10px_18px_rgba(21,98,64,0.14)] [&_span]:sr-only"
+                  className="relative shrink-0"
+                  errorClassName="absolute right-0 top-full z-20 mt-1 w-40 rounded-xl bg-white px-2 py-1 text-right shadow-[0_12px_24px_rgba(29,29,27,0.12)] ring-1 ring-[#E3DCC5]"
+                  label={copy.visitors.message}
+                  locale={locale}
+                  peerProfileId={visit.visitor.id}
+                  redirectPath="/profile/visitors"
+                />
               </div>
             ))}
           </div>

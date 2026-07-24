@@ -34,6 +34,7 @@ import {
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
 import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
@@ -406,6 +407,7 @@ export function FeedCard({
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
+  const directMessageCopy = getDirectMessagesCopy(locale);
   const isOwnMoment = viewerProfileId === moment.author.id;
   const hasImages = moment.images.length > 0;
   const canRepost =
@@ -508,6 +510,17 @@ export function FeedCard({
                         copy={copy}
                         href={detailHref}
                       />
+                      {!isOwnMoment ? (
+                        <StartDirectConversationButton
+                          buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
+                          className="min-w-0"
+                          errorClassName="px-3 pb-2"
+                          label={directMessageCopy.startConversation}
+                          locale={locale}
+                          peerProfileId={moment.author.id}
+                          redirectPath={`/footprints/${moment.id}`}
+                        />
+                      ) : null}
                       {isOwnMoment ? (
                         <form action={deleteMomentAction}>
                           <input name="locale" type="hidden" value={locale} />
@@ -680,6 +693,7 @@ export function MomentDetailContent({
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
+  const directMessageCopy = getDirectMessagesCopy(locale);
   const isOwnMoment = viewerProfileId === moment.author.id;
   const canRepost =
     isAuthenticated &&
@@ -725,6 +739,17 @@ export function MomentDetailContent({
                   copy={copy}
                   href={detailHref}
                 />
+                {!isOwnMoment ? (
+                  <StartDirectConversationButton
+                    buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
+                    className="min-w-0"
+                    errorClassName="px-3 pb-2"
+                    label={directMessageCopy.startConversation}
+                    locale={locale}
+                    peerProfileId={moment.author.id}
+                    redirectPath={`/footprints/${moment.id}`}
+                  />
+                ) : null}
                 {isOwnMoment ? (
                   <form action={deleteMomentAction}>
                     <input name="locale" type="hidden" value={locale} />
@@ -2130,6 +2155,11 @@ function FootprintsMessageRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
+          <input
+            name="redirectPath"
+            type="hidden"
+            value="/footprints?tab=message"
+          />
           <input
             name="friendProfileId"
             type="hidden"

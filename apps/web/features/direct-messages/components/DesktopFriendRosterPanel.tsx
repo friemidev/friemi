@@ -251,6 +251,7 @@ function DesktopFriendRosterRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
+          <input name="redirectPath" type="hidden" value="/messages" />
           <input
             name="friendProfileId"
             type="hidden"
