@@ -50,12 +50,15 @@ import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
+import { achievementCatalog } from "@/features/achievements/achievementCatalog";
+import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
 import {
   ProfileActivitySections,
   type ProfileSectionKey,
 } from "./ProfileActivitySections";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
+import { ProfilePublicAchievementWall } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
 import {
@@ -75,6 +78,7 @@ type ProfileDashboardViewProps = {
   isSelf?: boolean;
   locale: string;
   profile: PublicProfileViewModel;
+  publicAchievements?: PublicAchievementWallItem[];
 };
 
 function getSelfProfileMetricLabels(locale: string) {
@@ -141,6 +145,7 @@ function getMobileProfileCopy(locale: string) {
       accountSettings: "Paramètres du compte",
       achievements: "Badges",
       addFriend: "Ajouter",
+      available: "Ouvert",
       bag: "Sac",
       charm: "Aura",
       copyCode: "Copier",
@@ -170,6 +175,7 @@ function getMobileProfileCopy(locale: string) {
       shop: "Boutique",
       signOut: "Déconnexion",
       soon: "Bientôt disponible",
+      soonStatus: "Bientôt",
       trusted: "Fiable",
       visitors: "Visites",
       wallet: "Recharge",
@@ -182,6 +188,7 @@ function getMobileProfileCopy(locale: string) {
       accountSettings: "Account settings",
       achievements: "Badges",
       addFriend: "Add friend",
+      available: "Open",
       bag: "Bag",
       charm: "Charm",
       copyCode: "Copy",
@@ -211,6 +218,7 @@ function getMobileProfileCopy(locale: string) {
       shop: "Shop",
       signOut: "Sign out",
       soon: "Coming soon",
+      soonStatus: "Soon",
       trusted: "Trusted",
       visitors: "Visits",
       wallet: "Top up",
@@ -222,6 +230,7 @@ function getMobileProfileCopy(locale: string) {
     accountSettings: "账号设置",
     achievements: "成就",
     addFriend: "加好友",
+    available: "可进入",
     bag: "背包",
     charm: "魅力值",
     copyCode: "复制",
@@ -251,6 +260,7 @@ function getMobileProfileCopy(locale: string) {
     shop: "商城",
     signOut: "退出登录",
     soon: "敬请期待",
+    soonStatus: "待上线",
     trusted: "信用值",
     visitors: "访客记录",
     wallet: "充值",
@@ -496,6 +506,51 @@ function ComingSoonFeature({
       </span>
       <span className="text-[11px] font-bold text-[#1D1D1B]">{label}</span>
     </button>
+  );
+}
+
+function ProfileFeatureLink({
+  href,
+  icon: Icon,
+  label,
+  status,
+  tone = "green",
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  status: string;
+  tone?: "green" | "pink" | "blue" | "gold";
+}) {
+  const toneClass =
+    tone === "pink"
+      ? "bg-[radial-gradient(circle_at_30%_25%,#FFF5F7_0%,#FFE6EE_48%,#F7F2F4_100%)] text-[#E83F83] ring-[#F5C5D7]"
+      : tone === "blue"
+        ? "bg-[radial-gradient(circle_at_30%_25%,#EEF5FF_0%,#E6F0FF_48%,#F7F4EC_100%)] text-[#143376] ring-[#C8D9F5]"
+        : tone === "gold"
+          ? "bg-[radial-gradient(circle_at_30%_25%,#FFF9E8_0%,#FFF1C9_48%,#F6F2E7_100%)] text-[#7D641C] ring-[#E8D59D]"
+          : "bg-[radial-gradient(circle_at_30%_25%,#F3FAEF_0%,#E4F3DF_48%,#F7F3E9_100%)] text-[#156240] ring-[#BFD8B9]";
+
+  return (
+    <Link
+      href={href}
+      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
+    >
+      <span
+        className={cn(
+          "relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] shadow-[0_10px_18px_rgba(21,98,64,0.08)] ring-1",
+          toneClass,
+        )}
+      >
+        <Icon className="h-[1.125rem] w-[1.125rem]" />
+        <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-[#FEFFF9] px-1.5 text-[9px] font-black leading-none text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
+          <span className="truncate">{status}</span>
+        </span>
+      </span>
+      <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
+        {label}
+      </span>
+    </Link>
   );
 }
 
@@ -767,12 +822,14 @@ function PublicMobileProfileHome({
   locale,
   profile,
   profileInitial,
+  publicAchievements,
 }: {
   dashboard: ProfileDashboardViewModel;
   isAuthenticated: boolean;
   locale: string;
   profile: PublicProfileViewModel;
   profileInitial: string;
+  publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
   const charmProgress = getCharmProgress(dashboard.charmScore);
@@ -895,6 +952,10 @@ function PublicMobileProfileHome({
             className="mt-3"
             gifts={dashboard.recentCharmGifts}
             label={copy.recentGifts}
+          />
+          <ProfilePublicAchievementWall
+            items={publicAchievements}
+            locale={locale}
           />
         </div>
       </section>
@@ -1278,28 +1339,49 @@ function SelfMobileProfileHome({
           label={copy.charm}
           locale={locale}
         />
-        <ComingSoonFeature
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/invite")}
           icon={UserRoundPlus}
           label={copy.invite}
-          soon={copy.soon}
+          status={profile.friendCode ?? copy.available}
+          tone="pink"
         />
-        <ComingSoonFeature icon={Eye} label={copy.visitors} soon={copy.soon} />
-        <ComingSoonFeature icon={Package} label={copy.bag} soon={copy.soon} />
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/visitors")}
+          icon={Eye}
+          label={copy.visitors}
+          status={copy.available}
+          tone="blue"
+        />
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/bag")}
+          icon={Package}
+          label={copy.bag}
+          status="0"
+        />
         <ComingSoonFeature
           icon={WalletCards}
           label={copy.wallet}
           soon={copy.soon}
         />
-        <ComingSoonFeature
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
+          status={copy.soonStatus}
+          tone="gold"
+        />
+        <ComingSoonFeature
+          icon={Gift}
+          label={copy.giftWall}
           soon={copy.soon}
         />
-        <ComingSoonFeature icon={Gift} label={copy.giftWall} soon={copy.soon} />
-        <ComingSoonFeature
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
           label={copy.achievements}
-          soon={copy.soon}
+          status={String(achievementCatalog.length)}
+          tone="gold"
         />
         <Link
           href={withLocale(locale, "/account/settings")}
@@ -1377,6 +1459,7 @@ export function ProfileDashboardView({
   isSelf = false,
   locale,
   profile,
+  publicAchievements = [],
 }: ProfileDashboardViewProps) {
   const t = getCopy(locale);
   const friendsCopy = getFriendsCopy(locale);
@@ -1441,6 +1524,7 @@ export function ProfileDashboardView({
             locale={locale}
             profile={profile}
             profileInitial={profileInitial}
+            publicAchievements={publicAchievements}
           />
         )}
       </div>
@@ -1642,6 +1726,10 @@ export function ProfileDashboardView({
                   className="border-t border-[#D6D5B2]/45 pt-2"
                   gifts={dashboard.recentCharmGifts}
                   label={mobileCopy.recentGifts}
+                />
+                <ProfilePublicAchievementWall
+                  items={publicAchievements}
+                  locale={locale}
                 />
               </div>
             </div>
