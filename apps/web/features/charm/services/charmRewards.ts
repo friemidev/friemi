@@ -153,22 +153,12 @@ export async function grantWelcomeFriemiCheck(profileId: string) {
 
 export async function redeemBlindBoxFromFragments(profileId: string) {
   return prisma.$transaction(async (tx) => {
-    const currentBalance = await tx.userBlindBoxFragmentBalance.findUnique({
+    const updateResult = await tx.userBlindBoxFragmentBalance.updateMany({
       where: {
         profileId,
-      },
-    });
-
-    if (
-      !currentBalance ||
-      currentBalance.fragmentCount < blindBoxFragmentExchangeCount
-    ) {
-      throw new BlindBoxFragmentBalanceError(profileId);
-    }
-
-    const balance = await tx.userBlindBoxFragmentBalance.update({
-      where: {
-        profileId,
+        fragmentCount: {
+          gte: blindBoxFragmentExchangeCount,
+        },
       },
       data: {
         fragmentCount: {
@@ -177,6 +167,16 @@ export async function redeemBlindBoxFromFragments(profileId: string) {
         redeemedBlindBoxCount: {
           increment: 1,
         },
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new BlindBoxFragmentBalanceError(profileId);
+    }
+
+    const balance = await tx.userBlindBoxFragmentBalance.findUniqueOrThrow({
+      where: {
+        profileId,
       },
     });
     const check = await tx.friemiCheck.create({
