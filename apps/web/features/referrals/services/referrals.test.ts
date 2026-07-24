@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildReferralLink,
+  buildReferralSignUpLink,
   captureReferralCodeFromRequest,
   normalizeReferralCode,
 } from "./referrals";
+import { getReferralCodeToStore } from "../referralCode";
 
 test("referral code normalization accepts only Friemi friend codes", () => {
   assert.equal(normalizeReferralCode("123456"), "123456");
@@ -33,12 +35,16 @@ test("referral capture reads raw codes and URLs", () => {
   );
 });
 
-test("referral link builds a localized sign-up URL", () => {
+test("referral link builds a localized home URL and keeps sign-up compatibility", () => {
   const previousBaseUrl = process.env.NEXT_PUBLIC_APP_URL;
   process.env.NEXT_PUBLIC_APP_URL = "https://www.friemi.com/";
 
   assert.equal(
     buildReferralLink("zh-CN", "123456"),
+    "https://www.friemi.com/zh-CN/home?ref=123456",
+  );
+  assert.equal(
+    buildReferralSignUpLink("zh-CN", "123456"),
     "https://www.friemi.com/zh-CN/sign-up?ref=123456",
   );
   assert.equal(buildReferralLink("zh-CN", "bad"), null);
@@ -48,4 +54,28 @@ test("referral link builds a localized sign-up URL", () => {
   } else {
     process.env.NEXT_PUBLIC_APP_URL = previousBaseUrl;
   }
+});
+
+test("referral cookie storage keeps the first valid code", () => {
+  assert.equal(
+    getReferralCodeToStore({
+      existingCookie: null,
+      incomingRef: "123456",
+    }),
+    "123456",
+  );
+  assert.equal(
+    getReferralCodeToStore({
+      existingCookie: "111111",
+      incomingRef: "222222",
+    }),
+    null,
+  );
+  assert.equal(
+    getReferralCodeToStore({
+      existingCookie: null,
+      incomingRef: "bad",
+    }),
+    null,
+  );
 });

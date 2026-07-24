@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -13,9 +14,12 @@ import {
   Copy,
   Eye,
   Gift,
+  LoaderCircle,
   Lock,
   Medal,
+  MessageCircle,
   Package,
+  Share2,
   ShoppingBag,
   Sparkles,
   Ticket,
@@ -26,6 +30,7 @@ import {
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import type { UserAchievementProgressItem } from "@/features/achievements/queries/getUserAchievements";
 import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
 
@@ -93,6 +98,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       back: "Retour",
       copied: "Copié",
       copy: "Copier",
+      copyFailed: "Copie indisponible",
       errorDescription: "Réessayez dans un instant.",
       errorTitle: "Chargement incomplet",
       invite: {
@@ -102,6 +108,8 @@ function getProfilePrivateSubpageCopy(locale: string) {
         firstJoined: "Première sortie",
         invited: "Invités",
         linkUnavailable: "Code d'invitation indisponible",
+        share: "Partager",
+        shareText: "Rejoins-moi sur Friemi.",
         subtitle: "Partagez votre code avec de nouveaux amis.",
         title: "Inviter",
       },
@@ -120,9 +128,12 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyTitle: "Aucune visite récente",
         subtitle: "Vue privée, visible uniquement par vous.",
         title: "Visites",
+        friend: "Ami",
+        message: "Message",
         today: "Aujourd'hui",
         total: "Vues",
         unique: "Visiteurs",
+        visitor: "Visiteur",
       },
     };
   }
@@ -164,6 +175,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       back: "Back",
       copied: "Copied",
       copy: "Copy",
+      copyFailed: "Copy unavailable",
       errorDescription: "Try again in a moment.",
       errorTitle: "Could not load everything",
       invite: {
@@ -173,6 +185,8 @@ function getProfilePrivateSubpageCopy(locale: string) {
         firstJoined: "First joined",
         invited: "Invited",
         linkUnavailable: "Invite code unavailable",
+        share: "Share",
+        shareText: "Join me on Friemi.",
         subtitle: "Share your code with new friends.",
         title: "Invite",
       },
@@ -191,9 +205,12 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyTitle: "No recent visitors",
         subtitle: "Private view, visible only to you.",
         title: "Visitors",
+        friend: "Friend",
+        message: "Message",
         today: "Today",
         total: "Views",
         unique: "Visitors",
+        visitor: "Visitor",
       },
     };
   }
@@ -232,6 +249,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
     back: "返回",
     copied: "已复制",
     copy: "复制",
+    copyFailed: "复制不可用",
     errorDescription: "稍后再试一次即可。",
     errorTitle: "部分内容加载失败",
     invite: {
@@ -241,6 +259,8 @@ function getProfilePrivateSubpageCopy(locale: string) {
       firstJoined: "首次参与",
       invited: "已邀请",
       linkUnavailable: "邀请码暂不可用",
+      share: "分享",
+      shareText: "来 Friemi 和我一起组局。",
       subtitle: "把邀请码分享给新朋友。",
       title: "邀请好友",
     },
@@ -257,9 +277,12 @@ function getProfilePrivateSubpageCopy(locale: string) {
       emptyTitle: "暂时没有访客",
       subtitle: "仅自己可见的访问记录。",
       title: "访客记录",
+      friend: "好友",
+      message: "私聊",
       today: "今日访问",
       total: "总访问",
       unique: "访客",
+      visitor: "访客",
     },
   };
 }
@@ -308,6 +331,45 @@ function formatDate(value: string) {
   const day = String(date.getUTCDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${formatDate(value)} ${hours}:${minutes}`;
+}
+
+async function writeTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    const copied = document.execCommand("copy");
+
+    if (!copied) {
+      throw new Error("Copy command failed");
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function Avatar({
@@ -462,10 +524,7 @@ function StatusPanel({
   );
 }
 
-function getAchievementText(
-  item: UserAchievementProgressItem,
-  locale: string,
-) {
+function getAchievementText(item: UserAchievementProgressItem, locale: string) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const key = item.definition.key;
 
@@ -476,11 +535,7 @@ function getAchievementText(
   };
 }
 
-function AchievementIcon({
-  unlocked,
-}: {
-  unlocked: boolean;
-}) {
+function AchievementIcon({ unlocked }: { unlocked: boolean }) {
   return (
     <span
       className={cn(
@@ -490,11 +545,7 @@ function AchievementIcon({
           : "bg-[#F1F2EC] text-[#8B907F] ring-[#DFDAC5]",
       )}
     >
-      {unlocked ? (
-        <Medal className="h-5 w-5" />
-      ) : (
-        <Lock className="h-5 w-5" />
-      )}
+      {unlocked ? <Medal className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
     </span>
   );
 }
@@ -611,13 +662,39 @@ export function ProfileAchievementsPageView({
 
 function CopyButton({
   locale,
+  onCopied,
+  onFailed,
   value,
 }: {
   locale: string;
+  onCopied?: () => void;
+  onFailed?: () => void;
   value: string | null;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
+
+  const showCopied = () => {
+    if (copiedTimerRef.current) {
+      window.clearTimeout(copiedTimerRef.current);
+    }
+
+    setCopied(true);
+    copiedTimerRef.current = window.setTimeout(() => {
+      setCopied(false);
+      copiedTimerRef.current = null;
+    }, 1500);
+  };
+
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const copyValue = async () => {
     if (!value) {
@@ -625,25 +702,12 @@ function CopyButton({
     }
 
     try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(value);
-      } else {
-        const textarea = document.createElement("textarea");
-
-        textarea.value = value;
-        textarea.setAttribute("readonly", "");
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
+      await writeTextToClipboard(value);
+      showCopied();
+      onCopied?.();
     } catch {
       setCopied(false);
+      onFailed?.();
     }
   };
 
@@ -664,6 +728,103 @@ function CopyButton({
   );
 }
 
+function ShareInviteButton({
+  locale,
+  onCopied,
+  onFailed,
+  referralLink,
+}: {
+  locale: string;
+  onCopied: () => void;
+  onFailed: () => void;
+  referralLink: string | null;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+
+  const shareInvite = async () => {
+    if (!referralLink) {
+      onFailed();
+      return;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          text: copy.invite.shareText,
+          title: "Friemi",
+          url: referralLink,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    try {
+      await writeTextToClipboard(referralLink);
+      onCopied();
+    } catch {
+      onFailed();
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={!referralLink}
+      onClick={shareInvite}
+      aria-label={copy.invite.share}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#E83F83] ring-1 ring-[#F5C5D7] transition active:scale-95 disabled:text-[#B5B5A6] disabled:ring-[#E3DCC5]"
+    >
+      <Share2 className="h-[1.125rem] w-[1.125rem]" />
+    </button>
+  );
+}
+
+function VisitorMessageSubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      aria-busy={pending}
+      aria-label={label}
+      title={label}
+      disabled={pending}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#156240] text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+    >
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" />
+      ) : (
+        <MessageCircle className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
+
+function FriemiToast({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] z-[80] flex justify-center px-5 md:bottom-8">
+      <div className="flex max-w-[19rem] items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-2 text-xs font-black text-[#156240] shadow-[0_16px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#BFD8B9]">
+        <Image
+          src={brand.logoIconPath}
+          alt=""
+          width={24}
+          height={24}
+          className="h-6 w-6 rounded-lg"
+        />
+        <span className="truncate">{message}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileInvitePageView({
   friendCode,
   hasError,
@@ -678,100 +839,137 @@ export function ProfileInvitePageView({
   stats: ReferralStatsViewModel;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const showToast = (message: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage(null);
+      toastTimerRef.current = null;
+    }, 1700);
+  };
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    },
+    [],
+  );
 
   return (
-    <ProfilePrivatePageShell
-      icon={UserRoundPlus}
-      locale={locale}
-      subtitle={copy.invite.subtitle}
-      title={copy.invite.title}
-      tone="pink"
-      right={<CopyButton locale={locale} value={referralLink ?? friendCode} />}
-    >
-      {hasError ? (
-        <StatusPanel
-          icon={UserRoundPlus}
-          title={copy.errorTitle}
-          description={copy.errorDescription}
-          tone="pink"
-        />
-      ) : null}
-
-      <section className="mt-5 grid grid-cols-3 gap-2">
-        <MetricPill
-          icon={UserRoundPlus}
-          label={copy.invite.invited}
-          value={stats.invitedCount}
-        />
-        <MetricPill
-          icon={UsersRound}
-          label={copy.invite.accepted}
-          value={stats.friendshipAcceptedCount}
-        />
-        <MetricPill
-          icon={CalendarDays}
-          label={copy.invite.firstJoined}
-          value={stats.firstParticipationCount}
-        />
-      </section>
-
-      <section className="mt-6 rounded-[1.25rem] bg-white/88 p-3 ring-1 ring-[#E3DCC5]">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF0F3] text-[#E83F83] ring-1 ring-[#F5C5D7]">
-            <Ticket className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-black text-[#8B907F]">
-              Friemi Code
-            </p>
-            <p className="mt-1 truncate text-lg font-black text-[#111210]">
-              {friendCode ? `@${friendCode}` : copy.invite.linkUnavailable}
-            </p>
-          </div>
-          <CopyButton locale={locale} value={referralLink ?? friendCode} />
-        </div>
-        {referralLink ? (
-          <p className="mt-3 truncate rounded-full bg-[#F8F4EA] px-3 py-2 text-xs font-bold text-[#5F685F]">
-            {referralLink}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="mt-6">
-        {stats.recentReferrals.length > 0 ? (
-          <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
-            {stats.recentReferrals.map((referral) => (
-              <Link
-                href={withLocale(locale, `/profile/${referral.invitee.id}`)}
-                className="flex items-center gap-3 py-3 transition active:bg-[#F7F4E9]"
-                key={referral.id}
-              >
-                <Avatar
-                  avatarUrl={referral.invitee.avatarUrl}
-                  name={referral.invitee.nickname}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-[#111210]">
-                    {referral.invitee.nickname}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
-                    {formatDate(referral.createdAt)}
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#B1B39F]" />
-              </Link>
-            ))}
-          </div>
-        ) : (
+    <>
+      <ProfilePrivatePageShell
+        icon={UserRoundPlus}
+        locale={locale}
+        subtitle={copy.invite.subtitle}
+        title={copy.invite.title}
+        tone="pink"
+        right={
+          <ShareInviteButton
+            locale={locale}
+            onCopied={() => showToast(copy.copied)}
+            onFailed={() => showToast(copy.copyFailed)}
+            referralLink={referralLink}
+          />
+        }
+      >
+        {hasError ? (
           <StatusPanel
             icon={UserRoundPlus}
-            title={copy.invite.emptyTitle}
-            description={copy.invite.emptyDescription}
+            title={copy.errorTitle}
+            description={copy.errorDescription}
             tone="pink"
           />
-        )}
-      </section>
-    </ProfilePrivatePageShell>
+        ) : null}
+
+        <section className="mt-5 grid grid-cols-3 gap-2">
+          <MetricPill
+            icon={UserRoundPlus}
+            label={copy.invite.invited}
+            value={stats.invitedCount}
+          />
+          <MetricPill
+            icon={UsersRound}
+            label={copy.invite.accepted}
+            value={stats.friendshipAcceptedCount}
+          />
+          <MetricPill
+            icon={CalendarDays}
+            label={copy.invite.firstJoined}
+            value={stats.firstParticipationCount}
+          />
+        </section>
+
+        <section className="mt-6 rounded-[1.25rem] bg-white/88 p-3 ring-1 ring-[#E3DCC5]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF0F3] text-[#E83F83] ring-1 ring-[#F5C5D7]">
+              <Ticket className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-black text-[#8B907F]">
+                Friemi Code
+              </p>
+              <p className="mt-1 truncate text-lg font-black text-[#111210]">
+                {friendCode ? `@${friendCode}` : copy.invite.linkUnavailable}
+              </p>
+            </div>
+            <CopyButton
+              locale={locale}
+              onCopied={() => showToast(copy.copied)}
+              onFailed={() => showToast(copy.copyFailed)}
+              value={referralLink ?? friendCode}
+            />
+          </div>
+          {referralLink ? (
+            <p className="mt-3 truncate rounded-full bg-[#F8F4EA] px-3 py-2 text-xs font-bold text-[#5F685F]">
+              {referralLink}
+            </p>
+          ) : null}
+        </section>
+
+        <section className="mt-6">
+          {stats.recentReferrals.length > 0 ? (
+            <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
+              {stats.recentReferrals.map((referral) => (
+                <Link
+                  href={withLocale(locale, `/profile/${referral.invitee.id}`)}
+                  className="flex items-center gap-3 py-3 transition active:bg-[#F7F4E9]"
+                  key={referral.id}
+                >
+                  <Avatar
+                    avatarUrl={referral.invitee.avatarUrl}
+                    name={referral.invitee.nickname}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-[#111210]">
+                      {referral.invitee.nickname}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
+                      {formatDate(referral.createdAt)}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#B1B39F]" />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <StatusPanel
+              icon={UserRoundPlus}
+              title={copy.invite.emptyTitle}
+              description={copy.invite.emptyDescription}
+              tone="pink"
+            />
+          )}
+        </section>
+      </ProfilePrivatePageShell>
+      <FriemiToast message={toastMessage} />
+    </>
   );
 }
 
@@ -832,27 +1030,51 @@ export function ProfileVisitorsPageView({
         {visitors.length > 0 ? (
           <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
             {visitors.map((visit) => (
-              <Link
-                href={withLocale(locale, `/profile/${visit.visitor.id}`)}
-                className="flex items-center gap-3 py-3 transition active:bg-[#F7F4E9]"
-                key={visit.id}
-              >
-                <Avatar
-                  avatarUrl={visit.visitor.avatarUrl}
-                  name={visit.visitor.nickname}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-[#111210]">
-                    {visit.visitor.nickname}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
-                    {formatDate(visit.lastVisitedAt)}
-                  </p>
-                </div>
+              <div className="flex items-center gap-2 py-3" key={visit.id}>
+                <Link
+                  href={withLocale(locale, `/profile/${visit.visitor.id}`)}
+                  className="flex min-w-0 flex-1 items-center gap-3 transition active:opacity-80"
+                >
+                  <Avatar
+                    avatarUrl={visit.visitor.avatarUrl}
+                    name={visit.visitor.nickname}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-sm font-black text-[#111210]">
+                        {visit.visitor.nickname}
+                      </p>
+                      <span
+                        className={cn(
+                          "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[9px] font-black ring-1",
+                          visit.isFriend
+                            ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                            : "bg-[#EEF5FF] text-[#143376] ring-[#C8D9F5]",
+                        )}
+                      >
+                        {visit.isFriend
+                          ? copy.visitors.friend
+                          : copy.visitors.visitor}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
+                      {formatDateTime(visit.lastVisitedAt)}
+                    </p>
+                  </div>
+                </Link>
                 <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-black text-[#143376] ring-1 ring-[#C8D9F5]">
                   {visit.viewCount}
                 </span>
-              </Link>
+                <form action={openDirectConversationAction}>
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="friendProfileId"
+                    type="hidden"
+                    value={visit.visitor.id}
+                  />
+                  <VisitorMessageSubmitButton label={copy.visitors.message} />
+                </form>
+              </div>
             ))}
           </div>
         ) : (
@@ -868,11 +1090,7 @@ export function ProfileVisitorsPageView({
   );
 }
 
-export function ProfileBagPageView({
-  locale,
-}: {
-  locale: string;
-}) {
+export function ProfileBagPageView({ locale }: { locale: string }) {
   const copy = getProfilePrivateSubpageCopy(locale);
 
   return (
@@ -897,11 +1115,7 @@ export function ProfileBagPageView({
   );
 }
 
-export function ProfileShopPageView({
-  locale,
-}: {
-  locale: string;
-}) {
+export function ProfileShopPageView({ locale }: { locale: string }) {
   const copy = getProfilePrivateSubpageCopy(locale);
 
   return (

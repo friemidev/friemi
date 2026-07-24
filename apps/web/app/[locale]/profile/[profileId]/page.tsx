@@ -3,6 +3,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
+import { ProfileVisitTracker } from "@/features/profile-visits/components/ProfileVisitTracker";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -95,6 +96,9 @@ export default async function PublicProfilePage({
   return (
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
       <DetailSourceReturnLink locale={locale} />
+      {viewerProfile && !isSelf ? (
+        <ProfileVisitTracker profileId={profile.id} />
+      ) : null}
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}

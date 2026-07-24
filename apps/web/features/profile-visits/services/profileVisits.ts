@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getFriendshipPair,
+  getFriendshipPairKey,
+} from "@/features/friends/utils/friendship";
 
 export type ProfileVisitRecordResult =
   | {
@@ -13,6 +17,7 @@ export type ProfileVisitRecordResult =
 
 export type ProfileVisitorViewModel = {
   id: string;
+  isFriend: boolean;
   lastVisitedAt: string;
   viewCount: number;
   visitor: {
@@ -21,6 +26,24 @@ export type ProfileVisitorViewModel = {
     friendCode: string | null;
     nickname: string;
   };
+};
+
+type RecentProfileVisitRow = {
+  id: string;
+  lastVisitedAt: Date;
+  viewCount: number;
+  visitorId: string;
+  visitor: {
+    id: string;
+    avatarUrl: string | null;
+    friendCode: string | null;
+    nickname: string;
+  };
+};
+
+type FriendshipPairRow = {
+  userAId: string;
+  userBId: string;
 };
 
 export function getProfileVisitDate(now = new Date()) {
@@ -37,19 +60,12 @@ function normalizeProfileVisitLimit(limit: number) {
   return Math.max(1, Math.min(80, Math.floor(limit)));
 }
 
-function mapProfileVisitor(row: {
-  id: string;
-  lastVisitedAt: Date;
-  viewCount: number;
-  visitor: {
-    id: string;
-    avatarUrl: string | null;
-    friendCode: string | null;
-    nickname: string;
-  };
-}): ProfileVisitorViewModel {
+function mapProfileVisitor(
+  row: RecentProfileVisitRow & { isFriend: boolean },
+): ProfileVisitorViewModel {
   return {
     id: row.id,
+    isFriend: row.isFriend,
     lastVisitedAt: row.lastVisitedAt.toISOString(),
     viewCount: row.viewCount,
     visitor: {
@@ -59,6 +75,55 @@ function mapProfileVisitor(row: {
       nickname: row.visitor.nickname.trim() || row.visitor.friendCode || "NF",
     },
   };
+}
+
+export function selectRecentProfileVisitRows(
+  rows: RecentProfileVisitRow[],
+  limit = 30,
+) {
+  const normalizedLimit = normalizeProfileVisitLimit(limit);
+  const seenVisitorIds = new Set<string>();
+  const visitors: RecentProfileVisitRow[] = [];
+
+  for (const row of rows) {
+    if (seenVisitorIds.has(row.visitorId)) {
+      continue;
+    }
+
+    seenVisitorIds.add(row.visitorId);
+    visitors.push(row);
+
+    if (visitors.length >= normalizedLimit) {
+      break;
+    }
+  }
+
+  return visitors;
+}
+
+export function buildProfileVisitorViewModels({
+  friendships,
+  profileId,
+  visitors,
+}: {
+  friendships: FriendshipPairRow[];
+  profileId: string;
+  visitors: RecentProfileVisitRow[];
+}) {
+  const friendshipPairKeys = new Set(
+    friendships.map((friendship) =>
+      getFriendshipPairKey(friendship.userAId, friendship.userBId),
+    ),
+  );
+
+  return visitors.map((visit) =>
+    mapProfileVisitor({
+      ...visit,
+      isFriend: friendshipPairKeys.has(
+        getFriendshipPairKey(profileId, visit.visitorId),
+      ),
+    }),
+  );
 }
 
 export async function recordProfileVisit({
@@ -163,23 +228,28 @@ export async function getRecentProfileVisitors(profileId: string, limit = 30) {
       },
     },
   });
-  const seenVisitorIds = new Set<string>();
-  const visitors: ProfileVisitorViewModel[] = [];
+  const visitors = selectRecentProfileVisitRows(rows, normalizedLimit);
 
-  for (const row of rows) {
-    if (seenVisitorIds.has(row.visitorId)) {
-      continue;
-    }
-
-    seenVisitorIds.add(row.visitorId);
-    visitors.push(mapProfileVisitor(row));
-
-    if (visitors.length >= normalizedLimit) {
-      break;
-    }
+  if (visitors.length === 0) {
+    return [];
   }
 
-  return visitors;
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      OR: visitors.map((visit) =>
+        getFriendshipPair(profileId, visit.visitorId),
+      ),
+    },
+    select: {
+      userAId: true,
+      userBId: true,
+    },
+  });
+  return buildProfileVisitorViewModels({
+    friendships,
+    profileId,
+    visitors,
+  });
 }
 
 export async function getProfileVisitSummary(

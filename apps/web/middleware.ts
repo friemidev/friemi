@@ -8,6 +8,11 @@ import {
   getMobileRootLobbyRedirectPath,
   localeCookieName,
 } from "./lib/mobile-root-lobby-entry";
+import {
+  getReferralCodeToStore,
+  referralCookieMaxAgeSeconds,
+  referralCookieName,
+} from "./features/referrals/referralCode";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -84,9 +89,34 @@ function redirectToSignIn(request: NextRequest) {
     search: request.nextUrl.search,
   });
 
-  return NextResponse.redirect(
-    new URL(getSignInHref(locale, redirectTarget), request.url),
+  return withReferralCookie(
+    request,
+    NextResponse.redirect(
+      new URL(getSignInHref(locale, redirectTarget), request.url),
+    ),
   );
+}
+
+function withReferralCookie<TResponse extends NextResponse>(
+  request: NextRequest,
+  response: TResponse,
+) {
+  const referralCode = getReferralCodeToStore({
+    existingCookie: request.cookies.get(referralCookieName)?.value,
+    incomingRef: request.nextUrl.searchParams.get("ref"),
+  });
+
+  if (referralCode) {
+    response.cookies.set(referralCookieName, referralCode, {
+      httpOnly: true,
+      maxAge: referralCookieMaxAgeSeconds,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
+
+  return response;
 }
 
 function getCanonicalHostRedirectUrl(request: NextRequest) {
@@ -123,7 +153,10 @@ export default clerkMiddleware(async (auth, request) => {
   const canonicalHostRedirectUrl = getCanonicalHostRedirectUrl(request);
 
   if (canonicalHostRedirectUrl) {
-    return NextResponse.redirect(canonicalHostRedirectUrl);
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(canonicalHostRedirectUrl),
+    );
   }
 
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
@@ -135,13 +168,19 @@ export default clerkMiddleware(async (auth, request) => {
   });
 
   if (mobileRootLobbyPath) {
-    return NextResponse.redirect(new URL(mobileRootLobbyPath, request.url));
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(new URL(mobileRootLobbyPath, request.url)),
+    );
   }
 
   const localeRootHomePath = getLocaleRootHomeRedirectPath(request);
 
   if (localeRootHomePath) {
-    return NextResponse.redirect(new URL(localeRootHomePath, request.url));
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(new URL(localeRootHomePath, request.url)),
+    );
   }
 
   if (hasClerkKeys() && isProtectedRoute(request)) {
@@ -160,14 +199,17 @@ export default clerkMiddleware(async (auth, request) => {
 
     if (!authState.userId) {
       if (isAdminApiRoute(request)) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return withReferralCookie(
+          request,
+          NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        );
       }
 
       return redirectToSignIn(request);
     }
 
     if (isAdminApiRoute(request)) {
-      return NextResponse.next();
+      return withReferralCookie(request, NextResponse.next());
     }
   }
 
@@ -176,62 +218,65 @@ export default clerkMiddleware(async (auth, request) => {
       const { userId } = await auth();
 
       if (!userId) {
-        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+        return withReferralCookie(
+          request,
+          NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }),
+        );
       }
     }
 
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isActivityRoomChatApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isUserPreviewApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isFriendsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isDirectMessagesApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isNotificationsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isProfileVisitsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isReferralsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isLobbyApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isAnalyticsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isSearchApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isTranslationsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isMobileApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
-  return intlMiddleware(request);
+  return withReferralCookie(request, intlMiddleware(request));
 });
 
 export const config = {

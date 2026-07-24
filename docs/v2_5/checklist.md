@@ -441,63 +441,63 @@ v2.5 首批成就：
 
 页面：`/profile/invite`
 
-- [ ] 展示我的邀请码
-- [ ] 展示邀请链接
-- [ ] 支持复制邀请链接
-- [ ] 支持系统分享
-- [ ] 展示邀请统计：注册人数、成为好友人数、首次参加人数
-- [ ] 复制成功使用自定义 Friemi alert/toast
+- [x] 展示我的邀请码
+- [x] 展示邀请链接
+- [x] 支持复制邀请链接
+- [x] 支持系统分享
+- [x] 展示邀请统计：注册人数、成为好友人数、首次参加人数
+- [x] 复制成功使用自定义 Friemi alert/toast
 
 链接格式：
 
-- [ ] 主链接：`/${locale}/home?ref={friendCode}`
-- [ ] 兼容：`/${locale}/sign-up?ref={friendCode}`
-- [ ] 登录/注册后必须保留 `ref`
-- [ ] 邀请链接不自动加好友，只完成平台邀请归因
+- [x] 主链接：`/${locale}/home?ref={friendCode}`
+- [x] 兼容：`/${locale}/sign-up?ref={friendCode}`
+- [x] 登录/注册后必须保留 `ref`
+- [x] 邀请链接不自动加好友，只完成平台邀请归因
 
 ### 7.2 邀请捕获与归因
 
-- [ ] middleware 看到格式有效的 `?ref=` 时写入 `friemi_referral_code` cookie
-- [ ] cookie 建议保留 30 天
-- [ ] 已有有效 referral cookie 不被后续不同 ref 覆盖
-- [ ] 无效格式 ref 不写 cookie
-- [ ] DB 校验放在消费阶段，不在 middleware 查数据库
-- [ ] 注册/首次创建 Profile 时消费 cookie 并创建 `UserReferral`
-- [ ] 用户不能邀请自己
-- [ ] 同一个 invitee 只能归因一次
-- [ ] 好友关系建立后补 `friendshipAcceptedAt`
-- [ ] 被邀请者第一次真实参加活动后补 `firstParticipationAt`
+- [x] middleware 看到格式有效的 `?ref=` 时写入 `friemi_referral_code` cookie
+- [x] cookie 建议保留 30 天
+- [x] 已有有效 referral cookie 不被后续不同 ref 覆盖
+- [x] 无效格式 ref 不写 cookie
+- [x] DB 校验放在消费阶段，不在 middleware 查数据库
+- [x] 注册/首次创建 Profile 时消费 cookie 并创建 `UserReferral`
+- [x] 用户不能邀请自己
+- [x] 同一个 invitee 只能归因一次
+- [x] 好友关系建立后补 `friendshipAcceptedAt`
+- [x] 被邀请者第一次真实参加活动后补 `firstParticipationAt`
 
 ### 7.3 访客记录
 
 页面：`/profile/visitors`
 
-- [ ] Public Profile 页面挂载轻量 tracker
-- [ ] tracker 调用 `POST /api/profile-visits`
-- [ ] 只记录登录用户访问
-- [ ] 不记录自己访问自己
-- [ ] 游客访问 no-op，不暴露身份
-- [ ] 同一天同一访客 upsert 累计 `viewCount`
-- [ ] 访客页展示最近访客列表
-- [ ] 展示头像、昵称、访问时间、是否好友、近期访问次数
-- [ ] 点击访客可进入访客 Profile
-- [ ] 可从访客列表发起私聊，非好友仍受两条限制
-- [ ] 不展示过细访问轨迹
+- [x] Public Profile 页面挂载轻量 tracker
+- [x] tracker 调用 `POST /api/profile-visits`
+- [x] 只记录登录用户访问
+- [x] 不记录自己访问自己
+- [x] 游客访问 no-op，不暴露身份
+- [x] 同一天同一访客 upsert 累计 `viewCount`
+- [x] 访客页展示最近访客列表
+- [x] 展示头像、昵称、访问时间、是否好友、近期访问次数
+- [x] 点击访客可进入访客 Profile
+- [x] 可从访客列表发起私聊，非好友仍受两条限制
+- [x] 不展示过细访问轨迹
 
 ### 7.4 本 PR 验收标准
 
-- [ ] 游客打开邀请链接后 `ref` 不丢
-- [ ] 注册完成后 `UserReferral` 归因成功
-- [ ] 重复打开不同邀请链接不会覆盖已绑定归因
-- [ ] 邀请归因不会自动创建好友关系
-- [ ] 自己访问自己不写 `ProfileVisit`
-- [ ] 游客访问不写具体访客记录
-- [ ] 同一天同一访客重复访问只累计同一条记录
-- [ ] 访客页只能本人查看
-- [ ] 访客列表的私聊入口复用陌生人私聊策略
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `npm test --workspace=apps/web` 通过
-- [ ] `git diff --check` 通过
+- [x] 游客打开邀请链接后 `ref` 不丢
+- [x] 注册完成后 `UserReferral` 归因成功
+- [x] 重复打开不同邀请链接不会覆盖已绑定归因
+- [x] 邀请归因不会自动创建好友关系
+- [x] 自己访问自己不写 `ProfileVisit`
+- [x] 游客访问不写具体访客记录
+- [x] 同一天同一访客重复访问只累计同一条记录
+- [x] 访客页只能本人查看
+- [x] 访客列表的私聊入口复用陌生人私聊策略
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `npm test --workspace=apps/web` 通过
+- [x] `git diff --check` 通过
 
 ## 8. P1-PR05 成就、背包与商城展示
 
