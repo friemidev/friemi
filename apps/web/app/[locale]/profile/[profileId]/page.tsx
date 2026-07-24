@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -71,16 +72,25 @@ export default async function PublicProfilePage({
   const dashboardPromise = isSelf
     ? getProfileDashboard(profile.id)
     : getPublicProfileDashboard(profile.id, viewerProfile?.id);
-  const dashboardResult = await dashboardPromise
-    .then((dashboard) => ({ dashboard, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load public profile dashboard", error);
+  const [dashboardResult, publicAchievements] = await Promise.all([
+    dashboardPromise
+      .then((dashboard) => ({ dashboard, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load public profile dashboard", error);
 
-      return {
-        dashboard: getEmptyProfileDashboard(),
-        error,
-      };
-    });
+        return {
+          dashboard: getEmptyProfileDashboard(),
+          error,
+        };
+      }),
+    isSelf
+      ? Promise.resolve([])
+      : getPublicAchievementWall(profile.id).catch((error: unknown) => {
+          console.error("Failed to load public achievement wall", error);
+
+          return [];
+        }),
+  ]);
 
   return (
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
@@ -92,6 +102,7 @@ export default async function PublicProfilePage({
         isSelf={isSelf}
         locale={locale}
         profile={profile}
+        publicAchievements={publicAchievements}
       />
     </PageContainer>
   );

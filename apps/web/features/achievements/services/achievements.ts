@@ -30,6 +30,13 @@ export type UserAchievementProgressItem = {
   unlockedAt: string | null;
 };
 
+export type PublicAchievementWallItem = {
+  definition: AchievementDefinition;
+  sourceId: string | null;
+  sourceType: string | null;
+  unlockedAt: string;
+};
+
 export class AchievementDomainError extends Error {
   code: "UNKNOWN_ACHIEVEMENT";
 
@@ -304,6 +311,6 @@ export async function getPublicAchievementWall(profileId: string) {
       sourceId: achievement.sourceId,
       sourceType: achievement.sourceType,
       unlockedAt: achievement.unlockedAt.toISOString(),
-    };
+    } satisfies PublicAchievementWallItem;
   });
 }

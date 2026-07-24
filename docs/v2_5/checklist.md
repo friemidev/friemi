@@ -394,41 +394,41 @@ v2.5 首批成就：
 
 ### 6.1 新增路由
 
-- [ ] `apps/web/app/[locale]/profile/achievements/page.tsx`
-- [ ] `apps/web/app/[locale]/profile/bag/page.tsx`
-- [ ] `apps/web/app/[locale]/profile/shop/page.tsx`
-- [ ] `apps/web/app/[locale]/profile/invite/page.tsx`
-- [ ] `apps/web/app/[locale]/profile/visitors/page.tsx`
+- [x] `apps/web/app/[locale]/profile/achievements/page.tsx`
+- [x] `apps/web/app/[locale]/profile/bag/page.tsx`
+- [x] `apps/web/app/[locale]/profile/shop/page.tsx`
+- [x] `apps/web/app/[locale]/profile/invite/page.tsx`
+- [x] `apps/web/app/[locale]/profile/visitors/page.tsx`
 
 ### 6.2 入口调整
 
-- [ ] `ProfileDashboardView` 九宫格占位改为真实 Link
-- [ ] 每个入口显示一个小计数或状态
-- [ ] 没有数据时仍可进入页面，不弹“敬请期待”
-- [ ] 所有页面使用同一套移动端头部：返回、标题、必要操作
-- [ ] 五个子页都是 owner-only，只展示当前登录用户自己的数据
-- [ ] 他人公开 Profile 只展示公开成就墙、魅力值和必要社交入口
-- [ ] 他人公开 Profile 不展示背包、邀请、访客列表
+- [x] `ProfileDashboardView` 九宫格占位改为真实 Link
+- [x] 每个入口显示一个小计数或状态
+- [x] 没有数据时仍可进入页面，不弹“敬请期待”
+- [x] 所有页面使用同一套移动端头部：返回、标题、必要操作
+- [x] 五个子页都是 owner-only，只展示当前登录用户自己的数据
+- [x] 他人公开 Profile 只展示公开成就墙、魅力值和必要社交入口
+- [x] 他人公开 Profile 不展示背包、邀请、访客列表
 
 ### 6.3 页面骨架要求
 
-- [ ] 每页都有 loading、empty、error 的基础状态
-- [ ] 移动端底部留出 bottom nav 安全距离
-- [ ] 390px 宽度无横向滚动
-- [ ] 中英法按钮不换行
-- [ ] 新页面不使用浏览器 `alert`
-- [ ] 私有页面不进入 sitemap
+- [x] 每页都有 loading、empty、error 的基础状态
+- [x] 移动端底部留出 bottom nav 安全距离
+- [x] 390px 宽度无横向滚动
+- [x] 中英法按钮不换行
+- [x] 新页面不使用浏览器 `alert`
+- [x] 私有页面不进入 sitemap
 
 ### 6.4 本 PR 验收标准
 
-- [ ] Profile 五个占位入口全部能进入真实页面
-- [ ] 未登录访问五个私有页面会跳登录，并保留 redirect
-- [ ] 登录后回到原本要打开的子页面
-- [ ] 不能通过 URL 查看其他人的背包、邀请统计、访客记录
-- [ ] 公开 Profile 不暴露私有数据
-- [ ] 新页面空状态视觉统一且不拥挤
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `git diff --check` 通过
+- [x] Profile 五个占位入口全部能进入真实页面
+- [x] 未登录访问五个私有页面会跳登录，并保留 redirect
+- [x] 登录后回到原本要打开的子页面
+- [x] 不能通过 URL 查看其他人的背包、邀请统计、访客记录
+- [x] 公开 Profile 不暴露私有数据
+- [x] 新页面空状态视觉统一且不拥挤
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `git diff --check` 通过
 
 ## 7. P1-PR04 邀请与访客闭环
 
