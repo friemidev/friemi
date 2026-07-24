@@ -18,6 +18,7 @@ import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { markReferralFirstParticipation } from "@/features/referrals/services/referrals";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import { isLowTrustScore } from "@/features/trust/trustScore";
 import {
@@ -648,6 +649,15 @@ export async function joinActivityAction(
         message: rawInput.message,
       },
     };
+  }
+
+  if (
+    successfulParticipantStatus &&
+    activeParticipantStatuses.includes(successfulParticipantStatus)
+  ) {
+    await markReferralFirstParticipation(profile.id).catch((error) => {
+      console.error("Failed to mark referral first participation", error);
+    });
   }
 
   perf.finish({

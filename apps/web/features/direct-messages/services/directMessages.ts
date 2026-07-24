@@ -390,18 +390,6 @@ export function resolveDirectMessageSendPolicy({
     };
   }
 
-  if (!hasOrganizerActivity && !conversationId) {
-    return {
-      canSend: false,
-      conversationId,
-      hasPeerReplied,
-      isFriend: false,
-      reason: "NOT_FRIENDS",
-      remainingNonFriendMessages: 0,
-      trustScore,
-    };
-  }
-
   if (hasPeerReplied) {
     return {
       canSend: true,
@@ -586,6 +574,47 @@ export async function getOrCreateDirectConversation({
     await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
 
     const pair = getConversationPair(currentUserProfileId, friendProfileId);
+
+    return tx.conversation.upsert({
+      where: {
+        userAId_userBId: pair,
+      },
+      create: pair,
+      update: {},
+      select: directConversationSelect,
+    });
+  });
+}
+
+export async function getOrCreateOpenDirectConversation({
+  currentUserProfileId,
+  peerProfileId,
+}: {
+  currentUserProfileId: string;
+  peerProfileId: string;
+}): Promise<DirectConversationViewModel> {
+  return prisma.$transaction(async (tx) => {
+    const peerProfile = await tx.userProfile.findFirst({
+      where: {
+        id: peerProfileId,
+        status: "ACTIVE",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!peerProfile) {
+      throw new DirectMessageDomainError("CONVERSATION_UNAVAILABLE");
+    }
+
+    await assertDirectMessageSendAccess(
+      tx,
+      currentUserProfileId,
+      peerProfileId,
+    );
+
+    const pair = getConversationPair(currentUserProfileId, peerProfileId);
 
     return tx.conversation.upsert({
       where: {

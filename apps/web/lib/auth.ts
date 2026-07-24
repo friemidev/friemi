@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { isAdminByFields, readRoleFromMetadata } from "./admin-access";
 import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
@@ -8,6 +9,8 @@ import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
 import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
+import { referralCookieName } from "@/features/referrals/referralCode";
+import { consumeReferralCodeOnProfileCreate } from "@/features/referrals/services/referrals";
 
 type ClerkCurrentUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
@@ -47,6 +50,27 @@ async function grantWelcomeCheckForNewProfile(profileId: string) {
     await grantWelcomeFriemiCheck(profileId);
   } catch (error) {
     console.error("Failed to grant welcome Friemi check", error);
+  }
+}
+
+async function consumeReferralCookieForNewProfile(profileId: string) {
+  let referralCode: string | undefined;
+
+  try {
+    const cookieStore = await cookies();
+    referralCode = cookieStore.get(referralCookieName)?.value;
+  } catch {
+    return;
+  }
+
+  if (!referralCode) {
+    return;
+  }
+
+  try {
+    await consumeReferralCodeOnProfileCreate(profileId, referralCode);
+  } catch (error) {
+    console.error("Failed to consume referral cookie for new profile", error);
   }
 }
 
@@ -262,6 +286,7 @@ async function upsertClerkUserProfile(user: ClerkCurrentUser) {
 
   if (!existing) {
     await grantWelcomeCheckForNewProfile(finalizedProfile.id);
+    await consumeReferralCookieForNewProfile(finalizedProfile.id);
   }
 
   return finalizedProfile;

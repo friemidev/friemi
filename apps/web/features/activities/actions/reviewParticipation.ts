@@ -9,6 +9,7 @@ import { getCopy } from "@/lib/copy";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { markReferralFirstParticipation } from "@/features/referrals/services/referrals";
 import { assertCanManageActivity } from "../utils/activityManagement";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
@@ -26,6 +27,7 @@ export type ReviewParticipationState = {
 type ReviewParticipationResult =
   | {
       ok: true;
+      approvedProfileId?: string | null;
     }
   | {
       ok: false;
@@ -203,6 +205,7 @@ export async function reviewParticipationAction(
 
           return {
             ok: true,
+            approvedProfileId: null,
           };
         }
 
@@ -319,6 +322,10 @@ export async function reviewParticipationAction(
 
         return {
           ok: true,
+          approvedProfileId:
+            result.data.decision === "approve"
+              ? participation.userProfileId
+              : null,
         };
       },
       {
@@ -330,6 +337,14 @@ export async function reviewParticipationAction(
       return {
         formError: reviewResult.error,
       };
+    }
+
+    if (reviewResult.approvedProfileId) {
+      await markReferralFirstParticipation(
+        reviewResult.approvedProfileId,
+      ).catch((error) => {
+        console.error("Failed to mark referral first participation", error);
+      });
     }
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {

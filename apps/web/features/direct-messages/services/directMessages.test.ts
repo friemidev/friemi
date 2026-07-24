@@ -18,7 +18,7 @@ test("direct message policy allows friends without non-friend limits", () => {
   assert.equal(policy.remainingNonFriendMessages, null);
 });
 
-test("direct message policy blocks self, low trust, and unrelated non-friends", () => {
+test("direct message policy blocks self and low-trust senders", () => {
   assert.equal(
     resolveDirectMessageSendPolicy({
       currentUserProfileId: "u1",
@@ -35,13 +35,20 @@ test("direct message policy blocks self, low trust, and unrelated non-friends", 
     }).reason,
     "LOW_TRUST",
   );
+});
+
+test("direct message policy lets non-friends start with a two-message limit", () => {
+  const policy = resolveDirectMessageSendPolicy({
+    currentUserProfileId: "u1",
+    peerProfileId: "u2",
+    trustScore: 80,
+  });
+
+  assert.equal(policy.canSend, true);
+  assert.equal(policy.reason, "ALLOWED");
   assert.equal(
-    resolveDirectMessageSendPolicy({
-      currentUserProfileId: "u1",
-      peerProfileId: "u2",
-      trustScore: 80,
-    }).reason,
-    "NOT_FRIENDS",
+    policy.remainingNonFriendMessages,
+    nonFriendDirectMessageLimit,
   );
 });
 

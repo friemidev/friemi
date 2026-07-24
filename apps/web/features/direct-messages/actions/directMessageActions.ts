@@ -18,7 +18,7 @@ import {
   directMessageImageMaxCount,
   getOrCreateActivityParticipantConversation,
   getOrCreateActivityOrganizerConversation,
-  getOrCreateDirectConversation,
+  getOrCreateOpenDirectConversation,
   sendDirectMessage,
   sendDirectMessageToFriend,
 } from "../services/directMessages";
@@ -182,9 +182,9 @@ export async function createDirectConversationAction(
       result.data.locale,
       "/messages",
     );
-    const conversation = await getOrCreateDirectConversation({
+    const conversation = await getOrCreateOpenDirectConversation({
       currentUserProfileId: profile.id,
-      friendProfileId: result.data.friendProfileId,
+      peerProfileId: result.data.friendProfileId,
     });
 
     trackConversationOpened({
@@ -228,9 +228,9 @@ export async function openDirectConversationAction(
       result.data.locale,
       "/messages",
     );
-    const conversation = await getOrCreateDirectConversation({
+    const conversation = await getOrCreateOpenDirectConversation({
       currentUserProfileId: profile.id,
-      friendProfileId: result.data.friendProfileId,
+      peerProfileId: result.data.friendProfileId,
     });
 
     conversationId = conversation.id;
