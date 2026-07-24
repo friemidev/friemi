@@ -175,6 +175,24 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem));
   }
 
+  /*
+   * Opt-in safe-area helpers for PageContainer (see its `mobileSafeTop` /
+   * `mobileSafeBottom` props): pages whose mobile header/nav is hidden
+   * need this clearance themselves instead of hand-rolling
+   * env(safe-area-inset-*) math per page. Not applied automatically to
+   * every page because some (e.g. profile) intentionally zero out
+   * PageContainer's own padding and defer to a nested
+   * .app-mobile-page-shell child instead — auto-applying here would
+   * double the padding on those.
+   */
+  .app-page-mobile-safe-top {
+    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)) !important;
+  }
+
+  .app-page-mobile-safe-bottom {
+    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)) !important;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) {
     padding-bottom: 0;
   }

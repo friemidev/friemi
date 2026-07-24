@@ -48,7 +48,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
 
   return (
     <footer className="mt-4 border-t border-[#156240]/30 bg-[#156240] text-white">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="app-page-mobile-safe-bottom mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[1.2fr_0.9fr_0.7fr]">
           <div className="space-y-4">
             <Link

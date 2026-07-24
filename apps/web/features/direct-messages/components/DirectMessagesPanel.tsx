@@ -312,7 +312,7 @@ export function MessageThread({
     <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
-      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <div className="flex h-9 w-9 items-center justify-start">
           <MessageThreadBackButton
             fallbackHref={withLocale(locale, backHref)}

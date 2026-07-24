@@ -82,7 +82,11 @@ export default async function AvalonSeatPage({ params }: AvalonSeatPageProps) {
   }
 
   return (
-    <PageContainer className="max-w-2xl pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer
+      className="max-w-2xl sm:pb-12 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <AvalonPrivateRoleCard
         locale={locale}
         isHostSeat={seat.profileId === seat.room.hostId}

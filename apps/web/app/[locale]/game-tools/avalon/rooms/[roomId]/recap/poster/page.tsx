@@ -71,7 +71,11 @@ export default async function AvalonRecapPosterPage({
   };
 
   return (
-    <PageContainer className="max-w-[44rem] pb-28 pt-4 sm:pb-12 sm:pt-7 print:max-w-none print:p-0">
+    <PageContainer
+      className="max-w-[44rem] sm:pb-12 sm:pt-7 print:max-w-none print:p-0"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <AvalonRecapPosterView
         locale={locale}
         room={roomForClient}

@@ -22,7 +22,7 @@ export function MomentDetailMobilePage({
   const copy = getFootprintsCopy(locale);
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9] pb-10 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+    <main className="min-h-screen bg-[#FEFFF9] pb-[calc(5.15rem+env(safe-area-inset-bottom)+1rem)] text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
       <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1rem)] md:min-h-[calc(100vh-4rem)] md:max-w-3xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
         <header className="flex items-center justify-between pb-5">
           <Link

@@ -67,7 +67,10 @@ export default async function MessagesPage({
   });
 
   return (
-    <PageContainer className="space-y-5 pb-28 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0 lg:pb-8">
+    <PageContainer
+      className="space-y-5 pb-28 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0 lg:pb-8"
+      mobileSafeTop
+    >
       {friendRosterResult.error ? (
         <div className="lg:hidden">
           <EmptyState

@@ -170,7 +170,11 @@ export default async function WerewolfRoomPage({
   };
 
   return (
-    <PageContainer className="max-w-[94rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer
+      className="max-w-[94rem] sm:pb-12 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}

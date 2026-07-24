@@ -422,7 +422,7 @@ export default async function SearchPage({
   }
 
   return (
-    <PageContainer className="space-y-6 py-5 sm:py-8">
+    <PageContainer className="space-y-6 py-5 sm:py-8" mobileSafeBottom>
       <DetailSourceRestore sourceKey="search" />
       <div className="space-y-4">
         <div className="min-w-0">

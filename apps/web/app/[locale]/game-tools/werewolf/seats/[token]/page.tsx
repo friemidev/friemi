@@ -142,8 +142,10 @@ export default async function WerewolfSeatPage({
         className={
           showPlayerFullScreenCard
             ? "werewolf-seat-mobile-fullscreen !max-w-none !px-0 !py-0 max-md:!fixed max-md:!inset-0 max-md:!m-0 max-md:!h-[100svh] max-md:!w-screen max-md:!overflow-hidden max-md:!bg-[#090A0C] md:px-4 md:pb-6 md:pt-4"
-            : "max-w-3xl pb-28 pt-4 sm:pb-12 sm:pt-7"
+            : "max-w-3xl sm:pb-12 sm:pt-7"
         }
+        mobileSafeBottom={!showPlayerFullScreenCard}
+        mobileSafeTop={!showPlayerFullScreenCard}
       >
         <WerewolfPrivateSeatCard
           allReady={allReady}

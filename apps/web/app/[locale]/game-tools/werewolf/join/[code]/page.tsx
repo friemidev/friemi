@@ -171,7 +171,11 @@ function JoinStatusPage({
   title: string;
 }) {
   return (
-    <PageContainer className="max-w-xl pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer
+      className="max-w-xl sm:pb-12 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <GameToolBackButton
         fallbackHref={withLocale(locale, "/game-tools/werewolf")}
         locale={locale}
