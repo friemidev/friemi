@@ -243,147 +243,147 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 建议目录：
 
-- [ ] `apps/web/features/activity-room-chat/services/activityRoomChat.ts`
-- [ ] `apps/web/features/activity-room-chat/actions/activityRoomChatActions.ts`
-- [ ] `apps/web/features/activity-room-chat/queries/getActivityRoomMessages.ts`
-- [ ] `apps/web/features/activity-room-chat/copy.ts`
+- [x] `apps/web/features/activity-room-chat/services/activityRoomChat.ts`
+- [x] `apps/web/features/activity-room-chat/actions/activityRoomChatActions.ts`
+- [x] `apps/web/features/activity-room-chat/queries/getActivityRoomMessages.ts`
+- [x] `apps/web/features/activity-room-chat/copy.ts`
 
 服务函数：
 
-- [ ] `canViewActivityRoomChat(profileId, activityId)`
-- [ ] `canSendActivityRoomMessage(profileId, activityId)`
-- [ ] `getActivityRoomMessages(activityId, viewerProfileId, limit = 50)`
-- [ ] `sendActivityRoomMessage({ activityId, senderId, body })`
-- [ ] `deleteActivityRoomMessage({ messageId, actorId })`
+- [x] `canViewActivityRoomChat(profileId, activityId)`
+- [x] `canSendActivityRoomMessage(profileId, activityId)`
+- [x] `getActivityRoomMessages(activityId, viewerProfileId, limit = 50)`
+- [x] `sendActivityRoomMessage({ activityId, senderId, body })`
+- [x] `deleteActivityRoomMessage({ messageId, actorId })`
 
 权限规则：
 
-- [ ] Organizer 可查看和发送
-- [ ] Co-manager 可查看和发送
-- [ ] `JOINED / APPROVED` 参与者可查看和发送
-- [ ] `PENDING / REJECTED / CANCELLED` 不可查看消息内容
-- [ ] 游客不可查看消息内容
-- [ ] 纯公共采集活动不可查看和发送，除非进入的是其下用户组局
-- [ ] 活动取消后默认只读
-- [ ] 活动结束后 v2.5 默认只读，后续可调整
-- [ ] 删除消息：本人、Organizer、Co-manager 可删除
+- [x] Organizer 可查看和发送
+- [x] Co-manager 可查看和发送
+- [x] `JOINED / APPROVED` 参与者可查看和发送
+- [x] `PENDING / REJECTED / CANCELLED` 不可查看消息内容
+- [x] 游客不可查看消息内容
+- [x] 纯公共采集活动不可查看和发送，除非进入的是其下用户组局
+- [x] 活动取消后默认只读
+- [x] 活动结束后 v2.5 默认只读，后续可调整
+- [x] 删除消息：本人、Organizer、Co-manager 可删除
 
 消息规则：
 
-- [ ] 文本 trim 后不能为空
-- [ ] 最大长度 500
-- [ ] 连续发送失败时保留输入框
-- [ ] 成功发送后只 revalidate 当前活动详情或当前群聊区域
-- [ ] 返回最小消息字段：id、body、sender、createdAt、isMine
+- [x] 文本 trim 后不能为空
+- [x] 最大长度 500
+- [x] 连续发送失败时保留输入框
+- [x] 成功发送后只 revalidate 当前活动详情或当前群聊区域
+- [x] 返回最小消息字段：id、body、sender、createdAt、isMine
 
 ### 5.2 陌生人私聊策略
 
 现有基础在 `apps/web/features/direct-messages/services/directMessages.ts`，本 PR 只补统一策略输出。
 
-- [ ] 新增或扩展 `getDirectMessageSendPolicy(currentUserProfileId, peerProfileId)`
-- [ ] 返回 `canSend`
-- [ ] 返回 `reason`
-- [ ] 返回 `remainingNonFriendMessages`
-- [ ] 返回 `isFriend`
-- [ ] 返回 `hasPeerReplied`
-- [ ] 返回 `trustScore`
-- [ ] 图片消息和文字消息都计入非好友两条限制
+- [x] 新增或扩展 `getDirectMessageSendPolicy(currentUserProfileId, peerProfileId)`
+- [x] 返回 `canSend`
+- [x] 返回 `reason`
+- [x] 返回 `remainingNonFriendMessages`
+- [x] 返回 `isFriend`
+- [x] 返回 `hasPeerReplied`
+- [x] 返回 `trustScore`
+- [x] 图片消息和文字消息都计入非好友两条限制
 
 错误码建议：
 
-- [ ] `AUTH_REQUIRED`
-- [ ] `SELF_CONVERSATION`
-- [ ] `LOW_TRUST`
-- [ ] `NOT_FRIENDS`
-- [ ] `NON_FRIEND_LIMIT_REACHED`
-- [ ] `CONVERSATION_UNAVAILABLE`
-- [ ] `EMPTY_BODY`
-- [ ] `BODY_TOO_LONG`
-- [ ] `TOO_MANY_IMAGES`
-- [ ] `INVALID_IMAGE_URL`
+- [x] `AUTH_REQUIRED`
+- [x] `SELF_CONVERSATION`
+- [x] `LOW_TRUST`
+- [x] `NOT_FRIENDS`
+- [x] `NON_FRIEND_LIMIT_REACHED`
+- [x] `CONVERSATION_UNAVAILABLE`
+- [x] `EMPTY_BODY`
+- [x] `BODY_TOO_LONG`
+- [x] `TOO_MANY_IMAGES`
+- [x] `INVALID_IMAGE_URL`
 
 ### 5.3 成就服务
 
 建议目录：
 
-- [ ] `apps/web/features/achievements/achievementCatalog.ts`
-- [ ] `apps/web/features/achievements/services/achievements.ts`
-- [ ] `apps/web/features/achievements/queries/getUserAchievements.ts`
+- [x] `apps/web/features/achievements/achievementCatalog.ts`
+- [x] `apps/web/features/achievements/services/achievements.ts`
+- [x] `apps/web/features/achievements/queries/getUserAchievements.ts`
 
 服务函数：
 
-- [ ] `grantAchievement(profileId, achievementKey, source)`
-- [ ] `syncProfileAchievements(profileId)`
-- [ ] `getAchievementProgress(profileId)`
-- [ ] `getPublicAchievementWall(profileId)`
+- [x] `grantAchievement(profileId, achievementKey, source)`
+- [x] `syncProfileAchievements(profileId)`
+- [x] `getAchievementProgress(profileId)`
+- [x] `getPublicAchievementWall(profileId)`
 
 v2.5 首批成就：
 
-- [ ] `hello_world`：第一次参加活动
-- [ ] `open_minded`：第一次组织活动
-- [ ] `active_guest_20`：参加 20 次
-- [ ] `host_20`：举办 20 场
-- [ ] `co_creator`：共创主理人
-- [ ] `trusted_profile`：达到 Trusted
+- [x] `hello_world`：第一次参加活动
+- [x] `open_minded`：第一次组织活动
+- [x] `active_guest_20`：参加 20 次
+- [x] `host_20`：举办 20 场
+- [x] `co_creator`：共创主理人
+- [x] `trusted_profile`：达到 Trusted
 
 ### 5.4 邀请服务
 
 建议目录：
 
-- [ ] `apps/web/features/referrals/services/referrals.ts`
-- [ ] `apps/web/features/referrals/actions/referralActions.ts`
-- [ ] `apps/web/features/referrals/queries/getReferralDashboard.ts`
+- [x] `apps/web/features/referrals/services/referrals.ts`
+- [x] `apps/web/features/referrals/actions/referralActions.ts`
+- [x] `apps/web/features/referrals/queries/getReferralDashboard.ts`
 
 服务函数：
 
-- [ ] `buildReferralLink(locale, friendCode)`
-- [ ] `captureReferralCodeFromRequest(ref)`
-- [ ] `consumeReferralCodeOnProfileCreate(profileId, ref)`
-- [ ] `getReferralStats(inviterId)`
-- [ ] `markReferralFirstParticipation(inviteeId)`
-- [ ] `markReferralFriendshipAccepted(inviterId, inviteeId)`
+- [x] `buildReferralLink(locale, friendCode)`
+- [x] `captureReferralCodeFromRequest(ref)`
+- [x] `consumeReferralCodeOnProfileCreate(profileId, ref)`
+- [x] `getReferralStats(inviterId)`
+- [x] `markReferralFirstParticipation(inviteeId)`
+- [x] `markReferralFriendshipAccepted(inviterId, inviteeId)`
 
 奖励边界：
 
-- [ ] 单纯打开邀请链接不奖励
-- [ ] 单纯注册是否奖励贡献值后续再定，v2.5 不公开
-- [ ] 信用值 `INVITE_FRIEND` 建议在成为好友或首次真实参加活动后触发，避免刷号
-- [ ] 同一个 invitee 只能给 inviter 触发一次奖励
+- [x] 单纯打开邀请链接不奖励
+- [x] 单纯注册是否奖励贡献值后续再定，v2.5 不公开
+- [x] 信用值 `INVITE_FRIEND` 建议在成为好友或首次真实参加活动后触发，避免刷号
+- [x] 同一个 invitee 只能给 inviter 触发一次奖励
 
 ### 5.5 访客服务
 
 建议目录：
 
-- [ ] `apps/web/features/profile-visits/services/profileVisits.ts`
-- [ ] `apps/web/features/profile-visits/queries/getProfileVisitors.ts`
+- [x] `apps/web/features/profile-visits/services/profileVisits.ts`
+- [x] `apps/web/features/profile-visits/queries/getProfileVisitors.ts`
 
 服务函数：
 
-- [ ] `recordProfileVisit({ profileId, visitorId })`
-- [ ] `getRecentProfileVisitors(profileId, limit = 30)`
-- [ ] `getProfileVisitSummary(profileId)`
+- [x] `recordProfileVisit({ profileId, visitorId })`
+- [x] `getRecentProfileVisitors(profileId, limit = 30)`
+- [x] `getProfileVisitSummary(profileId)`
 
 写入策略：
 
 - [ ] Public Profile 页面后续挂载轻量 tracker
-- [ ] tracker 调用 `POST /api/profile-visits`
-- [ ] API 通过 Clerk 当前用户识别 visitor
-- [ ] 写入失败只记录日志，不阻塞页面
-- [ ] 未登录、访问自己、目标用户不存在时返回 204 或成功空响应，避免前端报错
+- [x] tracker 调用 `POST /api/profile-visits`
+- [x] API 通过 Clerk 当前用户识别 visitor
+- [x] 写入失败只记录日志，不阻塞页面
+- [x] 未登录、访问自己、目标用户不存在时返回 204 或成功空响应，避免前端报错
 
 ### 5.6 本 PR 验收标准
 
-- [ ] 群聊权限服务覆盖 Organizer、Co-manager、joined、approved、pending、rejected、cancelled、guest
-- [ ] 纯公共采集活动被群聊服务拒绝
-- [ ] 陌生人私聊策略能返回剩余次数和具体原因
-- [ ] 非好友第 3 条消息在对方未回复前被服务端拦截
-- [ ] 对方回复后服务端解除非好友两条限制
-- [ ] 成就 grant 重复调用不重复写入，不更新时间
-- [ ] 邀请归因不能被第二个邀请码覆盖
-- [ ] 访客记录不记录自己和游客
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `npm test --workspace=apps/web` 通过
-- [ ] `git diff --check` 通过
+- [x] 群聊权限服务覆盖 Organizer、Co-manager、joined、approved、pending、rejected、cancelled、guest
+- [x] 纯公共采集活动被群聊服务拒绝
+- [x] 陌生人私聊策略能返回剩余次数和具体原因
+- [x] 非好友第 3 条消息在对方未回复前被服务端拦截
+- [x] 对方回复后服务端解除非好友两条限制
+- [x] 成就 grant 重复调用不重复写入，不更新时间
+- [x] 邀请归因不能被第二个邀请码覆盖
+- [x] 访客记录不记录自己和游客
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `npm test --workspace=apps/web` 通过
+- [x] `git diff --check` 通过
 
 ## 6. P1-PR03 Profile 子页面骨架
 

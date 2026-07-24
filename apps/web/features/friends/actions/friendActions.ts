@@ -15,6 +15,7 @@ import {
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { createNotification } from "@/features/notifications/utils/createNotification";
+import { markReferralFriendshipAcceptedBetween } from "@/features/referrals/services/referrals";
 import { applyInviteFriendTrustScore } from "@/features/trust/trustScoreEvents";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -98,7 +99,9 @@ function redirectAfterFriendAction(
   returnTo: FriendActionReturnTo = "friends",
   redirectPath?: string,
 ): never {
-  redirect(withLocale(locale, resolveFriendActionRedirectPath(returnTo, redirectPath)));
+  redirect(
+    withLocale(locale, resolveFriendActionRedirectPath(returnTo, redirectPath)),
+  );
 }
 
 function getFriendAnalyticsSourceSurface(
@@ -750,6 +753,13 @@ export async function acceptFriendRequestAction(
   revalidatePath(withLocale(locale, "/"), "layout");
 
   if (acceptedRequesterId) {
+    await markReferralFriendshipAcceptedBetween(
+      acceptedRequesterId,
+      viewerProfile.id,
+    ).catch((error) => {
+      console.error("Failed to mark referral friendship accepted", error);
+    });
+
     await applyInviteFriendTrustScore(acceptedRequesterId).catch((error) => {
       console.error("Failed to award invite friend trust score", error);
     });

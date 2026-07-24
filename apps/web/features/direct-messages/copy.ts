@@ -126,9 +126,14 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       invalidRequest: "Requête invalide. Réessayez plus tard.",
       failed: "Message impossible à envoyer pour le moment.",
       errors: {
+        AUTH_REQUIRED: "Connectez-vous pour envoyer un message.",
         SELF_CONVERSATION:
           "Vous ne pouvez pas créer une conversation avec vous-même.",
+        LOW_TRUST:
+          "Votre compte doit retrouver un niveau de confiance suffisant avant d'envoyer ce message.",
         NOT_FRIENDS: "Vous devez être amis pour démarrer cette conversation.",
+        NON_FRIEND_LIMIT_REACHED:
+          "Attendez une réponse avant d'envoyer un autre message.",
         CONVERSATION_UNAVAILABLE: "Cette conversation n'est plus disponible.",
         EMPTY_BODY: "Le message ne peut pas être vide.",
         BODY_TOO_LONG: "Le message est trop long.",
@@ -201,8 +206,13 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       invalidRequest: "Invalid request. Try again later.",
       failed: "Message could not be sent right now.",
       errors: {
+        AUTH_REQUIRED: "Sign in to send a message.",
         SELF_CONVERSATION: "You cannot start a conversation with yourself.",
+        LOW_TRUST:
+          "Your account needs a higher trust level before sending this message.",
         NOT_FRIENDS: "You need to be friends to start this conversation.",
+        NON_FRIEND_LIMIT_REACHED:
+          "Wait for a reply before sending another message.",
         CONVERSATION_UNAVAILABLE: "This conversation is no longer available.",
         EMPTY_BODY: "Message cannot be empty.",
         BODY_TOO_LONG: "Message is too long.",
@@ -271,8 +281,11 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     invalidRequest: "请求无效，请稍后再试。",
     failed: "消息暂时无法发送，请稍后重试。",
     errors: {
+      AUTH_REQUIRED: "登录后才能发送消息。",
       SELF_CONVERSATION: "不能和自己创建会话。",
+      LOW_TRUST: "当前信用状态暂时不能发送这条消息。",
       NOT_FRIENDS: "只有好友之间可以创建会话。",
+      NON_FRIEND_LIMIT_REACHED: "请等待对方回复后再继续发送。",
       CONVERSATION_UNAVAILABLE: "这段会话已不可用。",
       EMPTY_BODY: "消息不能为空。",
       BODY_TOO_LONG: "消息内容过长。",
