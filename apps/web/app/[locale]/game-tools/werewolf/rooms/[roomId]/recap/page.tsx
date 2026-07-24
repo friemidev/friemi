@@ -76,7 +76,11 @@ export default async function WerewolfRecapPage({
   };
 
   return (
-    <PageContainer className="max-w-[96rem] pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer
+      className="max-w-[96rem] sm:pb-12 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <WerewolfRecapView
         locale={locale}
         room={roomForClient}

@@ -54,7 +54,11 @@ export default async function WerewolfToolPage({
   const { locale } = await params;
 
   return (
-    <PageContainer className="max-w-[34rem] overflow-x-hidden pb-28 pt-3 sm:pb-12 sm:pt-6">
+    <PageContainer
+      className="max-w-[34rem] overflow-x-hidden sm:pb-12 sm:pt-6"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <WerewolfCreateRoomPanel locale={locale} />
     </PageContainer>
   );

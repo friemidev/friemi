@@ -44,7 +44,7 @@ export default async function FriendsPage({
     });
 
   return (
-    <PageContainer className="space-y-6">
+    <PageContainer className="space-y-6" mobileSafeBottom>
       {dashboardResult.error ? (
         <EmptyState
           title={commonCopy.loadFailed}

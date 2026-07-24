@@ -94,7 +94,11 @@ export default async function WerewolfCardPreviewPage({
   const t = getCopy(locale);
 
   return (
-    <PageContainer className="max-w-[108rem] overflow-x-hidden pb-28 pt-4 sm:pb-12 sm:pt-7">
+    <PageContainer
+      className="max-w-[108rem] overflow-x-hidden sm:pb-12 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <style>
         {`
           @keyframes werewolf-death-card {

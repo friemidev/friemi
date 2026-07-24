@@ -99,7 +99,11 @@ export default async function NewActivityPage({
   const formId = "new-activity-form";
   const headerCopy = getMobileCreateHeaderCopy(locale);
   const formContent = (
-    <PageContainer className="max-w-3xl space-y-5 max-md:px-6">
+    <PageContainer
+      className="max-w-3xl space-y-5 max-md:px-6"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <div className="grid grid-cols-[minmax(3rem,max-content)_minmax(0,1fr)_minmax(3rem,max-content)] items-center gap-2 py-1">
         <Link
           className="max-w-[5.5rem] justify-self-start truncate whitespace-nowrap text-sm font-semibold text-zinc-600 transition hover:text-[#156240]"
