@@ -12,6 +12,7 @@ import {
   ClipboardList,
   ExternalLink,
   MapPin,
+  MessageCircle,
   Pencil,
   ShieldAlert,
   Store,
@@ -427,6 +428,59 @@ function getTeamOwnerCtaCopy(locale: string) {
     reviewDescription: "查看已报名成员和待审核申请。",
     title: "发起人空间",
   };
+}
+
+function getActivityRoomEntryCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      description: "Les messages du groupe restent ici.",
+      label: "Discussion",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      description: "Group messages stay here.",
+      label: "Chat",
+    };
+  }
+
+  return {
+    description: "组局消息都在这里。",
+    label: "群聊",
+  };
+}
+
+function ActivityRoomEntryLink({
+  className,
+  href,
+  locale,
+  showDescription = false,
+}: {
+  className?: string;
+  href: string;
+  locale: string;
+  showDescription?: boolean;
+}) {
+  const copy = getActivityRoomEntryCopy(locale);
+
+  return (
+    <Link
+      className={cn(
+        "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758] active:scale-[0.98]",
+        className,
+      )}
+      href={href}
+    >
+      <MessageCircle className="h-4 w-4" />
+      <span className="truncate">{copy.label}</span>
+      {showDescription ? (
+        <span className="hidden min-w-0 truncate text-xs font-semibold text-white/74 sm:inline">
+          {copy.description}
+        </span>
+      ) : null}
+    </Link>
+  );
 }
 
 function getApprovalModeNoticeCopy(locale: string) {
@@ -1331,6 +1385,16 @@ export async function ActivityDetailPageContent({
   const canCheckInViewerParticipation =
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED";
+  const hasRoomRelevantParticipation =
+    viewerParticipation?.status === "JOINED" ||
+    viewerParticipation?.status === "APPROVED" ||
+    viewerParticipation?.status === "PENDING";
+  const activityRoomHref = withLocale(locale, `/lobby/${activity.id}/room`);
+  const showActivityRoomEntry =
+    !activity.isActivityInfo &&
+    activity.type !== "PUBLIC_EVENT" &&
+    Boolean(viewerProfile) &&
+    (isTeamOperator || hasRoomRelevantParticipation);
   const mobileDetailTitle =
     locale === "fr"
       ? "Détail du groupe"
@@ -1631,6 +1695,13 @@ export async function ActivityDetailPageContent({
                 ) : null}
               </div>
             </div>
+          ) : null}
+          {showActivityRoomEntry ? (
+            <ActivityRoomEntryLink
+              className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
+              href={activityRoomHref}
+              locale={locale}
+            />
           ) : null}
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
@@ -1954,6 +2025,13 @@ export async function ActivityDetailPageContent({
                     <ClipboardList className="h-4 w-4" />
                     {teamOwnerCtaCopy.review}
                   </a>
+                  {showActivityRoomEntry ? (
+                    <ActivityRoomEntryLink
+                      href={activityRoomHref}
+                      locale={locale}
+                      showDescription
+                    />
+                  ) : null}
                   <ActivityParticipantContactDialog
                     activityId={activity.id}
                     buttonLabel={teamOwnerCtaCopy.contactParticipants}
@@ -2011,6 +2089,13 @@ export async function ActivityDetailPageContent({
                       viewerParticipation?.checkedInAt?.toISOString() ?? null
                     }
                     locale={locale}
+                  />
+                ) : null}
+                {showActivityRoomEntry ? (
+                  <ActivityRoomEntryLink
+                    href={activityRoomHref}
+                    locale={locale}
+                    showDescription
                   />
                 ) : null}
                 <JoinActivityForm
@@ -2395,6 +2480,12 @@ export async function ActivityDetailPageContent({
                 <ClipboardList className="h-4 w-4" />
                 {teamOwnerCtaCopy.review}
               </a>
+              {showActivityRoomEntry ? (
+                <ActivityRoomEntryLink
+                  href={activityRoomHref}
+                  locale={locale}
+                />
+              ) : null}
               <ActivityParticipantContactDialog
                 activityId={activity.id}
                 buttonClassName="min-h-11 transition active:scale-[0.98]"
