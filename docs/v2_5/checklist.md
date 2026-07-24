@@ -83,77 +83,77 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 用途：活动/组局内群聊消息。
 
-- [ ] 新增模型 `ActivityRoomMessage`
-- [ ] `id String @id @default(cuid())`
-- [ ] `activityId String`
-- [ ] `senderId String`
-- [ ] `body String @db.Text`
-- [ ] `deletedAt DateTime?`
-- [ ] `deletedById String?`
-- [ ] `createdAt DateTime @default(now())`
-- [ ] `updatedAt DateTime @updatedAt`
-- [ ] 关联 `Activity`
-- [ ] 关联 `UserProfile`，relation name 建议 `ActivityRoomMessageSender`
-- [ ] 在 `Activity` 上补 `roomMessages ActivityRoomMessage[]`
-- [ ] 在 `UserProfile` 上补 `activityRoomMessages ActivityRoomMessage[]`
-- [ ] 索引 `@@index([activityId, createdAt])`
-- [ ] 索引 `@@index([senderId, createdAt])`
+- [x] 新增模型 `ActivityRoomMessage`
+- [x] `id String @id @default(cuid())`
+- [x] `activityId String`
+- [x] `senderId String`
+- [x] `body String @db.Text`
+- [x] `deletedAt DateTime?`
+- [x] `deletedById String?`
+- [x] `createdAt DateTime @default(now())`
+- [x] `updatedAt DateTime @updatedAt`
+- [x] 关联 `Activity`
+- [x] 关联 `UserProfile`，relation name 建议 `ActivityRoomMessageSender`
+- [x] 在 `Activity` 上补 `roomMessages ActivityRoomMessage[]`
+- [x] 在 `UserProfile` 上补 `activityRoomMessages ActivityRoomMessage[]`
+- [x] 索引 `@@index([activityId, createdAt])`
+- [x] 索引 `@@index([senderId, createdAt])`
 
 边界：
 
 - [ ] 只给 Friemi 用户创建的组局/活动开放
 - [ ] 纯采集的 `PUBLIC_EVENT` 不直接开放群聊
 - [ ] 公共活动下创建的用户组局可以有群聊，群聊归属用户组局
-- [ ] v2.5 不加图片、回复、reaction、在线状态、已读回执、群聊未读红点
+- [x] v2.5 不加图片、回复、reaction、在线状态、已读回执、群聊未读红点
 
 #### UserAchievement
 
 用途：用户已解锁成就账本。
 
-- [ ] 新增模型 `UserAchievement`
-- [ ] `id String @id @default(cuid())`
-- [ ] `profileId String`
-- [ ] `achievementKey String`
-- [ ] `sourceType String?`
-- [ ] `sourceId String?`
-- [ ] `unlockedAt DateTime @default(now())`
-- [ ] `createdAt DateTime @default(now())`
-- [ ] 关联 `UserProfile`
-- [ ] 在 `UserProfile` 上补 `achievements UserAchievement[]`
-- [ ] 唯一键 `@@unique([profileId, achievementKey])`
-- [ ] 索引 `@@index([profileId, unlockedAt])`
-- [ ] 索引 `@@index([achievementKey, unlockedAt])`
+- [x] 新增模型 `UserAchievement`
+- [x] `id String @id @default(cuid())`
+- [x] `profileId String`
+- [x] `achievementKey String`
+- [x] `sourceType String?`
+- [x] `sourceId String?`
+- [x] `unlockedAt DateTime @default(now())`
+- [x] `createdAt DateTime @default(now())`
+- [x] 关联 `UserProfile`
+- [x] 在 `UserProfile` 上补 `achievements UserAchievement[]`
+- [x] 唯一键 `@@unique([profileId, achievementKey])`
+- [x] 索引 `@@index([profileId, unlockedAt])`
+- [x] 索引 `@@index([achievementKey, unlockedAt])`
 
 边界：
 
 - [ ] 成就定义先放代码常量，不建后台配置表
-- [ ] 同一用户同一成就只记录第一次解锁
+- [x] 同一用户同一成就只记录第一次解锁
 - [ ] source 只记录第一次解锁来源，重复触发不更新时间
 
 #### UserReferral
 
 用途：邀请归因。
 
-- [ ] 新增模型 `UserReferral`
-- [ ] `id String @id @default(cuid())`
-- [ ] `inviterId String`
-- [ ] `inviteeId String @unique`
-- [ ] `inviteCode String`
-- [ ] `source String?`
-- [ ] `registeredAt DateTime @default(now())`
-- [ ] `friendshipAcceptedAt DateTime?`
-- [ ] `firstParticipationAt DateTime?`
-- [ ] `createdAt DateTime @default(now())`
-- [ ] `updatedAt DateTime @updatedAt`
-- [ ] 关联邀请者 `UserProfile`，relation name 建议 `UserReferralInviter`
-- [ ] 关联被邀请者 `UserProfile`，relation name 建议 `UserReferralInvitee`
-- [ ] 在 `UserProfile` 上补 sent/received referral relations
-- [ ] 索引 `@@index([inviterId, createdAt])`
-- [ ] 索引 `@@index([inviteCode, createdAt])`
+- [x] 新增模型 `UserReferral`
+- [x] `id String @id @default(cuid())`
+- [x] `inviterId String`
+- [x] `inviteeId String @unique`
+- [x] `inviteCode String`
+- [x] `source String?`
+- [x] `registeredAt DateTime @default(now())`
+- [x] `friendshipAcceptedAt DateTime?`
+- [x] `firstParticipationAt DateTime?`
+- [x] `createdAt DateTime @default(now())`
+- [x] `updatedAt DateTime @updatedAt`
+- [x] 关联邀请者 `UserProfile`，relation name 建议 `UserReferralInviter`
+- [x] 关联被邀请者 `UserProfile`，relation name 建议 `UserReferralInvitee`
+- [x] 在 `UserProfile` 上补 sent/received referral relations
+- [x] 索引 `@@index([inviterId, createdAt])`
+- [x] 索引 `@@index([inviteCode, createdAt])`
 
 边界：
 
-- [ ] 一个新用户只能归因给一个邀请者
+- [x] 一个新用户只能归因给一个邀请者
 - [ ] 用户不能邀请自己
 - [ ] 邀请归因不自动创建好友关系
 - [ ] 成为好友时再补 `friendshipAcceptedAt`
@@ -163,21 +163,21 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 用途：Profile 访客记录。
 
-- [ ] 新增模型 `ProfileVisit`
-- [ ] `id String @id @default(cuid())`
-- [ ] `profileId String`
-- [ ] `visitorId String`
-- [ ] `visitDate DateTime @db.Date`
-- [ ] `viewCount Int @default(1)`
-- [ ] `lastVisitedAt DateTime @default(now())`
-- [ ] `createdAt DateTime @default(now())`
-- [ ] `updatedAt DateTime @updatedAt`
-- [ ] 关联被访问者 `UserProfile`，relation name 建议 `ProfileVisitTarget`
-- [ ] 关联访问者 `UserProfile`，relation name 建议 `ProfileVisitVisitor`
-- [ ] 在 `UserProfile` 上补 target/visitor visit relations
-- [ ] 唯一键 `@@unique([profileId, visitorId, visitDate])`
-- [ ] 索引 `@@index([profileId, lastVisitedAt])`
-- [ ] 索引 `@@index([visitorId, lastVisitedAt])`
+- [x] 新增模型 `ProfileVisit`
+- [x] `id String @id @default(cuid())`
+- [x] `profileId String`
+- [x] `visitorId String`
+- [x] `visitDate DateTime @db.Date`
+- [x] `viewCount Int @default(1)`
+- [x] `lastVisitedAt DateTime @default(now())`
+- [x] `createdAt DateTime @default(now())`
+- [x] `updatedAt DateTime @updatedAt`
+- [x] 关联被访问者 `UserProfile`，relation name 建议 `ProfileVisitTarget`
+- [x] 关联访问者 `UserProfile`，relation name 建议 `ProfileVisitVisitor`
+- [x] 在 `UserProfile` 上补 target/visitor visit relations
+- [x] 唯一键 `@@unique([profileId, visitorId, visitDate])`
+- [x] 索引 `@@index([profileId, lastVisitedAt])`
+- [x] 索引 `@@index([visitorId, lastVisitedAt])`
 
 边界：
 
@@ -190,40 +190,47 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 受保护页面：
 
-- [ ] `/:locale/profile/achievements(.*)`
-- [ ] `/:locale/profile/bag(.*)`
-- [ ] `/:locale/profile/shop(.*)`
-- [ ] `/:locale/profile/invite(.*)`
-- [ ] `/:locale/profile/visitors(.*)`
-- [ ] `/:locale/lobby/:activityId/room(.*)`
+- [x] `/:locale/profile/achievements(.*)`
+- [x] `/:locale/profile/bag(.*)`
+- [x] `/:locale/profile/shop(.*)`
+- [x] `/:locale/profile/invite(.*)`
+- [x] `/:locale/profile/visitors(.*)`
+- [x] `/:locale/lobby/:activityId/room(.*)`
 
 需要 matcher 覆盖的 API：
 
-- [ ] `/api/profile-visits(.*)`
-- [ ] `/api/referrals(.*)`，如果实现为 route handler
-- [ ] `/api/activity-room-chat(.*)`，如果实现为 route handler
+- [x] `/api/profile-visits(.*)`
+- [x] `/api/referrals(.*)`，如果实现为 route handler
+- [x] `/api/activity-room-chat(.*)`，如果实现为 route handler
 
 规则：
 
-- [ ] matcher 覆盖是为了让 `auth()` 正常工作，不等于所有 API 都强制跳登录
+- [x] matcher 覆盖是为了让 `auth()` 正常工作，不等于所有 API 都强制跳登录
 - [ ] `/api/profile-visits` 未登录时可以 no-op 返回 204
 - [ ] `/api/referrals` 写 cookie 可以允许游客，绑定归因必须登录
 - [ ] `/api/activity-room-chat` 读取和发送都必须登录并通过活动成员权限
 - [ ] 新 API 不返回 HTML redirect，未授权统一返回 JSON 错误或 204 no-op
-- [ ] `achievements / bag / shop / invite / visitors / hangouts / network` 不能被当作公开 profileId
+- [x] `achievements / bag / shop / invite / visitors / hangouts / network` 不能被当作公开 profileId
 
 ### 4.3 本 PR 验收标准
 
-- [ ] Prisma migration 可在已有数据的本地库执行
-- [ ] Prisma Client 已重新生成
-- [ ] `ActivityRoomMessage / UserAchievement / UserReferral / ProfileVisit` 表存在
-- [ ] 四张新表的唯一键和索引存在
-- [ ] middleware matcher 覆盖新增页面/API
-- [ ] 私有 Profile 子页不会被 `[profileId]` 捕获
-- [ ] 本 PR 不改用户可见 UI 行为
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `npm test --workspace=apps/web` 通过或明确记录尚未新增测试原因
-- [ ] `git diff --check` 通过
+- [x] Prisma migration 可在已有数据的本地库执行
+- [x] Prisma Client 已重新生成
+- [x] `ActivityRoomMessage / UserAchievement / UserReferral / ProfileVisit` 表存在
+- [x] 四张新表的唯一键和索引存在
+- [x] middleware matcher 覆盖新增页面/API
+- [x] 私有 Profile 子页不会被 `[profileId]` 捕获
+- [x] 本 PR 不改用户可见 UI 行为
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `npm test --workspace=apps/web` 通过或明确记录尚未新增测试原因
+- [x] `git diff --check` 通过
+
+记录：
+
+- 本地库已用非破坏性的 `prisma migrate deploy` 应用 `20260724100000_add_v2_5_data_foundation`。
+- 预览 target 库已用 `migration-backups/preview-db.env` 的 `TARGET_DIRECT_URL` 执行 `prisma migrate deploy`，当前无 pending migration。
+- 本地配置库和预览 target 库当前指向同一个 Supabase direct host；只读验证结果一致。
+- `prisma migrate dev` 当前被既有 drift 拦截：`20260717140000_add_planet_likes` 与库内索引/外键状态不一致；没有执行 reset。
 
 ## 5. P0-PR02 服务层与权限策略
 
