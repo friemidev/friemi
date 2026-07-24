@@ -1,4 +1,10 @@
-import type { ActivityStatus, ParticipantStatus, Prisma } from "@prisma/client";
+import type {
+  ActivityStatus,
+  ActivityType,
+  ActivityVisibility,
+  ParticipantStatus,
+  Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
@@ -11,6 +17,8 @@ export type ActivityRoomChatErrorCode =
   | "ACTIVITY_NOT_FOUND"
   | "PUBLIC_EVENT_UNAVAILABLE"
   | "NOT_ROOM_MEMBER"
+  | "PENDING_APPROVAL"
+  | "PARTICIPATION_UNAVAILABLE"
   | "ACTIVITY_CANCELLED"
   | "ACTIVITY_ENDED"
   | "EMPTY_BODY"
@@ -35,6 +43,7 @@ export type ActivityRoomMessageViewModel = {
   id: string;
   body: string;
   createdAt: string;
+  isDeleted: boolean;
   isMine: boolean;
   sender: {
     id: string;
@@ -44,8 +53,24 @@ export type ActivityRoomMessageViewModel = {
   };
 };
 
+export type ActivityRoomChatActivityViewModel = {
+  endAt: string | null;
+  id: string;
+  publicEventId: string | null;
+  startAt: string;
+  status: ActivityStatus;
+  title: string | null;
+  type: ActivityType;
+};
+
+export type ActivityRoomChatPageData = {
+  activity: ActivityRoomChatActivityViewModel | null;
+  messages: ActivityRoomMessageViewModel[];
+  policy: ActivityRoomChatPolicy;
+};
+
 type ResolveActivityRoomChatPolicyInput = {
-  activityType?: "PUBLIC_EVENT" | "USER_HOSTED" | "LOCAL" | "TRIP" | null;
+  activityType?: ActivityType | null;
   endAt?: Date | null;
   isCoManager?: boolean;
   isOrganizer?: boolean;
@@ -60,6 +85,7 @@ const messageSelect = {
   id: true,
   body: true,
   createdAt: true,
+  deletedAt: true,
   senderId: true,
   sender: {
     select: {
@@ -70,6 +96,29 @@ const messageSelect = {
     },
   },
 } satisfies Prisma.ActivityRoomMessageSelect;
+
+const activityRoomPageSelect = {
+  id: true,
+  endAt: true,
+  organizerId: true,
+  publicEventId: true,
+  startAt: true,
+  status: true,
+  title: true,
+  type: true,
+  visibility: true,
+} satisfies Prisma.ActivitySelect;
+
+type ActivityRoomActivityForView = {
+  endAt: Date | null;
+  id: string;
+  publicEventId: string | null;
+  startAt: Date;
+  status: ActivityStatus;
+  title: string;
+  type: ActivityType;
+  visibility: ActivityVisibility;
+};
 
 function normalizeActivityRoomMessageLimit(limit: number) {
   if (!Number.isFinite(limit)) {
@@ -129,6 +178,24 @@ export function resolveActivityRoomChatPolicy({
         : "NONE";
 
   if (role === "NONE") {
+    if (participantStatus === "PENDING") {
+      return {
+        canSend: false,
+        canView: false,
+        reason: "PENDING_APPROVAL",
+        role,
+      };
+    }
+
+    if (participantStatus === "REJECTED" || participantStatus === "CANCELLED") {
+      return {
+        canSend: false,
+        canView: false,
+        reason: "PARTICIPATION_UNAVAILABLE",
+        role,
+      };
+    }
+
     return {
       canSend: false,
       canView: false,
@@ -185,19 +252,53 @@ function mapActivityRoomMessage(
   }>,
   viewerProfileId: string,
 ): ActivityRoomMessageViewModel {
+  const isDeleted = Boolean(message.deletedAt);
+
   return {
     id: message.id,
-    body: message.body,
+    body: isDeleted ? "" : message.body,
     createdAt: message.createdAt.toISOString(),
+    isDeleted,
     isMine: message.senderId === viewerProfileId,
     sender: {
       id: message.sender.id,
       avatarUrl: message.sender.avatarUrl,
       friendCode: message.sender.friendCode,
       nickname:
-        message.sender.nickname.trim() || message.sender.friendCode || "NF",
+        message.sender.nickname.trim() || message.sender.friendCode || "Friemi",
     },
   };
+}
+
+function mapActivityRoomActivity(
+  activity: ActivityRoomActivityForView,
+  policy: ActivityRoomChatPolicy,
+): ActivityRoomChatActivityViewModel {
+  const canShowTitle = policy.canView || activity.visibility === "PUBLIC";
+
+  return {
+    endAt: activity.endAt?.toISOString() ?? null,
+    id: activity.id,
+    publicEventId: activity.publicEventId,
+    startAt: activity.startAt.toISOString(),
+    status: activity.status,
+    title: canShowTitle ? activity.title : null,
+    type: activity.type,
+  };
+}
+
+export function canDeleteActivityRoomMessage({
+  actorId,
+  isCoManager = false,
+  isOrganizer = false,
+  senderId,
+}: {
+  actorId: string;
+  isCoManager?: boolean;
+  isOrganizer?: boolean;
+  senderId: string;
+}) {
+  return actorId === senderId || isOrganizer || isCoManager;
 }
 
 async function getActivityRoomPolicy(
@@ -298,7 +399,6 @@ export async function getActivityRoomMessages(
   const messages = await prisma.activityRoomMessage.findMany({
     where: {
       activityId,
-      deletedAt: null,
     },
     orderBy: {
       createdAt: "desc",
@@ -310,6 +410,84 @@ export async function getActivityRoomMessages(
   return [...messages]
     .reverse()
     .map((message) => mapActivityRoomMessage(message, viewerProfileId));
+}
+
+export async function getActivityRoomChatPageData({
+  activityId,
+  limit = defaultActivityRoomMessageLimit,
+  now = new Date(),
+  viewerProfileId,
+}: {
+  activityId: string;
+  limit?: number;
+  now?: Date;
+  viewerProfileId: string;
+}): Promise<ActivityRoomChatPageData> {
+  const activity = await prisma.activity.findUnique({
+    where: {
+      id: activityId,
+    },
+    select: {
+      ...activityRoomPageSelect,
+      coManagers: {
+        where: {
+          managerProfileId: viewerProfileId,
+        },
+        select: {
+          id: true,
+        },
+        take: 1,
+      },
+      participants: {
+        where: {
+          userProfileId: viewerProfileId,
+        },
+        select: {
+          status: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  const policy = resolveActivityRoomChatPolicy({
+    activityType: activity?.type ?? null,
+    endAt: activity?.endAt ?? null,
+    isCoManager: Boolean(activity?.coManagers.length),
+    isOrganizer: activity?.organizerId === viewerProfileId,
+    now,
+    participantStatus: activity?.participants[0]?.status ?? null,
+    status: activity?.status ?? null,
+  });
+
+  if (!activity) {
+    return {
+      activity: null,
+      messages: [],
+      policy,
+    };
+  }
+
+  const messages = policy.canView
+    ? await prisma.activityRoomMessage.findMany({
+        where: {
+          activityId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: normalizeActivityRoomMessageLimit(limit),
+        select: messageSelect,
+      })
+    : [];
+
+  return {
+    activity: mapActivityRoomActivity(activity, policy),
+    messages: [...messages]
+      .reverse()
+      .map((message) => mapActivityRoomMessage(message, viewerProfileId)),
+    policy,
+  };
 }
 
 export async function sendActivityRoomMessage({
@@ -346,17 +524,20 @@ export async function sendActivityRoomMessage({
 }
 
 export async function deleteActivityRoomMessage({
+  activityId,
   actorId,
   messageId,
 }: {
+  activityId?: string;
   actorId: string;
   messageId: string;
 }) {
   return prisma.$transaction(async (tx) => {
     const message = await tx.activityRoomMessage.findFirst({
       where: {
-        id: messageId,
+        ...(activityId ? { activityId } : {}),
         deletedAt: null,
+        id: messageId,
       },
       select: {
         activityId: true,
@@ -382,10 +563,12 @@ export async function deleteActivityRoomMessage({
       throw new ActivityRoomChatDomainError("MESSAGE_NOT_FOUND");
     }
 
-    const canDelete =
-      message.senderId === actorId ||
-      message.activity.organizerId === actorId ||
-      message.activity.coManagers.length > 0;
+    const canDelete = canDeleteActivityRoomMessage({
+      actorId,
+      isCoManager: message.activity.coManagers.length > 0,
+      isOrganizer: message.activity.organizerId === actorId,
+      senderId: message.senderId,
+    });
 
     if (!canDelete) {
       throw new ActivityRoomChatDomainError("DELETE_FORBIDDEN");

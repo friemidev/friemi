@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ActivityRoomChatDomainError,
   activityRoomMessageMaxLength,
+  canDeleteActivityRoomMessage,
   normalizeActivityRoomMessageBody,
   resolveActivityRoomChatPolicy,
 } from "./activityRoomChat";
@@ -53,19 +54,27 @@ test("activity room chat rejects pending, rejected, cancelled and guest access",
     status: "RECRUITING" as const,
   };
 
-  for (const participantStatus of [
-    "PENDING",
-    "REJECTED",
-    "CANCELLED",
-  ] as const) {
-    const policy = resolveActivityRoomChatPolicy({
+  assert.equal(
+    resolveActivityRoomChatPolicy({
       ...base,
-      participantStatus,
-    });
-
-    assert.equal(policy.canView, false);
-    assert.equal(policy.reason, "NOT_ROOM_MEMBER");
-  }
+      participantStatus: "PENDING",
+    }).reason,
+    "PENDING_APPROVAL",
+  );
+  assert.equal(
+    resolveActivityRoomChatPolicy({
+      ...base,
+      participantStatus: "REJECTED",
+    }).reason,
+    "PARTICIPATION_UNAVAILABLE",
+  );
+  assert.equal(
+    resolveActivityRoomChatPolicy({
+      ...base,
+      participantStatus: "CANCELLED",
+    }).reason,
+    "PARTICIPATION_UNAVAILABLE",
+  );
 
   assert.equal(resolveActivityRoomChatPolicy(base).canView, false);
 });
@@ -119,5 +128,38 @@ test("activity room message body is trimmed and bounded", () => {
     (error) =>
       error instanceof ActivityRoomChatDomainError &&
       error.code === "BODY_TOO_LONG",
+  );
+});
+
+test("activity room message delete permission stays narrow", () => {
+  assert.equal(
+    canDeleteActivityRoomMessage({
+      actorId: "alice",
+      senderId: "alice",
+    }),
+    true,
+  );
+  assert.equal(
+    canDeleteActivityRoomMessage({
+      actorId: "host",
+      isOrganizer: true,
+      senderId: "alice",
+    }),
+    true,
+  );
+  assert.equal(
+    canDeleteActivityRoomMessage({
+      actorId: "manager",
+      isCoManager: true,
+      senderId: "alice",
+    }),
+    true,
+  );
+  assert.equal(
+    canDeleteActivityRoomMessage({
+      actorId: "bob",
+      senderId: "alice",
+    }),
+    false,
   );
 });

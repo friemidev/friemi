@@ -27,7 +27,6 @@ const isProtectedRoute = createRouteMatcher([
   "/:locale/friends(.*)",
   "/:locale/messages(.*)",
   "/:locale/notifications(.*)",
-  "/:locale/lobby/:activityId/room(.*)",
   "/:locale/profile/achievements(.*)",
   "/:locale/profile/bag(.*)",
   "/:locale/profile/hangouts(.*)",
@@ -48,9 +47,7 @@ const isDirectMessagesApiRoute = createRouteMatcher([
   "/api/direct-messages(.*)",
 ]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
-const isProfileVisitsApiRoute = createRouteMatcher([
-  "/api/profile-visits(.*)",
-]);
+const isProfileVisitsApiRoute = createRouteMatcher(["/api/profile-visits(.*)"]);
 const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);

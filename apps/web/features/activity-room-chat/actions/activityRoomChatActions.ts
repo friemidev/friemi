@@ -132,6 +132,7 @@ export async function deleteActivityRoomMessageAction(
     );
 
     await deleteActivityRoomMessage({
+      activityId: result.data.activityId,
       actorId: profile.id,
       messageId: result.data.messageId,
     });
