@@ -31,51 +31,51 @@ const colorPairs = [
 
 const planetCopy = {
   "zh-CN": {
-    chat: "星球群聊",
-    comments: "评论",
-    create: "创建星球",
-    createHint: "开始一条新的轨道",
-    creator: "创建人",
-    emptyChat: "还没有消息，和大家打个招呼吧。",
-    memberUnit: "位成员",
-    moment: "精彩瞬间",
-    orbit: "星球轨迹",
-    send: "输入消息...",
-    subtitle: "找到适合你的星球轨道",
-    title: "星际之间",
-    apply: "申请加入",
-    applied: "等待审核",
-    cancelRequest: "取消申请",
-    pendingNotice: "你的申请已提交，创建人审核通过后才能看到群聊并参与互动。",
-    joinNotice: "加入这个星球需要创建人审核，通过后才能看到群聊。",
-    pendingChatHint: "?????????",
-    pendingChatBody: "????????????????????????????????????",
-    joinChatHint: "??????????????",
-    joinChatBody: "????????????????????????????",
-    reviewTitle: "待审核申请",
-    reviewEmpty: "暂时没有新的申请。",
-    approve: "通过",
-    reject: "拒绝",
-    inviteLink: "邀请链接",
-    createLocked: "共创主理人可以创建并管理自己的星球。",
-    firstMoment: "还没有轨迹，发布第一条精彩瞬间吧。",
-    chatLocked: "审核通过后才能查看和参与群聊。",
-    backToSquare: "返回星球广场",
-    backToPlanet: "返回星球",
-    createTitle: "创建你的星球",
-    createSubtitle: "让兴趣、关系和灵感在这里相遇。",
-    nameLabel: "星球名称",
-    namePlaceholder: "例如：周末桌游星球",
-    descriptionLabel: "星球介绍",
-    descriptionPlaceholder: "告诉大家这个星球会发生什么。",
-    tagsLabel: "标签",
-    tagsPlaceholder: "桌游，周末，新手友好",
-    createButton: "创建并进入星球",
-    momentLabel: "精彩瞬间",
-    danmaku: "弹幕",
-    danmakuPlaceholder: "发布弹幕...",
-    delete: "删除",
-    planetMoment: "星球精彩瞬间",
+    chat: "\u661f\u7403\u7fa4\u804a",
+    comments: "\u8bc4\u8bba",
+    create: "\u521b\u5efa\u661f\u7403",
+    createHint: "\u5f00\u59cb\u4e00\u6761\u65b0\u7684\u8f68\u9053",
+    creator: "\u521b\u5efa\u4eba",
+    emptyChat: "\u8fd8\u6ca1\u6709\u6d88\u606f\uff0c\u548c\u5927\u5bb6\u6253\u4e2a\u62db\u547c\u5427\u3002",
+    memberUnit: "\u4f4d\u6210\u5458",
+    moment: "\u7cbe\u5f69\u77ac\u95f4",
+    orbit: "\u661f\u7403\u8f68\u8ff9",
+    send: "\u8f93\u5165\u6d88\u606f...",
+    subtitle: "\u627e\u5230\u9002\u5408\u4f60\u7684\u661f\u7403\u8f68\u9053",
+    title: "\u661f\u9645\u4e4b\u95f4",
+    apply: "\u7533\u8bf7\u52a0\u5165",
+    applied: "\u7b49\u5f85\u5ba1\u6838",
+    cancelRequest: "\u53d6\u6d88\u7533\u8bf7",
+    pendingNotice: "\u4f60\u7684\u7533\u8bf7\u5df2\u63d0\u4ea4\uff0c\u521b\u5efa\u4eba\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u5e76\u53c2\u4e0e\u4e92\u52a8\u3002",
+    joinNotice: "\u52a0\u5165\u8fd9\u4e2a\u661f\u7403\u9700\u8981\u521b\u5efa\u4eba\u5ba1\u6838\uff0c\u901a\u8fc7\u540e\u624d\u80fd\u770b\u5230\u7fa4\u804a\u3002",
+    pendingChatHint: "\u7b49\u5f85\u901a\u8fc7",
+    pendingChatBody: "\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u53ef\u4ee5\u5728\u8fd9\u91cc\u770b\u5230\u7fa4\u804a\uff0c\u4e5f\u80fd\u4e00\u8d77\u804a\u5929\u4e86\u3002",
+    joinChatHint: "\u901a\u8fc7\u540e\u53ef\u89c1",
+    joinChatBody: "\u7533\u8bf7\u901a\u8fc7\u540e\uff0c\u5c31\u80fd\u5728\u8fd9\u91cc\u804a\u5929\u3002",
+    reviewTitle: "\u5f85\u5ba1\u6838\u7533\u8bf7",
+    reviewEmpty: "\u6682\u65f6\u6ca1\u6709\u65b0\u7684\u7533\u8bf7\u3002",
+    approve: "\u901a\u8fc7",
+    reject: "\u62d2\u7edd",
+    inviteLink: "\u9080\u8bf7\u94fe\u63a5",
+    createLocked: "\u5171\u521b\u4e3b\u7406\u4eba\u53ef\u4ee5\u521b\u5efa\u5e76\u7ba1\u7406\u81ea\u5df1\u7684\u661f\u7403\u3002",
+    firstMoment: "\u8fd8\u6ca1\u6709\u8f68\u8ff9\uff0c\u53d1\u5e03\u7b2c\u4e00\u6761\u7cbe\u5f69\u77ac\u95f4\u5427\u3002",
+    chatLocked: "\u5ba1\u6838\u901a\u8fc7\u540e\u624d\u80fd\u67e5\u770b\u548c\u53c2\u4e0e\u7fa4\u804a\u3002",
+    backToSquare: "\u8fd4\u56de\u661f\u7403\u5e7f\u573a",
+    backToPlanet: "\u8fd4\u56de\u661f\u7403",
+    createTitle: "\u521b\u5efa\u4f60\u7684\u661f\u7403",
+    createSubtitle: "\u8ba9\u5174\u8da3\u3001\u5173\u7cfb\u548c\u7075\u611f\u5728\u8fd9\u91cc\u76f8\u9047\u3002",
+    nameLabel: "\u661f\u7403\u540d\u79f0",
+    namePlaceholder: "\u4f8b\u5982\uff1a\u5468\u672b\u684c\u6e38\u661f\u7403",
+    descriptionLabel: "\u661f\u7403\u4ecb\u7ecd",
+    descriptionPlaceholder: "\u544a\u8bc9\u5927\u5bb6\u8fd9\u4e2a\u661f\u7403\u4f1a\u53d1\u751f\u4ec0\u4e48\u3002",
+    tagsLabel: "\u6807\u7b7e",
+    tagsPlaceholder: "\u684c\u6e38\uff0c\u5468\u672b\uff0c\u65b0\u624b\u53cb\u597d",
+    createButton: "\u521b\u5efa\u5e76\u8fdb\u5165\u661f\u7403",
+    momentLabel: "\u7cbe\u5f69\u77ac\u95f4",
+    danmaku: "\u5f39\u5e55",
+    danmakuPlaceholder: "\u53d1\u5e03\u5f39\u5e55...",
+    delete: "\u5220\u9664",
+    planetMoment: "\u661f\u7403\u7cbe\u5f69\u77ac\u95f4",
   },
   en: {
     chat: "Planet chat",
@@ -95,9 +95,9 @@ const planetCopy = {
     cancelRequest: "Cancel request",
     pendingNotice: "Your request is pending. You can view the chat after the creator approves it.",
     joinNotice: "Joining this planet requires creator approval before chat becomes visible.",
-    pendingChatHint: "Status: pending review",
+    pendingChatHint: "Pending approval",
     pendingChatBody: "Once the creator approves you, the messages and composer will appear here automatically.",
-    joinChatHint: "Status: approved members only",
+    joinChatHint: "Join to view chat",
     joinChatBody: "Send a join request first. After approval, you will be able to read and join the chat.",
     reviewTitle: "Pending requests",
     reviewEmpty: "No pending requests right now.",
@@ -125,47 +125,51 @@ const planetCopy = {
     planetMoment: "Planet moment",
   },
   fr: {
-    chat: "Discussion de la planète",
+    chat: "Discussion de la planete",
     comments: "Commentaires",
-    create: "Créer une planète",
+    create: "Creer une planete",
     createHint: "Lancer une nouvelle orbite",
-    creator: "Créateur",
-    emptyChat: "Aucun message. Dites bonjour à la planète.",
+    creator: "Createur",
+    emptyChat: "Aucun message. Dites bonjour a la planete.",
     memberUnit: "membres",
     moment: "Moments",
-    orbit: "Trajectoire de la planète",
-    send: "Écrire un message...",
+    orbit: "Trajectoire de la planete",
+    send: "Ecrire un message...",
     subtitle: "Trouvez l'orbite qui vous ressemble",
-    title: "Entre planètes",
-    apply: "Demander à rejoindre",
+    title: "Entre planetes",
+    apply: "Demander a rejoindre",
     applied: "En attente",
     cancelRequest: "Annuler la demande",
-    pendingNotice: "Votre demande est en attente. Le chat sera visible après validation du créateur.",
-    joinNotice: "Rejoindre cette planète nécessite l'accord du créateur avant d'accéder au chat.",
+    pendingNotice: "Votre demande est en attente. Le chat sera visible apres validation du createur.",
+    joinNotice: "Rejoindre cette planete necessite l'accord du createur avant d'acceder au chat.",
+    pendingChatHint: "En attente de validation",
+    pendingChatBody: "Des que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici.",
+    joinChatHint: "Rejoignez la planete",
+    joinChatBody: "Commencez par envoyer une demande. Apres validation, vous pourrez lire et rejoindre le chat.",
     reviewTitle: "Demandes en attente",
     reviewEmpty: "Aucune nouvelle demande pour le moment.",
     approve: "Valider",
     reject: "Refuser",
     inviteLink: "Lien d'invitation",
-    createLocked: "Les co-créateurs peuvent créer et gérer leurs propres planètes.",
+    createLocked: "Les co-createurs peuvent creer et gerer leurs propres planetes.",
     firstMoment: "Pas encore de trajectoire. Partagez le premier moment.",
-    chatLocked: "Le chat devient disponible après validation.",
-    backToSquare: "Retour aux planètes",
-    backToPlanet: "Retour à la planète",
-    createTitle: "Créer votre planète",
-    createSubtitle: "Faites se rencontrer intérêts, relations et inspirations.",
-    nameLabel: "Nom de la planète",
+    chatLocked: "Le chat devient disponible apres validation.",
+    backToSquare: "Retour aux planetes",
+    backToPlanet: "Retour a la planete",
+    createTitle: "Creer votre planete",
+    createSubtitle: "Faites se rencontrer interets, relations et inspirations.",
+    nameLabel: "Nom de la planete",
     namePlaceholder: "Exemple : Jeux du week-end",
     descriptionLabel: "Description",
-    descriptionPlaceholder: "Expliquez ce que l'on trouve sur cette planète.",
+    descriptionPlaceholder: "Expliquez ce que l'on trouve sur cette planete.",
     tagsLabel: "Tags",
-    tagsPlaceholder: "jeux, week-end, débutants",
-    createButton: "Créer la planète",
+    tagsPlaceholder: "jeux, week-end, debutants",
+    createButton: "Creer la planete",
     momentLabel: "Moments",
     danmaku: "Commentaires",
-    danmakuPlaceholder: "Écrire un commentaire...",
+    danmakuPlaceholder: "Ecrire un commentaire...",
     delete: "Supprimer",
-    planetMoment: "Moment de la planète",
+    planetMoment: "Moment de la planete",
   },
 } as const;
 
@@ -259,7 +263,7 @@ export function PlanetSquarePage({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-[#d9d4b5] p-8 text-center text-sm text-[#7e827d]">
-          还没有星球，成为第一个创建它的人吧。
+          杩樻病鏈夋槦鐞冿紝鎴愪负绗竴涓垱寤哄畠鐨勪汉鍚с€?
         </div>
       )}
       {canCreate ? (
@@ -373,7 +377,7 @@ function MomentOrbitCard({
           <span className="h-full w-full rounded-full border border-white/50 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,.7),transparent_28%),linear-gradient(145deg,transparent_45%,rgba(20,55,42,.2)_46%_56%,transparent_57%)]" />
         )}
       </span>
-      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">{moment.content.slice(0, 4) || "··"}</span>
+      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">{moment.content.slice(0, 4) || "路路"}</span>
     </Link>
   );
 }
@@ -386,7 +390,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
   const inviteUrl = buildCanonicalSiteUrl(withLocale(locale, `/planets/invite/${planet.inviteCode}`));
   const pendingChatHint = locale === "fr" ? "En attente de validation" : locale === "en" ? "Pending approval" : "\u7b49\u5f85\u901a\u8fc7";
   const pendingChatBody = locale === "fr"
-    ? "D?s que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici."
+    ? "Des que le createur valide votre demande, les messages et la zone d'ecriture apparaissent ici."
     : locale === "en"
       ? "Once the creator approves you, the messages and composer will appear here automatically."
       : "\u521b\u5efa\u4eba\u901a\u8fc7\u540e\uff0c\u4f60\u5c31\u53ef\u4ee5\u5728\u8fd9\u91cc\u770b\u5230\u7fa4\u804a\uff0c\u4e5f\u80fd\u4e00\u8d77\u804a\u5929\u4e86\u3002";
@@ -412,7 +416,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">🪐</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">馃獝</span>
             <div className="min-w-0">
               <h1 className="truncate text-sm font-black">{getPlanetName(planet, locale)}</h1>
               <p className="text-[10px] text-[#7d877e]">
@@ -498,6 +502,11 @@ export function PlanetMomentPage({ locale, moment }: { locale: string; moment: P
   const copy = getPlanetCopy(locale);
   const photoUrls = moment.imageUrls.slice(0, 12);
   const canInteract = moment.viewerMembership?.status === "APPROVED";
+  const danmakuDisabledHint = locale === "fr"
+    ? "Rejoignez cette planete et attendez la validation pour envoyer un commentaire."
+    : locale === "en"
+      ? "Join this planet and wait for approval before sending a comment."
+      : "加入星球并通过审核后，才可以发送弹幕。";
 
   return (
     <PageShell>
@@ -538,30 +547,21 @@ export function PlanetMomentPage({ locale, moment }: { locale: string; moment: P
             </form>
           ) : null}
         </article>
-        <section className="mt-5">
-          <h2 className="text-sm font-black">
-            {copy.danmaku} {moment.comments.length}
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {moment.comments.map((comment) => (
-              <div className="max-w-full rounded-full bg-[#eef4eb] px-3 py-2 text-xs font-bold text-[#245f43]" key={comment.id}>
-                {comment.author.nickname}：{comment.content}
-              </div>
-            ))}
-          </div>
-          {canInteract ? (
-            <form action={createPlanetMomentCommentAction} className="mt-4 flex gap-2">
-              <input name="locale" type="hidden" value={locale} />
-              <input name="planetId" type="hidden" value={moment.planet.id} />
-              <input name="planetSlug" type="hidden" value={moment.planet.slug} />
-              <input name="momentId" type="hidden" value={moment.id} />
-              <input className="min-w-0 flex-1 rounded-full bg-white px-4 py-2 text-sm outline-none" maxLength={1000} name="content" placeholder={copy.danmakuPlaceholder} required />
-              <button aria-label={copy.danmaku} className="rounded-full bg-[#246c4b] p-2 text-white" type="submit">
-                <Send className="h-4 w-4" />
-              </button>
-            </form>
+        <div className="mt-5">
+          <form action={createPlanetMomentCommentAction} className="flex gap-2 rounded-[1.4rem] border border-[#e7e0d5] bg-[#fffefa] p-2 shadow-[0_10px_24px_rgba(54,47,35,0.06)]">
+            <input name="locale" type="hidden" value={locale} />
+            <input name="planetId" type="hidden" value={moment.planet.id} />
+            <input name="planetSlug" type="hidden" value={moment.planet.slug} />
+            <input name="momentId" type="hidden" value={moment.id} />
+            <input className="min-w-0 flex-1 rounded-full bg-[#f7f3ec] px-4 py-3 text-sm outline-none placeholder:text-[#9aa29b] disabled:cursor-not-allowed disabled:opacity-65" disabled={!canInteract} maxLength={1000} name="content" placeholder={copy.danmakuPlaceholder} required />
+            <button aria-label={copy.danmaku} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#246c4b] text-white disabled:cursor-not-allowed disabled:opacity-55" disabled={!canInteract} type="submit">
+              <Send className="h-4 w-4" />
+            </button>
+          </form>
+          {!canInteract ? (
+            <p className="mt-2 px-2 text-xs font-semibold text-[#8b8578]">{danmakuDisabledHint}</p>
           ) : null}
-        </section>
+        </div>
       </section>
     </PageShell>
   );
