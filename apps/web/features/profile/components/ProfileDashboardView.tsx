@@ -55,7 +55,7 @@ import {
 } from "./ProfileActivitySections";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
-import { ProfilePublicAchievementWall } from "./ProfilePublicAchievementWall";
+import { ProfileAchievementBadgeStrip } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
 import {
@@ -513,7 +513,7 @@ function ProfileFeatureLink({
   href: string;
   icon: LucideIcon;
   label: string;
-  status: string;
+  status?: string;
   tone?: "green" | "pink" | "blue" | "gold";
 }) {
   const toneClass =
@@ -537,9 +537,11 @@ function ProfileFeatureLink({
         )}
       >
         <Icon className="h-[1.125rem] w-[1.125rem]" />
-        <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-[#FEFFF9] px-1.5 text-[9px] font-black leading-none text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
-          <span className="truncate">{status}</span>
-        </span>
+        {status ? (
+          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-[#FEFFF9] px-1.5 text-[9px] font-black leading-none text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
+            <span className="truncate">{status}</span>
+          </span>
+        ) : null}
       </span>
       <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
         {label}
@@ -886,6 +888,12 @@ function PublicMobileProfileHome({
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
               ) : null}
+              <ProfileAchievementBadgeStrip
+                className="min-w-0 shrink-0"
+                items={publicAchievements}
+                limit={3}
+                locale={locale}
+              />
             </div>
             {profile.friendCode ? (
               <p className="mt-1 text-xs font-bold text-[#6C746A]">
@@ -911,7 +919,7 @@ function PublicMobileProfileHome({
           </div>
         </div>
 
-        <div className="mt-7 border-b border-[#E3DCC5] pb-5">
+        <div className="mt-5 border-b border-[#E3DCC5] pb-5">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[26px] font-black leading-none text-[#A57AEB]">
@@ -946,10 +954,6 @@ function PublicMobileProfileHome({
             className="mt-3"
             gifts={dashboard.recentCharmGifts}
             label={copy.recentGifts}
-          />
-          <ProfilePublicAchievementWall
-            items={publicAchievements}
-            locale={locale}
           />
         </div>
       </section>
@@ -1135,11 +1139,13 @@ function SelfMobileProfileHome({
   locale,
   profile,
   profileInitial,
+  publicAchievements,
 }: {
   dashboard: ProfileDashboardViewModel;
   locale: string;
   profile: PublicProfileViewModel;
   profileInitial: string;
+  publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
@@ -1272,21 +1278,31 @@ function SelfMobileProfileHome({
             />
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
-              {profile.nickname}
-            </h2>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+                {profile.nickname}
+              </h2>
+              <ProfileAchievementBadgeStrip
+                className="min-w-0 shrink-0"
+                items={publicAchievements}
+                limit={3}
+                locale={locale}
+              />
+            </div>
             {profile.friendCode ? (
-              <button
-                className="mt-0.5 inline-flex items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
-                onClick={copyFriendCode}
-                type="button"
-              >
-                <span>{profile.friendCode}</span>
-                <Copy className="h-3.5 w-3.5" />
-                <span className="tracking-normal">
-                  {copied ? copy.copied : copy.copyCode}
-                </span>
-              </button>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                <button
+                  className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
+                  onClick={copyFriendCode}
+                  type="button"
+                >
+                  <span>{profile.friendCode}</span>
+                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                  <span className="tracking-normal">
+                    {copied ? copy.copied : copy.copyCode}
+                  </span>
+                </button>
+              </div>
             ) : null}
             <MobileProfileBioEditor
               bio={profile.bio}
@@ -1337,14 +1353,12 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/invite")}
           icon={UserRoundPlus}
           label={copy.invite}
-          status={profile.friendCode ?? copy.available}
           tone="pink"
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/visitors")}
           icon={Eye}
           label={copy.visitors}
-          status={copy.available}
           tone="blue"
         />
         <ProfileFeatureLink
@@ -1362,7 +1376,6 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
-          status={copy.available}
           tone="gold"
         />
         <ComingSoonFeature icon={Gift} label={copy.giftWall} soon={copy.soon} />
@@ -1506,6 +1519,7 @@ export function ProfileDashboardView({
             locale={locale}
             profile={profile}
             profileInitial={profileInitial}
+            publicAchievements={publicAchievements}
           />
         ) : (
           <PublicMobileProfileHome
@@ -1548,9 +1562,17 @@ export function ProfileDashboardView({
                     <p className="text-sm font-medium text-moss">
                       {t.profile.title}
                     </p>
-                    <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
-                      {profile.nickname}
-                    </h1>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                      <h1 className="truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
+                        {profile.nickname}
+                      </h1>
+                      <ProfileAchievementBadgeStrip
+                        className="min-w-0 shrink-0"
+                        items={publicAchievements}
+                        limit={3}
+                        locale={locale}
+                      />
+                    </div>
                     {profile.isCoCreator ? (
                       <CoCreatorIdentityBadge
                         className="mt-2"
@@ -1638,9 +1660,17 @@ export function ProfileDashboardView({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
                     {t.profile.title}
                   </p>
-                  <h1 className="mt-0.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-1 sm:text-3xl">
-                    {profile.nickname}
-                  </h1>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2 sm:mt-1">
+                    <h1 className="truncate text-xl font-semibold tracking-normal text-ink sm:text-3xl">
+                      {profile.nickname}
+                    </h1>
+                    <ProfileAchievementBadgeStrip
+                      className="min-w-0 shrink-0"
+                      items={publicAchievements}
+                      limit={3}
+                      locale={locale}
+                    />
+                  </div>
                   {profile.isCoCreator ? (
                     <CoCreatorIdentityBadge className="mt-2" locale={locale} />
                   ) : null}
@@ -1716,10 +1746,6 @@ export function ProfileDashboardView({
                   className="border-t border-[#D6D5B2]/45 pt-2"
                   gifts={dashboard.recentCharmGifts}
                   label={mobileCopy.recentGifts}
-                />
-                <ProfilePublicAchievementWall
-                  items={publicAchievements}
-                  locale={locale}
                 />
               </div>
             </div>

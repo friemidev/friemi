@@ -17,7 +17,6 @@ import {
   Music2,
   Palette,
   Plane,
-  Plus,
   Rows3,
   Sprout,
   Utensils,
@@ -66,7 +65,6 @@ type MobileLobbyV23CategoryFilterOption = {
 };
 
 type MobileLobbyV23Copy = {
-  create: string;
   emptyDescription: string;
   emptyTitle: string;
   friendEmptyTitle: string;
@@ -193,7 +191,6 @@ function isFreeMobileLobbyActivity(activity: ActivityCardViewModel) {
 function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
   if (locale === "fr") {
     return {
-      create: "Créer",
       emptyDescription: "Les nouvelles sorties apparaîtront ici.",
       emptyTitle: "Aucun groupe pour le moment",
       friendEmptyTitle: "Aucune sortie d'amis",
@@ -217,7 +214,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
 
   if (locale === "en") {
     return {
-      create: "Create",
       emptyDescription: "Fresh hangouts will appear here.",
       emptyTitle: "No hangouts yet",
       friendEmptyTitle: "No friend hangouts yet",
@@ -239,7 +235,6 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
   }
 
   return {
-    create: "发布",
     emptyDescription: "新的组局会显示在这里。",
     emptyTitle: "暂时没有组局",
     friendEmptyTitle: "暂无好友组局",
@@ -801,13 +796,6 @@ export function MobileLobbyV23View({
                 {activeCategoryLabel}
               </span>
             </button>
-            <Link
-              href={withLocale(locale, "/activities/new")}
-              className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#096B45] text-white shadow-[0_14px_28px_rgba(9,107,69,0.22)]"
-              aria-label={copy.create}
-            >
-              <Plus className="h-5 w-5" strokeWidth={2.7} />
-            </Link>
           </div>
         </div>
 

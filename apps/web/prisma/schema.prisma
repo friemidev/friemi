@@ -267,6 +267,7 @@ model UserProfile {
   activityRoomMessages    ActivityRoomMessage[]        @relation("ActivityRoomMessageSender")
   deletedRoomMessages     ActivityRoomMessage[]        @relation("ActivityRoomMessageDeletedBy")
   achievements            UserAchievement[]
+  equippedAchievements    UserEquippedAchievement[]
   sentReferrals           UserReferral[]               @relation("UserReferralInviter")
   receivedReferral        UserReferral?                @relation("UserReferralInvitee")
   profileVisitsReceived   ProfileVisit[]               @relation("ProfileVisitTarget")
@@ -684,6 +685,21 @@ model UserAchievement {
   @@unique([profileId, achievementKey])
   @@index([profileId, unlockedAt])
   @@index([achievementKey, unlockedAt])
+}
+
+model UserEquippedAchievement {
+  id             String      @id @default(cuid())
+  profileId      String
+  achievementKey String
+  sortOrder      Int         @default(0)
+  profile        UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([profileId, achievementKey])
+  @@unique([profileId, sortOrder])
+  @@index([profileId, sortOrder])
+  @@index([achievementKey])
 }
 
 model UserReferral {

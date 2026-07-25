@@ -31,6 +31,7 @@ import {
   Ticket,
   UserRoundPlus,
   UsersRound,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { brand } from "@/lib/brand";
@@ -38,18 +39,43 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import {
+  sendCharmGiftAction,
+  type SendCharmGiftState,
+} from "@/features/charm/actions/sendCharmGift";
+import {
+  toggleEquippedAchievementAction,
+  type ToggleEquippedAchievementState,
+} from "@/features/achievements/actions/equippedAchievementActions";
+import { maxEquippedAchievementCount } from "@/features/achievements/achievementCatalog";
+import {
   redeemBlindBoxCheckAction,
   type RedeemBlindBoxCheckState,
 } from "@/features/charm/actions/redeemBlindBoxCheck";
+import {
+  bindReferralCodeAction,
+  type ReferralActionState,
+} from "@/features/referrals/actions/referralActions";
 import type { UserAchievementProgressItem } from "@/features/achievements/queries/getUserAchievements";
 import type {
   ProfileBagCheckItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
+import type { ProfileShopGiftRecipient } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
+import { ProfileAchievementIcon } from "./ProfilePublicAchievementWall";
 
 type ReferralStatsViewModel = {
+  boundReferral: {
+    id: string;
+    createdAt: string;
+    inviter: {
+      id: string;
+      avatarUrl: string | null;
+      friendCode: string | null;
+      nickname: string;
+    };
+  } | null;
   firstParticipationCount: number;
   friendshipAcceptedCount: number;
   invitedCount: number;
@@ -82,12 +108,17 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyDescription:
           "Participez à des sorties, organisez-en et complétez votre profil pour débloquer des badges.",
         emptyTitle: "Aucun badge débloqué",
+        equip: "Porter",
+        equipped: "Porté",
+        equipLimit: "3 max",
         locked: "Verrouillé",
         progress: "Progression",
         recent: "Récents",
+        saving: "Envoi...",
         subtitle: "Badges visibles sur votre profil public.",
         title: "Badges",
         unlocked: "Débloqués",
+        worn: "Portés",
       },
       achievementGroups: {
         identity: "Identité",
@@ -140,10 +171,23 @@ function getProfilePrivateSubpageCopy(locale: string) {
       errorTitle: "Chargement incomplet",
       invite: {
         accepted: "Devenus amis",
+        alreadyBound: "Déjà lié",
+        bindDescription:
+          "Entrez le code ami de la personne qui vous a invité.",
+        bindErrorAlready: "Une invitation est déjà liée.",
+        bindErrorInvalid: "Code invalide.",
+        bindErrorMissing: "Aucun profil trouvé.",
+        bindErrorSelf: "Utilisez le code d'un ami.",
+        bindPlaceholder: "Code à 6 chiffres",
+        bindSubmit: "Valider",
+        bindSuccess: "Invitation liée",
+        bindTitle: "Code reçu",
+        binding: "Envoi...",
         emptyDescription: "Vos invitations acceptées apparaîtront ici.",
         emptyTitle: "Aucune invitation pour le moment",
         firstJoined: "Première sortie",
         invited: "Invités",
+        inviterLabel: "Invité par",
         linkUnavailable: "Code d'invitation indisponible",
         share: "Partager",
         shareText: "Rejoins-moi sur Friemi.",
@@ -153,17 +197,20 @@ function getProfilePrivateSubpageCopy(locale: string) {
       loading: "Chargement",
       shop: {
         available: "Ouvert",
+        chooseFriend: "Choisir un ami",
         charm: "Charm",
-        detail: "Détail",
+        close: "Fermer",
         emptyDescription:
           "La boutique affichera les cadeaux, chèques et objets échangeables après ouverture.",
         emptyTitle: "Boutique en préparation",
         giftCatalog: "Cadeaux",
-        price: "Prix",
-        pricePending: "Coins bientôt",
+        noFriends: "Ajoutez un ami pour offrir un cadeau.",
         seasonalLocked: "Événement",
-        sendEntry: "Amis",
-        subtitle: "Un espace léger pour les cadeaux Friemi.",
+        send: "Envoyer",
+        sendEntry: "Offrir",
+        sending: "Envoi...",
+        sent: "Cadeau envoyé",
+        subtitle: "Cadeaux Friemi.",
         title: "Boutique",
       },
       visitors: {
@@ -188,12 +235,17 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyDescription:
           "Join hangouts, host events, and complete your profile to unlock badges.",
         emptyTitle: "No badges unlocked",
+        equip: "Wear",
+        equipped: "Worn",
+        equipLimit: "3 max",
         locked: "Locked",
         progress: "Progress",
         recent: "Recent",
+        saving: "Saving...",
         subtitle: "Badges shown on your public profile.",
         title: "Badges",
         unlocked: "Unlocked",
+        worn: "Worn",
       },
       achievementGroups: {
         identity: "Identity",
@@ -246,10 +298,22 @@ function getProfilePrivateSubpageCopy(locale: string) {
       errorTitle: "Could not load everything",
       invite: {
         accepted: "Became friends",
+        alreadyBound: "Linked",
+        bindDescription: "Enter the friend code from the person who invited you.",
+        bindErrorAlready: "An invitation is already linked.",
+        bindErrorInvalid: "Invalid code.",
+        bindErrorMissing: "No profile found.",
+        bindErrorSelf: "Use a friend's code.",
+        bindPlaceholder: "6-digit code",
+        bindSubmit: "Link",
+        bindSuccess: "Invitation linked",
+        bindTitle: "Got a code",
+        binding: "Linking...",
         emptyDescription: "Accepted invitations will appear here.",
         emptyTitle: "No invitations yet",
         firstJoined: "First joined",
         invited: "Invited",
+        inviterLabel: "Invited by",
         linkUnavailable: "Invite code unavailable",
         share: "Share",
         shareText: "Join me on Friemi.",
@@ -259,17 +323,20 @@ function getProfilePrivateSubpageCopy(locale: string) {
       loading: "Loading",
       shop: {
         available: "Open",
+        chooseFriend: "Choose a friend",
         charm: "Charm",
-        detail: "Detail",
+        close: "Close",
         emptyDescription:
           "The shop will show gifts, checks, and exchangeable items once opened.",
         emptyTitle: "Shop is preparing",
         giftCatalog: "Gifts",
-        price: "Price",
-        pricePending: "Coins soon",
+        noFriends: "Add a friend to send a gift.",
         seasonalLocked: "Event",
-        sendEntry: "Friends",
-        subtitle: "A lightweight Friemi gift space.",
+        send: "Send",
+        sendEntry: "Send gift",
+        sending: "Sending...",
+        sent: "Gift sent",
+        subtitle: "Friemi gifts.",
         title: "Shop",
       },
       visitors: {
@@ -292,12 +359,17 @@ function getProfilePrivateSubpageCopy(locale: string) {
     achievements: {
       emptyDescription: "参与组局、发起活动、完善资料后会逐步解锁。",
       emptyTitle: "暂未解锁成就",
+      equip: "佩戴",
+      equipped: "已佩戴",
+      equipLimit: "最多 3 个",
       locked: "未解锁",
       progress: "进度",
       recent: "最近解锁",
+      saving: "保存中...",
       subtitle: "公开展示在个人主页的轻量荣誉墙。",
       title: "成就",
       unlocked: "已解锁",
+      worn: "佩戴",
     },
     achievementGroups: {
       identity: "身份",
@@ -349,10 +421,22 @@ function getProfilePrivateSubpageCopy(locale: string) {
     errorTitle: "部分内容加载失败",
     invite: {
       accepted: "成为好友",
+      alreadyBound: "已绑定",
+      bindDescription: "输入邀请你的人的好友号。",
+      bindErrorAlready: "已经绑定过邀请人。",
+      bindErrorInvalid: "好友号无效。",
+      bindErrorMissing: "没有找到这个好友号。",
+      bindErrorSelf: "不能填写自己的好友号。",
+      bindPlaceholder: "6 位好友号",
+      bindSubmit: "确认绑定",
+      bindSuccess: "已绑定邀请人",
+      bindTitle: "填写邀请人",
+      binding: "绑定中...",
       emptyDescription: "通过你的邀请码加入的新朋友会显示在这里。",
       emptyTitle: "暂时没有邀请记录",
       firstJoined: "首次参与",
       invited: "已邀请",
+      inviterLabel: "邀请人",
       linkUnavailable: "邀请码暂不可用",
       share: "分享",
       shareText: "来 Friemi 和我一起组局。",
@@ -362,16 +446,19 @@ function getProfilePrivateSubpageCopy(locale: string) {
     loading: "加载中",
     shop: {
       available: "可送",
+      chooseFriend: "选择好友",
       charm: "魅力",
-      detail: "详情",
+      close: "关闭",
       emptyDescription: "礼物、支票和可兑换物品上线后会显示在这里。",
       emptyTitle: "商城准备中",
-      giftCatalog: "礼物目录",
-      price: "价格",
-      pricePending: "Coins 待定",
+      giftCatalog: "礼物",
+      noFriends: "添加好友后可以送礼。",
       seasonalLocked: "节日开放",
+      send: "送出",
       sendEntry: "去送礼",
-      subtitle: "轻量的 Friemi 礼物空间。",
+      sending: "送出中...",
+      sent: "礼物已送出",
+      subtitle: "Friemi 礼物。",
       title: "商城",
     },
     visitors: {
@@ -474,6 +561,13 @@ async function writeTextToClipboard(value: string) {
   }
 }
 
+function createShopGiftAttemptId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
 function Avatar({
   avatarUrl,
   name,
@@ -507,6 +601,7 @@ export function ProfilePrivatePageShell({
   icon: Icon,
   locale,
   right,
+  showIntro = true,
   subtitle,
   title,
   tone = "green",
@@ -515,6 +610,7 @@ export function ProfilePrivatePageShell({
   icon: LucideIcon;
   locale: string;
   right?: React.ReactNode;
+  showIntro?: boolean;
   subtitle: string;
   title: string;
   tone?: SubpageTone;
@@ -540,31 +636,33 @@ export function ProfilePrivatePageShell({
         </div>
       </header>
 
-      <section
-        className={cn(
-          "mt-6 overflow-hidden rounded-[1.35rem] bg-gradient-to-br p-4 ring-1 ring-[#E3DCC5]",
-          toneClasses.panel,
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className={cn(
-              "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.1rem] ring-1",
-              toneClasses.icon,
-            )}
-          >
-            <Icon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-black leading-tight text-[#111210]">
-              {title}
-            </p>
-            <p className="mt-1 text-xs font-bold leading-5 text-[#5F685F]">
-              {subtitle}
-            </p>
+      {showIntro ? (
+        <section
+          className={cn(
+            "mt-6 overflow-hidden rounded-[1.35rem] bg-gradient-to-br p-4 ring-1 ring-[#E3DCC5]",
+            toneClasses.panel,
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={cn(
+                "inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.1rem] ring-1",
+                toneClasses.icon,
+              )}
+            >
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-black leading-tight text-[#111210]">
+                {title}
+              </p>
+              <p className="mt-1 text-xs font-bold leading-5 text-[#5F685F]">
+                {subtitle}
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {children}
     </main>
@@ -637,18 +735,116 @@ function getAchievementText(item: UserAchievementProgressItem, locale: string) {
   };
 }
 
-function AchievementIcon({ unlocked }: { unlocked: boolean }) {
+function AchievementIcon({
+  item,
+  unlocked,
+}: {
+  item: UserAchievementProgressItem;
+  unlocked: boolean;
+}) {
+  if (unlocked) {
+    return (
+      <ProfileAchievementIcon
+        achievementKey={item.definition.key}
+        className="h-11 w-11"
+      />
+    );
+  }
+
   return (
-    <span
-      className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] ring-1",
-        unlocked
-          ? "bg-[#FFF7DC] text-[#8A641A] ring-[#E8D59D]"
-          : "bg-[#F1F2EC] text-[#8B907F] ring-[#DFDAC5]",
-      )}
-    >
-      {unlocked ? <Medal className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5]">
+      <Lock className="h-5 w-5" />
     </span>
+  );
+}
+
+const toggleEquippedInitialState: ToggleEquippedAchievementState = {};
+
+function AchievementEquipSubmitButton({
+  canEquipMore,
+  copy,
+  isEquipped,
+}: {
+  canEquipMore: boolean;
+  copy: ReturnType<typeof getProfilePrivateSubpageCopy>["achievements"];
+  isEquipped: boolean;
+}) {
+  const { pending } = useFormStatus();
+  const disabled = pending || (!isEquipped && !canEquipMore);
+
+  return (
+    <button
+      className={cn(
+        "inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black transition active:scale-95 disabled:active:scale-100",
+        isEquipped
+          ? "bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+          : "bg-white text-[#156240] ring-1 ring-[#BFD8B9]",
+        disabled && !isEquipped ? "text-[#8B907F] ring-[#DFDAC5]" : "",
+      )}
+      disabled={disabled}
+      type="submit"
+    >
+      {pending
+        ? copy.saving
+        : !isEquipped && !canEquipMore
+          ? copy.equipLimit
+          : isEquipped
+            ? copy.equipped
+            : copy.equip}
+    </button>
+  );
+}
+
+function AchievementEquipControl({
+  canEquipMore,
+  item,
+  locale,
+}: {
+  canEquipMore: boolean;
+  item: UserAchievementProgressItem;
+  locale: string;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const [state, formAction] = useActionState(
+    toggleEquippedAchievementAction,
+    toggleEquippedInitialState,
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.ok && state.achievementKey === item.definition.key) {
+      router.refresh();
+    }
+  }, [item.definition.key, router, state.achievementKey, state.ok]);
+
+  if (!item.isUnlocked) {
+    return null;
+  }
+
+  return (
+    <form action={formAction} className="grid justify-items-end gap-1">
+      <input
+        name="achievementKey"
+        type="hidden"
+        value={item.definition.key}
+      />
+      <input
+        name="intent"
+        type="hidden"
+        value={item.isEquipped ? "unequip" : "equip"}
+      />
+      <input name="locale" type="hidden" value={locale} />
+      <AchievementEquipSubmitButton
+        canEquipMore={canEquipMore}
+        copy={copy.achievements}
+        isEquipped={item.isEquipped}
+      />
+      {state.formError ? (
+        <p className="max-w-[5rem] text-right text-[10px] font-black leading-4 text-[#9A2135]">
+          {state.formError}
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -694,6 +890,10 @@ function getAchievementGroupKey(
 
 function getSortedAchievementItems(items: UserAchievementProgressItem[]) {
   return [...items].sort((a, b) => {
+    if (a.isEquipped !== b.isEquipped) {
+      return a.isEquipped ? -1 : 1;
+    }
+
     if (a.isUnlocked !== b.isUnlocked) {
       return a.isUnlocked ? -1 : 1;
     }
@@ -873,6 +1073,195 @@ function GiftAvailabilityBadge({
   );
 }
 
+const shopGiftInitialState: SendCharmGiftState = {};
+
+function ShopGiftSubmitButton({
+  label,
+  pendingLabel,
+}: {
+  label: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
+function ShopGiftRecipientDialog({
+  attemptId,
+  gift,
+  locale,
+  onClose,
+  onSent,
+  open,
+  recipients,
+}: {
+  attemptId: string;
+  gift: ProfileShopGiftItem | null;
+  locale: string;
+  onClose: () => void;
+  onSent: () => void;
+  open: boolean;
+  recipients: ProfileShopGiftRecipient[];
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const [state, formAction] = useActionState(
+    sendCharmGiftAction,
+    shopGiftInitialState,
+  );
+  const router = useRouter();
+  const formError = state.attemptId === attemptId ? state.formError : null;
+
+  useEffect(() => {
+    if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
+      return;
+    }
+
+    onClose();
+    onSent();
+    router.refresh();
+  }, [
+    attemptId,
+    onClose,
+    onSent,
+    router,
+    state.attemptId,
+    state.eventId,
+    state.ok,
+  ]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose, open]);
+
+  if (!open || !gift) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111210]/30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-[2px] md:items-center md:p-6">
+      <button
+        aria-label={copy.shop.close}
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        type="button"
+      />
+      <section
+        aria-modal="true"
+        className="relative w-full max-w-[390px] overflow-hidden rounded-[1.45rem] bg-[#FEFFF9] shadow-[0_28px_70px_rgba(17,18,16,0.24)] ring-1 ring-[#E4DDBE]"
+        role="dialog"
+      >
+        <header className="flex items-center justify-between gap-3 border-b border-[#ECE5CD] px-4 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[25px] leading-none ring-1 ring-[#E8D59D]">
+              {gift.emoji}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-base font-black text-[#111210]">
+                {gift.label}
+              </p>
+              <p className="mt-0.5 text-xs font-black text-[#7A8276]">
+                {copy.shop.chooseFriend}
+              </p>
+            </div>
+          </div>
+          <button
+            aria-label={copy.shop.close}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="max-h-[min(70dvh,30rem)] overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {recipients.length > 0 ? (
+            <div className="grid gap-2">
+              {recipients.map((recipient) => (
+                <form
+                  action={formAction}
+                  className="flex items-center gap-3 rounded-[1.05rem] bg-white/82 px-3 py-2.5 ring-1 ring-[#E3DCC5]"
+                  key={recipient.id}
+                >
+                  <input name="attemptId" type="hidden" value={attemptId} />
+                  <input name="giftId" type="hidden" value={gift.id} />
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="recipientProfileId"
+                    type="hidden"
+                    value={recipient.id}
+                  />
+                  <input
+                    name="redirectPath"
+                    type="hidden"
+                    value="/profile/shop"
+                  />
+                  <input name="sourceSurface" type="hidden" value="PROFILE" />
+                  <Avatar
+                    avatarUrl={recipient.avatarUrl}
+                    name={recipient.nickname}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-[#111210]">
+                      {recipient.nickname}
+                    </p>
+                    {recipient.friendCode ? (
+                      <p className="mt-0.5 truncate text-[11px] font-bold text-[#7A8276]">
+                        {recipient.friendCode}
+                      </p>
+                    ) : null}
+                  </div>
+                  <ShopGiftSubmitButton
+                    label={copy.shop.send}
+                    pendingLabel={copy.shop.sending}
+                  />
+                </form>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[1.1rem] bg-[#F8F4EA] px-4 py-7 text-center ring-1 ring-[#E3DCC5]">
+              <p className="text-sm font-black text-[#111210]">
+                {copy.shop.noFriends}
+              </p>
+            </div>
+          )}
+          {formError ? (
+            <p className="mt-3 rounded-full bg-[#FFF0F3] px-3 py-2 text-xs font-black text-[#9A2135] ring-1 ring-[#F5C5D7]">
+              {formError}
+            </p>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function ProfileAchievementsPageView({
   hasError,
   items,
@@ -883,6 +1272,7 @@ export function ProfileAchievementsPageView({
   locale: string;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
+  const equippedCount = items.filter((item) => item.isEquipped).length;
   const unlockedCount = items.filter((item) => item.isUnlocked).length;
   const recentUnlocked = [...items]
     .filter((item) => item.unlockedAt)
@@ -898,14 +1288,10 @@ export function ProfileAchievementsPageView({
     <ProfilePrivatePageShell
       icon={Medal}
       locale={locale}
+      showIntro={false}
       subtitle={copy.achievements.subtitle}
       title={copy.achievements.title}
       tone="gold"
-      right={
-        <span className="inline-flex h-8 min-w-8 items-center justify-center whitespace-nowrap rounded-full bg-[#FFF7DC] px-2 text-[11px] font-black text-[#7D641C] ring-1 ring-[#E8D59D]">
-          {unlockedCount}/{items.length}
-        </span>
-      }
     >
       {hasError ? (
         <StatusPanel
@@ -924,8 +1310,8 @@ export function ProfileAchievementsPageView({
         />
         <MetricPill
           icon={Sparkles}
-          label={copy.achievements.progress}
-          value={`${unlockedCount}/${items.length}`}
+          label={copy.achievements.worn}
+          value={`${equippedCount}/${maxEquippedAchievementCount}`}
         />
       </section>
 
@@ -946,7 +1332,7 @@ export function ProfileAchievementsPageView({
                   className="flex items-center gap-3 rounded-[1rem] bg-white/78 px-3 py-2 ring-1 ring-[#EFE0AF]"
                   key={item.definition.key}
                 >
-                  <AchievementIcon unlocked />
+                  <AchievementIcon item={item} unlocked />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-black text-[#111210]">
                       {text.title}
@@ -988,7 +1374,7 @@ export function ProfileAchievementsPageView({
                       key={item.definition.key}
                     >
                       <div className="flex gap-3">
-                        <AchievementIcon unlocked={unlocked} />
+                        <AchievementIcon item={item} unlocked={unlocked} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -999,23 +1385,33 @@ export function ProfileAchievementsPageView({
                                 {text.description}
                               </p>
                             </div>
-                            <span
-                              className={cn(
-                                "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
-                                unlocked
-                                  ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                                  : "bg-white text-[#8B907F] ring-[#DFDAC5]",
-                              )}
-                            >
-                              {unlocked ? (
-                                <>
-                                  <Check className="h-3 w-3" />
-                                  {formatDate(item.unlockedAt ?? "")}
-                                </>
-                              ) : (
-                                copy.achievements.locked
-                              )}
-                            </span>
+                            <div className="grid shrink-0 justify-items-end gap-1">
+                              <span
+                                className={cn(
+                                  "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                                  unlocked
+                                    ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                                    : "bg-white text-[#8B907F] ring-[#DFDAC5]",
+                                )}
+                              >
+                                {unlocked ? (
+                                  <>
+                                    <Check className="h-3 w-3" />
+                                    {formatDate(item.unlockedAt ?? "")}
+                                  </>
+                                ) : (
+                                  copy.achievements.locked
+                                )}
+                              </span>
+                              <AchievementEquipControl
+                                canEquipMore={
+                                  item.isEquipped ||
+                                  equippedCount < maxEquippedAchievementCount
+                                }
+                                item={item}
+                                locale={locale}
+                              />
+                            </div>
                           </div>
                           <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#EFEAD7]">
                             <div
@@ -1173,6 +1569,135 @@ function ShareInviteButton({
   );
 }
 
+const referralBindInitialState: ReferralActionState = {};
+
+function getReferralBindMessage(
+  inviteCopy: ReturnType<typeof getProfilePrivateSubpageCopy>["invite"],
+  formError: string | undefined,
+) {
+  if (!formError) {
+    return null;
+  }
+
+  if (formError === "ALREADY_ATTRIBUTED") {
+    return inviteCopy.bindErrorAlready;
+  }
+
+  if (formError === "INVITER_NOT_FOUND") {
+    return inviteCopy.bindErrorMissing;
+  }
+
+  if (formError === "SELF_REFERRAL") {
+    return inviteCopy.bindErrorSelf;
+  }
+
+  return inviteCopy.bindErrorInvalid;
+}
+
+function ReferralBindSubmitButton({
+  label,
+  pendingLabel,
+}: {
+  label: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+    >
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
+function ReferralInviteBinder({
+  boundReferral,
+  locale,
+}: {
+  boundReferral: ReferralStatsViewModel["boundReferral"];
+  locale: string;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const [state, formAction] = useActionState(
+    bindReferralCodeAction,
+    referralBindInitialState,
+  );
+  const message = state.ok
+    ? copy.invite.bindSuccess
+    : getReferralBindMessage(copy.invite, state.formError);
+
+  if (boundReferral) {
+    return (
+      <section className="mt-4 rounded-[1.25rem] bg-white/82 p-3 ring-1 ring-[#E3DCC5]">
+        <div className="flex items-center gap-3">
+          <Avatar
+            avatarUrl={boundReferral.inviter.avatarUrl}
+            name={boundReferral.inviter.nickname}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-black text-[#8B907F]">
+              {copy.invite.alreadyBound}
+            </p>
+            <p className="mt-0.5 truncate text-sm font-black text-[#111210]">
+              {copy.invite.inviterLabel} · {boundReferral.inviter.nickname}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <form
+      action={formAction}
+      className="mt-4 rounded-[1.25rem] bg-white/82 p-3 ring-1 ring-[#E3DCC5]"
+      noValidate
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-black text-[#111210]">
+            {copy.invite.bindTitle}
+          </h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-[#6C746A]">
+            {copy.invite.bindDescription}
+          </p>
+        </div>
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFF0F3] text-[#E83F83] ring-1 ring-[#F5C5D7]">
+          <UserRoundPlus className="h-4 w-4" />
+        </span>
+      </div>
+      <input name="locale" type="hidden" value={locale} />
+      <div className="mt-3 flex gap-2">
+        <input
+          name="ref"
+          inputMode="numeric"
+          maxLength={240}
+          placeholder={copy.invite.bindPlaceholder}
+          className="h-10 min-w-0 flex-1 rounded-full bg-[#FEFFF9] px-3 text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A3A48F] focus:ring-[#E83F83]"
+        />
+        <ReferralBindSubmitButton
+          label={copy.invite.bindSubmit}
+          pendingLabel={copy.invite.binding}
+        />
+      </div>
+      {message ? (
+        <p
+          className={cn(
+            "mt-2 text-xs font-bold",
+            state.ok ? "text-[#156240]" : "text-[#9A2135]",
+          )}
+        >
+          {message}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 function FriemiToast({ message }: { message: string | null }) {
   if (!message) {
     return null;
@@ -1236,6 +1761,7 @@ export function ProfileInvitePageView({
       <ProfilePrivatePageShell
         icon={UserRoundPlus}
         locale={locale}
+        showIntro={false}
         subtitle={copy.invite.subtitle}
         title={copy.invite.title}
         tone="pink"
@@ -1302,6 +1828,11 @@ export function ProfileInvitePageView({
           ) : null}
         </section>
 
+        <ReferralInviteBinder
+          boundReferral={stats.boundReferral}
+          locale={locale}
+        />
+
         <section className="mt-6">
           {stats.recentReferrals.length > 0 ? (
             <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
@@ -1359,14 +1890,10 @@ export function ProfileVisitorsPageView({
     <ProfilePrivatePageShell
       icon={Eye}
       locale={locale}
+      showIntro={false}
       subtitle={copy.visitors.subtitle}
       title={copy.visitors.title}
       tone="blue"
-      right={
-        <span className="inline-flex h-8 min-w-8 items-center justify-center whitespace-nowrap rounded-full bg-[#EEF5FF] px-2 text-[11px] font-black text-[#143376] ring-1 ring-[#C8D9F5]">
-          {summary.uniqueVisitorCount}
-        </span>
-      }
     >
       {hasError ? (
         <StatusPanel
@@ -1478,14 +2005,10 @@ export function ProfileBagPageView({
     <ProfilePrivatePageShell
       icon={Package}
       locale={locale}
+      showIntro={false}
       subtitle={copy.bag.subtitle}
       title={copy.bag.title}
       tone="green"
-      right={
-        <span className="inline-flex h-8 items-center whitespace-nowrap rounded-full bg-[#EAF5E8] px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#BFD8B9]">
-          {bag.availableCheckCount}
-        </span>
-      }
     >
       {hasError ? (
         <StatusPanel
@@ -1620,107 +2143,78 @@ export function ProfileBagPageView({
 }
 
 export function ProfileShopPageView({
+  giftRecipients,
   gifts,
   locale,
 }: {
+  giftRecipients: ProfileShopGiftRecipient[];
   gifts: ProfileShopGiftItem[];
   locale: string;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
-  const [selectedGiftId, setSelectedGiftId] = useState(gifts[0]?.id ?? "");
-  const selectedGift =
-    gifts.find((gift) => gift.id === selectedGiftId) ?? gifts[0] ?? null;
+  const [dialogGiftId, setDialogGiftId] = useState<string | null>(null);
+  const [dialogAttemptId, setDialogAttemptId] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const dialogGift =
+    gifts.find((gift) => gift.id === dialogGiftId) ?? null;
+  const openGiftDialog = (giftId: string) => {
+    setDialogGiftId(giftId);
+    setDialogAttemptId(createShopGiftAttemptId());
+  };
+  const closeGiftDialog = () => {
+    setDialogGiftId(null);
+    setDialogAttemptId("");
+  };
+  const showToast = (message: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage(null);
+      toastTimerRef.current = null;
+    }, 1700);
+  };
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    },
+    [],
+  );
 
   return (
     <ProfilePrivatePageShell
       icon={ShoppingBag}
       locale={locale}
+      showIntro={false}
       subtitle={copy.shop.subtitle}
       title={copy.shop.title}
       tone="gold"
-      right={
-        <span className="inline-flex h-8 items-center whitespace-nowrap rounded-full bg-[#FFF7DC] px-3 text-[11px] font-black text-[#7D641C] ring-1 ring-[#E8D59D]">
-          {gifts.length}
-        </span>
-      }
     >
-      {selectedGift ? (
-        <section className="mt-5 rounded-[1.35rem] bg-[#FFF9E8] p-4 ring-1 ring-[#E8D59D]">
-          <div className="flex items-start gap-3">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.25rem] bg-white text-[34px] leading-none shadow-[0_16px_30px_rgba(125,100,28,0.10)] ring-1 ring-[#EFE0AF]">
-              {selectedGift.emoji}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="mb-1 truncate text-[10px] font-black uppercase tracking-[0.14em] text-[#8A641A]">
-                {copy.shop.detail}
-              </p>
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-lg font-black text-[#111210]">
-                  {selectedGift.label}
-                </p>
-                <GiftAvailabilityBadge gift={selectedGift} locale={locale} />
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-[1rem] bg-white/78 px-3 py-2 ring-1 ring-[#EFE0AF]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8A641A]">
-                    {copy.shop.charm}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-[#111210]">
-                    +{selectedGift.charmValue}
-                  </p>
-                </div>
-                <div className="rounded-[1rem] bg-white/78 px-3 py-2 ring-1 ring-[#EFE0AF]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8A641A]">
-                    {copy.shop.price}
-                  </p>
-                  <p className="mt-1 truncate text-sm font-black text-[#111210]">
-                    {selectedGift.coinCost
-                      ? `${selectedGift.coinCost} Coins`
-                      : copy.shop.pricePending}
-                  </p>
-                </div>
-              </div>
-              {selectedGift.availability === "available" ? (
-                <Link
-                  href={withLocale(locale, "/friends")}
-                  className="mt-3 inline-flex h-8 max-w-full items-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
-                >
-                  <Gift className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{copy.shop.sendEntry}</span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mt-6">
+      <section className="mt-7">
         <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
           {copy.shop.giftCatalog}
         </h2>
         {gifts.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-3">
             {gifts.map((gift) => {
-              const selected = gift.id === selectedGift?.id;
               const locked = gift.availability === "seasonal_locked";
 
               return (
-                <button
-                  type="button"
-                  aria-pressed={selected}
+                <article
                   className={cn(
-                    "grid min-h-[9.5rem] content-between rounded-[1.2rem] p-3 text-left ring-1 transition active:scale-[0.98]",
-                    selected
-                      ? "bg-white shadow-[0_18px_32px_rgba(125,100,28,0.12)] ring-[#D6B85B]"
-                      : "bg-white/82 ring-[#E3DCC5]",
+                    "grid min-h-[9.7rem] content-between rounded-[1.2rem] bg-white/86 p-3 ring-1 ring-[#E3DCC5] transition",
                     locked ? "opacity-78" : "",
                   )}
                   key={gift.id}
-                  onClick={() => setSelectedGiftId(gift.id)}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="text-[32px] leading-none">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#FFF9E8] text-[30px] leading-none ring-1 ring-[#EFE0AF]">
                       {gift.emoji}
                     </span>
                     <GiftAvailabilityBadge gift={gift} locale={locale} />
@@ -1734,7 +2228,17 @@ export function ProfileShopPageView({
                       +{gift.charmValue}
                     </span>
                   </span>
-                </button>
+                  {locked ? null : (
+                    <button
+                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
+                      onClick={() => openGiftDialog(gift.id)}
+                      type="button"
+                    >
+                      <Gift className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{copy.shop.sendEntry}</span>
+                    </button>
+                  )}
+                </article>
               );
             })}
           </div>
@@ -1747,6 +2251,16 @@ export function ProfileShopPageView({
           />
         )}
       </section>
+      <ShopGiftRecipientDialog
+        attemptId={dialogAttemptId}
+        gift={dialogGift}
+        locale={locale}
+        onClose={closeGiftDialog}
+        onSent={() => showToast(copy.shop.sent)}
+        open={Boolean(dialogGift)}
+        recipients={giftRecipients}
+      />
+      <FriemiToast message={toastMessage} />
     </ProfilePrivatePageShell>
   );
 }

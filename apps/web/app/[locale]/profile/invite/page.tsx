@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 const emptyReferralStats = {
+  boundReferral: null,
   firstParticipationCount: 0,
   friendshipAcceptedCount: 0,
   invitedCount: 0,
