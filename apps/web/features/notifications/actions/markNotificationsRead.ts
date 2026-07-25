@@ -7,6 +7,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { getVisibleNotificationWhere } from "../queries/getNotifications";
 import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
@@ -58,10 +59,10 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   await prisma.notification.updateMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: null,
-    },
+    }),
     data: {
       readAt: new Date(),
     },
@@ -78,11 +79,11 @@ export async function markNotificationReadAction(formData: FormData) {
 
   if (notificationId) {
     await prisma.notification.updateMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
         readAt: null,
-      },
+      }),
       data: {
         readAt: new Date(),
       },
@@ -100,10 +101,10 @@ export async function deleteNotificationAction(formData: FormData) {
 
   if (notificationId) {
     await prisma.notification.deleteMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
-      },
+      }),
     });
   }
 
@@ -123,10 +124,10 @@ export async function deleteNotificationClientAction(
 
   if (notificationId) {
     await prisma.notification.deleteMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
-      },
+      }),
     });
   }
 
@@ -147,11 +148,11 @@ export async function markNotificationReadClientAction(
 
   if (notificationId) {
     await prisma.notification.updateMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
         readAt: null,
-      },
+      }),
       data: {
         readAt: new Date(),
       },
@@ -171,10 +172,10 @@ export async function markAllNotificationsReadClientAction(locale: string) {
   );
 
   await prisma.notification.updateMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: null,
-    },
+    }),
     data: {
       readAt: new Date(),
     },
@@ -190,12 +191,12 @@ export async function deleteReadNotificationsAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   await prisma.notification.deleteMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: {
         not: null,
       },
-    },
+    }),
   });
 
   revalidatePath(withLocale(locale, "/notifications"));
@@ -210,12 +211,12 @@ export async function deleteReadNotificationsClientAction(locale: string) {
   );
 
   await prisma.notification.deleteMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: {
         not: null,
       },
-    },
+    }),
   });
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -228,10 +229,10 @@ export async function openNotificationActivityAction(formData: FormData) {
   const notificationId = getString(formData, "notificationId");
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
   const notification = await prisma.notification.findFirst({
-    where: {
+    where: getVisibleNotificationWhere({
       id: notificationId,
       recipientId: profile.id,
-    },
+    }),
     select: {
       actorId: true,
       activityId: true,

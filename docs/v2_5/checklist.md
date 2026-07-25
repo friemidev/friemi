@@ -678,48 +678,50 @@ v2.5 首批成就：
 
 ### 11.1 页面结构
 
-- [ ] 顶部：标题、未读数、全部已读
-- [ ] 二级：横向分类 tabs
-- [ ] 列表：轻卡片或分割线列表
-- [ ] 底部：移动端避开 bottom nav
-- [ ] 支持空状态、加载态、错误态
+- [x] 顶部：标题、未读数、全部已读
+- [x] 二级：横向分类 tabs
+- [x] 列表：轻卡片或分割线列表
+- [x] 底部：移动端避开 bottom nav
+- [x] 支持空状态、加载态、错误态
 
 ### 11.2 分类映射
 
-- [ ] 全部：所有可展示通知
-- [ ] 报名：`PARTICIPATION_*`
-- [ ] 活动：`ACTIVITY_UPDATED / ACTIVITY_CANCELLED / ACTIVITY_ANNOUNCEMENT / ACTIVITY_COMMENTED / COMMENT_REPLY`
-- [ ] 好友：`FRIEND_REQUEST`
-- [ ] 系统：`REPORT_CREATED` 和未来系统消息
+- [x] 全部：所有可展示通知
+- [x] 报名：`PARTICIPATION_*`
+- [x] 活动：`ACTIVITY_UPDATED / ACTIVITY_CANCELLED / ACTIVITY_ANNOUNCEMENT / ACTIVITY_COMMENTED / COMMENT_REPLY`
+- [x] 好友：`FRIEND_REQUEST`
+- [x] 系统：`REPORT_CREATED` 和未来系统消息
 
 ### 11.3 红点边界
 
-- [ ] 通知红点只代表通知中心未读事件
-- [ ] 私信未读不进入通知红点
-- [ ] Moment 点赞不进入通知红点
-- [ ] Moment 评论不进入通知红点
-- [ ] Moment 回复不进入通知红点
-- [ ] Moment 转发不进入通知红点
+- [x] 通知红点只代表通知中心未读事件
+- [x] 私信未读不进入通知红点
+- [x] Moment 点赞不进入通知红点
+- [x] Moment 评论不进入通知红点
+- [x] Moment 回复不进入通知红点
+- [x] Moment 转发不进入通知红点
+- [x] 通知中心批量已读和删除已读只影响可展示通知
 
 ### 11.4 交互
 
-- [ ] 点击通知即标记已读
-- [ ] 可单条删除
-- [ ] 可删除已读
-- [ ] 好友请求支持卡片内接受/拒绝
-- [ ] 活动报名审核通知直达审核区域
-- [ ] 活动评论通知直达评论区域
+- [x] 点击通知即标记已读
+- [x] 可单条删除
+- [x] 可删除已读
+- [x] 好友请求支持卡片内接受/拒绝
+- [x] 活动报名审核通知直达审核区域
+- [x] 活动评论通知直达评论区域
 
 ### 11.5 本 PR 验收标准
 
-- [ ] 移动端通知页面少框、轻量、清晰
-- [ ] 中英法分类 tabs 不换行挤压
-- [ ] 通知未读和消息未读完全分离
-- [ ] 历史私聊/Moment 互动通知不计入通知红点
-- [ ] 好友请求可在通知卡片内处理
-- [ ] 活动类通知能跳到正确锚点
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `git diff --check` 通过
+- [x] 移动端通知页面少框、轻量、清晰
+- [x] 中英法分类 tabs 不换行挤压
+- [x] 通知未读和消息未读完全分离
+- [x] 历史私聊/Moment 互动通知不计入通知红点
+- [x] 好友请求可在通知卡片内处理
+- [x] 活动类通知能跳到正确锚点
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `npm test --workspace=apps/web` 通过
+- [x] `git diff --check` 通过
 
 ## 12. P2-PR09 Moment 晒晒底边栏
 

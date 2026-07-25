@@ -13,10 +13,14 @@ export function getVisibleNotificationWhere(
   where: Prisma.NotificationWhereInput = {},
 ): Prisma.NotificationWhereInput {
   return {
-    ...where,
-    type: {
-      notIn: notificationCenterExcludedTypes,
-    },
+    AND: [
+      where,
+      {
+        type: {
+          notIn: notificationCenterExcludedTypes,
+        },
+      },
+    ],
   };
 }
 
