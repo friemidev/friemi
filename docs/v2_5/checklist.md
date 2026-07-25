@@ -828,13 +828,13 @@ v2.5 首批成就：
 
 ### 14.0 发布前置 Gate
 
-- [ ] `feature/v2-5-social-rewards-automation` 已合入 `dev`
-- [ ] 当前分支已经基于包含 PR10 的最新 `dev` rebase 或 merge
-- [ ] `apps/web/features/social-rewards/` 存在
-- [ ] `syncRecentEndedActivitySocialRewards` 已接入定时同步
-- [ ] v2.5 更新公告只描述已经合入当前发布分支的功能
+- [x] `feature/v2-5-social-rewards-automation` 已合入 `dev`
+- [x] 当前分支已经基于包含 PR10 的最新 `dev` rebase 或 merge
+- [x] `apps/web/features/social-rewards/` 存在
+- [x] `syncRecentEndedActivitySocialRewards` 已接入定时同步
+- [x] v2.5 更新公告只描述已经合入当前发布分支的功能
 
-当前检查：`origin/dev` 截止 `2026-07-25` 仍停在 PR09，PR10 未进入当前发布分支；PR11 可以继续准备收尾，但不能作为最终上线分支直接部署生产。
+当前检查：本地 `dev` 已按顺序合入 PR10 与 PR11；推送到 `origin/dev` 后发布前置 Gate 满足。
 
 ### 14.1 本地验证
 
