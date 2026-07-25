@@ -43,6 +43,8 @@ export const achievementCatalog = [
   },
 ] as const;
 
+export const maxEquippedAchievementCount = 3;
+
 export type AchievementDefinition = (typeof achievementCatalog)[number];
 export type AchievementKey = AchievementDefinition["key"];
 export type AchievementMetric = AchievementDefinition["metric"];

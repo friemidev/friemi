@@ -1,6 +1,7 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -87,21 +88,31 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const profile = await getOptionalCurrentUserProfileSnapshot();
-  const dashboardResult = profile
-    ? await getProfileDashboard(profile.id)
-        .then((dashboard) => ({ dashboard, error: null }))
-        .catch((error: unknown) => {
-          console.error("Failed to load profile dashboard", error);
+  const [dashboardResult, publicAchievements] = profile
+    ? await Promise.all([
+        getProfileDashboard(profile.id)
+          .then((dashboard) => ({ dashboard, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load profile dashboard", error);
 
-          return {
-            dashboard: getEmptyProfileDashboard(),
-            error,
-          };
-        })
-    : {
-        dashboard: getEmptyProfileDashboard(),
-        error: null,
-      };
+            return {
+              dashboard: getEmptyProfileDashboard(),
+              error,
+            };
+          }),
+        getPublicAchievementWall(profile.id).catch((error: unknown) => {
+          console.error("Failed to load profile achievements", error);
+
+          return [];
+        }),
+      ])
+    : [
+        {
+          dashboard: getEmptyProfileDashboard(),
+          error: null,
+        },
+        [],
+      ];
   const isAuthenticated = Boolean(profile);
   const profileViewModel = profile
     ? {
@@ -125,6 +136,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isSelf={isAuthenticated}
         locale={locale}
         profile={profileViewModel}
+        publicAchievements={publicAchievements}
       />
     </PageContainer>
   );

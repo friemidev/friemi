@@ -4,6 +4,7 @@ import { getTrustScore } from "@/features/trust/trustScoreEvents";
 import {
   achievementCatalog,
   isAchievementKey,
+  maxEquippedAchievementCount,
   type AchievementDefinition,
   type AchievementKey,
 } from "../achievementCatalog";
@@ -24,6 +25,7 @@ export type AchievementProgressSnapshot = {
 
 export type UserAchievementProgressItem = {
   definition: AchievementDefinition;
+  isEquipped: boolean;
   isUnlocked: boolean;
   progress: number;
   target: number;
@@ -115,9 +117,11 @@ export function getAchievementProgressValue(
 }
 
 export function resolveAchievementProgress({
+  equippedKeys = new Set<AchievementKey>(),
   snapshot,
   unlockedAtByKey = new Map<AchievementKey, string>(),
 }: {
+  equippedKeys?: Set<AchievementKey>;
   snapshot: AchievementProgressSnapshot;
   unlockedAtByKey?: Map<AchievementKey, string>;
 }) {
@@ -128,12 +132,37 @@ export function resolveAchievementProgress({
 
     return {
       definition,
+      isEquipped: equippedKeys.has(definition.key),
       isUnlocked: Boolean(unlockedAt) || rawProgress >= definition.target,
       progress,
       target: definition.target,
       unlockedAt,
     } satisfies UserAchievementProgressItem;
   });
+}
+
+async function getEquippedAchievementKeySet(db: DbClient, profileId: string) {
+  const equippedAchievements = await db.userEquippedAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      achievementKey: true,
+    },
+    take: maxEquippedAchievementCount,
+  });
+
+  return new Set(
+    equippedAchievements.flatMap((achievement) =>
+      isAchievementKey(achievement.achievementKey)
+        ? [achievement.achievementKey]
+        : [],
+    ),
+  );
 }
 
 async function getAchievementSnapshot(
@@ -293,11 +322,13 @@ export async function grantAchievement(
 }
 
 export async function syncProfileAchievements(profileId: string) {
-  const [snapshot, unlockedAtByKey] = await Promise.all([
+  const [snapshot, unlockedAtByKey, equippedKeys] = await Promise.all([
     getAchievementSnapshot(prisma, profileId),
     getUnlockedAchievementMap(prisma, profileId),
+    getEquippedAchievementKeySet(prisma, profileId),
   ]);
   const progressItems = resolveAchievementProgress({
+    equippedKeys,
     snapshot,
     unlockedAtByKey,
   });
@@ -321,6 +352,7 @@ export async function syncProfileAchievements(profileId: string) {
   return {
     newlyUnlockedCount: newlyUnlocked.filter((result) => result.created).length,
     progress: resolveAchievementProgress({
+      equippedKeys,
       snapshot,
       unlockedAtByKey: nextUnlockedAtByKey,
     }),
@@ -328,38 +360,79 @@ export async function syncProfileAchievements(profileId: string) {
 }
 
 export async function getAchievementProgress(profileId: string) {
-  const [snapshot, unlockedAtByKey] = await Promise.all([
+  const [snapshot, unlockedAtByKey, equippedKeys] = await Promise.all([
     getAchievementSnapshot(prisma, profileId),
     getUnlockedAchievementMap(prisma, profileId),
+    getEquippedAchievementKeySet(prisma, profileId),
   ]);
 
   return resolveAchievementProgress({
+    equippedKeys,
     snapshot,
     unlockedAtByKey,
   });
 }
 
 export async function getPublicAchievementWall(profileId: string) {
-  const achievements = await prisma.userAchievement.findMany({
+  const equippedAchievements = await prisma.userEquippedAchievement.findMany({
     where: {
       achievementKey: {
         in: achievementCatalog.map((achievement) => achievement.key),
       },
       profileId,
     },
-    orderBy: {
-      unlockedAt: "desc",
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      achievementKey: true,
     },
+    take: maxEquippedAchievementCount,
+  });
+  const equippedKeys = equippedAchievements.flatMap((achievement) =>
+    isAchievementKey(achievement.achievementKey)
+      ? [achievement.achievementKey]
+      : [],
+  );
+
+  const achievements = await prisma.userAchievement.findMany({
+    where: {
+      achievementKey: {
+        in:
+          equippedKeys.length > 0
+            ? equippedKeys
+            : achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    orderBy:
+      equippedKeys.length > 0
+        ? undefined
+        : {
+            unlockedAt: "desc",
+          },
     select: {
       achievementKey: true,
       sourceId: true,
       sourceType: true,
       unlockedAt: true,
     },
-    take: 12,
+    take: maxEquippedAchievementCount,
   });
+  const achievementsByKey = new Map(
+    achievements.map((achievement) => [
+      achievement.achievementKey,
+      achievement,
+    ]),
+  );
+  const orderedAchievements =
+    equippedKeys.length > 0
+      ? equippedKeys.flatMap((key) => {
+          const achievement = achievementsByKey.get(key);
 
-  return achievements.flatMap((achievement) => {
+          return achievement ? [achievement] : [];
+        })
+      : achievements;
+
+  return orderedAchievements.flatMap((achievement) => {
     if (!isAchievementKey(achievement.achievementKey)) {
       return [];
     }

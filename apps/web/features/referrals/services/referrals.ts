@@ -25,9 +25,10 @@ export type ReferralConsumeResult =
         | "SELF_REFERRAL";
     };
 
-export async function consumeReferralCodeOnProfileCreate(
+async function consumeReferralCodeForProfile(
   profileId: string,
   ref: string | null | undefined,
+  source: string,
 ): Promise<ReferralConsumeResult> {
   const inviteCode = captureReferralCodeFromRequest(ref);
 
@@ -84,6 +85,7 @@ export async function consumeReferralCodeOnProfileCreate(
         inviteCode,
         inviteeId: profileId,
         inviterId: inviter.id,
+        source,
       },
       select: {
         id: true,
@@ -109,56 +111,107 @@ export async function consumeReferralCodeOnProfileCreate(
   }
 }
 
-export async function getReferralStats(inviterId: string) {
-  const [invitedCount, friendshipAcceptedCount, firstParticipationCount, rows] =
-    await Promise.all([
-      prisma.userReferral.count({
-        where: {
-          inviterId,
+export async function consumeReferralCodeOnProfileCreate(
+  profileId: string,
+  ref: string | null | undefined,
+): Promise<ReferralConsumeResult> {
+  return consumeReferralCodeForProfile(profileId, ref, "profile_create");
+}
+
+export async function bindReferralCodeToProfile(
+  profileId: string,
+  ref: string | null | undefined,
+): Promise<ReferralConsumeResult> {
+  return consumeReferralCodeForProfile(profileId, ref, "profile_invite_code");
+}
+
+export async function getReferralStats(profileId: string) {
+  const [
+    invitedCount,
+    friendshipAcceptedCount,
+    firstParticipationCount,
+    rows,
+    receivedReferral,
+  ] = await Promise.all([
+    prisma.userReferral.count({
+      where: {
+        inviterId: profileId,
+      },
+    }),
+    prisma.userReferral.count({
+      where: {
+        friendshipAcceptedAt: {
+          not: null,
         },
-      }),
-      prisma.userReferral.count({
-        where: {
-          friendshipAcceptedAt: {
-            not: null,
+        inviterId: profileId,
+      },
+    }),
+    prisma.userReferral.count({
+      where: {
+        firstParticipationAt: {
+          not: null,
+        },
+        inviterId: profileId,
+      },
+    }),
+    prisma.userReferral.findMany({
+      where: {
+        inviterId: profileId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 20,
+      select: {
+        id: true,
+        createdAt: true,
+        firstParticipationAt: true,
+        friendshipAcceptedAt: true,
+        invitee: {
+          select: {
+            id: true,
+            avatarUrl: true,
+            friendCode: true,
+            nickname: true,
           },
-          inviterId,
         },
-      }),
-      prisma.userReferral.count({
-        where: {
-          firstParticipationAt: {
-            not: null,
-          },
-          inviterId,
-        },
-      }),
-      prisma.userReferral.findMany({
-        where: {
-          inviterId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 20,
-        select: {
-          id: true,
-          createdAt: true,
-          firstParticipationAt: true,
-          friendshipAcceptedAt: true,
-          invitee: {
-            select: {
-              id: true,
-              avatarUrl: true,
-              friendCode: true,
-              nickname: true,
-            },
+      },
+    }),
+    prisma.userReferral.findUnique({
+      where: {
+        inviteeId: profileId,
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        inviter: {
+          select: {
+            id: true,
+            avatarUrl: true,
+            friendCode: true,
+            nickname: true,
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return {
+    boundReferral: receivedReferral
+      ? {
+          id: receivedReferral.id,
+          createdAt: receivedReferral.createdAt.toISOString(),
+          inviter: {
+            id: receivedReferral.inviter.id,
+            avatarUrl: receivedReferral.inviter.avatarUrl,
+            friendCode: receivedReferral.inviter.friendCode,
+            nickname:
+              receivedReferral.inviter.nickname.trim() ||
+              receivedReferral.inviter.friendCode ||
+              "NF",
+          },
+        }
+      : null,
     firstParticipationCount,
     friendshipAcceptedCount,
     invitedCount,

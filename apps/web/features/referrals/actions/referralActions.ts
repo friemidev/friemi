@@ -1,11 +1,14 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   ensureCurrentUserProfile,
   getCurrentUserProfileForMutation,
 } from "@/lib/auth";
+import { withLocale } from "@/lib/routes";
 import {
+  bindReferralCodeToProfile,
   buildReferralLink,
   consumeReferralCodeOnProfileCreate,
 } from "../services/referrals";
@@ -89,4 +92,42 @@ export async function consumeReferralCodeAction(
     : {
         formError: consumeResult.reason,
       };
+}
+
+export async function bindReferralCodeAction(
+  _previousState: ReferralActionState,
+  formData: FormData,
+): Promise<ReferralActionState> {
+  const result = consumeReferralCodeSchema.safeParse({
+    locale: getString(formData, "locale") || "zh-CN",
+    ref: getString(formData, "ref"),
+  });
+
+  if (!result.success) {
+    return {
+      formError: "INVALID_REQUEST",
+    };
+  }
+
+  const profile = await getCurrentUserProfileForMutation(
+    result.data.locale,
+    "/profile/invite",
+  );
+  const consumeResult = await bindReferralCodeToProfile(
+    profile.id,
+    result.data.ref,
+  );
+
+  if (consumeResult.consumed) {
+    revalidatePath(withLocale(result.data.locale, "/profile/invite"));
+    revalidatePath(withLocale(result.data.locale, "/profile"));
+
+    return {
+      ok: true,
+    };
+  }
+
+  return {
+    formError: consumeResult.reason,
+  };
 }
