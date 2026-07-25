@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Flag,
   Heart,
+  Inbox,
   MessageCircle,
   Repeat2,
   Trash2,
@@ -17,7 +18,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
-import { Button } from "@chill-club/ui";
 import { formatActivityDate } from "@chill-club/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,20 +39,18 @@ import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "./NotificationBadgeProvider";
 
 type NotificationCategory =
-  | "participation"
-  | "social"
-  | "comment"
-  | "message"
   | "activity"
-  | "report";
+  | "friends"
+  | "participation"
+  | "system";
+
+type NotificationFilter = "all" | NotificationCategory;
 
 const notificationCategoryStyles: Record<NotificationCategory, string> = {
-  participation: "bg-ice text-forest ring-sage/70",
-  social: "bg-ink text-paper ring-ink",
-  comment: "bg-fog text-forest ring-sage/60",
-  message: "bg-ice text-forest ring-sage/70",
-  activity: "bg-cream text-danger ring-rose",
-  report: "bg-rose text-danger ring-coral/35",
+  activity: "bg-[#FFF4E3] text-[#8A4B1A] ring-[#E7C98C]",
+  friends: "bg-[#F1F2EC] text-[#111210] ring-[#D6D5B2]",
+  participation: "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]",
+  system: "bg-[#FFF0F0] text-[#9A2135] ring-[#F1B5AE]",
 };
 
 function getNotificationCategory(
@@ -68,20 +66,17 @@ function getNotificationCategory(
     return "participation";
   }
 
-  if (type === "FRIEND_REQUEST") return "social";
-  if (type === "DIRECT_MESSAGE") return "message";
+  if (type === "FRIEND_REQUEST") return "friends";
+  if (type === "REPORT_CREATED") return "system";
   if (type === "ACTIVITY_ANNOUNCEMENT") return "activity";
   if (
     type === "ACTIVITY_COMMENTED" ||
     type === "COMMENT_REPLY" ||
-    type === "MOMENT_LIKED" ||
-    type === "MOMENT_COMMENTED" ||
-    type === "MOMENT_COMMENT_REPLY" ||
-    type === "MOMENT_REPOSTED"
+    type === "ACTIVITY_UPDATED" ||
+    type === "ACTIVITY_CANCELLED"
   ) {
-    return "comment";
+    return "activity";
   }
-  if (type === "REPORT_CREATED") return "report";
 
   return "activity";
 }
@@ -96,6 +91,17 @@ function needsUserAction(notification: NotificationViewModel) {
     notification.type === "REPORT_CREATED" ||
     (notification.type === "PARTICIPATION_PENDING" &&
       Boolean(notification.actor))
+  );
+}
+
+function isNotificationInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        "a,button,input,textarea,select,label,form,[data-no-swipe]",
+      ),
+    )
   );
 }
 
@@ -250,6 +256,88 @@ function getNotificationSummaryLabels(locale: string) {
   return { actionRequired: "待处理", total: "全部", unread: "未读" };
 }
 
+function getNotificationFilterCopy(locale: string): {
+  emptyDescription: Record<NotificationFilter, string>;
+  emptyTitle: Record<NotificationFilter, string>;
+  tabs: Record<NotificationFilter, string>;
+} {
+  if (locale === "fr") {
+    return {
+      tabs: {
+        all: "Tout",
+        participation: "Inscriptions",
+        activity: "Activité",
+        friends: "Amis",
+        system: "Système",
+      },
+      emptyTitle: {
+        all: "Aucune notification",
+        participation: "Aucune inscription",
+        activity: "Aucune nouveauté",
+        friends: "Aucune demande",
+        system: "Aucun message système",
+      },
+      emptyDescription: {
+        all: "Les nouvelles informations apparaîtront ici.",
+        participation: "Les demandes et confirmations apparaîtront ici.",
+        activity: "Les changements d'activité et commentaires apparaîtront ici.",
+        friends: "Les demandes d'amis apparaîtront ici.",
+        system: "Les alertes importantes apparaîtront ici.",
+      },
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      tabs: {
+        all: "All",
+        participation: "Joins",
+        activity: "Activity",
+        friends: "Friends",
+        system: "System",
+      },
+      emptyTitle: {
+        all: "No notifications",
+        participation: "No join updates",
+        activity: "No activity updates",
+        friends: "No friend requests",
+        system: "No system updates",
+      },
+      emptyDescription: {
+        all: "New updates will appear here.",
+        participation: "Join requests and confirmations will appear here.",
+        activity: "Activity changes and comments will appear here.",
+        friends: "Friend requests will appear here.",
+        system: "Important updates will appear here.",
+      },
+    };
+  }
+
+  return {
+    tabs: {
+      all: "全部",
+      participation: "报名",
+      activity: "活动",
+      friends: "好友",
+      system: "系统",
+    },
+    emptyTitle: {
+      all: "暂无通知",
+      participation: "暂无报名通知",
+      activity: "暂无活动通知",
+      friends: "暂无好友通知",
+      system: "暂无系统通知",
+    },
+    emptyDescription: {
+      all: "新的提醒会出现在这里。",
+      participation: "报名申请和报名结果会出现在这里。",
+      activity: "活动变更和评论会出现在这里。",
+      friends: "好友申请会出现在这里。",
+      system: "重要提醒会出现在这里。",
+    },
+  };
+}
+
 function getNotificationDeleteCopy(locale: string) {
   if (locale === "fr") {
     return { clearRead: "Supprimer les lues", delete: "Supprimer" };
@@ -396,6 +484,7 @@ function NotificationCard({
 }) {
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
+  const filterCopy = getNotificationFilterCopy(locale);
   const text = getNotificationText(notification, locale);
   const isUnread = notification.readAt === null;
   const visual = getNotificationVisual(notification.type, isUnread);
@@ -432,7 +521,7 @@ function NotificationCard({
     <NotificationSwipeCard mobileDeleteAction={mobileDeleteAction}>
       <article
         className={cn(
-          "group relative overflow-hidden rounded-[1.2rem] border p-3.5 shadow-[0_12px_30px_rgba(21,98,64,0.055)] transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(21,98,64,0.09)] sm:p-4",
+          "group relative overflow-hidden rounded-[1rem] border px-3 py-3 transition duration-150 ease-out hover:bg-white sm:px-4 sm:py-3.5",
           visual.cardClassName,
           pending ? "pointer-events-none opacity-70" : null,
         )}
@@ -440,21 +529,27 @@ function NotificationCard({
         <span
           aria-hidden="true"
           className={cn(
-            "absolute inset-y-4 left-0 w-1 rounded-r-full transition",
+            "absolute inset-y-3 left-0 w-1 rounded-r-full transition",
             isUnread ? "bg-coral" : "bg-sand/70",
           )}
         />
         {isUnread ? (
           <span
             aria-label={t.unread}
-            className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.45)]"
+            className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.38)] sm:hidden"
           />
         ) : null}
-
-        <div className="flex gap-3 pl-1">
+        <div
+          className="flex gap-3 pl-1"
+          onClick={(event) => {
+            if (isUnread && !isNotificationInteractiveTarget(event.target)) {
+              onMarkRead(notification.id);
+            }
+          }}
+        >
           <span
             className={cn(
-              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-[0_8px_20px_rgba(29,29,27,0.08)] ring-1 ring-paper/75 sm:h-9 sm:w-9",
+              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-paper/75",
               visual.iconClassName,
             )}
           >
@@ -467,11 +562,11 @@ function NotificationCard({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span
                     className={cn(
-                      "inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold leading-none ring-1 sm:text-[11px]",
+                      "inline-flex h-5 max-w-full items-center rounded-full px-2 text-[10px] font-semibold leading-none ring-1 sm:text-[11px]",
                       notificationCategoryStyles[category],
                     )}
                   >
-                    {t.categoryLabels[category]}
+                    {filterCopy.tabs[category]}
                   </span>
                   {isUnread ? (
                     <span className="inline-flex h-5 items-center rounded-full bg-rose px-2 text-[10px] font-semibold leading-none text-danger ring-1 ring-coral/35 sm:text-[11px]">
@@ -480,15 +575,21 @@ function NotificationCard({
                   ) : null}
                 </div>
 
-                <h2 className="mt-2 text-[15px] font-semibold leading-5 text-ink sm:text-base">
+                <h2 className="mt-2 text-[15px] font-black leading-5 text-ink sm:text-base">
                   {text.title}
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-forest/70">
+                <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6C746A]">
                   {text.body}
                 </p>
               </div>
 
-              <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
+              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
+                {isUnread ? (
+                  <span
+                    aria-label={t.unread}
+                    className="hidden h-2 w-2 rounded-full bg-coral shadow-[0_0_0_3px_rgba(222,170,179,0.32)] sm:inline-block"
+                  />
+                ) : null}
                 {formatActivityDate(notification.createdAt, locale)}
               </span>
             </div>
@@ -497,7 +598,7 @@ function NotificationCard({
               <dl className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-outline sm:text-xs">
                 {notification.actor ? (
                   <Link
-                    className="inline-flex max-w-full items-center gap-1 rounded-full bg-cream/72 px-2 py-0.5 ring-1 ring-sand transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                    className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#F7F7F0] px-2 py-0.5 ring-1 ring-[#EEEDE4] transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
                     href={withLocale(
                       locale,
                       `/profile/${notification.actor.id}`,
@@ -510,7 +611,7 @@ function NotificationCard({
                   </Link>
                 ) : null}
                 {notification.activity ? (
-                  <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-fog/82 px-2 py-0.5 ring-1 ring-sand">
+                  <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#F7F7F0] px-2 py-0.5 ring-1 ring-[#EEEDE4]">
                     <dt className="shrink-0 text-outline">{t.activityLabel}</dt>
                     <dd className="truncate font-medium text-ink">
                       {notification.activity.title}
@@ -593,11 +694,20 @@ export function NotificationsCenterClient({
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
   const summaryLabels = getNotificationSummaryLabels(locale);
+  const filterCopy = getNotificationFilterCopy(locale);
   const { setUnreadNotificationCount } =
     useNotificationBadge(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [activeFilter, setActiveFilter] = useState<NotificationFilter>("all");
   const [isPending, startTransition] = useTransition();
 
+  const filters: NotificationFilter[] = [
+    "all",
+    "participation",
+    "activity",
+    "friends",
+    "system",
+  ];
   const unreadNotifications = notifications.filter(
     (notification) => notification.readAt === null,
   );
@@ -606,29 +716,42 @@ export function NotificationsCenterClient({
   );
   const unreadCount = unreadNotifications.length;
   const actionRequiredCount = notifications.filter(needsUserAction).length;
-  const summaryItems = [
-    {
-      icon: Bell,
-      label: summaryLabels.unread,
-      tone: "bg-ice text-forest ring-sage/60",
-      value: unreadCount,
+  const filteredNotifications =
+    activeFilter === "all"
+      ? notifications
+      : notifications.filter(
+          (notification) =>
+            getNotificationCategory(notification.type) === activeFilter,
+        );
+  const visibleNotifications = [...filteredNotifications].sort((a, b) => {
+    const unreadDelta = Number(a.readAt !== null) - Number(b.readAt !== null);
+
+    if (unreadDelta !== 0) {
+      return unreadDelta;
+    }
+
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  });
+  const filterCounts = filters.reduce<Record<NotificationFilter, number>>(
+    (counts, filter) => {
+      counts[filter] =
+        filter === "all"
+          ? notifications.length
+          : notifications.filter(
+              (notification) =>
+                getNotificationCategory(notification.type) === filter,
+            ).length;
+
+      return counts;
     },
     {
-      icon: Clock3,
-      label: summaryLabels.actionRequired,
-      tone:
-        actionRequiredCount > 0
-          ? "bg-rose text-danger ring-coral/35"
-          : "bg-fog text-forest ring-sage/45",
-      value: actionRequiredCount,
+      activity: 0,
+      all: 0,
+      friends: 0,
+      participation: 0,
+      system: 0,
     },
-    {
-      icon: CheckCheck,
-      label: summaryLabels.total,
-      tone: "bg-cream text-ink ring-sand",
-      value: notifications.length,
-    },
-  ];
+  );
 
   useEffect(() => {
     setUnreadNotificationCount(unreadCount);
@@ -716,7 +839,7 @@ export function NotificationsCenterClient({
 
   const markAllReadButton = (
     <button
-      className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sand bg-paper/95 px-3 text-xs font-semibold text-forest transition hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+      className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#D6D5B2] bg-white px-3 text-xs font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
       disabled={isPending || unreadCount === 0}
       onClick={handleMarkAllRead}
       type="button"
@@ -728,18 +851,10 @@ export function NotificationsCenterClient({
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-[1.65rem] border border-sand bg-paper/82 p-4 shadow-[0_20px_56px_rgba(21,98,64,0.075)] ring-1 ring-paper/70 sm:p-5">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-16 h-36 w-36 rounded-full bg-rose/34 blur-3xl"
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-10 bottom-0 h-28 w-40 rounded-full bg-fog/90 blur-3xl"
-        />
-        <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <section className="space-y-4 border-b border-[#EEEDE4] pb-4">
+        <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full bg-fog px-3 py-1 text-xs font-semibold text-forest ring-1 ring-sage/50 sm:text-sm">
+            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[#156240]">
               <Bell className="h-4 w-4" />
               {actionRequiredCount > 0
                 ? t.actionRequiredCount(actionRequiredCount)
@@ -747,118 +862,132 @@ export function NotificationsCenterClient({
                   ? t.unreadCount(unreadCount)
                   : t.allRead}
             </p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
+            <h1 className="mt-2 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
               {t.title}
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-forest/72">
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[#6C746A]">
               {t.description}
-              <span className="sm:hidden"> {t.mobileDescription}</span>
             </p>
           </div>
-          <div className="grid gap-3 lg:min-w-[26rem]">
-            <div className="grid grid-cols-3 gap-2">
-              {summaryItems.map((item) => {
-                const SummaryIcon = item.icon;
-
-                return (
-                  <div
-                    className={cn(
-                      "min-w-0 rounded-[1rem] px-3 py-2 ring-1",
-                      item.tone,
-                    )}
-                    key={item.label}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <SummaryIcon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="text-base font-semibold leading-none">
-                        {item.value}
-                      </span>
-                    </div>
-                    <p className="mt-1 truncate text-[11px] font-semibold leading-4 opacity-80">
-                      {item.label}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="rounded-[1rem] border border-sand/80 bg-fog/55 p-2">
-              <div className="flex gap-2 sm:justify-end">
-                {markAllReadButton}
-                <button
-                  className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-danger/15 bg-paper px-3 text-xs font-semibold text-danger transition hover:bg-rose/55 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
-                  disabled={isPending || readNotifications.length === 0}
-                  onClick={handleDeleteRead}
-                  type="button"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {deleteCopy.clearRead}
-                </button>
-              </div>
-            </div>
-          </div>
+          <span className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] px-2 text-xs font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs font-black text-[#6C746A]">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
+            <Bell className="h-3.5 w-3.5 text-[#156240]" />
+            {summaryLabels.unread} {unreadCount}
+          </span>
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
+            <Clock3 className="h-3.5 w-3.5 text-[#9A2135]" />
+            {summaryLabels.actionRequired} {actionRequiredCount}
+          </span>
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
+            <CheckCheck className="h-3.5 w-3.5 text-[#156240]" />
+            {summaryLabels.total} {notifications.length}
+          </span>
+        </div>
+
+        <div className="flex gap-2 sm:justify-start">
+          {markAllReadButton}
+          <button
+            className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#F1B5AE] bg-white px-3 text-xs font-black text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+            disabled={isPending || readNotifications.length === 0}
+            onClick={handleDeleteRead}
+            type="button"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {deleteCopy.clearRead}
+          </button>
+        </div>
+
+        <nav
+          aria-label={t.title}
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
+          {filters.map((filter) => {
+            const active = activeFilter === filter;
+            const count = filterCounts[filter];
+
+            return (
+              <button
+                key={filter}
+                className={cn(
+                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                  active
+                    ? "bg-[#156240] text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
+                    : "bg-white text-[#111210] ring-1 ring-[#EEEDE4] hover:bg-[#F7F7F0]",
+                )}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filterCopy.tabs[filter]}
+                {count > 0 ? (
+                  <span
+                    className={cn(
+                      "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none",
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-[#EAF5E8] text-[#156240]",
+                    )}
+                  >
+                    {count > 99 ? "99+" : count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
       </section>
+
+      {unreadCount === 0 && notifications.length > 0 ? (
+        <section className="flex items-center gap-2 rounded-[1rem] bg-[#F7F7F0] px-3 py-2.5 text-sm font-bold text-[#6C746A] ring-1 ring-[#EEEDE4]">
+          <CheckCheck className="h-4 w-4 shrink-0 text-[#156240]" />
+          <span className="min-w-0 truncate">{t.sections.clearTitle}</span>
+        </section>
+      ) : null}
 
       {notifications.length === 0 ? (
         <EmptyState
           actionHref={withLocale(locale, "/activities")}
           actionLabel={t.emptyAction}
+          className="shadow-none"
           description={t.emptyDescription}
           title={t.emptyTitle}
         />
+      ) : visibleNotifications.length === 0 ? (
+        <section className="rounded-[1rem] border border-dashed border-[#D6D5B2] bg-white/62 px-4 py-6 text-center">
+          <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]">
+            <Inbox className="h-5 w-5" />
+          </span>
+          <h2 className="mt-3 text-base font-black text-[#111210]">
+            {filterCopy.emptyTitle[activeFilter]}
+          </h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-[#6C746A]">
+            {filterCopy.emptyDescription[activeFilter]}
+          </p>
+          <button
+            className="mt-4 inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F7F7F0]"
+            type="button"
+            onClick={() => setActiveFilter("all")}
+          >
+            {filterCopy.tabs.all}
+          </button>
+        </section>
       ) : (
-        <div className="space-y-4">
-          {unreadNotifications.length > 0 ? (
-            <section className="space-y-2.5">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <span className="h-2 w-2 rounded-full bg-coral" />
-                {t.sections.unread}
-              </h2>
-              <div className="grid gap-3">
-                {unreadNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    locale={locale}
-                    notification={notification}
-                    onDelete={handleDelete}
-                    onMarkRead={handleMarkRead}
-                    pending={isPending}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : (
-            <section className="rounded-[1.2rem] border border-dashed border-sage bg-paper/62 p-4 shadow-[0_12px_30px_rgba(21,98,64,0.045)]">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <CheckCheck className="h-4 w-4 text-forest" />
-                {t.sections.clearTitle}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-forest/68">
-                {t.sections.clearDescription}
-              </p>
-            </section>
-          )}
-
-          {readNotifications.length > 0 ? (
-            <section className="space-y-2.5">
-              <h2 className="text-sm font-semibold text-forest/68">
-                {t.sections.read}
-              </h2>
-              <div className="grid gap-3">
-                {readNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    locale={locale}
-                    notification={notification}
-                    onDelete={handleDelete}
-                    onMarkRead={handleMarkRead}
-                    pending={isPending}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </div>
+        <section className="grid gap-2.5 pb-4">
+          {visibleNotifications.map((notification) => (
+            <NotificationCard
+              key={notification.id}
+              locale={locale}
+              notification={notification}
+              onDelete={handleDelete}
+              onMarkRead={handleMarkRead}
+              pending={isPending}
+            />
+          ))}
+        </section>
       )}
     </>
   );
