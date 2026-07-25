@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent, MouseEvent, ReactNode, TouchEvent } from "react";
+import type { KeyboardEvent, MouseEvent, TouchEvent } from "react";
 import {
   useActionState,
   useEffect,
@@ -18,11 +18,11 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  Gift,
   Globe2,
   Heart,
   MessageCircle,
   MoreHorizontal,
-  Repeat2,
   Search,
   SendHorizontal,
   Share2,
@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
@@ -45,7 +46,6 @@ import {
   createMomentCommentAction,
   deleteMomentAction,
   deleteMomentCommentAction,
-  repostMomentAction,
   toggleMomentLikeAction,
   type CreateMomentCommentState,
   type CreateMomentState,
@@ -109,8 +109,10 @@ const copyByLocale = {
     composerSubmitting: "发布中...",
     commentPlaceholder: "写评论...",
     commentSubmit: "发送",
+    close: "关闭",
     delete: "删除",
     detail: "详情",
+    more: "更多",
     emptyFeedTitle: "还没有动态",
     emptyFeedDescription: "发一条足迹，或者添加好友后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
@@ -131,8 +133,8 @@ const copyByLocale = {
     visibilityPublic: "公开",
     like: "点赞",
     comment: "评论",
+    gift: "送礼",
     share: "分享链接",
-    repost: "转发",
     commentSheetTitle: "评论",
     loadMoreComments: "查看全部评论",
     emptyComments: "还没有评论",
@@ -188,8 +190,10 @@ const copyByLocale = {
     composerSubmitting: "Posting...",
     commentPlaceholder: "Write a comment...",
     commentSubmit: "Send",
+    close: "Close",
     delete: "Delete",
     detail: "Details",
+    more: "More",
     emptyFeedTitle: "No moments yet",
     emptyFeedDescription: "Post one, or come back after adding friends.",
     feedError: "Moments could not load. Try again later.",
@@ -211,8 +215,8 @@ const copyByLocale = {
     visibilityPublic: "Public",
     like: "Like",
     comment: "Comment",
+    gift: "Gift",
     share: "Share link",
-    repost: "Repost",
     commentSheetTitle: "Comments",
     loadMoreComments: "View all comments",
     emptyComments: "No comments yet",
@@ -270,8 +274,10 @@ const copyByLocale = {
     composerSubmitting: "Publication...",
     commentPlaceholder: "Écrire un commentaire...",
     commentSubmit: "Envoyer",
+    close: "Fermer",
     delete: "Supprimer",
     detail: "Détails",
+    more: "Plus",
     emptyFeedTitle: "Aucun moment pour l'instant",
     emptyFeedDescription:
       "Publiez un moment, ou revenez après avoir ajouté des amis.",
@@ -295,8 +301,8 @@ const copyByLocale = {
     visibilityPublic: "Public",
     like: "J'aime",
     comment: "Commenter",
+    gift: "Cadeau",
     share: "Partager le lien",
-    repost: "Republier",
     commentSheetTitle: "Commentaires",
     loadMoreComments: "Voir tous les commentaires",
     emptyComments: "Aucun commentaire pour le moment",
@@ -386,6 +392,209 @@ function ProfileAvatar({
   );
 }
 
+const momentActionButtonClassName =
+  "inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-sm font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
+
+function MomentActionBar({
+  className,
+  commentHref,
+  copy,
+  isAuthenticated,
+  isOwnMoment,
+  locale,
+  moment,
+  onCommentClick,
+  signInHref,
+}: {
+  className?: string;
+  commentHref?: string;
+  copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
+  isOwnMoment: boolean;
+  locale: string;
+  moment: MomentFeedItemViewModel;
+  onCommentClick?: () => void;
+  signInHref: string;
+}) {
+  const commentContent = (
+    <>
+      <MessageCircle className="h-[18px] w-[18px] shrink-0" />
+      <span className="min-w-0 tabular-nums leading-none">
+        {moment.commentCount}
+      </span>
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-3 items-center gap-1 text-[#51594F]",
+        className,
+      )}
+    >
+      <OptimisticMomentLikeButton
+        className={momentActionButtonClassName}
+        copy={copy}
+        formClassName="min-w-0"
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        moment={moment}
+        signInHref={signInHref}
+      />
+
+      {commentHref ? (
+        <Link
+          href={commentHref}
+          className={momentActionButtonClassName}
+          aria-label={copy.comment}
+        >
+          {commentContent}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className={momentActionButtonClassName}
+          aria-label={copy.comment}
+          onClick={onCommentClick}
+        >
+          {commentContent}
+        </button>
+      )}
+
+      <MomentGiftAction
+        className={momentActionButtonClassName}
+        copy={copy}
+        isAuthenticated={isAuthenticated}
+        isOwnMoment={isOwnMoment}
+        locale={locale}
+        moment={moment}
+      />
+    </div>
+  );
+}
+
+function MomentMoreMenu({
+  buttonClassName,
+  className,
+  copy,
+  deleteRedirectPath,
+  detailHref,
+  isAuthenticated,
+  isOwnMoment,
+  locale,
+  moment,
+  showDetailAction,
+}: {
+  buttonClassName?: string;
+  className?: string;
+  copy: ReturnType<typeof getFootprintsCopy>;
+  deleteRedirectPath?: string;
+  detailHref: string;
+  isAuthenticated: boolean;
+  isOwnMoment: boolean;
+  locale: string;
+  moment: MomentFeedItemViewModel;
+  showDetailAction: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const directMessageCopy = getDirectMessagesCopy(locale);
+
+  return (
+    <div
+      className={cn("relative min-w-0", className)}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          setMenuOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className={cn(
+          "inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1D1D1B]/70 transition hover:bg-[#F7F7F0] active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24",
+          buttonClassName,
+        )}
+        aria-label={copy.more}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <MoreHorizontal className="h-[18px] w-[18px] shrink-0" />
+        <span className="sr-only">{copy.more}</span>
+      </button>
+
+      {menuOpen ? (
+        <>
+          <button
+            aria-label={copy.close}
+            className="fixed inset-0 z-10 cursor-default bg-transparent"
+            onClick={() => setMenuOpen(false)}
+            tabIndex={-1}
+            type="button"
+          />
+          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
+            {showDetailAction ? (
+              <Link
+                className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
+                href={detailHref}
+              >
+                <Eye className="h-4 w-4" />
+                {copy.detail}
+              </Link>
+            ) : null}
+            <ShareMomentButton
+              className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
+              copy={copy}
+              href={detailHref}
+            />
+            {!isOwnMoment ? (
+              <StartDirectConversationButton
+                buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
+                className="min-w-0"
+                errorClassName="px-3 pb-2"
+                label={directMessageCopy.startConversation}
+                locale={locale}
+                peerProfileId={moment.author.id}
+                redirectPath={`/footprints/${moment.id}`}
+              />
+            ) : null}
+            {isOwnMoment ? (
+              <form action={deleteMomentAction}>
+                <input name="locale" type="hidden" value={locale} />
+                <input name="momentId" type="hidden" value={moment.id} />
+                {deleteRedirectPath ? (
+                  <input
+                    name="redirectPath"
+                    type="hidden"
+                    value={deleteRedirectPath}
+                  />
+                ) : null}
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {copy.delete}
+                </button>
+              </form>
+            ) : (
+              <ReportDialog
+                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                redirectPath={`/footprints/${moment.id}`}
+                targetId={moment.id}
+                targetType="MOMENT"
+                variant="link"
+              />
+            )}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export function FeedCard({
   deleteRedirectPath,
   isAuthenticated,
@@ -402,19 +611,12 @@ export function FeedCard({
   viewerProfileId: string | null;
 }) {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
-  const directMessageCopy = getDirectMessagesCopy(locale);
   const isOwnMoment = viewerProfileId === moment.author.id;
   const hasImages = moment.images.length > 0;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
   const openDetail = () => router.push(detailHref);
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target;
@@ -443,7 +645,7 @@ export function FeedCard({
     <>
       <article
         className={cn(
-          "cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+          "cursor-pointer overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
           hasImages
             ? "bg-transparent pb-5"
             : "rounded-[1.35rem] border border-[#E3DCC5] bg-white shadow-[0_12px_34px_rgba(21,98,64,0.08)]",
@@ -474,7 +676,7 @@ export function FeedCard({
               />
             </Link>
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
                     {moment.author.nickname}
@@ -483,81 +685,6 @@ export function FeedCard({
                     {formatActivityDate(moment.createdAt, locale)}
                   </p>
                 </div>
-                <div
-                  className="relative"
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1D1D1B]/62 transition hover:bg-[#F1F2EC]"
-                    aria-label="More"
-                    onClick={() => setMenuOpen((open) => !open)}
-                  >
-                    <MoreHorizontal className="h-5 w-5" />
-                  </button>
-                  {menuOpen ? (
-                    <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
-                      <Link
-                        className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
-                        href={detailHref}
-                      >
-                        <Eye className="h-4 w-4" />
-                        {copy.detail}
-                      </Link>
-                      <ShareMomentButton
-                        className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
-                        copy={copy}
-                        href={detailHref}
-                      />
-                      {!isOwnMoment ? (
-                        <StartDirectConversationButton
-                          buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
-                          className="min-w-0"
-                          errorClassName="px-3 pb-2"
-                          label={directMessageCopy.startConversation}
-                          locale={locale}
-                          peerProfileId={moment.author.id}
-                          redirectPath={`/footprints/${moment.id}`}
-                        />
-                      ) : null}
-                      {isOwnMoment ? (
-                        <form action={deleteMomentAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="momentId"
-                            type="hidden"
-                            value={moment.id}
-                          />
-                          {deleteRedirectPath ? (
-                            <input
-                              name="redirectPath"
-                              type="hidden"
-                              value={deleteRedirectPath}
-                            />
-                          ) : null}
-                          <button
-                            type="submit"
-                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            {copy.delete}
-                          </button>
-                        </form>
-                      ) : (
-                        <ReportDialog
-                          className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
-                          isAuthenticated={isAuthenticated}
-                          locale={locale}
-                          redirectPath={`/footprints/${moment.id}`}
-                          targetId={moment.id}
-                          targetType="MOMENT"
-                          variant="link"
-                        />
-                      )}
-                    </div>
-                  ) : null}
-                </div>
               </div>
               {!hasImages && moment.content ? (
                 <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#1D1D1B]">
@@ -565,6 +692,17 @@ export function FeedCard({
                 </p>
               ) : null}
             </div>
+            <MomentMoreMenu
+              className="ml-auto shrink-0"
+              copy={copy}
+              deleteRedirectPath={deleteRedirectPath}
+              detailHref={detailHref}
+              isAuthenticated={isAuthenticated}
+              isOwnMoment={isOwnMoment}
+              locale={locale}
+              moment={moment}
+              showDetailAction
+            />
           </div>
 
           {moment.resharedMoment ? (
@@ -589,37 +727,21 @@ export function FeedCard({
           ) : null}
         </div>
 
-        <div
+        <MomentActionBar
           className={cn(
-            "grid grid-cols-3 py-3 text-[#1D1D1B]/76",
-            hasImages ? "px-0 pb-1 pt-2" : "px-4",
+            "py-2",
+            hasImages
+              ? "mt-2 border-y border-[#E8E4D4]"
+              : "mx-4 mt-3 border-y border-[#E8E4D4]",
           )}
-        >
-          <OptimisticMomentLikeButton
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-full py-2 text-sm font-bold"
-            aria-label={copy.comment}
-            onClick={() => setCommentsOpen(true)}
-          >
-            <MessageCircle className="h-[18px] w-[18px]" />
-            <span>{moment.commentCount}</span>
-          </button>
-          <RepostMomentButton
-            canRepost={canRepost}
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-        </div>
+          copy={copy}
+          isAuthenticated={isAuthenticated}
+          isOwnMoment={isOwnMoment}
+          locale={locale}
+          moment={moment}
+          onCommentClick={() => setCommentsOpen(true)}
+          signInHref={signInHref}
+        />
 
         {moment.recentComments.length > 0 ? (
           <button
@@ -689,17 +811,10 @@ export function MomentDetailContent({
   copy: ReturnType<typeof getFootprintsCopy>;
   viewerProfileId: string | null;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
-  const directMessageCopy = getDirectMessagesCopy(locale);
   const isOwnMoment = viewerProfileId === moment.author.id;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
 
   return (
     <>
@@ -723,66 +838,17 @@ export function MomentDetailContent({
               {formatActivityDate(moment.createdAt, locale)}
             </p>
           </div>
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1D1D1B]/70 transition hover:bg-[#F1F2EC]"
-              aria-label="More"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-            {menuOpen ? (
-              <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
-                <ShareMomentButton
-                  className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
-                  copy={copy}
-                  href={detailHref}
-                />
-                {!isOwnMoment ? (
-                  <StartDirectConversationButton
-                    buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
-                    className="min-w-0"
-                    errorClassName="px-3 pb-2"
-                    label={directMessageCopy.startConversation}
-                    locale={locale}
-                    peerProfileId={moment.author.id}
-                    redirectPath={`/footprints/${moment.id}`}
-                  />
-                ) : null}
-                {isOwnMoment ? (
-                  <form action={deleteMomentAction}>
-                    <input name="locale" type="hidden" value={locale} />
-                    <input name="momentId" type="hidden" value={moment.id} />
-                    {deleteRedirectPath ? (
-                      <input
-                        name="redirectPath"
-                        type="hidden"
-                        value={deleteRedirectPath}
-                      />
-                    ) : null}
-                    <button
-                      type="submit"
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {copy.delete}
-                    </button>
-                  </form>
-                ) : (
-                  <ReportDialog
-                    className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    redirectPath={`/footprints/${moment.id}`}
-                    targetId={moment.id}
-                    targetType="MOMENT"
-                    variant="link"
-                  />
-                )}
-              </div>
-            ) : null}
-          </div>
+          <MomentMoreMenu
+            className="ml-auto shrink-0"
+            copy={copy}
+            deleteRedirectPath={deleteRedirectPath}
+            detailHref={detailHref}
+            isAuthenticated={isAuthenticated}
+            isOwnMoment={isOwnMoment}
+            locale={locale}
+            moment={moment}
+            showDetailAction={false}
+          />
         </header>
 
         {moment.content ? (
@@ -809,31 +875,16 @@ export function MomentDetailContent({
           </div>
         ) : null}
 
-        <div className="mt-5 grid grid-cols-3 border-y border-[#E8E4D4] py-3 text-[#1D1D1B]/76">
-          <OptimisticMomentLikeButton
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-          <a
-            href="#moment-comments"
-            className="inline-flex items-center justify-center gap-2 rounded-full py-2 text-sm font-bold"
-            aria-label={copy.comment}
-          >
-            <MessageCircle className="h-[18px] w-[18px]" />
-            <span>{moment.commentCount}</span>
-          </a>
-          <RepostMomentButton
-            canRepost={canRepost}
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-        </div>
+        <MomentActionBar
+          className="mt-5 border-y border-[#E8E4D4] py-2"
+          commentHref="#moment-comments"
+          copy={copy}
+          isAuthenticated={isAuthenticated}
+          isOwnMoment={isOwnMoment}
+          locale={locale}
+          moment={moment}
+          signInHref={signInHref}
+        />
       </article>
 
       <section id="moment-comments" className="border-t border-[#E8E4D4] pt-5">
@@ -926,13 +977,17 @@ export function MomentDetailContent({
 }
 
 function OptimisticMomentLikeButton({
+  className,
   copy,
+  formClassName,
   isAuthenticated,
   locale,
   moment,
   signInHref,
 }: {
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
+  formClassName?: string;
   isAuthenticated: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
@@ -953,11 +1008,13 @@ function OptimisticMomentLikeButton({
     <>
       <Heart
         className={cn(
-          "h-[18px] w-[18px]",
+          "h-[18px] w-[18px] shrink-0",
           optimisticLike.isLiked ? "fill-current" : null,
         )}
       />
-      <span>{optimisticLike.count}</span>
+      <span className="min-w-0 tabular-nums leading-none">
+        {optimisticLike.count}
+      </span>
     </>
   );
 
@@ -965,7 +1022,10 @@ function OptimisticMomentLikeButton({
     return (
       <Link
         href={signInHref}
-        className="inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold"
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
+          className,
+        )}
         aria-label={copy.signInToInteract}
       >
         {content}
@@ -979,6 +1039,7 @@ function OptimisticMomentLikeButton({
         toggleOptimisticLike(null);
         await toggleMomentLikeAction(formData);
       }}
+      className={formClassName}
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="momentId" type="hidden" value={moment.id} />
@@ -986,6 +1047,7 @@ function OptimisticMomentLikeButton({
         type="submit"
         className={cn(
           "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
+          className,
           optimisticLike.isLiked ? "text-[#E7457A]" : null,
         )}
         aria-label={copy.like}
@@ -996,92 +1058,60 @@ function OptimisticMomentLikeButton({
   );
 }
 
-function RepostMomentButton({
-  canRepost,
+function MomentGiftAction({
+  className,
   copy,
   isAuthenticated,
+  isOwnMoment,
   locale,
   moment,
-  signInHref,
 }: {
-  canRepost: boolean;
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   isAuthenticated: boolean;
+  isOwnMoment: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
-  signInHref: string;
 }) {
-  const [optimisticCount, addOptimisticRepost] = useOptimistic(
-    moment.repostCount,
-    (current, _action: null) => current + 1,
+  const triggerClassName = cn(
+    className,
+    "text-[#9A2135] hover:bg-[#FFF4F4] focus-visible:ring-[#E7457A]/24",
   );
-
-  const content = (
+  const triggerContent = (
     <>
-      <Repeat2 className="h-[18px] w-[18px]" />
-      <span>{optimisticCount}</span>
+      <Gift className="h-[18px] w-[18px] shrink-0" />
+      <span className="min-w-0 tabular-nums leading-none">
+        {moment.giftCount}
+      </span>
     </>
   );
 
-  if (!isAuthenticated) {
+  if (isOwnMoment) {
     return (
-      <Link
-        href={signInHref}
-        className="ml-auto inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold"
-        aria-label={copy.signInToInteract}
+      <button
+        aria-label={copy.gift}
+        className={cn(triggerClassName, "cursor-default")}
+        disabled
+        type="button"
       >
-        {content}
-      </Link>
+        {triggerContent}
+      </button>
     );
   }
 
   return (
-    <form
-      action={async (formData) => {
-        if (!canRepost) {
-          return;
-        }
-
-        addOptimisticRepost(null);
-        await repostMomentAction(formData);
-      }}
-      className="flex justify-end"
-    >
-      <input name="locale" type="hidden" value={locale} />
-      <input name="momentId" type="hidden" value={moment.id} />
-      <RepostMomentSubmitButton
-        canRepost={canRepost}
-        label={copy.repost}
-        content={content}
-      />
-    </form>
-  );
-}
-
-function RepostMomentSubmitButton({
-  canRepost,
-  content,
-  label,
-}: {
-  canRepost: boolean;
-  content: ReactNode;
-  label: string;
-}) {
-  const { pending } = useFormStatus();
-  const disabled = !canRepost || pending;
-
-  return (
-    <button
-      type="submit"
-      className={cn(
-        "inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold",
-        disabled && "cursor-not-allowed opacity-35",
-      )}
-      disabled={disabled}
-      aria-label={label}
-    >
-      {content}
-    </button>
+    <CharmGiftDialog
+      isAuthenticated={isAuthenticated}
+      locale={locale}
+      recipientName={moment.author.nickname}
+      recipientProfileId={moment.author.id}
+      redirectPath={`/footprints/${moment.id}`}
+      sourceContextId={moment.id}
+      sourceSurface="MOMENT"
+      triggerAriaLabel={copy.gift}
+      triggerClassName={triggerClassName}
+      triggerContent={triggerContent}
+    />
   );
 }
 

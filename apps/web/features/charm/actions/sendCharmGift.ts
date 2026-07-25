@@ -17,6 +17,10 @@ const sendCharmGiftSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
   recipientProfileId: z.string().min(1),
   redirectPath: z.string().min(1),
+  sourceContextId: z.string().min(1).optional(),
+  sourceSurface: z
+    .enum(["PROFILE", "ACTIVITY", "MOMENT", "PLANET", "DIRECT_MESSAGE", "OTHER"])
+    .default("PROFILE"),
 });
 
 export type SendCharmGiftState = {
@@ -74,6 +78,8 @@ export async function sendCharmGiftAction(
     locale: fallbackLocale,
     recipientProfileId: getString(formData, "recipientProfileId"),
     redirectPath: getString(formData, "redirectPath"),
+    sourceContextId: getString(formData, "sourceContextId") || undefined,
+    sourceSurface: getString(formData, "sourceSurface") || "PROFILE",
   });
 
   if (!result.success) {
@@ -83,8 +89,15 @@ export async function sendCharmGiftAction(
     };
   }
 
-  const { attemptId, giftId, locale, recipientProfileId, redirectPath } =
-    result.data;
+  const {
+    attemptId,
+    giftId,
+    locale,
+    recipientProfileId,
+    redirectPath,
+    sourceContextId,
+    sourceSurface,
+  } = result.data;
   const copy = getSendGiftCopy(locale);
   const gift = getCharmGiftDefinition(giftId);
 
@@ -133,8 +146,8 @@ export async function sendCharmGiftAction(
       locale,
       recipientProfileId,
       senderProfileId: senderProfile.id,
-      sourceContextId: recipientProfileId,
-      sourceSurface: "PROFILE",
+      sourceContextId: sourceContextId ?? recipientProfileId,
+      sourceSurface,
     });
 
     eventId = result.event.id;
@@ -156,6 +169,7 @@ export async function sendCharmGiftAction(
 
   revalidatePath(withLocale(locale, `/profile/${recipientProfileId}`));
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, redirectPath));
 
   return {
     attemptId,

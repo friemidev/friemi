@@ -131,6 +131,7 @@ export type MomentFeedItemViewModel = {
   content: string | null;
   visibility: MomentVisibility;
   images: MomentFeedImageViewModel[];
+  giftCount: number;
   likeCount: number;
   commentCount: number;
   repostCount: number;
@@ -152,7 +153,10 @@ function mapAuthor(author: MomentFeedQueryResult["author"]) {
   };
 }
 
-function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
+function mapMoment(
+  moment: MomentFeedQueryResult,
+  giftCount = 0,
+): MomentFeedItemViewModel {
   return {
     id: moment.id,
     author: mapAuthor(moment.author),
@@ -165,6 +169,7 @@ function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
       height: image.height,
       sortOrder: image.sortOrder,
     })),
+    giftCount,
     likeCount: moment.likeCount,
     commentCount: moment.commentCount,
     repostCount: moment.repostCount,
@@ -198,6 +203,33 @@ function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
           }
         : null,
   };
+}
+
+async function getMomentGiftCountMap(momentIds: string[]) {
+  if (momentIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.charmGiftEvent.groupBy({
+    by: ["sourceContextId"],
+    where: {
+      sourceContextId: {
+        in: momentIds,
+      },
+      sourceSurface: "MOMENT",
+    },
+    _sum: {
+      quantity: true,
+    },
+  });
+
+  return new Map(
+    groups.flatMap((group) =>
+      group.sourceContextId
+        ? [[group.sourceContextId, group._sum.quantity ?? 0]]
+        : [],
+    ),
+  );
 }
 
 export async function getVisibleMomentWhere(
@@ -256,7 +288,13 @@ export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
     select: getMomentFeedSelect(viewerProfileId),
   });
 
-  return moments.map(mapMoment);
+  const giftCountByMomentId = await getMomentGiftCountMap(
+    moments.map((moment) => moment.id),
+  );
+
+  return moments.map((moment) =>
+    mapMoment(moment, giftCountByMomentId.get(moment.id) ?? 0),
+  );
 });
 
 export const getMomentDetail = cache(
@@ -266,6 +304,12 @@ export const getMomentDetail = cache(
       select: getMomentFeedSelect(viewerProfileId, { commentTake: 100 }),
     });
 
-    return moment ? mapMoment(moment) : null;
+    if (!moment) {
+      return null;
+    }
+
+    const giftCountByMomentId = await getMomentGiftCountMap([moment.id]);
+
+    return mapMoment(moment, giftCountByMomentId.get(moment.id) ?? 0);
   },
 );
