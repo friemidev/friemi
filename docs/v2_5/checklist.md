@@ -826,21 +826,32 @@ v2.5 首批成就：
 - Branch：`chore/v2-5-release-hardening`
 - 目标：完成 v2.5 上线前稳定性、迁移、文案和版本公告收尾。
 
+### 14.0 发布前置 Gate
+
+- [ ] `feature/v2-5-social-rewards-automation` 已合入 `dev`
+- [ ] 当前分支已经基于包含 PR10 的最新 `dev` rebase 或 merge
+- [ ] `apps/web/features/social-rewards/` 存在
+- [ ] `syncRecentEndedActivitySocialRewards` 已接入定时同步
+- [ ] v2.5 更新公告只描述已经合入当前发布分支的功能
+
+当前检查：`origin/dev` 截止 `2026-07-25` 仍停在 PR09，PR10 未进入当前发布分支；PR11 可以继续准备收尾，但不能作为最终上线分支直接部署生产。
+
 ### 14.1 本地验证
 
-- [ ] 本地数据库执行全部 v2.5 migration
-- [ ] Prisma Client 为最新生成结果
-- [ ] `npm run typecheck --workspace=apps/web`
-- [ ] `npm test --workspace=apps/web`
-- [ ] `git diff --check`
+- [x] 本地数据库执行全部 v2.5 migration
+- [x] Prisma Client 为最新生成结果
+- [x] `npm run typecheck --workspace=apps/web`
+- [x] `npm test --workspace=apps/web`
+- [x] `npm run build --workspace=apps/web`
+- [x] `git diff --check`
 
 ### 14.2 预览环境验证
 
-- [ ] 使用预览库 direct URL 执行 Prisma migration deploy
-- [ ] 验证新表存在
-- [ ] 验证索引存在
-- [ ] 验证 Profile 新页面能加载
-- [ ] 验证旧数据不受影响
+- [x] 使用预览库 direct URL 执行 Prisma migration deploy
+- [x] 验证新表存在
+- [x] 验证索引存在
+- [x] 验证 Profile 新页面能加载
+- [x] 验证旧数据不受影响
 - [ ] iPhone 14 Pro Max smoke test
 - [ ] iPhone SE smoke test
 - [ ] Android WebView smoke test
@@ -850,14 +861,36 @@ v2.5 首批成就：
 
 - [ ] 只使用生产 direct URL 执行迁移
 - [ ] 迁移前确认当前分支已部署到预览且测试通过
-- [ ] 准备生产迁移命令
-- [ ] 准备生产检查 SQL
+- [x] 准备生产迁移命令
+- [x] 准备生产检查 SQL
 - [ ] 生产迁移后执行 smoke test
+
+生产迁移命令：
+
+```bash
+DATABASE_URL='<PRODUCTION_POOLER_URL>' \
+DIRECT_URL='<PRODUCTION_DIRECT_URL>' \
+npx prisma migrate deploy --schema=apps/web/prisma/schema.prisma
+```
+
+生产迁移后可重新生成本地 client 做类型校验：
+
+```bash
+DATABASE_URL='<PRODUCTION_POOLER_URL>' \
+DIRECT_URL='<PRODUCTION_DIRECT_URL>' \
+npx prisma generate --schema=apps/web/prisma/schema.prisma
+```
 
 表检查 SQL：
 
 ```sql
 SELECT
+  EXISTS (
+    SELECT 1 FROM "_prisma_migrations"
+    WHERE migration_name = '20260724100000_add_v2_5_data_foundation'
+      AND finished_at IS NOT NULL
+      AND rolled_back_at IS NULL
+  ) AS migration_applied,
   EXISTS (
     SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'ActivityRoomMessage'
@@ -873,7 +906,19 @@ SELECT
   EXISTS (
     SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'ProfileVisit'
-  ) AS has_profile_visit;
+  ) AS has_profile_visit,
+  EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'CharmGiftEvent'
+  ) AS has_charm_gift_event,
+  EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'FriemiCheck'
+  ) AS has_friemi_check,
+  EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'BlindBoxFragmentEvent'
+  ) AS has_blind_box_fragment_event;
 ```
 
 索引检查 SQL：
@@ -893,30 +938,43 @@ WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
 ```
 
+旧数据安全检查 SQL：
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM "UserProfile") AS user_profiles,
+  (SELECT COUNT(*) FROM "Activity") AS activities,
+  (SELECT COUNT(*) FROM "ActivityParticipant") AS participants,
+  (SELECT COUNT(*) FROM "DirectMessage") AS direct_messages;
+```
+
 ### 14.4 公告与版本
 
-- [ ] `apps/web/app/[locale]/updates` 写入 v2.5 更新公告
-- [ ] Footer 版本号更新为 v2.5
-- [ ] 检查 sitemap 不包含私有 Profile 子页
-- [ ] 检查 robots/noindex 不阻挡公开可索引页面
-- [ ] 检查登录回跳不丢 `redirect_url`
-- [ ] 检查邀请回跳不丢 `ref`
+- [x] `apps/web/app/[locale]/updates` 写入 v2.5 更新公告
+- [x] Footer 版本号更新为 v2.5
+- [x] Top News 默认配置指向 v2.5 更新公告
+- [x] 检查 sitemap 不包含私有 Profile 子页
+- [x] 检查 robots/noindex 不阻挡公开可索引页面
+- [x] 检查登录回跳不丢 `redirect_url`
+- [x] 检查邀请回跳不丢 `ref`
 
 ### 14.5 本 PR 验收标准
 
-- [ ] 本地迁移成功
-- [ ] 预览迁移成功
-- [ ] 生产迁移 SQL 已准备
-- [ ] v2.5 更新公告已上线
-- [ ] Footer 显示 v2.5
-- [ ] 新私有页面不进入 sitemap
-- [ ] 公开 Profile 和公开活动页面仍可被索引
+- [x] 本地迁移成功
+- [x] 预览迁移成功
+- [x] 生产迁移 SQL 已准备
+- [x] v2.5 更新公告已上线
+- [x] Footer 显示 v2.5
+- [x] Top News fallback 显示 v2.5
+- [x] 新私有页面不进入 sitemap
+- [x] 公开 Profile 和公开活动页面仍可被索引
 - [ ] 移动端没有中间滚动条遮挡底部导航
-- [ ] 所有新弹窗不用浏览器 `alert`
-- [ ] 未登录回跳不丢用户意图
-- [ ] `npm run typecheck --workspace=apps/web` 通过
-- [ ] `npm test --workspace=apps/web` 通过
-- [ ] `git diff --check` 通过
+- [x] 所有新弹窗不用浏览器 `alert`
+- [x] 未登录回跳不丢用户意图
+- [x] `npm run typecheck --workspace=apps/web` 通过
+- [x] `npm test --workspace=apps/web` 通过
+- [x] `npm run build --workspace=apps/web` 通过
+- [x] `git diff --check` 通过
 
 ## 15. Pn 暂缓项
 
@@ -960,8 +1018,8 @@ v2.5 可以拆多次 PR，但正式打 v2.5 时至少满足：
 - [ ] 陌生人私聊两条限制有清晰 UI
 - [ ] 通知页面移动端完成视觉优化
 - [x] Moment 底边栏完成移动端调整
-- [ ] 本地、预览数据库迁移完成
-- [ ] typecheck、test、diff check 通过
+- [x] 本地、预览数据库迁移完成
+- [x] typecheck、test、diff check 通过
 
 ## 17. 逻辑一致性约束
 

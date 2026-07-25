@@ -46,7 +46,7 @@ function createEmptyItem(index: number): TopNewsEditorItem {
   const order = (index + 1) * 10;
 
   return {
-    href: "/updates/v2_4",
+    href: "/updates/v2_5",
     id: `new-${Date.now()}-${index}`,
     imageUrl: "/brand/v2_1/friemi-og-default-1200x630.png",
     isActive: true,
@@ -383,7 +383,7 @@ export function TopNewsManagementClient({
                   <FormField label="站内链接">
                     <Input
                       className="h-10"
-                      placeholder="/updates/v2_4"
+                      placeholder="/updates/v2_5"
                       value={item.href}
                       onChange={(event) =>
                         updateItem(item.id, { href: event.target.value })
@@ -486,7 +486,7 @@ export function TopNewsManagementClient({
                       </summary>
                       <Input
                         className="mt-2 h-10"
-                        placeholder="/readme/v2_4/game-tools.png"
+                        placeholder="/brand/v2_1/friemi-og-default-1200x630.png"
                         value={item.imageUrl}
                         onChange={(event) =>
                           updateItem(item.id, { imageUrl: event.target.value })
