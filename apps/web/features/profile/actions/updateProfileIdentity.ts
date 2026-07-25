@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
+import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -431,6 +432,10 @@ export async function updateProfileContactBindingsAction(
       console.error("Failed to award phone trust score", error);
     });
   }
+
+  await syncProfileAchievements(profile.id).catch((error) => {
+    console.error("Failed to sync profile achievements after binding", error);
+  });
 
   revalidateNicknamePaths(locale);
 

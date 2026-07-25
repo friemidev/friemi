@@ -7,6 +7,7 @@ import {
   applyStandardTrustScoreEvent,
   removeTrustScoreEvent,
 } from "@/features/trust/trustScoreEvents";
+import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const reviewActivityCheckInSchema = z.object({
@@ -243,6 +244,14 @@ export async function reviewActivityCheckInAction(
       };
     }
 
+    if (result.data.decision === "confirm") {
+      await syncActivitySocialRewards({
+        activityId: result.data.activityId,
+      }).catch((error) => {
+        console.error("Failed to sync rewards after check-in review", error);
+      });
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Failed to review activity check-in", error);
@@ -346,6 +355,12 @@ export async function confirmAllPendingActivityCheckInsAction(
     if (confirmResult.confirmedCount === 0) {
       return { formError: copy.none };
     }
+
+    await syncActivitySocialRewards({
+      activityId: result.data.activityId,
+    }).catch((error) => {
+      console.error("Failed to sync rewards after batch check-in", error);
+    });
 
     return {
       confirmedCount: confirmResult.confirmedCount,
@@ -493,6 +508,14 @@ export async function confirmSelectedActivityCheckInsAction(
         reviewedCount: participantIds.length,
       };
     });
+
+    if (reviewResult.confirmedCount > 0) {
+      await syncActivitySocialRewards({
+        activityId: result.data.activityId,
+      }).catch((error) => {
+        console.error("Failed to sync rewards after selected check-ins", error);
+      });
+    }
 
     return {
       confirmedCount: reviewResult.confirmedCount,

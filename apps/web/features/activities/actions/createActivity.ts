@@ -34,6 +34,7 @@ import {
   largeActivityCapacityThreshold,
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -523,6 +524,10 @@ export async function createActivityAction(
     },
     status: "success",
     userProfileId: profile.id,
+  });
+
+  await syncProfileAchievements(profile.id).catch((error) => {
+    console.error("Failed to sync organizer achievements after create", error);
   });
 
   revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);
