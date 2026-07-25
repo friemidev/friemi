@@ -4,6 +4,7 @@ import {
   normalizeGuestPhone,
   normalizeGuestWechatId,
 } from "../utils/contactIdentity";
+import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 
 type PrismaTx = Prisma.TransactionClient;
 
@@ -158,7 +159,9 @@ async function linkGuestParticipation(
     },
   });
 
-  return participant.id;
+  return {
+    activityId: guest.activityId,
+  };
 }
 
 export async function linkGuestParticipationsForProfile(
@@ -179,10 +182,10 @@ export async function linkGuestParticipationsForProfile(
   const matchWhere = getGuestMatchWhere(profile);
 
   if (matchWhere.length === 0) {
-    return { linked: 0 };
+    return { activityIds: [], linked: 0 };
   }
 
-  return prismaClient.$transaction(async (tx) => {
+  const result = await prismaClient.$transaction(async (tx) => {
     const guestParticipations = await tx.guestActivityParticipant.findMany({
       where: {
         linkedParticipantId: null,
@@ -202,15 +205,32 @@ export async function linkGuestParticipationsForProfile(
     });
 
     let linked = 0;
+    const linkedActivityIds = new Set<string>();
 
     for (const guest of guestParticipations) {
-      const participantId = await linkGuestParticipation(tx, guest, profile.id);
+      const linkedParticipation = await linkGuestParticipation(
+        tx,
+        guest,
+        profile.id,
+      );
 
-      if (participantId) {
+      if (linkedParticipation) {
         linked += 1;
+        linkedActivityIds.add(linkedParticipation.activityId);
       }
     }
 
-    return { linked };
+    return {
+      activityIds: Array.from(linkedActivityIds),
+      linked,
+    };
   });
+
+  await Promise.allSettled(
+    result.activityIds.map((activityId) =>
+      syncActivitySocialRewards({ activityId }),
+    ),
+  );
+
+  return result;
 }

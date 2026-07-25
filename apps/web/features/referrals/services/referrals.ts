@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { getTrustScoreEventDelta } from "@/features/trust/trustScoreEvents";
 import { prisma } from "@/lib/prisma";
 export {
   buildReferralLink,
@@ -7,6 +8,8 @@ export {
   normalizeReferralCode,
 } from "../referralCode";
 import { captureReferralCodeFromRequest } from "../referralCode";
+
+type DbClient = typeof prisma | Prisma.TransactionClient;
 
 export type ReferralConsumeResult =
   | {
@@ -206,12 +209,103 @@ export async function markReferralFriendshipAcceptedBetween(
   profileId: string,
   otherProfileId: string,
 ) {
-  const [forward, reverse] = await Promise.all([
-    markReferralFriendshipAccepted(profileId, otherProfileId),
-    markReferralFriendshipAccepted(otherProfileId, profileId),
-  ]);
+  const acceptedAt = new Date();
+  const referrals = await prisma.$transaction(
+    async (tx) => {
+      const pendingReferrals = await tx.userReferral.findMany({
+        where: {
+          friendshipAcceptedAt: null,
+          OR: [
+            {
+              inviteeId: otherProfileId,
+              inviterId: profileId,
+            },
+            {
+              inviteeId: profileId,
+              inviterId: otherProfileId,
+            },
+          ],
+        },
+        select: {
+          id: true,
+          inviterId: true,
+        },
+      });
+
+      if (pendingReferrals.length === 0) {
+        return [];
+      }
+
+      await tx.userReferral.updateMany({
+        where: {
+          id: {
+            in: pendingReferrals.map((referral) => referral.id),
+          },
+        },
+        data: {
+          friendshipAcceptedAt: acceptedAt,
+        },
+      });
+
+      await Promise.all(
+        pendingReferrals.map((referral) =>
+          applyInviteFriendTrustScoreForReferral(tx, referral),
+        ),
+      );
+
+      return pendingReferrals;
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    },
+  );
 
   return {
-    updatedCount: forward.count + reverse.count,
+    updatedCount: referrals.length,
   };
+}
+
+export function getReferralFriendTrustScoreNote(referralId: string) {
+  return `Friend invite accepted:${referralId}`;
+}
+
+async function applyInviteFriendTrustScoreForReferral(
+  db: DbClient,
+  referral: {
+    id: string;
+    inviterId: string;
+  },
+) {
+  const note = getReferralFriendTrustScoreNote(referral.id);
+  const existingEvent = await db.trustScoreEvent.findFirst({
+    where: {
+      note,
+      profileId: referral.inviterId,
+      type: "INVITE_FRIEND",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingEvent) {
+    return db.trustScoreEvent.update({
+      where: {
+        id: existingEvent.id,
+      },
+      data: {
+        delta: getTrustScoreEventDelta("INVITE_FRIEND"),
+        note,
+      },
+    });
+  }
+
+  return db.trustScoreEvent.create({
+    data: {
+      delta: getTrustScoreEventDelta("INVITE_FRIEND"),
+      note,
+      profileId: referral.inviterId,
+      type: "INVITE_FRIEND",
+    },
+  });
 }

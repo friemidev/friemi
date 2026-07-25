@@ -4,6 +4,7 @@ import {
   buildReferralLink,
   buildReferralSignUpLink,
   captureReferralCodeFromRequest,
+  getReferralFriendTrustScoreNote,
   normalizeReferralCode,
 } from "./referrals";
 import { getReferralCodeToStore } from "../referralCode";
@@ -77,5 +78,12 @@ test("referral cookie storage keeps the first valid code", () => {
       incomingRef: "bad",
     }),
     null,
+  );
+});
+
+test("referral friend trust score note is stable per referral", () => {
+  assert.equal(
+    getReferralFriendTrustScoreNote("referral-1"),
+    "Friend invite accepted:referral-1",
   );
 });

@@ -52,6 +52,53 @@ const participationAchievementStatuses: ParticipantStatus[] = [
   "JOINED",
 ];
 
+function getEndedActivityWhere(now: Date): Prisma.ActivityWhereInput {
+  return {
+    OR: [
+      {
+        status: "ENDED",
+      },
+      {
+        endAt: {
+          lte: now,
+        },
+      },
+      {
+        endAt: null,
+        startAt: {
+          lte: now,
+        },
+      },
+    ],
+  };
+}
+
+function getNoActivityCheckInSignalWhere(): Prisma.ActivityWhereInput {
+  return {
+    participants: {
+      none: {
+        OR: [
+          {
+            checkInCancelledAt: {
+              not: null,
+            },
+          },
+          {
+            checkInRequestedAt: {
+              not: null,
+            },
+          },
+          {
+            checkedInAt: {
+              not: null,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
 function clampProgress(progress: number, target: number) {
   return Math.max(0, Math.min(target, progress));
 }
@@ -93,6 +140,7 @@ async function getAchievementSnapshot(
   db: DbClient,
   profileId: string,
 ): Promise<AchievementProgressSnapshot> {
+  const now = new Date();
   const [profile, participationCount, hostedActivityCount, trustScore] =
     await Promise.all([
       db.userProfile.findUnique({
@@ -105,15 +153,33 @@ async function getAchievementSnapshot(
       }),
       db.activityParticipant.count({
         where: {
-          userProfileId: profileId,
+          OR: [
+            {
+              checkedInAt: {
+                not: null,
+              },
+            },
+            {
+              activity: {
+                AND: [
+                  getEndedActivityWhere(now),
+                  getNoActivityCheckInSignalWhere(),
+                ],
+              },
+            },
+          ],
           status: {
             in: participationAchievementStatuses,
           },
           activity: {
+            status: {
+              not: "CANCELLED",
+            },
             type: {
               not: "PUBLIC_EVENT",
             },
           },
+          userProfileId: profileId,
         },
       }),
       db.activity.count({
