@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Gift, Sparkles, X } from "lucide-react";
@@ -19,9 +20,20 @@ import { cn } from "@/lib/utils";
 type CharmGiftDialogProps = {
   isAuthenticated: boolean;
   locale: string;
+  redirectPath?: string;
   recipientName: string;
   recipientProfileId: string;
+  sourceContextId?: string;
+  sourceSurface?:
+    | "PROFILE"
+    | "ACTIVITY"
+    | "MOMENT"
+    | "PLANET"
+    | "DIRECT_MESSAGE"
+    | "OTHER";
+  triggerAriaLabel?: string;
   triggerClassName?: string;
+  triggerContent?: ReactNode;
 };
 
 const initialGiftState: SendCharmGiftState = {};
@@ -92,9 +104,14 @@ function SendGiftSubmitButton({
 export function CharmGiftDialog({
   isAuthenticated,
   locale,
+  redirectPath,
   recipientName,
   recipientProfileId,
+  sourceContextId,
+  sourceSurface = "PROFILE",
+  triggerAriaLabel,
   triggerClassName,
+  triggerContent,
 }: CharmGiftDialogProps) {
   const copy = getGiftDialogCopy(locale);
   const gifts = useMemo(() => getActiveCharmGifts(), []);
@@ -106,8 +123,15 @@ export function CharmGiftDialog({
     initialGiftState,
   );
   const router = useRouter();
-  const redirectPath = `/profile/${recipientProfileId}`;
+  const giftRedirectPath = redirectPath ?? `/profile/${recipientProfileId}`;
   const formError = state.attemptId === attemptId ? state.formError : undefined;
+  const triggerLabel = triggerAriaLabel ?? copy.sendGift;
+  const triggerInner = triggerContent ?? (
+    <>
+      <Gift className="h-4 w-4 shrink-0" />
+      {copy.sendGift}
+    </>
+  );
 
   useEffect(() => {
     if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
@@ -143,14 +167,14 @@ export function CharmGiftDialog({
   if (!isAuthenticated) {
     return (
       <Link
-        href={getSignInHref(locale, redirectPath)}
+        href={getSignInHref(locale, giftRedirectPath)}
+        aria-label={triggerLabel}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
           triggerClassName,
         )}
       >
-        <Gift className="h-4 w-4 shrink-0" />
-        {copy.sendGift}
+        {triggerInner}
       </Link>
     );
   }
@@ -162,6 +186,7 @@ export function CharmGiftDialog({
   return (
     <>
       <button
+        aria-label={triggerLabel}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
           triggerClassName,
@@ -172,8 +197,7 @@ export function CharmGiftDialog({
         }}
         type="button"
       >
-        <Gift className="h-4 w-4 shrink-0" />
-        {copy.sendGift}
+        {triggerInner}
       </button>
 
       {open ? (
@@ -217,11 +241,27 @@ export function CharmGiftDialog({
               <input name="giftId" type="hidden" value={selectedGiftId} />
               <input name="locale" type="hidden" value={locale} />
               <input
+                name="sourceSurface"
+                type="hidden"
+                value={sourceSurface}
+              />
+              {sourceContextId ? (
+                <input
+                  name="sourceContextId"
+                  type="hidden"
+                  value={sourceContextId}
+                />
+              ) : null}
+              <input
                 name="recipientProfileId"
                 type="hidden"
                 value={recipientProfileId}
               />
-              <input name="redirectPath" type="hidden" value={redirectPath} />
+              <input
+                name="redirectPath"
+                type="hidden"
+                value={giftRedirectPath}
+              />
 
               <div className="grid grid-cols-3 gap-2">
                 {gifts.map((gift) => {

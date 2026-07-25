@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent, MouseEvent, ReactNode, TouchEvent } from "react";
+import type { KeyboardEvent, MouseEvent, TouchEvent } from "react";
 import {
   useActionState,
   useEffect,
@@ -18,11 +18,11 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  Gift,
   Globe2,
   Heart,
   MessageCircle,
   MoreHorizontal,
-  Repeat2,
   Search,
   SendHorizontal,
   Share2,
@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
@@ -45,7 +46,6 @@ import {
   createMomentCommentAction,
   deleteMomentAction,
   deleteMomentCommentAction,
-  repostMomentAction,
   toggleMomentLikeAction,
   type CreateMomentCommentState,
   type CreateMomentState,
@@ -133,8 +133,8 @@ const copyByLocale = {
     visibilityPublic: "公开",
     like: "点赞",
     comment: "评论",
+    gift: "送礼",
     share: "分享链接",
-    repost: "转发",
     commentSheetTitle: "评论",
     loadMoreComments: "查看全部评论",
     emptyComments: "还没有评论",
@@ -215,8 +215,8 @@ const copyByLocale = {
     visibilityPublic: "Public",
     like: "Like",
     comment: "Comment",
+    gift: "Gift",
     share: "Share link",
-    repost: "Repost",
     commentSheetTitle: "Comments",
     loadMoreComments: "View all comments",
     emptyComments: "No comments yet",
@@ -301,8 +301,8 @@ const copyByLocale = {
     visibilityPublic: "Public",
     like: "J'aime",
     comment: "Commenter",
+    gift: "Cadeau",
     share: "Partager le lien",
-    repost: "Republier",
     commentSheetTitle: "Commentaires",
     loadMoreComments: "Voir tous les commentaires",
     emptyComments: "Aucun commentaire pour le moment",
@@ -396,32 +396,24 @@ const momentActionButtonClassName =
   "inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-sm font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
 
 function MomentActionBar({
-  canRepost,
   className,
   commentHref,
   copy,
-  deleteRedirectPath,
-  detailHref,
   isAuthenticated,
   isOwnMoment,
   locale,
   moment,
   onCommentClick,
-  showDetailAction = false,
   signInHref,
 }: {
-  canRepost: boolean;
   className?: string;
   commentHref?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
-  deleteRedirectPath?: string;
-  detailHref: string;
   isAuthenticated: boolean;
   isOwnMoment: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
   onCommentClick?: () => void;
-  showDetailAction?: boolean;
   signInHref: string;
 }) {
   const commentContent = (
@@ -436,7 +428,7 @@ function MomentActionBar({
   return (
     <div
       className={cn(
-        "grid grid-cols-4 items-center gap-1 text-[#51594F]",
+        "grid grid-cols-3 items-center gap-1 text-[#51594F]",
         className,
       )}
     >
@@ -469,32 +461,21 @@ function MomentActionBar({
         </button>
       )}
 
-      <RepostMomentButton
-        canRepost={canRepost}
+      <MomentGiftAction
         className={momentActionButtonClassName}
         copy={copy}
-        formClassName="min-w-0"
-        isAuthenticated={isAuthenticated}
-        locale={locale}
-        moment={moment}
-        signInHref={signInHref}
-      />
-
-      <MomentMoreMenu
-        copy={copy}
-        deleteRedirectPath={deleteRedirectPath}
-        detailHref={detailHref}
         isAuthenticated={isAuthenticated}
         isOwnMoment={isOwnMoment}
         locale={locale}
         moment={moment}
-        showDetailAction={showDetailAction}
       />
     </div>
   );
 }
 
 function MomentMoreMenu({
+  buttonClassName,
+  className,
   copy,
   deleteRedirectPath,
   detailHref,
@@ -504,6 +485,8 @@ function MomentMoreMenu({
   moment,
   showDetailAction,
 }: {
+  buttonClassName?: string;
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   deleteRedirectPath?: string;
   detailHref: string;
@@ -518,7 +501,7 @@ function MomentMoreMenu({
 
   return (
     <div
-      className="relative min-w-0"
+      className={cn("relative min-w-0", className)}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
         event.stopPropagation();
@@ -529,7 +512,10 @@ function MomentMoreMenu({
     >
       <button
         type="button"
-        className={momentActionButtonClassName}
+        className={cn(
+          "inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1D1D1B]/70 transition hover:bg-[#F7F7F0] active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24",
+          buttonClassName,
+        )}
         aria-label={copy.more}
         onClick={() => setMenuOpen((open) => !open)}
       >
@@ -631,11 +617,6 @@ export function FeedCard({
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
   const isOwnMoment = viewerProfileId === moment.author.id;
   const hasImages = moment.images.length > 0;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
   const openDetail = () => router.push(detailHref);
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target;
@@ -711,6 +692,17 @@ export function FeedCard({
                 </p>
               ) : null}
             </div>
+            <MomentMoreMenu
+              className="ml-auto shrink-0"
+              copy={copy}
+              deleteRedirectPath={deleteRedirectPath}
+              detailHref={detailHref}
+              isAuthenticated={isAuthenticated}
+              isOwnMoment={isOwnMoment}
+              locale={locale}
+              moment={moment}
+              showDetailAction
+            />
           </div>
 
           {moment.resharedMoment ? (
@@ -736,7 +728,6 @@ export function FeedCard({
         </div>
 
         <MomentActionBar
-          canRepost={canRepost}
           className={cn(
             "py-2",
             hasImages
@@ -744,14 +735,11 @@ export function FeedCard({
               : "mx-4 mt-3 border-y border-[#E8E4D4]",
           )}
           copy={copy}
-          deleteRedirectPath={deleteRedirectPath}
-          detailHref={detailHref}
           isAuthenticated={isAuthenticated}
           isOwnMoment={isOwnMoment}
           locale={locale}
           moment={moment}
           onCommentClick={() => setCommentsOpen(true)}
-          showDetailAction
           signInHref={signInHref}
         />
 
@@ -827,11 +815,6 @@ export function MomentDetailContent({
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
   const isOwnMoment = viewerProfileId === moment.author.id;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
 
   return (
     <>
@@ -855,6 +838,17 @@ export function MomentDetailContent({
               {formatActivityDate(moment.createdAt, locale)}
             </p>
           </div>
+          <MomentMoreMenu
+            className="ml-auto shrink-0"
+            copy={copy}
+            deleteRedirectPath={deleteRedirectPath}
+            detailHref={detailHref}
+            isAuthenticated={isAuthenticated}
+            isOwnMoment={isOwnMoment}
+            locale={locale}
+            moment={moment}
+            showDetailAction={false}
+          />
         </header>
 
         {moment.content ? (
@@ -882,12 +876,9 @@ export function MomentDetailContent({
         ) : null}
 
         <MomentActionBar
-          canRepost={canRepost}
           className="mt-5 border-y border-[#E8E4D4] py-2"
           commentHref="#moment-comments"
           copy={copy}
-          deleteRedirectPath={deleteRedirectPath}
-          detailHref={detailHref}
           isAuthenticated={isAuthenticated}
           isOwnMoment={isOwnMoment}
           locale={locale}
@@ -1067,105 +1058,60 @@ function OptimisticMomentLikeButton({
   );
 }
 
-function RepostMomentButton({
-  canRepost,
+function MomentGiftAction({
   className,
   copy,
-  formClassName,
   isAuthenticated,
+  isOwnMoment,
   locale,
   moment,
-  signInHref,
 }: {
-  canRepost: boolean;
   className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
-  formClassName?: string;
   isAuthenticated: boolean;
+  isOwnMoment: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
-  signInHref: string;
 }) {
-  const [optimisticCount, addOptimisticRepost] = useOptimistic(
-    moment.repostCount,
-    (current, _action: null) => current + 1,
+  const triggerClassName = cn(
+    className,
+    "text-[#9A2135] hover:bg-[#FFF4F4] focus-visible:ring-[#E7457A]/24",
   );
-
-  const content = (
+  const triggerContent = (
     <>
-      <Repeat2 className="h-[18px] w-[18px] shrink-0" />
+      <Gift className="h-[18px] w-[18px] shrink-0" />
       <span className="min-w-0 tabular-nums leading-none">
-        {optimisticCount}
+        {moment.giftCount}
       </span>
     </>
   );
 
-  if (!isAuthenticated) {
+  if (isOwnMoment) {
     return (
-      <Link
-        href={signInHref}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
-          className,
-        )}
-        aria-label={copy.signInToInteract}
+      <button
+        aria-label={copy.gift}
+        className={cn(triggerClassName, "cursor-default")}
+        disabled
+        type="button"
       >
-        {content}
-      </Link>
+        {triggerContent}
+      </button>
     );
   }
 
   return (
-    <form
-      action={async (formData) => {
-        if (!canRepost) {
-          return;
-        }
-
-        addOptimisticRepost(null);
-        await repostMomentAction(formData);
-      }}
-      className={formClassName}
-    >
-      <input name="locale" type="hidden" value={locale} />
-      <input name="momentId" type="hidden" value={moment.id} />
-      <RepostMomentSubmitButton
-        canRepost={canRepost}
-        className={className}
-        content={content}
-        label={copy.repost}
-      />
-    </form>
-  );
-}
-
-function RepostMomentSubmitButton({
-  canRepost,
-  className,
-  content,
-  label,
-}: {
-  canRepost: boolean;
-  className?: string;
-  content: ReactNode;
-  label: string;
-}) {
-  const { pending } = useFormStatus();
-  const disabled = !canRepost || pending;
-
-  return (
-    <button
-      type="submit"
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
-        className,
-        disabled && "cursor-not-allowed opacity-35",
-      )}
-      disabled={disabled}
-      aria-label={label}
-    >
-      {content}
-    </button>
+    <CharmGiftDialog
+      isAuthenticated={isAuthenticated}
+      locale={locale}
+      recipientName={moment.author.nickname}
+      recipientProfileId={moment.author.id}
+      redirectPath={`/footprints/${moment.id}`}
+      sourceContextId={moment.id}
+      sourceSurface="MOMENT"
+      triggerAriaLabel={copy.gift}
+      triggerClassName={triggerClassName}
+      triggerContent={triggerContent}
+    />
   );
 }
 
