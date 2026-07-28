@@ -2023,7 +2023,7 @@ function FootprintsMessageList({
 
         return (
           timeB - timeA ||
-          friendA.friendshipId.localeCompare(friendB.friendshipId)
+          friendA.rosterId.localeCompare(friendB.rosterId)
         );
       }),
     [friends],
@@ -2116,7 +2116,7 @@ function FootprintsMessageList({
         <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent">
           {visibleFriends.map((friend) => (
             <FootprintsMessageRow
-              key={friend.friendshipId}
+              key={friend.rosterId}
               currentUserProfileId={currentUserProfileId}
               friend={friend}
               locale={locale}
@@ -2144,6 +2144,8 @@ function FootprintsMessageRow({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
+  const unreadCount = friend.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
@@ -2164,8 +2166,20 @@ function FootprintsMessageRow({
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
             {formatActivityDate(time, locale)}
           </span>
+          {unreadCount > 0 ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              {unreadBadgeText}
+            </span>
+          ) : null}
         </span>
-        <span className="mt-1 block truncate text-[13px] font-semibold leading-5 text-[#5F635E]">
+        <span
+          className={cn(
+            "mt-1 block truncate text-[13px] leading-5",
+            unreadCount > 0
+              ? "font-black text-[#111210]"
+              : "font-semibold text-[#5F635E]",
+          )}
+        >
           {preview}
         </span>
       </span>

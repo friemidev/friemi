@@ -110,6 +110,8 @@ function ConversationListItem({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = conversation.lastMessage;
+  const unreadCount = conversation.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -140,7 +142,12 @@ function ConversationListItem({
         />
         <span className="min-w-0">
           <span className="flex min-w-0 items-start gap-2">
-            <span className="truncate text-sm font-semibold">
+            <span
+              className={cn(
+                "truncate text-sm",
+                unreadCount > 0 ? "font-black" : "font-semibold",
+              )}
+            >
               {conversation.peer.nickname}
             </span>
             <span
@@ -151,11 +158,20 @@ function ConversationListItem({
             >
               {formatActivityDate(time, locale)}
             </span>
+            {unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : null}
           </span>
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-[#156240]" : "text-[#156240]",
+              unreadCount > 0
+                ? "font-black text-ink"
+                : isActive
+                  ? "text-[#156240]"
+                  : "text-[#156240]",
             )}
           >
             {sourceLabel ? `${sourceLabel} · ${preview}` : preview}

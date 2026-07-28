@@ -24,7 +24,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import type { ActivityCardViewModel } from "@/features/activities/types";
@@ -70,9 +70,12 @@ type MobileLobbyV23Copy = {
   friendEmptyTitle: string;
   friendEmptyDescription: string;
   friendGoing: (count: number) => string;
+  loadingLabel: string;
+  loadFailedTitle: string;
   mineEmptyTitle: string;
   mineEmptyDescription: string;
   participants: string;
+  retryLabel: string;
   tabs: Record<MobileLobbyV23TabId, string>;
   title: string;
 };
@@ -89,6 +92,15 @@ const publicMobileLobbyV23Tabs = mobileLobbyV23Tabs.filter(
 );
 const mobileLobbySparseResultThreshold = 3;
 const mobileLobbySwipePreviewLimit = 8;
+const mobileLobbyFriendPrefetchDelayMs = 1200;
+const mobileLobbyFriendSectionIds = ["friendJoined", "friendHosted"] as const;
+
+type MobileLobbyFriendSectionId = (typeof mobileLobbyFriendSectionIds)[number];
+
+type MobileLobbySectionResponse = {
+  activities?: ActivityCardViewModel[];
+  ok: boolean;
+};
 
 const mobileLobbyV23CategoryIcons = {
   FOOD: Utensils,
@@ -127,28 +139,41 @@ function getMobileLobbyCategoryFilterLabel(locale: string) {
   return "分类";
 }
 
-function getMobileLobbyTabHref({
+function syncMobileLobbyTabSearchParam({
   category,
   freeOnly,
-  locale,
   tab,
 }: {
   category: MobileLobbyV23CategoryFilterId;
   freeOnly?: boolean;
-  locale: string;
   tab: MobileLobbyV23TabId;
 }) {
-  const params = new URLSearchParams({ tab });
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+
+  url.searchParams.set("tab", tab);
 
   if (freeOnly) {
-    params.set("price", "free");
+    url.searchParams.set("price", "free");
+  } else {
+    url.searchParams.delete("price");
   }
 
   if (category !== "all") {
-    params.set("category", category);
+    url.searchParams.set("category", category);
+  } else {
+    url.searchParams.delete("category");
   }
 
-  return withLocale(locale, `/lobby?${params.toString()}`);
+  const nextHref = `${url.pathname}${url.search}${url.hash}`;
+  const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextHref !== currentHref) {
+    window.history.replaceState(window.history.state, "", nextHref);
+  }
 }
 
 function syncMobileLobbyCategorySearchParam(
@@ -197,10 +222,13 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       friendEmptyDescription:
         "Connectez-vous pour voir les sorties de vos amis.",
       friendGoing: (count) => `${count} ami${count > 1 ? "s" : ""} y vont`,
+      loadingLabel: "Chargement...",
+      loadFailedTitle: "Chargement impossible",
       mineEmptyTitle: "Aucune de vos sorties",
       mineEmptyDescription:
         "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
       participants: "pers.",
+      retryLabel: "Réessayer",
       tabs: {
         nearby: "Proche",
         friends: "Amis",
@@ -219,10 +247,13 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       friendEmptyTitle: "No friend hangouts yet",
       friendEmptyDescription: "Sign in to see what friends are joining.",
       friendGoing: (count) => `${count} friend${count > 1 ? "s" : ""} going`,
+      loadingLabel: "Loading...",
+      loadFailedTitle: "Could not load",
       mineEmptyTitle: "No personal hangouts yet",
       mineEmptyDescription:
         "Sign in to see hangouts you're hosting or joining.",
       participants: "people",
+      retryLabel: "Retry",
       tabs: {
         nearby: "Nearby",
         friends: "Friends",
@@ -240,9 +271,12 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     friendEmptyTitle: "暂无好友组局",
     friendEmptyDescription: "登录后可以看到好友参加的组局。",
     friendGoing: (count) => `${count} 位好友参加`,
+    loadingLabel: "加载中...",
+    loadFailedTitle: "加载失败",
     mineEmptyTitle: "暂无我的组局",
     mineEmptyDescription: "登录后可以看到你发起和参加的组局。",
     participants: "人",
+    retryLabel: "重试",
     tabs: {
       nearby: "附近",
       friends: "好友",
@@ -280,6 +314,34 @@ function dedupeActivities(activities: ActivityCardViewModel[]) {
 
     return true;
   });
+}
+
+async function fetchMobileLobbySection(
+  section: MobileLobbyFriendSectionId,
+  signal: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    section,
+  });
+  const response = await fetch(`/api/lobby/section?${params.toString()}`, {
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+    },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Mobile lobby section request failed: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as MobileLobbySectionResponse;
+
+  if (!payload.ok) {
+    throw new Error("Mobile lobby section payload was not ok.");
+  }
+
+  return payload.activities ?? [];
 }
 
 function getPrioritizedMobileLobbySwipeActivities({
@@ -678,9 +740,18 @@ export function MobileLobbyV23View({
   swipeActivities = [],
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
+  const [selectedTab, setSelectedTab] =
+    useState<MobileLobbyV23TabId>(activeTab);
   const [activeCategory, setActiveCategory] =
     useState<MobileLobbyV23CategoryFilterId>(initialCategoryFilter ?? "all");
   const [categoryRailOpen, setCategoryRailOpen] = useState(false);
+  const [lazyFriendActivities, setLazyFriendActivities] = useState<
+    ActivityCardViewModel[] | null
+  >(friendActivities ? dedupeActivities(friendActivities) : null);
+  const [friendActivitiesLoading, setFriendActivitiesLoading] =
+    useState(false);
+  const [friendActivitiesFailed, setFriendActivitiesFailed] = useState(false);
+  const friendActivitiesInFlightRef = useRef(false);
   const categoryFilterOptions = useMemo<MobileLobbyV23CategoryFilterOption[]>(
     () => [
       {
@@ -703,15 +774,19 @@ export function MobileLobbyV23View({
   const visibleTabs = isSignedIn
     ? mobileLobbyV23Tabs
     : publicMobileLobbyV23Tabs;
-  const displayedActiveTab = visibleTabs.includes(activeTab)
-    ? activeTab
+  const displayedActiveTab = visibleTabs.includes(selectedTab)
+    ? selectedTab
     : "nearby";
+  const hasLoadedFriendActivities =
+    lazyFriendActivities !== null || typeof friendActivities !== "undefined";
+  const resolvedFriendActivities =
+    lazyFriendActivities ?? friendActivities ?? [];
   const visibleActivities = filterMobileLobbyActivitiesByPrice(
     filterMobileLobbyActivitiesByCategory(
       getVisibleActivities({
         activeTab: displayedActiveTab,
         activities,
-        friendActivities,
+        friendActivities: resolvedFriendActivities,
         mineActivities,
       }),
       activeCategory,
@@ -743,6 +818,55 @@ export function MobileLobbyV23View({
       visibleActivities,
     ],
   );
+  const loadFriendActivities = useCallback(
+    async (options: { visual?: boolean } = {}) => {
+      if (
+        !isSignedIn ||
+        hasLoadedFriendActivities ||
+        friendActivitiesInFlightRef.current
+      ) {
+        return;
+      }
+
+      friendActivitiesInFlightRef.current = true;
+
+      if (options.visual) {
+        setFriendActivitiesLoading(true);
+      }
+
+      setFriendActivitiesFailed(false);
+
+      const controller = new AbortController();
+      const timeoutId =
+        typeof window === "undefined"
+          ? null
+          : window.setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const sections = await Promise.all(
+          mobileLobbyFriendSectionIds.map((section) =>
+            fetchMobileLobbySection(section, controller.signal),
+          ),
+        );
+
+        setLazyFriendActivities(dedupeActivities(sections.flat()));
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.error("Failed to load mobile lobby friend activities", error);
+        }
+
+        setFriendActivitiesFailed(true);
+      } finally {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+
+        friendActivitiesInFlightRef.current = false;
+        setFriendActivitiesLoading(false);
+      }
+    },
+    [hasLoadedFriendActivities, isSignedIn],
+  );
   const handleSelectCategory = useCallback(
     (category: MobileLobbyV23CategoryFilterId) => {
       setActiveCategory(category);
@@ -751,6 +875,43 @@ export function MobileLobbyV23View({
     },
     [],
   );
+  const handleSelectTab = useCallback(
+    (tab: MobileLobbyV23TabId) => {
+      setSelectedTab(tab);
+      syncMobileLobbyTabSearchParam({
+        category: activeCategory,
+        freeOnly: initialFreeOnly,
+        tab,
+      });
+    },
+    [activeCategory, initialFreeOnly],
+  );
+
+  useEffect(() => {
+    setSelectedTab(activeTab);
+  }, [activeTab]);
+  useEffect(() => {
+    if (displayedActiveTab !== "friends") {
+      return;
+    }
+
+    void loadFriendActivities({ visual: true });
+  }, [displayedActiveTab, loadFriendActivities]);
+  useEffect(() => {
+    if (
+      !isSignedIn ||
+      hasLoadedFriendActivities ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      void loadFriendActivities();
+    }, mobileLobbyFriendPrefetchDelayMs);
+
+    return () => window.clearTimeout(timerId);
+  }, [hasLoadedFriendActivities, isSignedIn, loadFriendActivities]);
   const emptyTitle =
     displayedActiveTab === "friends"
       ? copy.friendEmptyTitle
@@ -763,6 +924,16 @@ export function MobileLobbyV23View({
       : displayedActiveTab === "mine"
         ? copy.mineEmptyDescription
         : copy.emptyDescription;
+  const shouldShowFriendLoading =
+    displayedActiveTab === "friends" &&
+    isSignedIn &&
+    (friendActivitiesLoading || !hasLoadedFriendActivities) &&
+    !friendActivitiesFailed;
+  const shouldShowFriendFailed =
+    displayedActiveTab === "friends" &&
+    isSignedIn &&
+    !hasLoadedFriendActivities &&
+    friendActivitiesFailed;
 
   return (
     <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
@@ -804,31 +975,43 @@ export function MobileLobbyV23View({
           className="-mx-5 mt-9 flex gap-8 overflow-x-auto border-b border-[#EEEDE4] px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {visibleTabs.map((tab) => (
-            <Link
+            <button
               aria-current={displayedActiveTab === tab ? "page" : undefined}
               className={cn(
-                "relative shrink-0 pb-4 text-[19px] font-black tracking-normal transition",
+                "relative shrink-0 pb-4 text-left text-[19px] font-black tracking-normal transition active:scale-[0.98]",
                 displayedActiveTab === tab
                   ? "text-[#111210]"
                   : "text-[#111210]/28",
               )}
-              href={getMobileLobbyTabHref({
-                category: activeCategory,
-                freeOnly: initialFreeOnly,
-                locale,
-                tab,
-              })}
               key={tab}
+              type="button"
+              onClick={() => handleSelectTab(tab)}
             >
               {copy.tabs[tab]}
               {displayedActiveTab === tab ? (
                 <span className="absolute bottom-0 left-0 h-1.5 w-full rounded-full bg-[#369758] shadow-[0_7px_15px_rgba(54,151,88,0.28)]" />
               ) : null}
-            </Link>
+            </button>
           ))}
         </nav>
 
-        {visibleActivities.length > 0 ? (
+        {shouldShowFriendLoading ? (
+          <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
+            <span className="mx-auto block h-6 w-6 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#096B45]" />
+            <p className="mt-3 text-[16px] font-black">{copy.loadingLabel}</p>
+          </div>
+        ) : shouldShowFriendFailed ? (
+          <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
+            <p className="text-[18px] font-black">{copy.loadFailedTitle}</p>
+            <button
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#096B45] px-5 text-sm font-black text-white shadow-[0_10px_20px_rgba(9,107,69,0.18)] active:scale-[0.98]"
+              type="button"
+              onClick={() => loadFriendActivities({ visual: true })}
+            >
+              {copy.retryLabel}
+            </button>
+          </div>
+        ) : visibleActivities.length > 0 ? (
           <>
             <div className="mt-5 grid gap-5">
               {visibleActivities.map((activity) => (

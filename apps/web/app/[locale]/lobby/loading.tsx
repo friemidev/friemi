@@ -1,22 +1,9 @@
-import {
-  LoadingCardSkeleton,
-  LoadingPageShell,
-  LoadingToolbarSkeleton,
-  ShimmerBlock,
-} from "@/components/ui/LoadingState";
+import { LocalizedBrandLoader } from "@/components/ui/LocalizedBrandLoader";
 
 export default function LobbyLoading() {
   return (
-    <LoadingPageShell className="space-y-6 py-5 sm:space-y-8 sm:py-8">
-      <div className="max-w-md">
-        <ShimmerBlock className="h-14 rounded-full border border-[#8AB68E] bg-white" />
-      </div>
-      <LoadingToolbarSkeleton columns={4} />
-      <div className="grid gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-        {[0, 1, 2, 3, 4, 5].map((item) => (
-          <LoadingCardSkeleton key={item} compact delay={item * 60} />
-        ))}
-      </div>
-    </LoadingPageShell>
+    <div className="route-loading-shell flex min-h-[calc(100vh-4rem)] items-start justify-center bg-[#FEFFF9] px-4 pt-20 sm:pt-24">
+      <LocalizedBrandLoader size="sm" />
+    </div>
   );
 }
