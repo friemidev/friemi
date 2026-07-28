@@ -28,6 +28,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import {
+  sendFriendRequestToProfileAction,
+  type FriendActionState,
+} from "@/features/friends/actions/friendActions";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getFriendsCopy } from "@/features/friends/copy";
 import {
@@ -77,6 +81,8 @@ type ProfileDashboardViewProps = {
   profile: PublicProfileViewModel;
   publicAchievements?: PublicAchievementWallItem[];
 };
+
+const compactFriendActionInitialState: FriendActionState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
@@ -587,11 +593,16 @@ function PublicMobileProfileActions({
   relationship: ProfileDashboardViewModel["viewerRelationship"];
 }) {
   const copy = getMobileProfileCopy(locale);
+  const [addState, addAction] = useActionState(
+    sendFriendRequestToProfileAction,
+    compactFriendActionInitialState,
+  );
+  const redirectPath = `/profile/${profileId}`;
 
   if (!isAuthenticated) {
     return (
       <Link
-        href={getSignInHref(locale, `/profile/${profileId}`)}
+        href={getSignInHref(locale, redirectPath)}
         className="inline-flex h-8 items-center justify-center rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
       >
         {copy.addFriend}
@@ -599,16 +610,12 @@ function PublicMobileProfileActions({
     );
   }
 
-  if (relationship.isFriend) {
-    return (
+  return (
+    <div className="grid justify-items-end gap-1.5">
       <form action={openDirectConversationAction}>
         <input name="locale" type="hidden" value={locale} />
         <input name="friendProfileId" type="hidden" value={profileId} />
-        <input
-          name="redirectPath"
-          type="hidden"
-          value={`/profile/${profileId}`}
-        />
+        <input name="redirectPath" type="hidden" value={redirectPath} />
         <button
           className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)]"
           type="submit"
@@ -616,25 +623,33 @@ function PublicMobileProfileActions({
           {copy.message}
         </button>
       </form>
-    );
-  }
-
-  if (relationship.pendingFriendRequest === "sent") {
-    return (
-      <span className="inline-flex h-8 items-center justify-center rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#8AB68E]">
-        {copy.pendingFriend}
-      </span>
-    );
-  }
-
-  return (
-    <div className="min-w-[74px] [&_button]:!h-8 [&_button]:!px-3 [&_button]:!text-[11px] [&_svg]:!hidden">
-      <ProfileSocialActions
-        isAuthenticated={isAuthenticated}
-        locale={locale}
-        profileId={profileId}
-        relationship={relationship}
-      />
+      {!relationship.isFriend ? (
+        relationship.pendingFriendRequest === "sent" || addState.ok ? (
+          <span className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]">
+            {copy.pendingFriend}
+          </span>
+        ) : relationship.pendingFriendRequest === "received" ? (
+          <Link
+            href={withLocale(locale, "/friends")}
+            className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
+          >
+            {copy.pendingFriend}
+          </Link>
+        ) : (
+          <form action={addAction}>
+            <input name="locale" type="hidden" value={locale} />
+            <input name="targetProfileId" type="hidden" value={profileId} />
+            <input name="redirectPath" type="hidden" value={redirectPath} />
+            <input name="returnTo" type="hidden" value="friends" />
+            <button
+              className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
+              type="submit"
+            >
+              {copy.addFriend}
+            </button>
+          </form>
+        )
+      ) : null}
     </div>
   );
 }

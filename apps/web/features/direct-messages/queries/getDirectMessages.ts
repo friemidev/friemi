@@ -122,16 +122,20 @@ export type DirectConversationListItemViewModel = {
   lastMessageAt: string | null;
   createdAt: string;
   recentActivities: DirectConversationActivitySignalViewModel[];
+  unreadCount: number;
 };
 
 export type DirectMessageFriendRosterItemViewModel = {
-  friendshipId: string;
+  friendshipId: string | null;
+  isFriend: boolean;
+  rosterId: string;
   friend: DirectMessageUserViewModel;
   conversationId: string | null;
   lastMessage: DirectMessagePreviewViewModel | null;
   lastMessageAt: string | null;
   createdAt: string;
   recentActivities: DirectConversationActivitySignalViewModel[];
+  unreadCount: number;
 };
 
 export type DirectMessageThreadItemViewModel = {
@@ -230,6 +234,7 @@ function mapConversationListItem(
   conversation: ConversationListResult,
   currentUserProfileId: string,
   recentActivities: DirectConversationActivitySignalViewModel[] = [],
+  unreadCount = 0,
 ): DirectConversationListItemViewModel {
   return {
     id: conversation.id,
@@ -238,6 +243,7 @@ function mapConversationListItem(
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
     recentActivities,
+    unreadCount,
   };
 }
 
@@ -266,6 +272,35 @@ function mapConversationThread(
     })),
     sendPolicy,
   };
+}
+
+async function getUnreadDirectMessageCountMap(
+  currentUserProfileId: string,
+  conversationIds: string[],
+) {
+  if (conversationIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.directMessage.groupBy({
+    by: ["conversationId"],
+    where: {
+      conversationId: {
+        in: conversationIds,
+      },
+      readAt: null,
+      senderId: {
+        not: currentUserProfileId,
+      },
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  return new Map(
+    groups.map((group) => [group.conversationId, group._count._all]),
+  );
 }
 
 async function getFriendPeerIds(
@@ -311,7 +346,7 @@ function sortFriendRosterItems(
     if (itemA.lastMessage || itemB.lastMessage) {
       return (
         getLastContactTime(itemB) - getLastContactTime(itemA) ||
-        itemA.friendshipId.localeCompare(itemB.friendshipId)
+        itemA.rosterId.localeCompare(itemB.rosterId)
       );
     }
 
@@ -332,14 +367,14 @@ function sortFriendRosterItems(
 
     if (activityOrder !== 0 || firstActivityA || firstActivityB) {
       return (
-        activityOrder || itemA.friendshipId.localeCompare(itemB.friendshipId)
+        activityOrder || itemA.rosterId.localeCompare(itemB.rosterId)
       );
     }
 
     return (
       new Date(itemB.createdAt).getTime() -
         new Date(itemA.createdAt).getTime() ||
-      itemA.friendshipId.localeCompare(itemB.friendshipId)
+      itemA.rosterId.localeCompare(itemB.rosterId)
     );
   });
 }
@@ -370,6 +405,10 @@ export async function getDirectConversations(currentUserProfileId: string) {
     take: 50,
     select: conversationListSelect,
   });
+  const unreadCountByConversationId = await getUnreadDirectMessageCountMap(
+    currentUserProfileId,
+    conversations.map((conversation) => conversation.id),
+  );
   const peerIds = conversations.map((conversation) =>
     getConversationPeerId(conversation, currentUserProfileId),
   );
@@ -396,6 +435,7 @@ export async function getDirectConversations(currentUserProfileId: string) {
       activitiesByFriendId.get(
         getConversationPeerId(conversation, currentUserProfileId),
       ) ?? [],
+      unreadCountByConversationId.get(conversation.id) ?? 0,
     ),
   );
 }
@@ -422,27 +462,31 @@ export async function getDirectMessageFriendRoster(
     (friendship) => mapFriendshipPeer(friendship, currentUserProfileId).id,
   );
   const [conversations, activitiesByFriendId] = await Promise.all([
-    friendIds.length === 0
-      ? Promise.resolve([])
-      : prisma.conversation.findMany({
-          where: {
-            OR: friendIds.map((friendId) =>
-              getConversationPair(currentUserProfileId, friendId),
-            ),
+    prisma.conversation.findMany({
+      where: {
+        OR: [
+          {
+            userAId: currentUserProfileId,
           },
-          orderBy: [
-            {
-              lastMessageAt: {
-                sort: "desc",
-                nulls: "last",
-              },
-            },
-            {
-              createdAt: "desc",
-            },
-          ],
-          select: conversationListSelect,
-        }),
+          {
+            userBId: currentUserProfileId,
+          },
+        ],
+      },
+      orderBy: [
+        {
+          lastMessageAt: {
+            sort: "desc",
+            nulls: "last",
+          },
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
+      take: 80,
+      select: conversationListSelect,
+    }),
     getFriendNearestActivitySignals({
       friendIds,
       limitPerFriend: friendActivitySignalLimitPerFriend,
@@ -453,7 +497,19 @@ export async function getDirectMessageFriendRoster(
       return new Map<string, DirectConversationActivitySignalViewModel[]>();
     }),
   ]);
+  const unreadCountByConversationId = await getUnreadDirectMessageCountMap(
+    currentUserProfileId,
+    conversations.map((conversation) => conversation.id),
+  );
   const conversationsByFriendId = new Map<string, ConversationListResult>();
+  const friendshipsByFriendId = new Map<string, FriendshipRosterResult>();
+
+  for (const friendship of friendships) {
+    friendshipsByFriendId.set(
+      mapFriendshipPeer(friendship, currentUserProfileId).id,
+      friendship,
+    );
+  }
 
   for (const conversation of conversations) {
     conversationsByFriendId.set(
@@ -462,25 +518,51 @@ export async function getDirectMessageFriendRoster(
     );
   }
 
-  return sortFriendRosterItems(
-    friendships.map((friendship) => {
-      const friend = mapFriendshipPeer(friendship, currentUserProfileId);
-      const conversation = conversationsByFriendId.get(friend.id);
+  const friendItems = friendships.map((friendship) => {
+    const friend = mapFriendshipPeer(friendship, currentUserProfileId);
+    const conversation = conversationsByFriendId.get(friend.id);
 
-      return {
-        friendshipId: friendship.id,
-        friend,
-        conversationId: conversation?.id ?? null,
-        lastMessage: conversation ? mapLastMessage(conversation) : null,
-        lastMessageAt:
-          conversation?.lastMessageAt?.toISOString() ??
-          conversation?.messages[0]?.createdAt.toISOString() ??
-          null,
-        createdAt: friendship.createdAt.toISOString(),
-        recentActivities: activitiesByFriendId.get(friend.id) ?? [],
-      };
-    }),
-  );
+    return {
+      friendshipId: friendship.id,
+      isFriend: true,
+      rosterId: `friendship:${friendship.id}`,
+      friend,
+      conversationId: conversation?.id ?? null,
+      lastMessage: conversation ? mapLastMessage(conversation) : null,
+      lastMessageAt:
+        conversation?.lastMessageAt?.toISOString() ??
+        conversation?.messages[0]?.createdAt.toISOString() ??
+        null,
+      createdAt: friendship.createdAt.toISOString(),
+      recentActivities: activitiesByFriendId.get(friend.id) ?? [],
+      unreadCount: conversation
+        ? (unreadCountByConversationId.get(conversation.id) ?? 0)
+        : 0,
+    };
+  });
+  const strangerConversationItems = conversations
+    .filter((conversation) => {
+      const peerId = getConversationPeerId(conversation, currentUserProfileId);
+
+      return !friendshipsByFriendId.has(peerId);
+    })
+    .map((conversation) => ({
+      friendshipId: null,
+      isFriend: false,
+      rosterId: `conversation:${conversation.id}`,
+      friend: mapPeer(conversation, currentUserProfileId),
+      conversationId: conversation.id,
+      lastMessage: mapLastMessage(conversation),
+      lastMessageAt:
+        conversation.lastMessageAt?.toISOString() ??
+        conversation.messages[0]?.createdAt.toISOString() ??
+        null,
+      createdAt: conversation.createdAt.toISOString(),
+      recentActivities: [],
+      unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
+    }));
+
+  return sortFriendRosterItems([...friendItems, ...strangerConversationItems]);
 }
 
 export async function getUnreadDirectMessageConversationCount(

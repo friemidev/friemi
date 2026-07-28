@@ -947,7 +947,9 @@ export function ActivityCard({
         <CardHeader
           className={cn(
             "p-4 pb-2 sm:p-5 sm:pb-2.5",
-            mobileDenseClass("max-[639px]:p-3 max-[639px]:pb-1.5"),
+            mobileDenseClass(
+              "max-[639px]:flex max-[639px]:h-[3.7rem] max-[639px]:items-start max-[639px]:overflow-hidden max-[639px]:p-3 max-[639px]:pb-1.5",
+            ),
           )}
         >
           <CardTitle
@@ -969,7 +971,7 @@ export function ActivityCard({
           className={cn(
             "flex flex-1 flex-col space-y-3 p-4 pt-0 sm:p-5 sm:pt-0",
             mobileDenseClass(
-              "max-[639px]:space-y-2 max-[639px]:p-3 max-[639px]:pt-0",
+              "max-[639px]:min-h-[4.75rem] max-[639px]:space-y-0 max-[639px]:p-3 max-[639px]:pt-0",
             ),
           )}
         >
@@ -983,12 +985,22 @@ export function ActivityCard({
             )}
           >
             {countdownLabel ? (
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ice px-2.5 py-1 text-xs font-semibold text-forest ring-1 ring-sage">
+              <span
+                className={cn(
+                  "inline-flex w-fit items-center gap-1.5 rounded-full bg-ice px-2.5 py-1 text-xs font-semibold text-forest ring-1 ring-sage",
+                  mobileDenseClass("max-[639px]:hidden"),
+                )}
+              >
                 <Clock3 className="h-3.5 w-3.5 shrink-0" />
                 {countdownLabel}
               </span>
             ) : null}
-            <span className="flex items-start gap-2">
+            <span
+              className={cn(
+                "flex items-start gap-2",
+                mobileDenseClass("max-[639px]:min-h-[2.2rem]"),
+              )}
+            >
               <CalendarDays
                 className={cn(
                   "mt-0.5 h-4 w-4 shrink-0",
@@ -1006,7 +1018,12 @@ export function ActivityCard({
               </span>
             </span>
             {isActivityInfo ? (
-              <span className="flex items-start gap-2">
+              <span
+                className={cn(
+                  "flex items-start gap-2",
+                  mobileDenseClass("max-[639px]:min-h-[1rem]"),
+                )}
+              >
                 <MapPin
                   className={cn(
                     "mt-0.5 h-4 w-4 shrink-0 text-sage",
