@@ -142,7 +142,12 @@ function MessageBubbleAvatar({
       }}
       title={user.nickname}
     >
-      <MessageAvatar avatarUrl={user.avatarUrl} name={user.nickname} size="sm" />
+      <MessageAvatar
+        avatarUrl={user.avatarUrl}
+        isOnline={user.isOnline}
+        name={user.nickname}
+        size="sm"
+      />
     </ContextualDetailLink>
   );
 }

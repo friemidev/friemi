@@ -22,6 +22,10 @@ import {
   publicEventSelect,
 } from "@/features/public-events/queries/getPublicEvents";
 import { calculateTrustScore } from "@/features/trust/trustScore";
+import {
+  getUserPresenceState,
+  type UserPresenceStatusValue,
+} from "../presence";
 
 export const profileActivityListLimit = 12;
 export const profileCharmGiftListLimit = 6;
@@ -72,6 +76,8 @@ const publicProfileSelect = {
   avatarUrl: true,
   bio: true,
   isCoCreator: true,
+  presenceStatus: true,
+  lastActiveAt: true,
   status: true,
 } satisfies Prisma.UserProfileSelect;
 
@@ -235,6 +241,8 @@ export type PublicProfileViewModel = {
   avatarUrl: string | null;
   bio: string | null;
   isCoCreator: boolean;
+  isOnline: boolean;
+  presenceStatus: UserPresenceStatusValue;
 };
 
 export type ProfileFollowUserViewModel = {
@@ -261,8 +269,14 @@ function mapPublicProfile(profile: {
   avatarUrl: string | null;
   bio: string | null;
   isCoCreator: boolean;
+  lastActiveAt: Date | null;
+  presenceStatus: string | null;
 }): PublicProfileViewModel {
   const hasPublicNickname = profile.nickname.trim().length > 0;
+  const presence = getUserPresenceState({
+    lastActiveAt: profile.lastActiveAt,
+    status: profile.presenceStatus,
+  });
 
   return {
     id: profile.id,
@@ -275,6 +289,8 @@ function mapPublicProfile(profile: {
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
     isCoCreator: profile.isCoCreator,
+    isOnline: presence.isOnline,
+    presenceStatus: presence.status,
   };
 }
 

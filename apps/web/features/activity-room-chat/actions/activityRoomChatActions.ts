@@ -51,6 +51,7 @@ function getActionErrorMessage(locale: string, error: unknown) {
 }
 
 function revalidateActivityRoom(locale: string, activityId: string) {
+  revalidatePath(withLocale(locale, "/footprints"));
   revalidatePath(withLocale(locale, `/lobby/${activityId}`));
   revalidatePath(withLocale(locale, `/lobby/${activityId}/room`));
 }

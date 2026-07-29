@@ -3,7 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent, MouseEvent, TouchEvent } from "react";
+import type {
+  ComponentType,
+  KeyboardEvent,
+  MouseEvent,
+  TouchEvent,
+} from "react";
 import {
   useActionState,
   useEffect,
@@ -29,11 +34,14 @@ import {
   Trash2,
   UserPlus,
   UserRound,
+  UsersRound,
   X,
 } from "lucide-react";
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
+import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
@@ -58,6 +66,7 @@ import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
 type MomentFeedScope = "PUBLIC" | "FRIENDS";
+type MessageRosterFilter = "all" | "friends" | "rooms";
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
 type FootprintsViewerProfile = {
@@ -70,6 +79,7 @@ type FootprintsViewerProfile = {
 };
 
 type FootprintsMobilePageProps = {
+  activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
@@ -143,6 +153,11 @@ const copyByLocale = {
     viewOriginal: "查看原文",
     messageTitle: "消息",
     messageDescription: "好友私聊和组局聊天都在这里。",
+    messageFilters: {
+      all: "聊聊",
+      friends: "好友",
+      rooms: "群聊",
+    },
     openMessages: "进入消息",
     notificationTitle: "通知",
     notificationDescription: "报名、评论和点赞提醒会汇总到通知中心。",
@@ -225,6 +240,11 @@ const copyByLocale = {
     viewOriginal: "View original",
     messageTitle: "Messages",
     messageDescription: "Friend chats and plan details stay here.",
+    messageFilters: {
+      all: "All",
+      friends: "Friends",
+      rooms: "Groups",
+    },
     openMessages: "Open messages",
     notificationTitle: "Notifications",
     notificationDescription:
@@ -312,6 +332,11 @@ const copyByLocale = {
     messageTitle: "Messages",
     messageDescription:
       "Les échanges entre amis et autour des plans restent ici.",
+    messageFilters: {
+      all: "Tout",
+      friends: "Amis",
+      rooms: "Groupes",
+    },
     openMessages: "Ouvrir les messages",
     notificationTitle: "Notifications",
     notificationDescription:
@@ -1992,6 +2017,7 @@ function FootprintsAuthPrompt({
 }
 
 function FootprintsMessageList({
+  activityRoomChats,
   currentUserFriendCode,
   currentUserProfileId,
   friends,
@@ -2000,75 +2026,191 @@ function FootprintsMessageList({
 }: {
   currentUserFriendCode?: string | null;
   currentUserProfileId: string;
+  activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
 }) {
   const t = getDirectMessagesCopy(locale);
+  const pageCopy = getFootprintsCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
   const [addFriendOpen, setAddFriendOpen] = useState(false);
-  const sortedFriends = useMemo(
-    () =>
-      [...friends].sort((friendA, friendB) => {
-        const timeA = new Date(
-          friendA.lastMessage?.createdAt ??
-            friendA.lastMessageAt ??
-            friendA.createdAt,
-        ).getTime();
-        const timeB = new Date(
-          friendB.lastMessage?.createdAt ??
-            friendB.lastMessageAt ??
-            friendB.createdAt,
-        ).getTime();
-
-        return (
-          timeB - timeA ||
-          friendA.rosterId.localeCompare(friendB.rosterId)
-        );
-      }),
-    [friends],
-  );
-  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
-  const visibleFriends = useMemo(() => {
-    if (!normalizedSearchTerm) {
-      return sortedFriends;
-    }
-
-    return sortedFriends.filter((friend) => {
-      const searchable = [
+  const [activeFilter, setActiveFilter] =
+    useState<MessageRosterFilter>("all");
+  const sortedEntries = useMemo(() => {
+    const directEntries = friends.map((friend) => ({
+      kind: "direct" as const,
+      id: friend.rosterId,
+      searchText: [
         friend.friend.nickname,
         friend.friend.friendCode,
         friend.friend.bio,
         friend.lastMessage?.body,
       ]
         .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase();
+        .join(" "),
+      sortTime: new Date(
+        friend.lastMessage?.createdAt ??
+          friend.lastMessageAt ??
+          friend.createdAt,
+      ).getTime(),
+      friend,
+    }));
+    const roomEntries = activityRoomChats.map((room) => ({
+      kind: "room" as const,
+      id: `room:${room.id}`,
+      searchText: [
+        room.title,
+        room.city,
+        room.lastMessage?.body,
+        room.lastMessage?.senderName,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      sortTime: new Date(
+        room.lastMessage?.createdAt ?? room.startAt,
+      ).getTime(),
+      room,
+    }));
 
-      return searchable.includes(normalizedSearchTerm);
-    });
-  }, [normalizedSearchTerm, sortedFriends]);
+    return [...directEntries, ...roomEntries].sort(
+      (entryA, entryB) =>
+        entryB.sortTime - entryA.sortTime || entryA.id.localeCompare(entryB.id),
+    );
+  }, [activityRoomChats, friends]);
+  const defaultVisibleEntries = useMemo(
+    () =>
+      sortedEntries.filter(
+        (entry) => entry.kind === "direct" || Boolean(entry.room.lastMessage),
+      ),
+    [sortedEntries],
+  );
+  const filteredEntries = useMemo(() => {
+    if (activeFilter === "friends") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.isFriend,
+      );
+    }
+
+    if (activeFilter === "rooms") {
+      return sortedEntries.filter((entry) => entry.kind === "room");
+    }
+
+    return defaultVisibleEntries;
+  }, [activeFilter, defaultVisibleEntries, sortedEntries]);
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const visibleEntries = useMemo(() => {
+    if (!normalizedSearchTerm) {
+      return filteredEntries;
+    }
+
+    return filteredEntries.filter((entry) =>
+      entry.searchText.toLocaleLowerCase().includes(normalizedSearchTerm),
+    );
+  }, [filteredEntries, normalizedSearchTerm]);
+  const filters: Array<{
+    count: number;
+    icon: ComponentType<{ className?: string }>;
+    iconClassName: string;
+    iconFrameClassName: string;
+    key: MessageRosterFilter;
+    label: string;
+  }> = [
+    {
+      count: defaultVisibleEntries.length,
+      icon: MessageCircle,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "all",
+      label: pageCopy.messageFilters.all,
+    },
+    {
+      count: friends.filter((friend) => friend.isFriend).length,
+      icon: Heart,
+      iconClassName: "text-[#E7457A]",
+      iconFrameClassName: "bg-[#FFF0F5]",
+      key: "friends",
+      label: pageCopy.messageFilters.friends,
+    },
+    {
+      count: activityRoomChats.length,
+      icon: UsersRound,
+      iconClassName: "text-[#F08A24]",
+      iconFrameClassName: "bg-[#FFF3E6]",
+      key: "rooms",
+      label: pageCopy.messageFilters.rooms,
+    },
+  ];
   const toolbar = (
-    <div className="mt-4 flex items-center gap-2.5">
-      <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
-        <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
-        <input
-          type="search"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder={t.searchPlaceholder}
-          className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
-        />
-      </label>
-      <button
-        type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
-        aria-label={t.addFriend}
-        title={t.addFriend}
-        onClick={() => setAddFriendOpen(true)}
-      >
-        <UserPlus className="h-4 w-4" />
-      </button>
+    <div className="mt-4">
+      <div className="flex items-center gap-2.5">
+        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
+          <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder={t.searchPlaceholder}
+            className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
+          />
+        </label>
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
+          aria-label={t.addFriend}
+          title={t.addFriend}
+          onClick={() => setAddFriendOpen(true)}
+        >
+          <UserPlus className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        {filters.map((filter) => {
+          const isActive = activeFilter === filter.key;
+          const Icon = filter.icon;
+
+          return (
+            <button
+              key={filter.key}
+              type="button"
+              className={cn(
+                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-black transition duration-150 active:scale-[0.98]",
+                isActive
+                  ? "border-[#156240] bg-[#156240] text-white"
+                  : "border border-[#E7E2D6] bg-white text-[#111210]",
+              )}
+              onClick={() => setActiveFilter(filter.key)}
+            >
+              <span
+                className={cn(
+                  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition",
+                  isActive ? "bg-white/16" : filter.iconFrameClassName,
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    isActive ? "text-white" : filter.iconClassName,
+                  )}
+                />
+              </span>
+              <span>{filter.label}</span>
+              {filter.count > 0 ? (
+                <span
+                  className={cn(
+                    "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none",
+                    isActive
+                      ? "bg-white text-[#156240]"
+                      : "bg-[#F1F2EC] text-[#6F756E]",
+                  )}
+                >
+                  {filter.count > 99 ? "99+" : filter.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
   const addFriendDialog = addFriendOpen ? (
@@ -2092,7 +2234,7 @@ function FootprintsMessageList({
     );
   }
 
-  if (friends.length === 0) {
+  if (friends.length === 0 && activityRoomChats.length === 0) {
     return (
       <section>
         {toolbar}
@@ -2112,16 +2254,24 @@ function FootprintsMessageList({
   return (
     <section>
       {toolbar}
-      {visibleFriends.length > 0 ? (
+      {visibleEntries.length > 0 ? (
         <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent">
-          {visibleFriends.map((friend) => (
-            <FootprintsMessageRow
-              key={friend.rosterId}
-              currentUserProfileId={currentUserProfileId}
-              friend={friend}
-              locale={locale}
-            />
-          ))}
+          {visibleEntries.map((entry) =>
+            entry.kind === "direct" ? (
+              <FootprintsMessageRow
+                key={entry.id}
+                currentUserProfileId={currentUserProfileId}
+                friend={entry.friend}
+                locale={locale}
+              />
+            ) : (
+              <FootprintsRoomChatRow
+                key={entry.id}
+                locale={locale}
+                room={entry.room}
+              />
+            ),
+          )}
         </div>
       ) : (
         <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
@@ -2130,6 +2280,78 @@ function FootprintsMessageList({
       )}
       {addFriendDialog}
     </section>
+  );
+}
+
+function FootprintsRoomChatRow({
+  locale,
+  room,
+}: {
+  locale: string;
+  room: ActivityRoomChatRosterItemViewModel;
+}) {
+  const t = getDirectMessagesCopy(locale);
+  const lastMessage = room.lastMessage;
+  const unreadCount = room.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const preview = lastMessage
+    ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+        lastMessage.body.trim() || t.imageMessage
+      }`
+    : t.roomChatEmptyPreview;
+  const time = lastMessage?.createdAt ?? room.startAt;
+
+  return (
+    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+      <Link
+        aria-label={t.openRoomChat(room.title)}
+        className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={withLocale(locale, `/lobby/${room.id}/room`)}
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          {room.coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+              src={room.coverImageUrl}
+            />
+          ) : (
+            <UsersRound className="h-5 w-5" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-black leading-5 text-[#111210]">
+                {room.title}
+              </span>
+            </span>
+            <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
+              {formatActivityDate(time, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                unreadCount > 0
+                  ? "font-black text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {preview}
+            </span>
+            {unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
   );
 }
 
@@ -2156,31 +2378,34 @@ function FootprintsMessageRow({
     <>
       <MessageAvatar
         avatarUrl={friend.friend.avatarUrl}
+        isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
       />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="truncate text-[14px] font-black leading-5 text-[#111210]">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-black leading-5 text-[#111210]">
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
             {formatActivityDate(time, locale)}
+          </span>
+        </span>
+        <span className="mt-1 flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-[13px] leading-5",
+              unreadCount > 0
+                ? "font-black text-[#111210]"
+                : "font-semibold text-[#5F635E]",
+            )}
+          >
+            {preview}
           </span>
           {unreadCount > 0 ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
           ) : null}
-        </span>
-        <span
-          className={cn(
-            "mt-1 block truncate text-[13px] leading-5",
-            unreadCount > 0
-              ? "font-black text-[#111210]"
-              : "font-semibold text-[#5F635E]",
-          )}
-        >
-          {preview}
         </span>
       </span>
     </>
@@ -2223,6 +2448,7 @@ function FootprintsMessageRow({
 }
 
 export function FootprintsMobilePage({
+  activityRoomChats,
   initialTab = "message",
   locale,
   messageFriends,
@@ -2239,6 +2465,12 @@ export function FootprintsMobilePage({
   const [feedScope, setFeedScope] = useState<MomentFeedScope>("PUBLIC");
   const isAuthenticated = Boolean(profile);
   const signInHref = getSignInHref(locale, "/footprints");
+  const initialUnreadMessageCount = useMemo(
+    () =>
+      messageFriends.filter((friend) => friend.unreadCount > 0).length +
+      activityRoomChats.filter((room) => room.unreadCount > 0).length,
+    [activityRoomChats, messageFriends],
+  );
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
     { key: "message", label: copy.tabs.message },
@@ -2279,7 +2511,9 @@ export function FootprintsMobilePage({
   }, [feedScope, profile]);
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+    <>
+      <DirectMessageUnreadCountHydrator unreadCount={initialUnreadMessageCount} />
+      <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
       <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
         <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
           {tabs.map((tab) => {
@@ -2367,6 +2601,7 @@ export function FootprintsMobilePage({
               <FootprintsMessageList
                 currentUserFriendCode={profile.friendCode}
                 currentUserProfileId={profile.id}
+                activityRoomChats={activityRoomChats}
                 friends={messageFriends}
                 hasError={messageRosterError}
                 locale={locale}
@@ -2405,6 +2640,7 @@ export function FootprintsMobilePage({
           </section>
         ) : null}
       </div>
-    </main>
+      </main>
+    </>
   );
 }

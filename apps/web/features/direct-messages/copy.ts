@@ -37,6 +37,7 @@ type DirectMessagesCopy = {
   viewProfile: string;
   openFriends: string;
   openConversation: (name: string) => string;
+  openRoomChat: (title: string) => string;
   openingConversation: string;
   searchPlaceholder: string;
   startConversation: string;
@@ -48,6 +49,8 @@ type DirectMessagesCopy = {
   sourceActivityLabel: (title: string) => string;
   addFriend: string;
   startChat: string;
+  roomChatLabel: string;
+  roomChatEmptyPreview: string;
   activitySignal: (
     date: string,
     title: string,
@@ -106,6 +109,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       viewProfile: "Voir le profil",
       openFriends: "Voir les amis",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
+      openRoomChat: (title: string) => `Ouvrir la discussion : ${title}`,
       openingConversation: "Ouverture...",
       searchPlaceholder: "Rechercher une discussion",
       startConversation: "Message",
@@ -121,6 +125,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       sourceActivityLabel: (title: string) => `Depuis « ${title} »`,
       addFriend: "Ajouter",
       startChat: "Démarrer la discussion",
+      roomChatLabel: "Groupe",
+      roomChatEmptyPreview: "Aucun message pour le moment",
       activitySignal: (date: string, title: string, state) =>
         state === "ONGOING"
           ? `En cours : « ${title} »`
@@ -192,6 +198,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       viewProfile: "View profile",
       openFriends: "Open friends",
       openConversation: (name: string) => `Open chat with ${name}`,
+      openRoomChat: (title: string) => `Open room chat: ${title}`,
       openingConversation: "Opening...",
       searchPlaceholder: "Search chats",
       startConversation: "Message",
@@ -207,6 +214,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       sourceActivityLabel: (title: string) => `From "${title}"`,
       addFriend: "Add",
       startChat: "Start chat",
+      roomChatLabel: "Group chat",
+      roomChatEmptyPreview: "No messages yet",
       activitySignal: (date: string, title: string, state) =>
         state === "ONGOING"
           ? `At "${title}" now`
@@ -273,6 +282,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     viewProfile: "查看主页",
     openFriends: "查看好友",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
+    openRoomChat: (title: string) => `打开「${title}」群聊`,
     openingConversation: "打开中...",
     searchPlaceholder: "搜索聊天",
     startConversation: "发消息",
@@ -288,6 +298,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     sourceActivityLabel: (title: string) => `来自「${title}」`,
     addFriend: "添加",
     startChat: "开始聊天",
+    roomChatLabel: "聚吧群聊",
+    roomChatEmptyPreview: "还没有消息",
     activitySignal: (date: string, title: string, state) =>
       state === "ONGOING"
         ? `正在参加「${title}」`

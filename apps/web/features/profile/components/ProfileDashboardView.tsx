@@ -66,6 +66,15 @@ import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import {
+  updateProfilePresenceAction,
+  type UpdateProfilePresenceState,
+} from "../actions/updateProfilePresence";
+import {
+  getPresenceCopy,
+  userPresenceStatuses,
+  type UserPresenceStatusValue,
+} from "../presence";
 import type {
   ProfileDashboardViewModel,
   PublicProfileViewModel,
@@ -83,6 +92,7 @@ type ProfileDashboardViewProps = {
 };
 
 const compactFriendActionInitialState: FriendActionState = {};
+const profilePresenceInitialState: UpdateProfilePresenceState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
@@ -297,38 +307,115 @@ function getGuestProfileCopy(locale: string) {
 function ProfileAvatar({
   avatarUrl,
   initial,
+  isOnline = false,
   name,
   size = "lg",
 }: {
   avatarUrl: string | null;
   initial: string;
+  isOnline?: boolean;
   name: string;
   size?: "sm" | "lg";
 }) {
   const sizeClass =
     size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
-
-  if (avatarUrl) {
-    return (
-      // User avatars are stored as remote URLs from Clerk/user data.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatarUrl}
-        alt={name}
-        className={cn(sizeClass, "shrink-0 rounded-full object-cover")}
-      />
-    );
-  }
+  const dotClass = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
 
   return (
-    <div
-      className={cn(
-        sizeClass,
-        "flex shrink-0 items-center justify-center rounded-full bg-[#E83F83] font-medium text-white shadow-[0_14px_28px_rgba(232,63,131,0.18)]",
+    <span className="relative shrink-0">
+      {avatarUrl ? (
+        // User avatars are stored as remote URLs from Clerk/user data.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={name}
+          className={cn(sizeClass, "rounded-full object-cover")}
+        />
+      ) : (
+        <span
+          className={cn(
+            sizeClass,
+            "flex items-center justify-center rounded-full bg-[#E83F83] font-medium text-white shadow-[0_14px_28px_rgba(232,63,131,0.18)]",
+          )}
+        >
+          {initial}
+        </span>
       )}
-    >
-      {initial}
-    </div>
+      {isOnline ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            dotClass,
+            "absolute bottom-0 right-0 rounded-full bg-[#2FBF62] ring-2 ring-white",
+          )}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+function ProfilePresenceControl({
+  locale,
+  onStatusChange,
+  status,
+}: {
+  locale: string;
+  onStatusChange?: (status: UserPresenceStatusValue) => void;
+  status: UserPresenceStatusValue;
+}) {
+  const copy = getPresenceCopy(locale);
+  const [state, formAction] = useActionState(
+    updateProfilePresenceAction,
+    profilePresenceInitialState,
+  );
+  const currentStatus = state.status ?? status;
+  const statusDotClass: Record<UserPresenceStatusValue, string> = {
+    ONLINE: "bg-[#2FBF62]",
+    AWAY: "bg-[#F0B84D]",
+    INVISIBLE: "bg-[#B8B8B0]",
+  };
+
+  useEffect(() => {
+    if (state.status) {
+      onStatusChange?.(state.status);
+    }
+  }, [onStatusChange, state.status]);
+
+  return (
+    <form action={formAction} className="flex min-w-0 flex-wrap gap-1.5">
+      <input name="locale" type="hidden" value={locale} />
+      {userPresenceStatuses.map((presenceStatus) => {
+        const active = currentStatus === presenceStatus;
+
+        return (
+          <button
+            key={presenceStatus}
+            type="submit"
+            name="status"
+            value={presenceStatus}
+            className={cn(
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black transition active:scale-[0.98]",
+              active
+                ? "bg-[#156240] text-white"
+                : "border border-[#E7E2D6] bg-white text-[#4F574F]",
+            )}
+            aria-label={`${copy.label}: ${copy.statuses[presenceStatus]}`}
+            title={copy.statuses[presenceStatus]}
+            onClick={() => onStatusChange?.(presenceStatus)}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-2 w-2 rounded-full",
+                active ? "ring-1 ring-white/40" : "",
+                statusDotClass[presenceStatus],
+              )}
+            />
+            <span>{copy.statuses[presenceStatus]}</span>
+          </button>
+        );
+      })}
+    </form>
   );
 }
 
@@ -375,6 +462,7 @@ function GuestProfilePlaceholder({
             <ProfileAvatar
               avatarUrl={profile.avatarUrl}
               initial={profileInitial}
+              isOnline={profile.isOnline}
               name={profile.nickname}
               size="sm"
             />
@@ -427,6 +515,7 @@ function GuestProfilePlaceholder({
               <ProfileAvatar
                 avatarUrl={profile.avatarUrl}
                 initial={profileInitial}
+                isOnline={profile.isOnline}
                 name={profile.nickname}
               />
               <div className="min-w-0">
@@ -893,6 +982,7 @@ function PublicMobileProfileHome({
           <ProfileAvatar
             avatarUrl={profile.avatarUrl}
             initial={profileInitial}
+            isOnline={profile.isOnline}
             name={profile.nickname}
           />
           <div className="min-w-0 pt-1">
@@ -1152,12 +1242,16 @@ function MobileProfileBioSubmitButton({
 function SelfMobileProfileHome({
   dashboard,
   locale,
+  onPresenceStatusChange,
+  presenceStatus,
   profile,
   profileInitial,
   publicAchievements,
 }: {
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
+  presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
   profileInitial: string;
   publicAchievements: PublicAchievementWallItem[];
@@ -1288,6 +1382,7 @@ function SelfMobileProfileHome({
             <ProfileAvatar
               avatarUrl={profile.avatarUrl}
               initial={profileInitial}
+              isOnline={presenceStatus === "ONLINE"}
               name={profile.nickname}
               size="sm"
             />
@@ -1319,6 +1414,13 @@ function SelfMobileProfileHome({
                 </button>
               </div>
             ) : null}
+            <div className="mt-2">
+              <ProfilePresenceControl
+                locale={locale}
+                onStatusChange={onPresenceStatusChange}
+                status={presenceStatus}
+              />
+            </div>
             <MobileProfileBioEditor
               bio={profile.bio}
               locale={locale}
@@ -1495,6 +1597,8 @@ export function ProfileDashboardView({
   );
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
+  const [currentPresenceStatus, setCurrentPresenceStatus] =
+    useState<UserPresenceStatusValue>(profile.presenceStatus);
 
   useEffect(() => {
     const context = readDetailSourceContext();
@@ -1514,6 +1618,10 @@ export function ProfileDashboardView({
     }
   }, [isSelf]);
 
+  useEffect(() => {
+    setCurrentPresenceStatus(profile.presenceStatus);
+  }, [profile.id, profile.presenceStatus]);
+
   if (isGuestPlaceholder) {
     return (
       <GuestProfilePlaceholder
@@ -1532,6 +1640,8 @@ export function ProfileDashboardView({
           <SelfMobileProfileHome
             dashboard={dashboard}
             locale={locale}
+            onPresenceStatusChange={setCurrentPresenceStatus}
+            presenceStatus={currentPresenceStatus}
             profile={profile}
             profileInitial={profileInitial}
             publicAchievements={publicAchievements}
@@ -1560,19 +1670,12 @@ export function ProfileDashboardView({
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] lg:items-start">
               <div className="grid min-w-0 gap-3">
                 <div className="flex min-w-0 items-center gap-4">
-                  {profile.avatarUrl ? (
-                    // User avatars are stored as remote URLs from Clerk/user data.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profile.avatarUrl}
-                      alt={profile.nickname}
-                      className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-lg font-semibold text-white sm:h-16 sm:w-16 sm:text-xl">
-                      {profileInitial}
-                    </div>
-                  )}
+                  <ProfileAvatar
+                    avatarUrl={profile.avatarUrl}
+                    initial={profileInitial}
+                    isOnline={currentPresenceStatus === "ONLINE"}
+                    name={profile.nickname}
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-moss">
                       {t.profile.title}
@@ -1611,6 +1714,11 @@ export function ProfileDashboardView({
                     />
                   </div>
                 ) : null}
+                <ProfilePresenceControl
+                  locale={locale}
+                  onStatusChange={setCurrentPresenceStatus}
+                  status={currentPresenceStatus}
+                />
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
@@ -1658,19 +1766,12 @@ export function ProfileDashboardView({
           ) : (
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] md:items-center">
               <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                {profile.avatarUrl ? (
-                  // User avatars are stored as remote URLs from Clerk/user data.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.avatarUrl}
-                    alt={profile.nickname}
-                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white sm:h-16 sm:w-16"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-base font-semibold text-white ring-2 ring-white sm:h-16 sm:w-16 sm:text-xl">
-                    {profileInitial}
-                  </div>
-                )}
+                <ProfileAvatar
+                  avatarUrl={profile.avatarUrl}
+                  initial={profileInitial}
+                  isOnline={profile.isOnline}
+                  name={profile.nickname}
+                />
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
                     {t.profile.title}

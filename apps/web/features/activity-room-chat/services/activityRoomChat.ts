@@ -1,4 +1,5 @@
 import type {
+  ActivityCategory,
   ActivityStatus,
   ActivityType,
   ActivityVisibility,
@@ -9,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
 export const defaultActivityRoomMessageLimit = 50;
+export const defaultActivityRoomRosterLimit = 80;
 export const maxActivityRoomMessageLimit = 100;
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
@@ -69,6 +71,26 @@ export type ActivityRoomChatPageData = {
   policy: ActivityRoomChatPolicy;
 };
 
+export type ActivityRoomChatRosterItemViewModel = {
+  id: string;
+  category: ActivityCategory;
+  city: string;
+  coverImageUrl: string | null;
+  endAt: string | null;
+  lastMessage: {
+    id: string;
+    body: string;
+    createdAt: string;
+    isMine: boolean;
+    senderId: string;
+    senderName: string;
+  } | null;
+  startAt: string;
+  status: ActivityStatus;
+  title: string;
+  unreadCount: number;
+};
+
 type ResolveActivityRoomChatPolicyInput = {
   activityType?: ActivityType | null;
   endAt?: Date | null;
@@ -80,6 +102,10 @@ type ResolveActivityRoomChatPolicyInput = {
 };
 
 const roomParticipantStatuses: ParticipantStatus[] = ["JOINED", "APPROVED"];
+const visibleActivityRoomStatuses: ActivityStatus[] = [
+  "RECRUITING",
+  "CONFIRMED",
+];
 
 const messageSelect = {
   id: true,
@@ -109,6 +135,49 @@ const activityRoomPageSelect = {
   visibility: true,
 } satisfies Prisma.ActivitySelect;
 
+const activityRoomRosterSelect = {
+  id: true,
+  category: true,
+  city: true,
+  coverImageUrl: true,
+  endAt: true,
+  publicEvent: {
+    select: {
+      coverImageUrl: true,
+    },
+  },
+  startAt: true,
+  status: true,
+  title: true,
+  roomMessages: {
+    where: {
+      deletedAt: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 1,
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      senderId: true,
+      sender: {
+        select: {
+          friendCode: true,
+          nickname: true,
+        },
+      },
+    },
+  },
+  roomReadStates: {
+    select: {
+      lastReadAt: true,
+    },
+    take: 1,
+  },
+} satisfies Prisma.ActivitySelect;
+
 type ActivityRoomActivityForView = {
   endAt: Date | null;
   id: string;
@@ -119,6 +188,10 @@ type ActivityRoomActivityForView = {
   type: ActivityType;
   visibility: ActivityVisibility;
 };
+
+type ActivityRoomRosterResult = Prisma.ActivityGetPayload<{
+  select: typeof activityRoomRosterSelect;
+}>;
 
 function normalizeActivityRoomMessageLimit(limit: number) {
   if (!Number.isFinite(limit)) {
@@ -284,6 +357,116 @@ function mapActivityRoomActivity(
     status: activity.status,
     title: canShowTitle ? activity.title : null,
     type: activity.type,
+  };
+}
+
+function getActivityRoomAccessWhere(
+  profileId: string,
+): Prisma.ActivityWhereInput {
+  return {
+    status: {
+      in: visibleActivityRoomStatuses,
+    },
+    type: {
+      not: "PUBLIC_EVENT",
+    },
+    OR: [
+      {
+        organizerId: profileId,
+      },
+      {
+        coManagers: {
+          some: {
+            managerProfileId: profileId,
+          },
+        },
+      },
+      {
+        participants: {
+          some: {
+            status: {
+              in: roomParticipantStatuses,
+            },
+            userProfileId: profileId,
+          },
+        },
+      },
+    ],
+  };
+}
+
+async function getActivityRoomUnreadCountMap(
+  rooms: Array<Pick<ActivityRoomRosterResult, "id" | "roomReadStates">>,
+  viewerProfileId: string,
+) {
+  if (rooms.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const unreadWhere = rooms.map((room) => {
+    const lastReadAt = room.roomReadStates[0]?.lastReadAt ?? null;
+
+    return {
+      activityId: room.id,
+      deletedAt: null,
+      senderId: {
+        not: viewerProfileId,
+      },
+      ...(lastReadAt
+        ? {
+            createdAt: {
+              gt: lastReadAt,
+            },
+          }
+        : {}),
+    } satisfies Prisma.ActivityRoomMessageWhereInput;
+  });
+
+  const groups = await prisma.activityRoomMessage.groupBy({
+    by: ["activityId"],
+    where: {
+      OR: unreadWhere,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  return new Map(
+    groups.map((group) => [group.activityId, group._count._all]),
+  );
+}
+
+function mapActivityRoomRosterItem(
+  room: ActivityRoomRosterResult,
+  viewerProfileId: string,
+  unreadCount: number,
+): ActivityRoomChatRosterItemViewModel {
+  const lastMessage = room.roomMessages[0] ?? null;
+
+  return {
+    id: room.id,
+    category: room.category,
+    city: room.city,
+    coverImageUrl: room.coverImageUrl ?? room.publicEvent?.coverImageUrl ?? null,
+    endAt: room.endAt?.toISOString() ?? null,
+    lastMessage: lastMessage
+      ? {
+          id: lastMessage.id,
+          body: lastMessage.body,
+          createdAt: lastMessage.createdAt.toISOString(),
+          isMine: lastMessage.senderId === viewerProfileId,
+          senderId: lastMessage.senderId,
+          senderName:
+            lastMessage.sender.nickname.trim() ||
+            lastMessage.sender.friendCode ||
+            "Friemi",
+        }
+      : null,
+    startAt: room.startAt.toISOString(),
+    status: room.status,
+    title: room.title,
+    unreadCount,
   };
 }
 
@@ -490,6 +673,165 @@ export async function getActivityRoomChatPageData({
   };
 }
 
+export async function getActivityRoomChatRoster(
+  viewerProfileId: string,
+  limit = defaultActivityRoomRosterLimit,
+) {
+  const rooms = await prisma.activity.findMany({
+    where: getActivityRoomAccessWhere(viewerProfileId),
+    orderBy: [
+      {
+        startAt: "desc",
+      },
+      {
+        id: "asc",
+      },
+    ],
+    take: Math.max(1, Math.min(100, Math.floor(limit))),
+    select: {
+      ...activityRoomRosterSelect,
+      roomReadStates: {
+        where: {
+          profileId: viewerProfileId,
+        },
+        select: {
+          lastReadAt: true,
+        },
+        take: 1,
+      },
+    },
+  });
+  const unreadCountByActivityId = await getActivityRoomUnreadCountMap(
+    rooms,
+    viewerProfileId,
+  );
+
+  return rooms
+    .map((room) =>
+      mapActivityRoomRosterItem(
+        room,
+        viewerProfileId,
+        unreadCountByActivityId.get(room.id) ?? 0,
+      ),
+    )
+    .sort((roomA, roomB) => {
+      const timeA = new Date(
+        roomA.lastMessage?.createdAt ?? roomA.startAt,
+      ).getTime();
+      const timeB = new Date(
+        roomB.lastMessage?.createdAt ?? roomB.startAt,
+      ).getTime();
+
+      return timeB - timeA || roomA.id.localeCompare(roomB.id);
+    });
+}
+
+export async function getUnreadActivityRoomConversationCount(
+  viewerProfileId: string,
+) {
+  const rooms = await prisma.activity.findMany({
+    where: getActivityRoomAccessWhere(viewerProfileId),
+    orderBy: [
+      {
+        startAt: "desc",
+      },
+      {
+        id: "asc",
+      },
+    ],
+    take: 100,
+    select: {
+      id: true,
+      roomReadStates: {
+        where: {
+          profileId: viewerProfileId,
+        },
+        select: {
+          lastReadAt: true,
+        },
+        take: 1,
+      },
+    },
+  });
+  const unreadCountByActivityId = await getActivityRoomUnreadCountMap(
+    rooms,
+    viewerProfileId,
+  );
+
+  return unreadCountByActivityId.size;
+}
+
+export async function getUnreadActivityRoomMessageCount(
+  viewerProfileId: string,
+  activityId: string,
+) {
+  const policy = await getActivityRoomPolicy(
+    prisma,
+    viewerProfileId,
+    activityId,
+  );
+
+  if (!policy.canView) {
+    return 0;
+  }
+
+  const readState = await prisma.activityRoomReadState.findUnique({
+    where: {
+      activityId_profileId: {
+        activityId,
+        profileId: viewerProfileId,
+      },
+    },
+    select: {
+      lastReadAt: true,
+    },
+  });
+
+  return prisma.activityRoomMessage.count({
+    where: {
+      activityId,
+      deletedAt: null,
+      senderId: {
+        not: viewerProfileId,
+      },
+      ...(readState?.lastReadAt
+        ? {
+            createdAt: {
+              gt: readState.lastReadAt,
+            },
+          }
+        : {}),
+    },
+  });
+}
+
+export async function markActivityRoomChatRead({
+  activityId,
+  profileId,
+  readAt = new Date(),
+}: {
+  activityId: string;
+  profileId: string;
+  readAt?: Date;
+}) {
+  return prisma.activityRoomReadState.upsert({
+    where: {
+      activityId_profileId: {
+        activityId,
+        profileId,
+      },
+    },
+    create: {
+      activityId,
+      lastReadAt: readAt,
+      profileId,
+    },
+    update: {
+      lastReadAt: readAt,
+    },
+  });
+}
+
 export async function sendActivityRoomMessage({
   activityId,
   body,
@@ -517,6 +859,23 @@ export async function sendActivityRoomMessage({
         senderId,
       },
       select: messageSelect,
+    });
+
+    await tx.activityRoomReadState.upsert({
+      where: {
+        activityId_profileId: {
+          activityId,
+          profileId: senderId,
+        },
+      },
+      create: {
+        activityId,
+        lastReadAt: message.createdAt,
+        profileId: senderId,
+      },
+      update: {
+        lastReadAt: message.createdAt,
+      },
     });
 
     return mapActivityRoomMessage(message, senderId);

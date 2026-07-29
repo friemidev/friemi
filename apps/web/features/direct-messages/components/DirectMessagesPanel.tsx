@@ -138,6 +138,7 @@ function ConversationListItem({
       >
         <MessageAvatar
           avatarUrl={conversation.peer.avatarUrl}
+          isOnline={conversation.peer.isOnline}
           name={conversation.peer.nickname}
         />
         <span className="min-w-0">

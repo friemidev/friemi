@@ -25,6 +25,7 @@ import {
   getGameToolRoomPath,
 } from "@/features/game-tools/gameToolRooms";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
+import { PresenceHeartbeat } from "@/features/profile/components/PresenceHeartbeat";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -143,6 +144,7 @@ export default async function LocaleLayout({
                 </>
               ) : null}
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
+              {viewerProfile ? <PresenceHeartbeat /> : null}
               {children}
               <ActiveGameToolFloatingWindow
                 activeRoom={activeGameToolFloatingRoom}

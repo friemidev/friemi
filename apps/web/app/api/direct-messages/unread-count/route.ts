@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getUnreadActivityRoomConversationCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getUnreadDirectMessageConversationCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -16,12 +17,16 @@ export async function GET() {
         return NextResponse.json({ unreadCount: 0 });
       }
 
-      const unreadCount = await getUnreadDirectMessageConversationCount(
-        localProfile.id,
-      );
+      const [unreadDirectMessageCount, unreadActivityRoomCount] =
+        await Promise.all([
+          getUnreadDirectMessageConversationCount(localProfile.id),
+          getUnreadActivityRoomConversationCount(localProfile.id),
+        ]);
 
       return NextResponse.json({
-        unreadCount,
+        unreadActivityRoomCount,
+        unreadCount: unreadDirectMessageCount + unreadActivityRoomCount,
+        unreadDirectMessageCount,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -46,12 +51,16 @@ export async function GET() {
       return NextResponse.json({ unreadCount: 0 }, { status: 401 });
     }
 
-    const unreadCount = await getUnreadDirectMessageConversationCount(
-      profile.id,
-    );
+    const [unreadDirectMessageCount, unreadActivityRoomCount] =
+      await Promise.all([
+        getUnreadDirectMessageConversationCount(profile.id),
+        getUnreadActivityRoomConversationCount(profile.id),
+      ]);
 
     return NextResponse.json({
-      unreadCount,
+      unreadActivityRoomCount,
+      unreadCount: unreadDirectMessageCount + unreadActivityRoomCount,
+      unreadDirectMessageCount,
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
