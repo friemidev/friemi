@@ -48,14 +48,14 @@
 
 html {
   min-height: 100%;
-  background: var(--friemi-palette-paper);
+  background: #ffffff;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100%;
   margin: 0;
-  background: var(--friemi-palette-paper);
+  background: #ffffff;
   color: var(--friemi-palette-ink);
 }
 
@@ -1297,4 +1297,96 @@ html[data-home-motion-ready="true"]
   .friemi-shimmer::after {
     opacity: 0;
   }
+}
+
+/*
+ * Global flat UI pass.
+ * Keep the palette accents, but remove the old warm paper backgrounds,
+ * card shadows, and gradient fills from the application chrome.
+ */
+:where(
+  html,
+  body,
+  .app-layout-shell,
+  .app-mobile-page-shell,
+  .auth-page-shell,
+  .route-loading-shell
+) {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+:where(
+  [class*="bg-[linear-gradient"],
+  [class*="bg-[radial-gradient"],
+  [class*="bg-gradient-to-"],
+  [class*="[background-image:linear-gradient"],
+  [class*="[background-image:radial-gradient"],
+  [style*="linear-gradient"],
+  [style*="radial-gradient"],
+  .app-orientation-lock,
+  .app-orientation-lock__panel,
+  .friemi-alert-card,
+  .friemi-shimmer
+) {
+  background-image: none !important;
+}
+
+:where(
+  .text-white[class*="bg-[linear-gradient"],
+  .text-white[class*="bg-gradient-to-"]
+) {
+  background-color: var(--friemi-palette-forest) !important;
+}
+
+:where(*, *::before, *::after) {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+}
+
+:where([class*="shadow"], [class*="drop-shadow"]) {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+  filter: none !important;
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow) !important;
+}
+
+:where(
+  .app-orientation-lock__panel,
+  .app-orientation-lock__device,
+  .app-orientation-lock__hint,
+  .friemi-shimmer,
+  .co-creator-benefit-row:hover
+) {
+  box-shadow: none !important;
+}
+
+.friemi-shimmer::after {
+  display: none !important;
+}
+
+.home-hero-scrim {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(29, 29, 27, 0.76),
+      rgba(29, 29, 27, 0.38) 45%,
+      rgba(29, 29, 27, 0.12)
+    ),
+    linear-gradient(
+      180deg,
+      rgba(29, 29, 27, 0.2),
+      rgba(29, 29, 27, 0.72)
+    ) !important;
+}
+
+.home-hero-bottom-scrim {
+  background-image: linear-gradient(
+    0deg,
+    #1d1d1b,
+    rgba(29, 29, 27, 0)
+  ) !important;
 }

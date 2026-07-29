@@ -57,7 +57,7 @@ function getFallbackLabel(sourceKey: DetailSourceContext["sourceKey"], locale: s
     admin_reports: "返回举报处理",
     friends: "返回好友页",
     home: "返回首页",
-    lobby: "返回组队大厅",
+    lobby: "返回聚吧",
     merchant: "返回商家页",
     messages: "返回聊天",
     notifications: "返回通知中心",

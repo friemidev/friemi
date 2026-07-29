@@ -239,14 +239,14 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
 
   return {
     title: "消息",
-    description: "从个人主页或组局里快速开启聊天。",
+    description: "从个人主页或聚吧里快速开启聊天。",
     listTitle: "聊天列表",
     listDescription: "最近联系的好友。",
     friendListTitle: "好友列表",
     friendListDescription: "点一位好友，开始聊天",
     threadTitle: (name: string) => `和 ${name} 的聊天`,
     emptyListTitle: "还没有聊天",
-    emptyListDescription: "从个人主页或组局进入后，就可以在这里聊天。",
+    emptyListDescription: "从个人主页或聚吧进入后，就可以在这里聊天。",
     emptyFriendListTitle: "暂无好友",
     emptyFriendListDescription: "添加好友后即可开始聊天。",
     emptyThreadTitle: "还没有消息",
@@ -281,8 +281,8 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         ? "可以先发 2 条消息，对方回复后继续聊。"
         : "还可以再发 1 条，对方回复后继续聊。",
     nonFriendWaitNotice: "等对方回复后，就可以继续聊。",
-    activityContextLabel: "关于这个组局",
-    activityContextCta: "查看组局",
+    activityContextLabel: "关于这个聚吧",
+    activityContextCta: "查看聚吧",
     activityMessageSuggestion: (title: string) =>
       `你好，我想了解一下「${title}」的具体安排。`,
     sourceActivityLabel: (title: string) => `来自「${title}」`,

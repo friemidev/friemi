@@ -56,12 +56,12 @@ function getCoverManagerCopy(locale: string) {
 
   return {
     close: "关闭",
-    description: "这张图只影响当前组局卡片和详情页，不会修改原活动封面。",
+    description: "这张图只影响当前聚吧卡片和详情页，不会修改原活动封面。",
     remove: "恢复系统封面",
     save: "保存预览图",
     saving: "保存中...",
     success: "预览图已更新。",
-    title: "组局预览图",
+    title: "聚吧预览图",
     trigger: "换预览图",
     triggerShort: "换图",
   };

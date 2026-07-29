@@ -37,7 +37,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
     : "zh-CN";
   const items: DesktopNavItem[] = [
     { href: "/mobile-home", label: t.nav.hallShort, icon: House },
-    { href: "/lobby", label: t.nav.lobbyShort, icon: UsersRound },
+    { href: "/lobby", label: t.nav.lobby, icon: UsersRound },
     { href: "/activities", label: t.nav.activities, icon: Compass },
     { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
     {
@@ -99,6 +99,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
                   : "text-zinc-700 hover:bg-[#F1F2EC] hover:text-[#1D1D1B]",
             )}
             href={withLocale(currentLocale, item.href)}
+            prefetchOnVisible
           >
             <span
               className={cn(

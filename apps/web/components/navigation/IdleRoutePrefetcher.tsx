@@ -28,6 +28,7 @@ const prefetchedTargets = new Set<string>();
 const coreMobilePrefetchTargets = [
   "/mobile-home",
   "/lobby",
+  "/activities",
   "/activities/new",
   "/footprints",
   "/profile",
@@ -76,11 +77,15 @@ function getRouteAwarePrefetchTargets(routePath: string) {
     routePath === "/home" ||
     routePath === "/mobile-home"
   ) {
-    return ["/lobby", "/footprints", "/activities/new"];
+    return ["/lobby", "/activities", "/footprints", "/activities/new"];
   }
 
   if (routePath === "/lobby") {
-    return ["/mobile-home", "/activities/new", "/footprints"];
+    return ["/activities", "/mobile-home", "/activities/new", "/footprints"];
+  }
+
+  if (routePath === "/activities") {
+    return ["/lobby", "/mobile-home", "/activities/new"];
   }
 
   if (routePath === "/activities/new") {

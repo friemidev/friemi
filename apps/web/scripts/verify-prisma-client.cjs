@@ -25,6 +25,8 @@ const requiredModels = [
   "PlanetMomentComment",
   "PlanetMomentLike",
   "PlanetMomentCommentLike",
+  "UserAchievement",
+  "UserEquippedAchievement",
 ];
 const requiredFields = [
   ["Activity", "coManagers"],
@@ -41,6 +43,11 @@ const requiredFields = [
   ["Planet", "nameTranslations"],
   ["PlanetMoment", "likes"],
   ["PlanetMomentComment", "likes"],
+  ["UserProfile", "achievements"],
+  ["UserProfile", "equippedAchievements"],
+  ["UserAchievement", "achievementKey"],
+  ["UserEquippedAchievement", "achievementKey"],
+  ["UserEquippedAchievement", "sortOrder"],
 ];
 
 const missingModels = requiredModels.filter(

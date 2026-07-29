@@ -419,8 +419,8 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           sizes="100vw"
           className="home-luxury-hero-media object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(29,29,27,0.76),rgba(29,29,27,0.38)_45%,rgba(29,29,27,0.12)),linear-gradient(180deg,rgba(29,29,27,0.2),rgba(29,29,27,0.72))]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1D1D1B] to-transparent" />
+        <div className="home-hero-scrim absolute inset-0" />
+        <div className="home-hero-bottom-scrim absolute inset-x-0 bottom-0 h-40" />
 
         <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6">
           <div className="home-luxury-reveal max-w-4xl">
@@ -704,8 +704,8 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           imageSrc={homeMedia.heroMobile}
           videoSrc={homeMedia.heroVideo}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(29,29,27,0.76),rgba(29,29,27,0.38)_45%,rgba(29,29,27,0.12)),linear-gradient(180deg,rgba(29,29,27,0.2),rgba(29,29,27,0.72))]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1D1D1B] to-transparent" />
+        <div className="home-hero-scrim absolute inset-0" />
+        <div className="home-hero-bottom-scrim absolute inset-x-0 bottom-0 h-40" />
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-end px-8 pb-16 pt-16 lg:px-10">
           <div className="home-luxury-reveal max-w-4xl">

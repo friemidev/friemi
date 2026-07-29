@@ -1,10 +1,5 @@
-import { PageContainer } from "@/components/layout/PageContainer";
-import { ProfileSubpageLoadingView } from "@/features/profile/components/ProfilePrivateSubpages";
+import { RouteLoadingScreen } from "@/components/ui/LoadingState";
 
 export default function ProfileAchievementsLoading() {
-  return (
-    <PageContainer className="max-md:px-0 max-md:py-0 md:py-8">
-      <ProfileSubpageLoadingView />
-    </PageContainer>
-  );
+  return <RouteLoadingScreen />;
 }

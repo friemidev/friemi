@@ -19,8 +19,8 @@ const activityCategorySchema = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,
   z.enum(activityCategoryValues, {
-    invalid_type_error: "请选择组局主题",
-    required_error: "请选择组局主题",
+    invalid_type_error: "请选择聚吧主题",
+    required_error: "请选择聚吧主题",
   }),
 );
 

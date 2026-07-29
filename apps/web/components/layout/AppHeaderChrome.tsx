@@ -43,7 +43,7 @@ export function AppHeaderChrome({ children, locale }: AppHeaderChromeProps) {
   return (
     <header
       className={cn(
-        "app-header sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC] shadow-[0_2px_10px_rgba(21,98,64,0.06)]",
+        "app-header sticky top-0 z-40 border-b border-[#D6D5B2] bg-[#F1F2EC]",
         hideOnMobile && "max-md:hidden",
       )}
     >

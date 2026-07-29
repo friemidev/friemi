@@ -373,7 +373,7 @@ export async function createActivityAction(
     isLowTrustScore(trustScore) &&
     isLargeActivityCapacity(submittedCapacity)
   ) {
-    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型组局。`;
+    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型聚吧。`;
 
     recordLatency({
       status: "failed",
@@ -463,7 +463,7 @@ export async function createActivityAction(
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "发布组局失败，请稍后重试。",
+      "发布聚吧失败，请稍后重试。",
     );
   }
 

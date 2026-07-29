@@ -15,6 +15,6 @@ export const friemiPalette = {
 } as const;
 
 export const brandThemeColors = {
-  background: friemiPalette.cream,
+  background: "#FFFFFF",
   theme: friemiPalette.forest,
 } as const;

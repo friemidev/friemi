@@ -233,7 +233,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
     return {
       achievements: {
         emptyDescription:
-          "Join hangouts, host events, and complete your profile to unlock badges.",
+          "Join plans, host events, and complete your profile to unlock badges.",
         emptyTitle: "No badges unlocked",
         equip: "Wear",
         equipped: "Worn",
@@ -257,17 +257,17 @@ function getProfilePrivateSubpageCopy(locale: string) {
       achievementTitles: {
         active_guest_20: "Active Guest",
         co_creator: "Co-creator",
-        hello_world: "First Hangout",
+        hello_world: "First Plan",
         host_20: "Host 20",
         open_minded: "Open Minded",
         trusted_profile: "Trusted Profile",
       },
       achievementDescriptions: {
-        active_guest_20: "Join 20 hangouts.",
+        active_guest_20: "Join 20 plans.",
         co_creator: "Become a Friemi co-creator.",
-        hello_world: "Join your first hangout.",
-        host_20: "Host 20 hangouts.",
-        open_minded: "Host your first hangout.",
+        hello_world: "Join your first plan.",
+        host_20: "Host 20 plans.",
+        open_minded: "Host your first plan.",
         trusted_profile: "Reach a trusted profile score.",
       },
       bag: {
@@ -357,7 +357,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
 
   return {
     achievements: {
-      emptyDescription: "参与组局、发起活动、完善资料后会逐步解锁。",
+      emptyDescription: "参与聚吧、发起活动、完善资料后会逐步解锁。",
       emptyTitle: "暂未解锁成就",
       equip: "佩戴",
       equipped: "已佩戴",
@@ -387,11 +387,11 @@ function getProfilePrivateSubpageCopy(locale: string) {
       trusted_profile: "可信资料",
     },
     achievementDescriptions: {
-      active_guest_20: "参与 20 次组局。",
+      active_guest_20: "参与 20 次聚吧。",
       co_creator: "成为 Friemi 共创者。",
-      hello_world: "首次参加组局。",
-      host_20: "发起 20 次组局。",
-      open_minded: "首次发起组局。",
+      hello_world: "首次参加聚吧。",
+      host_20: "发起 20 次聚吧。",
+      open_minded: "首次发起聚吧。",
       trusted_profile: "信用值达到可信等级。",
     },
     bag: {
@@ -439,7 +439,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       inviterLabel: "邀请人",
       linkUnavailable: "邀请码暂不可用",
       share: "分享",
-      shareText: "来 Friemi 和我一起组局。",
+      shareText: "来 Friemi 和我一起聚聚。",
       subtitle: "把邀请码分享给新朋友。",
       title: "邀请好友",
     },

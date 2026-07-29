@@ -83,7 +83,7 @@ function getPublicAchievementWallCopy(locale: string) {
       achievementTitles: {
         active_guest_20: "Active Guest",
         co_creator: "Co-creator",
-        hello_world: "First Hangout",
+        hello_world: "First Plan",
         host_20: "Host 20",
         open_minded: "Open Minded",
         trusted_profile: "Trusted Profile",

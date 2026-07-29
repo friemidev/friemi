@@ -41,9 +41,9 @@ function getClaimCopy(locale: string) {
   }
 
   return {
-    claim: "认领组局",
+    claim: "认领聚吧",
     claiming: "认领中...",
-    helper: "认领后你可以修改时间、地点和组局信息。",
+    helper: "认领后你可以修改时间、地点和聚吧信息。",
     signIn: "登录后认领",
   };
 }

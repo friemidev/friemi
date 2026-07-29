@@ -44,7 +44,7 @@ function getMobileCreateHeaderCopy(locale: string) {
   return {
     cancel: "取消",
     publish: "发布",
-    title: "创建组局",
+    title: "创建聚吧",
   };
 }
 

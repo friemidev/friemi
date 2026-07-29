@@ -127,7 +127,7 @@ export default async function LocaleLayout({
               />
               <MobileScrollProgress />
               <IdleRoutePrefetcher
-                enabled={Boolean(viewerProfile)}
+                enabled
                 idleDelayMs={1600}
                 locale={locale}
               />
