@@ -130,8 +130,8 @@ function getCopy(locale: string): Copy {
     removing: "移除中...",
     searchEmpty: "没有匹配的好友。",
     searchPlaceholder: "搜索昵称或好友号",
-    title: "组局管理人",
-    viewerManagerHint: "你可以协助审核报名、编辑组局，并在必要时取消组局。",
+    title: "聚吧管理人",
+    viewerManagerHint: "你可以协助审核报名、编辑聚吧，并在必要时取消聚吧。",
   };
 }
 

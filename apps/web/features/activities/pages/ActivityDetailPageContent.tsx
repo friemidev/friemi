@@ -203,7 +203,7 @@ function getAutoCreatedTeamCopy(locale: string) {
 
   return {
     claimHint:
-      "这是由热门活动自动生成的组局，认领后你就可以修改时间、地点和组局信息。",
+      "这是由热门活动自动生成的聚吧，认领后你就可以修改时间、地点和聚吧信息。",
     deadlinePrefix: "认领截止",
   };
 }
@@ -300,8 +300,8 @@ function getTeamDetailCtaCopy(locale: string) {
 
   return {
     eyebrow: "下一步",
-    title: "报名这个组局",
-    organizerTitle: "管理这个组局",
+    title: "报名这个聚吧",
+    organizerTitle: "管理这个聚吧",
   };
 }
 
@@ -421,7 +421,7 @@ function getTeamOwnerCtaCopy(locale: string) {
   return {
     contactParticipants: "联系参与者",
     contactParticipantsDescription: "打开名单，查看资料并继续联系参与者。",
-    manage: "管理组局",
+    manage: "管理聚吧",
     manageDescription: "修改展示信息、时间地点或报名规则。",
     managerTitle: "管理人空间",
     review: "查看报名",
@@ -446,7 +446,7 @@ function getActivityRoomEntryCopy(locale: string) {
   }
 
   return {
-    description: "组局消息都在这里。",
+    description: "聚吧消息都在这里。",
     label: "群聊",
   };
 }
@@ -1399,14 +1399,14 @@ export async function ActivityDetailPageContent({
     locale === "fr"
       ? "Détail du groupe"
       : locale === "en"
-        ? "Hangout Detail"
-        : "组局详情";
+        ? "Plan Detail"
+        : "聚吧详情";
   const mobileShareLabel =
     locale === "fr"
       ? "Partager le groupe"
       : locale === "en"
-        ? "Share hangout"
-        : "组队分享";
+        ? "Share plan"
+        : "聚吧分享";
   const mobileCloseLabel =
     locale === "fr" ? "Fermer" : locale === "en" ? "Close" : "关闭";
   const mobileMapHref =

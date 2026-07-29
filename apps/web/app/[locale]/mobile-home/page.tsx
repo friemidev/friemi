@@ -35,7 +35,6 @@ import {
   getCanonicalMetadataBaseUrl,
   getGeneralPageShareDescription,
 } from "@/lib/share-metadata";
-import { cn } from "@/lib/utils";
 import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
 import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 
@@ -126,7 +125,7 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
       { category: "MUSIC", image: "music.png", label: "音乐" },
       { category: "SPORTS", image: "sports.png", label: "运动" },
     ],
-    createPlanLabel: "我要组局",
+    createPlanLabel: "聚聚",
     activityEyebrow: "Live from Friemi",
     activityTitle: "从一次小局开始",
     activityDescription:
@@ -245,15 +244,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "Qu'avez-vous envie de faire aujourd'hui ?",
       searchPlaceholder: "Rechercher activités ou personnes...",
       location: "Paris",
+      activityCategoriesTitle: "Catégories d'activités",
       filters: [
-        { href: "/activities", label: "Activités" },
-        { href: "/lobby?tab=nearby", label: "Groupes proches" },
-        { href: "/lobby?tab=today", label: "Aujourd'hui" },
-        { href: "/lobby?tab=friends", label: "Groupes d'amis" },
+        { href: "/activities?q=gratuit", label: "Gratuit" },
+        { href: "/activities?city=Paris", label: "Proche" },
+        { href: "/activities?dateRange=TODAY", label: "Aujourd'hui" },
+        { href: "/activities?q=week-end", label: "Week-end" },
+        { href: "/activities", label: "Plus" },
       ],
-      categoriesTitle: "Catégories populaires",
+      categoriesTitle: "Catégories de groupes",
       topNewsTitle: "🔥 Top News",
-      trendingTitle: "Tendance aujourd'hui",
+      trendingTitle: "Groupes populaires",
       seeAll: "Voir tout",
       participantsLabel: "personnes",
       distanceFallback: "800m",
@@ -296,15 +297,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "What are you up to today?",
       searchPlaceholder: "Search activities or people...",
       location: "Paris",
+      activityCategoriesTitle: "Activity Categories",
       filters: [
-        { href: "/activities", label: "Activities" },
-        { href: "/lobby?tab=nearby", label: "Nearby Hangouts" },
-        { href: "/lobby?tab=today", label: "Today" },
-        { href: "/lobby?tab=friends", label: "Friend Hangouts" },
+        { href: "/activities?q=free", label: "Free" },
+        { href: "/activities?city=Paris", label: "Nearby" },
+        { href: "/activities?dateRange=TODAY", label: "Today" },
+        { href: "/activities?q=weekend", label: "Weekend" },
+        { href: "/activities", label: "More" },
       ],
-      categoriesTitle: "Popular Categories",
+      categoriesTitle: "Plan Categories",
       topNewsTitle: "🔥 Top News",
-      trendingTitle: "Trending Today",
+      trendingTitle: "Popular Plans",
       seeAll: "See all",
       participantsLabel: "people",
       distanceFallback: "800m",
@@ -333,7 +336,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       ],
       bottomNav: {
         home: "Home",
-        hangout: "Hangout",
+        hangout: "Plans",
         create: "Create",
         moment: "Activity",
         profile: "Profile",
@@ -346,15 +349,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     subtitle: "今天想做点什么？",
     searchPlaceholder: "搜索活动或用户...",
     location: "巴黎",
+    activityCategoriesTitle: "活动分类",
     filters: [
-      { href: "/activities", label: "发现活动" },
-      { href: "/lobby?tab=nearby", label: "附近组局" },
-      { href: "/lobby?tab=today", label: "今日组局" },
-      { href: "/lobby?tab=friends", label: "好友组局" },
+      { href: "/activities?q=%E5%85%8D%E8%B4%B9", label: "免费" },
+      { href: "/activities?city=Paris", label: "附近" },
+      { href: "/activities?dateRange=TODAY", label: "今日" },
+      { href: "/activities?q=%E5%91%A8%E6%9C%AB", label: "周末" },
+      { href: "/activities", label: "更多" },
     ],
-    categoriesTitle: "热门分类",
+    categoriesTitle: "聚吧分类",
     topNewsTitle: "🔥 Top News",
-    trendingTitle: "今日热门",
+    trendingTitle: "热门聚吧",
     seeAll: "查看全部",
     participantsLabel: "人",
     distanceFallback: "800m",
@@ -521,17 +526,18 @@ function MobileHomeV23Experience({
             className="mt-6 w-full [&_button]:right-2 [&_button]:h-10 [&_button]:w-10 [&_input]:h-[3.55rem] [&_input]:rounded-[1.05rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-14 [&_input]:text-[15px] [&_input]:font-semibold [&_input]:shadow-[0_18px_38px_rgba(23,36,28,0.06)] [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
           />
 
-          <div className="mt-5 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {copy.filters.map((filter, index) => (
+          <div className="mt-5 flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+              {copy.activityCategoriesTitle}
+            </h2>
+          </div>
+
+          <div className="mt-3 flex gap-2.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {copy.filters.map((filter) => (
               <Link
                 key={filter.label}
                 href={withLocale(locale, filter.href)}
-                className={cn(
-                  "inline-flex h-11 shrink-0 items-center justify-center rounded-full px-5 text-[14px] font-extrabold shadow-[0_10px_22px_rgba(21,98,64,0.07)] ring-1 transition active:scale-[0.96]",
-                  index === 0
-                    ? "bg-[#096B45] text-white ring-[#096B45]"
-                    : "bg-white text-[#123D31] ring-[#D7D5C8]",
-                )}
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-4 text-[14px] font-extrabold text-[#123D31] transition active:scale-[0.96]"
               >
                 {filter.label}
               </Link>

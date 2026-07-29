@@ -84,7 +84,7 @@ function getCardKindLabel(isActivityInfo: boolean, locale: string) {
     return isActivityInfo ? "Activity info" : "Crew";
   }
 
-  return isActivityInfo ? "活动" : "组局";
+  return isActivityInfo ? "活动" : "聚吧";
 }
 
 function getCardVisibilityLabel(
@@ -298,9 +298,9 @@ function getCardActionCopy(locale: string) {
   }
 
   return {
-    createTeam: "去组局",
+    createTeam: "去聚聚",
     joinTeam: "报名加入",
-    manageTeam: "管理组局",
+    manageTeam: "管理聚吧",
     viewActivity: "查看活动",
     viewDetails: "查看详情",
   };
@@ -583,7 +583,7 @@ export function ActivityCard({
           : "Team up now"
         : displayStatus === "ENDED" || displayStatus === "CANCELLED"
           ? "查看活动"
-          : "立刻组队"
+          : "立刻聚聚"
     : locale === "fr"
       ? "Rejoindre maintenant"
       : locale === "en"

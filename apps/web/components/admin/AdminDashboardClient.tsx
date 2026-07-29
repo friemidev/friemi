@@ -660,7 +660,7 @@ export function AdminDashboardClient({
                       loading={isActivitySubmitDisabled}
                       loadingText={isCoverUploading ? "上传中…" : "保存中…"}
                     >
-                      {activityForm.id ? "保存修改" : "我要组局"}
+                      {activityForm.id ? "保存修改" : "聚聚"}
                     </LoadingLabel>
                   </Button>
                   <Button

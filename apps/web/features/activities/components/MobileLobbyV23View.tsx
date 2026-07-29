@@ -242,16 +242,16 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
 
   if (locale === "en") {
     return {
-      emptyDescription: "Fresh hangouts will appear here.",
-      emptyTitle: "No hangouts yet",
-      friendEmptyTitle: "No friend hangouts yet",
+      emptyDescription: "Fresh plans will appear here.",
+      emptyTitle: "No plans yet",
+      friendEmptyTitle: "No friend plans yet",
       friendEmptyDescription: "Sign in to see what friends are joining.",
       friendGoing: (count) => `${count} friend${count > 1 ? "s" : ""} going`,
       loadingLabel: "Loading...",
       loadFailedTitle: "Could not load",
-      mineEmptyTitle: "No personal hangouts yet",
+      mineEmptyTitle: "No personal plans yet",
       mineEmptyDescription:
-        "Sign in to see hangouts you're hosting or joining.",
+        "Sign in to see plans you're hosting or joining.",
       participants: "people",
       retryLabel: "Retry",
       tabs: {
@@ -261,20 +261,20 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
         popular: "Popular",
         mine: "Mine",
       },
-      title: "Hangout",
+      title: "Plans",
     };
   }
 
   return {
-    emptyDescription: "新的组局会显示在这里。",
-    emptyTitle: "暂时没有组局",
-    friendEmptyTitle: "暂无好友组局",
-    friendEmptyDescription: "登录后可以看到好友参加的组局。",
+    emptyDescription: "新的聚吧会显示在这里。",
+    emptyTitle: "暂时没有聚吧",
+    friendEmptyTitle: "暂无好友聚吧",
+    friendEmptyDescription: "登录后可以看到好友参加的聚吧。",
     friendGoing: (count) => `${count} 位好友参加`,
     loadingLabel: "加载中...",
     loadFailedTitle: "加载失败",
-    mineEmptyTitle: "暂无我的组局",
-    mineEmptyDescription: "登录后可以看到你发起和参加的组局。",
+    mineEmptyTitle: "暂无我的聚吧",
+    mineEmptyDescription: "登录后可以看到你发起和参加的聚吧。",
     participants: "人",
     retryLabel: "重试",
     tabs: {
@@ -284,7 +284,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       popular: "热门",
       mine: "我的",
     },
-    title: "组局",
+    title: "聚吧",
   };
 }
 

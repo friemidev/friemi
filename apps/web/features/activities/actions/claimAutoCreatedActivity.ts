@@ -45,9 +45,9 @@ function getClaimCopy(locale: string) {
   }
 
   return {
-    failed: "认领组局失败，请稍后再试。",
-    forbidden: "这个组局当前不能再认领了。",
-    self: "你已经是这个组局的发起人了。",
+    failed: "认领聚吧失败，请稍后再试。",
+    forbidden: "这个聚吧当前不能再认领了。",
+    self: "你已经是这个聚吧的发起人了。",
   };
 }
 

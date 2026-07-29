@@ -74,12 +74,12 @@ function getClaimCardCopy(locale: string) {
     close: "关闭",
     confirm: "确认当房主",
     confirming: "认领中...",
-    eyebrow: "可认领组局",
+    eyebrow: "可认领聚吧",
     helper: "成为房主后，你可以编辑标题、时间、地点和报名规则。",
     mobileOpen: "我来当房主",
     primary: "我来当房主",
     signIn: "登录后认领",
-    signInHint: "先登录，再回来把这个组局变成你的。",
+    signInHint: "先登录，再回来把这个聚吧变成你的。",
     title: "确认成为本次活动的发起人？",
   };
 }

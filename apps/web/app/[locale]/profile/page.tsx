@@ -70,7 +70,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       nickname: "Guest",
       friendCode: null,
       avatarUrl: null,
-      bio: "Sign in when you want to keep your hangouts, traces, and friends together.",
+      bio: "Sign in when you want to keep your plans, traces, and friends together.",
       isCoCreator: false,
     };
   }

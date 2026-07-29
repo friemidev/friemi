@@ -73,9 +73,9 @@ function getCoverImageCopy(locale: string) {
 
   return {
     failed: "暂时无法更新预览图，请稍后重试。",
-    forbidden: "只有组局发起人或管理人可以修改这张预览图。",
+    forbidden: "只有聚吧发起人或管理人可以修改这张预览图。",
     invalid: "请选择有效的已上传图片。",
-    unavailable: "这个组局当前不可用。",
+    unavailable: "这个聚吧当前不可用。",
   };
 }
 

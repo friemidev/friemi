@@ -505,7 +505,7 @@ function getLongDurationConfirmCopy(locale: string) {
 
   return {
     eyebrow: "发布前确认",
-    title: "这个组局持续超过一天",
+    title: "这个聚吧持续超过一天",
     description:
       "默认结束时间仍与活动整体结束时间一致。如果你只是想约其中某一场，可以返回修改结束时间。",
     start: "开始",
@@ -722,17 +722,17 @@ function getPublicEventTeamFormCopy(locale: string) {
   }
 
   return {
-    cardTitle: "组局信息",
+    cardTitle: "聚吧信息",
     activityContent: "这次怎么约",
-    title: "组局标题",
+    title: "聚吧标题",
     titlePlaceholder: "例如：下班后一起去看展",
     description: "给想加入的人看的说明",
     descriptionPlaceholder: "说明集合方式、同行氛围和需要提前知道的信息。",
     itinerary: "集合备注",
     itineraryPlaceholder: "例如：入口处集合，结束后附近喝咖啡。",
     timeLocation: "集合时间和地点",
-    peoplePrice: "组局人数和费用",
-    capacity: "组局人数上限",
+    peoplePrice: "聚吧人数和费用",
+    capacity: "聚吧人数上限",
     minParticipants: "最少同行人数",
     priceText: "费用说明",
   };

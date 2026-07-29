@@ -35,7 +35,7 @@ function getTeamDetailMobileCtaCopy(
     close: "关闭",
     eyebrow: mode === "manage" ? "管理" : "操作",
     open: mode === "manage" ? "管理" : "报名",
-    title: mode === "manage" ? "管理这个组局" : "报名这个组局",
+    title: mode === "manage" ? "管理这个聚吧" : "报名这个聚吧",
   };
 }
 

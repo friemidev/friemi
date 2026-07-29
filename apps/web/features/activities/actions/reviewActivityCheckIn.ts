@@ -69,7 +69,7 @@ function getCopy(locale: string) {
 
   return {
     failed: "暂时无法更新这个签到。",
-    forbidden: "只有组局发起人和管理人员可以确认签到。",
+    forbidden: "只有聚吧发起人和管理人员可以确认签到。",
     invalid: "请求无效。",
     missing: "没有找到这个签到记录。",
     none: "暂无待确认签到。",

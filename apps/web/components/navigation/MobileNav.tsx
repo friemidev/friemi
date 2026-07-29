@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import { Footprints, House, Plus, UserCircle2, UsersRound } from "lucide-react";
+import { Globe2, House, Plus, UserCircle2, UsersRound } from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -18,19 +18,19 @@ type MobileNavProps = {
 function getMobileNavToneClasses(tone: string, active: boolean) {
   if (tone === "rose") {
     return active
-      ? "bg-[linear-gradient(145deg,#FEFFF9,#DEAAB3_135%)] text-[#B5301F] ring-[#DEAAB3]/80 shadow-[0_10px_20px_rgba(181,48,31,0.16)]"
-      : "bg-[#DEAAB3]/20 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+      ? "bg-[#DEAAB3]/28 text-[#B5301F] ring-[#DEAAB3]/80"
+      : "bg-[#DEAAB3]/16 text-[#1D1D1B]/70 ring-[#8E8383]/10";
   }
 
   if (tone === "cream") {
     return active
-      ? "bg-[linear-gradient(145deg,#FEFFF9,#F1F2EC)] text-[#156240] ring-[#D6D5B2]/90 shadow-[0_10px_20px_rgba(21,98,64,0.12)]"
-      : "bg-[#FEFFF9]/74 text-[#1D1D1B]/68 ring-[#8E8383]/12";
+      ? "bg-[#F1F2EC] text-[#156240] ring-[#D6D5B2]/90"
+      : "bg-[#FEFFF9] text-[#1D1D1B]/68 ring-[#8E8383]/12";
   }
 
   return active
-    ? "bg-[linear-gradient(145deg,#FEFFF9,#DEEBFF)] text-[#156240] ring-[#8AB68E]/70 shadow-[0_10px_20px_rgba(21,98,64,0.13)]"
-    : "bg-[#DEEBFF]/58 text-[#1D1D1B]/70 ring-[#8E8383]/10";
+    ? "bg-[#DEEBFF]/72 text-[#156240] ring-[#8AB68E]/70"
+    : "bg-[#DEEBFF]/46 text-[#1D1D1B]/70 ring-[#8E8383]/10";
 }
 
 function shouldHideMobileNav(pathname: string, locale: string) {
@@ -71,7 +71,7 @@ export function MobileNav({ locale }: MobileNavProps) {
       {
         href: "/footprints",
         label: t.nav.footprintsShort,
-        icon: Footprints,
+        icon: Globe2,
         tone: "rose",
       },
       {
@@ -121,7 +121,7 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   return (
-    <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_28px_rgba(21,98,64,0.1)] md:hidden">
+    <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#D6D5B2] bg-[#F1F2EC] pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="mx-auto grid h-[5.15rem] max-w-md grid-cols-5 gap-1.5 px-4 py-2.5">
         {items.map((item) => {
           const Icon = item.icon;
@@ -133,6 +133,7 @@ export function MobileNav({ locale }: MobileNavProps) {
             <IntentPrefetchLink
               key={item.href}
               href={withLocale(currentLocale, item.href)}
+              prefetchOnVisible
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               title={item.label}
@@ -140,10 +141,10 @@ export function MobileNav({ locale }: MobileNavProps) {
                 "relative flex min-w-0 flex-col items-center justify-end gap-1 rounded-[1.35rem] px-1 pb-1.5 pt-1 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[linear-gradient(160deg,#156240_0%,#369758_62%,#8AB68E_140%)] p-0 text-white shadow-[0_12px_24px_rgba(21,98,64,0.28),0_0_0_4px_rgba(254,255,249,0.88)] ring-2 ring-[#D6D5B2]/85"
-                    : "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[linear-gradient(160deg,#369758,#156240)] p-0 text-white shadow-[0_10px_20px_rgba(21,98,64,0.22)] ring-1 ring-[#FEFFF9]/75"
+                    ? "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white ring-2 ring-[#D6D5B2]/85"
+                    : "h-14 w-14 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white ring-1 ring-[#D6D5B2]/75"
                   : active
-                    ? "-translate-y-1 bg-[#FEFFF9]/72 text-forest shadow-[0_10px_22px_rgba(21,98,64,0.11)] ring-1 ring-[#8E8383]/12"
+                    ? "-translate-y-1 bg-white text-forest ring-1 ring-[#8E8383]/12"
                     : "text-[#1D1D1B]/72",
               )}
             >
@@ -163,8 +164,8 @@ export function MobileNav({ locale }: MobileNavProps) {
                   "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
                   item.isPrimary
                     ? active
-                      ? "h-11 w-11 bg-[#FEFFF9]/18 text-white ring-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_1px_rgba(21,98,64,0.1)]"
-                      : "h-10 w-10 bg-white/12 text-white ring-white/24"
+                      ? "h-11 w-11 bg-[#156240] text-white ring-white/50"
+                      : "h-10 w-10 bg-[#369758] text-white ring-white/24"
                     : getMobileNavToneClasses(item.tone, active),
                 )}
               >
@@ -176,7 +177,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   strokeWidth={active ? 2.4 : 2}
                 />
                 {showUnreadBadge ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.28)] ring-2 ring-[#FEFFF9]">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}
                   </span>
                 ) : null}
@@ -186,7 +187,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   className={cn(
                     "max-w-full whitespace-nowrap transition",
                     active
-                      ? "rounded-full bg-[#FEFFF9]/72 px-1.5 py-0.5 font-extrabold text-forest shadow-[0_1px_0_rgba(255,255,255,0.7)]"
+                      ? "rounded-full bg-white px-1.5 py-0.5 font-extrabold text-forest"
                       : null,
                   )}
                 >

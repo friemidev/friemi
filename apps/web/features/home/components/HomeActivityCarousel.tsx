@@ -64,7 +64,7 @@ function getActivityKindCopy(locale: string, isActivityInfo: boolean) {
     return isActivityInfo ? "Event" : "Crew";
   }
 
-  return isActivityInfo ? "活动" : "组局";
+  return isActivityInfo ? "活动" : "聚吧";
 }
 
 export function HomeActivityCarousel({
