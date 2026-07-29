@@ -48,6 +48,7 @@ const isDirectMessagesApiRoute = createRouteMatcher([
 ]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
 const isProfileVisitsApiRoute = createRouteMatcher(["/api/profile-visits(.*)"]);
+const isProfileApiRoute = createRouteMatcher(["/api/profile(.*)"]);
 const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
@@ -249,6 +250,10 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(request, NextResponse.next());
   }
 
+  if (isProfileApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
   if (isReferralsApiRoute(request)) {
     return withReferralCookie(request, NextResponse.next());
   }
@@ -288,6 +293,7 @@ export const config = {
     "/api/friends/:path*",
     "/api/direct-messages/:path*",
     "/api/notifications/:path*",
+    "/api/profile/:path*",
     "/api/profile-visits/:path*",
     "/api/referrals/:path*",
     "/api/lobby/:path*",

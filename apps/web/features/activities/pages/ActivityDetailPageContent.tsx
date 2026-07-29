@@ -84,6 +84,7 @@ import { DetailSourceRestore } from "@/features/navigation/components/DetailSour
 import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
+import { getUnreadActivityRoomMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
 import { getTicketCtaLabel } from "@/features/public-events/utils/ticketCta";
@@ -456,18 +457,21 @@ function ActivityRoomEntryLink({
   href,
   locale,
   showDescription = false,
+  unreadCount = 0,
 }: {
   className?: string;
   href: string;
   locale: string;
   showDescription?: boolean;
+  unreadCount?: number;
 }) {
   const copy = getActivityRoomEntryCopy(locale);
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
 
   return (
     <Link
       className={cn(
-        "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758] active:scale-[0.98]",
+        "relative inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758] active:scale-[0.98]",
         className,
       )}
       href={href}
@@ -477,6 +481,11 @@ function ActivityRoomEntryLink({
       {showDescription ? (
         <span className="hidden min-w-0 truncate text-xs font-semibold text-white/74 sm:inline">
           {copy.description}
+        </span>
+      ) : null}
+      {unreadCount > 0 ? (
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1.5 text-[10px] font-black leading-none text-white ring-2 ring-white">
+          {unreadBadgeText}
         </span>
       ) : null}
     </Link>
@@ -1395,6 +1404,18 @@ export async function ActivityDetailPageContent({
     activity.type !== "PUBLIC_EVENT" &&
     Boolean(viewerProfile) &&
     (isTeamOperator || hasRoomRelevantParticipation);
+  const activityRoomUnreadCount =
+    showActivityRoomEntry && viewerProfile?.id
+      ? await perf
+          .measure("activity.roomUnreadCount", () =>
+            getUnreadActivityRoomMessageCount(viewerProfile.id, activity.id),
+          )
+          .catch((error: unknown) => {
+            console.error("Failed to load activity room unread count", error);
+
+            return 0;
+          })
+      : 0;
   const mobileDetailTitle =
     locale === "fr"
       ? "Détail du groupe"
@@ -1701,6 +1722,7 @@ export async function ActivityDetailPageContent({
               className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
               href={activityRoomHref}
               locale={locale}
+              unreadCount={activityRoomUnreadCount}
             />
           ) : null}
           {!isTeamOperator && canCancelViewerParticipation ? (
@@ -2030,6 +2052,7 @@ export async function ActivityDetailPageContent({
                       href={activityRoomHref}
                       locale={locale}
                       showDescription
+                      unreadCount={activityRoomUnreadCount}
                     />
                   ) : null}
                   <ActivityParticipantContactDialog
@@ -2096,6 +2119,7 @@ export async function ActivityDetailPageContent({
                     href={activityRoomHref}
                     locale={locale}
                     showDescription
+                    unreadCount={activityRoomUnreadCount}
                   />
                 ) : null}
                 <JoinActivityForm
@@ -2484,6 +2508,7 @@ export async function ActivityDetailPageContent({
                 <ActivityRoomEntryLink
                   href={activityRoomHref}
                   locale={locale}
+                  unreadCount={activityRoomUnreadCount}
                 />
               ) : null}
               <ActivityParticipantContactDialog

@@ -201,6 +201,7 @@ function DesktopFriendRosterRow({
     <>
       <MessageAvatar
         avatarUrl={friend.friend.avatarUrl}
+        isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
       />
       <span className="min-w-0">

@@ -14,6 +14,10 @@ import {
   getConversationPair,
   getConversationPeerId,
 } from "../utils/conversation";
+import {
+  getUserPresenceState,
+  type UserPresenceStatusValue,
+} from "@/features/profile/presence";
 
 const friendActivitySignalLimitPerFriend = 4;
 
@@ -23,6 +27,8 @@ const userSummarySelect = {
   friendCode: true,
   avatarUrl: true,
   bio: true,
+  presenceStatus: true,
+  lastActiveAt: true,
 } satisfies Prisma.UserProfileSelect;
 
 const messageSelect = {
@@ -98,6 +104,8 @@ export type DirectMessageUserViewModel = {
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  isOnline: boolean;
+  presenceStatus: UserPresenceStatusValue;
 };
 
 export type DirectMessagePreviewViewModel = {
@@ -169,8 +177,14 @@ function mapUserProfile(user: {
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  lastActiveAt: Date | null;
+  presenceStatus: string | null;
 }): DirectMessageUserViewModel {
   const hasPublicNickname = user.nickname.trim().length > 0;
+  const presence = getUserPresenceState({
+    lastActiveAt: user.lastActiveAt,
+    status: user.presenceStatus,
+  });
 
   return {
     id: user.id,
@@ -182,6 +196,8 @@ function mapUserProfile(user: {
     friendCode: user.friendCode,
     avatarUrl: hasPublicNickname ? user.avatarUrl : null,
     bio: user.bio,
+    isOnline: presence.isOnline,
+    presenceStatus: presence.status,
   };
 }
 

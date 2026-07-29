@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
+import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
@@ -52,8 +53,13 @@ export default async function FootprintsPage({
   );
   const initialTab = requestedTab ?? (profile ? "message" : "moment");
   const viewerProfileId = profile?.id ?? null;
-  const [momentsResult, messageFriendsResult, planetsResult, canCreateResult] =
-    await Promise.all([
+  const [
+    momentsResult,
+    messageFriendsResult,
+    activityRoomChatsResult,
+    planetsResult,
+    canCreateResult,
+  ] = await Promise.all([
       perf
         .measure("moments.feed", () => getMomentFeed(viewerProfileId))
         .then((moments) => ({ moments, error: null }))
@@ -80,6 +86,21 @@ export default async function FootprintsPage({
               };
             })
         : Promise.resolve({ friends: [], error: null }),
+      profile
+        ? perf
+            .measure("messages.activityRooms", () =>
+              getActivityRoomChatRoster(profile.id),
+            )
+            .then((rooms) => ({ rooms, error: null }))
+            .catch((error: unknown) => {
+              console.error("Failed to load footprints room chat roster", error);
+
+              return {
+                rooms: [],
+                error,
+              };
+            })
+        : Promise.resolve({ rooms: [], error: null }),
       perf
         .measure("planets.square", () => getPlanetSquare(viewerProfileId))
         .then((planets) => ({ planets, error: null }))
@@ -106,6 +127,7 @@ export default async function FootprintsPage({
   perf.finish(
     {
       initialTab,
+      activityRoomChatCount: activityRoomChatsResult.rooms.length,
       messageFriendCount: messageFriendsResult.friends.length,
       momentCount: momentsResult.moments.length,
       planetCount: planetsResult.planets.length,
@@ -126,7 +148,10 @@ export default async function FootprintsPage({
       moments={momentsResult.moments}
       momentFeedError={Boolean(momentsResult.error)}
       messageFriends={messageFriendsResult.friends}
-      messageRosterError={Boolean(messageFriendsResult.error)}
+      activityRoomChats={activityRoomChatsResult.rooms}
+      messageRosterError={Boolean(
+        messageFriendsResult.error || activityRoomChatsResult.error,
+      )}
       profile={
         profile
           ? {

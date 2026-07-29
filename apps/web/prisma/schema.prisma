@@ -74,6 +74,12 @@ enum UserRole {
   ADMIN
 }
 
+enum UserPresenceStatus {
+  ONLINE
+  AWAY
+  INVISIBLE
+}
+
 enum TrustScoreEventType {
   ACTIVITY_CHECK_IN
   INVITE_FRIEND
@@ -235,6 +241,8 @@ model UserProfile {
   bio                     String?
   interests               String[]                     @default([])
   status                  UserProfileStatus            @default(ACTIVE)
+  presenceStatus          UserPresenceStatus           @default(ONLINE)
+  lastActiveAt            DateTime?
   role                    UserRole                     @default(USER)
   isCoCreator             Boolean                      @default(false)
   lastSignInAt            DateTime?
@@ -266,6 +274,7 @@ model UserProfile {
   sentDirectMessages      DirectMessage[]              @relation("DirectMessageSender")
   activityRoomMessages    ActivityRoomMessage[]        @relation("ActivityRoomMessageSender")
   deletedRoomMessages     ActivityRoomMessage[]        @relation("ActivityRoomMessageDeletedBy")
+  activityRoomReadStates  ActivityRoomReadState[]      @relation("ActivityRoomReadStateProfile")
   achievements            UserAchievement[]
   equippedAchievements    UserEquippedAchievement[]
   sentReferrals           UserReferral[]               @relation("UserReferralInviter")
@@ -307,6 +316,7 @@ model UserProfile {
   @@index([normalizedWechatId])
   @@index([isCoCreator, status])
   @@index([role, status])
+  @@index([presenceStatus, lastActiveAt])
 }
 
 model Planet {
@@ -484,6 +494,7 @@ model Activity {
   coManagers        ActivityCoManager[]
   managementLogs    ActivityManagementLog[]
   roomMessages      ActivityRoomMessage[]
+  roomReadStates    ActivityRoomReadState[]
   directMessages    DirectMessage[]
   announcements     ActivityAnnouncement[]
   trustScoreEvents  TrustScoreEvent[]
@@ -547,6 +558,21 @@ model ActivityRoomMessage {
   @@index([activityId, createdAt])
   @@index([senderId, createdAt])
   @@index([deletedById])
+}
+
+model ActivityRoomReadState {
+  id         String      @id @default(cuid())
+  activityId String
+  profileId  String
+  lastReadAt DateTime    @default(now())
+  activity   Activity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  profile    UserProfile @relation("ActivityRoomReadStateProfile", fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([activityId, profileId])
+  @@index([profileId, updatedAt])
+  @@index([activityId, lastReadAt])
 }
 
 model PublicEvent {

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
-import { getActivityRoomChatPageData } from "@/features/activity-room-chat/services/activityRoomChat";
+import {
+  getActivityRoomChatPageData,
+  markActivityRoomChatRead,
+} from "@/features/activity-room-chat/services/activityRoomChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getSignInHref } from "@/lib/auth-redirect";
 
@@ -56,6 +60,17 @@ export default async function ActivityRoomPage({
         messages: [],
         policy: guestPolicy,
       };
+
+  if (viewerProfile && roomData.policy.canView) {
+    after(() => {
+      void markActivityRoomChatRead({
+        activityId,
+        profileId: viewerProfile.id,
+      }).catch((error: unknown) => {
+        console.error("Failed to mark activity room chat read", error);
+      });
+    });
+  }
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8">

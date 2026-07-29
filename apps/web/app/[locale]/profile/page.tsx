@@ -8,6 +8,7 @@ import {
   type ProfileDashboardViewModel,
   type PublicProfileViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import { getUserPresenceState } from "@/features/profile/presence";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -61,6 +62,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       avatarUrl: null,
       bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et amis.",
       isCoCreator: false,
+      isOnline: false,
+      presenceStatus: "INVISIBLE",
     };
   }
 
@@ -72,6 +75,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       avatarUrl: null,
       bio: "Sign in when you want to keep your plans, traces, and friends together.",
       isCoCreator: false,
+      isOnline: false,
+      presenceStatus: "INVISIBLE",
     };
   }
 
@@ -82,6 +87,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     avatarUrl: null,
     bio: "登录后可以同步你的组局、足迹和好友关系。",
     isCoCreator: false,
+    isOnline: false,
+    presenceStatus: "INVISIBLE",
   };
 }
 
@@ -114,6 +121,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         [],
       ];
   const isAuthenticated = Boolean(profile);
+  const profilePresence = profile
+    ? getUserPresenceState({
+        lastActiveAt: profile.lastActiveAt,
+        status: profile.presenceStatus,
+      })
+    : null;
   const profileViewModel = profile
     ? {
         id: profile.id,
@@ -122,6 +135,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         avatarUrl: profile.avatarUrl,
         bio: profile.bio,
         isCoCreator: profile.isCoCreator,
+        isOnline: profilePresence?.isOnline ?? false,
+        presenceStatus: profilePresence?.status ?? "ONLINE",
       }
     : getGuestProfile(locale);
 
