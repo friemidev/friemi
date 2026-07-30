@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Mint avatar">
+  <rect width="160" height="160" rx="80" fill="#DDF4E7"/>
+  <circle cx="80" cy="72" r="39" fill="#156240"/>
+  <path d="M48 103c8-16 21-24 32-24s24 8 32 24c-8 12-20 19-32 19s-24-7-32-19Z" fill="#0B4C33"/>
+  <circle cx="65" cy="70" r="6" fill="#FEFFF9"/>
+  <circle cx="95" cy="70" r="6" fill="#FEFFF9"/>
+  <path d="M65 91c9 8 21 8 30 0" fill="none" stroke="#FEFFF9" stroke-width="7" stroke-linecap="round"/>
+</svg>

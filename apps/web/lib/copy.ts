@@ -31,11 +31,11 @@ export const localeMeta: Record<
 const copy = {
   "zh-CN": {
     nav: {
-      home: "首页",
+      home: "发现",
       activities: "活动",
       lobby: "聚吧",
       lobbyShort: "聚吧",
-      hallShort: "大厅",
+      hallShort: "发现",
       newActivity: "聚聚",
       newActivityShort: "组局",
       messages: "消息",
@@ -45,7 +45,7 @@ const copy = {
       planet: "星球",
       planetShort: "星球",
       profile: "个人空间",
-      profileShort: "主页",
+      profileShort: "我的",
       signIn: "登录",
     },
     accountMenu: {
@@ -970,11 +970,11 @@ const copy = {
   },
   en: {
     nav: {
-      home: "Home",
+      home: "Discover",
       activities: "Activities",
       lobby: "Lobby",
       lobbyShort: "Plans",
-      hallShort: "Hall",
+      hallShort: "Discover",
       newActivity: "Start a plan",
       newActivityShort: "Plan",
       messages: "Messages",
@@ -1979,11 +1979,11 @@ const copy = {
   },
   fr: {
     nav: {
-      home: "Accueil",
+      home: "Découvrir",
       activities: "Activités",
       lobby: "Hall d'équipe",
       lobbyShort: "Plans",
-      hallShort: "Hall",
+      hallShort: "Découvrir",
       newActivity: "Je lance un plan",
       newActivityShort: "Lancer",
       messages: "Messages",

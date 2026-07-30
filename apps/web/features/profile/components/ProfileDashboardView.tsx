@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { useClerk } from "@clerk/nextjs";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -53,6 +52,7 @@ import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import { achievementCatalog } from "@/features/achievements/achievementCatalog";
 import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
+import { defaultProfileAvatars } from "@/features/profile/defaultAvatars";
 import {
   ProfileActivitySections,
   type ProfileSectionKey,
@@ -448,13 +448,6 @@ function GuestProfilePlaceholder({
           <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.title}
           </h1>
-          <Link
-            href={settingsHref}
-            aria-label={copy.settings}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
-          >
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </Link>
         </header>
 
         <section className="mt-6">
@@ -503,6 +496,13 @@ function GuestProfilePlaceholder({
               className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
             >
               {copy.browsePlanets}
+            </Link>
+            <Link
+              href={settingsHref}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
+            >
+              <Settings className="h-4 w-4" />
+              {copy.settings}
             </Link>
           </div>
         </section>
@@ -1239,6 +1239,204 @@ function MobileProfileBioSubmitButton({
   );
 }
 
+const mobileAvatarInitialState: UpdateProfileIdentityState = {};
+
+function getMobileProfileAvatarEditorCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      cancel: "Annuler",
+      change: "Changer l'avatar",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      title: "Avatar",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      cancel: "Cancel",
+      change: "Change avatar",
+      save: "Save",
+      saving: "Saving...",
+      title: "Avatar",
+    };
+  }
+
+  return {
+    cancel: "取消",
+    change: "修改头像",
+    save: "保存",
+    saving: "保存中...",
+    title: "头像",
+  };
+}
+
+function MobileProfileAvatarEditor({
+  avatarUrl,
+  bio,
+  initial,
+  isOnline,
+  locale,
+  name,
+  nickname,
+  onSaved,
+}: {
+  avatarUrl: string | null;
+  bio: string | null;
+  initial: string;
+  isOnline: boolean;
+  locale: string;
+  name: string;
+  nickname: string;
+  onSaved: (avatarUrl: string | null) => void;
+}) {
+  const copy = getMobileProfileAvatarEditorCopy(locale);
+  const router = useRouter();
+  const [state, formAction] = useActionState(
+    updateProfileIdentityAction,
+    mobileAvatarInitialState,
+  );
+  const [open, setOpen] = useState(false);
+  const currentDefaultAvatar = defaultProfileAvatars.find(
+    (avatar) => avatar.src === avatarUrl,
+  );
+  const [avatarValue, setAvatarValue] = useState(
+    currentDefaultAvatar?.src ?? defaultProfileAvatars[0].src,
+  );
+
+  useEffect(() => {
+    const nextDefaultAvatar = defaultProfileAvatars.find(
+      (avatar) => avatar.src === avatarUrl,
+    );
+
+    setAvatarValue(nextDefaultAvatar?.src ?? defaultProfileAvatars[0].src);
+  }, [avatarUrl]);
+
+  useEffect(() => {
+    if (!state.success || state.avatarUrl === undefined) {
+      return;
+    }
+
+    onSaved(state.avatarUrl);
+    setOpen(false);
+    router.refresh();
+  }, [onSaved, router, state.avatarUrl, state.success]);
+
+  return (
+    <>
+      <button
+        aria-label={copy.change}
+        className="group relative shrink-0 rounded-full transition active:scale-95"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <ProfileAvatar
+          avatarUrl={avatarUrl}
+          initial={initial}
+          isOnline={isOnline}
+          name={name}
+          size="sm"
+        />
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/32 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setOpen(false);
+            }
+          }}
+        >
+          <form
+            action={formAction}
+            className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_24px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E6E6E0]"
+            noValidate
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-black text-[#111210]">
+                {copy.title}
+              </h3>
+              <button
+                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                {copy.cancel}
+              </button>
+            </div>
+            <input name="locale" type="hidden" value={locale} />
+            <input name="afterSave" type="hidden" value="refresh" />
+            <input name="nickname" type="hidden" value={nickname} />
+            <input name="bio" type="hidden" value={bio ?? ""} />
+            <input name="avatarUrl" type="hidden" value={avatarValue} />
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {defaultProfileAvatars.map((avatar) => {
+                const selected = avatarValue === avatar.src;
+
+                return (
+                  <button
+                    key={avatar.key}
+                    type="button"
+                    className={cn(
+                      "grid min-w-0 place-items-center rounded-2xl bg-white p-2 ring-1 ring-[#ECE6D5] transition active:scale-95",
+                      selected
+                        ? "ring-2 ring-[#156240] ring-offset-2"
+                        : "hover:ring-[#8AB68E]",
+                    )}
+                    onClick={() => setAvatarValue(avatar.src)}
+                  >
+                    {/* Default avatar assets are local public SVGs. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={avatar.src}
+                      alt=""
+                      className="h-14 w-14 rounded-full object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            {state.formError ? (
+              <p className="mt-3 text-xs font-semibold text-[#9A2135]">
+                {state.formError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex justify-end">
+              <MobileProfileAvatarSubmitButton
+                label={copy.save}
+                pendingLabel={copy.saving}
+              />
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function MobileProfileAvatarSubmitButton({
+  label,
+  pendingLabel,
+}: {
+  label: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
 function SelfMobileProfileHome({
   dashboard,
   locale,
@@ -1258,9 +1456,13 @@ function SelfMobileProfileHome({
 }) {
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
-  const { openUserProfile } = useClerk();
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
   const [copied, setCopied] = useState(false);
   const nativeQrScanPendingRef = useRef(false);
+
+  useEffect(() => {
+    setCurrentAvatarUrl(profile.avatarUrl);
+  }, [profile.avatarUrl]);
 
   const copyFriendCode = async () => {
     if (!profile.friendCode) {
@@ -1351,42 +1553,29 @@ function SelfMobileProfileHome({
         <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
           {copy.profileTitle}
         </h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={copy.scan}
-            title={copy.scan}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-            onClick={openGlobalQrScanner}
-          >
-            <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-          </button>
-          <Link
-            href={withLocale(locale, "/account/settings")}
-            aria-label={copy.settings}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
-          >
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </Link>
-        </div>
+        <button
+          type="button"
+          aria-label={copy.scan}
+          title={copy.scan}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+          onClick={openGlobalQrScanner}
+        >
+          <ScanLine className="h-[1.125rem] w-[1.125rem]" />
+        </button>
       </header>
 
       <section className="mt-6">
         <div className="grid grid-cols-[4rem_minmax(0,1fr)_3.25rem] items-start gap-3">
-          <button
-            aria-label={copy.editProfile}
-            className="group relative shrink-0 rounded-full transition active:scale-95"
-            onClick={() => openUserProfile()}
-            type="button"
-          >
-            <ProfileAvatar
-              avatarUrl={profile.avatarUrl}
-              initial={profileInitial}
-              isOnline={presenceStatus === "ONLINE"}
-              name={profile.nickname}
-              size="sm"
-            />
-          </button>
+          <MobileProfileAvatarEditor
+            avatarUrl={currentAvatarUrl}
+            bio={profile.bio}
+            initial={profileInitial}
+            isOnline={presenceStatus === "ONLINE"}
+            locale={locale}
+            name={profile.nickname}
+            nickname={profile.nickname}
+            onSaved={setCurrentAvatarUrl}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
               <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
@@ -1707,6 +1896,7 @@ export function ProfileDashboardView({
                 {profile.friendCode ? (
                   <div className="max-w-xl">
                     <ProfileIdentityForm
+                      avatarUrl={profile.avatarUrl}
                       bio={profile.bio}
                       friendCode={profile.friendCode}
                       locale={locale}
