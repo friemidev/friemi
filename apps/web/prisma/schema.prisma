@@ -1037,6 +1037,7 @@ model Notification {
   recipient              UserProfile           @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   actorId                String?
   actor                  UserProfile?          @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorDisplayName       String?               @db.VarChar(80)
   activityId             String?
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?

@@ -3,13 +3,9 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import {
-  CheckCircle2,
-  ExternalLink,
-  Loader2,
-  UserPlus,
-} from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, UserPlus } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import {
   sendFriendRequestToProfileAction,
   type FriendActionState,
@@ -144,7 +140,10 @@ function AddFriendQuickButton({
 
   if (!isAuthenticated) {
     return (
-      <Link className="block min-w-0" href={getSignInHref(locale, redirectPath)}>
+      <Link
+        className="block min-w-0"
+        href={getSignInHref(locale, redirectPath)}
+      >
         <Button
           className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
           variant="secondary"
@@ -247,9 +246,9 @@ export function UserProfilePreviewPopoverContent({
 }: UserProfilePreviewPopoverContentProps) {
   const [data, setData] = useState<UserPreviewPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorType, setErrorType] = useState<"load_failed" | "not_found" | null>(
-    null,
-  );
+  const [errorType, setErrorType] = useState<
+    "load_failed" | "not_found" | null
+  >(null);
   const previewCopy = getPreviewCopy(locale);
   const resolvedNickname = data?.nickname ?? nickname;
   const resolvedAvatarUrl = data?.avatarUrl ?? avatarUrl;
@@ -260,8 +259,13 @@ export function UserProfilePreviewPopoverContent({
   const showBio = errorType !== "not_found";
   const showProfileLink =
     !isLoading && Boolean(profileId) && !isGuest && errorType !== "not_found";
-  const showActionButtons =
-    !isLoading && !isSelf && errorType !== "not_found";
+  const showActionButtons = !isLoading && !isSelf && errorType !== "not_found";
+  const showGiftButton = showActionButtons && !isGuest && Boolean(profileId);
+  const actionCount = [
+    showProfileLink,
+    showActionButtons,
+    showGiftButton,
+  ].filter(Boolean).length;
 
   useEffect(() => {
     if (isGuest || !profileId) {
@@ -322,7 +326,7 @@ export function UserProfilePreviewPopoverContent({
   }, [isGuest, profileId]);
 
   return (
-    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-[linear-gradient(155deg,#FEFFF9_0%,#F1F2EC_62%,#FFF5E6_100%)] p-3.5 shadow-[0_18px_42px_rgba(21,98,64,0.16)] ring-1 ring-white/70 backdrop-blur">
+    <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-white p-3.5 shadow-[0_16px_36px_rgba(21,98,64,0.12)]">
       <div className="space-y-3">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F09182] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.12)] ring-2 ring-[#FEFFF9]">
@@ -354,17 +358,15 @@ export function UserProfilePreviewPopoverContent({
           </div>
         </div>
 
-        {showProfileLink || showActionButtons ? (
+        {showProfileLink || showActionButtons || showGiftButton ? (
           <div
             className={
-              showProfileLink && showActionButtons
-                ? "grid grid-cols-2 gap-2"
-                : "grid gap-2"
+              actionCount > 1 ? "grid grid-cols-2 gap-2" : "grid gap-2"
             }
           >
             {showProfileLink ? (
               <Link
-                className="inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white/88 px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
+                className="inline-flex h-7 min-w-0 items-center justify-center gap-1 rounded-full border border-[#D6D5B2]/80 bg-white px-2 text-[11px] font-semibold text-[#156240] transition hover:bg-[#FFF5E6]"
                 href={withLocale(locale, `/profile/${profileId}`)}
                 prefetch={false}
               >
@@ -379,6 +381,17 @@ export function UserProfilePreviewPopoverContent({
                 profileId={profileId}
                 redirectPath={redirectPath}
                 relationship={relationship}
+              />
+            ) : null}
+            {showGiftButton ? (
+              <CharmGiftDialog
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                recipientName={resolvedNickname}
+                recipientProfileId={profileId}
+                redirectPath={redirectPath}
+                sourceSurface="PROFILE"
+                triggerClassName="!h-7 w-full min-w-0 justify-center border border-[#F5D7DC]/80 bg-white !px-2 !text-[11px] font-semibold text-[#B5301F] hover:bg-[#FFF5E6]"
               />
             ) : null}
           </div>
@@ -397,7 +410,6 @@ export function UserProfilePreviewPopoverContent({
               : previewCopy.failed}
           </p>
         ) : null}
-
       </div>
     </div>
   );

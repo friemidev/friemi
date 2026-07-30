@@ -72,6 +72,7 @@ export function getNotificationCopy(input: {
       : input.locale === "en"
         ? "your plan"
         : "votre sortie");
+  const hasActorName = Boolean(input.actorName?.trim());
   const actorName =
     input.actorName ||
     (input.locale === "zh-CN"
@@ -98,7 +99,9 @@ export function getNotificationCopy(input: {
       MOMENT_REPOSTED: `${actorName} 转发了你的足迹`,
       PARTICIPATION_APPROVED: `${activityTitle} 已通过你的报名`,
       PARTICIPATION_CANCELLED: `${actorName} 取消了报名`,
-      PARTICIPATION_CONFIRMED: `${activityTitle} 报名已确认`,
+      PARTICIPATION_CONFIRMED: hasActorName
+        ? `${actorName} 已报名`
+        : `${activityTitle} 报名已确认`,
       PARTICIPATION_PENDING: `${actorName} 提交了报名申请`,
       PARTICIPATION_REJECTED: `${activityTitle} 未通过报名`,
       REPORT_CREATED: "有新的举报需要处理",
@@ -117,7 +120,9 @@ export function getNotificationCopy(input: {
       MOMENT_REPOSTED: `${actorName} reposted your moment`,
       PARTICIPATION_APPROVED: `You're approved for ${activityTitle}`,
       PARTICIPATION_CANCELLED: `${actorName} cancelled their join`,
-      PARTICIPATION_CONFIRMED: `You're confirmed for ${activityTitle}`,
+      PARTICIPATION_CONFIRMED: hasActorName
+        ? `${actorName} joined ${activityTitle}`
+        : `You're confirmed for ${activityTitle}`,
       PARTICIPATION_PENDING: `${actorName} asked to join`,
       PARTICIPATION_REJECTED: `${activityTitle} could not approve you`,
       REPORT_CREATED: "A new report needs review",
@@ -136,7 +141,9 @@ export function getNotificationCopy(input: {
       MOMENT_REPOSTED: `${actorName} a republié votre moment`,
       PARTICIPATION_APPROVED: `Votre inscription à ${activityTitle} est validée`,
       PARTICIPATION_CANCELLED: `${actorName} a annulé son inscription`,
-      PARTICIPATION_CONFIRMED: `Votre inscription à ${activityTitle} est confirmée`,
+      PARTICIPATION_CONFIRMED: hasActorName
+        ? `${actorName} a rejoint ${activityTitle}`
+        : `Votre inscription à ${activityTitle} est confirmée`,
       PARTICIPATION_PENDING: `${actorName} demande à participer`,
       PARTICIPATION_REJECTED: `${activityTitle} n'a pas pu vous accepter`,
       REPORT_CREATED: "Un nouveau signalement est à traiter",

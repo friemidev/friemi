@@ -3,7 +3,13 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { locales } from "@chill-club/shared";
-import { Globe2, House, Plus, UserCircle2, UsersRound } from "lucide-react";
+import {
+  Compass,
+  MessageCircle,
+  Plus,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import { withLocale } from "@/lib/routes";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -14,24 +20,6 @@ import { useMobileNavSection } from "./MobileNavSectionContext";
 type MobileNavProps = {
   locale: string;
 };
-
-function getMobileNavToneClasses(tone: string, active: boolean) {
-  if (tone === "rose") {
-    return active
-      ? "bg-[#DEAAB3]/28 text-[#B5301F] ring-[#DEAAB3]/80"
-      : "bg-[#DEAAB3]/16 text-[#1D1D1B]/70 ring-[#8E8383]/10";
-  }
-
-  if (tone === "cream") {
-    return active
-      ? "bg-[#F1F2EC] text-[#156240] ring-[#D6D5B2]/90"
-      : "bg-[#FEFFF9] text-[#1D1D1B]/68 ring-[#8E8383]/12";
-  }
-
-  return active
-    ? "bg-[#DEEBFF]/72 text-[#156240] ring-[#8AB68E]/70"
-    : "bg-[#DEEBFF]/46 text-[#1D1D1B]/70 ring-[#8E8383]/10";
-}
 
 function shouldHideMobileNav(pathname: string, locale: string) {
   return pathname.startsWith(`${withLocale(locale, "/messages")}/`);
@@ -52,33 +40,28 @@ export function MobileNav({ locale }: MobileNavProps) {
       {
         href: "/mobile-home",
         label: t.nav.hallShort,
-        icon: House,
-        tone: "green",
+        icon: Compass,
       },
       {
         href: "/lobby",
         label: t.nav.lobbyShort,
         icon: UsersRound,
-        tone: "rose",
       },
       {
         href: "/activities/new",
         label: t.nav.newActivity,
         icon: Plus,
         isPrimary: true,
-        tone: "green",
       },
       {
         href: "/footprints",
         label: t.nav.footprintsShort,
-        icon: Globe2,
-        tone: "rose",
+        icon: MessageCircle,
       },
       {
         href: "/profile",
         label: t.nav.profileShort,
-        icon: UserCircle2,
-        tone: "cream",
+        icon: UserRound,
       },
     ],
     [
@@ -122,7 +105,7 @@ export function MobileNav({ locale }: MobileNavProps) {
 
   return (
     <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#E9E9E4] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="mx-auto grid h-[4.55rem] max-w-md grid-cols-5 gap-1 px-4 py-1.5">
+      <div className="mx-auto grid h-[4.35rem] max-w-md grid-cols-5 gap-1 px-4 py-1.5">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(item.href);
@@ -138,13 +121,13 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-end gap-0.5 rounded-[1.1rem] px-1 pb-1 pt-0.5 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                "relative flex min-w-0 flex-col items-center justify-end gap-0.5 rounded-[0.9rem] px-1 pb-0.5 pt-0.5 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white ring-2 ring-[#D6D5B2]/85"
-                    : "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white ring-1 ring-[#D6D5B2]/75"
+                    ? "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
+                    : "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
                   : active
-                    ? "-translate-y-0.5 bg-white text-forest ring-1 ring-[#8E8383]/12"
+                    ? "-translate-y-0.5 text-forest"
                     : "text-[#1D1D1B]/72",
               )}
             >
@@ -161,18 +144,20 @@ export function MobileNav({ locale }: MobileNavProps) {
               />
               <span
                 className={cn(
-                  "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-1 transition duration-200",
+                  "relative inline-flex h-7 w-7 items-center justify-center rounded-full transition duration-200",
                   item.isPrimary
                     ? active
-                      ? "h-10 w-10 bg-[#156240] text-white ring-white/50"
-                      : "h-9 w-9 bg-[#369758] text-white ring-white/24"
-                    : getMobileNavToneClasses(item.tone, active),
+                      ? "h-10 w-10 text-white"
+                      : "h-10 w-10 text-white"
+                    : active
+                      ? "text-forest"
+                      : "text-[#1D1D1B]/64",
                 )}
               >
                 <Icon
                   className={cn(
                     "shrink-0",
-                    item.isPrimary ? "h-5 w-5" : "h-[17px] w-[17px]",
+                    item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />
@@ -186,9 +171,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 <span
                   className={cn(
                     "max-w-full whitespace-nowrap transition",
-                    active
-                      ? "rounded-full bg-white px-1.5 py-0.5 font-extrabold text-forest"
-                      : null,
+                    active ? "font-extrabold text-forest" : null,
                   )}
                 >
                   {item.label}

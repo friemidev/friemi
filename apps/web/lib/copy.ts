@@ -518,7 +518,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "报名成功",
-          body: (activityTitle: string) => `你已成功报名「${activityTitle}」。`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName}已报名「${activityTitle}」。`
+              : `你已成功报名「${activityTitle}」。`,
         },
         PARTICIPATION_CANCELLED: {
           title: "有人取消报名",
@@ -1485,8 +1488,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "Join confirmed",
-          body: (activityTitle: string) =>
-            `You have joined "${activityTitle}".`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} joined "${activityTitle}".`
+              : `You have joined "${activityTitle}".`,
         },
         PARTICIPATION_CANCELLED: {
           title: "Someone left",
@@ -2511,8 +2516,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "Inscription confirmée",
-          body: (activityTitle: string) =>
-            `Vous êtes inscrit à « ${activityTitle} ».`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} a rejoint « ${activityTitle} ».`
+              : `Vous êtes inscrit à « ${activityTitle} ».`,
         },
         PARTICIPATION_CANCELLED: {
           title: "Une personne s'est retirée",

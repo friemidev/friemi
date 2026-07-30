@@ -493,28 +493,28 @@ function MobileHomeV23Experience({
   const trendingActivities = swipeActivities.slice(2, 8);
 
   return (
-    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:1.15rem] [--app-mobile-page-bottom-gap:1.1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
+    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
-        <header className="flex min-h-[6.75rem] items-start justify-between gap-4 pt-2">
+        <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pt-1">
           <Link
             href={withLocale(locale, "/home?view=desktop")}
-            className="mt-2 inline-flex shrink-0"
+            className="mt-1.5 inline-flex shrink-0"
             aria-label="Friemi"
           >
-            <BrandLockup className="h-10 w-[8.4rem]" priority size="md" />
+            <BrandLockup className="h-9 w-[7.55rem]" priority size="md" />
           </Link>
 
-          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-4">
+          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-3">
             <MobileHomeV23CitySelector currentCity={copy.location} />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
 
-        <section className="pt-2">
-          <h1 className="text-[26px] font-black leading-tight tracking-normal text-[#111210]">
+        <section>
+          <h1 className="text-[23px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
-          <p className="mt-1 text-[15px] font-medium leading-6 text-[#111210]/72">
+          <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
             {copy.subtitle}
           </p>
 
@@ -523,21 +523,21 @@ function MobileHomeV23Experience({
             locale={locale}
             placeholder={copy.searchPlaceholder}
             variant="page"
-            className="mt-6 w-full [&_button]:right-2 [&_button]:h-10 [&_button]:w-10 [&_input]:h-[3.55rem] [&_input]:rounded-[1.05rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-14 [&_input]:text-[15px] [&_input]:font-semibold [&_input]:shadow-[0_18px_38px_rgba(23,36,28,0.06)] [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
+            className="mt-4 w-full [&_button]:right-1.5 [&_button]:h-9 [&_button]:w-9 [&_input]:h-12 [&_input]:rounded-[0.95rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-12 [&_input]:text-[14px] [&_input]:font-semibold [&_input]:shadow-none [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
           />
 
-          <div className="mt-5 flex items-end justify-between gap-3">
-            <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+          <div className="mt-4 flex items-end justify-between gap-3">
+            <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
               {copy.activityCategoriesTitle}
             </h2>
           </div>
 
-          <div className="mt-3 flex gap-2.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {copy.filters.map((filter) => (
               <Link
                 key={filter.label}
                 href={withLocale(locale, filter.href)}
-                className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-4 text-[14px] font-extrabold text-[#123D31] transition active:scale-[0.96]"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-3.5 text-[13px] font-extrabold text-[#123D31] transition active:scale-[0.96]"
               >
                 {filter.label}
               </Link>
@@ -545,8 +545,8 @@ function MobileHomeV23Experience({
           </div>
         </section>
 
-        <section className="mt-7">
-          <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+        <section className="mt-4">
+          <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
           <MobileHomeV23CategoryCarousel
@@ -556,11 +556,11 @@ function MobileHomeV23Experience({
         </section>
 
         {topNewsItems.length > 0 ? (
-          <section className="mt-4">
-            <h2 className="text-[19px] font-black tracking-normal text-[#064133]">
+          <section className="mt-3">
+            <h2 className="text-[17px] font-black tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="-mx-5 mt-3 flex snap-x gap-2.5 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
                   href={withLocale(locale, item.href)}
@@ -573,9 +573,9 @@ function MobileHomeV23Experience({
           </section>
         ) : null}
 
-        <section className="mt-6">
+        <section className="mt-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[18px] font-black tracking-normal text-[#111210]">
+            <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
               {copy.trendingTitle}
             </h2>
             <Link
@@ -586,7 +586,7 @@ function MobileHomeV23Experience({
             </Link>
           </div>
 
-          <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-5 mt-2.5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trendingActivities.length > 0
               ? trendingActivities
                   .slice(0, 5)
@@ -625,7 +625,7 @@ function MobileHomeV23NewsCard({
     <IntentPrefetchLink
       href={href}
       prefetchOnVisible
-      className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
+      className="group relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
     >
       {/* Admin-managed images can be local paths or HTTPS URLs. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -635,7 +635,7 @@ function MobileHomeV23NewsCard({
         className="absolute inset-0 h-full w-full object-cover transition duration-500 group-active:scale-[1.03]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
-      <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
+      <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-extrabold text-[#123D31] shadow-sm">
         {title}
       </span>
     </IntentPrefetchLink>

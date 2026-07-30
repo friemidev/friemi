@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
 import {
   getActivityRoomChatPageData,
+  getActivityRoomManagementData,
   markActivityRoomChatRead,
 } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
@@ -72,6 +73,17 @@ export default async function ActivityRoomPage({
     });
   }
 
+  const management = viewerProfile
+    ? await getActivityRoomManagementData({
+        activityId,
+        viewerProfileId: viewerProfile.id,
+      }).catch((error: unknown) => {
+        console.error("Failed to load activity room management", error);
+
+        return null;
+      })
+    : null;
+
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8">
       <ActivityRoomChatPage
@@ -79,6 +91,7 @@ export default async function ActivityRoomPage({
         activityId={activityId}
         locale={locale}
         messages={roomData.messages}
+        management={management}
         policy={roomData.policy}
         signInHref={getSignInHref(locale, redirectPath)}
         viewer={

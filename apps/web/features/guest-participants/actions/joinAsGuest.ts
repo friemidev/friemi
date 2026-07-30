@@ -377,6 +377,7 @@ export async function joinActivityAsGuestAction(
     successfulStatus = joinResult.status;
 
     await createNotification(prisma, {
+      actorDisplayName: result.data.displayName,
       activityId: joinResult.activityId,
       recipientId: joinResult.organizerId,
       type:

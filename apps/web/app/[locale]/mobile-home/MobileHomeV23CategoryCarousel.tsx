@@ -66,16 +66,16 @@ export function MobileHomeV23CategoryCarousel({
   }, []);
 
   return (
-    <div className="-mx-5 mt-4 overflow-hidden bg-white">
+    <div className="-mx-5 mt-2 overflow-hidden bg-white">
       <div
-        className="flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={updateActivePage}
         ref={scrollerRef}
       >
         {categoryPages.map((page, pageIndex) => (
           <div
             key={`category-page-${pageIndex}`}
-            className="grid min-w-full snap-start grid-cols-3 gap-2.5 px-5"
+            className="grid min-w-full snap-start grid-cols-3 gap-2 px-5"
           >
             {page.map((item) => (
               <Link
@@ -84,7 +84,7 @@ export function MobileHomeV23CategoryCarousel({
                   locale,
                   `/lobby?tab=nearby&category=${item.category}`,
                 )}
-                className="group flex h-[7.35rem] min-w-0 flex-col items-center justify-end overflow-hidden rounded-[1rem] bg-white"
+                className="group flex h-[5.85rem] min-w-0 flex-col items-center justify-end overflow-hidden rounded-[0.9rem] bg-white"
                 aria-label={item.label}
               >
                 <Image
@@ -92,9 +92,9 @@ export function MobileHomeV23CategoryCarousel({
                   alt=""
                   width={150}
                   height={120}
-                  className="h-[5.85rem] w-full object-contain transition duration-300 group-active:scale-95"
+                  className="h-[4.55rem] w-full object-contain transition duration-300 group-active:scale-95"
                 />
-                <span className="-mt-1 max-w-full truncate px-1 text-[11px] font-extrabold text-[#123D31]">
+                <span className="-mt-0.5 max-w-full truncate px-1 text-[10px] font-extrabold text-[#123D31]">
                   {item.label}
                 </span>
               </Link>
@@ -102,7 +102,7 @@ export function MobileHomeV23CategoryCarousel({
           </div>
         ))}
       </div>
-      <div className="flex justify-center gap-1.5 pb-2 pt-1">
+      <div className="flex justify-center gap-1.5 pb-1 pt-0.5">
         {categoryPages.map((_, index) => (
           <button
             aria-label={`Go to category page ${index + 1}`}

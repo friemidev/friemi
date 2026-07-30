@@ -6,6 +6,15 @@ import type {
   ParticipantStatus,
   Prisma,
 } from "@prisma/client";
+import type { ActivityContactableParticipantViewModel } from "@/features/activities/types";
+import {
+  getActivityCoManagerDashboard,
+  type ActivityCoManagerDashboardViewModel,
+} from "@/features/activities/queries/getActivityCoManagerDashboard";
+import {
+  getActivityCheckInRoster,
+  type ActivityCheckInParticipantViewModel,
+} from "@/features/activities/queries/getActivityCheckInRoster";
 import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
@@ -59,6 +68,7 @@ export type ActivityRoomChatActivityViewModel = {
   endAt: string | null;
   id: string;
   publicEventId: string | null;
+  requiresApproval: boolean;
   startAt: string;
   status: ActivityStatus;
   title: string | null;
@@ -89,6 +99,16 @@ export type ActivityRoomChatRosterItemViewModel = {
   status: ActivityStatus;
   title: string;
   unreadCount: number;
+};
+
+export type ActivityRoomManagementViewModel = {
+  activityTitle: string;
+  canCancelActivity: boolean;
+  canEditActivity: boolean;
+  checkInRoster: ActivityCheckInParticipantViewModel[];
+  coManagerDashboard: ActivityCoManagerDashboardViewModel | null;
+  contactableParticipants: ActivityContactableParticipantViewModel[];
+  requiresApproval: boolean;
 };
 
 type ResolveActivityRoomChatPolicyInput = {
@@ -128,6 +148,7 @@ const activityRoomPageSelect = {
   endAt: true,
   organizerId: true,
   publicEventId: true,
+  requiresApproval: true,
   startAt: true,
   status: true,
   title: true,
@@ -182,6 +203,7 @@ type ActivityRoomActivityForView = {
   endAt: Date | null;
   id: string;
   publicEventId: string | null;
+  requiresApproval: boolean;
   startAt: Date;
   status: ActivityStatus;
   title: string;
@@ -353,6 +375,7 @@ function mapActivityRoomActivity(
     endAt: activity.endAt?.toISOString() ?? null,
     id: activity.id,
     publicEventId: activity.publicEventId,
+    requiresApproval: activity.requiresApproval,
     startAt: activity.startAt.toISOString(),
     status: activity.status,
     title: canShowTitle ? activity.title : null,
@@ -432,9 +455,7 @@ async function getActivityRoomUnreadCountMap(
     },
   });
 
-  return new Map(
-    groups.map((group) => [group.activityId, group._count._all]),
-  );
+  return new Map(groups.map((group) => [group.activityId, group._count._all]));
 }
 
 function mapActivityRoomRosterItem(
@@ -448,7 +469,8 @@ function mapActivityRoomRosterItem(
     id: room.id,
     category: room.category,
     city: room.city,
-    coverImageUrl: room.coverImageUrl ?? room.publicEvent?.coverImageUrl ?? null,
+    coverImageUrl:
+      room.coverImageUrl ?? room.publicEvent?.coverImageUrl ?? null,
     endAt: room.endAt?.toISOString() ?? null,
     lastMessage: lastMessage
       ? {
@@ -670,6 +692,92 @@ export async function getActivityRoomChatPageData({
       .reverse()
       .map((message) => mapActivityRoomMessage(message, viewerProfileId)),
     policy,
+  };
+}
+
+export async function getActivityRoomManagementData({
+  activityId,
+  now = new Date(),
+  viewerProfileId,
+}: {
+  activityId: string;
+  now?: Date;
+  viewerProfileId: string;
+}): Promise<ActivityRoomManagementViewModel | null> {
+  const policy = await getActivityRoomPolicy(
+    prisma,
+    viewerProfileId,
+    activityId,
+    now,
+  );
+
+  if (policy.role !== "ORGANIZER" && policy.role !== "CO_MANAGER") {
+    return null;
+  }
+
+  const activity = await prisma.activity.findUnique({
+    where: {
+      id: activityId,
+    },
+    select: {
+      id: true,
+      endAt: true,
+      organizerId: true,
+      requiresApproval: true,
+      status: true,
+      title: true,
+      participants: {
+        where: {
+          status: {
+            in: ["JOINED", "APPROVED", "PENDING"],
+          },
+        },
+        orderBy: {
+          joinedAt: "asc",
+        },
+        select: {
+          userProfile: {
+            select: {
+              id: true,
+              avatarUrl: true,
+              nickname: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!activity) {
+    return null;
+  }
+
+  const isEnded =
+    activity.status === "ENDED" ||
+    Boolean(activity.endAt && activity.endAt.getTime() <= now.getTime());
+  const isCancelled = activity.status === "CANCELLED";
+  const contactableParticipants = activity.participants
+    .filter(
+      (participant) => participant.userProfile.id !== activity.organizerId,
+    )
+    .map((participant) => ({
+      id: participant.userProfile.id,
+      avatarUrl: participant.userProfile.avatarUrl,
+      nickname: participant.userProfile.nickname,
+    }));
+  const [coManagerDashboard, checkInRoster] = await Promise.all([
+    getActivityCoManagerDashboard(activity.id, viewerProfileId),
+    getActivityCheckInRoster(activity.id, viewerProfileId),
+  ]);
+
+  return {
+    activityTitle: activity.title,
+    canCancelActivity: !isCancelled && !isEnded,
+    canEditActivity: !isCancelled && !isEnded,
+    checkInRoster,
+    coManagerDashboard,
+    contactableParticipants,
+    requiresApproval: activity.requiresApproval,
   };
 }
 

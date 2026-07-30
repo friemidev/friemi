@@ -261,6 +261,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
           nickname: true,
         },
       },
+      actorDisplayName: true,
       actorId: true,
       momentId: true,
       recipientId: true,
@@ -328,7 +329,8 @@ export async function sendMobilePushForNotification(notificationId: string) {
     const locale = normalizePushLocale(device.locale);
     const copy = getNotificationCopy({
       activityTitle: notification.activity?.title ?? null,
-      actorName: notification.actor?.nickname ?? null,
+      actorName:
+        notification.actor?.nickname ?? notification.actorDisplayName ?? null,
       locale,
       messageBody,
       type: notification.type,

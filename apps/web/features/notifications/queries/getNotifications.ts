@@ -35,6 +35,7 @@ const notificationSelect = {
       nickname: true,
     },
   },
+  actorDisplayName: true,
   activity: {
     select: {
       id: true,
@@ -79,6 +80,7 @@ export type NotificationViewModel = {
     id: string;
     nickname: string;
   } | null;
+  actorDisplayName: string | null;
   activity: {
     id: string;
     title: string;
@@ -112,6 +114,7 @@ function mapNotification(
     friendRequestId,
     actorActivityRole,
     actor: notification.actor,
+    actorDisplayName: notification.actorDisplayName,
     activity: notification.activity
       ? {
           id: notification.activity.id,
