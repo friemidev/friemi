@@ -10,6 +10,7 @@ type ActivityShareDialogButtonProps = {
   className?: string;
   closeLabel: string;
   label: string;
+  triggerLabel?: string;
 };
 
 export function ActivityShareDialogButton({
@@ -17,6 +18,7 @@ export function ActivityShareDialogButton({
   className,
   closeLabel,
   label,
+  triggerLabel,
 }: ActivityShareDialogButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -31,7 +33,11 @@ export function ActivityShareDialogButton({
         onClick={() => setOpen(true)}
         type="button"
       >
-        <Share2 className="h-4 w-4" strokeWidth={2.4} />
+        <Share2
+          className={cn("h-4 w-4", triggerLabel ? "h-3.5 w-3.5" : null)}
+          strokeWidth={2.4}
+        />
+        {triggerLabel ? <span>{triggerLabel}</span> : null}
       </button>
 
       {open ? (

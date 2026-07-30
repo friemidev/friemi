@@ -113,6 +113,17 @@ export function readDetailSourceContext() {
   }
 }
 
+export function writeDetailSourceContext(context: DetailSourceContext) {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    detailSourceStorageKey,
+    JSON.stringify(context),
+  );
+}
+
 export function getDetailSourceForCurrentTarget() {
   const context = readDetailSourceContext();
 

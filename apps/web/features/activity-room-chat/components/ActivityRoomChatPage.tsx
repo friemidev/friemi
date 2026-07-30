@@ -4,15 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  ClipboardList,
   LoaderCircle,
   Lock,
   MessageCircle,
+  MoreHorizontal,
+  Pencil,
   SendHorizontal,
   Trash2,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@chill-club/ui";
+import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
+import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
+import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
+import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
@@ -23,6 +31,7 @@ import {
 import { getActivityRoomChatCopy } from "../copy";
 import type {
   ActivityRoomChatActivityViewModel,
+  ActivityRoomManagementViewModel,
   ActivityRoomChatPolicy,
   ActivityRoomMessageViewModel,
 } from "../services/activityRoomChat";
@@ -38,6 +47,7 @@ type ActivityRoomChatPageProps = {
   activityId: string;
   locale: string;
   messages: ActivityRoomMessageViewModel[];
+  management?: ActivityRoomManagementViewModel | null;
   policy: ActivityRoomChatPolicy;
   signInHref: string;
   viewer: ActivityRoomViewer | null;
@@ -60,6 +70,42 @@ function formatMessageTime(value: string, locale: string) {
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
+}
+
+function getRoomManagementCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      close: "Fermer",
+      contactParticipants: "Contacter",
+      edit: "Modifier",
+      label: "Options",
+      manageTitle: "Gérer le groupe",
+      members: "Membres",
+      signups: "Inscriptions",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      close: "Close",
+      contactParticipants: "Contact",
+      edit: "Edit",
+      label: "Options",
+      manageTitle: "Manage group",
+      members: "Members",
+      signups: "Signups",
+    };
+  }
+
+  return {
+    close: "关闭",
+    contactParticipants: "联系成员",
+    edit: "编辑聚吧",
+    label: "群聊设置",
+    manageTitle: "管理聚吧",
+    members: "成员",
+    signups: "报名名单",
+  };
 }
 
 function RoomAvatar({
@@ -114,6 +160,123 @@ function ActivityRoomChatAutoRefresh({
   }, [activityId, intervalMs, router]);
 
   return null;
+}
+
+function ActivityRoomManagementMenu({
+  activityHref,
+  activityId,
+  locale,
+  management,
+}: {
+  activityHref: string;
+  activityId: string;
+  locale: string;
+  management: ActivityRoomManagementViewModel | null | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const copy = getRoomManagementCopy(locale);
+
+  const reviewHref = `${activityHref}${
+    management?.requiresApproval
+      ? "#participation-approval"
+      : "#activity-participants"
+  }`;
+  const editHref = withLocale(locale, `/activities/${activityId}/edit`);
+  const membersHref = `${activityHref}#activity-participants`;
+
+  return (
+    <div className="relative">
+      <button
+        aria-expanded={open}
+        aria-label={copy.label}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-10 z-40 max-h-[min(31rem,calc(100dvh-8rem))] w-[min(21rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[1.35rem] border border-[#D6D5B2] bg-white p-3 shadow-[0_18px_48px_rgba(17,18,16,0.16)]">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <p className="text-sm font-black text-[#111210]">
+              {management ? copy.manageTitle : copy.label}
+            </p>
+            <button
+              className="text-xs font-bold text-[#6C746A]"
+              onClick={() => setOpen(false)}
+              type="button"
+            >
+              {copy.close}
+            </button>
+          </div>
+          <div className="grid gap-2">
+            <Link
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+              href={membersHref}
+              onClick={() => setOpen(false)}
+            >
+              <UsersRound className="h-4 w-4" />
+              {copy.members}
+            </Link>
+            {management?.canEditActivity ? (
+              <Link
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white transition active:scale-[0.98]"
+                href={editHref}
+                onClick={() => setOpen(false)}
+              >
+                <Pencil className="h-4 w-4" />
+                {copy.edit}
+              </Link>
+            ) : null}
+            {management ? (
+              <>
+                <Link
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+                  href={reviewHref}
+                  onClick={() => setOpen(false)}
+                >
+                  <ClipboardList className="h-4 w-4" />
+                  {copy.signups}
+                </Link>
+                <ActivityAnnouncementComposer
+                  activityId={activityId}
+                  locale={locale}
+                  compact
+                />
+                <ActivityParticipantContactDialog
+                  activityId={activityId}
+                  buttonClassName="min-h-10 bg-white px-4 text-sm font-black"
+                  buttonLabel={copy.contactParticipants}
+                  locale={locale}
+                  participants={management.contactableParticipants}
+                />
+                {management.coManagerDashboard ? (
+                  <ActivityCoManagerPanel
+                    dashboard={management.coManagerDashboard}
+                    locale={locale}
+                  />
+                ) : null}
+                <ActivityCheckInReviewPanel
+                  activityId={activityId}
+                  locale={locale}
+                  participants={management.checkInRoster}
+                />
+                <div className="rounded-[1rem] border border-[#F0D6D1] bg-white p-2">
+                  <CancelActivityForm
+                    activityId={activityId}
+                    activityTitle={management.activityTitle}
+                    disabled={!management.canCancelActivity}
+                    locale={locale}
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ScrollAnchor({ lastMessageId }: { lastMessageId?: string }) {
@@ -435,6 +598,7 @@ export function ActivityRoomChatPage({
   activity,
   activityId,
   locale,
+  management,
   messages: initialMessages,
   policy,
   signInHref,
@@ -448,7 +612,10 @@ export function ActivityRoomChatPage({
   const [deletingId, setDeletingId] = useState("");
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
-  const activityHref = withLocale(locale, `/lobby/${activity?.id ?? activityId}`);
+  const activityHref = withLocale(
+    locale,
+    `/lobby/${activity?.id ?? activityId}`,
+  );
   const state = getDeniedState({
     activity,
     activityHref,
@@ -505,7 +672,7 @@ export function ActivityRoomChatPage({
       {activity && policy.canView ? (
         <ActivityRoomChatAutoRefresh activityId={activity.id} />
       ) : null}
-      <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#EAF5E8_100%)] p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <Link
           aria-label={copy.backToActivity}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2] transition active:scale-95"
@@ -523,10 +690,16 @@ export function ActivityRoomChatPage({
             {activity?.title ?? copy.title}
           </h1>
         </div>
-        <span className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-          <UsersRound className="h-3.5 w-3.5" />
-          {copy.roleLabels[policy.role]}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {activity && policy.canView ? (
+            <ActivityRoomManagementMenu
+              activityHref={activityHref}
+              activityId={activity.id}
+              locale={locale}
+              management={management}
+            />
+          ) : null}
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF8EA_100%)] px-3 py-4 sm:px-5">

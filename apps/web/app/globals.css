@@ -39,7 +39,7 @@
   --app-top-safe-area: env(safe-area-inset-top);
   --app-bottom-safe-area: env(safe-area-inset-bottom);
   --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
-  --app-mobile-nav-height: 5.15rem;
+  --app-mobile-nav-height: 4.35rem;
 }
 
 * {

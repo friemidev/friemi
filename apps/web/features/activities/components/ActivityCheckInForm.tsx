@@ -18,6 +18,7 @@ import {
 
 type ActivityCheckInFormProps = {
   activityId: string;
+  buttonClassName?: string;
   checkInRequestedAt?: string | null;
   checkedInAt?: string | null;
   className?: string;
@@ -54,11 +55,13 @@ function getCopy(locale: string) {
 }
 
 function CheckInButton({
+  buttonClassName,
   checkedIn,
   onAttempt,
   requested,
   locale,
 }: {
+  buttonClassName?: string;
   checkedIn: boolean;
   onAttempt: () => void;
   requested: boolean;
@@ -75,6 +78,7 @@ function CheckInButton({
         checkedIn || requested
           ? "border border-[#8AB68E] bg-[#EAF7EA] text-[#156240]"
           : "bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]",
+        buttonClassName,
       )}
       disabled={pending || checkedIn || requested}
       onClick={onAttempt}
@@ -100,6 +104,7 @@ function CheckInButton({
 
 export function ActivityCheckInForm({
   activityId,
+  buttonClassName,
   checkInRequestedAt,
   checkedInAt,
   className,
@@ -161,6 +166,7 @@ export function ActivityCheckInForm({
       <input name="activityId" type="hidden" value={activityId} />
       <input name="locale" type="hidden" value={locale} />
       <CheckInButton
+        buttonClassName={buttonClassName}
         checkedIn={isCheckedIn}
         locale={locale}
         onAttempt={() => setDismissedError(null)}

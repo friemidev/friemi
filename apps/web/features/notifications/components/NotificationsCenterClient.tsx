@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Bell,
   CalendarX2,
   CheckCheck,
@@ -8,8 +9,8 @@ import {
   ExternalLink,
   Flag,
   Heart,
-  Inbox,
   MessageCircle,
+  MoreHorizontal,
   Repeat2,
   Trash2,
   UserMinus,
@@ -19,7 +20,6 @@ import {
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
 import { formatActivityDate } from "@chill-club/shared";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -38,20 +38,11 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useNotificationBadge } from "./NotificationBadgeProvider";
 
-type NotificationCategory =
-  | "activity"
-  | "friends"
-  | "participation"
-  | "system";
+type NotificationCategory = "activity" | "friends" | "gift" | "system";
 
-type NotificationFilter = "all" | NotificationCategory;
-
-const notificationCategoryStyles: Record<NotificationCategory, string> = {
-  activity: "bg-[#FFF4E3] text-[#8A4B1A] ring-[#E7C98C]",
-  friends: "bg-[#F1F2EC] text-[#111210] ring-[#D6D5B2]",
-  participation: "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]",
-  system: "bg-[#FFF0F0] text-[#9A2135] ring-[#F1B5AE]",
-};
+type NotificationStateFilter = "all" | "unread" | "read";
+type NotificationFilter = NotificationStateFilter | NotificationCategory;
+type NotificationBulkAction = "delete-read" | "mark-all-read";
 
 function getNotificationCategory(
   type: NotificationType | string,
@@ -63,7 +54,7 @@ function getNotificationCategory(
     type === "PARTICIPATION_APPROVED" ||
     type === "PARTICIPATION_REJECTED"
   ) {
-    return "participation";
+    return "activity";
   }
 
   if (type === "FRIEND_REQUEST") return "friends";
@@ -81,19 +72,6 @@ function getNotificationCategory(
   return "activity";
 }
 
-function needsUserAction(notification: NotificationViewModel) {
-  if (notification.readAt !== null) {
-    return false;
-  }
-
-  return (
-    notification.type === "FRIEND_REQUEST" ||
-    notification.type === "REPORT_CREATED" ||
-    (notification.type === "PARTICIPATION_PENDING" &&
-      Boolean(notification.actor))
-  );
-}
-
 function isNotificationInteractiveTarget(target: EventTarget | null) {
   return (
     target instanceof Element &&
@@ -109,9 +87,10 @@ function getNotificationActorName(
   notification: NotificationViewModel,
   locale: string,
 ) {
-  const actorName = notification.actor?.nickname;
+  const actorName =
+    notification.actor?.nickname ?? notification.actorDisplayName;
 
-  if (!actorName || !notification.actorActivityRole) {
+  if (!actorName || !notification.actor || !notification.actorActivityRole) {
     return actorName;
   }
 
@@ -139,7 +118,7 @@ function getNotificationText(
 ) {
   const t = getCopy(locale).notifications;
   const activityTitle = notification.activity?.title ?? t.fallbackActivity;
-  const actorName = getNotificationActorName(notification, locale);
+  const actorName = getNotificationActorName(notification, locale) ?? undefined;
 
   if (notification.type === "FRIEND_REQUEST") {
     const copy = t.types.FRIEND_REQUEST;
@@ -244,45 +223,19 @@ function getNotificationActionLabel(
   return t.openActivity;
 }
 
-function getNotificationSummaryLabels(locale: string) {
-  if (locale === "fr") {
-    return { actionRequired: "À traiter", total: "Total", unread: "Non lues" };
-  }
-
-  if (locale === "en") {
-    return { actionRequired: "Needs action", total: "Total", unread: "Unread" };
-  }
-
-  return { actionRequired: "待处理", total: "全部", unread: "未读" };
-}
-
 function getNotificationFilterCopy(locale: string): {
-  emptyDescription: Record<NotificationFilter, string>;
-  emptyTitle: Record<NotificationFilter, string>;
   tabs: Record<NotificationFilter, string>;
 } {
   if (locale === "fr") {
     return {
       tabs: {
         all: "Tout",
-        participation: "Inscriptions",
+        unread: "Non lues",
+        read: "Lues",
         activity: "Activité",
         friends: "Amis",
-        system: "Système",
-      },
-      emptyTitle: {
-        all: "Aucune notification",
-        participation: "Aucune inscription",
-        activity: "Aucune nouveauté",
-        friends: "Aucune demande",
-        system: "Aucun message système",
-      },
-      emptyDescription: {
-        all: "Les nouvelles informations apparaîtront ici.",
-        participation: "Les demandes et confirmations apparaîtront ici.",
-        activity: "Les changements d'activité et commentaires apparaîtront ici.",
-        friends: "Les demandes d'amis apparaîtront ici.",
-        system: "Les alertes importantes apparaîtront ici.",
+        gift: "Cadeaux",
+        system: "Friemi",
       },
     };
   }
@@ -291,24 +244,12 @@ function getNotificationFilterCopy(locale: string): {
     return {
       tabs: {
         all: "All",
-        participation: "Joins",
+        unread: "Unread",
+        read: "Read",
         activity: "Activity",
         friends: "Friends",
-        system: "System",
-      },
-      emptyTitle: {
-        all: "No notifications",
-        participation: "No join updates",
-        activity: "No activity updates",
-        friends: "No friend requests",
-        system: "No system updates",
-      },
-      emptyDescription: {
-        all: "New updates will appear here.",
-        participation: "Join requests and confirmations will appear here.",
-        activity: "Activity changes and comments will appear here.",
-        friends: "Friend requests will appear here.",
-        system: "Important updates will appear here.",
+        gift: "Gifts",
+        system: "Friemi",
       },
     };
   }
@@ -316,24 +257,12 @@ function getNotificationFilterCopy(locale: string): {
   return {
     tabs: {
       all: "全部",
-      participation: "报名",
+      unread: "未读",
+      read: "已读",
       activity: "活动",
       friends: "好友",
-      system: "系统",
-    },
-    emptyTitle: {
-      all: "暂无通知",
-      participation: "暂无报名通知",
-      activity: "暂无活动通知",
-      friends: "暂无好友通知",
-      system: "暂无系统通知",
-    },
-    emptyDescription: {
-      all: "新的提醒会出现在这里。",
-      participation: "报名申请和报名结果会出现在这里。",
-      activity: "活动变更和评论会出现在这里。",
-      friends: "好友申请会出现在这里。",
-      system: "重要提醒会出现在这里。",
+      gift: "礼物",
+      system: "Friemi",
     },
   };
 }
@@ -348,6 +277,58 @@ function getNotificationDeleteCopy(locale: string) {
   }
 
   return { clearRead: "批量删除已读", delete: "删除" };
+}
+
+function getNotificationBulkConfirmCopy(
+  locale: string,
+  action: NotificationBulkAction,
+  count: number,
+) {
+  if (locale === "fr") {
+    return action === "mark-all-read"
+      ? {
+          body: `${count} notifications seront marquees comme lues.`,
+          cancel: "Annuler",
+          confirm: "Tout marquer",
+          title: "Tout marquer comme lu ?",
+        }
+      : {
+          body: `${count} notifications lues seront supprimees. Cette action est definitive.`,
+          cancel: "Annuler",
+          confirm: "Supprimer",
+          title: "Supprimer les lues ?",
+        };
+  }
+
+  if (locale === "en") {
+    return action === "mark-all-read"
+      ? {
+          body: `${count} unread notifications will be marked as read.`,
+          cancel: "Cancel",
+          confirm: "Mark read",
+          title: "Mark all as read?",
+        }
+      : {
+          body: `${count} read notifications will be deleted. This cannot be undone.`,
+          cancel: "Cancel",
+          confirm: "Delete",
+          title: "Delete read notifications?",
+        };
+  }
+
+  return action === "mark-all-read"
+    ? {
+        body: `将 ${count} 条未读通知标为已读。`,
+        cancel: "取消",
+        confirm: "全部已读",
+        title: "全部标为已读？",
+      }
+    : {
+        body: `将删除 ${count} 条已读通知，删除后无法恢复。`,
+        cancel: "取消",
+        confirm: "确认删除",
+        title: "删除已读通知？",
+      };
 }
 
 function getNotificationVisual(
@@ -484,12 +465,10 @@ function NotificationCard({
 }) {
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
-  const filterCopy = getNotificationFilterCopy(locale);
   const text = getNotificationText(notification, locale);
   const isUnread = notification.readAt === null;
   const visual = getNotificationVisual(notification.type, isUnread);
   const NotificationIcon = visual.icon;
-  const category = getNotificationCategory(notification.type);
   const hasAction =
     notification.type === "FRIEND_REQUEST"
       ? false
@@ -533,12 +512,6 @@ function NotificationCard({
             isUnread ? "bg-coral" : "bg-sand/70",
           )}
         />
-        {isUnread ? (
-          <span
-            aria-label={t.unread}
-            className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_0_4px_rgba(222,170,179,0.38)] sm:hidden"
-          />
-        ) : null}
         <div
           className="flex gap-3 pl-1"
           onClick={(event) => {
@@ -557,25 +530,9 @@ function NotificationCard({
           </span>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-col gap-1 pr-5 sm:flex-row sm:items-start sm:justify-between sm:pr-0">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "inline-flex h-5 max-w-full items-center rounded-full px-2 text-[10px] font-semibold leading-none ring-1 sm:text-[11px]",
-                      notificationCategoryStyles[category],
-                    )}
-                  >
-                    {filterCopy.tabs[category]}
-                  </span>
-                  {isUnread ? (
-                    <span className="inline-flex h-5 items-center rounded-full bg-rose px-2 text-[10px] font-semibold leading-none text-danger ring-1 ring-coral/35 sm:text-[11px]">
-                      {t.unread}
-                    </span>
-                  ) : null}
-                </div>
-
-                <h2 className="mt-2 text-[15px] font-black leading-5 text-ink sm:text-base">
+                <h2 className="text-[15px] font-black leading-5 text-ink sm:text-base">
                   {text.title}
                 </h2>
                 <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6C746A]">
@@ -583,43 +540,16 @@ function NotificationCard({
                 </p>
               </div>
 
-              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-outline sm:text-xs">
+              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap pt-0.5 text-[11px] font-medium text-outline sm:text-xs">
+                {formatActivityDate(notification.createdAt, locale)}
                 {isUnread ? (
                   <span
                     aria-label={t.unread}
-                    className="hidden h-2 w-2 rounded-full bg-coral shadow-[0_0_0_3px_rgba(222,170,179,0.32)] sm:inline-block"
+                    className="h-2 w-2 rounded-full bg-coral shadow-[0_0_0_3px_rgba(222,170,179,0.28)]"
                   />
                 ) : null}
-                {formatActivityDate(notification.createdAt, locale)}
               </span>
             </div>
-
-            {notification.actor || notification.activity ? (
-              <dl className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-outline sm:text-xs">
-                {notification.actor ? (
-                  <Link
-                    className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#F7F7F0] px-2 py-0.5 ring-1 ring-[#EEEDE4] transition hover:bg-paper hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
-                    href={withLocale(
-                      locale,
-                      `/profile/${notification.actor.id}`,
-                    )}
-                  >
-                    <dt className="shrink-0 text-outline">{t.actorLabel}</dt>
-                    <dd className="truncate font-medium text-ink">
-                      {notification.actor.nickname}
-                    </dd>
-                  </Link>
-                ) : null}
-                {notification.activity ? (
-                  <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#F7F7F0] px-2 py-0.5 ring-1 ring-[#EEEDE4]">
-                    <dt className="shrink-0 text-outline">{t.activityLabel}</dt>
-                    <dd className="truncate font-medium text-ink">
-                      {notification.activity.title}
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            ) : null}
 
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {canInlineResolveFriendRequest && notification.friendRequestId ? (
@@ -681,6 +611,72 @@ function NotificationCard({
   );
 }
 
+function NotificationBulkConfirmDialog({
+  action,
+  count,
+  locale,
+  onCancel,
+  onConfirm,
+  pending,
+}: {
+  action: NotificationBulkAction;
+  count: number;
+  locale: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  pending: boolean;
+}) {
+  const copy = getNotificationBulkConfirmCopy(locale, action, count);
+
+  return (
+    <div
+      aria-modal="true"
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-black/36 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:p-6"
+      role="dialog"
+    >
+      <button
+        aria-label={copy.cancel}
+        className="absolute inset-0 cursor-default"
+        onClick={onCancel}
+        type="button"
+      />
+      <div className="relative w-full max-w-sm rounded-[1.25rem] border border-[#F4B3B3] bg-white p-5 shadow-[0_22px_60px_rgba(17,18,16,0.2)]">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0F0] text-[#D52E3F] ring-1 ring-[#F4B3B3]">
+            <AlertTriangle className="h-5 w-5" strokeWidth={2.6} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-black leading-6 text-[#111210]">
+              {copy.title}
+            </h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]">
+              {copy.body}
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-[0.98]"
+            disabled={pending}
+            onClick={onCancel}
+            type="button"
+          >
+            {copy.cancel}
+          </button>
+          <button
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#D52E3F] px-4 text-sm font-black text-white transition hover:bg-[#B82434] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={pending}
+            onClick={onConfirm}
+            type="button"
+          >
+            {copy.confirm}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NotificationsCenterClient({
   initialNotifications,
   initialUnreadCount,
@@ -693,19 +689,23 @@ export function NotificationsCenterClient({
   const router = useRouter();
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
-  const summaryLabels = getNotificationSummaryLabels(locale);
   const filterCopy = getNotificationFilterCopy(locale);
   const { setUnreadNotificationCount } =
     useNotificationBadge(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("all");
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [pendingBulkAction, setPendingBulkAction] =
+    useState<NotificationBulkAction | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filters: NotificationFilter[] = [
     "all",
-    "participation",
+    "unread",
+    "read",
     "activity",
     "friends",
+    "gift",
     "system",
   ];
   const unreadNotifications = notifications.filter(
@@ -715,14 +715,19 @@ export function NotificationsCenterClient({
     (notification) => notification.readAt !== null,
   );
   const unreadCount = unreadNotifications.length;
-  const actionRequiredCount = notifications.filter(needsUserAction).length;
-  const filteredNotifications =
-    activeFilter === "all"
-      ? notifications
-      : notifications.filter(
-          (notification) =>
-            getNotificationCategory(notification.type) === activeFilter,
-        );
+  const pendingBulkActionCount =
+    pendingBulkAction === "mark-all-read"
+      ? unreadNotifications.length
+      : pendingBulkAction === "delete-read"
+        ? readNotifications.length
+        : 0;
+  const filteredNotifications = notifications.filter((notification) => {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "unread") return notification.readAt === null;
+    if (activeFilter === "read") return notification.readAt !== null;
+
+    return getNotificationCategory(notification.type) === activeFilter;
+  });
   const visibleNotifications = [...filteredNotifications].sort((a, b) => {
     const unreadDelta = Number(a.readAt !== null) - Number(b.readAt !== null);
 
@@ -734,13 +739,13 @@ export function NotificationsCenterClient({
   });
   const filterCounts = filters.reduce<Record<NotificationFilter, number>>(
     (counts, filter) => {
-      counts[filter] =
-        filter === "all"
-          ? notifications.length
-          : notifications.filter(
-              (notification) =>
-                getNotificationCategory(notification.type) === filter,
-            ).length;
+      counts[filter] = notifications.filter((notification) => {
+        if (filter === "all") return true;
+        if (filter === "unread") return notification.readAt === null;
+        if (filter === "read") return notification.readAt !== null;
+
+        return getNotificationCategory(notification.type) === filter;
+      }).length;
 
       return counts;
     },
@@ -748,8 +753,10 @@ export function NotificationsCenterClient({
       activity: 0,
       all: 0,
       friends: 0,
-      participation: 0,
+      gift: 0,
+      read: 0,
       system: 0,
+      unread: 0,
     },
   );
 
@@ -837,69 +844,74 @@ export function NotificationsCenterClient({
     );
   }
 
-  const markAllReadButton = (
-    <button
-      className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#D6D5B2] bg-white px-3 text-xs font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
-      disabled={isPending || unreadCount === 0}
-      onClick={handleMarkAllRead}
-      type="button"
-    >
-      <CheckCheck className="h-3.5 w-3.5" />
-      {t.markAllRead}
-    </button>
-  );
+  function handleConfirmBulkAction() {
+    const action = pendingBulkAction;
+
+    if (!action) {
+      return;
+    }
+
+    setPendingBulkAction(null);
+
+    if (action === "mark-all-read") {
+      handleMarkAllRead();
+      return;
+    }
+
+    handleDeleteRead();
+  }
 
   return (
     <>
       <section className="space-y-4 border-b border-[#EEEDE4] pb-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[#156240]">
-              <Bell className="h-4 w-4" />
-              {actionRequiredCount > 0
-                ? t.actionRequiredCount(actionRequiredCount)
-                : unreadCount > 0
-                  ? t.unreadCount(unreadCount)
-                  : t.allRead}
-            </p>
-            <h1 className="mt-2 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
-              {t.title}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[#6C746A]">
-              {t.description}
-            </p>
-          </div>
-          <span className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] px-2 text-xs font-black text-[#156240] ring-1 ring-[#BFD8B9]">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs font-black text-[#6C746A]">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
-            <Bell className="h-3.5 w-3.5 text-[#156240]" />
-            {summaryLabels.unread} {unreadCount}
-          </span>
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
-            <Clock3 className="h-3.5 w-3.5 text-[#9A2135]" />
-            {summaryLabels.actionRequired} {actionRequiredCount}
-          </span>
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#F7F7F0] px-2.5 ring-1 ring-[#EEEDE4]">
-            <CheckCheck className="h-3.5 w-3.5 text-[#156240]" />
-            {summaryLabels.total} {notifications.length}
-          </span>
-        </div>
-
-        <div className="flex gap-2 sm:justify-start">
-          {markAllReadButton}
+        <div className="relative flex items-center justify-between gap-3">
+          <h1 className="min-w-0 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
+            {t.title}
+          </h1>
           <button
-            className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#F1B5AE] bg-white px-3 text-xs font-black text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
-            disabled={isPending || readNotifications.length === 0}
-            onClick={handleDeleteRead}
+            aria-expanded={isActionMenuOpen}
+            aria-label={
+              locale === "en"
+                ? "Notification actions"
+                : locale === "fr"
+                  ? "Actions notification"
+                  : "通知操作"
+            }
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
+            onClick={() => setIsActionMenuOpen((current) => !current)}
             type="button"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            {deleteCopy.clearRead}
+            <MoreHorizontal className="h-4 w-4" />
           </button>
+
+          {isActionMenuOpen ? (
+            <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-2 rounded-[1rem] border border-[#D6D5B2] bg-white p-2 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
+              <button
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={isPending || unreadCount === 0}
+                onClick={() => {
+                  setPendingBulkAction("mark-all-read");
+                  setIsActionMenuOpen(false);
+                }}
+                type="button"
+              >
+                <CheckCheck className="h-4 w-4" />
+                {t.markAllRead}
+              </button>
+              <button
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={isPending || readNotifications.length === 0}
+                onClick={() => {
+                  setPendingBulkAction("delete-read");
+                  setIsActionMenuOpen(false);
+                }}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleteCopy.clearRead}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <nav
@@ -941,40 +953,14 @@ export function NotificationsCenterClient({
         </nav>
       </section>
 
-      {unreadCount === 0 && notifications.length > 0 ? (
-        <section className="flex items-center gap-2 rounded-[1rem] bg-[#F7F7F0] px-3 py-2.5 text-sm font-bold text-[#6C746A] ring-1 ring-[#EEEDE4]">
-          <CheckCheck className="h-4 w-4 shrink-0 text-[#156240]" />
-          <span className="min-w-0 truncate">{t.sections.clearTitle}</span>
-        </section>
-      ) : null}
-
       {notifications.length === 0 ? (
         <EmptyState
           actionHref={withLocale(locale, "/activities")}
           actionLabel={t.emptyAction}
           className="shadow-none"
-          description={t.emptyDescription}
+          description=""
           title={t.emptyTitle}
         />
-      ) : visibleNotifications.length === 0 ? (
-        <section className="rounded-[1rem] border border-dashed border-[#D6D5B2] bg-white/62 px-4 py-6 text-center">
-          <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]">
-            <Inbox className="h-5 w-5" />
-          </span>
-          <h2 className="mt-3 text-base font-black text-[#111210]">
-            {filterCopy.emptyTitle[activeFilter]}
-          </h2>
-          <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-[#6C746A]">
-            {filterCopy.emptyDescription[activeFilter]}
-          </p>
-          <button
-            className="mt-4 inline-flex h-9 items-center justify-center rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#8AB68E] transition hover:bg-[#F7F7F0]"
-            type="button"
-            onClick={() => setActiveFilter("all")}
-          >
-            {filterCopy.tabs.all}
-          </button>
-        </section>
       ) : (
         <section className="grid gap-2.5 pb-4">
           {visibleNotifications.map((notification) => (
@@ -989,6 +975,17 @@ export function NotificationsCenterClient({
           ))}
         </section>
       )}
+
+      {pendingBulkAction && pendingBulkActionCount > 0 ? (
+        <NotificationBulkConfirmDialog
+          action={pendingBulkAction}
+          count={pendingBulkActionCount}
+          locale={locale}
+          onCancel={() => setPendingBulkAction(null)}
+          onConfirm={handleConfirmBulkAction}
+          pending={isPending}
+        />
+      ) : null}
     </>
   );
 }

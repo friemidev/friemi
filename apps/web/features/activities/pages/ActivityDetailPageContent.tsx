@@ -9,11 +9,11 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
-  ClipboardList,
   ExternalLink,
   MapPin,
   MessageCircle,
   Pencil,
+  Repeat2,
   ShieldAlert,
   Store,
   Ticket,
@@ -34,14 +34,9 @@ import {
   inferAnalyticsSourceSurfaceFromReferrer,
 } from "@/features/analytics/utils";
 import { ActivityStatusBadge } from "@/features/activities/components/ActivityStatusBadge";
-import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
-import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
-import { ActivityCommentsSection } from "@/features/activities/components/ActivityCommentsSection";
-import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
-import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
@@ -58,9 +53,6 @@ import {
   getActivityById,
   getActivityShareMetadataById,
 } from "@/features/activities/queries/getActivityById";
-import { getActivityComments } from "@/features/activities/queries/getActivityComments";
-import { getActivityCoManagerDashboard } from "@/features/activities/queries/getActivityCoManagerDashboard";
-import { getActivityCheckInRoster } from "@/features/activities/queries/getActivityCheckInRoster";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
@@ -83,7 +75,6 @@ import { DetailSourceReturnLink } from "@/features/navigation/components/DetailS
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
-import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { getUnreadActivityRoomMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import { ensurePublicEventFromActivityInfo } from "@/features/public-events/queries/ensurePublicEventFromActivityInfo";
@@ -387,50 +378,6 @@ function getTeamDetailMobileJoinOpenLabel({
   return undefined;
 }
 
-function getTeamOwnerCtaCopy(locale: string) {
-  if (locale === "fr") {
-    return {
-      contactParticipants: "Contacter les inscrits",
-      contactParticipantsDescription:
-        "Ouvrir la liste pour retrouver les profils et reprendre contact.",
-      manage: "Gérer le plan",
-      manageDescription:
-        "Modifier les infos visibles, l'horaire, l'adresse ou les règles.",
-      managerTitle: "Espace gestionnaire",
-      review: "Voir les inscriptions",
-      reviewDescription:
-        "Consulter les personnes inscrites et les demandes en attente.",
-      title: "Espace organisateur",
-    };
-  }
-
-  if (locale === "en") {
-    return {
-      contactParticipants: "Contact participants",
-      contactParticipantsDescription:
-        "Open the list to find profiles and follow up with people.",
-      manage: "Manage plan",
-      manageDescription:
-        "Edit visible details, time, address, or participation rules.",
-      managerTitle: "Manager space",
-      review: "View signups",
-      reviewDescription: "Check joined people and requests waiting for review.",
-      title: "Organizer space",
-    };
-  }
-
-  return {
-    contactParticipants: "联系参与者",
-    contactParticipantsDescription: "打开名单，查看资料并继续联系参与者。",
-    manage: "管理聚吧",
-    manageDescription: "修改展示信息、时间地点或报名规则。",
-    managerTitle: "管理人空间",
-    review: "查看报名",
-    reviewDescription: "查看已报名成员和待审核申请。",
-    title: "发起人空间",
-  };
-}
-
 function getActivityRoomEntryCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -488,6 +435,39 @@ function ActivityRoomEntryLink({
           {unreadBadgeText}
         </span>
       ) : null}
+    </Link>
+  );
+}
+
+function getPlayAgainCopy(locale: string) {
+  if (locale === "fr") {
+    return "Relancer";
+  }
+
+  if (locale === "en") {
+    return "Run it again";
+  }
+
+  return "再来一局";
+}
+
+function ActivityPlayAgainLink({
+  activityId,
+  locale,
+}: {
+  activityId: string;
+  locale: string;
+}) {
+  return (
+    <Link
+      className="mx-auto mt-2 hidden min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-xs font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98] md:inline-flex"
+      href={withLocale(
+        locale,
+        `/activities/new?copyActivityId=${encodeURIComponent(activityId)}`,
+      )}
+    >
+      <Repeat2 className="h-3.5 w-3.5" />
+      {getPlayAgainCopy(locale)}
     </Link>
   );
 }
@@ -1282,31 +1262,14 @@ export async function ActivityDetailPageContent({
     );
   }
 
-  const [viewerParticipation, comments, friendSignal, coManagerDashboard] =
-    await Promise.all([
-      perf.measure("activity.viewerParticipation", () =>
-        getActivityViewerParticipation(activity.id, viewerProfile?.id),
-      ),
-      perf.measure("activity.comments", () =>
-        getActivityComments(
-          activity.id,
-          viewerProfile?.id ?? null,
-          viewerFriendIds,
-        ),
-      ),
-      perf.measure("activity.friendSignal", () =>
-        getActivityFriendSignal(
-          activity.id,
-          viewerProfile?.id,
-          viewerFriendIds,
-        ),
-      ),
-      perf.measure("activity.coManagerDashboard", () =>
-        activity.viewerCanManage
-          ? getActivityCoManagerDashboard(activity.id, viewerProfile?.id)
-          : Promise.resolve(null),
-      ),
-    ]);
+  const [viewerParticipation, friendSignal] = await Promise.all([
+    perf.measure("activity.viewerParticipation", () =>
+      getActivityViewerParticipation(activity.id, viewerProfile?.id),
+    ),
+    perf.measure("activity.friendSignal", () =>
+      getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
+    ),
+  ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
   const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
@@ -1317,15 +1280,12 @@ export async function ActivityDetailPageContent({
   const isFull =
     activity.capacity > 0 && activity.participantCount >= activity.capacity;
   const isOrganizer = viewerProfile?.id === activity.organizer.id;
-  const isCoManager = coManagerDashboard?.role === "CO_MANAGER";
-  const isTeamOperator =
-    Boolean(activity.viewerCanManage) || isOrganizer || isCoManager;
+  const isTeamOperator = Boolean(activity.viewerCanManage) || isOrganizer;
   const canManageCrewCover =
     isTeamOperator &&
     !activity.isActivityInfo &&
     activity.type !== "PUBLIC_EVENT";
   const canContactOrganizer = !isTeamOperator;
-  const canEditActivity = isTeamOperator && !isCancelled && !isEndedByTime;
   const activityDetailPath = lobbyActivityDetailPath;
   const activityEditHref = withLocale(
     locale,
@@ -1359,7 +1319,6 @@ export async function ActivityDetailPageContent({
       ? `${activity.participantCount}/${activity.capacity} ${t.common.people}`
       : `${activity.participantCount} ${t.common.people}`;
   const participantPreview = activity.participantPreview ?? [];
-  const contactableParticipants = activity.contactableParticipants ?? [];
   const ticketUrl =
     activity.ticketUrl ?? activity.publicEvent?.ticketUrl ?? null;
   const ticketLabel = getTicketCtaLabel(
@@ -1374,7 +1333,6 @@ export async function ActivityDetailPageContent({
       ? t.activityDetail.visibilityPrivate
       : t.activityDetail.visibilityPublic;
   const teamDetailCtaCopy = getTeamDetailCtaCopy(locale);
-  const teamOwnerCtaCopy = getTeamOwnerCtaCopy(locale);
   const teamDetailCtaTitle = getTeamDetailCtaTitle({
     isClosed,
     isFull,
@@ -1428,6 +1386,10 @@ export async function ActivityDetailPageContent({
       : locale === "en"
         ? "Share plan"
         : "聚吧分享";
+  const mobileMapLabel =
+    locale === "fr" ? "Carte" : locale === "en" ? "Map" : "地图";
+  const mobileShareButtonLabel =
+    locale === "fr" ? "Partager" : locale === "en" ? "Share" : "分享";
   const mobileCloseLabel =
     locale === "fr" ? "Fermer" : locale === "en" ? "Close" : "关闭";
   const mobileMapHref =
@@ -1458,30 +1420,21 @@ export async function ActivityDetailPageContent({
       viewerParticipation?.status === "APPROVED");
   const avalonToolHref = withLocale(locale, "/game-tools/avalon");
   const werewolfToolHref = withLocale(locale, "/game-tools/werewolf");
-  const teamOperatorSpaceTitle = isCoManager
-    ? teamOwnerCtaCopy.managerTitle
-    : teamOwnerCtaCopy.title;
-  const [pendingParticipants, analyticsSummary, checkInRoster] =
-    await Promise.all([
-      isTeamOperator && activity.requiresApproval && viewerProfile
-        ? perf.measure("activity.pendingParticipants", () =>
-            getPendingParticipants(activity.id, viewerProfile.id),
-          )
-        : Promise.resolve([]),
-      isTeamOperator && !isMobileRequest
-        ? perf.measure("activity.analyticsSummary", () =>
-            getActivityAnalyticsSummary(activity.id),
-          )
-        : Promise.resolve(null),
-      isTeamOperator && viewerProfile
-        ? perf.measure("activity.checkInRoster", () =>
-            getActivityCheckInRoster(activity.id, viewerProfile.id),
-          )
-        : Promise.resolve([]),
-    ]);
+  const [pendingParticipants, analyticsSummary] = await Promise.all([
+    isTeamOperator && activity.requiresApproval && viewerProfile
+      ? perf.measure("activity.pendingParticipants", () =>
+          getPendingParticipants(activity.id, viewerProfile.id),
+        )
+      : Promise.resolve([]),
+    isTeamOperator && !isMobileRequest
+      ? perf.measure("activity.analyticsSummary", () =>
+          getActivityAnalyticsSummary(activity.id),
+        )
+      : Promise.resolve(null),
+  ]);
   perf.finish(
     {
-      commentCount: comments.length,
+      commentCount: 0,
       hasViewer: Boolean(viewerProfile),
       isOrganizer: isTeamOperator,
       itemKind: "team",
@@ -1512,6 +1465,201 @@ export async function ActivityDetailPageContent({
       shareKind="team"
       sharePath={privateSharePath}
     />
+  );
+  const renderActivityDetailTogglePanels = (className?: string) => (
+    <div className={cn("space-y-3 border-y border-[#E7E1CA] py-3", className)}>
+      <div className="flex flex-wrap items-start gap-2">
+        <details className="group min-w-0 [&[open]]:basis-full">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+            <Pencil className="h-3.5 w-3.5" />
+            <span>
+              {locale === "en"
+                ? "Details"
+                : locale === "fr"
+                  ? "Détails"
+                  : "详情"}
+            </span>
+          </summary>
+          <div className="mt-3 space-y-3 px-1">
+            <h2 className="text-sm font-black text-ink">
+              {locale === "en"
+                ? "Plan note"
+                : locale === "fr"
+                  ? "Note du groupe"
+                  : "聚吧说明"}
+            </h2>
+            <ActivityRichDescription
+              className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+              copyFailedLabel={t.activityShare.copyFailed}
+              copyLabel={t.activityShare.copyLink}
+              copySuccessLabel={t.activityShare.copied}
+              entityId={detailAnalyticsEntity.entityId}
+              entityType={detailAnalyticsEntity.entityType}
+              locale={locale}
+              sourceSurface="activity_detail"
+              text={activity.description}
+            />
+            <ManualTranslationBundle
+              accessToken={accessToken ?? null}
+              entityId={activity.id}
+              entityType="activity"
+              fields={[
+                {
+                  field: "title",
+                  label: t.translation.fields.title,
+                  text: activity.title,
+                },
+                {
+                  field: "description",
+                  label: t.translation.fields.description,
+                  text: activity.description,
+                },
+                {
+                  field: "address",
+                  label: t.translation.fields.address,
+                  text: activityLocationLabel,
+                },
+                {
+                  field: "priceText",
+                  label: t.translation.fields.priceText,
+                  text: activity.priceText,
+                },
+              ]}
+              locale={locale}
+            />
+          </div>
+        </details>
+
+        {activity.publicEvent ? (
+          <details className="group min-w-0 [&[open]]:basis-full">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>{publicEventCopy.linkedEventTitle}</span>
+            </summary>
+            <div className="mt-3 space-y-2 px-1">
+              <p className="line-clamp-2 text-base font-black leading-6 text-ink">
+                {activity.publicEvent.title}
+              </p>
+              <p className="text-sm leading-6 text-zinc-600">
+                {publicEventCopy.linkedEventDescription}
+              </p>
+              {activity.publicEvent.status === "CANCELLED" ? (
+                <p className="inline-flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-700 ring-1 ring-red-200">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{publicEventCopy.eventCancelled}</span>
+                </p>
+              ) : null}
+              <Link
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white transition hover:bg-[#0F4D32] active:scale-[0.98]"
+                href={withLocale(
+                  locale,
+                  `/public-events/${activity.publicEvent.id}`,
+                )}
+              >
+                {publicEventCopy.linkedEventCta}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </div>
+          </details>
+        ) : null}
+
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
+          {mobileMapHref ? (
+            <a
+              aria-label={t.activityDetail.openGoogleMaps}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
+              href={mobileMapHref}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <MapPin className="h-3.5 w-3.5" strokeWidth={2.4} />
+              <span>{mobileMapLabel}</span>
+            </a>
+          ) : null}
+          <ActivityShareDialogButton
+            className="h-auto w-auto gap-1.5 px-3 py-1.5 text-[12px] font-black ring-[#D6D5B2] shadow-none hover:bg-[#F6FAF4]"
+            closeLabel={mobileCloseLabel}
+            label={mobileShareLabel}
+            triggerLabel={mobileShareButtonLabel}
+          >
+            {renderTeamShareTools({ collapsible: false })}
+          </ActivityShareDialogButton>
+        </div>
+      </div>
+    </div>
+  );
+  const renderActivityDetailDesktop = () => (
+    <div className="hidden space-y-4 border-y border-[#E7E1CA] py-4 md:block">
+      <div className="space-y-3">
+        <h2 className="text-sm font-black text-ink">
+          {locale === "en" ? "Details" : locale === "fr" ? "Détails" : "详情"}
+        </h2>
+        <ActivityRichDescription
+          className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+          copyFailedLabel={t.activityShare.copyFailed}
+          copyLabel={t.activityShare.copyLink}
+          copySuccessLabel={t.activityShare.copied}
+          entityId={detailAnalyticsEntity.entityId}
+          entityType={detailAnalyticsEntity.entityType}
+          locale={locale}
+          sourceSurface="activity_detail"
+          text={activity.description}
+        />
+        <ManualTranslationBundle
+          accessToken={accessToken ?? null}
+          entityId={activity.id}
+          entityType="activity"
+          fields={[
+            {
+              field: "title",
+              label: t.translation.fields.title,
+              text: activity.title,
+            },
+            {
+              field: "description",
+              label: t.translation.fields.description,
+              text: activity.description,
+            },
+            {
+              field: "address",
+              label: t.translation.fields.address,
+              text: activityLocationLabel,
+            },
+            {
+              field: "priceText",
+              label: t.translation.fields.priceText,
+              text: activity.priceText,
+            },
+          ]}
+          locale={locale}
+        />
+      </div>
+
+      {activity.publicEvent ? (
+        <div className="border-t border-[#E7E1CA] pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-black text-[#156240]">
+                {publicEventCopy.linkedEventTitle}
+              </p>
+              <p className="mt-1 line-clamp-2 text-sm font-black leading-6 text-ink">
+                {activity.publicEvent.title}
+              </p>
+            </div>
+            <Link
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
+              href={withLocale(
+                locale,
+                `/public-events/${activity.publicEvent.id}`,
+              )}
+            >
+              {publicEventCopy.linkedEventCta}
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 
   return (
@@ -1580,7 +1728,7 @@ export async function ActivityDetailPageContent({
         <h1 className="text-[1.55rem] font-black leading-[1.08] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 md:hidden">
+        <div className="md:hidden">
           <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1.5 text-[12px] font-semibold leading-5 text-[#111210]/55">
             <span className="inline-flex items-center gap-1.5">
               <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
@@ -1601,27 +1749,9 @@ export async function ActivityDetailPageContent({
               </span>
             ) : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {mobileMapHref ? (
-              <a
-                aria-label={t.activityDetail.openGoogleMaps}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95"
-                href={mobileMapHref}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <MapPin className="h-4 w-4" strokeWidth={2.4} />
-              </a>
-            ) : null}
-            <ActivityShareDialogButton
-              closeLabel={mobileCloseLabel}
-              label={mobileShareLabel}
-            >
-              {renderTeamShareTools({ collapsible: false })}
-            </ActivityShareDialogButton>
-          </div>
         </div>
         <div className="space-y-4 md:hidden">
+          {renderActivityDetailTogglePanels()}
           <div>
             <p className="text-[12px] font-black leading-none text-[#111210]/72">
               {t.activityDetail.organizerTitle}
@@ -1781,51 +1911,6 @@ export async function ActivityDetailPageContent({
 
       <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
-          <div className="rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5">
-            <h2 className="text-lg font-semibold text-ink">
-              {t.activityDetail.descriptionTitle}
-            </h2>
-            <ActivityRichDescription
-              className="mt-3 whitespace-pre-wrap text-sm leading-7 text-zinc-600"
-              copyFailedLabel={t.activityShare.copyFailed}
-              copyLabel={t.activityShare.copyLink}
-              copySuccessLabel={t.activityShare.copied}
-              entityId={detailAnalyticsEntity.entityId}
-              entityType={detailAnalyticsEntity.entityType}
-              locale={locale}
-              sourceSurface="activity_detail"
-              text={activity.description}
-            />
-            <ManualTranslationBundle
-              accessToken={accessToken ?? null}
-              entityId={activity.id}
-              entityType="activity"
-              fields={[
-                {
-                  field: "title",
-                  label: t.translation.fields.title,
-                  text: activity.title,
-                },
-                {
-                  field: "description",
-                  label: t.translation.fields.description,
-                  text: activity.description,
-                },
-                {
-                  field: "address",
-                  label: t.translation.fields.address,
-                  text: activityLocationLabel,
-                },
-                {
-                  field: "priceText",
-                  label: t.translation.fields.priceText,
-                  text: activity.priceText,
-                },
-              ]}
-              locale={locale}
-            />
-          </div>
-
           {protectedLocationNotice ? (
             <ProtectedDetailNotice
               icon={protectedLocationIsOnline ? "link" : "address"}
@@ -1845,45 +1930,6 @@ export async function ActivityDetailPageContent({
                 queryAddress={activity.address}
                 title={t.activityDetail.locationMapTitle}
               />
-            </div>
-          ) : null}
-
-          {activity.publicEvent ? (
-            <div className="rounded-[1.25rem] border border-[#8AB68E] bg-[#FEFFF9] p-4 shadow-sm sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
-                    <ExternalLink className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-[#156240]">
-                      {publicEventCopy.linkedEventTitle}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-base font-semibold text-ink">
-                      {activity.publicEvent.title}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-zinc-600">
-                      {publicEventCopy.linkedEventDescription}
-                    </p>
-                    {activity.publicEvent.status === "CANCELLED" ? (
-                      <p className="mt-3 inline-flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-700 ring-1 ring-red-200">
-                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>{publicEventCopy.eventCancelled}</span>
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <Link
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                  href={withLocale(
-                    locale,
-                    `/public-events/${activity.publicEvent.id}`,
-                  )}
-                >
-                  {publicEventCopy.linkedEventCta}
-                  <ExternalLink className="h-4 w-4" />
-                </Link>
-              </div>
             </div>
           ) : null}
 
@@ -1932,6 +1978,8 @@ export async function ActivityDetailPageContent({
             </div>
           ) : null}
 
+          {renderActivityDetailDesktop()}
+
           <div className="hidden rounded-lg border border-black/10 bg-white/70 p-4 sm:p-5 md:block">
             <div className="flex items-center gap-2">
               <UserRound className="h-5 w-5 text-moss" />
@@ -1972,155 +2020,88 @@ export async function ActivityDetailPageContent({
           </div>
 
           <ActivityAnnouncementsSection
-            activityId={activity.id}
             announcements={activity.announcements}
             canView={canViewAnnouncements}
-            isOrganizer={isTeamOperator}
             locale={locale}
-          />
-
-          <ActivityCommentsSection
-            activityId={activity.id}
-            comments={comments}
-            isAuthenticated={Boolean(viewerProfile)}
-            locale={locale}
-            translationAccessToken={accessToken ?? null}
-            viewerProfileId={viewerProfile?.id ?? null}
           />
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
-          <div className="order-1 hidden rounded-[1.35rem] border border-coral/45 bg-[linear-gradient(145deg,#FFF5E6_0%,#FEFFF9_54%,#F1F2EC_100%)] p-4 shadow-[0_18px_42px_rgba(240,145,130,0.14)] ring-1 ring-white md:block">
-            <div className="mb-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
-                {teamDetailCtaCopy.eyebrow}
-              </p>
-              <h2 className="mt-1 text-xl font-extrabold leading-tight text-ink">
-                {teamDetailCtaTitle}
-              </h2>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-forest">
-                <span className="rounded-full bg-white/88 px-3 py-1 ring-1 ring-sage/70">
-                  {getActivitySeatLabel(activity, locale)}
-                </span>
-                <span className="rounded-full bg-white/88 px-3 py-1 ring-1 ring-sage/70">
-                  {activityParticipantLabel}
-                </span>
-              </div>
-              <ApprovalModeNotice
-                className="mt-3"
-                isOrganizer={isTeamOperator}
-                locale={locale}
-                pendingCount={pendingParticipants.length}
-                requiresApproval={activity.requiresApproval}
-              />
-            </div>
-
-            {isTeamOperator ? (
-              <div className="grid gap-3">
-                <div className="grid gap-2 rounded-2xl border border-[#8AB68E]/55 bg-white/82 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <ShieldAlert className="h-4 w-4 text-forest" />
-                    {teamOperatorSpaceTitle}
-                  </p>
-                  {canEditActivity ? (
-                    <Link
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758]"
-                      href={activityEditHref}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      {teamOwnerCtaCopy.manage}
-                    </Link>
-                  ) : null}
-                  {canEditActivity ? (
-                    <p className="px-1 text-xs leading-5 text-[#156240]/70">
-                      {teamOwnerCtaCopy.manageDescription}
-                    </p>
-                  ) : null}
-                  <a
-                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition hover:-translate-y-0.5 hover:bg-[#F1F2EC]"
-                    href={
-                      activity.requiresApproval
-                        ? "#participation-approval"
-                        : "#activity-participants"
-                    }
-                  >
-                    <ClipboardList className="h-4 w-4" />
-                    {teamOwnerCtaCopy.review}
-                  </a>
-                  {showActivityRoomEntry ? (
-                    <ActivityRoomEntryLink
-                      href={activityRoomHref}
-                      locale={locale}
-                      showDescription
-                      unreadCount={activityRoomUnreadCount}
-                    />
-                  ) : null}
-                  <ActivityParticipantContactDialog
-                    activityId={activity.id}
-                    buttonLabel={teamOwnerCtaCopy.contactParticipants}
-                    locale={locale}
-                    participants={contactableParticipants}
-                  />
-                  <p className="px-1 text-xs leading-5 text-zinc-500">
-                    {teamOwnerCtaCopy.reviewDescription}
-                  </p>
-                </div>
-                {coManagerDashboard ? (
-                  <ActivityCoManagerPanel
-                    dashboard={coManagerDashboard}
-                    locale={locale}
-                  />
-                ) : null}
-                <ActivityCheckInReviewPanel
+          {isTeamOperator ? (
+            showActivityRoomEntry ? (
+              <div className="order-1 hidden rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3 md:block">
+                <ActivityRoomEntryLink
+                  href={activityRoomHref}
+                  locale={locale}
+                  unreadCount={activityRoomUnreadCount}
+                />
+                <ActivityPlayAgainLink
                   activityId={activity.id}
                   locale={locale}
-                  participants={checkInRoster}
                 />
-                <div className="grid gap-2 rounded-2xl border border-sand bg-white/74 p-3">
-                  {!isCancelled && !isEndedByTime ? (
-                    <p className="text-xs leading-5 text-zinc-500">
-                      {t.activityOwner.cancelDescription}
-                    </p>
-                  ) : null}
-                  <CancelActivityForm
-                    activityId={activity.id}
-                    activityTitle={activity.title}
-                    disabled={isCancelled || isEndedByTime}
-                    locale={locale}
-                  />
-                  {isCancelled ? (
-                    <p className="text-xs leading-5 text-zinc-500">
-                      {t.activityOwner.cancelledHint}
-                    </p>
-                  ) : isEndedByTime ? (
-                    <p className="text-xs leading-5 text-zinc-500">
-                      {t.activityOwner.endedHint}
-                    </p>
-                  ) : null}
-                </div>
               </div>
-            ) : (
+            ) : null
+          ) : (
+            <div className="order-1 hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white p-4 md:block">
+              <div className="mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
+                  {teamDetailCtaCopy.eyebrow}
+                </p>
+                <h2 className="mt-1 text-xl font-extrabold leading-tight text-ink">
+                  {teamDetailCtaTitle}
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-forest">
+                  <span className="rounded-full bg-white px-3 py-1 ring-1 ring-sage/70">
+                    {getActivitySeatLabel(activity, locale)}
+                  </span>
+                  <span className="rounded-full bg-white px-3 py-1 ring-1 ring-sage/70">
+                    {activityParticipantLabel}
+                  </span>
+                </div>
+                <ApprovalModeNotice
+                  className="mt-3"
+                  isOrganizer={false}
+                  locale={locale}
+                  pendingCount={0}
+                  requiresApproval={activity.requiresApproval}
+                />
+              </div>
               <div className="grid gap-3">
-                {canCheckInViewerParticipation ? (
-                  <ActivityCheckInForm
-                    activityId={activity.id}
-                    checkInRequestedAt={
-                      viewerParticipation?.checkInRequestedAt?.toISOString() ??
-                      null
-                    }
-                    checkedInAt={
-                      viewerParticipation?.checkedInAt?.toISOString() ?? null
-                    }
-                    locale={locale}
-                  />
-                ) : null}
-                {showActivityRoomEntry ? (
-                  <ActivityRoomEntryLink
-                    href={activityRoomHref}
-                    locale={locale}
-                    showDescription
-                    unreadCount={activityRoomUnreadCount}
-                  />
+                {canCheckInViewerParticipation || showActivityRoomEntry ? (
+                  <div
+                    className={cn(
+                      "grid gap-2",
+                      canCheckInViewerParticipation && showActivityRoomEntry
+                        ? "grid-cols-[minmax(0,1fr)_auto] items-start"
+                        : "grid-cols-1",
+                    )}
+                  >
+                    {showActivityRoomEntry ? (
+                      <ActivityRoomEntryLink
+                        href={activityRoomHref}
+                        locale={locale}
+                        unreadCount={activityRoomUnreadCount}
+                      />
+                    ) : null}
+                    {canCheckInViewerParticipation ? (
+                      <ActivityCheckInForm
+                        activityId={activity.id}
+                        buttonClassName="min-h-11 px-4 text-sm"
+                        checkInRequestedAt={
+                          viewerParticipation?.checkInRequestedAt?.toISOString() ??
+                          null
+                        }
+                        checkedInAt={
+                          viewerParticipation?.checkedInAt?.toISOString() ??
+                          null
+                        }
+                        className={cn(
+                          showActivityRoomEntry ? "shrink-0" : undefined,
+                        )}
+                        locale={locale}
+                      />
+                    ) : null}
+                  </div>
                 ) : null}
                 <JoinActivityForm
                   activityId={activity.id}
@@ -2149,8 +2130,8 @@ export async function ActivityDetailPageContent({
                   />
                 ) : null}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div
             id="activity-participants"
@@ -2382,19 +2363,6 @@ export async function ActivityDetailPageContent({
               </AnalyticsExternalLink>
             ) : null}
 
-            {activity.publicEvent ? (
-              <Link
-                className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-4 text-sm font-medium text-ink ring-1 ring-black/10 transition hover:bg-zinc-50"
-                href={withLocale(
-                  locale,
-                  `/public-events/${activity.publicEvent.id}`,
-                )}
-              >
-                {publicEventCopy.linkedEventCta}
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            ) : null}
-
             {autoCreatedTeam?.isClaimable && !isTeamOperator ? (
               <div className="mt-3 rounded-2xl border border-[#8AB68E] bg-[#FEFFF9] p-3">
                 {autoCreatedClaimDeadline ? (
@@ -2423,7 +2391,7 @@ export async function ActivityDetailPageContent({
           <div className="order-6 mt-4 hidden space-y-4 text-sm text-zinc-700 md:block lg:mt-5">
             <p className="grid grid-cols-[minmax(0,1fr)_minmax(0,50%)] items-start gap-3">
               <span className="flex min-w-0 items-center gap-2 text-zinc-500">
-                <ClipboardList className="h-4 w-4 shrink-0" />
+                <Ticket className="h-4 w-4 shrink-0" />
                 {t.activityDetail.type}
               </span>
               <span className="min-w-0 break-words text-right font-medium text-ink">
@@ -2469,82 +2437,6 @@ export async function ActivityDetailPageContent({
             />
           </div>
         </aside>
-        {isTeamOperator ? (
-          <TeamDetailMobileCtaSheet
-            activityTitle={activity.title}
-            locale={locale}
-            mode="manage"
-            participantLabel={activityParticipantLabel}
-            statusLabel={getActivitySeatLabel(activity, locale)}
-          >
-            <div className="grid gap-3">
-              <ApprovalModeNotice
-                isOrganizer
-                locale={locale}
-                pendingCount={pendingParticipants.length}
-                requiresApproval={activity.requiresApproval}
-              />
-              {canEditActivity ? (
-                <Link
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition active:scale-[0.98]"
-                  href={activityEditHref}
-                >
-                  <Pencil className="h-4 w-4" />
-                  {teamOwnerCtaCopy.manage}
-                </Link>
-              ) : null}
-              <a
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
-                href={
-                  activity.requiresApproval
-                    ? "#participation-approval"
-                    : "#activity-participants"
-                }
-              >
-                <ClipboardList className="h-4 w-4" />
-                {teamOwnerCtaCopy.review}
-              </a>
-              {showActivityRoomEntry ? (
-                <ActivityRoomEntryLink
-                  href={activityRoomHref}
-                  locale={locale}
-                  unreadCount={activityRoomUnreadCount}
-                />
-              ) : null}
-              <ActivityParticipantContactDialog
-                activityId={activity.id}
-                buttonClassName="min-h-11 transition active:scale-[0.98]"
-                buttonLabel={teamOwnerCtaCopy.contactParticipants}
-                locale={locale}
-                participants={contactableParticipants}
-              />
-              {coManagerDashboard ? (
-                <ActivityCoManagerPanel
-                  dashboard={coManagerDashboard}
-                  locale={locale}
-                />
-              ) : null}
-              <ActivityCheckInReviewPanel
-                activityId={activity.id}
-                locale={locale}
-                participants={checkInRoster}
-              />
-              <div className="rounded-2xl border border-sand bg-white/76 p-3">
-                {!isCancelled && !isEndedByTime ? (
-                  <p className="mb-2 text-xs leading-5 text-zinc-500">
-                    {t.activityOwner.cancelDescription}
-                  </p>
-                ) : null}
-                <CancelActivityForm
-                  activityId={activity.id}
-                  activityTitle={activity.title}
-                  disabled={isCancelled || isEndedByTime}
-                  locale={locale}
-                />
-              </div>
-            </div>
-          </TeamDetailMobileCtaSheet>
-        ) : null}
         {canUseBoardGameTools ? (
           <BoardGameToolFloatingEntry
             avalonHref={avalonToolHref}
@@ -2633,13 +2525,10 @@ function getAnnouncementSectionCopy(locale: string) {
 }
 
 function ActivityAnnouncementsSection({
-  activityId,
   announcements,
   canView,
-  isOrganizer,
   locale,
 }: {
-  activityId: string;
   announcements: {
     id: string;
     authorName: string;
@@ -2648,40 +2537,22 @@ function ActivityAnnouncementsSection({
     isByOrganizer: boolean;
   }[];
   canView: boolean;
-  isOrganizer: boolean;
   locale: string;
 }) {
   const copy = getAnnouncementSectionCopy(locale);
   const hasAnnouncements = announcements.length > 0;
 
-  if (!hasAnnouncements && !isOrganizer) {
+  if (!canView || !hasAnnouncements) {
     return null;
   }
 
   return (
-    <section className="rounded-[1.35rem] border border-sand bg-white/72 p-4 shadow-[0_18px_42px_rgba(21,98,64,0.06)] ring-1 ring-white/70">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-[#156240]" />
-          <h2 className="text-lg font-semibold text-ink">{copy.title}</h2>
-        </div>
-
-        {isOrganizer && canView ? (
-          <ActivityAnnouncementComposer
-            activityId={activityId}
-            locale={locale}
-            compact
-          />
-        ) : null}
-      </div>
-
-      {!canView ? (
-        <p className="mt-4 rounded-[1rem] border border-dashed border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3 text-sm leading-6 text-[#156240]">
-          {copy.locked}
-        </p>
-      ) : null}
-
-      {canView && hasAnnouncements ? (
+    <details className="group">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-3.5 py-2 text-sm font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] [&::-webkit-details-marker]:hidden">
+        <Bell className="h-3.5 w-3.5" />
+        <span>{copy.title}</span>
+      </summary>
+      <section className="mt-3 rounded-[1.15rem] border border-[#D6D5B2] bg-white p-4">
         <div className="mt-4 grid gap-2.5">
           {announcements.map((announcement) => (
             <article
@@ -2712,13 +2583,7 @@ function ActivityAnnouncementsSection({
             </article>
           ))}
         </div>
-      ) : canView ? (
-        <div className="mt-4 rounded-[1rem] border border-dashed border-[#D6D5B2] bg-[#FEFFF9] px-4 py-3">
-          <p className="text-sm leading-6 text-[#156240]">
-            {isOrganizer ? copy.organizerEmpty : copy.participantEmpty}
-          </p>
-        </div>
-      ) : null}
-    </section>
+      </section>
+    </details>
   );
 }

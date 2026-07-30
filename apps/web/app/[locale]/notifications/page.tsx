@@ -43,7 +43,7 @@ export default async function NotificationsPage({
   );
 
   return (
-    <PageContainer className="space-y-5" mobileSafeBottom>
+    <PageContainer className="space-y-5" mobileSafeBottom mobileSafeTop>
       <NotificationCountHydrator unreadCount={unreadCount} />
       <NotificationsCenterClient
         initialNotifications={notifications}

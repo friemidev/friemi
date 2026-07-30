@@ -121,11 +121,12 @@ export function ActivityAnnouncementComposer({
   return (
     <>
       {compact ? (
-        <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+        <div className="flex w-full shrink-0 flex-col gap-2">
           <Button
             type="button"
-            className="ml-auto h-9 gap-1.5 rounded-full bg-[#156240] px-3.5 text-sm text-white hover:bg-[#156240] sm:h-10 sm:gap-2 sm:px-4 sm:text-base"
+            className="h-10 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] shadow-none hover:bg-[#F6FAF4]"
             onClick={() => setIsOpen(true)}
+            variant="secondary"
           >
             <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {t.open}
