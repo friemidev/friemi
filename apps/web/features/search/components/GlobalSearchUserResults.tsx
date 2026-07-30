@@ -1,28 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  LoaderCircle,
-  UserPlus,
-  UserRound,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, CheckCircle2, UserRound } from "lucide-react";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
-import {
-  sendFriendRequestToProfileAction,
-  type FriendActionState,
-} from "@/features/friends/actions/friendActions";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import type { GlobalSearchUserViewModel } from "@/features/search/queries/getGlobalSearchResults";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { SearchHighlightedText } from "./SearchHighlightedText";
-
-const initialFriendActionState: FriendActionState = {};
 
 type GlobalSearchUserResultsProps = {
   locale: string;
@@ -109,18 +96,7 @@ function GlobalSearchUserCard({
   user: GlobalSearchUserViewModel;
 }) {
   const t = getCopy(locale).globalSearch;
-  const [state, formAction] = useActionState(
-    sendFriendRequestToProfileAction,
-    initialFriendActionState,
-  );
-  const [requestSent, setRequestSent] = useState(false);
   const profileHref = withLocale(locale, `/profile/${user.id}`);
-
-  useEffect(() => {
-    if (state.ok) {
-      setRequestSent(true);
-    }
-  }, [state.ok]);
 
   return (
     <article className="flex min-w-0 flex-col gap-4 rounded-xl border border-sand bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
@@ -169,84 +145,67 @@ function GlobalSearchUserCard({
       </ContextualDetailLink>
 
       <div className="shrink-0 sm:w-32">
-        <FriendRequestCta
+        <FollowCta
           locale={locale}
           relationshipStatus={user.relationshipStatus}
-          requestSent={requestSent}
           targetProfileId={user.id}
-          state={state}
-          formAction={formAction}
         />
       </div>
     </article>
   );
 }
 
-function FriendRequestCta({
+function FollowCta({
   locale,
   relationshipStatus,
-  requestSent,
   targetProfileId,
-  state,
-  formAction,
 }: {
   locale: string;
   relationshipStatus: GlobalSearchUserViewModel["relationshipStatus"];
-  requestSent: boolean;
   targetProfileId: string;
-  state: FriendActionState;
-  formAction: (formData: FormData) => void;
 }) {
   const t = getCopy(locale).globalSearch;
-
-  if (requestSent) {
-    return (
-      <RelationshipStatusPill label={t.requestSent} icon="check" tone="good" />
-    );
-  }
 
   if (relationshipStatus === "SELF") {
     return <RelationshipStatusPill label={t.selfUser} icon="check" />;
   }
 
-  if (relationshipStatus === "FRIENDS") {
-    return (
-      <RelationshipStatusPill
-        label={t.alreadyFriends}
-        icon="check"
-        tone="good"
-      />
-    );
-  }
-
-  if (relationshipStatus === "PENDING") {
-    return <RelationshipStatusPill label={t.pendingFriendRequest} />;
-  }
+  const relationshipCopy = getSearchRelationshipCopy(locale);
+  const isFollowing =
+    relationshipStatus === "FOLLOWING" || relationshipStatus === "MUTUAL";
+  const activeLabel =
+    relationshipStatus === "MUTUAL"
+      ? relationshipCopy.mutual
+      : relationshipCopy.following;
+  const inactiveLabel =
+    relationshipStatus === "FOLLOWED_BY"
+      ? relationshipCopy.followBack
+      : relationshipCopy.follow;
 
   return (
-    <form action={formAction} className="space-y-2">
-      <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="targetProfileId" value={targetProfileId} />
-      <input type="hidden" name="returnTo" value="friends" />
-      <AddFriendSubmitButton locale={locale} />
-      {state.formError ? (
-        <p className="text-xs leading-5 text-clay">{state.formError}</p>
-      ) : null}
-    </form>
+    <FollowButton
+      activeButtonClassName="h-10 w-full rounded-full bg-moss/10 px-3 text-sm font-medium text-moss shadow-none ring-1 ring-moss/20"
+      activeLabel={activeLabel}
+      buttonClassName="h-10 w-full rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#156240]"
+      inactiveLabel={inactiveLabel}
+      isAuthenticated
+      isFollowing={isFollowing}
+      locale={locale}
+      redirectPath="/search"
+      targetUserProfileId={targetProfileId}
+    />
   );
 }
 
 function RelationshipStatusPill({
-  icon = "clock",
+  icon = "check",
   label,
   tone = "neutral",
 }: {
-  icon?: "check" | "clock";
+  icon?: "check";
   label: string;
   tone?: "neutral" | "good";
 }) {
-  const Icon = icon === "check" ? CheckCircle2 : Clock;
-
   return (
     <span
       className={cn(
@@ -256,32 +215,35 @@ function RelationshipStatusPill({
           : "bg-white/70 text-zinc-600 ring-sand",
       )}
     >
-      <Icon className="h-4 w-4" aria-hidden="true" />
+      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
       {label}
     </span>
   );
 }
 
-function AddFriendSubmitButton({ locale }: { locale: string }) {
-  const { pending } = useFormStatus();
-  const t = getCopy(locale).globalSearch;
+function getSearchRelationshipCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      follow: "Suivre",
+      following: "Suivi",
+      followBack: "Suivre aussi",
+      mutual: "Mutuel",
+    };
+  }
 
-  return (
-    <button
-      type="submit"
-      className={cn(
-        "inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#369758] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#156240] disabled:pointer-events-none disabled:opacity-60",
-        pending ? "cursor-wait" : null,
-      )}
-      disabled={pending}
-      aria-busy={pending}
-    >
-      {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-      ) : (
-        <UserPlus className="h-4 w-4" aria-hidden="true" />
-      )}
-      {pending ? t.addingFriend : t.addFriend}
-    </button>
-  );
+  if (locale === "en") {
+    return {
+      follow: "Follow",
+      following: "Following",
+      followBack: "Follow back",
+      mutual: "Mutual",
+    };
+  }
+
+  return {
+    follow: "关注",
+    following: "已关注",
+    followBack: "回关",
+    mutual: "互关",
+  };
 }

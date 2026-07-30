@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildProfileVisitorViewModels,
   getProfileVisitDate,
+  getMutualProfileVisitFollowIds,
   recordProfileVisit,
   selectRecentProfileVisitRows,
 } from "./profileVisits";
@@ -77,7 +78,7 @@ test("profile visitor list keeps the latest visit per visitor", () => {
   );
 });
 
-test("profile visitor list marks friendship without exposing detailed trails", () => {
+test("profile visitor list marks mutual follows without exposing detailed trails", () => {
   const rows = [
     {
       id: "visit-friend",
@@ -107,12 +108,7 @@ test("profile visitor list marks friendship without exposing detailed trails", (
 
   assert.deepEqual(
     buildProfileVisitorViewModels({
-      friendships: [
-        {
-          userAId: "profile",
-          userBId: "visitor-friend",
-        },
-      ],
+      mutualFollowIds: ["visitor-friend"],
       profileId: "profile",
       visitors: rows,
     }),
@@ -142,5 +138,37 @@ test("profile visitor list marks friendship without exposing detailed trails", (
         },
       },
     ],
+  );
+});
+
+test("profile visitor mutual follow ids require both directions", () => {
+  assert.deepEqual(
+    getMutualProfileVisitFollowIds({
+      followRows: [
+        {
+          followerId: "profile",
+          followingId: "visitor-mutual",
+        },
+        {
+          followerId: "visitor-mutual",
+          followingId: "profile",
+        },
+        {
+          followerId: "profile",
+          followingId: "visitor-following-only",
+        },
+        {
+          followerId: "visitor-follower-only",
+          followingId: "profile",
+        },
+      ],
+      profileId: "profile",
+      visitorIds: [
+        "visitor-mutual",
+        "visitor-following-only",
+        "visitor-follower-only",
+      ],
+    }),
+    ["visitor-mutual"],
   );
 });

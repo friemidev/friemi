@@ -23,24 +23,18 @@ function mapGiftRecipient(user: ProfileShopGiftRecipient) {
 }
 
 export async function getProfileShopGiftRecipients(viewerProfileId: string) {
-  const friendships = await prisma.friendship.findMany({
+  const follows = await prisma.userFollow.findMany({
     where: {
-      OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
+      followerId: viewerProfileId,
+      following: {
+        status: "ACTIVE",
+      },
     },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     take: 50,
     select: {
       id: true,
-      userAId: true,
-      userA: {
-        select: {
-          id: true,
-          avatarUrl: true,
-          friendCode: true,
-          nickname: true,
-        },
-      },
-      userB: {
+      following: {
         select: {
           id: true,
           avatarUrl: true,
@@ -51,11 +45,5 @@ export async function getProfileShopGiftRecipients(viewerProfileId: string) {
     },
   });
 
-  return friendships.map((friendship) =>
-    mapGiftRecipient(
-      friendship.userAId === viewerProfileId
-        ? friendship.userB
-        : friendship.userA,
-    ),
-  );
+  return follows.map((follow) => mapGiftRecipient(follow.following));
 }

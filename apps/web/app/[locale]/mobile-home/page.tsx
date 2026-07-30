@@ -152,7 +152,7 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureDescription:
       "A quick way to see what is happening before opening the details.",
     featureKicker: "Friemi Hall",
-    searchPlaceholder: "Search activities, crews, or friends",
+    searchPlaceholder: "Search activities, crews, or people",
     categoriesTitle: "Browse by mood",
     categoriesDescription:
       "Food, galleries, music, sports, and small city plans.",
@@ -194,7 +194,7 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureDescription:
       "Voyez les sorties en cours de préparation avant d'ouvrir le détail.",
     featureKicker: "Friemi Hall",
-    searchPlaceholder: "Rechercher activités, groupes ou amis",
+    searchPlaceholder: "Rechercher activités, groupes ou personnes",
     categoriesTitle: "Explorer par envie",
     categoriesDescription:
       "Repas, expos, musique, sport et petites sorties en ville.",
@@ -270,7 +270,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
           category: "MUSIC",
           coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
           href: "/activities?category=MUSIC",
-          meta: "2 amis y vont",
+          meta: "2 personnes suivies",
           title: "Jazz au parc",
         },
         {
@@ -323,7 +323,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
           category: "MUSIC",
           coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
           href: "/activities?category=MUSIC",
-          meta: "2 friends going",
+          meta: "2 followed people",
           title: "Jazz in the Park",
         },
         {
@@ -375,7 +375,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         category: "MUSIC",
         coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
         href: "/activities?category=MUSIC",
-        meta: "2 位好友参加",
+        meta: "2 位关注的人",
         title: "公园爵士",
       },
       {

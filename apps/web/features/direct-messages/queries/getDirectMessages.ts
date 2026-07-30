@@ -5,6 +5,10 @@ import {
   getFriendNearestActivitySignals,
   type FriendNearestActivitySignalViewModel,
 } from "@/features/friends/queries/getFriendNearestActivitySignals";
+import {
+  getFollowRelationshipBuckets,
+  getMutualFollowProfileIds,
+} from "@/features/follow/queries/followRelations";
 import { buildPrivateActivityShareAccessWhere } from "@/features/activities/utils/activityShareAccess";
 import {
   getDirectMessageSendPolicy,
@@ -73,18 +77,10 @@ const conversationThreadSelect = {
   },
 } satisfies Prisma.ConversationSelect;
 
-const friendshipRosterSelect = {
-  id: true,
+const rosterProfileSelect = {
+  ...userSummarySelect,
   createdAt: true,
-  userAId: true,
-  userBId: true,
-  userA: {
-    select: userSummarySelect,
-  },
-  userB: {
-    select: userSummarySelect,
-  },
-} satisfies Prisma.FriendshipSelect;
+} satisfies Prisma.UserProfileSelect;
 
 type ConversationListResult = Prisma.ConversationGetPayload<{
   select: typeof conversationListSelect;
@@ -94,9 +90,15 @@ type ConversationThreadResult = Prisma.ConversationGetPayload<{
   select: typeof conversationThreadSelect;
 }>;
 
-type FriendshipRosterResult = Prisma.FriendshipGetPayload<{
-  select: typeof friendshipRosterSelect;
+type RosterProfileResult = Prisma.UserProfileGetPayload<{
+  select: typeof rosterProfileSelect;
 }>;
+
+export type DirectMessageRelationshipKind =
+  | "none"
+  | "following"
+  | "followed_by"
+  | "mutual";
 
 export type DirectMessageUserViewModel = {
   id: string;
@@ -136,7 +138,11 @@ export type DirectConversationListItemViewModel = {
 export type DirectMessageFriendRosterItemViewModel = {
   friendshipId: string | null;
   isFriend: boolean;
+  isFollowing: boolean;
+  isMutualFollow: boolean;
+  relationshipKind: DirectMessageRelationshipKind;
   rosterId: string;
+  targetFollowsViewer: boolean;
   friend: DirectMessageUserViewModel;
   conversationId: string | null;
   lastMessage: DirectMessagePreviewViewModel | null;
@@ -211,18 +217,6 @@ function mapPeer(
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
   const peer =
     peerId === conversation.userAId ? conversation.userA : conversation.userB;
-
-  return mapUserProfile(peer);
-}
-
-function mapFriendshipPeer(
-  friendship: FriendshipRosterResult,
-  currentUserProfileId: string,
-): DirectMessageUserViewModel {
-  const peer =
-    friendship.userAId === currentUserProfileId
-      ? friendship.userB
-      : friendship.userA;
 
   return mapUserProfile(peer);
 }
@@ -331,22 +325,11 @@ async function getFriendPeerIds(
     return new Set<string>();
   }
 
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: uniquePeerIds.map((peerId) =>
-        getConversationPair(currentUserProfileId, peerId),
-      ),
-    },
-    select: {
-      userAId: true,
-      userBId: true,
-    },
-  });
+  const mutualFollowIds = await getMutualFollowProfileIds(currentUserProfileId);
+  const peerIdSet = new Set(uniquePeerIds);
 
   return new Set(
-    friendships.map((friendship) =>
-      getConversationPeerId(friendship, currentUserProfileId),
-    ),
+    mutualFollowIds.filter((profileId) => peerIdSet.has(profileId)),
   );
 }
 
@@ -382,9 +365,7 @@ function sortFriendRosterItems(
     );
 
     if (activityOrder !== 0 || firstActivityA || firstActivityB) {
-      return (
-        activityOrder || itemA.rosterId.localeCompare(itemB.rosterId)
-      );
+      return activityOrder || itemA.rosterId.localeCompare(itemB.rosterId);
     }
 
     return (
@@ -459,25 +440,8 @@ export async function getDirectConversations(currentUserProfileId: string) {
 export async function getDirectMessageFriendRoster(
   currentUserProfileId: string,
 ) {
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: [
-        {
-          userAId: currentUserProfileId,
-        },
-        {
-          userBId: currentUserProfileId,
-        },
-      ],
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-    take: 80,
-    select: friendshipRosterSelect,
-  });
-  const friendIds = friendships.map(
-    (friendship) => mapFriendshipPeer(friendship, currentUserProfileId).id,
-  );
-  const [conversations, activitiesByFriendId] = await Promise.all([
+  const [followBuckets, conversations] = await Promise.all([
+    getFollowRelationshipBuckets(currentUserProfileId),
     prisma.conversation.findMany({
       where: {
         OR: [
@@ -503,12 +467,47 @@ export async function getDirectMessageFriendRoster(
       take: 80,
       select: conversationListSelect,
     }),
+  ]);
+  const followingOnlyIdSet = new Set(followBuckets.followingOnlyIds);
+  const followerOnlyIdSet = new Set(followBuckets.followerOnlyIds);
+  const mutualFollowIdSet = new Set(followBuckets.mutualFollowIds);
+  const conversationPeerIds = conversations
+    .filter((conversation) => conversation.messages.length > 0)
+    .map((conversation) =>
+      getConversationPeerId(conversation, currentUserProfileId),
+    );
+  const relationshipProfileIds = [
+    ...followBuckets.mutualFollowIds,
+    ...followBuckets.followingOnlyIds,
+    ...followBuckets.followerOnlyIds,
+  ];
+  const rosterProfileIds = [
+    ...new Set([...conversationPeerIds, ...relationshipProfileIds]),
+  ].filter((profileId) => profileId !== currentUserProfileId);
+  const [profiles, activitiesByFriendId] = await Promise.all([
+    rosterProfileIds.length > 0
+      ? prisma.userProfile.findMany({
+          where: {
+            id: {
+              in: rosterProfileIds,
+            },
+            status: "ACTIVE",
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+          select: rosterProfileSelect,
+        })
+      : Promise.resolve([] as RosterProfileResult[]),
     getFriendNearestActivitySignals({
-      friendIds,
+      friendIds: [
+        ...new Set([
+          ...followBuckets.mutualFollowIds,
+          ...followBuckets.followingOnlyIds,
+        ]),
+      ],
       limitPerFriend: friendActivitySignalLimitPerFriend,
       viewerProfileId: currentUserProfileId,
     }).catch((error: unknown) => {
-      console.error("Failed to load mobile friend activity signals", error);
+      console.error("Failed to load mobile follow activity signals", error);
 
       return new Map<string, DirectConversationActivitySignalViewModel[]>();
     }),
@@ -518,14 +517,6 @@ export async function getDirectMessageFriendRoster(
     conversations.map((conversation) => conversation.id),
   );
   const conversationsByFriendId = new Map<string, ConversationListResult>();
-  const friendshipsByFriendId = new Map<string, FriendshipRosterResult>();
-
-  for (const friendship of friendships) {
-    friendshipsByFriendId.set(
-      mapFriendshipPeer(friendship, currentUserProfileId).id,
-      friendship,
-    );
-  }
 
   for (const conversation of conversations) {
     conversationsByFriendId.set(
@@ -534,14 +525,32 @@ export async function getDirectMessageFriendRoster(
     );
   }
 
-  const friendItems = friendships.map((friendship) => {
-    const friend = mapFriendshipPeer(friendship, currentUserProfileId);
-    const conversation = conversationsByFriendId.get(friend.id);
+  const profileItems = profiles.map((profile) => {
+    const relationshipKind: DirectMessageRelationshipKind =
+      mutualFollowIdSet.has(profile.id)
+        ? "mutual"
+        : followingOnlyIdSet.has(profile.id)
+          ? "following"
+          : followerOnlyIdSet.has(profile.id)
+            ? "followed_by"
+            : "none";
+    const isMutualFollow = relationshipKind === "mutual";
+    const conversation = conversationsByFriendId.get(profile.id);
+    const friend = mapUserProfile(profile);
 
     return {
-      friendshipId: friendship.id,
-      isFriend: true,
-      rosterId: `friendship:${friendship.id}`,
+      friendshipId: null,
+      isFriend: isMutualFollow,
+      isFollowing:
+        relationshipKind === "following" || relationshipKind === "mutual",
+      isMutualFollow,
+      relationshipKind,
+      rosterId:
+        relationshipKind === "none"
+          ? `conversation:${conversation?.id ?? profile.id}`
+          : `follow:${relationshipKind}:${profile.id}`,
+      targetFollowsViewer:
+        relationshipKind === "followed_by" || relationshipKind === "mutual",
       friend,
       conversationId: conversation?.id ?? null,
       lastMessage: conversation ? mapLastMessage(conversation) : null,
@@ -549,36 +558,17 @@ export async function getDirectMessageFriendRoster(
         conversation?.lastMessageAt?.toISOString() ??
         conversation?.messages[0]?.createdAt.toISOString() ??
         null,
-      createdAt: friendship.createdAt.toISOString(),
+      createdAt:
+        conversation?.createdAt.toISOString() ??
+        profile.createdAt.toISOString(),
       recentActivities: activitiesByFriendId.get(friend.id) ?? [],
       unreadCount: conversation
         ? (unreadCountByConversationId.get(conversation.id) ?? 0)
         : 0,
     };
   });
-  const strangerConversationItems = conversations
-    .filter((conversation) => {
-      const peerId = getConversationPeerId(conversation, currentUserProfileId);
 
-      return !friendshipsByFriendId.has(peerId) && conversation.messages.length > 0;
-    })
-    .map((conversation) => ({
-      friendshipId: null,
-      isFriend: false,
-      rosterId: `conversation:${conversation.id}`,
-      friend: mapPeer(conversation, currentUserProfileId),
-      conversationId: conversation.id,
-      lastMessage: mapLastMessage(conversation),
-      lastMessageAt:
-        conversation.lastMessageAt?.toISOString() ??
-        conversation.messages[0]?.createdAt.toISOString() ??
-        null,
-      createdAt: conversation.createdAt.toISOString(),
-      recentActivities: [],
-      unreadCount: unreadCountByConversationId.get(conversation.id) ?? 0,
-    }));
-
-  return sortFriendRosterItems([...friendItems, ...strangerConversationItems]);
+  return sortFriendRosterItems(profileItems);
 }
 
 export async function getUnreadDirectMessageConversationCount(

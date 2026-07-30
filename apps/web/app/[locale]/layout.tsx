@@ -121,7 +121,6 @@ export default async function LocaleLayout({
                 viewerPhone={viewerProfile?.phone ?? null}
                 viewerWechatId={viewerProfile?.wechatId ?? null}
                 viewerNickname={viewerProfile?.nickname ?? null}
-                incomingFriendRequests={[]}
                 unreadNotificationCount={
                   viewerState.initialUnreadNotificationCount
                 }

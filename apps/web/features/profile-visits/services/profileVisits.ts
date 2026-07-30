@@ -1,8 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import {
-  getFriendshipPair,
-  getFriendshipPairKey,
-} from "@/features/friends/utils/friendship";
 
 export type ProfileVisitRecordResult =
   | {
@@ -41,9 +37,9 @@ type RecentProfileVisitRow = {
   };
 };
 
-type FriendshipPairRow = {
-  userAId: string;
-  userBId: string;
+type FollowPairRow = {
+  followerId: string;
+  followingId: string;
 };
 
 export function getProfileVisitDate(now = new Date()) {
@@ -102,27 +98,52 @@ export function selectRecentProfileVisitRows(
 }
 
 export function buildProfileVisitorViewModels({
-  friendships,
+  mutualFollowIds,
   profileId,
   visitors,
 }: {
-  friendships: FriendshipPairRow[];
+  mutualFollowIds: string[];
   profileId: string;
   visitors: RecentProfileVisitRow[];
 }) {
-  const friendshipPairKeys = new Set(
-    friendships.map((friendship) =>
-      getFriendshipPairKey(friendship.userAId, friendship.userBId),
-    ),
-  );
+  const mutualFollowIdSet = new Set(mutualFollowIds);
 
   return visitors.map((visit) =>
     mapProfileVisitor({
       ...visit,
-      isFriend: friendshipPairKeys.has(
-        getFriendshipPairKey(profileId, visit.visitorId),
-      ),
+      isFriend: mutualFollowIdSet.has(visit.visitorId),
     }),
+  );
+}
+
+export function getMutualProfileVisitFollowIds({
+  followRows,
+  profileId,
+  visitorIds,
+}: {
+  followRows: FollowPairRow[];
+  profileId: string;
+  visitorIds: string[];
+}) {
+  const visitorIdSet = new Set(visitorIds);
+  const profileFollowsVisitors = new Set<string>();
+  const visitorsFollowProfile = new Set<string>();
+
+  for (const row of followRows) {
+    if (row.followerId === profileId && visitorIdSet.has(row.followingId)) {
+      profileFollowsVisitors.add(row.followingId);
+      continue;
+    }
+
+    if (row.followingId === profileId && visitorIdSet.has(row.followerId)) {
+      visitorsFollowProfile.add(row.followerId);
+    }
+  }
+
+  return visitorIds.filter(
+    (visitorId) =>
+      profileFollowsVisitors.has(visitorId) &&
+      visitorsFollowProfile.has(visitorId),
   );
 }
 
@@ -234,19 +255,35 @@ export async function getRecentProfileVisitors(profileId: string, limit = 30) {
     return [];
   }
 
-  const friendships = await prisma.friendship.findMany({
+  const visitorIds = visitors.map((visit) => visit.visitorId);
+  const followRows = await prisma.userFollow.findMany({
     where: {
-      OR: visitors.map((visit) =>
-        getFriendshipPair(profileId, visit.visitorId),
-      ),
+      OR: [
+        {
+          followerId: profileId,
+          followingId: {
+            in: visitorIds,
+          },
+        },
+        {
+          followerId: {
+            in: visitorIds,
+          },
+          followingId: profileId,
+        },
+      ],
     },
     select: {
-      userAId: true,
-      userBId: true,
+      followerId: true,
+      followingId: true,
     },
   });
   return buildProfileVisitorViewModels({
-    friendships,
+    mutualFollowIds: getMutualProfileVisitFollowIds({
+      followRows,
+      profileId,
+      visitorIds,
+    }),
     profileId,
     visitors,
   });

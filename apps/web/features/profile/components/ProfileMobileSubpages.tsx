@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
   ChevronRight,
   MapPin,
   Search,
-  UserRoundPlus,
   UsersRound,
 } from "lucide-react";
 import { getCategoryLabel, getCopy, getStatusLabel } from "@/lib/copy";
@@ -20,7 +19,7 @@ import {
   getActivityDisplayStatus,
 } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import type {
   ProfileFavoriteActivityViewModel,
   ProfileDashboardViewModel,
@@ -30,78 +29,100 @@ import type {
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
 type HangoutsTab = "created" | "participation" | "favorite";
+type NetworkTab = "following" | "followers" | "mutual";
 
 function getProfileSubpageCopy(locale: string) {
   if (locale === "fr") {
     return {
-      addFriend: "Ajouter",
+      findPeople: "Trouver",
       created: "Créées",
       emptyCreated: "Aucune sortie créée.",
       emptyFavorite: "Aucune sortie sauvegardée.",
       emptyNetwork: "Aucune personne ici.",
-      emptySearch: "Aucun ami trouvé.",
+      emptySearch: "Aucun résultat.",
       emptyParticipation: "Aucune sortie rejointe.",
       favorite: "Favoris",
-      followers: "Fans",
+      followers: "Me suivent",
       following: "Suivis",
-      friends: "Amis",
+      friends: "Mutuels",
       hangoutsTitle: "Mes sorties",
       joined: "Rejointes",
       joinedAt: "Rejoint",
       manage: "Gérer",
-      networkTitle: "Mes amis",
+      networkTitle: "Réseau",
       noBio: "Pas encore de bio.",
       savedAt: "Sauvé",
-      searchFriends: "Rechercher un ami",
+      searchPeople: "Rechercher",
+      follow: "Suivre",
+      followBack: "Suivre aussi",
+      unfollow: "Ne plus suivre",
+      unfollowCancel: "Annuler",
+      unfollowConfirm: "Confirmer",
+      unfollowDescription: "Vous ne serez plus en suivi mutuel.",
+      unfollowTitle: "Ne plus suivre ?",
       view: "Voir",
     };
   }
 
   if (locale === "en") {
     return {
-      addFriend: "Add",
+      findPeople: "Find",
       created: "Created",
       emptyCreated: "No created plans yet.",
       emptyFavorite: "No saved plans yet.",
       emptyNetwork: "No people here yet.",
-      emptySearch: "No matching friends.",
+      emptySearch: "No matching people.",
       emptyParticipation: "No joined plans yet.",
       favorite: "Saved",
-      followers: "Fans",
+      followers: "Followers",
       following: "Following",
-      friends: "Friends",
+      friends: "Mutual",
       hangoutsTitle: "My Plans",
       joined: "Joined",
       joinedAt: "Joined",
       manage: "Manage",
-      networkTitle: "My Friends",
+      networkTitle: "Network",
       noBio: "No bio yet.",
       savedAt: "Saved",
-      searchFriends: "Search friends",
+      searchPeople: "Search people",
+      follow: "Follow",
+      followBack: "Follow back",
+      unfollow: "Unfollow",
+      unfollowCancel: "Cancel",
+      unfollowConfirm: "Unfollow",
+      unfollowDescription: "You will no longer follow each other.",
+      unfollowTitle: "Unfollow this user?",
       view: "View",
     };
   }
 
   return {
-    addFriend: "添加好友",
+    findPeople: "找人",
     created: "我发起的",
     emptyCreated: "还没有发起聚吧。",
     emptyFavorite: "还没有收藏聚吧。",
     emptyNetwork: "这里还没有人。",
-    emptySearch: "没有找到这个好友。",
+    emptySearch: "没有找到相关用户。",
     emptyParticipation: "还没有参与聚吧。",
     favorite: "我收藏的",
-    followers: "粉丝",
-    following: "关注",
-    friends: "好友",
+    followers: "关注我的",
+    following: "我的关注",
+    friends: "互相关注",
     hangoutsTitle: "我的聚吧",
     joined: "我参与的",
     joinedAt: "报名",
     manage: "管理",
-    networkTitle: "我的好友",
+    networkTitle: "关系网",
     noBio: "还没有填写简介。",
     savedAt: "收藏",
-    searchFriends: "搜索好友",
+    searchPeople: "搜索用户",
+    follow: "关注",
+    followBack: "回关",
+    unfollow: "取消关注",
+    unfollowCancel: "暂不取消",
+    unfollowConfirm: "确认取消",
+    unfollowDescription: "取消后，你们将不再是互相关注。",
+    unfollowTitle: "确认取消关注？",
     view: "查看",
   };
 }
@@ -129,7 +150,9 @@ function SubpageShell({
         <h1 className="min-w-0 flex-1 text-center text-xl font-black text-[#111210]">
           {title}
         </h1>
-        <div className="flex h-10 w-10 items-center justify-center">{right}</div>
+        <div className="flex h-10 w-10 items-center justify-center">
+          {right}
+        </div>
       </header>
       {children}
     </main>
@@ -185,8 +208,14 @@ function compareIsoDate(left: string, right: string) {
   return new Date(right).getTime() - new Date(left).getTime();
 }
 
-function getCompactActivityHref(locale: string, activity: ActivityCardViewModel) {
-  if ((activity.type === "PUBLIC_EVENT" || activity.isActivityInfo) && activity.publicEventId) {
+function getCompactActivityHref(
+  locale: string,
+  activity: ActivityCardViewModel,
+) {
+  if (
+    (activity.type === "PUBLIC_EVENT" || activity.isActivityInfo) &&
+    activity.publicEventId
+  ) {
     return withLocale(locale, `/public-events/${activity.publicEventId}`);
   }
 
@@ -211,11 +240,7 @@ function getParticipationTone(status: ProfileParticipationViewModel["status"]) {
   return "bg-[#DDF8E7] text-[#156240]";
 }
 
-function ActivityThumb({
-  activity,
-}: {
-  activity: ActivityCardViewModel;
-}) {
+function ActivityThumb({ activity }: { activity: ActivityCardViewModel }) {
   if (activity.coverImageUrl) {
     return (
       // Activity cover images are user or source provided remote URLs.
@@ -255,7 +280,8 @@ function CompactHangoutRow({
   statusTone?: string;
 }) {
   const displayStatus = getActivityDisplayStatus(activity);
-  const resolvedStatusLabel = statusLabel ?? getStatusLabel(displayStatus, locale);
+  const resolvedStatusLabel =
+    statusLabel ?? getStatusLabel(displayStatus, locale);
   const categoryLabel = getCategoryLabel(activity.category, locale);
 
   return (
@@ -311,7 +337,9 @@ function CompactHangoutRow({
             <span className="flex min-w-0 items-center justify-between gap-2">
               <span className="flex min-w-0 items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6AA179]" />
-                <span className="truncate">{activity.city || activity.address}</span>
+                <span className="truncate">
+                  {activity.city || activity.address}
+                </span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-1 font-black text-[#156240]">
                 <UsersRound className="h-3.5 w-3.5" />
@@ -491,91 +519,222 @@ export function ProfileHangoutsMobilePage({
 }
 
 function NetworkUserRow({
+  activeTab,
   locale,
+  onFollowStateChange,
   user,
 }: {
+  activeTab: NetworkTab;
   locale: string;
+  onFollowStateChange: (
+    user: ProfileFollowUserViewModel,
+    isFollowing: boolean,
+  ) => void;
   user: ProfileFollowUserViewModel;
 }) {
   const copy = getProfileSubpageCopy(locale);
   const initial = user.nickname.trim().slice(0, 1) || "N";
+  const isFollowing = activeTab !== "followers";
+  const inactiveLabel =
+    activeTab === "followers" ? copy.followBack : copy.follow;
 
   return (
-    <Link
-      href={withLocale(locale, `/profile/${user.id}`)}
-      className="group flex items-center gap-3 border-b border-[#E8E1CF] py-4 last:border-b-0 active:bg-[#F7F4E9]"
-    >
-      {user.avatarUrl ? (
-        // User avatars are remote profile images.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={user.avatarUrl}
-          alt={user.nickname}
-          className="h-[3.25rem] w-[3.25rem] shrink-0 rounded-full object-cover shadow-sm"
-        />
-      ) : (
-        <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[#DCEBDE] text-base font-black text-[#156240] shadow-sm">
-          {initial}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <p className="truncate text-sm font-black text-[#111210]">
-            {user.nickname}
+    <div className="flex items-center gap-3 border-b border-[#E8E1CF] py-4 last:border-b-0">
+      <Link
+        href={withLocale(locale, `/profile/${user.id}`)}
+        className="group flex min-w-0 flex-1 items-center gap-3 active:bg-[#F7F4E9]"
+      >
+        {user.avatarUrl ? (
+          // User avatars are remote profile images.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.avatarUrl}
+            alt={user.nickname}
+            className="h-[3.25rem] w-[3.25rem] shrink-0 rounded-full object-cover shadow-sm"
+          />
+        ) : (
+          <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full bg-[#DCEBDE] text-base font-black text-[#156240] shadow-sm">
+            {initial}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-sm font-black text-[#111210]">
+              {user.nickname}
+            </p>
+            {user.isCoCreator ? (
+              <CoCreatorIdentityBadge locale={locale} variant="icon" />
+            ) : null}
+          </div>
+          <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-[#7A8276]">
+            {user.bio ?? copy.noBio}
           </p>
-          {user.isCoCreator ? (
-            <CoCreatorIdentityBadge locale={locale} variant="icon" />
-          ) : null}
         </div>
-        <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-[#7A8276]">
-          {user.bio ?? copy.noBio}
-        </p>
-      </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#B1B39F] transition group-active:translate-x-0.5" />
-    </Link>
+      </Link>
+      <FollowButton
+        activeButtonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeLabel={copy.unfollow}
+        buttonClassName="!h-8 !min-h-8 min-w-[4.75rem] rounded-full border border-[#D6D5B2] bg-white !px-3 !text-xs font-black text-[#156240] shadow-none active:scale-[0.98]"
+        fullWidth={false}
+        inactiveLabel={inactiveLabel}
+        isAuthenticated
+        isFollowing={isFollowing}
+        locale={locale}
+        onStateChange={(nextIsFollowing) => {
+          onFollowStateChange(user, nextIsFollowing);
+        }}
+        redirectPath="/profile/network"
+        targetUserProfileId={user.id}
+        unfollowConfirm={{
+          cancelLabel: copy.unfollowCancel,
+          confirmLabel: copy.unfollowConfirm,
+          description: copy.unfollowDescription,
+          title: copy.unfollowTitle,
+        }}
+      />
+    </div>
   );
 }
 
 export function ProfileNetworkMobilePage({
-  currentUserFriendCode = null,
   dashboard,
   locale,
 }: {
-  currentUserFriendCode?: string | null;
   dashboard: ProfileDashboardViewModel;
   locale: string;
 }) {
   const copy = getProfileSubpageCopy(locale);
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<NetworkTab>("mutual");
+  const [localNetwork, setLocalNetwork] = useState({
+    followers: dashboard.followers,
+    following: dashboard.following,
+    mutual: dashboard.friends,
+  });
+  const [countAdjustments, setCountAdjustments] = useState({
+    followers: 0,
+    following: 0,
+    mutual: 0,
+  });
+
+  useEffect(() => {
+    setLocalNetwork({
+      followers: dashboard.followers,
+      following: dashboard.following,
+      mutual: dashboard.friends,
+    });
+    setCountAdjustments({
+      followers: 0,
+      following: 0,
+      mutual: 0,
+    });
+  }, [dashboard.followers, dashboard.following, dashboard.friends]);
+
+  const activeUsers =
+    activeTab === "following"
+      ? localNetwork.following
+      : activeTab === "followers"
+        ? localNetwork.followers
+        : localNetwork.mutual;
   const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
   const list = useMemo(() => {
     if (!normalizedSearchTerm) {
-      return dashboard.friends;
+      return activeUsers;
     }
 
-    return dashboard.friends.filter((friend) => {
+    return activeUsers.filter((friend) => {
       const searchableText = [friend.nickname, friend.bio ?? ""]
         .join(" ")
         .toLocaleLowerCase();
 
       return searchableText.includes(normalizedSearchTerm);
     });
-  }, [dashboard.friends, normalizedSearchTerm]);
+  }, [activeUsers, normalizedSearchTerm]);
+  const networkTabs = [
+    {
+      key: "mutual" as const,
+      label: copy.friends,
+      count: Math.max(0, dashboard.friendCount + countAdjustments.mutual),
+    },
+    {
+      key: "following" as const,
+      label: copy.following,
+      count: Math.max(
+        0,
+        dashboard.followingCount + countAdjustments.following,
+      ),
+    },
+    {
+      key: "followers" as const,
+      label: copy.followers,
+      count: Math.max(
+        0,
+        dashboard.followersCount + countAdjustments.followers,
+      ),
+    },
+  ];
+
+  function handleNetworkFollowChange(
+    user: ProfileFollowUserViewModel,
+    isFollowing: boolean,
+  ) {
+    if (activeTab === "mutual" && !isFollowing) {
+      setLocalNetwork((current) => ({
+        followers: current.followers.some((item) => item.id === user.id)
+          ? current.followers
+          : [user, ...current.followers],
+        following: current.following,
+        mutual: current.mutual.filter((item) => item.id !== user.id),
+      }));
+      setCountAdjustments((current) => ({
+        ...current,
+        followers: current.followers + 1,
+        mutual: current.mutual - 1,
+      }));
+      return;
+    }
+
+    if (activeTab === "following" && !isFollowing) {
+      setLocalNetwork((current) => ({
+        ...current,
+        following: current.following.filter((item) => item.id !== user.id),
+      }));
+      setCountAdjustments((current) => ({
+        ...current,
+        following: current.following - 1,
+      }));
+      return;
+    }
+
+    if (activeTab === "followers" && isFollowing) {
+      setLocalNetwork((current) => ({
+        followers: current.followers.filter((item) => item.id !== user.id),
+        following: current.following,
+        mutual: current.mutual.some((item) => item.id === user.id)
+          ? current.mutual
+          : [user, ...current.mutual],
+      }));
+      setCountAdjustments((current) => ({
+        ...current,
+        followers: current.followers - 1,
+        mutual: current.mutual + 1,
+      }));
+    }
+  }
 
   return (
     <SubpageShell
       title={copy.networkTitle}
       locale={locale}
       right={
-        <button
-          type="button"
-          aria-label={copy.addFriend}
+        <Link
+          aria-label={copy.findPeople}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2]"
-          onClick={() => setAddFriendOpen(true)}
+          href={withLocale(locale, "/search")}
+          title={copy.findPeople}
         >
-          <UserRoundPlus className="h-5 w-5" />
-        </button>
+          <Search className="h-5 w-5" />
+        </Link>
       }
     >
       <div className="mt-8 border-b border-[#DED8BE] pb-4">
@@ -585,36 +744,41 @@ export function ProfileNetworkMobilePage({
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder={copy.searchFriends}
+            placeholder={copy.searchPeople}
             className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[#111210] outline-none placeholder:text-[#A3A48F]"
           />
           <span className="shrink-0 text-xs font-black text-[#156240]">
-            {dashboard.friendCount}
+            {networkTabs.find((tab) => tab.key === activeTab)?.count ?? 0}
           </span>
         </label>
+        <SegmentTabs
+          active={activeTab}
+          items={networkTabs}
+          onChange={setActiveTab}
+        />
       </div>
 
       <section className="mt-3">
         {list.length > 0 ? (
           list.map((user) => (
-            <NetworkUserRow key={user.id} user={user} locale={locale} />
+            <NetworkUserRow
+              key={user.id}
+              activeTab={activeTab}
+              locale={locale}
+              onFollowStateChange={handleNetworkFollowChange}
+              user={user}
+            />
           ))
         ) : (
           <div className="py-8">
             <EmptyPanel
-              message={normalizedSearchTerm ? copy.emptySearch : copy.emptyNetwork}
+              message={
+                normalizedSearchTerm ? copy.emptySearch : copy.emptyNetwork
+              }
             />
           </div>
         )}
       </section>
-
-      {addFriendOpen ? (
-        <AddFriendDialog
-          currentUserFriendCode={currentUserFriendCode}
-          locale={locale}
-          onClose={() => setAddFriendOpen(false)}
-        />
-      ) : null}
     </SubpageShell>
   );
 }

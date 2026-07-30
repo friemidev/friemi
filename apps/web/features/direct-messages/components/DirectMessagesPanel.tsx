@@ -73,7 +73,7 @@ export function ConversationListPanel({
               {t.emptyListDescription}
             </p>
           </div>
-          <Link href={withLocale(locale, "/friends")} className="w-full">
+          <Link href={withLocale(locale, "/search")} className="w-full">
             <Button variant="secondary" className="w-full gap-2 rounded-full">
               <UsersRound className="h-4 w-4" />
               {t.openFriends}

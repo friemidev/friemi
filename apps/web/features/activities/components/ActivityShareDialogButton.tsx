@@ -27,7 +27,7 @@ export function ActivityShareDialogButton({
       <button
         aria-label={label}
         className={cn(
-          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95",
+          "inline-flex h-9 w-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95",
           className,
         )}
         onClick={() => setOpen(true)}
@@ -37,7 +37,9 @@ export function ActivityShareDialogButton({
           className={cn("h-4 w-4", triggerLabel ? "h-3.5 w-3.5" : null)}
           strokeWidth={2.4}
         />
-        {triggerLabel ? <span>{triggerLabel}</span> : null}
+        {triggerLabel ? (
+          <span className="whitespace-nowrap leading-none">{triggerLabel}</span>
+        ) : null}
       </button>
 
       {open ? (

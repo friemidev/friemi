@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getMutualFollowProfileIds } from "@/features/follow/queries/followRelations";
 import {
   getActivityManagementRole,
   maxActivityCoManagers,
@@ -104,48 +105,33 @@ export async function getActivityCoManagerDashboard(
   let availableFriends: ActivityCoManagerUserViewModel[] = [];
 
   if (canEditManagers) {
-    const friendships = await prisma.friendship.findMany({
-      where: {
-        OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
-      },
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      select: {
-        userAId: true,
-        userA: {
-          select: {
-            id: true,
-            nickname: true,
-            friendCode: true,
-            avatarUrl: true,
-            status: true,
-          },
-        },
-        userB: {
-          select: {
-            id: true,
-            nickname: true,
-            friendCode: true,
-            avatarUrl: true,
-            status: true,
-          },
-        },
-      },
-    });
+    const mutualFollowIds = await getMutualFollowProfileIds(viewerProfileId);
 
-    availableFriends = friendships
-      .map((friendship) =>
-        friendship.userAId === viewerProfileId
-          ? friendship.userB
-          : friendship.userA,
-      )
-      .filter(
-        (friend) =>
-          friend.status === "ACTIVE" &&
-          friend.id !== activity.organizerId &&
-          !coManagerIds.has(friend.id),
-      )
-      .map(mapUser)
-      .sort((left, right) => left.nickname.localeCompare(right.nickname));
+    if (mutualFollowIds.length > 0) {
+      const mutualFollows = await prisma.userProfile.findMany({
+        where: {
+          id: {
+            in: mutualFollowIds,
+          },
+          status: "ACTIVE",
+        },
+        orderBy: [{ nickname: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          nickname: true,
+          friendCode: true,
+          avatarUrl: true,
+        },
+      });
+
+      availableFriends = mutualFollows
+        .filter(
+          (profile) =>
+            profile.id !== activity.organizerId &&
+            !coManagerIds.has(profile.id),
+        )
+        .map(mapUser);
+    }
   }
 
   return {

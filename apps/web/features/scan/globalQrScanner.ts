@@ -89,7 +89,10 @@ export function resolveGlobalQrScanDestination({
 
   if (/^\d{6}$/.test(directFriendCode)) {
     return {
-      href: withLocale(locale, `/friends?friendCode=${directFriendCode}`),
+      href: withLocale(
+        locale,
+        `/search?${new URLSearchParams({ q: directFriendCode }).toString()}`,
+      ),
       kind: "internal",
       source: "friend-code",
     };
@@ -125,7 +128,10 @@ export function resolveGlobalQrScanDestination({
 
   if (friendCode) {
     return {
-      href: withLocale(locale, `/friends?friendCode=${friendCode}`),
+      href: withLocale(
+        locale,
+        `/search?${new URLSearchParams({ q: friendCode }).toString()}`,
+      ),
       kind: "internal",
       source: "friend-code",
     };

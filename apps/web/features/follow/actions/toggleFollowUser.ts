@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -79,6 +80,17 @@ export async function toggleFollowUserAction(
       id: true,
     },
   });
+  const targetFollowsViewer = await prisma.userFollow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: targetUserProfileId,
+        followingId: viewerProfile.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
 
   const localizedPath = withLocale(locale, redirectPath);
 
@@ -91,6 +103,7 @@ export async function toggleFollowUserAction(
 
     revalidatePath(localizedPath);
     revalidatePath(withLocale(locale, "/profile"));
+    revalidatePath(withLocale(locale, "/profile/network"));
 
     return {
       isFollowing: false,
@@ -105,8 +118,19 @@ export async function toggleFollowUserAction(
     },
   });
 
+  if (targetFollowsViewer) {
+    await markReferralMutualFollowAcceptedBetween(
+      viewerProfile.id,
+      targetUserProfileId,
+    ).catch((error: unknown) => {
+      console.error("Failed to mark referral mutual follow accepted", error);
+    });
+  }
+
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/profile/invite"));
+  revalidatePath(withLocale(locale, "/profile/network"));
 
   return {
     isFollowing: true,

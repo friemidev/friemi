@@ -1,24 +1,17 @@
 import { cache } from "react";
-import { prisma } from "@/lib/prisma";
+import {
+  getFollowRelationshipBuckets,
+  getMutualFollowProfileIds,
+} from "@/features/follow/queries/followRelations";
 
 export const getViewerFriendIds = cache(async (viewerProfileId: string) => {
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
-    },
-    select: {
-      userAId: true,
-      userBId: true,
-    },
-  });
-
-  return Array.from(
-    new Set(
-      friendships.map((friendship) =>
-        friendship.userAId === viewerProfileId
-          ? friendship.userBId
-          : friendship.userAId,
-      ),
-    ),
-  );
+  return getMutualFollowProfileIds(viewerProfileId);
 });
+
+export const getViewerFollowedProfileIds = cache(
+  async (viewerProfileId: string) => {
+    const buckets = await getFollowRelationshipBuckets(viewerProfileId);
+
+    return [...buckets.followingOnlyIds, ...buckets.mutualFollowIds];
+  },
+);

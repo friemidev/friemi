@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
@@ -18,12 +17,10 @@ import {
   Settings,
   ShieldCheck,
   ShieldAlert,
-  UserPlus,
   type LucideIcon,
   UserRound,
+  UsersRound,
 } from "lucide-react";
-import { getFriendsCopy } from "@/features/friends/copy";
-import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { ProfileContactBindingDialog } from "@/features/profile/components/ProfileContactBindingDialog";
 import {
@@ -36,14 +33,6 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { IntentPrefetchLink } from "./IntentPrefetchLink";
 
-const AddFriendDialog = dynamic(
-  () =>
-    import("@/features/friends/components/FriendsDashboard").then(
-      (mod) => mod.AddFriendDialog,
-    ),
-  { ssr: false },
-);
-
 type AccountMenuProps = {
   locale: string;
   showAdminLink?: boolean;
@@ -54,7 +43,6 @@ type AccountMenuProps = {
   viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
-  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 type AndroidPushTokenPayload = {
@@ -129,13 +117,11 @@ export function AccountMenu({
   viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
-  incomingFriendRequests = [],
 }: AccountMenuProps) {
   const { signOut } = useClerk();
   const { user } = useUser();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [contactBindings, setContactBindings] = useState({
     contactEmail: viewerContactEmail,
@@ -143,16 +129,12 @@ export function AccountMenu({
     wechatId: viewerWechatId,
   });
   const [friendCodeCopied, setFriendCodeCopied] = useState(false);
-  const [liveIncomingFriendRequests, setLiveIncomingFriendRequests] = useState(
-    incomingFriendRequests,
-  );
   const menuRef = useRef<HTMLDivElement>(null);
   const { unreadNotificationCount: liveUnreadNotificationCount } =
     useNotificationBadge(unreadNotificationCount);
   const { nickname: liveNickname } = useViewerProfile();
   const t = getCopy(locale).accountMenu;
   const profileCopy = getCopy(locale).profile;
-  const friendsCopy = getFriendsCopy(locale);
 
   const displayName =
     liveNickname.trim() ||
@@ -162,6 +144,7 @@ export function AccountMenu({
   const avatarUrl = user?.imageUrl;
   const initial = displayName.trim().charAt(0).toUpperCase() || "N";
   const profileHref = withLocale(locale, "/profile");
+  const networkHref = withLocale(locale, "/profile/network");
   const messagesHref = withLocale(locale, "/messages");
   const notificationsHref = withLocale(locale, "/notifications");
   const accountSettingsHref = withLocale(locale, "/account/settings");
@@ -173,6 +156,7 @@ export function AccountMenu({
   const topNewsOpsHref = withLocale(locale, "/admin/top-news");
   const profileActive =
     pathname === profileHref || pathname.startsWith(`${profileHref}/`);
+  const networkActive = pathname === networkHref;
   const contactBindingCount = [
     contactBindings.contactEmail,
     contactBindings.phone,
@@ -181,50 +165,12 @@ export function AccountMenu({
   const hasContactBindings = contactBindingCount > 0;
 
   useEffect(() => {
-    setLiveIncomingFriendRequests(incomingFriendRequests);
-  }, [incomingFriendRequests]);
-
-  useEffect(() => {
     setContactBindings({
       contactEmail: viewerContactEmail,
       phone: viewerPhone,
       wechatId: viewerWechatId,
     });
   }, [viewerContactEmail, viewerPhone, viewerWechatId]);
-
-  useEffect(() => {
-    if (!open || !user) {
-      return;
-    }
-
-    const abortController = new AbortController();
-
-    void fetch("/api/friends/incoming-requests", {
-      cache: "no-store",
-      signal: abortController.signal,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Incoming requests failed: ${response.status}`);
-        }
-
-        return response.json() as Promise<{
-          incomingRequests?: FriendRequestViewModel[];
-        }>;
-      })
-      .then((payload) => {
-        setLiveIncomingFriendRequests(payload.incomingRequests ?? []);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-      });
-
-    return () => {
-      abortController.abort();
-    };
-  }, [open, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -256,11 +202,6 @@ export function AccountMenu({
 
   function closeMenu() {
     setOpen(false);
-  }
-
-  function openAddFriendDialog() {
-    setOpen(false);
-    setAddFriendOpen(true);
   }
 
   function openContactDialog() {
@@ -390,11 +331,12 @@ export function AccountMenu({
               active={profileActive}
               onClick={closeMenu}
             />
-            <MenuButton
-              icon={UserPlus}
-              label={friendsCopy.addTitle}
-              badgeCount={liveIncomingFriendRequests.length}
-              onClick={openAddFriendDialog}
+            <MenuLink
+              href={networkHref}
+              icon={UsersRound}
+              label={t.friends}
+              active={networkActive}
+              onClick={closeMenu}
             />
             <MenuLink
               href={messagesHref}
@@ -493,15 +435,6 @@ export function AccountMenu({
           </div>
         </div>
       ) : null}
-      {addFriendOpen ? (
-        <AddFriendDialog
-          currentUserFriendCode={viewerFriendCode}
-          incomingRequests={liveIncomingFriendRequests}
-          locale={locale}
-          onClose={() => setAddFriendOpen(false)}
-          returnTo="messages"
-        />
-      ) : null}
       {contactDialogOpen ? (
         <ProfileContactBindingDialog
           initialContactEmail={contactBindings.contactEmail}
@@ -594,38 +527,5 @@ function MenuLink({
         ) : null}
       </span>
     </IntentPrefetchLink>
-  );
-}
-
-function MenuButton({
-  icon: Icon,
-  label,
-  badgeCount = 0,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  badgeCount?: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="relative flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
-    >
-      <Icon className="h-4 w-4 shrink-0 text-zinc-500" />
-      <span className="min-w-0">
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-medium">{label}</span>
-          {badgeCount > 0 ? (
-            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-moss px-1.5 text-[11px] font-semibold text-white">
-              {badgeCount > 99 ? "99+" : badgeCount}
-            </span>
-          ) : null}
-        </span>
-      </span>
-    </button>
   );
 }

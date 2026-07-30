@@ -20,7 +20,10 @@ import type {
   DirectMessageUserViewModel,
 } from "../queries/getDirectMessages";
 import { MessageBubble, type MessageBubbleViewModel } from "./MessageBubble";
-import { MessageComposer, type OptimisticMessagePayload } from "./MessageComposer";
+import {
+  MessageComposer,
+  type OptimisticMessagePayload,
+} from "./MessageComposer";
 import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
 
 type MessageThreadClientProps = {
@@ -245,7 +248,10 @@ export function MessageThreadClient({
     <>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
         {activityContext ? (
-          <ActivityContextCard activityContext={activityContext} locale={locale} />
+          <ActivityContextCard
+            activityContext={activityContext}
+            locale={locale}
+          />
         ) : null}
         {policyNotice ? <SendPolicyNotice label={policyNotice} /> : null}
         {hasMessages ? (
@@ -369,7 +375,7 @@ function getSendPolicyNotice(
 ) {
   const t = getDirectMessagesCopy(locale);
 
-  if (sendPolicy.isFriend || sendPolicy.hasPeerReplied) {
+  if (sendPolicy.isMutualFollow || sendPolicy.hasPeerReplied) {
     return null;
   }
 
@@ -413,9 +419,7 @@ function ReadOnlyMessageComposer({
     <div className="shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
       <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
-        <p className="mt-1 text-xs leading-5 text-[#156240]">
-          {description}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-[#156240]">{description}</p>
       </div>
     </div>
   );

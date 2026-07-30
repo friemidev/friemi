@@ -1,16 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
-import { CheckCircle2, ExternalLink, Loader2, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
-import {
-  sendFriendRequestToProfileAction,
-  type FriendActionState,
-} from "@/features/friends/actions/friendActions";
-import { getSignInHref } from "@/lib/auth-redirect";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import { withLocale } from "@/lib/routes";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
@@ -25,7 +20,9 @@ type UserPreviewPayload = {
     friendshipId: string | null;
     isFriend: boolean;
     isFollowing: boolean;
+    isMutualFollow: boolean;
     pendingFriendRequest: "received" | "sent" | null;
+    targetFollowsViewer: boolean;
   };
 };
 
@@ -39,12 +36,13 @@ type UserProfilePreviewPopoverContentProps = {
   redirectPath: string;
 };
 
-const initialFriendActionState: FriendActionState = {};
 const fallbackRelationship: UserPreviewPayload["relationship"] = {
   friendshipId: null,
   isFriend: false,
   isFollowing: false,
+  isMutualFollow: false,
   pendingFriendRequest: null,
+  targetFollowsViewer: false,
 };
 const userPreviewCache = new Map<string, UserPreviewPayload | null>();
 
@@ -55,44 +53,41 @@ function getInitial(name: string) {
 function getPreviewCopy(locale: string) {
   if (locale === "fr") {
     return {
-      addFriend: "Ajouter",
-      alreadyFriends: "Déjà ami",
+      follow: "Suivre",
+      followed: "Suivi",
+      followBack: "Suivre aussi",
+      mutualFollow: "Mutuel",
       emptyBio: "Pas encore de présentation.",
       failed: "Échec du chargement.",
       guestNotice: "Cet utilisateur est encore visiteur.",
       openProfile: "Profil",
-      pendingFriendRequest: "En attente",
-      requestReceived: "Voir",
-      sending: "Envoi...",
       selfNotice: "C'est votre profil.",
     };
   }
 
   if (locale === "en") {
     return {
-      addFriend: "Add friend",
-      alreadyFriends: "Friends",
+      follow: "Follow",
+      followed: "Following",
+      followBack: "Follow back",
+      mutualFollow: "Mutual",
       emptyBio: "No bio yet.",
       failed: "Failed to load.",
       guestNotice: "This user is still a guest.",
       openProfile: "Profile",
-      pendingFriendRequest: "Pending",
-      requestReceived: "Review",
-      sending: "Sending...",
       selfNotice: "This is you.",
     };
   }
 
   return {
-    addFriend: "加好友",
-    alreadyFriends: "已经是好友",
+    follow: "关注",
+    followed: "已关注",
+    followBack: "回关",
+    mutualFollow: "互相关注",
     emptyBio: "这个人还没有写简介。",
     failed: "加载失败。",
     guestNotice: "该用户还是游客哦",
     openProfile: "主页",
-    pendingFriendRequest: "已申请",
-    requestReceived: "查看申请",
-    sending: "发送中...",
     selfNotice: "这是你自己。",
   };
 }
@@ -100,138 +95,40 @@ function getPreviewCopy(locale: string) {
 function AddFriendQuickButton({
   isAuthenticated,
   locale,
+  onFollowStateChange,
   profileId,
   redirectPath,
   relationship,
 }: {
   isAuthenticated: boolean;
   locale: string;
+  onFollowStateChange: (isFollowing: boolean) => void;
   profileId: string;
   redirectPath: string;
   relationship: UserPreviewPayload["relationship"];
 }) {
   const previewCopy = getPreviewCopy(locale);
-  const [state, formAction] = useActionState(
-    sendFriendRequestToProfileAction,
-    initialFriendActionState,
-  );
-  const [isOptimisticPending, setIsOptimisticPending] = useState(false);
-
-  useEffect(() => {
-    if (relationship.isFriend) {
-      setIsOptimisticPending(false);
-      return;
-    }
-
-    if (state.code === "pending_exists") {
-      setIsOptimisticPending(true);
-      return;
-    }
-
-    if (state.formError) {
-      setIsOptimisticPending(false);
-      return;
-    }
-
-    if (state.ok) {
-      setIsOptimisticPending(true);
-    }
-  }, [relationship.isFriend, state.code, state.formError, state.ok]);
-
-  if (!isAuthenticated) {
-    return (
-      <Link
-        className="block min-w-0"
-        href={getSignInHref(locale, redirectPath)}
-      >
-        <Button
-          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
-          variant="secondary"
-        >
-          <UserPlus className="h-3 w-3 shrink-0" />
-          {previewCopy.addFriend}
-        </Button>
-      </Link>
-    );
-  }
-
-  if (relationship.isFriend) {
-    return (
-      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
-        <CheckCircle2 className="h-3 w-3 shrink-0" />
-        {previewCopy.alreadyFriends}
-      </div>
-    );
-  }
-
-  if (
-    relationship.pendingFriendRequest === "sent" ||
-    state.ok ||
-    state.code === "pending_exists" ||
-    isOptimisticPending
-  ) {
-    return (
-      <div className="inline-flex h-7 w-full min-w-0 items-center justify-center gap-1 rounded-full bg-[#F1F2EC] px-2 text-[11px] font-semibold leading-none text-[#156240] ring-1 ring-[#8AB68E]/80">
-        <CheckCircle2 className="h-3 w-3 shrink-0" />
-        {previewCopy.pendingFriendRequest}
-      </div>
-    );
-  }
-
-  if (relationship.pendingFriendRequest === "received") {
-    return (
-      <Link className="block min-w-0" href={withLocale(locale, "/friends")}>
-        <Button
-          className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#D6D5B2] bg-[#FFF5E6] !px-2 !text-[11px] font-semibold text-[#156240] hover:bg-white"
-          variant="secondary"
-        >
-          {previewCopy.requestReceived}
-        </Button>
-      </Link>
-    );
-  }
+  const activeLabel = relationship.isMutualFollow
+    ? previewCopy.mutualFollow
+    : previewCopy.followed;
+  const inactiveLabel = relationship.targetFollowsViewer
+    ? previewCopy.followBack
+    : previewCopy.follow;
 
   return (
-    <form
-      action={formAction}
-      className="inline-grid w-full min-w-0 gap-1 justify-items-center"
-      onSubmit={() => {
-        setIsOptimisticPending(true);
-      }}
-    >
-      <input name="locale" type="hidden" value={locale} />
-      <input name="targetProfileId" type="hidden" value={profileId} />
-      <input name="redirectPath" type="hidden" value={redirectPath} />
-      <input name="returnTo" type="hidden" value="friends" />
-      <FriendSubmitButton locale={locale} />
-      {state.formError ? (
-        <p className="text-[11px] leading-4 text-red-600">{state.formError}</p>
-      ) : null}
-    </form>
-  );
-}
-
-function FriendSubmitButton({ locale }: { locale: string }) {
-  const { pending } = useFormStatus();
-  const previewCopy = getPreviewCopy(locale);
-
-  return (
-    <Button
-      className="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
-      type="submit"
-    >
-      {pending ? (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          {previewCopy.sending}
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap leading-none">
-          <UserPlus className="h-3 w-3 shrink-0" />
-          {previewCopy.addFriend}
-        </span>
-      )}
-    </Button>
+    <FollowButton
+      activeButtonClassName="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#8AB68E]/80 bg-[#F1F2EC] !px-2 !text-[11px] font-semibold leading-none text-[#156240] shadow-none"
+      activeLabel={activeLabel}
+      buttonClassName="!h-7 !min-h-7 w-full min-w-0 rounded-full border border-[#F09182]/70 bg-[#F09182] !px-2 !text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(240,145,130,0.18)] hover:bg-[#E98272]"
+      fullWidth
+      inactiveLabel={inactiveLabel}
+      isAuthenticated={isAuthenticated}
+      isFollowing={relationship.isFollowing}
+      locale={locale}
+      onStateChange={onFollowStateChange}
+      redirectPath={redirectPath}
+      targetUserProfileId={profileId}
+    />
   );
 }
 
@@ -325,6 +222,30 @@ export function UserProfilePreviewPopoverContent({
     return () => controller.abort();
   }, [isGuest, profileId]);
 
+  function handleFollowStateChange(isFollowing: boolean) {
+    setData((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const isMutualFollow =
+        isFollowing && current.relationship.targetFollowsViewer;
+      const nextPreview = {
+        ...current,
+        relationship: {
+          ...current.relationship,
+          isFriend: isMutualFollow,
+          isFollowing,
+          isMutualFollow,
+        },
+      };
+
+      userPreviewCache.set(profileId, nextPreview);
+
+      return nextPreview;
+    });
+  }
+
   return (
     <div className="w-full overflow-hidden rounded-[1.35rem] border border-[#8AB68E]/45 bg-white p-3.5 shadow-[0_16px_36px_rgba(21,98,64,0.12)]">
       <div className="space-y-3">
@@ -378,6 +299,7 @@ export function UserProfilePreviewPopoverContent({
               <AddFriendQuickButton
                 isAuthenticated={isAuthenticated}
                 locale={locale}
+                onFollowStateChange={handleFollowStateChange}
                 profileId={profileId}
                 redirectPath={redirectPath}
                 relationship={relationship}

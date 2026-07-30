@@ -8,7 +8,7 @@ import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/fin
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import {
-  areProfilesFriends,
+  areProfilesMutualFollows,
   maxActivityCoManagers,
 } from "../utils/activityManagement";
 import { getActivityDetailPath } from "../utils/activityRoutes";
@@ -18,12 +18,14 @@ const coManagerActionSchema = z.object({
   locale: z.string().min(1).default("zh-CN"),
 });
 
-const addCoManagerSchema = coManagerActionSchema.extend({
-  managerFriendCode: z.string().trim().optional(),
-  managerProfileId: z.string().trim().optional(),
-}).refine((data) => data.managerProfileId || data.managerFriendCode, {
-  path: ["managerProfileId"],
-});
+const addCoManagerSchema = coManagerActionSchema
+  .extend({
+    managerFriendCode: z.string().trim().optional(),
+    managerProfileId: z.string().trim().optional(),
+  })
+  .refine((data) => data.managerProfileId || data.managerFriendCode, {
+    path: ["managerProfileId"],
+  });
 
 const removeCoManagerSchema = coManagerActionSchema.extend({
   coManagerId: z.string().min(1),
@@ -56,15 +58,16 @@ function getCopy(locale: string): Copy {
       alreadyManager: "Cette personne est déjà gestionnaire.",
       addFailed: "Impossible d'ajouter ce gestionnaire. Réessayez plus tard.",
       addSuccess: "Gestionnaire ajouté.",
-      friendCodeInvalid: "Entrez un code ami à 6 chiffres.",
-      friendCodeNotFound: "Aucun ami actif trouvé avec ce code.",
+      friendCodeInvalid: "Entrez un ID Friemi à 6 chiffres.",
+      friendCodeNotFound: "Aucun profil actif trouvé avec cet ID.",
       friendshipRequired:
-        "Vous ne pouvez choisir qu'une personne déjà dans vos amis.",
+        "Vous pouvez choisir une personne qui vous suit aussi.",
       limitReached: "Chaque plan peut avoir au maximum 3 gestionnaires.",
       missing: "Ce plan n'existe plus.",
       noPermission: "Seul l'organisateur peut modifier les gestionnaires.",
       refreshError: "Réessayez plus tard.",
-      removeFailed: "Impossible de retirer ce gestionnaire. Réessayez plus tard.",
+      removeFailed:
+        "Impossible de retirer ce gestionnaire. Réessayez plus tard.",
       removeSuccess: "Gestionnaire retiré.",
       selfError: "L'organisateur n'a pas besoin d'être ajouté.",
     };
@@ -75,9 +78,9 @@ function getCopy(locale: string): Copy {
       alreadyManager: "This person is already a manager.",
       addFailed: "Could not add this manager. Try again later.",
       addSuccess: "Manager added.",
-      friendCodeInvalid: "Enter a 6-digit friend code.",
-      friendCodeNotFound: "No active friend found with that code.",
-      friendshipRequired: "You can only choose one of your friends.",
+      friendCodeInvalid: "Enter a 6-digit Friemi ID.",
+      friendCodeNotFound: "No active profile found with that ID.",
+      friendshipRequired: "You can only choose someone who follows you back.",
       limitReached: "Each plan can have up to 3 managers.",
       missing: "This plan no longer exists.",
       noPermission: "Only the organizer can edit managers.",
@@ -89,12 +92,12 @@ function getCopy(locale: string): Copy {
   }
 
   return {
-    alreadyManager: "这个好友已经是管理人了。",
+    alreadyManager: "这个用户已经是管理人了。",
     addFailed: "添加管理人失败，请稍后重试。",
     addSuccess: "管理人已添加。",
-    friendCodeInvalid: "请输入 6 位好友号。",
-    friendCodeNotFound: "没有找到这个好友号对应的活跃好友。",
-    friendshipRequired: "只能从你的好友中选择管理人。",
+    friendCodeInvalid: "请输入 6 位个人码。",
+    friendCodeNotFound: "没有找到这个个人码对应的活跃用户。",
+    friendshipRequired: "只能选择与你互关的人作为管理人。",
     limitReached: "每个聚吧最多只能设置 3 位管理人。",
     missing: "聚吧不存在或已更新。",
     noPermission: "只有发起人可以修改管理人。",
@@ -239,13 +242,13 @@ export async function addActivityCoManagerAction(
           };
         }
 
-        const isFriend = await areProfilesFriends(
+        const isMutualFollow = await areProfilesMutualFollows(
           profile.id,
           manager.id,
           tx,
         );
 
-        if (!isFriend) {
+        if (!isMutualFollow) {
           return {
             ok: false,
             error: copy.friendshipRequired,

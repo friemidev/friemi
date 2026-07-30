@@ -23,7 +23,6 @@ import { formatActivityDate } from "@chill-club/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FriendRequestActionButtons } from "@/features/friends/components/FriendsDashboard";
 import {
   deleteNotificationClientAction,
   deleteReadNotificationsClientAction,
@@ -233,7 +232,7 @@ function getNotificationFilterCopy(locale: string): {
         unread: "Non lues",
         read: "Lues",
         activity: "Activité",
-        friends: "Amis",
+        friends: "Suivis",
         gift: "Cadeaux",
         system: "Friemi",
       },
@@ -247,7 +246,7 @@ function getNotificationFilterCopy(locale: string): {
         unread: "Unread",
         read: "Read",
         activity: "Activity",
-        friends: "Friends",
+        friends: "Follows",
         gift: "Gifts",
         system: "Friemi",
       },
@@ -260,7 +259,7 @@ function getNotificationFilterCopy(locale: string): {
       unread: "未读",
       read: "已读",
       activity: "活动",
-      friends: "好友",
+      friends: "关注",
       gift: "礼物",
       system: "Friemi",
     },
@@ -479,9 +478,6 @@ function NotificationCard({
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||
         notification.type === "MOMENT_REPOSTED";
-  const canInlineResolveFriendRequest =
-    notification.type === "FRIEND_REQUEST" &&
-    Boolean(notification.friendRequestId);
 
   const mobileDeleteAction = (
     <button
@@ -552,15 +548,6 @@ function NotificationCard({
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              {canInlineResolveFriendRequest && notification.friendRequestId ? (
-                <div className="w-full sm:max-w-xs">
-                  <FriendRequestActionButtons
-                    locale={locale}
-                    redirectPath="/notifications"
-                    requestId={notification.friendRequestId}
-                  />
-                </div>
-              ) : null}
               {hasAction ? (
                 <form action={openNotificationActivityAction}>
                   <input name="locale" type="hidden" value={locale} />

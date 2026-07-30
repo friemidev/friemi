@@ -39,7 +39,7 @@ export type DirectMessageSendPolicy = {
   canSend: boolean;
   conversationId: string | null;
   hasPeerReplied: boolean;
-  isFriend: boolean;
+  isMutualFollow: boolean;
   reason: DirectMessageSendPolicyReason;
   remainingNonFriendMessages: number | null;
   trustScore: number;
@@ -51,7 +51,7 @@ type ResolveDirectMessageSendPolicyInput = {
   currentUserProfileId: string;
   hasOrganizerActivity?: boolean;
   hasPeerReplied?: boolean;
-  isFriend?: boolean;
+  isMutualFollow?: boolean;
   peerProfileId: string;
   trustScore?: number;
 };
@@ -180,35 +180,58 @@ function normalizeDirectMessagePayload(body: string, imageUrls?: string[]) {
   };
 }
 
-async function assertFriendshipExists(
+async function assertMutualFollowExists(
   db: DbClient,
   userId: string,
   otherUserId: string,
 ) {
   assertDifferentUsers(userId, otherUserId);
 
-  const friendship = await findFriendship(db, userId, otherUserId);
+  const isMutualFollow = await hasMutualFollow(db, userId, otherUserId);
 
-  if (!friendship) {
+  if (!isMutualFollow) {
     throw new DirectMessageDomainError("NOT_FRIENDS");
   }
 }
 
-async function findFriendship(
+async function hasMutualFollow(
   db: DbClient,
   userId: string,
   otherUserId: string,
 ) {
-  const pair = getConversationPair(userId, otherUserId);
+  if (userId === otherUserId) {
+    return false;
+  }
 
-  return db.friendship.findUnique({
+  const follows = await db.userFollow.findMany({
     where: {
-      userAId_userBId: pair,
+      OR: [
+        {
+          followerId: userId,
+          followingId: otherUserId,
+        },
+        {
+          followerId: otherUserId,
+          followingId: userId,
+        },
+      ],
     },
     select: {
-      id: true,
+      followerId: true,
+      followingId: true,
     },
   });
+
+  return (
+    follows.some(
+      (follow) =>
+        follow.followerId === userId && follow.followingId === otherUserId,
+    ) &&
+    follows.some(
+      (follow) =>
+        follow.followerId === otherUserId && follow.followingId === userId,
+    )
+  );
 }
 
 async function findOrganizerMessageActivity(
@@ -350,7 +373,7 @@ export function resolveDirectMessageSendPolicy({
   currentUserProfileId,
   hasOrganizerActivity = false,
   hasPeerReplied = false,
-  isFriend = false,
+  isMutualFollow = false,
   peerProfileId,
   trustScore = initialTrustScore,
 }: ResolveDirectMessageSendPolicyInput): DirectMessageSendPolicy {
@@ -359,19 +382,19 @@ export function resolveDirectMessageSendPolicy({
       canSend: false,
       conversationId,
       hasPeerReplied: false,
-      isFriend: false,
+      isMutualFollow: false,
       reason: "SELF_CONVERSATION",
       remainingNonFriendMessages: 0,
       trustScore,
     };
   }
 
-  if (isFriend) {
+  if (isMutualFollow) {
     return {
       canSend: true,
       conversationId,
       hasPeerReplied,
-      isFriend: true,
+      isMutualFollow: true,
       reason: "ALLOWED",
       remainingNonFriendMessages: null,
       trustScore,
@@ -383,7 +406,7 @@ export function resolveDirectMessageSendPolicy({
       canSend: false,
       conversationId,
       hasPeerReplied,
-      isFriend: false,
+      isMutualFollow: false,
       reason: "LOW_TRUST",
       remainingNonFriendMessages: 0,
       trustScore,
@@ -395,7 +418,7 @@ export function resolveDirectMessageSendPolicy({
       canSend: true,
       conversationId,
       hasPeerReplied: true,
-      isFriend: false,
+      isMutualFollow: false,
       reason: "ALLOWED",
       remainingNonFriendMessages: null,
       trustScore,
@@ -411,7 +434,7 @@ export function resolveDirectMessageSendPolicy({
     canSend: remainingNonFriendMessages > 0,
     conversationId,
     hasPeerReplied: false,
-    isFriend: false,
+    isMutualFollow: false,
     reason:
       remainingNonFriendMessages > 0 ? "ALLOWED" : "NON_FRIEND_LIMIT_REACHED",
     remainingNonFriendMessages,
@@ -435,9 +458,9 @@ export async function getDirectMessageSendPolicy(
     });
   }
 
-  const [friendship, organizerActivity, existingConversation, trustScore] =
+  const [isMutualFollow, organizerActivity, existingConversation, trustScore] =
     await Promise.all([
-      findFriendship(prisma, currentUserProfileId, peerProfileId),
+      hasMutualFollow(prisma, currentUserProfileId, peerProfileId),
       findOrganizerMessageActivity(
         prisma,
         currentUserProfileId,
@@ -448,12 +471,12 @@ export async function getDirectMessageSendPolicy(
       getTrustScore(prisma, currentUserProfileId),
     ]);
 
-  if (friendship || !existingConversation) {
+  if (isMutualFollow || !existingConversation) {
     return resolveDirectMessageSendPolicy({
       conversationId: existingConversation?.id ?? null,
       currentUserProfileId,
       hasOrganizerActivity: Boolean(organizerActivity),
-      isFriend: Boolean(friendship),
+      isMutualFollow,
       peerProfileId,
       trustScore,
     });
@@ -474,7 +497,7 @@ export async function getDirectMessageSendPolicy(
     currentUserProfileId,
     hasOrganizerActivity: Boolean(organizerActivity),
     hasPeerReplied: peerReplied,
-    isFriend: false,
+    isMutualFollow: false,
     peerProfileId,
     trustScore,
   });
@@ -487,14 +510,14 @@ async function assertDirectMessageSendAccess(
 ) {
   assertDifferentUsers(userId, otherUserId);
 
-  const [friendship, organizerActivity, existingConversation] =
+  const [isMutualFollow, organizerActivity, existingConversation] =
     await Promise.all([
-      findFriendship(db, userId, otherUserId),
+      hasMutualFollow(db, userId, otherUserId),
       findOrganizerMessageActivity(db, userId, otherUserId, []),
       findExistingConversation(db, userId, otherUserId),
     ]);
 
-  if (friendship) {
+  if (isMutualFollow) {
     return;
   }
 
@@ -505,7 +528,7 @@ async function assertDirectMessageSendAccess(
       conversationId: null,
       currentUserProfileId: userId,
       hasOrganizerActivity: Boolean(organizerActivity),
-      isFriend: false,
+      isMutualFollow: false,
       peerProfileId: otherUserId,
       trustScore,
     });
@@ -529,7 +552,7 @@ async function assertDirectMessageSendAccess(
     currentUserProfileId: userId,
     hasOrganizerActivity: Boolean(organizerActivity),
     hasPeerReplied: peerReplied,
-    isFriend: false,
+    isMutualFollow: false,
     peerProfileId: otherUserId,
     trustScore,
   });
@@ -571,7 +594,7 @@ export async function getOrCreateDirectConversation({
   friendProfileId: string;
 }): Promise<DirectConversationViewModel> {
   return prisma.$transaction(async (tx) => {
-    await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
+    await assertMutualFollowExists(tx, currentUserProfileId, friendProfileId);
 
     const pair = getConversationPair(currentUserProfileId, friendProfileId);
 
@@ -839,7 +862,7 @@ export async function sendDirectMessageToFriend({
   return prisma.$transaction(async (tx) => {
     const transactionStartedAt = Date.now();
     const accessStartedAt = Date.now();
-    await assertFriendshipExists(tx, currentUserProfileId, friendProfileId);
+    await assertMutualFollowExists(tx, currentUserProfileId, friendProfileId);
     const accessMs = Date.now() - accessStartedAt;
 
     const pair = getConversationPair(currentUserProfileId, friendProfileId);
