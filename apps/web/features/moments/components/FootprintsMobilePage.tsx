@@ -46,7 +46,9 @@ import { MessageAvatar } from "@/features/direct-messages/components/MessageAvat
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
+import { removeFriendshipAction } from "@/features/friends/actions/friendActions";
 import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
+import { getFriendsCopy } from "@/features/friends/copy";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import {
@@ -2365,6 +2367,7 @@ function FootprintsMessageRow({
   locale: string;
 }) {
   const t = getDirectMessagesCopy(locale);
+  const friendsCopy = getFriendsCopy(locale);
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
@@ -2374,6 +2377,11 @@ function FootprintsMessageRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const [removeState, removeAction] = useActionState(
+    removeFriendshipAction,
+    {},
+  );
+  const canRemoveFriend = friend.isFriend && Boolean(friend.friendshipId);
   const content = (
     <>
       <MessageAvatar
@@ -2411,37 +2419,72 @@ function FootprintsMessageRow({
     </>
   );
 
+  const removeButton = canRemoveFriend ? (
+    <form
+      action={removeAction}
+      className="shrink-0 self-center"
+      onSubmit={(event) => {
+        if (!window.confirm(friendsCopy.removeConfirm)) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <input name="locale" type="hidden" value={locale} />
+      <input name="redirectPath" type="hidden" value="/footprints?tab=message" />
+      <input name="friendshipId" type="hidden" value={friend.friendshipId ?? ""} />
+      <button
+        type="submit"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#8F9189] transition hover:bg-[#FFF0F0] hover:text-[#9A2135] active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9A2135]/20"
+        aria-label={friendsCopy.remove}
+        title={friendsCopy.remove}
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+      {removeState.formError ? (
+        <span className="sr-only" aria-live="polite">
+          {removeState.formError}
+        </span>
+      ) : null}
+    </form>
+  ) : null;
+
   return (
     <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
       {friend.conversationId ? (
-        <Link
-          aria-label={t.openConversation(friend.friend.nickname)}
-          className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
-          href={withLocale(locale, `/messages/${friend.conversationId}`)}
-        >
-          {content}
-        </Link>
-      ) : (
-        <form action={openDirectConversationAction}>
-          <input name="locale" type="hidden" value={locale} />
-          <input
-            name="redirectPath"
-            type="hidden"
-            value="/footprints?tab=message"
-          />
-          <input
-            name="friendProfileId"
-            type="hidden"
-            value={friend.friend.id}
-          />
-          <button
-            type="submit"
-            className="flex w-full min-w-0 items-center gap-3 px-1 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
             aria-label={t.openConversation(friend.friend.nickname)}
+            className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+            href={withLocale(locale, `/messages/${friend.conversationId}`)}
           >
             {content}
-          </button>
-        </form>
+          </Link>
+          {removeButton}
+        </div>
+      ) : (
+        <div className="flex min-w-0 items-center gap-2">
+          <form action={openDirectConversationAction} className="min-w-0 flex-1">
+            <input name="locale" type="hidden" value={locale} />
+            <input
+              name="redirectPath"
+              type="hidden"
+              value="/footprints?tab=message"
+            />
+            <input
+              name="friendProfileId"
+              type="hidden"
+              value={friend.friend.id}
+            />
+            <button
+              type="submit"
+              className="flex w-full min-w-0 items-center gap-3 px-1 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+              aria-label={t.openConversation(friend.friend.nickname)}
+            >
+              {content}
+            </button>
+          </form>
+          {removeButton}
+        </div>
       )}
     </article>
   );
@@ -2449,7 +2492,7 @@ function FootprintsMessageRow({
 
 export function FootprintsMobilePage({
   activityRoomChats,
-  initialTab = "message",
+  initialTab = "moment",
   locale,
   messageFriends,
   messageRosterError = false,

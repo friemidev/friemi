@@ -560,7 +560,7 @@ export async function getDirectMessageFriendRoster(
     .filter((conversation) => {
       const peerId = getConversationPeerId(conversation, currentUserProfileId);
 
-      return !friendshipsByFriendId.has(peerId);
+      return !friendshipsByFriendId.has(peerId) && conversation.messages.length > 0;
     })
     .map((conversation) => ({
       friendshipId: null,

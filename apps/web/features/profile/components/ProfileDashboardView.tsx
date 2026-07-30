@@ -52,13 +52,13 @@ import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import { achievementCatalog } from "@/features/achievements/achievementCatalog";
 import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
-import { defaultProfileAvatars } from "@/features/profile/defaultAvatars";
 import {
   ProfileActivitySections,
   type ProfileSectionKey,
 } from "./ProfileActivitySections";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
+import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
 import { ProfileAchievementBadgeStrip } from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
@@ -329,16 +329,23 @@ function ProfileAvatar({
         <img
           src={avatarUrl}
           alt={name}
-          className={cn(sizeClass, "rounded-full object-cover")}
+          className={cn(
+            sizeClass,
+            "rounded-full bg-white object-cover ring-1 ring-[#DAD9C8]",
+          )}
         />
       ) : (
         <span
           className={cn(
             sizeClass,
-            "flex items-center justify-center rounded-full bg-[#E83F83] font-medium text-white shadow-[0_14px_28px_rgba(232,63,131,0.18)]",
+            "relative flex items-center justify-center overflow-hidden rounded-full bg-[#E83F83] font-medium text-white ring-1 ring-[#DAD9C8]",
           )}
         >
-          {initial}
+          <span
+            aria-hidden="true"
+            className="absolute inset-[5px] rounded-full border border-white/25"
+          />
+          <span className="relative">{initial}</span>
         </span>
       )}
       {isOnline ? (
@@ -1297,19 +1304,13 @@ function MobileProfileAvatarEditor({
     mobileAvatarInitialState,
   );
   const [open, setOpen] = useState(false);
-  const currentDefaultAvatar = defaultProfileAvatars.find(
-    (avatar) => avatar.src === avatarUrl,
-  );
-  const [avatarValue, setAvatarValue] = useState(
-    currentDefaultAvatar?.src ?? defaultProfileAvatars[0].src,
-  );
+  const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   useEffect(() => {
-    const nextDefaultAvatar = defaultProfileAvatars.find(
-      (avatar) => avatar.src === avatarUrl,
-    );
-
-    setAvatarValue(nextDefaultAvatar?.src ?? defaultProfileAvatars[0].src);
+    setAvatarValue(avatarUrl);
+    setAvatarDirty(false);
   }, [avatarUrl]);
 
   useEffect(() => {
@@ -1318,6 +1319,7 @@ function MobileProfileAvatarEditor({
     }
 
     onSaved(state.avatarUrl);
+    setAvatarDirty(false);
     setOpen(false);
     router.refresh();
   }, [onSaved, router, state.avatarUrl, state.success]);
@@ -1352,7 +1354,7 @@ function MobileProfileAvatarEditor({
         >
           <form
             action={formAction}
-            className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_24px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E6E6E0]"
+            className="w-full rounded-[1.6rem] bg-white p-4 ring-1 ring-[#E6E6E0]"
             noValidate
           >
             <div className="flex items-center justify-between gap-3">
@@ -1371,34 +1373,22 @@ function MobileProfileAvatarEditor({
             <input name="afterSave" type="hidden" value="refresh" />
             <input name="nickname" type="hidden" value={nickname} />
             <input name="bio" type="hidden" value={bio ?? ""} />
-            <input name="avatarUrl" type="hidden" value={avatarValue} />
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              {defaultProfileAvatars.map((avatar) => {
-                const selected = avatarValue === avatar.src;
-
-                return (
-                  <button
-                    key={avatar.key}
-                    type="button"
-                    className={cn(
-                      "grid min-w-0 place-items-center rounded-2xl bg-white p-2 ring-1 ring-[#ECE6D5] transition active:scale-95",
-                      selected
-                        ? "ring-2 ring-[#156240] ring-offset-2"
-                        : "hover:ring-[#8AB68E]",
-                    )}
-                    onClick={() => setAvatarValue(avatar.src)}
-                  >
-                    {/* Default avatar assets are local public SVGs. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={avatar.src}
-                      alt=""
-                      className="h-14 w-14 rounded-full object-cover"
-                    />
-                  </button>
-                );
-              })}
-            </div>
+            {avatarDirty && avatarValue ? (
+              <input name="avatarUrl" type="hidden" value={avatarValue} />
+            ) : null}
+            <ProfileAvatarPicker
+              className="mt-4"
+              initial={initial}
+              locale={locale}
+              name={name}
+              onChange={(nextAvatarUrl) => {
+                setAvatarValue(nextAvatarUrl);
+                setAvatarDirty(true);
+              }}
+              onUploadingChange={setIsAvatarUploading}
+              value={avatarValue}
+              variant="sheet"
+            />
             {state.formError ? (
               <p className="mt-3 text-xs font-semibold text-[#9A2135]">
                 {state.formError}
@@ -1406,6 +1396,7 @@ function MobileProfileAvatarEditor({
             ) : null}
             <div className="mt-4 flex justify-end">
               <MobileProfileAvatarSubmitButton
+                disabled={!avatarDirty || isAvatarUploading}
                 label={copy.save}
                 pendingLabel={copy.saving}
               />
@@ -1418,9 +1409,11 @@ function MobileProfileAvatarEditor({
 }
 
 function MobileProfileAvatarSubmitButton({
+  disabled = false,
   label,
   pendingLabel,
 }: {
+  disabled?: boolean;
   label: string;
   pendingLabel: string;
 }) {
@@ -1429,7 +1422,7 @@ function MobileProfileAvatarSubmitButton({
   return (
     <button
       className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
-      disabled={pending}
+      disabled={pending || disabled}
       type="submit"
     >
       {pending ? pendingLabel : label}
