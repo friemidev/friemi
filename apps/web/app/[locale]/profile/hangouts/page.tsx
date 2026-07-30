@@ -51,7 +51,9 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
       friendshipId: null,
       isFriend: false,
       isFollowing: false,
+      isMutualFollow: false,
       pendingFriendRequest: null,
+      targetFollowsViewer: false,
     },
   };
 }
@@ -61,18 +63,17 @@ export default async function ProfileHangoutsPage({
 }: ProfileHangoutsPageProps) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/hangouts");
-  const dashboard = await getProfileDashboard(profile.id).catch((error: unknown) => {
-    console.error("Failed to load profile hangouts", error);
+  const dashboard = await getProfileDashboard(profile.id).catch(
+    (error: unknown) => {
+      console.error("Failed to load profile hangouts", error);
 
-    return getEmptyProfileDashboard();
-  });
+      return getEmptyProfileDashboard();
+    },
+  );
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
-      <ProfileHangoutsMobilePage
-        dashboard={dashboard}
-        locale={locale}
-      />
+      <ProfileHangoutsMobilePage dashboard={dashboard} locale={locale} />
     </PageContainer>
   );
 }

@@ -1,24 +1,13 @@
-import { prisma } from "@/lib/prisma";
+import { getFollowRelationState } from "./followRelations";
 
 export async function getViewerFollowState(
   followerId: string | null | undefined,
   followingId: string,
 ): Promise<boolean> {
-  if (!followerId || !followingId || followerId === followingId) {
-    return false;
-  }
-
-  const relation = await prisma.userFollow.findUnique({
-    where: {
-      followerId_followingId: {
-        followerId,
-        followingId,
-      },
-    },
-    select: {
-      id: true,
-    },
+  const relation = await getFollowRelationState({
+    viewerProfileId: followerId,
+    targetProfileId: followingId,
   });
 
-  return Boolean(relation);
+  return relation.viewerFollowsTarget;
 }

@@ -218,10 +218,10 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     return {
       emptyDescription: "Les nouvelles sorties apparaîtront ici.",
       emptyTitle: "Aucun groupe pour le moment",
-      friendEmptyTitle: "Aucune sortie d'amis",
+      friendEmptyTitle: "Aucune sortie suivie",
       friendEmptyDescription:
-        "Connectez-vous pour voir les sorties de vos amis.",
-      friendGoing: (count) => `${count} ami${count > 1 ? "s" : ""} y vont`,
+        "Connectez-vous pour voir les sorties des personnes que vous suivez.",
+      friendGoing: (count) => `${count} suivi${count > 1 ? "s" : ""}`,
       loadingLabel: "Chargement...",
       loadFailedTitle: "Chargement impossible",
       mineEmptyTitle: "Aucune de vos sorties",
@@ -231,7 +231,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       retryLabel: "Réessayer",
       tabs: {
         nearby: "Proche",
-        friends: "Amis",
+        friends: "Suivis",
         today: "Aujourd'hui",
         popular: "Populaire",
         mine: "Les miens",
@@ -244,19 +244,20 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     return {
       emptyDescription: "Fresh plans will appear here.",
       emptyTitle: "No plans yet",
-      friendEmptyTitle: "No friend plans yet",
-      friendEmptyDescription: "Sign in to see what friends are joining.",
-      friendGoing: (count) => `${count} friend${count > 1 ? "s" : ""} going`,
+      friendEmptyTitle: "Nothing from people you follow",
+      friendEmptyDescription:
+        "Sign in to see plans joined by people you follow.",
+      friendGoing: (count) =>
+        `${count} ${count === 1 ? "followed person" : "followed people"}`,
       loadingLabel: "Loading...",
       loadFailedTitle: "Could not load",
       mineEmptyTitle: "No personal plans yet",
-      mineEmptyDescription:
-        "Sign in to see plans you're hosting or joining.",
+      mineEmptyDescription: "Sign in to see plans you're hosting or joining.",
       participants: "people",
       retryLabel: "Retry",
       tabs: {
         nearby: "Nearby",
-        friends: "Friends",
+        friends: "Following",
         today: "Today",
         popular: "Popular",
         mine: "Mine",
@@ -268,9 +269,9 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
   return {
     emptyDescription: "新的聚吧会显示在这里。",
     emptyTitle: "暂时没有聚吧",
-    friendEmptyTitle: "暂无好友聚吧",
-    friendEmptyDescription: "登录后可以看到好友参加的聚吧。",
-    friendGoing: (count) => `${count} 位好友参加`,
+    friendEmptyTitle: "暂无关注动态",
+    friendEmptyDescription: "登录后可以看到你关注的人参加的聚吧。",
+    friendGoing: (count) => `${count} 位关注的人`,
     loadingLabel: "加载中...",
     loadFailedTitle: "加载失败",
     mineEmptyTitle: "暂无我的聚吧",
@@ -279,7 +280,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     retryLabel: "重试",
     tabs: {
       nearby: "附近",
-      friends: "好友",
+      friends: "关注",
       today: "今天",
       popular: "热门",
       mine: "我的",
@@ -748,8 +749,7 @@ export function MobileLobbyV23View({
   const [lazyFriendActivities, setLazyFriendActivities] = useState<
     ActivityCardViewModel[] | null
   >(friendActivities ? dedupeActivities(friendActivities) : null);
-  const [friendActivitiesLoading, setFriendActivitiesLoading] =
-    useState(false);
+  const [friendActivitiesLoading, setFriendActivitiesLoading] = useState(false);
   const [friendActivitiesFailed, setFriendActivitiesFailed] = useState(false);
   const friendActivitiesInFlightRef = useRef(false);
   const categoryFilterOptions = useMemo<MobileLobbyV23CategoryFilterOption[]>(

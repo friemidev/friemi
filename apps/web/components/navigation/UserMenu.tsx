@@ -3,7 +3,6 @@ import { hasClerkKeys } from "@/lib/clerk";
 import { getCopy } from "@/lib/copy";
 import { AccountMenu } from "@/components/navigation/AccountMenu";
 import { AuthRedirectSignInButton } from "@/components/navigation/AuthRedirectSignInButton";
-import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 
 type UserMenuProps = {
   locale: string;
@@ -16,7 +15,6 @@ type UserMenuProps = {
   viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
-  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 export function UserMenu({
@@ -30,7 +28,6 @@ export function UserMenu({
   viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
-  incomingFriendRequests = [],
 }: UserMenuProps) {
   const t = getCopy(locale);
 
@@ -49,7 +46,6 @@ export function UserMenu({
         viewerPhone={viewerPhone}
         viewerWechatId={viewerWechatId}
         viewerNickname={viewerNickname}
-        incomingFriendRequests={incomingFriendRequests}
         unreadNotificationCount={unreadNotificationCount}
       />
     );
@@ -67,7 +63,6 @@ export function UserMenu({
           viewerPhone={viewerPhone}
           viewerWechatId={viewerWechatId}
           viewerNickname={viewerNickname}
-          incomingFriendRequests={incomingFriendRequests}
           unreadNotificationCount={unreadNotificationCount}
         />
       </SignedIn>

@@ -4,7 +4,6 @@ import { NoConversationSelected } from "@/features/direct-messages/components/Di
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
 import { MobileFriendChatRoster } from "@/features/direct-messages/components/MobileFriendChatRoster";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
-import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -13,58 +12,39 @@ type MessagesPageProps = {
   params: Promise<{
     locale: string;
   }>;
-  searchParams?: Promise<{
-    friendRequests?: string;
-  }>;
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function MessagesPage({
-  params,
-  searchParams,
-}: MessagesPageProps) {
+export default async function MessagesPage({ params }: MessagesPageProps) {
   const { locale } = await params;
   const perf = createPerformanceTracker({
     locale,
     route: "/messages",
   });
-  const query = await searchParams;
-  const redirectPath =
-    query?.friendRequests === "1" ? "/messages?friendRequests=1" : "/messages";
   const profile = await perf.measure("viewer.profile", () =>
-    ensureCurrentUserProfile(locale, redirectPath),
+    ensureCurrentUserProfile(locale, "/messages"),
   );
   const commonCopy = getCopy(locale).common;
-  const [friendRosterResult, incomingRequests] = await perf.measure(
-    "messages.roster",
-    () =>
-      Promise.all([
-        getDirectMessageFriendRoster(profile.id)
-          .then((friends) => ({ friends, error: null }))
-          .catch((error: unknown) => {
-            console.error("Failed to load direct message friend roster", error);
-            return { friends: [], error };
-          }),
-        getPendingIncomingFriendRequests(profile.id).catch((error: unknown) => {
-          console.error("Failed to load incoming friend requests", error);
-
-          return [];
-        }),
-      ]),
+  const friendRosterResult = await perf.measure("messages.roster", () =>
+    getDirectMessageFriendRoster(profile.id)
+      .then((friends) => ({ friends, error: null }))
+      .catch((error: unknown) => {
+        console.error("Failed to load direct message friend roster", error);
+        return { friends: [], error };
+      }),
   );
-  const openFriendRequests =
-    query?.friendRequests === "1" && incomingRequests.length > 0;
-  perf.finish({
-    friendCount: friendRosterResult.friends.length,
-    incomingRequestCount: incomingRequests.length,
-    openFriendRequests,
-  }, {
-    route: `/${locale}/messages`,
-    routeKey: "messages",
-    sourceSurface: "messages",
-    userProfileId: profile.id,
-  });
+  perf.finish(
+    {
+      friendCount: friendRosterResult.friends.length,
+    },
+    {
+      route: `/${locale}/messages`,
+      routeKey: "messages",
+      sourceSurface: "messages",
+      userProfileId: profile.id,
+    },
+  );
 
   return (
     <PageContainer
@@ -81,10 +61,7 @@ export default async function MessagesPage({
       ) : (
         <MobileFriendChatRoster
           currentUserProfileId={profile.id}
-          currentUserFriendCode={profile.friendCode}
           friends={friendRosterResult.friends}
-          incomingRequests={incomingRequests}
-          initialAddFriendOpen={openFriendRequests}
           locale={locale}
         />
       )}
@@ -102,10 +79,7 @@ export default async function MessagesPage({
             <NoConversationSelected locale={locale} />
             <DesktopFriendRosterPanel
               currentUserProfileId={profile.id}
-              currentUserFriendCode={profile.friendCode}
               friends={friendRosterResult.friends}
-              incomingRequests={incomingRequests}
-              initialAddFriendOpen={openFriendRequests}
               locale={locale}
             />
           </>

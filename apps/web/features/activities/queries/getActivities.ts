@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { getViewerFollowedProfileIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
@@ -602,7 +602,7 @@ async function getActivityRelationWhere(
     };
   }
 
-  const friendIds = await getViewerFriendIds(viewerProfileId);
+  const friendIds = await getViewerFollowedProfileIds(viewerProfileId);
 
   if (friendIds.length === 0) {
     return {
@@ -1486,7 +1486,7 @@ async function attachJoinableActivityStates(
   );
   const viewerFriendIds =
     viewerProfileId && teamActivities.length > 0
-      ? await getViewerFriendIds(viewerProfileId)
+      ? await getViewerFollowedProfileIds(viewerProfileId)
       : [];
   const [
     publicEventActivitiesWithState,

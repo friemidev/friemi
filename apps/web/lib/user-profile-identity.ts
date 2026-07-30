@@ -51,5 +51,5 @@ export async function ensureUserProfileFriendCode<
     }
   }
 
-  throw new Error("Unable to generate a unique friend code.");
+  throw new Error("Unable to generate a unique Friemi ID.");
 }

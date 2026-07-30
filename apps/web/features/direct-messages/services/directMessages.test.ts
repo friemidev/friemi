@@ -5,16 +5,16 @@ import {
   resolveDirectMessageSendPolicy,
 } from "./directMessages";
 
-test("direct message policy allows friends without non-friend limits", () => {
+test("direct message policy allows mutual follows without non-mutual limits", () => {
   const policy = resolveDirectMessageSendPolicy({
     currentUserProfileId: "u1",
-    isFriend: true,
+    isMutualFollow: true,
     peerProfileId: "u2",
     trustScore: 30,
   });
 
   assert.equal(policy.canSend, true);
-  assert.equal(policy.isFriend, true);
+  assert.equal(policy.isMutualFollow, true);
   assert.equal(policy.remainingNonFriendMessages, null);
 });
 
@@ -37,7 +37,7 @@ test("direct message policy blocks self and low-trust senders", () => {
   );
 });
 
-test("direct message policy lets non-friends start with a two-message limit", () => {
+test("direct message policy lets non-mutual users start with a two-message limit", () => {
   const policy = resolveDirectMessageSendPolicy({
     currentUserProfileId: "u1",
     peerProfileId: "u2",
@@ -46,13 +46,10 @@ test("direct message policy lets non-friends start with a two-message limit", ()
 
   assert.equal(policy.canSend, true);
   assert.equal(policy.reason, "ALLOWED");
-  assert.equal(
-    policy.remainingNonFriendMessages,
-    nonFriendDirectMessageLimit,
-  );
+  assert.equal(policy.remainingNonFriendMessages, nonFriendDirectMessageLimit);
 });
 
-test("direct message policy enforces two non-friend messages until peer replies", () => {
+test("direct message policy enforces two non-mutual messages until peer replies", () => {
   assert.equal(nonFriendDirectMessageLimit, 2);
 
   const secondAllowed = resolveDirectMessageSendPolicy({

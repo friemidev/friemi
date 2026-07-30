@@ -27,12 +27,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
-import {
-  sendFriendRequestToProfileAction,
-  type FriendActionState,
-} from "@/features/friends/actions/friendActions";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import { getFriendsCopy } from "@/features/friends/copy";
 import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
@@ -91,7 +87,6 @@ type ProfileDashboardViewProps = {
   publicAchievements?: PublicAchievementWallItem[];
 };
 
-const compactFriendActionInitialState: FriendActionState = {};
 const profilePresenceInitialState: UpdateProfilePresenceState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
@@ -157,7 +152,7 @@ function getMobileProfileCopy(locale: string) {
       accountSecurity: "Compte et sécurité",
       accountSettings: "Paramètres du compte",
       achievements: "Badges",
-      addFriend: "Ajouter",
+      addFriend: "Suivre",
       available: "Ouvert",
       bag: "Sac",
       charm: "Aura",
@@ -165,7 +160,7 @@ function getMobileProfileCopy(locale: string) {
       copied: "Copié",
       created: "Sorties",
       editProfile: "Modifier",
-      friends: "Amis",
+      friends: "Mutuels",
       giftWall: "Cadeaux",
       hangoutsTitle: "Mes sorties",
       invite: "Inviter",
@@ -173,10 +168,16 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       more: "Plus",
-      networkTitle: "Mes amis",
+      networkTitle: "Réseau",
       noTimeline: "Aucune activité publique pour le moment.",
       nextCharm: "Prochain",
-      pendingFriend: "Demandé",
+      unfollowCancel: "Annuler",
+      unfollowConfirm: "Confirmer",
+      unfollowDescription: "Vous ne serez plus en suivi mutuel.",
+      unfollowTitle: "Ne plus suivre ?",
+      followBack: "Suivre aussi",
+      mutualFollow: "Mutuel",
+      pendingFriend: "Suivi",
       profileTitle: "Profile",
       publicTimeline: "Activité",
       recentGifts: "Reçus",
@@ -199,7 +200,7 @@ function getMobileProfileCopy(locale: string) {
       accountSecurity: "Account & security",
       accountSettings: "Account settings",
       achievements: "Badges",
-      addFriend: "Add friend",
+      addFriend: "Follow",
       available: "Open",
       bag: "Bag",
       charm: "Charm",
@@ -207,7 +208,7 @@ function getMobileProfileCopy(locale: string) {
       copied: "Copied",
       created: "Plans",
       editProfile: "Edit",
-      friends: "Friends",
+      friends: "Mutual",
       giftWall: "Gifts",
       hangoutsTitle: "My Plans",
       invite: "Invite",
@@ -215,10 +216,16 @@ function getMobileProfileCopy(locale: string) {
       message: "Message",
       moments: "Moments",
       more: "More",
-      networkTitle: "My Friends",
+      networkTitle: "Network",
       noTimeline: "No public activity yet.",
       nextCharm: "Next",
-      pendingFriend: "Requested",
+      unfollowCancel: "Cancel",
+      unfollowConfirm: "Unfollow",
+      unfollowDescription: "You will no longer follow each other.",
+      unfollowTitle: "Unfollow this user?",
+      followBack: "Follow back",
+      mutualFollow: "Mutual",
+      pendingFriend: "Following",
       profileTitle: "Profile",
       publicTimeline: "Activity",
       recentGifts: "Received",
@@ -240,7 +247,7 @@ function getMobileProfileCopy(locale: string) {
     accountSecurity: "账号与安全",
     accountSettings: "账号设置",
     achievements: "成就",
-    addFriend: "加好友",
+    addFriend: "关注",
     available: "可进入",
     bag: "背包",
     charm: "魅力值",
@@ -248,18 +255,24 @@ function getMobileProfileCopy(locale: string) {
     copied: "已复制",
     created: "聚吧",
     editProfile: "编辑资料",
-    friends: "好友",
+    friends: "互关",
     giftWall: "礼物墙",
     hangoutsTitle: "我的聚吧",
-    invite: "邀请好友",
+    invite: "邀请",
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
     more: "更多",
-    networkTitle: "我的好友",
+    networkTitle: "关系",
     noTimeline: "暂时没有公开动态。",
     nextCharm: "下一等级",
-    pendingFriend: "已申请",
+    unfollowCancel: "暂不取消",
+    unfollowConfirm: "确认取消",
+    unfollowDescription: "取消后，你们将不再是互相关注。",
+    unfollowTitle: "确认取消关注？",
+    followBack: "回关",
+    mutualFollow: "互相关注",
+    pendingFriend: "已关注",
     profileTitle: "Profile",
     publicTimeline: "动态",
     recentGifts: "最近收到",
@@ -689,62 +702,46 @@ function PublicMobileProfileActions({
   relationship: ProfileDashboardViewModel["viewerRelationship"];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const [addState, addAction] = useActionState(
-    sendFriendRequestToProfileAction,
-    compactFriendActionInitialState,
-  );
   const redirectPath = `/profile/${profileId}`;
-
-  if (!isAuthenticated) {
-    return (
-      <Link
-        href={getSignInHref(locale, redirectPath)}
-        className="inline-flex h-8 items-center justify-center rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
-      >
-        {copy.addFriend}
-      </Link>
-    );
-  }
+  const activeLabel = relationship.isMutualFollow
+    ? copy.mutualFollow
+    : copy.pendingFriend;
+  const inactiveLabel = relationship.targetFollowsViewer
+    ? copy.followBack
+    : copy.addFriend;
 
   return (
-    <div className="grid justify-items-end gap-1.5">
-      <form action={openDirectConversationAction}>
-        <input name="locale" type="hidden" value={locale} />
-        <input name="friendProfileId" type="hidden" value={profileId} />
-        <input name="redirectPath" type="hidden" value={redirectPath} />
-        <button
-          className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)]"
-          type="submit"
-        >
-          {copy.message}
-        </button>
-      </form>
-      {!relationship.isFriend ? (
-        relationship.pendingFriendRequest === "sent" || addState.ok ? (
-          <span className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]">
-            {copy.pendingFriend}
-          </span>
-        ) : relationship.pendingFriendRequest === "received" ? (
-          <Link
-            href={withLocale(locale, "/friends")}
-            className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
+    <div className="flex items-center justify-end gap-2">
+      <FollowButton
+        activeButtonClassName="!h-8 !min-h-8 min-w-[5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeLabel={activeLabel}
+        buttonClassName="!h-8 !min-h-8 min-w-[4.5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        fullWidth={false}
+        inactiveLabel={inactiveLabel}
+        isAuthenticated={isAuthenticated}
+        isFollowing={relationship.isFollowing}
+        locale={locale}
+        redirectPath={redirectPath}
+        targetUserProfileId={profileId}
+        unfollowConfirm={{
+          cancelLabel: copy.unfollowCancel,
+          confirmLabel: copy.unfollowConfirm,
+          description: copy.unfollowDescription,
+          title: copy.unfollowTitle,
+        }}
+      />
+      {isAuthenticated ? (
+        <form action={openDirectConversationAction}>
+          <input name="locale" type="hidden" value={locale} />
+          <input name="friendProfileId" type="hidden" value={profileId} />
+          <input name="redirectPath" type="hidden" value={redirectPath} />
+          <button
+            className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)] active:scale-[0.98]"
+            type="submit"
           >
-            {copy.pendingFriend}
-          </Link>
-        ) : (
-          <form action={addAction}>
-            <input name="locale" type="hidden" value={locale} />
-            <input name="targetProfileId" type="hidden" value={profileId} />
-            <input name="redirectPath" type="hidden" value={redirectPath} />
-            <input name="returnTo" type="hidden" value="friends" />
-            <button
-              className="inline-flex h-7 items-center justify-center rounded-full bg-white px-2.5 text-[10px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
-              type="submit"
-            >
-              {copy.addFriend}
-            </button>
-          </form>
-        )
+            {copy.message}
+          </button>
+        </form>
       ) : null}
     </div>
   );
@@ -1764,7 +1761,6 @@ export function ProfileDashboardView({
   publicAchievements = [],
 }: ProfileDashboardViewProps) {
   const t = getCopy(locale);
-  const friendsCopy = getFriendsCopy(locale);
   const mobileCopy = getMobileProfileCopy(locale);
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
@@ -1910,6 +1906,10 @@ export function ProfileDashboardView({
                   createdCount={dashboard.createdActivityCount}
                   joinedCount={dashboard.participationCount}
                   friendCount={dashboard.friendCount}
+                  followers={dashboard.followers}
+                  followersCount={dashboard.followersCount}
+                  following={dashboard.following}
+                  followingCount={dashboard.followingCount}
                   friends={dashboard.friends}
                   locale={locale}
                   createdLabel={selfMetricLabels.created}
@@ -1942,7 +1942,7 @@ export function ProfileDashboardView({
                   className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
                 >
                   <UsersRound className="h-4 w-4" />
-                  {friendsCopy.openFriends}
+                  {mobileCopy.networkTitle}
                 </Link>
               </div>
             </div>

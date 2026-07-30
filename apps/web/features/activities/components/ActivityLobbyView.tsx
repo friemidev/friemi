@@ -240,9 +240,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "favorites":
         return "Favoris";
       case "friendHosted":
-        return "Amis hotes";
+        return "Vos suivis";
       case "friendJoined":
-        return "Amis inscrits";
+        return "Suivis inscrits";
       default:
         return fallback;
     }
@@ -259,9 +259,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "favorites":
         return "Favorites";
       case "friendHosted":
-        return "Hosted by friends";
+        return "People you follow host";
       case "friendJoined":
-        return "Joined by friends";
+        return "People you follow joined";
       default:
         return fallback;
     }
@@ -277,9 +277,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
     case "favorites":
       return "我收藏的";
     case "friendHosted":
-      return "好友发起";
+      return "关注的人发起";
     case "friendJoined":
-      return "好友参加";
+      return "关注的人参加";
     default:
       return fallback;
   }
@@ -336,10 +336,10 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
   if (locale === "fr") {
     return [
       {
-        href: "/friends",
-        label: "Ajouter des amis",
+        href: "/search",
+        label: "Trouver des personnes",
         description:
-          "Ajoutez d'abord vos proches. Dès qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
+          "Suivez des personnes qui vous intéressent. Leurs groupes apparaîtront ici.",
         tone: "primary",
       },
       {
@@ -362,10 +362,10 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
   if (locale === "en") {
     return [
       {
-        href: "/friends",
-        label: "Add friends first",
+        href: "/search",
+        label: "Find people",
         description:
-          "Bring your people in first. As soon as they start a plan or join one, it will show up here.",
+          "Follow people you are interested in. Their plans will appear here.",
         tone: "primary",
       },
       {
@@ -387,10 +387,9 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
 
   return [
     {
-      href: "/friends",
-      label: "先去加好友",
-      description:
-        "把常一起玩的人先加进来。他们发起聚吧或一起报名，你马上就能在这里看到。",
+      href: "/search",
+      label: "去找人",
+      description: "关注几个感兴趣的人。他们发起或参加聚吧时，这里会显示。",
       tone: "primary",
     },
     {
@@ -3001,7 +3000,7 @@ export function ActivityLobbyView({
                       ? "Votre reseau est encore leger. Ces sorties donnent tout de suite une raison de contacter quelqu'un."
                       : locale === "en"
                         ? "Your network is still light. These activities give you a concrete reason to start."
-                        : "好友和记录还少时，先用这些真实活动作为组局起点。"}
+                        : "关注和记录还少时，先用这些真实活动作为组局起点。"}
                   </p>
                 </div>
                 <Link

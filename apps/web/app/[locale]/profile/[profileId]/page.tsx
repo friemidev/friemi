@@ -51,7 +51,9 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
       friendshipId: null,
       isFriend: false,
       isFollowing: false,
+      isMutualFollow: false,
       pendingFriendRequest: null,
+      targetFollowsViewer: false,
     },
   };
 }

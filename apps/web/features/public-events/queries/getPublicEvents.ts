@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { getViewerFollowedProfileIds } from "@/features/friends/queries/getViewerFriendIds";
 import {
   activityCardSelect,
   getActivityCardViewModel,
@@ -155,7 +155,7 @@ async function attachTeamStates(
   }
 
   const viewerFriendIds = viewerProfileId
-    ? await getViewerFriendIds(viewerProfileId)
+    ? await getViewerFollowedProfileIds(viewerProfileId)
     : [];
   const [teamsWithFavoriteState, friendSignalMap] = await Promise.all([
     attachActivityFavoriteStates(teams, viewerProfileId),

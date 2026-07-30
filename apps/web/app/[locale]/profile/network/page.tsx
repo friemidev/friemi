@@ -51,7 +51,9 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
       friendshipId: null,
       isFriend: false,
       isFollowing: false,
+      isMutualFollow: false,
       pendingFriendRequest: null,
+      targetFollowsViewer: false,
     },
   };
 }
@@ -61,19 +63,17 @@ export default async function ProfileNetworkPage({
 }: ProfileNetworkPageProps) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/network");
-  const dashboard = await getProfileDashboard(profile.id).catch((error: unknown) => {
-    console.error("Failed to load profile network", error);
+  const dashboard = await getProfileDashboard(profile.id).catch(
+    (error: unknown) => {
+      console.error("Failed to load profile network", error);
 
-    return getEmptyProfileDashboard();
-  });
+      return getEmptyProfileDashboard();
+    },
+  );
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
-      <ProfileNetworkMobilePage
-        currentUserFriendCode={profile.friendCode}
-        dashboard={dashboard}
-        locale={locale}
-      />
+      <ProfileNetworkMobilePage dashboard={dashboard} locale={locale} />
     </PageContainer>
   );
 }

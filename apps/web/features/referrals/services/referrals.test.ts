@@ -9,7 +9,7 @@ import {
 } from "./referrals";
 import { getReferralCodeToStore } from "../referralCode";
 
-test("referral code normalization accepts only Friemi friend codes", () => {
+test("referral code normalization accepts only Friemi IDs", () => {
   assert.equal(normalizeReferralCode("123456"), "123456");
   assert.equal(normalizeReferralCode("@123456"), "123456");
   assert.equal(normalizeReferralCode("abc123"), null);

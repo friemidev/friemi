@@ -170,20 +170,20 @@ function getProfilePrivateSubpageCopy(locale: string) {
       errorDescription: "Réessayez dans un instant.",
       errorTitle: "Chargement incomplet",
       invite: {
-        accepted: "Devenus amis",
+        accepted: "Mutuels",
         alreadyBound: "Déjà lié",
-        bindDescription:
-          "Entrez le code ami de la personne qui vous a invité.",
+        bindDescription: "Entrez l'ID Friemi de la personne qui vous a invité.",
         bindErrorAlready: "Une invitation est déjà liée.",
         bindErrorInvalid: "Code invalide.",
         bindErrorMissing: "Aucun profil trouvé.",
-        bindErrorSelf: "Utilisez le code d'un ami.",
-        bindPlaceholder: "Code à 6 chiffres",
+        bindErrorSelf: "Utilisez l'ID d'une autre personne.",
+        bindPlaceholder: "ID Friemi à 6 chiffres",
         bindSubmit: "Valider",
         bindSuccess: "Invitation liée",
         bindTitle: "Code reçu",
         binding: "Envoi...",
-        emptyDescription: "Vos invitations acceptées apparaîtront ici.",
+        emptyDescription:
+          "Les personnes invitées qui vous suivent aussi apparaîtront ici.",
         emptyTitle: "Aucune invitation pour le moment",
         firstJoined: "Première sortie",
         invited: "Invités",
@@ -191,20 +191,20 @@ function getProfilePrivateSubpageCopy(locale: string) {
         linkUnavailable: "Code d'invitation indisponible",
         share: "Partager",
         shareText: "Rejoins-moi sur Friemi.",
-        subtitle: "Partagez votre code avec de nouveaux amis.",
+        subtitle: "Partagez votre code avec de nouvelles personnes.",
         title: "Inviter",
       },
       loading: "Chargement",
       shop: {
         available: "Ouvert",
-        chooseFriend: "Choisir un ami",
+        chooseFriend: "Choisir une personne",
         charm: "Charm",
         close: "Fermer",
         emptyDescription:
           "La boutique affichera les cadeaux, chèques et objets échangeables après ouverture.",
         emptyTitle: "Boutique en préparation",
         giftCatalog: "Cadeaux",
-        noFriends: "Ajoutez un ami pour offrir un cadeau.",
+        noFriends: "Suivez quelqu'un pour offrir un cadeau.",
         seasonalLocked: "Événement",
         send: "Envoyer",
         sendEntry: "Offrir",
@@ -219,7 +219,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyTitle: "Aucune visite récente",
         subtitle: "Vue privée, visible uniquement par vous.",
         title: "Visites",
-        friend: "Ami",
+        friend: "Mutuel",
         message: "Message",
         today: "Aujourd'hui",
         total: "Vues",
@@ -297,19 +297,19 @@ function getProfilePrivateSubpageCopy(locale: string) {
       errorDescription: "Try again in a moment.",
       errorTitle: "Could not load everything",
       invite: {
-        accepted: "Became friends",
+        accepted: "Mutual",
         alreadyBound: "Linked",
-        bindDescription: "Enter the friend code from the person who invited you.",
+        bindDescription: "Enter the Friemi ID from the person who invited you.",
         bindErrorAlready: "An invitation is already linked.",
         bindErrorInvalid: "Invalid code.",
         bindErrorMissing: "No profile found.",
-        bindErrorSelf: "Use a friend's code.",
-        bindPlaceholder: "6-digit code",
+        bindErrorSelf: "Use someone else's Friemi ID.",
+        bindPlaceholder: "6-digit Friemi ID",
         bindSubmit: "Link",
         bindSuccess: "Invitation linked",
         bindTitle: "Got a code",
         binding: "Linking...",
-        emptyDescription: "Accepted invitations will appear here.",
+        emptyDescription: "Invited people who follow you back will appear here.",
         emptyTitle: "No invitations yet",
         firstJoined: "First joined",
         invited: "Invited",
@@ -317,20 +317,20 @@ function getProfilePrivateSubpageCopy(locale: string) {
         linkUnavailable: "Invite code unavailable",
         share: "Share",
         shareText: "Join me on Friemi.",
-        subtitle: "Share your code with new friends.",
+        subtitle: "Share your code with new people.",
         title: "Invite",
       },
       loading: "Loading",
       shop: {
         available: "Open",
-        chooseFriend: "Choose a friend",
+        chooseFriend: "Choose a person",
         charm: "Charm",
         close: "Close",
         emptyDescription:
           "The shop will show gifts, checks, and exchangeable items once opened.",
         emptyTitle: "Shop is preparing",
         giftCatalog: "Gifts",
-        noFriends: "Add a friend to send a gift.",
+        noFriends: "Follow someone to send a gift.",
         seasonalLocked: "Event",
         send: "Send",
         sendEntry: "Send gift",
@@ -345,7 +345,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         emptyTitle: "No recent visitors",
         subtitle: "Private view, visible only to you.",
         title: "Visitors",
-        friend: "Friend",
+        friend: "Mutual",
         message: "Message",
         today: "Today",
         total: "Views",
@@ -420,19 +420,19 @@ function getProfilePrivateSubpageCopy(locale: string) {
     errorDescription: "稍后再试一次即可。",
     errorTitle: "部分内容加载失败",
     invite: {
-      accepted: "成为好友",
+      accepted: "已互关",
       alreadyBound: "已绑定",
-      bindDescription: "输入邀请你的人的好友号。",
+      bindDescription: "输入邀请你的人的个人码。",
       bindErrorAlready: "已经绑定过邀请人。",
-      bindErrorInvalid: "好友号无效。",
-      bindErrorMissing: "没有找到这个好友号。",
-      bindErrorSelf: "不能填写自己的好友号。",
-      bindPlaceholder: "6 位好友号",
+      bindErrorInvalid: "个人码无效。",
+      bindErrorMissing: "没有找到这个个人码。",
+      bindErrorSelf: "不能填写自己的个人码。",
+      bindPlaceholder: "6 位个人码",
       bindSubmit: "确认绑定",
       bindSuccess: "已绑定邀请人",
       bindTitle: "填写邀请人",
       binding: "绑定中...",
-      emptyDescription: "通过你的邀请码加入的新朋友会显示在这里。",
+      emptyDescription: "通过你的邀请码加入并完成互关的人会显示在这里。",
       emptyTitle: "暂时没有邀请记录",
       firstJoined: "首次参与",
       invited: "已邀请",
@@ -441,18 +441,18 @@ function getProfilePrivateSubpageCopy(locale: string) {
       share: "分享",
       shareText: "来 Friemi 和我一起聚聚。",
       subtitle: "把邀请码分享给新朋友。",
-      title: "邀请好友",
+      title: "邀请",
     },
     loading: "加载中",
     shop: {
       available: "可送",
-      chooseFriend: "选择好友",
+      chooseFriend: "选择对象",
       charm: "魅力",
       close: "关闭",
       emptyDescription: "礼物、支票和可兑换物品上线后会显示在这里。",
       emptyTitle: "商城准备中",
       giftCatalog: "礼物",
-      noFriends: "添加好友后可以送礼。",
+      noFriends: "关注用户后可以送礼。",
       seasonalLocked: "节日开放",
       send: "送出",
       sendEntry: "去送礼",
@@ -466,7 +466,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       emptyTitle: "暂时没有访客",
       subtitle: "仅自己可见的访问记录。",
       title: "访客记录",
-      friend: "好友",
+      friend: "互关",
       message: "私聊",
       today: "今日访问",
       total: "总访问",
@@ -823,11 +823,7 @@ function AchievementEquipControl({
 
   return (
     <form action={formAction} className="grid justify-items-end gap-1">
-      <input
-        name="achievementKey"
-        type="hidden"
-        value={item.definition.key}
-      />
+      <input name="achievementKey" type="hidden" value={item.definition.key} />
       <input
         name="intent"
         type="hidden"
@@ -2156,8 +2152,7 @@ export function ProfileShopPageView({
   const [dialogAttemptId, setDialogAttemptId] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const dialogGift =
-    gifts.find((gift) => gift.id === dialogGiftId) ?? null;
+  const dialogGift = gifts.find((gift) => gift.id === dialogGiftId) ?? null;
   const openGiftDialog = (giftId: string) => {
     setDialogGiftId(giftId);
     setDialogAttemptId(createShopGiftAttemptId());

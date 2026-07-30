@@ -52,10 +52,10 @@ const copy = {
       fallbackName: "Friemi 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
-      friends: "好友",
-      friendsDescription: "处理好友申请和好友列表",
+      friends: "关系",
+      friendsDescription: "查看关注和互关",
       messages: "消息",
-      messagesDescription: "查看好友私聊和活动前沟通",
+      messagesDescription: "查看聊天和活动前沟通",
       notifications: "通知中心",
       notificationsDescription: "查看报名、审核和活动变更",
       analyticsOps: "数据后台",
@@ -120,19 +120,19 @@ const copy = {
         "下面是命中部分关键词的活动与组局，适合继续逛逛。",
       publicEventsTitle: "活动",
       merchantsTitle: "商家",
-      usersTitle: "好友",
+      usersTitle: "用户",
       noActivityResults: "没有匹配的组局。",
       noMainResults: "没有匹配的活动或组局。",
       noPublicEventResults: "没有匹配的活动。",
       noMerchantResults: "没有匹配的商家。",
       noUserResults: "没有匹配的用户。",
       usersPreviewHint: (shown: number, total: number) =>
-        `先显示前 ${shown} 位好友结果，共 ${total} 位。`,
+        `先显示前 ${shown} 位用户结果，共 ${total} 位。`,
       expandUserResults: (shown: number, total: number) =>
-        `查看更多好友 ${shown}/${total}`,
-      collapseUserResults: "收起好友",
+        `查看更多用户 ${shown}/${total}`,
+      collapseUserResults: "收起用户",
       userResultsLimited: (shown: number, total: number) =>
-        `已加载 ${shown} 位好友结果，共 ${total} 位。可以换更具体的昵称或好友号继续缩小范围。`,
+        `已加载 ${shown} 位用户结果，共 ${total} 位。可以换更具体的昵称或个人码继续缩小范围。`,
       endedResultsToggleLabel: "已结束",
       showEndedResults: "显示已结束",
       hideEndedResults: "隐藏已结束",
@@ -143,13 +143,13 @@ const copy = {
       onlyEndedResultsTitle: "当前只找到已结束内容",
       onlyEndedResultsDescription: (count: number) =>
         `默认隐藏了 ${count} 个已结束的活动或组局。你可以打开历史结果继续查看。`,
-      friendCodeLabel: "好友号",
-      friendCodeMissing: "暂无好友号",
-      addFriend: "加好友",
+      friendCodeLabel: "个人码",
+      friendCodeMissing: "暂无个人码",
+      addFriend: "关注",
       addingFriend: "发送中",
       requestSent: "已发送",
-      alreadyFriends: "已是好友",
-      pendingFriendRequest: "已申请",
+      alreadyFriends: "互关",
+      pendingFriendRequest: "已关注",
       selfUser: "这是你",
       openUserProfile: (name: string) => `查看 ${name} 的主页`,
       merchantActivityCount: (count: number) => `${count} 个可展示活动`,
@@ -203,14 +203,13 @@ const copy = {
       description: "在这里发现活动，和朋友、新搭子一起出发",
       emptyTitle: "你的聚吧还空着",
       emptyDescription:
-        "公园、逛展、看电影，先发起一场聚吧，再加几个好友。",
+        "公园、逛展、看电影，先发起一场聚吧，再关注几个感兴趣的人。",
       emptySectionTitle: "从这里开始吧",
       openTitle: "开放局",
       openDescription: "所有登录用户都能看到的公开聚吧，适合找新搭子。",
       openEmptyDescription: "暂时没有开放局。可以先从活动详情页发起一个。",
       createdTitle: "我发起的",
-      createdDescription:
-        "公园、逛展、看电影，先聚起来，带上搭子一起出发。",
+      createdDescription: "公园、逛展、看电影，先聚起来，带上搭子一起出发。",
       createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
       joinedTitle: "我参加的",
       joinedDescription: "wow~ 这些都是你参加的活动",
@@ -220,14 +219,14 @@ const copy = {
       favoriteDescription: "这些有趣的活动正等你参与呢",
       favoriteEmptyDescription:
         "还没收藏任何活动？先把让你心动的那些留在这里。",
-      friendHostedTitle: "好友发起的",
-      friendHostedDescription: "朋友们在等你加入哦～",
+      friendHostedTitle: "关注的人发起",
+      friendHostedDescription: "你关注的人发起的聚吧会显示在这里。",
       friendHostedEmptyDescription:
-        "先去加几个好友吧。等他们发起聚吧，你就能第一时间看到。",
-      friendJoinedTitle: "好友参加的",
-      friendJoinedDescription: "朋友最近去哪儿玩了？说不定下一场就能一起出发。",
+        "关注几个感兴趣的人。他们发起聚吧时，这里会第一时间显示。",
+      friendJoinedTitle: "关注的人参加",
+      friendJoinedDescription: "你关注的人参加的聚吧会显示在这里。",
       friendJoinedEmptyDescription:
-        "朋友最近还没参加什么活动。先去发现页看看，有没有想一起去的。",
+        "你关注的人最近还没参加聚吧。先去发现页看看，有没有想一起去的。",
     },
     activityFilters: {
       title: "搜索和筛选",
@@ -251,8 +250,8 @@ const copy = {
       allCities: "全部城市",
       allDateRanges: "全部日期",
       allRelations: "全部关系",
-      relationFriendHosted: "好友发起",
-      relationFriendJoined: "好友参加",
+      relationFriendHosted: "关注的人发起",
+      relationFriendJoined: "关注的人参加",
       relationMine: "我发起的",
       allTypes: "全部形式",
       allTimeStates: "全部进度",
@@ -322,21 +321,21 @@ const copy = {
       openGoogleMaps: "打开 Google Maps",
     },
     activityFriendSignal: {
-      title: "好友也在",
-      cardSummary: (count: number) => `${count} 位好友已报名`,
+      title: "关注的人也在",
+      cardSummary: (count: number) => `${count} 位关注的人已报名`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} 位好友已报名`;
+          return `${count} 位关注的人已报名`;
         }
 
         if (count > names.length) {
-          return `${names.join("、")} 等 ${count} 位好友已报名`;
+          return `${names.join("、")} 等 ${count} 位关注的人已报名`;
         }
 
         return `${names.join("、")} 已报名`;
       },
       showMore: "查看更多",
-      showAllLabel: (count: number) => `查看全部 ${count} 位好友`,
+      showAllLabel: (count: number) => `查看全部 ${count} 位关注的人`,
       showLess: "收起",
     },
     activityShare: {
@@ -473,7 +472,7 @@ const copy = {
     },
     notifications: {
       title: "通知中心",
-      description: "活动、好友和评论的最新提醒都在这里。",
+      description: "活动、关注和评论的最新提醒都在这里。",
       mobileDescription: "未读通知会优先显示。",
       unreadCount: (count: number) => `${count} 条未读`,
       actionRequiredCount: (count: number) => `${count} 条需要处理`,
@@ -484,11 +483,11 @@ const copy = {
         unread: "未读",
         read: "已读",
         clearTitle: "当前没有未读通知",
-        clearDescription: "新的报名、好友申请和评论会自动出现在这里。",
+        clearDescription: "新的报名、关注和评论会自动出现在这里。",
       },
       categoryLabels: {
         participation: "报名",
-        social: "好友",
+        social: "关注",
         comment: "评论",
         message: "私信",
         activity: "活动",
@@ -497,7 +496,7 @@ const copy = {
       actorLabel: "来自",
       activityLabel: "关联",
       emptyTitle: "暂无通知",
-      emptyDescription: "有新的报名、评论或好友消息时，会显示在这里。",
+      emptyDescription: "有新的报名、评论或关注提醒时，会显示在这里。",
       emptyAction: "去发现活动",
       openActivity: "查看活动",
       openComments: "查看评论",
@@ -556,9 +555,9 @@ const copy = {
               : `${actorName}在「${activityTitle}」发布了群公告。`,
         },
         FRIEND_REQUEST: {
-          title: "新的好友申请",
+          title: "新的关注",
           body: (_activityTitle: string, actorName = "有人") =>
-            `${actorName}想添加你为好友。`,
+            `${actorName}关注了你。`,
         },
         ACTIVITY_COMMENTED: {
           title: "活动有新评论",
@@ -657,14 +656,14 @@ const copy = {
     profile: {
       title: "个人空间",
       emailFallback: "未绑定邮箱",
-      friendCodeLabel: "好友号",
-      copyFriendCode: "复制好友号",
+      friendCodeLabel: "个人码",
+      copyFriendCode: "复制个人码",
       friendCodeCopied: "已复制",
       nicknameLabel: "昵称",
       nicknamePlaceholder: "输入你的昵称",
       nicknameSetupTitle: "先设置昵称",
       nicknameSetupDescription:
-        "别人只会看到这个昵称和好友号，不会显示你的 Google 姓名或邮箱。",
+        "别人只会看到这个昵称和个人码，不会显示你的 Google 姓名或邮箱。",
       saveNickname: "保存昵称",
       savingNickname: "保存中...",
       nicknameError: "昵称不能为空，最多 24 个字。",
@@ -872,7 +871,7 @@ const copy = {
       visibilityPublic: "开放局",
       visibilityPublicHint: "会出现在聚吧大厅，登录用户都可以看到并申请加入。",
       visibilityPrivate: "私人局",
-      visibilityPrivateHint: "只对你的好友可见，适合先和熟人约局。",
+      visibilityPrivateHint: "只对与你互关的人可见，适合先和熟人约局。",
       sectionVisibilityTitle: "谁可以看",
       sectionVisibilityMobileTitle: "谁可以看",
       sectionVisibilityDescription: "公开范围与权限",
@@ -994,10 +993,10 @@ const copy = {
       fallbackName: "Friemi user",
       openMenu: "Open account menu",
       profile: "Profile",
-      friends: "Friends",
-      friendsDescription: "Requests and friend list",
+      friends: "Network",
+      friendsDescription: "Following and mutual follows",
       messages: "Messages",
-      messagesDescription: "Open friend chats and activity planning",
+      messagesDescription: "Open chats and activity planning",
       notifications: "Notifications",
       notificationsDescription: "Review joins, approvals, and activity changes",
       analyticsOps: "Data dashboard",
@@ -1026,12 +1025,12 @@ const copy = {
       title: "Search Friemi",
       description: "Find activity info, crews, friends, and merchants quickly.",
       inputLabel: "Search keyword",
-      placeholder: "Search activities, friend codes, nicknames, or merchants",
+      placeholder: "Search activities, Friemi IDs, nicknames, or merchants",
       mobileOpen: "Open site search",
       submit: "Search",
       emptyTitle: "Enter a keyword to search",
       emptyDescription:
-        "Try an activity name, place, friend code, nickname, or merchant name.",
+        "Try an activity name, place, Friemi ID, nickname, or merchant name.",
       noResultsTitle: "No results found",
       noResultsDescription: (query: string) => `No results matched "${query}".`,
       browseRecentActivities: "Browse recent activities",
@@ -1064,19 +1063,19 @@ const copy = {
         "These match part of your search and may still be worth checking.",
       publicEventsTitle: "Activity info",
       merchantsTitle: "Merchants",
-      usersTitle: "Friends",
+      usersTitle: "People",
       noActivityResults: "No matching crews.",
       noMainResults: "No matching activities or crews.",
       noPublicEventResults: "No matching activity info.",
       noMerchantResults: "No matching merchants.",
       noUserResults: "No matching users.",
       usersPreviewHint: (shown: number, total: number) =>
-        `Showing the first ${shown} friend results out of ${total}.`,
+        `Showing the first ${shown} people out of ${total}.`,
       expandUserResults: (shown: number, total: number) =>
-        `Show more friends ${shown}/${total}`,
-      collapseUserResults: "Show fewer friends",
+        `Show more people ${shown}/${total}`,
+      collapseUserResults: "Show fewer people",
       userResultsLimited: (shown: number, total: number) =>
-        `${shown} friend results loaded out of ${total}. Try a more specific nickname or friend code to narrow it down.`,
+        `${shown} people loaded out of ${total}. Try a more specific nickname or Friemi ID to narrow it down.`,
       endedResultsToggleLabel: "Ended",
       showEndedResults: "Show ended",
       hideEndedResults: "Hide ended",
@@ -1087,13 +1086,13 @@ const copy = {
       onlyEndedResultsTitle: "Only ended items were found",
       onlyEndedResultsDescription: (count: number) =>
         `${count} ended activit${count === 1 ? "y or crew was" : "ies or crews were"} hidden by default. Show history to keep browsing.`,
-      friendCodeLabel: "Friend code",
-      friendCodeMissing: "No friend code yet",
-      addFriend: "Add friend",
+      friendCodeLabel: "Friemi ID",
+      friendCodeMissing: "No Friemi ID yet",
+      addFriend: "Follow",
       addingFriend: "Sending",
       requestSent: "Sent",
-      alreadyFriends: "Friends",
-      pendingFriendRequest: "Pending",
+      alreadyFriends: "Mutual",
+      pendingFriendRequest: "Following",
       selfUser: "You",
       openUserProfile: (name: string) => `Open ${name}'s profile`,
       merchantActivityCount: (count: number) =>
@@ -1155,7 +1154,7 @@ const copy = {
       description: "Keep up with the plans that matter most to you.",
       emptyTitle: "Your lobby is still empty",
       emptyDescription:
-        "Start a plan, browse activity info, or add a few friends.",
+        "Start a plan, browse activity info, or follow a few people.",
       emptySectionTitle: "Begin here",
       openTitle: "Open crews",
       openDescription:
@@ -1177,16 +1176,16 @@ const copy = {
         "Save crews you are interested in so they are easy to come back to later.",
       favoriteEmptyDescription:
         "Save a few crews you like and they will be waiting for you here.",
-      friendHostedTitle: "Hosted by friends",
+      friendHostedTitle: "Hosted by people you follow",
       friendHostedDescription:
-        "Add a few friends and the crews they host will start to appear here.",
+        "Plans started by people you follow will appear here.",
       friendHostedEmptyDescription:
-        "Add a few friends first, then you can quickly see the plans they start here.",
-      friendJoinedTitle: "Joined by friends",
+        "Follow a few people first. Plans they start will appear here.",
+      friendJoinedTitle: "Joined by people you follow",
       friendJoinedDescription:
-        "Crews your friends have joined will appear here so it is easier to join them.",
+        "Plans joined by people you follow will appear here.",
       friendJoinedEmptyDescription:
-        "Your friends have not joined any crews yet. Discover something fun and invite them along.",
+        "People you follow have not joined any plans yet. Discover something fun first.",
     },
     activityFilters: {
       title: "Search and filters",
@@ -1210,8 +1209,8 @@ const copy = {
       allCities: "All cities",
       allDateRanges: "All dates",
       allRelations: "All relationships",
-      relationFriendHosted: "Friend hosted",
-      relationFriendJoined: "Friend joined",
+      relationFriendHosted: "Followed host",
+      relationFriendJoined: "Followed joined",
       relationMine: "My plans",
       allTypes: "All formats",
       allTimeStates: "All timing",
@@ -1283,22 +1282,23 @@ const copy = {
       openGoogleMaps: "Open in Google Maps",
     },
     activityFriendSignal: {
-      title: "Friends joining",
+      title: "People you follow",
       cardSummary: (count: number) =>
-        `${count} friend${count === 1 ? "" : "s"} joined`,
+        `${count} ${count === 1 ? "person" : "people"} you follow joined`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} friend${count === 1 ? "" : "s"} joined`;
+          return `${count} ${count === 1 ? "person" : "people"} you follow joined`;
         }
 
         if (count > names.length) {
-          return `${names.join(", ")} and others joined (${count} friends)`;
+          return `${names.join(", ")} and others you follow joined (${count})`;
         }
 
         return `${names.join(", ")} joined`;
       },
       showMore: "More",
-      showAllLabel: (count: number) => `Show all ${count} friends`,
+      showAllLabel: (count: number) =>
+        `Show all ${count} ${count === 1 ? "person" : "people"}`,
       showLess: "Collapse",
     },
     activityShare: {
@@ -1441,7 +1441,7 @@ const copy = {
     },
     notifications: {
       title: "Notifications",
-      description: "Activity, friend, and comment updates appear here.",
+      description: "Activity, follow, and comment updates appear here.",
       mobileDescription: "Unread notifications appear first.",
       unreadCount: (count: number) => `${count} unread`,
       actionRequiredCount: (count: number) => `${count} need action`,
@@ -1453,11 +1453,11 @@ const copy = {
         read: "Read",
         clearTitle: "No unread notifications",
         clearDescription:
-          "New join requests, friend requests, and comments will appear here.",
+          "New join requests, follows, and comments will appear here.",
       },
       categoryLabels: {
         participation: "Joins",
-        social: "Friends",
+        social: "Follows",
         comment: "Comments",
         message: "Messages",
         activity: "Activity",
@@ -1467,7 +1467,7 @@ const copy = {
       activityLabel: "About",
       emptyTitle: "No notifications",
       emptyDescription:
-        "New joins, comments, and friend updates will appear here.",
+        "New joins, comments, and follow updates will appear here.",
       emptyAction: "Browse activities",
       openActivity: "Open activity",
       openComments: "Open comments",
@@ -1530,9 +1530,9 @@ const copy = {
               : `${actorName} posted an update in "${activityTitle}".`,
         },
         FRIEND_REQUEST: {
-          title: "New friend request",
+          title: "New follower",
           body: (_activityTitle: string, actorName = "Someone") =>
-            `${actorName} wants to add you as a friend.`,
+            `${actorName} started following you.`,
         },
         ACTIVITY_COMMENTED: {
           title: "New activity comment",
@@ -1640,14 +1640,14 @@ const copy = {
     profile: {
       title: "Profile",
       emailFallback: "No email connected",
-      friendCodeLabel: "Friend code",
-      copyFriendCode: "Copy friend code",
+      friendCodeLabel: "Friemi ID",
+      copyFriendCode: "Copy Friemi ID",
       friendCodeCopied: "Copied",
       nicknameLabel: "Nickname",
       nicknamePlaceholder: "Enter your nickname",
       nicknameSetupTitle: "Set your nickname",
       nicknameSetupDescription:
-        "Others will see this nickname and your friend code, not your Google name or email.",
+        "Others will see this nickname and your Friemi ID, not your Google name or email.",
       saveNickname: "Save nickname",
       savingNickname: "Saving...",
       nicknameError: "Nickname is required, up to 24 characters.",
@@ -1881,7 +1881,7 @@ const copy = {
         "Shown in the team lobby. Signed-in users can see it and request to join.",
       visibilityPrivate: "Private crew",
       visibilityPrivateHint:
-        "Only your friends can see it. Best for plans with people you know.",
+        "Only mutual follows can see it. Best for private plans.",
       sectionVisibilityTitle: "Visibility",
       sectionVisibilityMobileTitle: "Visibility",
       sectionVisibilityDescription: "Audience and access",
@@ -2005,10 +2005,10 @@ const copy = {
       fallbackName: "Utilisateur Friemi",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
-      friends: "Amis",
-      friendsDescription: "Gérer demandes et liste d'amis",
+      friends: "Réseau",
+      friendsDescription: "Suivis et suivis mutuels",
       messages: "Messages",
-      messagesDescription: "Ouvrir les échanges avec vos amis",
+      messagesDescription: "Ouvrir les échanges et préparatifs",
       notifications: "Notifications",
       notificationsDescription:
         "Suivre inscriptions, validations et changements d'activité",
@@ -2038,14 +2038,14 @@ const copy = {
       eyebrow: "Recherche globale",
       title: "Rechercher dans Friemi",
       description:
-        "Trouvez vite une activité, un groupe, un ami ou un partenaire.",
+        "Trouvez vite une activité, un groupe, une personne ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
-      placeholder: "Activités, code ami, pseudo ou partenaire",
+      placeholder: "Activités, ID Friemi, pseudo ou partenaire",
       mobileOpen: "Ouvrir la recherche globale",
       submit: "Rechercher",
       emptyTitle: "Saisissez un mot-clé",
       emptyDescription:
-        "Essayez une activité, un lieu, un code ami, un pseudo ou un partenaire.",
+        "Essayez une activité, un lieu, un ID Friemi, un pseudo ou un partenaire.",
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
         `Aucun résultat ne correspond à « ${query} ».`,
@@ -2079,19 +2079,19 @@ const copy = {
         "Ces résultats correspondent à une partie de votre recherche.",
       publicEventsTitle: "Activités",
       merchantsTitle: "Partenaires",
-      usersTitle: "Amis",
+      usersTitle: "Personnes",
       noActivityResults: "Aucun groupe correspondant.",
       noMainResults: "Aucune activité ou groupe correspondant.",
       noPublicEventResults: "Aucune activité correspondante.",
       noMerchantResults: "Aucun partenaire correspondant.",
       noUserResults: "Aucun utilisateur correspondant.",
       usersPreviewHint: (shown: number, total: number) =>
-        `Affichage des ${shown} premiers résultats amis sur ${total}.`,
+        `Affichage des ${shown} premières personnes sur ${total}.`,
       expandUserResults: (shown: number, total: number) =>
-        `Voir plus d'amis ${shown}/${total}`,
-      collapseUserResults: "Réduire les amis",
+        `Voir plus de personnes ${shown}/${total}`,
+      collapseUserResults: "Réduire les personnes",
       userResultsLimited: (shown: number, total: number) =>
-        `${shown} résultats amis chargés sur ${total}. Essayez un pseudo ou un code ami plus précis.`,
+        `${shown} personnes chargées sur ${total}. Essayez un pseudo ou un ID Friemi plus précis.`,
       endedResultsToggleLabel: "Terminées",
       showEndedResults: "Afficher les terminées",
       hideEndedResults: "Masquer les terminées",
@@ -2103,13 +2103,13 @@ const copy = {
       onlyEndedResultsTitle: "Seuls des contenus terminés ont été trouvés",
       onlyEndedResultsDescription: (count: number) =>
         `${count} activité${count > 1 ? "s" : ""} ou groupe${count > 1 ? "s" : ""} terminé${count > 1 ? "s ont" : " a"} été masqué${count > 1 ? "s" : ""} par défaut. Affichez l'historique pour continuer.`,
-      friendCodeLabel: "Code ami",
-      friendCodeMissing: "Aucun code ami",
-      addFriend: "Ajouter",
+      friendCodeLabel: "ID Friemi",
+      friendCodeMissing: "Aucun ID Friemi",
+      addFriend: "Suivre",
       addingFriend: "Envoi",
       requestSent: "Envoyé",
-      alreadyFriends: "Déjà ami",
-      pendingFriendRequest: "En attente",
+      alreadyFriends: "Mutuel",
+      pendingFriendRequest: "Suivi",
       selfUser: "C'est vous",
       openUserProfile: (name: string) => `Voir le profil de ${name}`,
       merchantActivityCount: (count: number) =>
@@ -2168,12 +2168,12 @@ const copy = {
       agendaNextMonth: "Mois suivant",
     },
     activityLobby: {
-      eyebrow: "Vos plans, vos amis, votre prochaine sortie",
+      eyebrow: "Vos plans, vos suivis, votre prochaine sortie",
       title: "Hall d'équipe",
       description: "Retrouvez ici les plans qui comptent le plus pour vous.",
       emptyTitle: "Votre hall d'équipe est encore vide",
       emptyDescription:
-        "Lancez un plan, parcourez les infos activité ou ajoutez quelques amis.",
+        "Lancez un plan, parcourez les infos activité ou suivez quelques personnes.",
       emptySectionTitle: "Commencez par ici",
       openTitle: "Groupes publics",
       openDescription:
@@ -2195,16 +2195,16 @@ const copy = {
         "Enregistrez les groupes qui vous intéressent pour les retrouver facilement plus tard.",
       favoriteEmptyDescription:
         "Mettez quelques plans en favoris et ils vous attendront ici.",
-      friendHostedTitle: "Organisées par des amis",
+      friendHostedTitle: "Par vos suivis",
       friendHostedDescription:
-        "Ajoutez quelques amis et les groupes qu'ils lancent apparaîtront ici.",
+        "Les groupes lancés par les personnes que vous suivez apparaîtront ici.",
       friendHostedEmptyDescription:
-        "Ajoutez quelques amis et leurs plans apparaîtront ici dès qu'ils lancent quelque chose.",
-      friendJoinedTitle: "Rejointes par des amis",
+        "Suivez quelques personnes. Leurs prochains groupes apparaîtront ici.",
+      friendJoinedTitle: "Rejointes par vos suivis",
       friendJoinedDescription:
-        "Les groupes que vos amis ont rejoints apparaîtront ici pour faciliter les sorties ensemble.",
+        "Les groupes rejoints par les personnes que vous suivez apparaîtront ici.",
       friendJoinedEmptyDescription:
-        "Vos amis n'ont encore rejoint aucun plan. Trouvez quelque chose de sympa et proposez-leur d'y aller ensemble.",
+        "Les personnes que vous suivez n'ont encore rejoint aucun groupe.",
     },
     activityFilters: {
       title: "Recherche et filtres",
@@ -2228,8 +2228,8 @@ const copy = {
       allCities: "Toutes les villes",
       allDateRanges: "Toutes les dates",
       allRelations: "Toutes les relations",
-      relationFriendHosted: "Organisé par des amis",
-      relationFriendJoined: "Rejoint par des amis",
+      relationFriendHosted: "Par vos suivis",
+      relationFriendJoined: "Rejoint par vos suivis",
       relationMine: "Mes plans",
       allTypes: "Tous les formats",
       allTimeStates: "Tous les états",
@@ -2303,22 +2303,22 @@ const copy = {
       openGoogleMaps: "Ouvrir dans Google Maps",
     },
     activityFriendSignal: {
-      title: "Amis inscrits",
+      title: "Vos suivis inscrits",
       cardSummary: (count: number) =>
-        `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`,
+        `${count} suivi${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`;
+          return `${count} suivi${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`;
         }
 
         if (count > names.length) {
-          return `${names.join(", ")} et d'autres amis sont inscrits (${count})`;
+          return `${names.join(", ")} et d'autres suivis sont inscrits (${count})`;
         }
 
         return `${names.join(", ")} ${names.length > 1 ? "sont inscrits" : "est inscrit"}`;
       },
       showMore: "Plus",
-      showAllLabel: (count: number) => `Voir les ${count} amis`,
+      showAllLabel: (count: number) => `Voir les ${count} suivis`,
       showLess: "Réduire",
     },
     activityShare: {
@@ -2469,7 +2469,7 @@ const copy = {
     notifications: {
       title: "Notifications",
       description:
-        "Les nouveautés d'activité, d'amis et de commentaires apparaissent ici.",
+        "Les nouveautés d'activité, de suivis et de commentaires apparaissent ici.",
       mobileDescription: "Les notifications non lues restent en premier.",
       unreadCount: (count: number) => `${count} non lues`,
       actionRequiredCount: (count: number) => `${count} à traiter`,
@@ -2481,11 +2481,11 @@ const copy = {
         read: "Lues",
         clearTitle: "Aucune notification non lue",
         clearDescription:
-          "Les nouvelles inscriptions, demandes d'amis et commentaires apparaîtront ici.",
+          "Les nouvelles inscriptions, suivis et commentaires apparaîtront ici.",
       },
       categoryLabels: {
         participation: "Inscriptions",
-        social: "Amis",
+        social: "Suivis",
         comment: "Commentaires",
         message: "Messages",
         activity: "Activité",
@@ -2495,7 +2495,7 @@ const copy = {
       activityLabel: "Sujet",
       emptyTitle: "Aucune notification",
       emptyDescription:
-        "Les inscriptions, commentaires et demandes d'amis apparaîtront ici.",
+        "Les inscriptions, commentaires et suivis apparaîtront ici.",
       emptyAction: "Voir les activités",
       openActivity: "Voir l'activité",
       openComments: "Voir les commentaires",
@@ -2558,9 +2558,9 @@ const copy = {
               : `${actorName} a publie une annonce pour ? ${activityTitle} ?.`,
         },
         FRIEND_REQUEST: {
-          title: "Nouvelle demande d'ami",
+          title: "Nouvel abonné",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
-            `${actorName} souhaite vous ajouter en ami.`,
+            `${actorName} vous suit.`,
         },
         ACTIVITY_COMMENTED: {
           title: "Nouveau commentaire",
@@ -2672,14 +2672,14 @@ const copy = {
     profile: {
       title: "Profil",
       emailFallback: "Aucun e-mail connecté",
-      friendCodeLabel: "Code ami",
-      copyFriendCode: "Copier le code ami",
+      friendCodeLabel: "ID Friemi",
+      copyFriendCode: "Copier l'ID Friemi",
       friendCodeCopied: "Copié",
       nicknameLabel: "Pseudo",
       nicknamePlaceholder: "Saisissez votre pseudo",
       nicknameSetupTitle: "Choisissez un pseudo",
       nicknameSetupDescription:
-        "Les autres verront ce pseudo et votre code ami, pas votre nom Google ni votre e-mail.",
+        "Les autres verront ce pseudo et votre ID Friemi, pas votre nom Google ni votre e-mail.",
       saveNickname: "Enregistrer",
       savingNickname: "Enregistrement...",
       nicknameError: "Le pseudo est requis, 24 caractères maximum.",
@@ -2925,8 +2925,7 @@ const copy = {
       visibilityPublicHint:
         "Visible dans le hall d'équipe. Les utilisateurs connectés peuvent le voir et demander à rejoindre.",
       visibilityPrivate: "Groupe privé",
-      visibilityPrivateHint:
-        "Visible uniquement par vos amis. Pratique pour organiser avec des proches.",
+      visibilityPrivateHint: "Visible uniquement par vos abonnements mutuels.",
       sectionVisibilityTitle: "Visibilité",
       sectionVisibilityMobileTitle: "Visibilité",
       sectionVisibilityDescription: "Audience et accès",

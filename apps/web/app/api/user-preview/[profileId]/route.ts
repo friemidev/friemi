@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
+import { getFollowRelationState } from "@/features/follow/queries/followRelations";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  getFriendshipPair,
-  getFriendshipPairKey,
-} from "@/features/friends/utils/friendship";
 
 function getDisplayProfile(profile: {
   nickname: string;
@@ -76,53 +73,17 @@ export async function GET(
         friendshipId: null,
         isFriend: false,
         isFollowing: false,
+        isMutualFollow: false,
         pendingFriendRequest: null,
+        targetFollowsViewer: false,
       },
     });
   }
 
-  const [friendship, follow, pendingRequest] = await Promise.all([
-    prisma.friendship.findUnique({
-      where: {
-        userAId_userBId: getFriendshipPair(viewerProfile.id, profile.id),
-      },
-      select: {
-        id: true,
-      },
-    }),
-    prisma.userFollow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: viewerProfile.id,
-          followingId: profile.id,
-        },
-      },
-      select: {
-        id: true,
-      },
-    }),
-    prisma.friendRequest.findFirst({
-      where: {
-        status: "PENDING",
-        OR: [
-          {
-            pendingPairKey: getFriendshipPairKey(viewerProfile.id, profile.id),
-          },
-          {
-            requesterId: viewerProfile.id,
-            receiverId: profile.id,
-          },
-          {
-            requesterId: profile.id,
-            receiverId: viewerProfile.id,
-          },
-        ],
-      },
-      select: {
-        requesterId: true,
-      },
-    }),
-  ]);
+  const relation = await getFollowRelationState({
+    targetProfileId: profile.id,
+    viewerProfileId: viewerProfile.id,
+  });
 
   return NextResponse.json({
     bio: profile.bio,
@@ -134,14 +95,12 @@ export async function GET(
     nickname: displayProfile.nickname,
     avatarUrl: displayProfile.avatarUrl,
     relationship: {
-      friendshipId: friendship?.id ?? null,
-      isFriend: Boolean(friendship),
-      isFollowing: Boolean(follow),
-      pendingFriendRequest: pendingRequest
-        ? pendingRequest.requesterId === viewerProfile.id
-          ? "sent"
-          : "received"
-        : null,
+      friendshipId: null,
+      isFriend: relation.isMutualFollow,
+      isFollowing: relation.viewerFollowsTarget,
+      isMutualFollow: relation.isMutualFollow,
+      pendingFriendRequest: null,
+      targetFollowsViewer: relation.targetFollowsViewer,
     },
   });
 }

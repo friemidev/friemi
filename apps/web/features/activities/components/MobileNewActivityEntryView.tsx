@@ -20,7 +20,7 @@ function getMobileEntryCopy(locale: string) {
   if (locale === "fr") {
     return {
       activity: "Activités",
-      createDescription: "Lance une sortie et invite tes amis.",
+      createDescription: "Lance une sortie et invite du monde.",
       createTitle: "Créer une sortie",
       partyToolsDescription: "Des outils pour animer vos soirées jeux.",
       partyToolsTitle: "Outils de jeu",
@@ -43,7 +43,7 @@ function getMobileEntryCopy(locale: string) {
   if (locale === "en") {
     return {
       activity: "Activity",
-      createDescription: "Start a plan and invite your friends.",
+      createDescription: "Start a plan and invite people.",
       createTitle: "Create Plan",
       partyToolsDescription: "Use tools to make your game night better.",
       partyToolsTitle: "Party Tools",

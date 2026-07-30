@@ -32,7 +32,6 @@ import {
   SendHorizontal,
   Share2,
   Trash2,
-  UserPlus,
   UserRound,
   UsersRound,
   X,
@@ -46,9 +45,7 @@ import { MessageAvatar } from "@/features/direct-messages/components/MessageAvat
 import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
-import { removeFriendshipAction } from "@/features/friends/actions/friendActions";
-import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
-import { getFriendsCopy } from "@/features/friends/copy";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import {
@@ -68,7 +65,12 @@ import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
 type MomentFeedScope = "PUBLIC" | "FRIENDS";
-type MessageRosterFilter = "all" | "friends" | "rooms";
+type MessageRosterFilter =
+  | "all"
+  | "following"
+  | "followers"
+  | "mutual"
+  | "rooms";
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
 type FootprintsViewerProfile = {
@@ -126,13 +128,13 @@ const copyByLocale = {
     detail: "详情",
     more: "更多",
     emptyFeedTitle: "还没有动态",
-    emptyFeedDescription: "发一条足迹，或者添加好友后再回来看看。",
+    emptyFeedDescription: "发一条晒晒，或者关注几个人后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
-    feedFriends: "好友",
+    feedFriends: "互关",
     feedPublic: "公共",
-    guestProfileDescription: "登录后可以管理头像、简介和好友码。",
+    guestProfileDescription: "登录后可以管理头像、简介和个人码。",
     guestProfileTitle: "登录查看主页",
-    guestMessageDescription: "登录后可以查看好友私聊和组局聊天。",
+    guestMessageDescription: "登录后可以查看私聊和组局聊天。",
     guestMessageTitle: "登录查看聊聊",
     signIn: "登录",
     signInToInteract: "登录后互动",
@@ -140,7 +142,7 @@ const copyByLocale = {
     report: "举报",
     shareCopied: "链接已复制",
     shareFailed: "暂时无法分享",
-    visibilityFriends: "好友可见",
+    visibilityFriends: "互关可见",
     visibilityLabel: "发布范围",
     visibilityPublic: "公开",
     like: "点赞",
@@ -154,10 +156,12 @@ const copyByLocale = {
     originalUnavailable: "原足迹已不可见",
     viewOriginal: "查看原文",
     messageTitle: "聊聊",
-    messageDescription: "好友私聊和组局聊天都在这里。",
+    messageDescription: "私聊和组局聊天都在这里。",
     messageFilters: {
       all: "聊聊",
-      friends: "好友",
+      following: "我关注的",
+      followers: "关注我的",
+      mutual: "互相关注",
       rooms: "群聊",
     },
     openMessages: "进入聊聊",
@@ -165,9 +169,9 @@ const copyByLocale = {
     notificationDescription: "报名、评论和点赞提醒会汇总到通知中心。",
     openNotifications: "查看通知",
     profileTitle: "我的主页",
-    profileDescription: "头像、简介和好友码仍在个人主页管理。",
+    profileDescription: "头像、简介和个人码仍在个人主页管理。",
     openProfile: "编辑主页",
-    friendCode: "好友码",
+    friendCode: "个人码",
     bioFallback: "还没有填写简介。",
     samples: [
       {
@@ -212,14 +216,14 @@ const copyByLocale = {
     detail: "Details",
     more: "More",
     emptyFeedTitle: "No moments yet",
-    emptyFeedDescription: "Post one, or come back after adding friends.",
+    emptyFeedDescription: "Post one, or come back after following people.",
     feedError: "Moments could not load. Try again later.",
-    feedFriends: "Friends",
+    feedFriends: "Mutual",
     feedPublic: "Public",
     guestProfileDescription:
-      "Sign in to manage your avatar, bio, and friend code.",
+      "Sign in to manage your avatar, bio, and Friemi ID.",
     guestProfileTitle: "Sign in to view your profile",
-    guestMessageDescription: "Sign in to see friend chats and plan messages.",
+    guestMessageDescription: "Sign in to see chats and plan messages.",
     guestMessageTitle: "Sign in to view messages",
     signIn: "Sign in",
     signInToInteract: "Sign in to interact",
@@ -227,7 +231,7 @@ const copyByLocale = {
     report: "Report",
     shareCopied: "Link copied",
     shareFailed: "Could not share",
-    visibilityFriends: "Friends",
+    visibilityFriends: "Mutual",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "Like",
@@ -241,10 +245,12 @@ const copyByLocale = {
     originalUnavailable: "Original moment is unavailable",
     viewOriginal: "View original",
     messageTitle: "Messages",
-    messageDescription: "Friend chats and plan details stay here.",
+    messageDescription: "Chats and plan details stay here.",
     messageFilters: {
-      all: "All",
-      friends: "Friends",
+      all: "Chats",
+      following: "Following",
+      followers: "Followers",
+      mutual: "Mutual",
       rooms: "Groups",
     },
     openMessages: "Open messages",
@@ -254,9 +260,9 @@ const copyByLocale = {
     openNotifications: "Open notifications",
     profileTitle: "Profile",
     profileDescription:
-      "Manage your avatar, bio, and friend code from your profile.",
+      "Manage your avatar, bio, and Friemi ID from your profile.",
     openProfile: "Edit profile",
-    friendCode: "Friend code",
+    friendCode: "Friemi ID",
     bioFallback: "No bio yet.",
     samples: [
       {
@@ -302,12 +308,12 @@ const copyByLocale = {
     more: "Plus",
     emptyFeedTitle: "Aucun moment pour l'instant",
     emptyFeedDescription:
-      "Publiez un moment, ou revenez après avoir ajouté des amis.",
+      "Publiez un moment, ou revenez après avoir suivi quelques personnes.",
     feedError: "Les moments ne se chargent pas pour le moment.",
-    feedFriends: "Amis",
+    feedFriends: "Mutuels",
     feedPublic: "Public",
     guestProfileDescription:
-      "Connecte-toi pour gérer ton avatar, ta bio et ton code ami.",
+      "Connecte-toi pour gérer ton avatar, ta bio et ton ID Friemi.",
     guestProfileTitle: "Connecte-toi pour voir ton profil",
     guestMessageDescription:
       "Connecte-toi pour voir tes discussions et messages de sorties.",
@@ -318,7 +324,7 @@ const copyByLocale = {
     report: "Signaler",
     shareCopied: "Lien copié",
     shareFailed: "Partage impossible",
-    visibilityFriends: "Amis",
+    visibilityFriends: "Mutuels",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "J'aime",
@@ -332,11 +338,12 @@ const copyByLocale = {
     originalUnavailable: "Moment original indisponible",
     viewOriginal: "Voir l'original",
     messageTitle: "Messages",
-    messageDescription:
-      "Les échanges entre amis et autour des plans restent ici.",
+    messageDescription: "Les échanges et messages de plans restent ici.",
     messageFilters: {
-      all: "Tout",
-      friends: "Amis",
+      all: "Messages",
+      following: "Suivis",
+      followers: "Me suivent",
+      mutual: "Mutuels",
       rooms: "Groupes",
     },
     openMessages: "Ouvrir les messages",
@@ -346,9 +353,9 @@ const copyByLocale = {
     openNotifications: "Voir les notifications",
     profileTitle: "Profil",
     profileDescription:
-      "Gérez votre avatar, bio et code ami depuis votre profil.",
+      "Gérez votre avatar, bio et ID Friemi depuis votre profil.",
     openProfile: "Modifier le profil",
-    friendCode: "Code ami",
+    friendCode: "ID Friemi",
     bioFallback: "Aucune bio pour le moment.",
     samples: [
       {
@@ -2020,13 +2027,11 @@ function FootprintsAuthPrompt({
 
 function FootprintsMessageList({
   activityRoomChats,
-  currentUserFriendCode,
   currentUserProfileId,
   friends,
   hasError,
   locale,
 }: {
-  currentUserFriendCode?: string | null;
   currentUserProfileId: string;
   activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
@@ -2036,9 +2041,7 @@ function FootprintsMessageList({
   const t = getDirectMessagesCopy(locale);
   const pageCopy = getFootprintsCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
-  const [activeFilter, setActiveFilter] =
-    useState<MessageRosterFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<MessageRosterFilter>("all");
   const sortedEntries = useMemo(() => {
     const directEntries = friends.map((friend) => ({
       kind: "direct" as const,
@@ -2069,9 +2072,7 @@ function FootprintsMessageList({
       ]
         .filter(Boolean)
         .join(" "),
-      sortTime: new Date(
-        room.lastMessage?.createdAt ?? room.startAt,
-      ).getTime(),
+      sortTime: new Date(room.lastMessage?.createdAt ?? room.startAt).getTime(),
       room,
     }));
 
@@ -2082,15 +2083,29 @@ function FootprintsMessageList({
   }, [activityRoomChats, friends]);
   const defaultVisibleEntries = useMemo(
     () =>
-      sortedEntries.filter(
-        (entry) => entry.kind === "direct" || Boolean(entry.room.lastMessage),
+      sortedEntries.filter((entry) =>
+        entry.kind === "direct"
+          ? Boolean(entry.friend.lastMessage)
+          : Boolean(entry.room.lastMessage),
       ),
     [sortedEntries],
   );
   const filteredEntries = useMemo(() => {
-    if (activeFilter === "friends") {
+    if (activeFilter === "following") {
       return sortedEntries.filter(
-        (entry) => entry.kind === "direct" && entry.friend.isFriend,
+        (entry) => entry.kind === "direct" && entry.friend.isFollowing,
+      );
+    }
+
+    if (activeFilter === "followers") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.targetFollowsViewer,
+      );
+    }
+
+    if (activeFilter === "mutual") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.isMutualFollow,
       );
     }
 
@@ -2127,20 +2142,28 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.all,
     },
     {
-      count: friends.filter((friend) => friend.isFriend).length,
+      count: activityRoomChats.length,
+      icon: UsersRound,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "rooms",
+      label: pageCopy.messageFilters.rooms,
+    },
+    {
+      count: friends.filter((friend) => friend.isMutualFollow).length,
+      icon: UsersRound,
+      iconClassName: "text-[#6E46D6]",
+      iconFrameClassName: "bg-[#F0ECFF]",
+      key: "mutual",
+      label: pageCopy.messageFilters.mutual,
+    },
+    {
+      count: friends.filter((friend) => friend.isFollowing).length,
       icon: Heart,
       iconClassName: "text-[#E7457A]",
       iconFrameClassName: "bg-[#FFF0F5]",
-      key: "friends",
-      label: pageCopy.messageFilters.friends,
-    },
-    {
-      count: activityRoomChats.length,
-      icon: UsersRound,
-      iconClassName: "text-[#F08A24]",
-      iconFrameClassName: "bg-[#FFF3E6]",
-      key: "rooms",
-      label: pageCopy.messageFilters.rooms,
+      key: "following",
+      label: pageCopy.messageFilters.following,
     },
   ];
   const toolbar = (
@@ -2156,15 +2179,14 @@ function FootprintsMessageList({
             className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
           />
         </label>
-        <button
-          type="button"
+        <Link
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
-          aria-label={t.addFriend}
-          title={t.addFriend}
-          onClick={() => setAddFriendOpen(true)}
+          aria-label={t.findPeople}
+          href={withLocale(locale, "/search")}
+          title={t.findPeople}
         >
-          <UserPlus className="h-4 w-4" />
-        </button>
+          <Search className="h-4 w-4" />
+        </Link>
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {filters.map((filter) => {
@@ -2215,15 +2237,6 @@ function FootprintsMessageList({
       </div>
     </div>
   );
-  const addFriendDialog = addFriendOpen ? (
-    <AddFriendDialog
-      currentUserFriendCode={currentUserFriendCode}
-      locale={locale}
-      onClose={() => setAddFriendOpen(false)}
-      returnTo="footprints"
-    />
-  ) : null;
-
   if (hasError) {
     return (
       <section>
@@ -2231,7 +2244,6 @@ function FootprintsMessageList({
         <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-4 text-sm font-semibold leading-6 text-[#777A74]">
           {t.emptyListDescription}
         </div>
-        {addFriendDialog}
       </section>
     );
   }
@@ -2248,7 +2260,6 @@ function FootprintsMessageList({
             {t.emptyFriendListDescription}
           </p>
         </div>
-        {addFriendDialog}
       </section>
     );
   }
@@ -2265,6 +2276,7 @@ function FootprintsMessageList({
                 currentUserProfileId={currentUserProfileId}
                 friend={entry.friend}
                 locale={locale}
+                showBackFollowAction={activeFilter === "followers"}
               />
             ) : (
               <FootprintsRoomChatRow
@@ -2280,7 +2292,6 @@ function FootprintsMessageList({
           {t.emptyListTitle}
         </div>
       )}
-      {addFriendDialog}
     </section>
   );
 }
@@ -2361,13 +2372,14 @@ function FootprintsMessageRow({
   currentUserProfileId,
   friend,
   locale,
+  showBackFollowAction,
 }: {
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   locale: string;
+  showBackFollowAction: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
-  const friendsCopy = getFriendsCopy(locale);
   const lastMessage = friend.lastMessage;
   const unreadCount = friend.unreadCount;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
@@ -2377,11 +2389,12 @@ function FootprintsMessageRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
-  const [removeState, removeAction] = useActionState(
-    removeFriendshipAction,
-    {},
-  );
-  const canRemoveFriend = friend.isFriend && Boolean(friend.friendshipId);
+  const shouldShowBackFollow =
+    showBackFollowAction && friend.relationshipKind === "followed_by";
+  const followBackLabel =
+    locale === "en" ? "Follow" : locale === "fr" ? "Suivre" : "回关";
+  const mutualLabel =
+    locale === "en" ? "Mutual" : locale === "fr" ? "Mutuel" : "互关";
   const content = (
     <>
       <MessageAvatar
@@ -2418,34 +2431,21 @@ function FootprintsMessageRow({
       </span>
     </>
   );
-
-  const removeButton = canRemoveFriend ? (
-    <form
-      action={removeAction}
-      className="shrink-0 self-center"
-      onSubmit={(event) => {
-        if (!window.confirm(friendsCopy.removeConfirm)) {
-          event.preventDefault();
-        }
-      }}
-    >
-      <input name="locale" type="hidden" value={locale} />
-      <input name="redirectPath" type="hidden" value="/footprints?tab=message" />
-      <input name="friendshipId" type="hidden" value={friend.friendshipId ?? ""} />
-      <button
-        type="submit"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#8F9189] transition hover:bg-[#FFF0F0] hover:text-[#9A2135] active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9A2135]/20"
-        aria-label={friendsCopy.remove}
-        title={friendsCopy.remove}
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-      {removeState.formError ? (
-        <span className="sr-only" aria-live="polite">
-          {removeState.formError}
-        </span>
-      ) : null}
-    </form>
+  const backFollowAction = shouldShowBackFollow ? (
+    <div className="shrink-0 self-center">
+      <FollowButton
+        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        activeLabel={mutualLabel}
+        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        fullWidth={false}
+        inactiveLabel={followBackLabel}
+        isAuthenticated
+        isFollowing={friend.isFollowing}
+        locale={locale}
+        redirectPath="/footprints?tab=message"
+        targetUserProfileId={friend.friend.id}
+      />
+    </div>
   ) : null;
 
   return (
@@ -2459,11 +2459,14 @@ function FootprintsMessageRow({
           >
             {content}
           </Link>
-          {removeButton}
+          {backFollowAction}
         </div>
       ) : (
         <div className="flex min-w-0 items-center gap-2">
-          <form action={openDirectConversationAction} className="min-w-0 flex-1">
+          <form
+            action={openDirectConversationAction}
+            className="min-w-0 flex-1"
+          >
             <input name="locale" type="hidden" value={locale} />
             <input
               name="redirectPath"
@@ -2483,7 +2486,7 @@ function FootprintsMessageRow({
               {content}
             </button>
           </form>
-          {removeButton}
+          {backFollowAction}
         </div>
       )}
     </article>
@@ -2555,134 +2558,135 @@ export function FootprintsMobilePage({
 
   return (
     <>
-      <DirectMessageUnreadCountHydrator unreadCount={initialUnreadMessageCount} />
+      <DirectMessageUnreadCountHydrator
+        unreadCount={initialUnreadMessageCount}
+      />
       <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
-      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-        <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
-          {tabs.map((tab) => {
-            const active = activeTab === tab.key;
+        <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
+          <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
+            {tabs.map((tab) => {
+              const active = activeTab === tab.key;
 
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                className={cn(
-                  "relative pb-3 text-sm font-black tracking-normal transition",
-                  active ? "text-[#111210]" : "text-[#1D1D1B]/58",
-                )}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-                <span
-                  className={cn(
-                    "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-10 rounded-full bg-[#156240] transition",
-                    active ? "opacity-100" : "opacity-0",
-                  )}
-                />
-              </button>
-            );
-          })}
-        </nav>
-
-        {activeTab === "moment" ? (
-          <section className="mt-5 space-y-5 md:mt-8">
-            <div className="md:mx-auto md:max-w-2xl">
-              <MomentComposer copy={copy} locale={locale} profile={profile} />
-            </div>
-
-            <div className="inline-flex h-7 rounded-full bg-[#F7F7F0] p-0.5 text-[11px] font-black text-[#156240]">
-              {feedScopeTabs.map((tab) => (
+              return (
                 <button
                   key={tab.key}
                   type="button"
                   className={cn(
-                    "rounded-full px-2.5 transition",
-                    feedScope === tab.key
-                      ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
-                      : "text-[#156240]/62",
+                    "relative pb-3 text-sm font-black tracking-normal transition",
+                    active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                   )}
-                  onClick={() => setFeedScope(tab.key)}
+                  onClick={() => setActiveTab(tab.key)}
                 >
                   {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {momentFeedError ? (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
-                {copy.feedError}
-              </div>
-            ) : scopedMoments.length > 0 ? (
-              <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
-                {scopedMoments.map((moment) => (
-                  <FeedCard
-                    key={moment.id}
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    moment={moment}
-                    copy={copy}
-                    viewerProfileId={profile?.id ?? null}
+                  <span
+                    className={cn(
+                      "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-10 rounded-full bg-[#156240] transition",
+                      active ? "opacity-100" : "opacity-0",
+                    )}
                   />
+                </button>
+              );
+            })}
+          </nav>
+
+          {activeTab === "moment" ? (
+            <section className="mt-5 space-y-5 md:mt-8">
+              <div className="md:mx-auto md:max-w-2xl">
+                <MomentComposer copy={copy} locale={locale} profile={profile} />
+              </div>
+
+              <div className="inline-flex h-7 rounded-full bg-[#F7F7F0] p-0.5 text-[11px] font-black text-[#156240]">
+                {feedScopeTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={cn(
+                      "rounded-full px-2.5 transition",
+                      feedScope === tab.key
+                        ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
+                        : "text-[#156240]/62",
+                    )}
+                    onClick={() => setFeedScope(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
                 ))}
               </div>
-            ) : (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
-                <p className="text-[15px] font-black text-[#111210]">
-                  {copy.emptyFeedTitle}
-                </p>
-                <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
-                  {copy.emptyFeedDescription}
-                </p>
-              </div>
-            )}
-          </section>
-        ) : null}
 
-        {activeTab === "message" ? (
-          <section className="md:mx-auto md:max-w-2xl">
-            {profile ? (
-              <FootprintsMessageList
-                currentUserFriendCode={profile.friendCode}
-                currentUserProfileId={profile.id}
-                activityRoomChats={activityRoomChats}
-                friends={messageFriends}
-                hasError={messageRosterError}
-                locale={locale}
-              />
-            ) : (
-              <div className="mt-5">
-                <FootprintsAuthPrompt
-                  actionLabel={copy.signIn}
-                  description={copy.guestMessageDescription}
-                  href={signInHref}
-                  title={copy.guestMessageTitle}
+              {momentFeedError ? (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
+                  {copy.feedError}
+                </div>
+              ) : scopedMoments.length > 0 ? (
+                <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
+                  {scopedMoments.map((moment) => (
+                    <FeedCard
+                      key={moment.id}
+                      isAuthenticated={isAuthenticated}
+                      locale={locale}
+                      moment={moment}
+                      copy={copy}
+                      viewerProfileId={profile?.id ?? null}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
+                  <p className="text-[15px] font-black text-[#111210]">
+                    {copy.emptyFeedTitle}
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
+                    {copy.emptyFeedDescription}
+                  </p>
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === "message" ? (
+            <section className="md:mx-auto md:max-w-2xl">
+              {profile ? (
+                <FootprintsMessageList
+                  currentUserProfileId={profile.id}
+                  activityRoomChats={activityRoomChats}
+                  friends={messageFriends}
+                  hasError={messageRosterError}
+                  locale={locale}
                 />
-              </div>
-            )}
-          </section>
-        ) : null}
+              ) : (
+                <div className="mt-5">
+                  <FootprintsAuthPrompt
+                    actionLabel={copy.signIn}
+                    description={copy.guestMessageDescription}
+                    href={signInHref}
+                    title={copy.guestMessageTitle}
+                  />
+                </div>
+              )}
+            </section>
+          ) : null}
 
-        {activeTab === "planet" ? (
-          <section className="mt-5 md:mx-auto md:max-w-3xl">
-            {planetSquareError ? (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
-                {locale === "fr"
-                  ? "Les planètes ne se chargent pas pour le moment."
-                  : locale === "en"
-                    ? "Planets could not load right now."
-                    : "星球暂时加载失败，请稍后再试。"}
-              </div>
-            ) : (
-              <PlanetSquarePage
-                canCreate={canCreatePlanet}
-                embedded
-                locale={locale}
-                planets={planets}
-              />
-            )}
-          </section>
-        ) : null}
-      </div>
+          {activeTab === "planet" ? (
+            <section className="mt-5 md:mx-auto md:max-w-3xl">
+              {planetSquareError ? (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
+                  {locale === "fr"
+                    ? "Les planètes ne se chargent pas pour le moment."
+                    : locale === "en"
+                      ? "Planets could not load right now."
+                      : "星球暂时加载失败，请稍后再试。"}
+                </div>
+              ) : (
+                <PlanetSquarePage
+                  canCreate={canCreatePlanet}
+                  embedded
+                  locale={locale}
+                  planets={planets}
+                />
+              )}
+            </section>
+          ) : null}
+        </div>
       </main>
     </>
   );

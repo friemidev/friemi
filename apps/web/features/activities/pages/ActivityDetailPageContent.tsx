@@ -68,7 +68,10 @@ import { ActivityFavoriteButton } from "@/features/favorites/components/Activity
 import { getViewerActivityFavorite } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { ActivityFriendSignalPanel } from "@/features/friends/components/ActivityFriendSignalPanel";
 import { getActivityFriendSignal } from "@/features/friends/queries/getActivityFriendSignals";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import {
+  getViewerFollowedProfileIds,
+  getViewerFriendIds,
+} from "@/features/friends/queries/getViewerFriendIds";
 import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
@@ -773,11 +776,15 @@ export async function ActivityDetailPageContent({
   const viewerProfile = await perf.measure("activity.viewerProfile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
-  const viewerFriendIds = viewerProfile?.id
-    ? await perf.measure("activity.viewerFriends", () =>
-        getViewerFriendIds(viewerProfile.id),
-      )
-    : [];
+  const [viewerFriendIds, viewerFollowedProfileIds]: [string[], string[]] =
+    viewerProfile?.id
+      ? await perf.measure("activity.viewerRelations", () =>
+          Promise.all([
+            getViewerFriendIds(viewerProfile.id),
+            getViewerFollowedProfileIds(viewerProfile.id),
+          ]),
+        )
+      : [[], []];
   const [activity, activityIsFavorited] = await Promise.all([
     perf.measure("activity.primary", () =>
       getActivityById(
@@ -1267,7 +1274,11 @@ export async function ActivityDetailPageContent({
       getActivityViewerParticipation(activity.id, viewerProfile?.id),
     ),
     perf.measure("activity.friendSignal", () =>
-      getActivityFriendSignal(activity.id, viewerProfile?.id, viewerFriendIds),
+      getActivityFriendSignal(
+        activity.id,
+        viewerProfile?.id,
+        viewerFollowedProfileIds,
+      ),
     ),
   ]);
   const participantPercent = getActivityParticipantPercent(activity);
@@ -1402,6 +1413,12 @@ export async function ActivityDetailPageContent({
           queryAddress: activity.address,
         })
       : null;
+  const mobileDetailActionButtonClassName =
+    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[12px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]";
+  const mobileDetailSummaryButtonClassName = cn(
+    mobileDetailActionButtonClassName,
+    "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+  );
   const mobileParticipantPreview = participantPreview.slice(0, 6);
   const extraParticipantCount = Math.max(
     activity.participantCount - mobileParticipantPreview.length,
@@ -1469,8 +1486,8 @@ export async function ActivityDetailPageContent({
   const renderActivityDetailTogglePanels = (className?: string) => (
     <div className={cn("space-y-3 border-y border-[#E7E1CA] py-3", className)}>
       <div className="flex flex-wrap items-start gap-2">
-        <details className="group min-w-0 [&[open]]:basis-full">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+        <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
+          <summary className={mobileDetailSummaryButtonClassName}>
             <Pencil className="h-3.5 w-3.5" />
             <span>
               {locale === "en"
@@ -1531,8 +1548,8 @@ export async function ActivityDetailPageContent({
         </details>
 
         {activity.publicEvent ? (
-          <details className="group min-w-0 [&[open]]:basis-full">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+          <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
+            <summary className={mobileDetailSummaryButtonClassName}>
               <ExternalLink className="h-3.5 w-3.5" />
               <span>{publicEventCopy.linkedEventTitle}</span>
             </summary>
@@ -1567,7 +1584,7 @@ export async function ActivityDetailPageContent({
           {mobileMapHref ? (
             <a
               aria-label={t.activityDetail.openGoogleMaps}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
+              className={mobileDetailActionButtonClassName}
               href={mobileMapHref}
               rel="noreferrer"
               target="_blank"
@@ -1577,7 +1594,7 @@ export async function ActivityDetailPageContent({
             </a>
           ) : null}
           <ActivityShareDialogButton
-            className="h-auto w-auto gap-1.5 px-3 py-1.5 text-[12px] font-black ring-[#D6D5B2] shadow-none hover:bg-[#F6FAF4]"
+            className="h-auto w-auto gap-1.5 px-3 py-1.5 text-[12px] font-black leading-none ring-[#D6D5B2] shadow-none hover:bg-[#F6FAF4]"
             closeLabel={mobileCloseLabel}
             label={mobileShareLabel}
             triggerLabel={mobileShareButtonLabel}

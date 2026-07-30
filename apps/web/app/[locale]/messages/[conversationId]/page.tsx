@@ -15,7 +15,6 @@ import {
   getUnreadDirectMessageConversationCount,
   markDirectConversationRead,
 } from "@/features/direct-messages/queries/getDirectMessages";
-import { getPendingIncomingFriendRequests } from "@/features/friends/queries/getFriendsDashboard";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { getCopy } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
@@ -153,9 +152,7 @@ export default async function MessageThreadPage({
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
-      <DirectMessageUnreadCountHydrator
-        unreadCount={unreadMessageCount}
-      />
+      <DirectMessageUnreadCountHydrator unreadCount={unreadMessageCount} />
       <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
         <MessageThread
           activityContext={activityContext}
@@ -169,7 +166,6 @@ export default async function MessageThreadPage({
           <DesktopConversationSidebar
             accessToken={accessToken}
             activityId={activityId}
-            currentUserFriendCode={profile.friendCode}
             currentUserProfileId={profile.id}
             locale={locale}
             selectedConversationId={conversation.id}
@@ -183,34 +179,25 @@ export default async function MessageThreadPage({
 async function DesktopConversationSidebar({
   accessToken,
   activityId,
-  currentUserFriendCode,
   currentUserProfileId,
   locale,
   selectedConversationId,
 }: {
   accessToken?: string;
   activityId?: string;
-  currentUserFriendCode?: string | null;
   currentUserProfileId: string;
   locale: string;
   selectedConversationId: string;
 }) {
   const commonCopy = getCopy(locale).common;
-  const [friendRosterResult, incomingRequests] = await Promise.all([
-    getDirectMessageFriendRoster(currentUserProfileId)
-      .then((friends) => ({ friends, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load direct message friend roster", error);
-        return { friends: [], error };
-      }),
-    getPendingIncomingFriendRequests(currentUserProfileId).catch(
-      (error: unknown) => {
-        console.error("Failed to load incoming friend requests", error);
-
-        return [];
-      },
-    ),
-  ]);
+  const friendRosterResult = await getDirectMessageFriendRoster(
+    currentUserProfileId,
+  )
+    .then((friends) => ({ friends, error: null }))
+    .catch((error: unknown) => {
+      console.error("Failed to load direct message friend roster", error);
+      return { friends: [], error };
+    });
 
   return (
     <div className="hidden lg:block">
@@ -230,9 +217,7 @@ async function DesktopConversationSidebar({
               : null
           }
           currentUserProfileId={currentUserProfileId}
-          currentUserFriendCode={currentUserFriendCode}
           friends={friendRosterResult.friends}
-          incomingRequests={incomingRequests}
           locale={locale}
           selectedConversationId={selectedConversationId}
         />

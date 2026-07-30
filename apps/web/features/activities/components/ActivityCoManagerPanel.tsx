@@ -55,26 +55,27 @@ function getCopy(locale: string): Copy {
   if (locale === "fr") {
     return {
       add: "Ajouter",
-      addByCode: "Ajouter par code",
+      addByCode: "Ajouter par ID Friemi",
       addDisabledFull: "Limite atteinte",
-      addEmpty: "Aucun ami disponible à ajouter.",
-      availableHint: "Les gestionnaires doivent déjà être vos amis.",
+      addEmpty: "Aucune personne en suivi mutuel à ajouter.",
+      availableHint:
+        "Les gestionnaires doivent être en suivi mutuel avec vous.",
       close: "Fermer",
       current: "Gestionnaires actuels",
       empty: "Aucun gestionnaire pour le moment.",
       friendCodeHint:
-        "Le code doit appartenir à une personne déjà dans vos amis.",
-      friendCodeLabel: "Code ami",
+        "L'ID doit appartenir à une personne en suivi mutuel avec vous.",
+      friendCodeLabel: "ID Friemi",
       friendCodePlaceholder: "123456",
-      friendList: "Amis disponibles",
+      friendList: "Suivis mutuels",
       managerRole: "Gestionnaire",
       maxLabel: (count: number) => `${count}/3 gestionnaires`,
-      openPicker: "Choisir un ami",
+      openPicker: "Choisir une personne",
       organizerOnly: "Seul l'organisateur peut modifier cette liste.",
       remove: "Retirer",
       removing: "Retrait...",
-      searchEmpty: "Aucun ami correspondant.",
-      searchPlaceholder: "Nom ou code ami",
+      searchEmpty: "Aucun résultat.",
+      searchPlaceholder: "Nom ou ID Friemi",
       title: "Gestionnaires du plan",
       viewerManagerHint:
         "Vous pouvez aider à valider les inscriptions, modifier le plan et l'annuler si nécessaire.",
@@ -86,23 +87,23 @@ function getCopy(locale: string): Copy {
       add: "Add",
       addByCode: "Add by code",
       addDisabledFull: "Limit reached",
-      addEmpty: "No available friends to add.",
-      availableHint: "Managers must already be your friends.",
+      addEmpty: "No mutual follows available to add.",
+      availableHint: "Managers must be mutual follows.",
       close: "Close",
       current: "Current managers",
       empty: "No managers yet.",
-      friendCodeHint: "The code must belong to one of your friends.",
-      friendCodeLabel: "Friend code",
+      friendCodeHint: "The ID must belong to a mutual follow.",
+      friendCodeLabel: "Friemi ID",
       friendCodePlaceholder: "123456",
-      friendList: "Available friends",
+      friendList: "Mutual follows",
       managerRole: "Manager",
       maxLabel: (count: number) => `${count}/3 managers`,
-      openPicker: "Choose friend",
+      openPicker: "Choose person",
       organizerOnly: "Only the organizer can edit this list.",
       remove: "Remove",
       removing: "Removing...",
-      searchEmpty: "No matching friends.",
-      searchPlaceholder: "Name or friend code",
+      searchEmpty: "No matches.",
+      searchPlaceholder: "Name or Friemi ID",
       title: "Plan managers",
       viewerManagerHint:
         "You can help review requests, edit this plan, and cancel it when needed.",
@@ -111,25 +112,25 @@ function getCopy(locale: string): Copy {
 
   return {
     add: "添加",
-    addByCode: "用好友号添加",
+    addByCode: "用个人码添加",
     addDisabledFull: "已达上限",
-    addEmpty: "暂无可添加的好友。",
-    availableHint: "管理人必须已经是你的好友。",
+    addEmpty: "暂无可添加的互关用户。",
+    availableHint: "管理人必须与你互关。",
     close: "关闭",
     current: "当前管理人",
     empty: "暂未设置管理人。",
-    friendCodeHint: "好友号对应的人也必须已经是你的好友。",
-    friendCodeLabel: "好友号",
+    friendCodeHint: "个人码对应的人必须与你互关。",
+    friendCodeLabel: "个人码",
     friendCodePlaceholder: "例如 551007",
-    friendList: "可添加好友",
+    friendList: "可添加互关",
     managerRole: "管理人",
     maxLabel: (count: number) => `${count}/3 位管理人`,
-    openPicker: "选择好友",
+    openPicker: "选择互关用户",
     organizerOnly: "只有发起人可以修改这份名单。",
     remove: "移除",
     removing: "移除中...",
-    searchEmpty: "没有匹配的好友。",
-    searchPlaceholder: "搜索昵称或好友号",
+    searchEmpty: "没有匹配的用户。",
+    searchPlaceholder: "搜索昵称或个人码",
     title: "聚吧管理人",
     viewerManagerHint: "你可以协助审核报名、编辑聚吧，并在必要时取消聚吧。",
   };
@@ -139,7 +140,13 @@ function getInitial(name: string) {
   return name.trim().slice(0, 1).toUpperCase() || "N";
 }
 
-function SubmitAddButton({ label, locale }: { label?: string; locale: string }) {
+function SubmitAddButton({
+  label,
+  locale,
+}: {
+  label?: string;
+  locale: string;
+}) {
   const { pending } = useFormStatus();
   const copy = getCopy(locale);
 
@@ -191,7 +198,10 @@ function RemoveCoManagerForm({
       <input name="locale" type="hidden" value={locale} />
       <RemoveButton locale={locale} />
       {state.formError ? (
-        <p className="text-xs font-medium leading-5 text-[#B5301F]" role="alert">
+        <p
+          className="text-xs font-medium leading-5 text-[#B5301F]"
+          role="alert"
+        >
           {state.formError}
         </p>
       ) : null}
@@ -370,11 +380,17 @@ export function ActivityCoManagerPanel({
             </p>
           ) : null}
           {state.formError ? (
-            <p className="text-xs font-medium leading-5 text-[#B5301F]" role="alert">
+            <p
+              className="text-xs font-medium leading-5 text-[#B5301F]"
+              role="alert"
+            >
               {state.formError}
             </p>
           ) : state.successMessage ? (
-            <p className="text-xs font-medium leading-5 text-[#156240]" role="status">
+            <p
+              className="text-xs font-medium leading-5 text-[#156240]"
+              role="status"
+            >
               {state.successMessage}
             </p>
           ) : null}
@@ -437,7 +453,9 @@ export function ActivityCoManagerPanel({
                       <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <input
                         className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-[#156240]/42"
-                        onChange={(event) => setFriendSearch(event.target.value)}
+                        onChange={(event) =>
+                          setFriendSearch(event.target.value)
+                        }
                         placeholder={copy.searchPlaceholder}
                         type="search"
                         value={friendSearch}
@@ -483,7 +501,10 @@ export function ActivityCoManagerPanel({
                                 </span>
                               </span>
                               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8F2E8] text-[#156240] ring-1 ring-[#8AB68E]/50 transition group-hover:bg-[#156240] group-hover:text-white">
-                                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                                <UserPlus
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
                               </span>
                             </button>
                           </form>
@@ -499,7 +520,11 @@ export function ActivityCoManagerPanel({
                     <p className="mt-1 text-xs font-medium leading-5 text-[#156240]/68">
                       {copy.friendCodeHint}
                     </p>
-                    <form action={formAction} className="mt-3 grid gap-3" noValidate>
+                    <form
+                      action={formAction}
+                      className="mt-3 grid gap-3"
+                      noValidate
+                    >
                       <input
                         name="activityId"
                         type="hidden"

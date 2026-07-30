@@ -318,6 +318,13 @@ export async function markReferralFriendshipAcceptedBetween(
   };
 }
 
+export async function markReferralMutualFollowAcceptedBetween(
+  profileId: string,
+  otherProfileId: string,
+) {
+  return markReferralFriendshipAcceptedBetween(profileId, otherProfileId);
+}
+
 export function getReferralFriendTrustScoreNote(referralId: string) {
   return `Friend invite accepted:${referralId}`;
 }
