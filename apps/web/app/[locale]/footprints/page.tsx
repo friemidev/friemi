@@ -51,7 +51,7 @@ export default async function FootprintsPage({
   const profile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
-  const initialTab = requestedTab ?? (profile ? "message" : "moment");
+  const initialTab = requestedTab ?? "moment";
   const viewerProfileId = profile?.id ?? null;
   const [
     momentsResult,

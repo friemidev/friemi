@@ -63,6 +63,13 @@ export type ActivityFilterSearchParams = Record<
   string | string[] | undefined
 >;
 
+const activityCategoryPriority: Partial<Record<ActivityCategory, number>> = {
+  FOOD: 0,
+  BOARD_GAME: 1,
+  ART: 2,
+  SPORTS: 3,
+};
+
 const activityFilterQueryKeys = [
   "q",
   "category",
@@ -93,6 +100,13 @@ type ActivityFilterRawValues = {
 export const activityCategoryOptions = (
   Object.keys(activityCategories) as ActivityCategory[]
 ).sort((left, right) => {
+  const leftPriority = activityCategoryPriority[left];
+  const rightPriority = activityCategoryPriority[right];
+
+  if (leftPriority !== undefined || rightPriority !== undefined) {
+    return (leftPriority ?? 100) - (rightPriority ?? 100);
+  }
+
   if (left === "OTHER") {
     return 1;
   }

@@ -13,6 +13,7 @@ import { linkGuestParticipationsForProfile } from "@/features/guest-participants
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 import { isDefaultProfileAvatarSrc } from "@/features/profile/defaultAvatars";
+import { isUploadedProfileAvatarUrl } from "@/lib/activity-cover-storage";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -49,9 +50,15 @@ const updateProfileIdentitySchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((value) => !value || isDefaultProfileAvatarSrc(value), {
-      message: "invalid-avatar",
-    }),
+    .refine(
+      (value) =>
+        !value ||
+        isDefaultProfileAvatarSrc(value) ||
+        isUploadedProfileAvatarUrl(value),
+      {
+        message: "invalid-avatar",
+      },
+    ),
   bio: z.string().trim().max(160).optional(),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),

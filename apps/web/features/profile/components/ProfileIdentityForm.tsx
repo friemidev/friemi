@@ -6,12 +6,11 @@ import { useFormStatus } from "react-dom";
 import { Check, Copy, Pencil, Save, X } from "lucide-react";
 import { Button, Input, Textarea } from "@chill-club/ui";
 import { getCopy } from "@/lib/copy";
-import { cn } from "@/lib/utils";
 import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
-import { defaultProfileAvatars } from "../defaultAvatars";
+import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
 import { useViewerProfile } from "./ViewerProfileProvider";
 
 type ProfileIdentityFormProps = {
@@ -38,10 +37,9 @@ export function ProfileIdentityForm({
     initialState,
   );
   const [editing, setEditing] = useState(false);
-  const [avatarValue, setAvatarValue] = useState<string | null>(
-    defaultProfileAvatars.find((avatar) => avatar.src === avatarUrl)?.src ??
-      null,
-  );
+  const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const [bioValue, setBioValue] = useState(bio ?? "");
   const [nicknameValue, setNicknameValue] = useState(nickname);
   const [copied, setCopied] = useState(false);
@@ -68,10 +66,8 @@ export function ProfileIdentityForm({
   }, [nickname]);
 
   useEffect(() => {
-    setAvatarValue(
-      defaultProfileAvatars.find((avatar) => avatar.src === avatarUrl)?.src ??
-        null,
-    );
+    setAvatarValue(avatarUrl);
+    setAvatarDirty(false);
   }, [avatarUrl]);
 
   useEffect(() => {
@@ -89,6 +85,7 @@ export function ProfileIdentityForm({
     }
     if (state.avatarUrl !== undefined) {
       setAvatarValue(state.avatarUrl ?? "");
+      setAvatarDirty(false);
     }
     setNicknameValue(state.nickname);
     setEditing(false);
@@ -160,41 +157,24 @@ export function ProfileIdentityForm({
         >
           <input name="locale" type="hidden" value={locale} />
           <input name="afterSave" type="hidden" value="refresh" />
-          {avatarValue ? (
+          {avatarDirty && avatarValue ? (
             <input name="avatarUrl" type="hidden" value={avatarValue} />
           ) : null}
           <div className="grid gap-2">
             <span className="text-xs font-medium text-zinc-500">
               {locale === "en" ? "Avatar" : locale === "fr" ? "Avatar" : "头像"}
             </span>
-            <div className="flex flex-wrap gap-2">
-              {defaultProfileAvatars.map((avatar) => {
-                const selected = avatarValue === avatar.src;
-
-                return (
-                  <button
-                    key={avatar.key}
-                    type="button"
-                    aria-label={avatar.key}
-                    className={cn(
-                      "relative h-10 w-10 overflow-hidden rounded-full bg-white ring-1 ring-sand transition active:scale-95",
-                      selected
-                        ? "ring-2 ring-[#156240] ring-offset-2"
-                        : "hover:ring-[#8AB68E]",
-                    )}
-                    onClick={() => setAvatarValue(avatar.src)}
-                  >
-                    {/* Default avatar assets are local public SVGs. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={avatar.src}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                );
-              })}
-            </div>
+            <ProfileAvatarPicker
+              initial={nicknameValue.charAt(0).toUpperCase()}
+              locale={locale}
+              name={nicknameValue}
+              onChange={(nextAvatarUrl) => {
+                setAvatarValue(nextAvatarUrl);
+                setAvatarDirty(true);
+              }}
+              onUploadingChange={setIsAvatarUploading}
+              value={avatarValue}
+            />
           </div>
           <label className="grid gap-1.5">
             <span className="text-xs font-medium text-zinc-500">
@@ -226,6 +206,7 @@ export function ProfileIdentityForm({
             <p className="text-xs text-red-600">{state.formError}</p>
           ) : null}
           <ProfileIdentitySubmitButton
+            disabled={isAvatarUploading}
             label={t.saveNickname}
             pendingLabel={t.savingNickname}
           />
@@ -236,9 +217,11 @@ export function ProfileIdentityForm({
 }
 
 function ProfileIdentitySubmitButton({
+  disabled = false,
   label,
   pendingLabel,
 }: {
+  disabled?: boolean;
   label: string;
   pendingLabel: string;
 }) {
@@ -247,7 +230,7 @@ function ProfileIdentitySubmitButton({
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       variant="secondary"
       className="h-10 gap-2 whitespace-nowrap bg-white"
     >

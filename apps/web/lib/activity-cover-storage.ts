@@ -5,6 +5,7 @@ import { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 export { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 
 export const maxActivityCoverFileSize = 4 * 1024 * 1024;
+export const maxProfileAvatarFileSize = 2 * 1024 * 1024;
 const defaultBucket = "activity-covers";
 const allowedMimeTypes = {
   "image/jpeg": "jpg",
@@ -199,6 +200,42 @@ export async function uploadTopNewsImageBuffer(
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "top-news",
   });
+}
+
+export async function uploadProfileAvatarBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "profile-avatars",
+  });
+}
+
+export function isUploadedProfileAvatarUrl(imageUrl: string) {
+  const config = getActivityCoverStorageConfig();
+
+  if (!config) {
+    return false;
+  }
+
+  try {
+    const url = new URL(imageUrl);
+    const supabaseUrl = new URL(config.supabaseUrl);
+    const expectedPrefix = `/storage/v1/object/public/${config.bucket}/profile-avatars/`;
+    const protocolAllowed =
+      process.env.NODE_ENV === "production"
+        ? url.protocol === "https:"
+        : url.protocol === "https:" || url.protocol === "http:";
+
+    return (
+      protocolAllowed &&
+      url.hostname === supabaseUrl.hostname &&
+      url.pathname.startsWith(expectedPrefix)
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function uploadPublicImageBuffer(
