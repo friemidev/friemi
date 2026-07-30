@@ -12,6 +12,7 @@ import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
+import { isDefaultProfileAvatarSrc } from "@/features/profile/defaultAvatars";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -19,6 +20,7 @@ import {
 } from "@/features/guest-participants/utils/contactIdentity";
 
 export type UpdateProfileIdentityState = {
+  avatarUrl?: string | null;
   bio?: string | null;
   formError?: string;
   nickname?: string;
@@ -43,6 +45,13 @@ export type UpdateProfileContactBindingsState = {
 
 const updateProfileIdentitySchema = z.object({
   afterSave: z.enum(["refresh", "redirect"]).default("redirect"),
+  avatarUrl: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => !value || isDefaultProfileAvatarSrc(value), {
+      message: "invalid-avatar",
+    }),
   bio: z.string().trim().max(160).optional(),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
@@ -87,6 +96,9 @@ export async function updateProfileIdentityAction(
   const t = getCopy(fallbackLocale).profile;
   const result = updateProfileIdentitySchema.safeParse({
     afterSave: getString(formData, "afterSave") || "redirect",
+    avatarUrl: formData.has("avatarUrl")
+      ? getString(formData, "avatarUrl")
+      : undefined,
     bio: formData.has("bio") ? getString(formData, "bio") : undefined,
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
@@ -99,7 +111,7 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { afterSave, bio, locale, nickname, returnTo } = result.data;
+  const { afterSave, avatarUrl, bio, locale, nickname, returnTo } = result.data;
   const perf = createActionPerformanceTracker({
     action: "updateProfileIdentity",
   });
@@ -114,6 +126,7 @@ export async function updateProfileIdentityAction(
         id: profile.id,
       },
       data: {
+        ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
         ...(bio !== undefined ? { bio: bio || null } : {}),
         nickname,
       },
@@ -126,6 +139,7 @@ export async function updateProfileIdentityAction(
     });
 
     return {
+      avatarUrl: avatarUrl !== undefined ? avatarUrl || null : undefined,
       bio: bio !== undefined ? bio || null : undefined,
       nickname,
       success: true,

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Sun avatar">
+  <rect width="160" height="160" rx="80" fill="#FFF6D7"/>
+  <circle cx="80" cy="80" r="42" fill="#E9A827"/>
+  <path d="M49 68c13-23 48-28 66-6-11 8-23 11-36 8-10-2-20-2-30-2Z" fill="#9C6B05"/>
+  <circle cx="66" cy="83" r="5" fill="#FEFFF9"/>
+  <circle cx="96" cy="83" r="5" fill="#FEFFF9"/>
+  <path d="M68 102c8 6 17 6 25 0" fill="none" stroke="#FEFFF9" stroke-width="7" stroke-linecap="round"/>
+</svg>

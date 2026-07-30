@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Coral avatar">
+  <rect width="160" height="160" rx="80" fill="#FFF0E9"/>
+  <circle cx="80" cy="78" r="43" fill="#F47D6B"/>
+  <path d="M50 57c16-21 43-25 62-4 9 10 10 28 2 43-10-16-24-24-42-24-10 0-18-5-22-15Z" fill="#B5301F"/>
+  <circle cx="64" cy="82" r="5" fill="#FEFFF9"/>
+  <circle cx="96" cy="82" r="5" fill="#FEFFF9"/>
+  <path d="M69 104c7 4 15 4 22 0" fill="none" stroke="#FEFFF9" stroke-width="7" stroke-linecap="round"/>
+</svg>
