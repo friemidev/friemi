@@ -81,7 +81,7 @@ export function GlobalSearchForm({
       action={withLocale(locale, "/search")}
       className={cn(
         "relative flex min-w-0 items-center",
-        isPage ? "w-full" : "w-64 xl:w-80",
+        isPage ? "w-full" : "w-56 2xl:w-72",
         className,
       )}
       role="search"
