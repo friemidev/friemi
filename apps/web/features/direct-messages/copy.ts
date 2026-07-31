@@ -33,6 +33,7 @@ type DirectMessagesCopy = {
   imageUploadFailed: string;
   imageUploading: string;
   removeImage: string;
+  sendGift: string;
   backToMessages: string;
   viewProfile: string;
   openFriends: string;
@@ -106,6 +107,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       imageUploadFailed: "Image impossible à importer.",
       imageUploading: "Import...",
       removeImage: "Retirer l'image",
+      sendGift: "Cadeau",
       backToMessages: "Messages",
       viewProfile: "Voir le profil",
       openFriends: "Trouver quelqu'un",
@@ -195,6 +197,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       imageUploadFailed: "Image could not be uploaded.",
       imageUploading: "Uploading...",
       removeImage: "Remove image",
+      sendGift: "Gift",
       backToMessages: "Messages",
       viewProfile: "View profile",
       openFriends: "Find people",
@@ -279,6 +282,7 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     imageUploadFailed: "图片上传失败，请稍后再试。",
     imageUploading: "上传中...",
     removeImage: "移除图片",
+    sendGift: "送礼",
     backToMessages: "消息",
     viewProfile: "查看主页",
     openFriends: "找人",

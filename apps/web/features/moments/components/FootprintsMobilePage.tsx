@@ -60,11 +60,12 @@ import {
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
-type MomentFeedScope = "PUBLIC" | "FRIENDS";
+type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING";
 type MessageRosterFilter =
   | "all"
   | "following"
@@ -109,7 +110,7 @@ type MomentCard = {
 
 const copyByLocale = {
   "zh-CN": {
-    title: "足迹",
+    title: "世界",
     settings: "设置",
     tabs: {
       message: "聊聊",
@@ -130,8 +131,9 @@ const copyByLocale = {
     emptyFeedTitle: "还没有动态",
     emptyFeedDescription: "发一条晒晒，或者关注几个人后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
-    feedFriends: "互关",
-    feedPublic: "公共",
+    feedFollowing: "我关注的",
+    feedMutual: "互相关注",
+    feedPublic: "广场",
     guestProfileDescription: "登录后可以管理头像、简介和个人码。",
     guestProfileTitle: "登录查看主页",
     guestMessageDescription: "登录后可以查看私聊和组局聊天。",
@@ -197,7 +199,7 @@ const copyByLocale = {
     ] satisfies MomentCard[],
   },
   en: {
-    title: "Trace",
+    title: "World",
     settings: "Settings",
     tabs: {
       message: "Message",
@@ -218,7 +220,8 @@ const copyByLocale = {
     emptyFeedTitle: "No moments yet",
     emptyFeedDescription: "Post one, or come back after following people.",
     feedError: "Moments could not load. Try again later.",
-    feedFriends: "Mutual",
+    feedFollowing: "Following",
+    feedMutual: "Mutual",
     feedPublic: "Public",
     guestProfileDescription:
       "Sign in to manage your avatar, bio, and Friemi ID.",
@@ -288,7 +291,7 @@ const copyByLocale = {
     ] satisfies MomentCard[],
   },
   fr: {
-    title: "Trace",
+    title: "Monde",
     settings: "Réglages",
     tabs: {
       message: "Message",
@@ -310,7 +313,8 @@ const copyByLocale = {
     emptyFeedDescription:
       "Publiez un moment, ou revenez après avoir suivi quelques personnes.",
     feedError: "Les moments ne se chargent pas pour le moment.",
-    feedFriends: "Mutuels",
+    feedFollowing: "Suivis",
+    feedMutual: "Mutuels",
     feedPublic: "Public",
     guestProfileDescription:
       "Connecte-toi pour gérer ton avatar, ta bio et ton ID Friemi.",
@@ -2188,7 +2192,7 @@ function FootprintsMessageList({
           <Search className="h-4 w-4" />
         </Link>
       </div>
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {filters.map((filter) => {
           const isActive = activeFilter === filter.key;
           const Icon = filter.icon;
@@ -2342,7 +2346,7 @@ function FootprintsRoomChatRow({
               </span>
             </span>
             <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-              {formatActivityDate(time, locale)}
+              {formatChatListTimestamp(time, locale)}
             </span>
           </span>
           <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -2408,7 +2412,7 @@ function FootprintsMessageRow({
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
         </span>
         <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -2539,14 +2543,26 @@ export function FootprintsMobilePage({
       return true;
     });
   }, [moments]);
-  const scopedMoments = useMemo(
-    () => dedupedMoments.filter((moment) => moment.visibility === feedScope),
-    [dedupedMoments, feedScope],
-  );
+  const scopedMoments = useMemo(() => {
+    if (feedScope === "MUTUAL") {
+      return dedupedMoments.filter(
+        (moment) => moment.isOwnMoment || moment.isAuthorMutualFollow,
+      );
+    }
+
+    if (feedScope === "FOLLOWING") {
+      return dedupedMoments.filter(
+        (moment) => moment.isOwnMoment || moment.isAuthorFollowedByViewer,
+      );
+    }
+
+    return dedupedMoments.filter((moment) => moment.visibility === "PUBLIC");
+  }, [dedupedMoments, feedScope]);
   const feedScopeTabs: Array<{ key: MomentFeedScope; label: string }> = profile
     ? [
         { key: "PUBLIC", label: copy.feedPublic },
-        { key: "FRIENDS", label: copy.feedFriends },
+        { key: "MUTUAL", label: copy.feedMutual },
+        { key: "FOLLOWING", label: copy.feedFollowing },
       ]
     : [{ key: "PUBLIC", label: copy.feedPublic }];
 
@@ -2563,31 +2579,38 @@ export function FootprintsMobilePage({
       />
       <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
         <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-          <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
-            {tabs.map((tab) => {
-              const active = activeTab === tab.key;
+          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-1">
+            <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
+              {copy.title}
+            </h1>
+            <nav className="grid min-w-0 translate-y-1 grid-cols-3 text-center">
+              {tabs.map((tab) => {
+                const active = activeTab === tab.key;
 
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  className={cn(
-                    "relative pb-3 text-sm font-black tracking-normal transition",
-                    active ? "text-[#111210]" : "text-[#1D1D1B]/58",
-                  )}
-                  onClick={() => setActiveTab(tab.key)}
-                >
-                  {tab.label}
-                  <span
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
                     className={cn(
-                      "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-10 rounded-full bg-[#156240] transition",
-                      active ? "opacity-100" : "opacity-0",
+                      "relative min-w-0 px-1 pb-3 text-[13px] font-black tracking-normal transition",
+                      active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                     )}
-                  />
-                </button>
-              );
-            })}
-          </nav>
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    <span className="block truncate whitespace-nowrap">
+                      {tab.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-9 rounded-full bg-[#156240] transition",
+                        active ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </nav>
+          </header>
 
           {activeTab === "moment" ? (
             <section className="mt-5 space-y-5 md:mt-8">

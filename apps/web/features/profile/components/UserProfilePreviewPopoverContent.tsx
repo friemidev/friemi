@@ -108,7 +108,7 @@ function AddFriendQuickButton({
   relationship: UserPreviewPayload["relationship"];
 }) {
   const previewCopy = getPreviewCopy(locale);
-  const activeLabel = relationship.isMutualFollow
+  const activeLabel = relationship.targetFollowsViewer
     ? previewCopy.mutualFollow
     : previewCopy.followed;
   const inactiveLabel = relationship.targetFollowsViewer

@@ -703,7 +703,7 @@ function PublicMobileProfileActions({
 }) {
   const copy = getMobileProfileCopy(locale);
   const redirectPath = `/profile/${profileId}`;
-  const activeLabel = relationship.isMutualFollow
+  const activeLabel = relationship.targetFollowsViewer
     ? copy.mutualFollow
     : copy.pendingFriend;
   const inactiveLabel = relationship.targetFollowsViewer
@@ -1538,86 +1538,87 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
-          {copy.profileTitle}
-        </h1>
-        <button
-          type="button"
-          aria-label={copy.scan}
-          title={copy.scan}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-          onClick={openGlobalQrScanner}
-        >
-          <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-        </button>
-      </header>
-
-      <section className="mt-6">
-        <div className="grid grid-cols-[4rem_minmax(0,1fr)_3.25rem] items-start gap-3">
-          <MobileProfileAvatarEditor
-            avatarUrl={currentAvatarUrl}
-            bio={profile.bio}
-            initial={profileInitial}
-            isOnline={presenceStatus === "ONLINE"}
-            locale={locale}
-            name={profile.nickname}
-            nickname={profile.nickname}
-            onSaved={setCurrentAvatarUrl}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
-                {profile.nickname}
-              </h2>
-              <ProfileAchievementBadgeStrip
-                className="min-w-0 shrink-0"
-                items={publicAchievements}
-                limit={3}
-                locale={locale}
-              />
-            </div>
-            {profile.friendCode ? (
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                <button
-                  className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
-                  onClick={copyFriendCode}
-                  type="button"
-                >
-                  <span>{profile.friendCode}</span>
-                  <Copy className="h-3.5 w-3.5 shrink-0" />
-                  <span className="tracking-normal">
-                    {copied ? copy.copied : copy.copyCode}
-                  </span>
-                </button>
-              </div>
-            ) : null}
-            <div className="mt-2">
-              <ProfilePresenceControl
-                locale={locale}
-                onStatusChange={onPresenceStatusChange}
-                status={presenceStatus}
-              />
-            </div>
-            <MobileProfileBioEditor
+    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-7">
+      <section>
+        <div>
+          <div className="flex items-start gap-3">
+            <MobileProfileAvatarEditor
+              avatarUrl={currentAvatarUrl}
               bio={profile.bio}
+              initial={profileInitial}
+              isOnline={presenceStatus === "ONLINE"}
               locale={locale}
+              name={profile.nickname}
               nickname={profile.nickname}
+              onSaved={setCurrentAvatarUrl}
+            />
+
+            <div className="min-w-0 flex-1 pt-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+                  {profile.nickname}
+                </h2>
+                <ProfileAchievementBadgeStrip
+                  className="min-w-0 shrink-0"
+                  items={publicAchievements}
+                  limit={3}
+                  locale={locale}
+                />
+              </div>
+              {profile.friendCode ? (
+                <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                  <button
+                    className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
+                    onClick={copyFriendCode}
+                    type="button"
+                  >
+                    <span>{profile.friendCode}</span>
+                    <Copy className="h-3.5 w-3.5 shrink-0" />
+                    <span className="tracking-normal">
+                      {copied ? copy.copied : copy.copyCode}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex shrink-0 items-start gap-2">
+              <div className="grid min-w-[3.25rem] justify-items-center gap-1 text-center">
+                <span className="max-w-[4.25rem] truncate text-[10px] font-bold text-[#4F574F]">
+                  {copy.trusted}
+                </span>
+                <span className="inline-flex min-h-8 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-2 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+                  <BadgeCheck className="h-4 w-4 shrink-0" />
+                  {dashboard.trustScore}
+                </span>
+                <span className="max-w-[4.25rem] truncate text-[9px] font-bold leading-none text-[#8B907F]">
+                  {getTrustLevelLabel(dashboard.trustScore, locale)}
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-label={copy.scan}
+                title={copy.scan}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+                onClick={openGlobalQrScanner}
+              >
+                <ScanLine className="h-[1.125rem] w-[1.125rem]" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <ProfilePresenceControl
+              locale={locale}
+              onStatusChange={onPresenceStatusChange}
+              status={presenceStatus}
             />
           </div>
-          <div className="grid justify-items-center gap-1 text-center">
-            <span className="text-[10px] font-bold text-[#4F574F]">
-              {copy.trusted}
-            </span>
-            <span className="inline-flex min-h-8 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-2 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-              <BadgeCheck className="h-4 w-4 shrink-0" />
-              {dashboard.trustScore}
-            </span>
-            <span className="max-w-[4.75rem] truncate text-[9px] font-bold leading-none text-[#8B907F]">
-              {getTrustLevelLabel(dashboard.trustScore, locale)}
-            </span>
-          </div>
+          <MobileProfileBioEditor
+            bio={profile.bio}
+            locale={locale}
+            nickname={profile.nickname}
+          />
         </div>
 
         <div className="mt-6 grid grid-cols-3">

@@ -23,7 +23,8 @@ export async function generateMetadata({
   params,
 }: FootprintsPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const title = locale === "zh-CN" ? "足迹" : "Trace";
+  const title =
+    locale === "zh-CN" ? "世界" : locale === "fr" ? "Monde" : "World";
 
   return {
     title: `${title} | Friemi`,

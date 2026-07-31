@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -177,7 +178,7 @@ function DesktopFriendRosterRow({
               isActive ? "text-[#8E8383]" : "text-[#8E8383]",
             )}
           >
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
           {unreadCount > 0 ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -134,7 +135,7 @@ function MobileFriendChatRow({
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#8E8383]">
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
           {unreadCount > 0 ? (
             <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">

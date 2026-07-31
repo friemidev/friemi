@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
@@ -8,6 +14,10 @@ import { ContextualDetailLink } from "@/features/navigation/components/Contextua
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import {
+  formatChatDateSeparator,
+  getChatDateKey,
+} from "@/lib/chatDateSeparators";
 import {
   sendDirectMessageAction,
   type DirectMessageActionState,
@@ -51,6 +61,30 @@ const defaultActionState: DirectMessageActionState = {
     body: "",
   },
 };
+
+function ChatDateSeparator({
+  createdAt,
+  locale,
+}: {
+  createdAt: string;
+  locale: string;
+}) {
+  const label = formatChatDateSeparator(createdAt, locale);
+
+  if (!label) {
+    return null;
+  }
+
+  return (
+    <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#8B907F] ring-1 ring-[#E7E2D6]">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+    </div>
+  );
+}
 
 export function MessageThreadClient({
   activityContext,
@@ -261,19 +295,34 @@ export function MessageThreadClient({
               activityContext || policyNotice ? "mt-4" : "",
             )}
           >
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                {...message}
-                locale={locale}
-                onRetry={
-                  message.deliveryStatus === "failed" && canSendNow
-                    ? handleRetryMessage
-                    : undefined
-                }
-                sender={message.isMine ? currentUser : peer}
-              />
-            ))}
+            {messages.map((message, index) => {
+              const previousMessage = messages[index - 1];
+              const showDateSeparator =
+                !previousMessage ||
+                getChatDateKey(previousMessage.createdAt) !==
+                  getChatDateKey(message.createdAt);
+
+              return (
+                <Fragment key={message.id}>
+                  {showDateSeparator ? (
+                    <ChatDateSeparator
+                      createdAt={message.createdAt}
+                      locale={locale}
+                    />
+                  ) : null}
+                  <MessageBubble
+                    {...message}
+                    locale={locale}
+                    onRetry={
+                      message.deliveryStatus === "failed" && canSendNow
+                        ? handleRetryMessage
+                        : undefined
+                    }
+                    sender={message.isMine ? currentUser : peer}
+                  />
+                </Fragment>
+              );
+            })}
             <MessageThreadScrollAnchor lastMessageId={lastMessageId} />
           </div>
         ) : (

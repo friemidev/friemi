@@ -26,6 +26,9 @@ export async function getProfileShopGiftRecipients(viewerProfileId: string) {
   const follows = await prisma.userFollow.findMany({
     where: {
       followerId: viewerProfileId,
+      followingId: {
+        not: viewerProfileId,
+      },
       following: {
         status: "ACTIVE",
       },
