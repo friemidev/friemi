@@ -26,6 +26,7 @@ type ActivityWeatherWidgetProps = {
   locale: string;
   locationQuery: string | null;
   longitude: number | null;
+  variant?: "full" | "compact";
 };
 
 type WeatherState =
@@ -72,6 +73,7 @@ export function ActivityWeatherWidget({
   locale,
   locationQuery,
   longitude,
+  variant = "full",
 }: ActivityWeatherWidgetProps) {
   const t = getCopy(locale).weather;
   const [state, setState] = useState<WeatherState>({ status: "loading" });
@@ -135,6 +137,22 @@ export function ActivityWeatherWidget({
   }, [requestUrl]);
 
   if (state.status === "loading") {
+    if (variant === "compact") {
+      return (
+        <span
+          className={cn(
+            "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-[#F6FAF4] px-2.5 text-xs font-semibold text-[#156240]",
+            className,
+          )}
+          role="status"
+          aria-label={t.loading}
+        >
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+          {t.title}
+        </span>
+      );
+    }
+
     return (
       <section
         className={cn(
@@ -152,6 +170,10 @@ export function ActivityWeatherWidget({
   }
 
   if (state.status === "unavailable") {
+    if (variant === "compact") {
+      return null;
+    }
+
     return (
       <section
         className={cn(
@@ -171,6 +193,26 @@ export function ActivityWeatherWidget({
   const Icon = getWeatherIcon(forecast.weatherCode);
   const conditionKey = getWeatherConditionKey(forecast.weatherCode);
   const conditionLabel = t.conditions[conditionKey] ?? t.conditions.unknown;
+
+  if (variant === "compact") {
+    return (
+      <span
+        className={cn(
+          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-[#F6FAF4] px-2.5 text-xs font-semibold text-[#156240]",
+          className,
+        )}
+        aria-label={`${t.title}: ${conditionLabel}, ${formatTemperature(
+          forecast.temperatureMin,
+        )} / ${formatTemperature(forecast.temperatureMax)}`}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        <span className="whitespace-nowrap">
+          {formatTemperature(forecast.temperatureMin)} /{" "}
+          {formatTemperature(forecast.temperatureMax)}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <section

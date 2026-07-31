@@ -43,6 +43,22 @@ type ActivityShareToolsProps = {
 
 type WebShareMode = "copy" | "native" | "wechat";
 
+type ActivityPosterDownloadButtonProps = {
+  activityTitle: string;
+  analyticsEntityId: string;
+  analyticsEntityType: AnalyticsEntityType;
+  analyticsSourceSurface?: AnalyticsSourceSurface;
+  categoryLabel: string;
+  className?: string;
+  coverImageUrl?: string | null;
+  dateLabel: string;
+  description: string;
+  locationLabel: string;
+  locale: string;
+  priceLabel: string;
+  sharePath?: string | null;
+};
+
 type DrawLineOptions = {
   color?: string;
   font: string;
@@ -76,6 +92,125 @@ function getUrlHost(value: string) {
 
 function isWechatWebView(userAgent: string) {
   return /MicroMessenger/i.test(userAgent);
+}
+
+async function generateActivityPosterDataUrl({
+  activityTitle,
+  activityUrl,
+  categoryLabel,
+  coverImageUrl,
+  dateLabel,
+  description,
+  locationLabel,
+  priceLabel,
+  t,
+}: {
+  activityTitle: string;
+  activityUrl: string;
+  categoryLabel: string;
+  coverImageUrl?: string | null;
+  dateLabel: string;
+  description: string;
+  locationLabel: string;
+  priceLabel: string;
+  t: ReturnType<typeof getCopy>["activityShare"];
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Canvas context is not available");
+  }
+
+  context.fillStyle = "#FEFFF9";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#F1F2EC";
+  context.fillRect(0, 0, canvas.width, 360);
+  let hasCoverBackground = false;
+
+  if (coverImageUrl) {
+    try {
+      const { image, objectUrl } = await loadFetchedImage(
+        getActivityCoverDisplayUrl(coverImageUrl),
+      );
+      drawImageCover(context, image, 0, 0, canvas.width, 360);
+      URL.revokeObjectURL(objectUrl);
+      context.fillStyle = "rgba(0, 0, 0, 0.38)";
+      context.fillRect(0, 0, canvas.width, 360);
+      hasCoverBackground = true;
+    } catch {
+      context.fillStyle = "#369758";
+      context.fillRect(0, 0, 140, 360);
+    }
+  } else {
+    context.fillStyle = "#369758";
+    context.fillRect(0, 0, 140, 360);
+  }
+
+  await drawBrandHeader(context, hasCoverBackground);
+
+  drawPill(context, categoryLabel, 72, 286);
+
+  drawWrappedText(context, activityTitle, 72, 440, 936, 68, {
+    font: "800 62px sans-serif",
+    maxLines: 2,
+  });
+
+  drawWrappedText(context, description, 72, 616, 936, 38, {
+    color: "#8E8383",
+    font: "400 30px sans-serif",
+    maxLines: 2,
+  });
+
+  const cardWidth = 448;
+  drawInfoCard(context, t.posterTime, dateLabel, 72, 710, cardWidth, {
+    height: 158,
+    maxLines: 2,
+  });
+  drawInfoCard(context, t.posterPrice, priceLabel, 560, 710, cardWidth, {
+    height: 158,
+    maxLines: 2,
+  });
+  drawInfoCard(context, t.posterLocation, locationLabel, 72, 890, 936, {
+    height: 174,
+    lineHeight: 34,
+    maxLines: 3,
+    valueFont: "700 28px sans-serif",
+  });
+
+  const qrDataUrl = await QRCode.toDataURL(activityUrl, {
+    color: {
+      dark: "#1D1D1B",
+      light: "#FEFFF9",
+    },
+    margin: 1,
+    width: 260,
+  });
+  const qrImage = await loadImage(qrDataUrl);
+  const urlHost = getUrlHost(activityUrl);
+
+  context.fillStyle = "#FEFFF9";
+  context.beginPath();
+  context.roundRect(72, 1096, 936, 170, 28);
+  context.fill();
+  context.drawImage(qrImage, 786, 1122, 118, 118);
+  context.font = "800 34px sans-serif";
+  context.fillStyle = "#1D1D1B";
+  context.fillText(t.posterScanTitle, 108, 1160);
+  context.font = "400 26px sans-serif";
+  context.fillStyle = "#8E8383";
+  drawWrappedText(context, t.posterScanDescription, 108, 1204, 610, 32, {
+    color: "#8E8383",
+    font: "400 26px sans-serif",
+    maxLines: 1,
+  });
+  context.font = "700 24px sans-serif";
+  context.fillStyle = "#156240";
+  context.fillText(urlHost, 108, 1242);
+
+  return canvas.toDataURL("image/png");
 }
 
 function resolveWechatShareImageUrl(
@@ -313,6 +448,177 @@ async function drawBrandHeader(
   }
 }
 
+export function ActivityPosterDownloadButton({
+  activityTitle,
+  analyticsEntityId,
+  analyticsEntityType,
+  analyticsSourceSurface = "activity_detail",
+  categoryLabel,
+  className,
+  coverImageUrl,
+  dateLabel,
+  description,
+  locationLabel,
+  locale,
+  priceLabel,
+  sharePath = null,
+}: ActivityPosterDownloadButtonProps) {
+  const t = getCopy(locale).activityShare;
+  const [activityUrl, setActivityUrl] = useState("");
+  const [shareMode, setShareMode] = useState<WebShareMode>("copy");
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
+  const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
+  const [downloadState, setDownloadState] = useState<
+    "idle" | "downloading" | "failed"
+  >("idle");
+  const posterFileName = useMemo(
+    () =>
+      `${sanitizeFileName(activityTitle)}-${sanitizeFileName(dateLabel).slice(
+        0,
+        36,
+      )}-next-fun-club.png`,
+    [activityTitle, dateLabel],
+  );
+
+  useEffect(() => {
+    const resolvedUrl = sharePath
+      ? new URL(sharePath, window.location.origin).toString()
+      : window.location.href;
+
+    setActivityUrl(resolvedUrl);
+  }, [sharePath]);
+
+  useEffect(() => {
+    if (isWechatWebView(navigator.userAgent)) {
+      setShareMode("wechat");
+    }
+  }, []);
+
+  async function handleDownloadPoster() {
+    if (!activityUrl) {
+      return;
+    }
+
+    setDownloadState("downloading");
+
+    try {
+      const posterDataUrl = await generateActivityPosterDataUrl({
+        activityTitle,
+        activityUrl,
+        categoryLabel,
+        coverImageUrl,
+        dateLabel,
+        description,
+        locationLabel,
+        priceLabel,
+        t,
+      });
+
+      if (shareMode === "wechat") {
+        setPosterPreviewUrl(posterDataUrl);
+        setPosterPreviewOpen(true);
+      } else {
+        const link = document.createElement("a");
+        link.download = posterFileName;
+        link.href = posterDataUrl;
+        link.click();
+      }
+
+      trackClientAnalyticsEvent({
+        name: "poster_downloaded",
+        entityId: analyticsEntityId,
+        entityType: analyticsEntityType,
+        sourceSurface: analyticsSourceSurface,
+        properties: {
+          has_cover_image: Boolean(coverImageUrl),
+          has_qr_code: true,
+          share_mode:
+            shareMode === "wechat" ? "wechat_long_press" : "poster_download",
+        },
+      });
+      setDownloadState("idle");
+    } catch (error) {
+      console.error("Failed to generate activity poster", error);
+      setDownloadState("failed");
+    }
+  }
+
+  const buttonLabel =
+    downloadState === "downloading"
+      ? t.downloading
+      : shareMode === "wechat"
+        ? t.savePoster
+        : t.downloadPoster;
+
+  return (
+    <>
+      <Button
+        aria-label={buttonLabel}
+        className={cn(
+          "h-10 w-full gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
+          downloadState === "failed" && "text-red-600 ring-red-200",
+          className,
+        )}
+        disabled={!activityUrl || downloadState === "downloading"}
+        onClick={handleDownloadPoster}
+        type="button"
+        variant="secondary"
+      >
+        {shareMode === "wechat" ? (
+          <ImageIcon className="h-4 w-4 shrink-0" />
+        ) : (
+          <Download className="h-4 w-4 shrink-0" />
+        )}
+        <span className="min-w-0 truncate">{buttonLabel}</span>
+      </Button>
+      {posterPreviewUrl && posterPreviewOpen ? (
+        <div
+          aria-label={t.posterPreviewTitle}
+          aria-modal="true"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/72 px-4 py-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+          role="dialog"
+        >
+          <button
+            aria-label={t.closePosterPreview}
+            className="absolute inset-0 cursor-default"
+            onClick={() => setPosterPreviewOpen(false)}
+            type="button"
+          />
+          <div className="relative flex max-h-full w-full max-w-[390px] flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-full border border-white/15 bg-black/45 px-3 py-2 text-white shadow-lg backdrop-blur">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {t.longPressPoster}
+                </p>
+                <p className="truncate text-xs text-white/70">
+                  {t.posterSaveHint}
+                </p>
+              </div>
+              <button
+                aria-label={t.closePosterPreview}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/12 text-white ring-1 ring-white/20 transition hover:bg-white/20"
+                onClick={() => setPosterPreviewOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="relative min-h-0 overflow-hidden rounded-2xl bg-[#FEFFF9] shadow-2xl ring-1 ring-white/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={t.posterPreviewAlt}
+                className="max-h-[calc(100vh-9.5rem)] w-full select-auto object-contain"
+                draggable={false}
+                src={posterPreviewUrl}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function ActivityShareTools({
   activityTitle,
   analyticsEntityId,
@@ -421,102 +727,17 @@ export function ActivityShareTools({
     setDownloadState("downloading");
 
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1080;
-      canvas.height = 1350;
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error("Canvas context is not available");
-      }
-
-      context.fillStyle = "#FEFFF9";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#F1F2EC";
-      context.fillRect(0, 0, canvas.width, 360);
-      let hasCoverBackground = false;
-
-      if (coverImageUrl) {
-        try {
-          const { image, objectUrl } = await loadFetchedImage(
-            getActivityCoverDisplayUrl(coverImageUrl),
-          );
-          drawImageCover(context, image, 0, 0, canvas.width, 360);
-          URL.revokeObjectURL(objectUrl);
-          context.fillStyle = "rgba(0, 0, 0, 0.38)";
-          context.fillRect(0, 0, canvas.width, 360);
-          hasCoverBackground = true;
-        } catch {
-          context.fillStyle = "#369758";
-          context.fillRect(0, 0, 140, 360);
-        }
-      } else {
-        context.fillStyle = "#369758";
-        context.fillRect(0, 0, 140, 360);
-      }
-
-      await drawBrandHeader(context, hasCoverBackground);
-
-      drawPill(context, categoryLabel, 72, 286);
-
-      drawWrappedText(context, activityTitle, 72, 440, 936, 68, {
-        font: "800 62px sans-serif",
-        maxLines: 2,
+      const posterDataUrl = await generateActivityPosterDataUrl({
+        activityTitle,
+        activityUrl,
+        categoryLabel,
+        coverImageUrl,
+        dateLabel,
+        description,
+        locationLabel,
+        priceLabel,
+        t,
       });
-
-      drawWrappedText(context, description, 72, 616, 936, 38, {
-        color: "#8E8383",
-        font: "400 30px sans-serif",
-        maxLines: 2,
-      });
-
-      const cardWidth = 448;
-      drawInfoCard(context, t.posterTime, dateLabel, 72, 710, cardWidth, {
-        height: 158,
-        maxLines: 2,
-      });
-      drawInfoCard(context, t.posterPrice, priceLabel, 560, 710, cardWidth, {
-        height: 158,
-        maxLines: 2,
-      });
-      drawInfoCard(context, t.posterLocation, locationLabel, 72, 890, 936, {
-        height: 174,
-        lineHeight: 34,
-        maxLines: 3,
-        valueFont: "700 28px sans-serif",
-      });
-
-      const qrDataUrl = await QRCode.toDataURL(activityUrl, {
-        color: {
-          dark: "#1D1D1B",
-          light: "#FEFFF9",
-        },
-        margin: 1,
-        width: 260,
-      });
-      const qrImage = await loadImage(qrDataUrl);
-      const urlHost = getUrlHost(activityUrl);
-
-      context.fillStyle = "#FEFFF9";
-      context.beginPath();
-      context.roundRect(72, 1096, 936, 170, 28);
-      context.fill();
-      context.drawImage(qrImage, 786, 1122, 118, 118);
-      context.font = "800 34px sans-serif";
-      context.fillStyle = "#1D1D1B";
-      context.fillText(t.posterScanTitle, 108, 1160);
-      context.font = "400 26px sans-serif";
-      context.fillStyle = "#8E8383";
-      drawWrappedText(context, t.posterScanDescription, 108, 1204, 610, 32, {
-        color: "#8E8383",
-        font: "400 26px sans-serif",
-        maxLines: 1,
-      });
-      context.font = "700 24px sans-serif";
-      context.fillStyle = "#156240";
-      context.fillText(urlHost, 108, 1242);
-
-      const posterDataUrl = canvas.toDataURL("image/png");
       setPosterPreviewUrl(posterDataUrl);
       setPosterPreviewOpen(true);
 
