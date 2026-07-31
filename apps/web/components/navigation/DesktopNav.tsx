@@ -26,6 +26,7 @@ type DesktopNavItem = {
   label: ReactNode;
   icon: LucideIcon;
   isPrimary?: boolean;
+  shortLabel?: ReactNode;
 };
 
 export function DesktopNav({ locale }: DesktopNavProps) {
@@ -37,12 +38,18 @@ export function DesktopNav({ locale }: DesktopNavProps) {
     : "zh-CN";
   const items: DesktopNavItem[] = [
     { href: "/mobile-home", label: t.nav.hallShort, icon: House },
-    { href: "/lobby", label: t.nav.lobby, icon: UsersRound },
+    {
+      href: "/lobby",
+      label: t.nav.lobby,
+      shortLabel: t.nav.lobbyShort,
+      icon: UsersRound,
+    },
     { href: "/activities", label: t.nav.activities, icon: Compass },
     { href: "/messages", label: t.nav.messagesShort, icon: MessageCircle },
     {
       href: "/activities/new",
       label: t.nav.newActivity,
+      shortLabel: t.nav.newActivityShort,
       icon: CalendarPlus,
       isPrimary: true,
     },
@@ -83,10 +90,14 @@ export function DesktopNav({ locale }: DesktopNavProps) {
       {items.map((item) => {
         const Icon = item.icon;
         const active = isItemActive(item.href);
+        const visibleLabel =
+          currentLocale === "zh-CN" ? item.label : item.shortLabel ?? item.label;
+        const title = typeof item.label === "string" ? item.label : undefined;
 
         return (
           <IntentPrefetchLink
             key={item.href}
+            title={title}
             aria-current={active ? "page" : undefined}
             className={cn(
               "group relative flex h-full items-center gap-1.5 whitespace-nowrap px-1.5 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#369758]/35 min-[900px]:px-2.5 min-[900px]:text-xs lg:px-3 lg:text-sm",
@@ -117,7 +128,7 @@ export function DesktopNav({ locale }: DesktopNavProps) {
               )}
               strokeWidth={active ? 2.4 : 2}
             />
-            {item.label}
+            <span className="truncate">{visibleLabel}</span>
           </IntentPrefetchLink>
         );
       })}

@@ -321,7 +321,7 @@ export function ActivityPlacePicker({
   }, [addressInput, hasCoordinateInput, matchedQuery]);
 
   return (
-    <div ref={containerRef} className="grid gap-3">
+    <div ref={containerRef} className="grid min-w-0 gap-3">
       <input name="latitude" type="hidden" value={latitude} />
       <input name="longitude" type="hidden" value={longitude} />
 
@@ -386,7 +386,7 @@ export function ActivityPlacePicker({
           ) : null}
         </div>
         <FieldError errors={addressErrors} />
-        {addressFooter ? <div>{addressFooter}</div> : null}
+        {addressFooter ? <div className="min-w-0">{addressFooter}</div> : null}
       </div>
 
       {hasCoordinateInput ? (
