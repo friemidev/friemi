@@ -180,7 +180,7 @@ export function RouteProgress() {
         "pointer-events-none fixed inset-x-0 top-0 z-[70] h-1",
         "max-md:inset-x-4 max-md:top-auto max-md:z-[45] max-md:h-[2px] max-md:rounded-full",
         hasMobileNavOffset
-          ? "max-md:bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.375rem)]"
+          ? "max-md:bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))]"
           : "max-md:bottom-[var(--app-bottom-safe-area)]",
       )}
     >

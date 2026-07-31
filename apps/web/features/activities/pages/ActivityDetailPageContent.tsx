@@ -72,7 +72,6 @@ import {
   getViewerFollowedProfileIds,
   getViewerFriendIds,
 } from "@/features/friends/queries/getViewerFriendIds";
-import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -150,6 +149,46 @@ function getActivityRoutePath(
       : getLegacyActivityDetailPath(activityId);
 
   return `/${locale}${detailPath}`;
+}
+
+function getActivityLayerTitle(locale: string) {
+  return locale === "fr"
+    ? "Détail de l'activité"
+    : locale === "en"
+      ? "Activity Detail"
+      : "活动详情";
+}
+
+function getLobbyLayerTitle(locale: string) {
+  return locale === "fr"
+    ? "Détail du groupe"
+    : locale === "en"
+      ? "Plan Detail"
+      : "聚吧详情";
+}
+
+function ActivityLayerHeader({
+  backHref,
+  title,
+}: {
+  backHref: string;
+  title: string;
+}) {
+  return (
+    <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
+      <Link
+        aria-label={title}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95"
+        href={backHref}
+        prefetch
+      >
+        <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+      </Link>
+      <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
+        {title}
+      </p>
+    </div>
+  );
 }
 
 const participantAvatarTones = [
@@ -931,17 +970,29 @@ export async function ActivityDetailPageContent({
     );
 
     return (
-      <PageContainer className="space-y-6">
+      <PageContainer
+        className="space-y-5 py-4 sm:space-y-6 sm:py-8"
+        mobileSafeTop
+      >
         <MobileNavSectionOverride section="activities" />
         <DetailSourceRestore sourceKey="activity_detail" />
+        <ActivityLayerHeader
+          backHref={withLocale(locale, "/activities")}
+          title={getActivityLayerTitle(locale)}
+        />
         <DetailSourceReturnLink
-          className="h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm"
+          className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
           locale={locale}
         />
-        <div className="relative flex min-h-[12rem] items-end overflow-hidden rounded-[1.25rem] bg-moss p-3 shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:min-h-52 sm:p-5 md:min-h-72">
+        <div className="space-y-2 px-1 sm:px-0">
+          <h1 className="text-[1.7rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
+            {activity.title}
+          </h1>
+        </div>
+        <div className="relative aspect-[1.48/1] overflow-hidden rounded-[1.25rem] bg-moss shadow-[0_10px_24px_rgba(29,29,27,0.1)] sm:aspect-[16/9] md:aspect-[2.35/1]">
           <ActivityCoverImage
             src={activity.coverImageUrl}
-            overlayClassName="bg-gradient-to-t from-black/76 via-black/34 to-black/12"
+            overlayClassName="bg-gradient-to-t from-black/14 via-transparent to-black/12"
           />
           <div className="absolute right-3 top-4 z-30 flex items-start gap-2 sm:right-5 sm:top-6">
             <ActivityFavoriteButton
@@ -963,19 +1014,13 @@ export async function ActivityDetailPageContent({
               variant="icon"
             />
           </div>
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/62 to-transparent" />
-          <div className="relative max-w-3xl space-y-2 rounded-[1.15rem] bg-black/24 p-3 ring-1 ring-white/10 backdrop-blur-sm sm:space-y-3 sm:p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
-                {activityCategoryLabel}
-              </span>
-              <span className="rounded-md bg-white/85 px-2.5 py-1 text-xs font-medium text-zinc-700 shadow-sm">
-                {publicEventCopy.detailSource}
-              </span>
-            </div>
-            <h1 className="text-2xl font-semibold leading-tight tracking-normal text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] sm:text-4xl md:text-5xl">
-              {activity.title}
-            </h1>
+          <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-white/70">
+              {activityCategoryLabel}
+            </span>
+            <span className="rounded-full bg-white/86 px-2.5 py-1 text-[11px] font-black text-[#111210]/70 ring-1 ring-white/60">
+              {publicEventCopy.detailSource}
+            </span>
           </div>
         </div>
 
@@ -1385,12 +1430,7 @@ export async function ActivityDetailPageContent({
             return 0;
           })
       : 0;
-  const mobileDetailTitle =
-    locale === "fr"
-      ? "Détail du groupe"
-      : locale === "en"
-        ? "Plan Detail"
-        : "聚吧详情";
+  const mobileDetailTitle = getLobbyLayerTitle(locale);
   const mobileShareLabel =
     locale === "fr"
       ? "Partager le groupe"
@@ -1688,22 +1728,19 @@ export async function ActivityDetailPageContent({
         editHref={activityEditHref}
         locale={locale}
       />
-      <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
-        <ActivityHistoryBackButton
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/78 text-[#111210]/60 transition active:scale-95"
-          fallbackHref={withLocale(locale, "/lobby")}
-          ariaLabel={mobileDetailTitle}
-        >
-          <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-        </ActivityHistoryBackButton>
-        <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
-          {mobileDetailTitle}
-        </p>
-      </div>
+      <ActivityLayerHeader
+        backHref={withLocale(locale, "/lobby")}
+        title={mobileDetailTitle}
+      />
       <DetailSourceReturnLink
         className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
         locale={locale}
       />
+      <div className="space-y-2 px-1 sm:px-0">
+        <h1 className="text-[1.65rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
+          {activity.title}
+        </h1>
+      </div>
       <div className="relative aspect-[1.75/1] overflow-hidden rounded-[1.45rem] bg-moss shadow-[0_16px_36px_rgba(29,29,27,0.12)] sm:aspect-[16/9] md:aspect-[2.35/1]">
         <ActivityCoverImage
           src={activity.coverImageUrl}
@@ -1740,11 +1777,16 @@ export async function ActivityDetailPageContent({
             variant="icon"
           />
         </div>
+        <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-white/70">
+            {activityCategoryLabel}
+          </span>
+          <span className="rounded-full bg-white/86 px-2.5 py-1 text-[11px] font-black text-[#111210]/70 ring-1 ring-white/60">
+            {getTypeLabel(activity.type, locale)}
+          </span>
+        </div>
       </div>
       <div className="space-y-4 px-1 sm:px-0">
-        <h1 className="text-[1.55rem] font-black leading-[1.08] tracking-normal text-ink sm:text-4xl md:text-5xl">
-          {activity.title}
-        </h1>
         <div className="md:hidden">
           <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1.5 text-[12px] font-semibold leading-5 text-[#111210]/55">
             <span className="inline-flex items-center gap-1.5">

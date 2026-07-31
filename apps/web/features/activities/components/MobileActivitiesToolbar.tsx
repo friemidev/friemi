@@ -38,11 +38,6 @@ import {
   type ActivityTimeState,
 } from "@/features/activities/utils/activityFilters";
 import { getActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
-import {
-  activityListEntryUpdatedEvent,
-  getActivityListFallbackHref,
-  readActivityListEntryHref,
-} from "@/features/navigation/activityListEntryReturn";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -109,23 +104,9 @@ export function MobileActivitiesToolbar({
   const t = getCopy(locale);
   const copy = getMobileActivitiesCopy(locale);
   const activitiesHref = withLocale(locale, "/activities");
-  const fallbackBackHref = getActivityListFallbackHref(locale);
-  const [backHref, setBackHref] = useState(fallbackBackHref);
+  const backHref = withLocale(locale, "/activities/new");
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState(filters.keyword ?? "");
-
-  useEffect(() => {
-    function syncBackHref() {
-      setBackHref(readActivityListEntryHref(locale) ?? fallbackBackHref);
-    }
-
-    syncBackHref();
-    window.addEventListener(activityListEntryUpdatedEvent, syncBackHref);
-
-    return () => {
-      window.removeEventListener(activityListEntryUpdatedEvent, syncBackHref);
-    };
-  }, [fallbackBackHref, locale]);
 
   useEffect(() => {
     setKeyword(filters.keyword ?? "");

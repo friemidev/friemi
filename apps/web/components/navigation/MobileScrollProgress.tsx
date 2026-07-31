@@ -165,7 +165,7 @@ export function MobileScrollProgress() {
     <div
       aria-hidden="true"
       data-mobile-scroll-progress
-      className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.375rem)] top-auto z-[45] h-[2px] rounded-full bg-[#D6D5B2]/70 md:hidden"
+      className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))] top-auto z-[45] h-[2px] rounded-full bg-[#D6D5B2]/70 md:hidden"
     >
       <div
         className="h-full origin-left rounded-full bg-[#369758] shadow-[0_-1px_8px_rgba(54,151,88,0.18)] transition-transform duration-100 ease-out"
