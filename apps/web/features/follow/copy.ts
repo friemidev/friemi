@@ -11,6 +11,11 @@ export function getFollowCopy(locale: string) {
       followingCount: "Abonnements",
       invalidRequest: "Requête invalide. Réessayez plus tard.",
       cannotFollowSelf: "Vous ne pouvez pas vous suivre vous-même.",
+      mutualPromptCta: "Discuter",
+      mutualPromptDescription:
+        "Vous vous suivez maintenant. Vous pouvez discuter directement.",
+      mutualPromptLater: "Plus tard",
+      mutualPromptTitle: "Vous vous suivez",
       targetUnavailable:
         "Cet utilisateur est introuvable ou temporairement indisponible.",
     };
@@ -28,6 +33,10 @@ export function getFollowCopy(locale: string) {
       followingCount: "Following",
       invalidRequest: "Invalid request. Try again later.",
       cannotFollowSelf: "You cannot follow yourself.",
+      mutualPromptCta: "Chat now",
+      mutualPromptDescription: "You follow each other now. Start a chat.",
+      mutualPromptLater: "Later",
+      mutualPromptTitle: "Mutual follow",
       targetUnavailable:
         "This user does not exist or cannot be followed right now.",
     };
@@ -44,6 +53,10 @@ export function getFollowCopy(locale: string) {
     followingCount: "关注",
     invalidRequest: "请求无效，请稍后再试。",
     cannotFollowSelf: "不能关注自己。",
+    mutualPromptCta: "去聊天",
+    mutualPromptDescription: "你们已经互相关注，快来聊天吧。",
+    mutualPromptLater: "稍后",
+    mutualPromptTitle: "已互相关注",
     targetUnavailable: "目标用户不存在或暂时不可关注。",
   };
 }

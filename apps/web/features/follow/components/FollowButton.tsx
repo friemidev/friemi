@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import {
@@ -110,6 +112,7 @@ export function FollowButton({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mutualPromptOpen, setMutualPromptOpen] = useState(false);
   const effectiveIsFollowing = state.isFollowing ?? optimisticIsFollowing;
 
   useEffect(() => {
@@ -129,6 +132,9 @@ export function FollowButton({
 
     if (typeof state.isFollowing === "boolean") {
       onStateChange?.(state.isFollowing);
+      if (state.becameMutualFollow) {
+        setMutualPromptOpen(true);
+      }
       setIsSubmitting(false);
       return;
     }
@@ -141,6 +147,7 @@ export function FollowButton({
     onStateChange,
     state.formError,
     state.isFollowing,
+    state.becameMutualFollow,
     state.ok,
   ]);
 
@@ -210,6 +217,68 @@ export function FollowButton({
           document.body,
         )
       : null;
+  const mutualPrompt =
+    mounted && mutualPromptOpen
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/32 px-5"
+            role="presentation"
+          >
+            <button
+              aria-label={t.mutualPromptLater}
+              className="absolute inset-0 cursor-default"
+              onClick={() => setMutualPromptOpen(false)}
+              tabIndex={-1}
+              type="button"
+            />
+            <div
+              aria-modal="true"
+              className="relative w-full max-w-[19rem] rounded-[1.4rem] border border-[#D6D5B2] bg-white p-4 shadow-[0_20px_46px_rgba(17,18,16,0.2)]"
+              role="dialog"
+            >
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#CFE3D2]">
+                <MessageCircle className="h-5 w-5" />
+              </div>
+              <h2 className="text-base font-black text-[#111210]">
+                {t.mutualPromptTitle}
+              </h2>
+              <p className="mt-2 text-sm font-semibold leading-5 text-[#6C746A]">
+                {t.mutualPromptDescription}
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <button
+                  className="h-10 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#156240] active:scale-[0.98]"
+                  onClick={() => setMutualPromptOpen(false)}
+                  type="button"
+                >
+                  {t.mutualPromptLater}
+                </button>
+                <form action={openDirectConversationAction}>
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="friendProfileId"
+                    type="hidden"
+                    value={targetUserProfileId}
+                  />
+                  <input
+                    name="redirectPath"
+                    type="hidden"
+                    value={redirectPath}
+                  />
+                  <button
+                    className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-sm font-black text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)] active:scale-[0.98]"
+                    type="submit"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {t.mutualPromptCta}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <>
@@ -258,6 +327,7 @@ export function FollowButton({
         />
       </form>
       {confirmDialog}
+      {mutualPrompt}
     </>
   );
 }

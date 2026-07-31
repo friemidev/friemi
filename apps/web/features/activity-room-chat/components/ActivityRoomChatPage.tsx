@@ -3,26 +3,44 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   ClipboardList,
+  ExternalLink,
   LoaderCircle,
   Lock,
+  LogOut,
   MessageCircle,
   MoreHorizontal,
   Pencil,
   SendHorizontal,
   Trash2,
-  UsersRound,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  Fragment,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Button } from "@chill-club/ui";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
 import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import {
+  cancelParticipationAction,
+  type CancelParticipationState,
+} from "@/features/activities/actions/cancelParticipation";
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import {
+  formatChatDateSeparator,
+  formatChatMessageTime,
+  getChatDateKey,
+} from "@/lib/chatDateSeparators";
 import {
   deleteActivityRoomMessageAction,
   sendActivityRoomMessageAction,
@@ -54,19 +72,7 @@ type ActivityRoomChatPageProps = {
 };
 
 const initialActionState: ActivityRoomChatActionState = {};
-
-function formatMessageTime(value: string, locale: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+const initialLeaveState: CancelParticipationState = {};
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
@@ -79,9 +85,18 @@ function getRoomManagementCopy(locale: string) {
       contactParticipants: "Contacter",
       edit: "Modifier",
       label: "Options",
+      leave: "Quitter le groupe",
+      leaveCancel: "Rester",
+      leaveConfirm: "Quitter",
+      leaveDescription:
+        "Vous n'aurez plus acces a cette discussion. Vous devrez rejoindre le groupe a nouveau.",
+      leaveFailed: "Impossible de quitter pour le moment.",
+      leavePending: "Sortie...",
+      leaveTitle: "Quitter ce groupe ?",
       manageTitle: "Gérer le groupe",
       members: "Membres",
       signups: "Inscriptions",
+      viewGroup: "Voir le groupe",
     };
   }
 
@@ -91,9 +106,18 @@ function getRoomManagementCopy(locale: string) {
       contactParticipants: "Contact",
       edit: "Edit",
       label: "Options",
+      leave: "Leave group",
+      leaveCancel: "Stay",
+      leaveConfirm: "Leave",
+      leaveDescription:
+        "You will lose access to this chat. Join the group again to come back.",
+      leaveFailed: "Could not leave right now.",
+      leavePending: "Leaving...",
+      leaveTitle: "Leave this group?",
       manageTitle: "Manage group",
       members: "Members",
       signups: "Signups",
+      viewGroup: "View group",
     };
   }
 
@@ -102,9 +126,17 @@ function getRoomManagementCopy(locale: string) {
     contactParticipants: "联系成员",
     edit: "编辑聚吧",
     label: "群聊设置",
+    leave: "退出本聚吧",
+    leaveCancel: "暂不退出",
+    leaveConfirm: "确认退出",
+    leaveDescription: "退出后将无法继续查看这个群聊，需要重新加入聚吧才能回来。",
+    leaveFailed: "暂时无法退出。",
+    leavePending: "退出中...",
+    leaveTitle: "确认退出本聚吧？",
     manageTitle: "管理聚吧",
     members: "成员",
     signups: "报名名单",
+    viewGroup: "查看聚吧",
   };
 }
 
@@ -165,13 +197,17 @@ function ActivityRoomChatAutoRefresh({
 function ActivityRoomManagementMenu({
   activityHref,
   activityId,
+  activityTitle,
   locale,
   management,
+  policy,
 }: {
   activityHref: string;
   activityId: string;
+  activityTitle: string;
   locale: string;
   management: ActivityRoomManagementViewModel | null | undefined;
+  policy: ActivityRoomChatPolicy;
 }) {
   const [open, setOpen] = useState(false);
   const copy = getRoomManagementCopy(locale);
@@ -182,7 +218,7 @@ function ActivityRoomManagementMenu({
       : "#activity-participants"
   }`;
   const editHref = withLocale(locale, `/activities/${activityId}/edit`);
-  const membersHref = `${activityHref}#activity-participants`;
+  const canLeaveRoom = policy.role === "PARTICIPANT";
 
   return (
     <div className="relative">
@@ -213,11 +249,11 @@ function ActivityRoomManagementMenu({
           <div className="grid gap-2">
             <Link
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition active:scale-[0.98]"
-              href={membersHref}
+              href={activityHref}
               onClick={() => setOpen(false)}
             >
-              <UsersRound className="h-4 w-4" />
-              {copy.members}
+              <ExternalLink className="h-4 w-4" />
+              {copy.viewGroup}
             </Link>
             {management?.canEditActivity ? (
               <Link
@@ -272,10 +308,128 @@ function ActivityRoomManagementMenu({
                 </div>
               </>
             ) : null}
+            {canLeaveRoom ? (
+              <ActivityRoomLeaveAction
+                activityHref={activityHref}
+                activityId={activityId}
+                activityTitle={management?.activityTitle ?? activityTitle}
+                locale={locale}
+              />
+            ) : null}
           </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ActivityRoomLeaveAction({
+  activityHref,
+  activityId,
+  activityTitle,
+  locale,
+}: {
+  activityHref: string;
+  activityId: string;
+  activityTitle: string;
+  locale: string;
+}) {
+  const router = useRouter();
+  const copy = getRoomManagementCopy(locale);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState(
+    cancelParticipationAction,
+    initialLeaveState,
+  );
+
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    setConfirmOpen(false);
+    router.push(activityHref);
+    router.refresh();
+  }, [activityHref, router, state.success]);
+
+  return (
+    <form action={formAction} className="grid gap-2" noValidate>
+      <input name="activityId" type="hidden" value={activityId} />
+      <input name="locale" type="hidden" value={locale} />
+      {state.formError ? (
+        <p className="rounded-xl bg-[#FFF1EF] px-3 py-2 text-xs font-bold leading-5 text-[#B5301F]">
+          {state.formError || copy.leaveFailed}
+        </p>
+      ) : null}
+      <button
+        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#F0B7AE] bg-white px-4 text-sm font-black text-[#B5301F] transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+        disabled={isPending}
+        onClick={() => setConfirmOpen(true)}
+        type="button"
+      >
+        {isPending ? (
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+        ) : (
+          <LogOut className="h-4 w-4" />
+        )}
+        {isPending ? copy.leavePending : copy.leave}
+      </button>
+      {confirmOpen ? (
+        <div
+          className="fixed inset-0 z-[80] grid place-items-center bg-[#111210]/42 px-5 py-[max(1rem,env(safe-area-inset-top))]"
+          role="presentation"
+        >
+          <div
+            aria-describedby="activity-room-leave-description"
+            aria-labelledby="activity-room-leave-title"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-[1.25rem] border border-[#F0B7AE] bg-white p-5 shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
+            role="alertdialog"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FFF1EF] text-[#B5301F]">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <h2
+              className="mt-4 text-lg font-black text-[#111210]"
+              id="activity-room-leave-title"
+            >
+              {copy.leaveTitle}
+            </h2>
+            <p
+              className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]"
+              id="activity-room-leave-description"
+            >
+              {copy.leaveDescription}
+            </p>
+            {activityTitle ? (
+              <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-black text-[#4F574F]">
+                {activityTitle}
+              </p>
+            ) : null}
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#4F574F] transition active:scale-[0.98]"
+                disabled={isPending}
+                onClick={() => setConfirmOpen(false)}
+                type="button"
+              >
+                {copy.leaveCancel}
+              </button>
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-black text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                disabled={isPending}
+                type="submit"
+              >
+                {isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : null}
+                {isPending ? copy.leavePending : copy.leaveConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </form>
   );
 }
 
@@ -287,6 +441,30 @@ function ScrollAnchor({ lastMessageId }: { lastMessageId?: string }) {
   }, [lastMessageId]);
 
   return <div ref={anchorRef} aria-hidden="true" />;
+}
+
+function ChatDateSeparator({
+  createdAt,
+  locale,
+}: {
+  createdAt: string;
+  locale: string;
+}) {
+  const label = formatChatDateSeparator(createdAt, locale);
+
+  if (!label) {
+    return null;
+  }
+
+  return (
+    <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#8B907F] ring-1 ring-[#E7E2D6]">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+    </div>
+  );
 }
 
 function StatusPanel({
@@ -413,62 +591,76 @@ function MessageRow({
   return (
     <div
       className={cn(
-        "group flex items-end gap-2",
+        "group flex items-start gap-2.5",
         message.isMine ? "justify-end" : "justify-start",
       )}
     >
       {!message.isMine ? (
-        <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        <span className="pt-[1.25rem]">
+          <RoomAvatar avatarUrl={sender.avatarUrl} name={sender.nickname} />
+        </span>
       ) : null}
       <div
         className={cn(
-          "max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-[0_10px_24px_rgba(21,98,64,0.08)] sm:max-w-[66%]",
-          message.isDeleted
-            ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5]"
-            : message.isMine
-              ? "rounded-br-md bg-[#156240] text-white"
-              : "rounded-bl-md bg-white text-[#111210] ring-1 ring-[#D6D5B2]",
+          "grid max-w-[76%] gap-0.5 sm:max-w-[64%]",
+          message.isMine ? "justify-items-end" : "justify-items-start",
         )}
       >
-        <p
-          className={cn(
-            "whitespace-pre-wrap break-words",
-            message.isDeleted && "font-semibold italic",
-          )}
-        >
-          {message.isDeleted ? copy.deletedMessage : message.body}
-        </p>
+        {!message.isMine ? (
+          <p className="max-w-full truncate pl-1 text-[11px] font-black leading-4 text-[#6C746A]">
+            {sender.nickname}
+          </p>
+        ) : null}
         <div
           className={cn(
-            "mt-1 flex items-center gap-2 text-[11px]",
-            message.isMine && !message.isDeleted
-              ? "text-white/68"
-              : "text-[#8B907F]",
+            "rounded-[1.05rem] px-3.5 py-2 text-sm leading-6 shadow-[0_8px_18px_rgba(21,98,64,0.06)]",
+            message.isDeleted
+              ? "bg-[#F1F2EC] text-[#8B907F] ring-1 ring-[#DFDAC5]"
+              : message.isMine
+                ? "rounded-br-[0.35rem] bg-[#156240] text-white"
+                : "rounded-tl-[0.35rem] bg-white text-[#111210] ring-1 ring-[#D6D5B2]",
           )}
         >
-          <span>{formatMessageTime(message.createdAt, locale)}</span>
-          {canDelete ? (
-            <button
-              aria-busy={isDeleting}
-              aria-label={copy.deleteMessage}
-              className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-full opacity-100 transition active:scale-95 disabled:cursor-wait disabled:opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-                message.isMine
-                  ? "bg-white/14 text-white hover:bg-white/22"
-                  : "bg-[#F1F2EC] text-[#6C746A] hover:bg-[#E8E1CF]",
-              )}
-              disabled={isDeleting}
-              onClick={() => onDelete(message.id)}
-              title={copy.deleteMessage}
-              type="button"
-            >
-              {isDeleting ? (
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-            </button>
-          ) : null}
+          <p
+            className={cn(
+              "whitespace-pre-wrap break-words",
+              message.isDeleted && "font-semibold italic",
+            )}
+          >
+            {message.isDeleted ? copy.deletedMessage : message.body}
+          </p>
+          <div
+            className={cn(
+              "mt-1 flex items-center gap-2 text-[11px]",
+              message.isMine && !message.isDeleted
+                ? "text-white/68"
+                : "text-[#8B907F]",
+            )}
+          >
+            <span>{formatChatMessageTime(message.createdAt, locale)}</span>
+            {canDelete ? (
+              <button
+                aria-busy={isDeleting}
+                aria-label={copy.deleteMessage}
+                className={cn(
+                  "inline-flex h-6 w-6 items-center justify-center rounded-full opacity-100 transition active:scale-95 disabled:cursor-wait disabled:opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
+                  message.isMine
+                    ? "bg-white/14 text-white hover:bg-white/22"
+                    : "bg-[#F1F2EC] text-[#6C746A] hover:bg-[#E8E1CF]",
+                )}
+                disabled={isDeleting}
+                onClick={() => onDelete(message.id)}
+                title={copy.deleteMessage}
+                type="button"
+              >
+                {isDeleting ? (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
       {message.isMine ? (
@@ -483,11 +675,13 @@ function RoomComposer({
   disabled,
   locale,
   onSent,
+  viewer,
 }: {
   activityId: string;
   disabled: boolean;
   locale: string;
   onSent: (message: ActivityRoomMessageViewModel) => void;
+  viewer: ActivityRoomViewer | null;
 }) {
   const copy = getActivityRoomChatCopy(locale);
   const [body, setBody] = useState("");
@@ -528,10 +722,10 @@ function RoomComposer({
             isDeleted: false,
             isMine: true,
             sender: {
-              avatarUrl: null,
+              avatarUrl: viewer?.avatarUrl ?? null,
               friendCode: null,
-              id: "",
-              nickname: "Friemi",
+              id: viewer?.id ?? "",
+              nickname: viewer?.nickname ?? "Friemi",
             },
           });
 
@@ -673,14 +867,15 @@ export function ActivityRoomChatPage({
         <ActivityRoomChatAutoRefresh activityId={activity.id} />
       ) : null}
       <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <Link
+        <button
           aria-label={copy.backToActivity}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2] transition active:scale-95"
-          href={activityHref}
+          onClick={() => router.back()}
           title={copy.backToActivity}
+          type="button"
         >
           <ArrowLeft className="h-5 w-5" />
-        </Link>
+        </button>
         <div className="min-w-0 text-center">
           <p className="mx-auto flex max-w-full items-center justify-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#156240]">
             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
@@ -695,8 +890,10 @@ export function ActivityRoomChatPage({
             <ActivityRoomManagementMenu
               activityHref={activityHref}
               activityId={activity.id}
+              activityTitle={activity.title ?? copy.title}
               locale={locale}
               management={management}
+              policy={policy}
             />
           ) : null}
         </div>
@@ -706,17 +903,32 @@ export function ActivityRoomChatPage({
         {policy.canView ? (
           messages.length > 0 ? (
             <div className="grid gap-3">
-              {messages.map((message) => (
-                <MessageRow
-                  canManage={canManage}
-                  isDeleting={deletingId === message.id}
-                  key={message.id}
-                  locale={locale}
-                  message={message}
-                  onDelete={handleDelete}
-                  viewer={viewer}
-                />
-              ))}
+              {messages.map((message, index) => {
+                const previousMessage = messages[index - 1];
+                const showDateSeparator =
+                  !previousMessage ||
+                  getChatDateKey(previousMessage.createdAt) !==
+                    getChatDateKey(message.createdAt);
+
+                return (
+                  <Fragment key={message.id}>
+                    {showDateSeparator ? (
+                      <ChatDateSeparator
+                        createdAt={message.createdAt}
+                        locale={locale}
+                      />
+                    ) : null}
+                    <MessageRow
+                      canManage={canManage}
+                      isDeleting={deletingId === message.id}
+                      locale={locale}
+                      message={message}
+                      onDelete={handleDelete}
+                      viewer={viewer}
+                    />
+                  </Fragment>
+                );
+              })}
               <ScrollAnchor lastMessageId={lastMessageId} />
             </div>
           ) : (
@@ -747,6 +959,7 @@ export function ActivityRoomChatPage({
           disabled={Boolean(deletingId)}
           locale={locale}
           onSent={handleSent}
+          viewer={viewer}
         />
       ) : policy.canView ? (
         <div className="shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-center text-xs font-black text-[#6C746A] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">

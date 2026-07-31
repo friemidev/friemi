@@ -85,7 +85,7 @@ function FriendAction({
     );
   }
 
-  const activeLabel = relationship.isMutualFollow
+  const activeLabel = relationship.targetFollowsViewer
     ? actionCopy.mutual
     : actionCopy.followed;
   const inactiveLabel = relationship.targetFollowsViewer

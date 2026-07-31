@@ -3,16 +3,19 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronDown,
+  Gift,
   MessageCircle,
   MoreVertical,
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { getDirectMessagesCopy } from "../copy";
@@ -157,7 +160,7 @@ function ConversationListItem({
                 isActive ? "text-[#8E8383]" : "text-[#8E8383]",
               )}
             >
-              {formatActivityDate(time, locale)}
+              {formatChatListTimestamp(time, locale)}
             </span>
             {unreadCount > 0 ? (
               <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
@@ -364,6 +367,23 @@ export function MessageThread({
               <UserRound className="h-4 w-4 shrink-0" />
               <span className="truncate">{t.viewProfile}</span>
             </ContextualDetailLink>
+            <CharmGiftDialog
+              isAuthenticated
+              locale={locale}
+              recipientName={conversation.peer.nickname}
+              recipientProfileId={conversation.peer.id}
+              redirectPath={`/messages/${conversation.id}`}
+              sourceContextId={conversation.id}
+              sourceSurface="DIRECT_MESSAGE"
+              triggerAriaLabel={t.sendGift}
+              triggerClassName="flex h-auto w-full min-w-0 justify-start rounded-none bg-transparent px-3 py-2 text-sm font-medium text-[#9A2135] shadow-none hover:bg-[#FFF5E6] focus-visible:ring-[#E7457A]/24"
+              triggerContent={
+                <>
+                  <Gift className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t.sendGift}</span>
+                </>
+              }
+            />
           </div>
         </details>
       </div>

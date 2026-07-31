@@ -174,7 +174,7 @@ function FollowCta({
   const isFollowing =
     relationshipStatus === "FOLLOWING" || relationshipStatus === "MUTUAL";
   const activeLabel =
-    relationshipStatus === "MUTUAL"
+    relationshipStatus === "MUTUAL" || relationshipStatus === "FOLLOWED_BY"
       ? relationshipCopy.mutual
       : relationshipCopy.following;
   const inactiveLabel =

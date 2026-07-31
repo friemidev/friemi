@@ -15,8 +15,10 @@ const toggleFollowSchema = z.object({
 });
 
 export type ToggleFollowState = {
+  becameMutualFollow?: boolean;
   formError?: string;
   isFollowing?: boolean;
+  isMutualFollow?: boolean;
   ok?: boolean;
 };
 
@@ -106,7 +108,9 @@ export async function toggleFollowUserAction(
     revalidatePath(withLocale(locale, "/profile/network"));
 
     return {
+      becameMutualFollow: false,
       isFollowing: false,
+      isMutualFollow: false,
       ok: true,
     };
   }
@@ -118,7 +122,9 @@ export async function toggleFollowUserAction(
     },
   });
 
-  if (targetFollowsViewer) {
+  const isMutualFollow = Boolean(targetFollowsViewer);
+
+  if (isMutualFollow) {
     await markReferralMutualFollowAcceptedBetween(
       viewerProfile.id,
       targetUserProfileId,
@@ -133,7 +139,9 @@ export async function toggleFollowUserAction(
   revalidatePath(withLocale(locale, "/profile/network"));
 
   return {
+    becameMutualFollow: isMutualFollow,
     isFollowing: true,
+    isMutualFollow,
     ok: true,
   };
 }
