@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getUnreadActivityRoomConversationCount } from "@/features/activity-room-chat/services/activityRoomChat";
-import { getUnreadDirectMessageConversationCount } from "@/features/direct-messages/queries/getDirectMessages";
+import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
+import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
 import { prisma } from "@/lib/prisma";
@@ -19,8 +19,8 @@ export async function GET() {
 
       const [unreadDirectMessageCount, unreadActivityRoomCount] =
         await Promise.all([
-          getUnreadDirectMessageConversationCount(localProfile.id),
-          getUnreadActivityRoomConversationCount(localProfile.id),
+          getUnreadDirectMessageCount(localProfile.id),
+          getUnreadActivityRoomTotalMessageCount(localProfile.id),
         ]);
 
       return NextResponse.json({
@@ -53,8 +53,8 @@ export async function GET() {
 
     const [unreadDirectMessageCount, unreadActivityRoomCount] =
       await Promise.all([
-        getUnreadDirectMessageConversationCount(profile.id),
-        getUnreadActivityRoomConversationCount(profile.id),
+        getUnreadDirectMessageCount(profile.id),
+        getUnreadActivityRoomTotalMessageCount(profile.id),
       ]);
 
     return NextResponse.json({

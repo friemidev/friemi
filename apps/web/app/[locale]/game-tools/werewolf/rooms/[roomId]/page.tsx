@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { WerewolfRoomOverview } from "@/features/game-tools/components/WerewolfRoomOverview";
 import {
   getActiveGameToolRoomForProfile,
@@ -170,11 +169,7 @@ export default async function WerewolfRoomPage({
   };
 
   return (
-    <PageContainer
-      className="max-w-[94rem] sm:pb-12 sm:pt-7"
-      mobileSafeBottom
-      mobileSafeTop
-    >
+    <main className="werewolf-room-fullscreen fixed inset-0 z-0 h-[100svh] w-screen overflow-hidden bg-[#062A24] px-0 py-0 md:static md:h-auto md:w-full md:bg-transparent">
       <WerewolfRoomOverview
         baseUrl={baseUrl}
         locale={locale}
@@ -182,6 +177,6 @@ export default async function WerewolfRoomPage({
         room={roomForClient}
         testBotsEnabled={isWerewolfTestBotFeatureEnabled()}
       />
-    </PageContainer>
+    </main>
   );
 }

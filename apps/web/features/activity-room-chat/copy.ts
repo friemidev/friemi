@@ -1,6 +1,12 @@
 import type { ActivityRoomChatErrorCode } from "./services/activityRoomChat";
 
 type ActivityRoomChatCopy = {
+  announcements: {
+    close: string;
+    latest: string;
+    open: string;
+    title: string;
+  };
   backToActivity: string;
   createGroup: string;
   deletedMessage: string;
@@ -33,6 +39,12 @@ type ActivityRoomChatCopy = {
 export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
   if (locale === "fr") {
     return {
+      announcements: {
+        close: "Fermer",
+        latest: "Nouveau",
+        open: "Voir les annonces",
+        title: "Annonce du groupe",
+      },
       backToActivity: "Retour",
       createGroup: "Créer un groupe",
       deletedMessage: "Message supprimé",
@@ -80,6 +92,12 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
 
   if (locale === "en") {
     return {
+      announcements: {
+        close: "Close",
+        latest: "New",
+        open: "View announcements",
+        title: "Group announcement",
+      },
       backToActivity: "Back",
       createGroup: "Create group",
       deletedMessage: "Message deleted",
@@ -123,6 +141,12 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
   }
 
   return {
+    announcements: {
+      close: "关闭",
+      latest: "最新",
+      open: "查看群公告",
+      title: "群公告",
+    },
     backToActivity: "返回",
     createGroup: "创建聚吧",
     deletedMessage: "消息已删除",

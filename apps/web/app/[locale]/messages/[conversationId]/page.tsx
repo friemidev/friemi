@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getUnreadActivityRoomConversationCount } from "@/features/activity-room-chat/services/activityRoomChat";
+import { getUnreadActivityRoomTotalMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
 import { MessageThread } from "@/features/direct-messages/components/DirectMessagesPanel";
 import { DesktopFriendRosterPanel } from "@/features/direct-messages/components/DesktopFriendRosterPanel";
@@ -12,7 +12,7 @@ import {
   getDirectConversationActivityContext,
   getDirectConversationThread,
   getDirectMessageFriendRoster,
-  getUnreadDirectMessageConversationCount,
+  getUnreadDirectMessageCount,
   markDirectConversationRead,
 } from "@/features/direct-messages/queries/getDirectMessages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -87,8 +87,8 @@ export default async function MessageThreadPage({
     "messages.unreadMessageCount",
     async () => {
       const [directCount, roomCount] = await Promise.all([
-        getUnreadDirectMessageConversationCount(profile.id),
-        getUnreadActivityRoomConversationCount(profile.id),
+        getUnreadDirectMessageCount(profile.id),
+        getUnreadActivityRoomTotalMessageCount(profile.id),
       ]);
 
       return directCount + roomCount;

@@ -17,10 +17,11 @@ import {
   Check,
   Monitor,
   Moon,
+  Palette,
   Plus,
-  RotateCcw,
+  QrCode,
   Ticket,
-  UserPlus,
+  X,
 } from "lucide-react";
 import {
   claimWerewolfSeatAction,
@@ -31,8 +32,13 @@ import {
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
-import { WerewolfTestBotPanel } from "@/features/game-tools/components/WerewolfTestBotPanel";
-import { werewolfUiAssets } from "@/features/game-tools/werewolfCardAssets";
+import {
+  defaultWerewolfAtmosphere,
+  getWerewolfAtmosphereById,
+  werewolfAtmospheres,
+  werewolfUiAssets,
+  type WerewolfAtmosphereId,
+} from "@/features/game-tools/werewolfCardAssets";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
@@ -113,6 +119,7 @@ type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
 
 const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
 const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
+const WEREWOLF_ATMOSPHERE_STORAGE_KEY = "friemi:werewolf:atmosphere";
 
 type WerewolfRoomSyncPayload = {
   room?: WerewolfRoomView;
@@ -193,6 +200,9 @@ function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       back: "Tous les outils",
+      atmosphere: "Ambiance",
+      atmosphereDescription: "Changez la nappe visible dans la salle.",
+      atmosphereTitle: "Ambiance de table",
       boundary:
         "Scannez, choisissez une place, puis lancez les rôles quand tout le monde est prêt.",
       changeSeat: "Changer",
@@ -262,6 +272,9 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       back: "All tools",
+      atmosphere: "Atmosphere",
+      atmosphereDescription: "Change the tablecloth shown in the room.",
+      atmosphereTitle: "Table atmosphere",
       boundary: "Scan in, pick seats, then deal roles when the table is ready.",
       changeSeat: "Switch",
       claimError: "Could not update the seat.",
@@ -329,6 +342,9 @@ function getCopy(locale: string) {
 
   return {
     back: "全部工具",
+    atmosphere: "氛围",
+    atmosphereDescription: "切换房间里的桌布氛围。",
+    atmosphereTitle: "桌布氛围",
     boundary: "扫码入座，人齐发身份。现场照常聊、投票、走夜晚。",
     changeSeat: "换座",
     claimError: "座位操作失败。",
@@ -421,109 +437,144 @@ function SubmitButton({
   );
 }
 
-function getEventLabel(type: string, locale: string) {
-  const labels: Record<string, Record<string, string>> = {
-    werewolf_member_joined: {
-      "zh-CN": "进房间",
-      en: "Joined",
-      fr: "Entrée",
-    },
-    werewolf_player_marked_dead: {
-      "zh-CN": "出局",
-      en: "Out",
-      fr: "Élimination",
-    },
-    werewolf_player_revived: {
-      "zh-CN": "回到场上",
-      en: "Back in",
-      fr: "Retour",
-    },
-    werewolf_ready_changed: {
-      "zh-CN": "准备更新",
-      en: "Ready update",
-      fr: "Prêt",
-    },
-    werewolf_room_created: {
-      "zh-CN": "开桌",
-      en: "Table opened",
-      fr: "Table ouverte",
-    },
-    werewolf_room_finished: {
-      "zh-CN": "结算",
-      en: "Result",
-      fr: "Résultat",
-    },
-    werewolf_room_started: {
-      "zh-CN": "发身份",
-      en: "Roles dealt",
-      fr: "Rôles donnés",
-    },
-    werewolf_seat_changed: {
-      "zh-CN": "换座",
-      en: "Seat switched",
-      fr: "Place changée",
-    },
-    werewolf_seat_claimed: {
-      "zh-CN": "入座",
-      en: "Seated",
-      fr: "Place prise",
-    },
-    werewolf_seat_left: {
-      "zh-CN": "离座",
-      en: "Left seat",
-      fr: "Place quittée",
-    },
-    werewolf_seat_link_refreshed: {
-      "zh-CN": "身份链接刷新",
-      en: "Private link refreshed",
-      fr: "Lien privé changé",
-    },
-    werewolf_seat_released: {
-      "zh-CN": "清空座位",
-      en: "Seat released",
-      fr: "Place libérée",
-    },
-    werewolf_seat_renamed: {
-      "zh-CN": "座位改名",
-      en: "Seat renamed",
-      fr: "Place renommée",
-    },
-    werewolf_test_bots_filled: {
-      "zh-CN": "测试补位",
-      en: "Test seats filled",
-      fr: "Places test ajoutées",
-    },
-    werewolf_test_bots_readied: {
-      "zh-CN": "测试准备",
-      en: "Test ready",
-      fr: "Prêt test",
-    },
-    werewolf_test_flow_started: {
-      "zh-CN": "测试开局",
-      en: "Test start",
-      fr: "Départ test",
-    },
-    werewolf_test_phase_advanced: {
-      "zh-CN": "测试推进",
-      en: "Test step",
-      fr: "Étape test",
-    },
-  };
+function getStoredWerewolfAtmosphereId(): WerewolfAtmosphereId {
+  const fallbackId = defaultWerewolfAtmosphere.id;
 
-  return labels[type]?.[locale] ?? labels[type]?.en ?? type;
-}
-
-function getEventTimeLabel(value: string, locale: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
+  if (typeof window === "undefined") {
+    return fallbackId;
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  try {
+    return getWerewolfAtmosphereById(
+      window.localStorage.getItem(WEREWOLF_ATMOSPHERE_STORAGE_KEY),
+    ).id;
+  } catch {
+    return fallbackId;
+  }
+}
+
+function WerewolfAtmospherePicker({
+  locale,
+  onCycle,
+  selectedId,
+}: {
+  locale: string;
+  onCycle: () => void;
+  selectedId: WerewolfAtmosphereId;
+}) {
+  const [showHint, setShowHint] = useState(false);
+  const hintTimerRef = useRef<number | null>(null);
+  const t = getCopy(locale);
+  const selectedAtmosphere = getWerewolfAtmosphereById(selectedId);
+
+  useEffect(() => {
+    return () => {
+      if (hintTimerRef.current !== null) {
+        window.clearTimeout(hintTimerRef.current);
+      }
+    };
+  }, []);
+
+  const cycleAtmosphere = () => {
+    onCycle();
+    setShowHint(true);
+
+    if (hintTimerRef.current !== null) {
+      window.clearTimeout(hintTimerRef.current);
+    }
+
+    hintTimerRef.current = window.setTimeout(() => {
+      setShowHint(false);
+      hintTimerRef.current = null;
+    }, 1300);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        aria-label={`${t.atmosphere}: ${selectedAtmosphere.name}`}
+        className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-[#F8DDA8]/38 bg-[#031F1B] text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition hover:scale-105 active:scale-95"
+        onClick={cycleAtmosphere}
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(6,42,36,0.18), rgba(3,31,27,0.78)), url("${selectedAtmosphere.src}")`,
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+        }}
+        title={selectedAtmosphere.name}
+        type="button"
+      >
+        <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/15" />
+        <Palette className="relative h-4 w-4 drop-shadow" />
+      </button>
+
+      {showHint ? (
+        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full border border-[#D8A84E]/38 bg-[#062A24]/96 px-3 py-1.5 text-right text-[11px] font-black text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
+          <span className="block truncate">{selectedAtmosphere.name}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WerewolfRoomQrDialog({
+  joinUrl,
+  roomCode,
+  t,
+}: {
+  joinUrl: string;
+  roomCode: string;
+  t: ReturnType<typeof getCopy>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        aria-label={t.scanJoin}
+        className="grid h-10 w-10 place-items-center rounded-full bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] ring-1 ring-[#F8DDA8]/34 transition hover:bg-[#11483E] active:scale-95"
+        onClick={() => setOpen(true)}
+        title={t.scanJoin}
+        type="button"
+      >
+        <QrCode className="h-4 w-4" />
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[95] grid place-items-center bg-[#031F1B]/76 px-4 py-[calc(env(safe-area-inset-top)+1rem)]"
+          role="presentation"
+        >
+          <section
+            aria-label={t.scanJoin}
+            aria-modal="true"
+            className="w-full max-w-[19rem] overflow-hidden rounded-[1.35rem] bg-[#FFFDF7] p-4 text-[#153B31] shadow-[0_24px_70px_rgba(0,0,0,0.36)]"
+            role="dialog"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="truncate text-sm font-black">{t.scanJoin}</p>
+              <button
+                aria-label="Close"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EDF3EA] text-[#153B31] transition active:scale-95"
+                onClick={() => setOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <WerewolfQrCode
+              codeLabel={t.code}
+              copiedLabel={t.copied}
+              copyLabel={t.copyInvite}
+              label={t.scanJoin}
+              roomCode={roomCode}
+              unavailableLabel={t.qrUnavailable}
+              value={joinUrl}
+            />
+          </section>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 function getNoticeLabel(
@@ -555,7 +606,6 @@ export function WerewolfRoomOverview({
   locale,
   notice,
   room: initialRoom,
-  testBotsEnabled = false,
 }: WerewolfRoomOverviewProps) {
   const router = useRouter();
   const [room, setRoom] = useState(initialRoom);
@@ -589,15 +639,16 @@ export function WerewolfRoomOverview({
     startWerewolfRoomAction,
     initialState,
   );
+  const [selectedAtmosphereId, setSelectedAtmosphereId] =
+    useState<WerewolfAtmosphereId>(defaultWerewolfAtmosphere.id);
+  const [atmospherePreferenceReady, setAtmospherePreferenceReady] =
+    useState(false);
   const t = getCopy(locale);
+  const selectedAtmosphere = getWerewolfAtmosphereById(selectedAtmosphereId);
   const joinUrl = `${baseUrl}${withLocale(
     locale,
     `/game-tools/werewolf/join/${room.code}`,
   )}`;
-  const recapHref = withLocale(
-    locale,
-    `/game-tools/werewolf/rooms/${room.id}/recap`,
-  );
   const screenHref = withLocale(
     locale,
     `/game-tools/werewolf/rooms/${room.id}/screen`,
@@ -627,6 +678,26 @@ export function WerewolfRoomOverview({
     room.events.find((event) => event.type === "werewolf_room_started")?.id ??
     "current";
   const noticeLabel = getNoticeLabel(notice, t);
+
+  useEffect(() => {
+    setSelectedAtmosphereId(getStoredWerewolfAtmosphereId());
+    setAtmospherePreferenceReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!atmospherePreferenceReady) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        WEREWOLF_ATMOSPHERE_STORAGE_KEY,
+        selectedAtmosphereId,
+      );
+    } catch {
+      // Local preference storage can be unavailable in private browsing.
+    }
+  }, [atmospherePreferenceReady, selectedAtmosphereId]);
 
   const canSubmitOnline = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -1087,12 +1158,12 @@ export function WerewolfRoomOverview({
     const tokenClass = `relative grid h-16 w-16 place-items-center rounded-full transition ${
       seat.isDead ? "grayscale opacity-55" : ""
     } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
-    const seatNumberClass = `absolute -left-1 -top-1 z-20 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10.5px] font-black shadow-sm ring-1 ${
+    const seatNumberClass = `absolute -left-1 -top-1 z-20 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10.5px] font-black shadow-[0_4px_12px_rgba(0,0,0,0.34)] ring-1 ${
       isCurrentSeat
-        ? "bg-[#F8DDA8] text-[#153B31] ring-[#F8DDA8]/85"
-        : "bg-[#F8DDA8]/96 text-[#153B31] ring-[#D8A84E]/45"
+        ? "bg-[#F8DDA8] text-[#153B31] ring-white/70"
+        : "bg-[#FFF8DC] text-[#153B31] ring-white/60"
     }`;
-    const seatNameClass = `mt-1.5 block w-full truncate text-[10.5px] font-black leading-tight ${
+    const seatNameClass = `mt-1.5 block max-w-full truncate rounded-full bg-[#031F1B]/88 px-2.5 py-0.5 text-[10.5px] font-black leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.42)] ring-1 ring-[#F8DDA8]/22 [text-shadow:0_1px_5px_rgba(0,0,0,0.95)] ${
       seat.isDead
         ? "text-white/42"
         : isCurrentSeat
@@ -1172,32 +1243,37 @@ export function WerewolfRoomOverview({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[28rem] space-y-4 lg:max-w-[94rem]">
-      <section className="grid gap-5 lg:grid-cols-[minmax(25rem,28rem)_minmax(0,1fr)] lg:items-start">
-        <div
-          className="relative overflow-hidden rounded-[1.75rem] border border-[#D8A84E]/35 bg-[#062A24] p-4 text-white shadow-[0_22px_52px_rgba(6,42,36,0.28)]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 50% 14%, rgba(248,221,168,0.18), transparent 29%), radial-gradient(circle at 50% 58%, rgba(4,74,61,0.78), transparent 46%), linear-gradient(180deg, #062A24 0%, #06372F 52%, #031F1B 100%)",
-          }}
-        >
-          <div className="pointer-events-none absolute inset-x-8 top-2 h-28 rounded-b-full border-b border-[#D8A84E]/16 bg-[#F8DDA8]/5" />
+    <div className="h-full w-full overflow-hidden bg-[#062A24]">
+      <section className="h-full min-h-[32rem] md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
+        <div className="relative flex h-full flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
+          <img
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover brightness-[0.72] contrast-[1.05] saturate-[0.9]"
+            draggable={false}
+            key={selectedAtmosphere.id}
+            src={selectedAtmosphere.src}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-black/34" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[calc(var(--app-top-safe-area)+6.4rem)] bg-[#031F1B]/70" />
+          <div className="pointer-events-none absolute inset-x-2 top-[calc(var(--app-top-safe-area)+0.5rem)] z-10 h-[3.35rem] rounded-full bg-[#031F1B]/94 shadow-[0_10px_26px_rgba(0,0,0,0.34)] ring-1 ring-[#F8DDA8]/16" />
+          <div className="pointer-events-none absolute inset-x-8 top-[calc(var(--app-top-safe-area)+4.7rem)] h-20 rounded-b-full border-b border-[#D8A84E]/16 bg-[#F8DDA8]/4" />
           <div className="pointer-events-none absolute inset-x-5 bottom-4 h-16 rounded-t-[2rem] border-t border-[#D8A84E]/18" />
 
-          <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="relative z-20 grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
             <Link
               aria-label={t.back}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#D8A84E]/38 bg-[#0A3B32]/86 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.20)] transition hover:bg-[#11483E]"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#F8DDA8]/38 bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.26)] transition hover:bg-[#11483E]"
               href={withLocale(locale, "/game-tools/werewolf")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
 
-            <div className="min-w-0 text-center">
-              <p className="truncate text-base font-black tracking-normal text-[#F8DDA8]">
+            <div className="min-w-0 rounded-full bg-[#031F1B]/86 px-2 py-1 text-center shadow-[0_6px_18px_rgba(0,0,0,0.34)] ring-1 ring-[#F8DDA8]/22">
+              <p className="truncate text-sm font-black tracking-normal text-[#F8DDA8] [text-shadow:0_1px_6px_rgba(0,0,0,0.95)]">
                 {room.variant.label}
               </p>
-              <p className="mt-0.5 text-[11px] font-black text-white/56">
+              <p className="mt-0.5 text-[10px] font-black text-white/78 [text-shadow:0_1px_5px_rgba(0,0,0,0.85)]">
                 {t.code} ·{" "}
                 <span className="font-mono tracking-[0.18em] text-[#F0C36A]">
                   {room.code}
@@ -1205,14 +1281,38 @@ export function WerewolfRoomOverview({
               </p>
             </div>
 
-            <Link
-              aria-label={t.publicScreen}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#D8A84E]/38 bg-[#0A3B32]/86 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.20)] transition hover:bg-[#11483E]"
-              href={screenHref}
-              target="_blank"
-            >
-              <Monitor className="h-4 w-4" />
-            </Link>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <WerewolfAtmospherePicker
+                locale={locale}
+                onCycle={() => {
+                  setSelectedAtmosphereId((currentId) => {
+                    const currentIndex = werewolfAtmospheres.findIndex(
+                      (atmosphere) => atmosphere.id === currentId,
+                    );
+                    const nextAtmosphere =
+                      werewolfAtmospheres[
+                        (currentIndex + 1) % werewolfAtmospheres.length
+                      ] ?? defaultWerewolfAtmosphere;
+
+                    return nextAtmosphere.id;
+                  });
+                }}
+                selectedId={selectedAtmosphere.id}
+              />
+              <WerewolfRoomQrDialog
+                joinUrl={joinUrl}
+                roomCode={room.code}
+                t={t}
+              />
+              <Link
+                aria-label={t.publicScreen}
+                className="grid h-10 w-10 place-items-center rounded-full border border-[#F8DDA8]/38 bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition hover:bg-[#11483E]"
+                href={screenHref}
+                target="_blank"
+              >
+                <Monitor className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           {noticeLabel ? (
@@ -1222,15 +1322,15 @@ export function WerewolfRoomOverview({
             </div>
           ) : null}
 
-          <div className="relative z-10 mt-4 overflow-hidden rounded-[1.35rem] border border-[#D8A84E]/30 bg-[#04241F]/68 shadow-inner">
-            <div className="pointer-events-none absolute inset-0 opacity-45 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
+          <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 opacity-24 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
             <div className="pointer-events-none absolute left-6 top-12 h-12 w-12 rounded-full border border-[#F8DDA8]/34 shadow-[inset_-8px_0_0_rgba(248,221,168,0.16)]" />
             <div className="pointer-events-none absolute right-5 top-20 h-20 w-20 rounded-full bg-[#D8A84E]/8 blur-2xl" />
 
-            <div className="relative px-2 py-3">
+            <div className="relative flex min-h-0 flex-1 flex-col px-2 py-2">
               {judgeSeat ? (
                 <div className="relative z-30 mx-auto flex w-full max-w-[5.2rem] flex-col items-center text-center">
-                  <span className="mb-0.5 rounded-full bg-[#062A24]/88 px-3 py-1 text-[11px] font-black text-[#F0C36A] ring-1 ring-[#D8A84E]/35">
+                  <span className="mb-0.5 rounded-full bg-[#031F1B]/82 px-3 py-1 text-[11px] font-black text-[#F0C36A] shadow-[0_5px_14px_rgba(0,0,0,0.28)] ring-1 ring-[#D8A84E]/35">
                     {t.judge}
                   </span>
                   {judgeSeat.isClaimed ? (
@@ -1304,26 +1404,28 @@ export function WerewolfRoomOverview({
                       </span>
                     </span>
                   )}
-                  <span className="mt-1 block max-w-[5.2rem] truncate text-[10.5px] font-black leading-tight text-white">
+                  <span className="mt-1 block max-w-[5.2rem] truncate rounded-full bg-[#031F1B]/80 px-2 py-0.5 text-[10.5px] font-black leading-tight text-white shadow-[0_4px_12px_rgba(0,0,0,0.35)] ring-1 ring-[#F8DDA8]/16 [text-shadow:0_1px_5px_rgba(0,0,0,0.9)]">
                     {judgeSeat.isClaimed ? judgeSeat.displayName : t.empty}
                   </span>
                 </div>
               ) : null}
 
-              <div className="relative z-20 mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1">
-                <div className="grid content-start gap-2.5">
+              <div className="relative z-20 mt-2 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1">
+                <div className="grid content-start gap-2.5 rounded-[2rem] bg-[#031F1B]/38 px-1 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.18)] ring-1 ring-[#F8DDA8]/10">
                   {leftTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
 
-                <div className="relative flex min-h-[31.5rem] flex-col items-center justify-between overflow-hidden rounded-[4.25rem] border border-[#D8A84E]/38 bg-[#062A24] px-3 py-5 shadow-[0_0_30px_rgba(0,0,0,0.24),inset_0_0_34px_rgba(216,168,78,0.12)]">
+                <div
+                  className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden rounded-[4.25rem] bg-black/24 px-3 py-3 shadow-[inset_0_0_28px_rgba(216,168,78,0.08)]"
+                >
                   <div className="pointer-events-none absolute inset-1.5 rounded-[3.75rem] border border-[#F8DDA8]/12" />
-                  <div className="pointer-events-none absolute inset-x-2 bottom-7 top-7 rounded-[3.4rem] border border-[#D8A84E]/18 bg-[linear-gradient(90deg,rgba(8,56,47,0.88),rgba(4,34,29,0.96)_34%,rgba(13,72,58,0.78)_50%,rgba(4,34,29,0.96)_66%,rgba(8,56,47,0.88))]" />
-                  <div className="pointer-events-none absolute inset-x-5 top-1/2 h-72 -translate-y-1/2 rounded-full bg-[#F0C36A]/8 blur-xl" />
+                  <div className="pointer-events-none absolute inset-x-2 bottom-7 top-7 rounded-[3.4rem] border border-[#D8A84E]/14 bg-black/12" />
+                  <div className="pointer-events-none absolute inset-x-5 top-1/2 h-72 -translate-y-1/2 rounded-full bg-[#F0C36A]/5 blur-xl" />
                   <div className="pointer-events-none absolute left-1/2 top-10 h-[calc(100%-5rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#F8DDA8]/16 to-transparent" />
 
                   <Moon className="relative h-6 w-6 text-[#F0C36A]" />
 
-                  <div className="relative grid place-items-center text-center">
+                  <div className="relative grid place-items-center rounded-[1.45rem] bg-[#031F1B]/48 px-2 py-3 text-center shadow-[0_10px_28px_rgba(0,0,0,0.24)] ring-1 ring-[#F8DDA8]/12">
                     <div className="mb-3 grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-[#D8A84E]/34 bg-[#062A24] shadow-[inset_0_0_18px_rgba(248,221,168,0.10)]">
                       <img
                         alt=""
@@ -1334,10 +1436,10 @@ export function WerewolfRoomOverview({
                       />
                       <div className="absolute h-16 w-16 rounded-full bg-[#062A24]/42" />
                     </div>
-                    <p className="max-w-[5rem] text-center text-lg font-black leading-tight text-[#F8DDA8]">
+                    <p className="max-w-[5rem] text-center text-lg font-black leading-tight text-[#F8DDA8] [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
                       {centerTitle}
                     </p>
-                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-black leading-tight text-white/62">
+                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-black leading-tight text-white/76 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
                       {centerSubtitle}
                     </p>
                   </div>
@@ -1347,14 +1449,14 @@ export function WerewolfRoomOverview({
                   </div>
                 </div>
 
-                <div className="grid content-start gap-2.5">
+                <div className="grid content-start gap-2.5 rounded-[2rem] bg-[#031F1B]/38 px-1 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.18)] ring-1 ring-[#F8DDA8]/10">
                   {rightTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-4 space-y-3">
+          <div className="relative z-10 mt-2 shrink-0 space-y-2">
             {!room.currentMember && isLobby ? (
               <form
                 action={joinAction}
@@ -1534,84 +1636,6 @@ export function WerewolfRoomOverview({
             ) : null}
           </div>
         </div>
-
-        <aside className="space-y-4">
-          <div className="rounded-[1.35rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
-            <WerewolfQrCode
-              codeLabel={t.code}
-              copiedLabel={t.copied}
-              copyLabel={t.copyInvite}
-              label={t.scanJoin}
-              roomCode={room.code}
-              unavailableLabel={t.qrUnavailable}
-              value={joinUrl}
-            />
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D]"
-                href={screenHref}
-                target="_blank"
-              >
-                <Monitor className="h-3.5 w-3.5" />
-                {t.publicScreen}
-              </Link>
-              <Link
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-[#FFFDF7] px-3 text-xs font-black text-[#7A1F2B] transition hover:bg-[#FFF7F1]"
-                href={recapHref}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                {t.recap}
-              </Link>
-            </div>
-          </div>
-
-          {testBotsEnabled && room.isHost ? (
-            <WerewolfTestBotPanel locale={locale} room={room} />
-          ) : null}
-
-          <div className="rounded-[1.35rem] border border-[#D9C7B4] bg-white p-4 shadow-sm">
-            <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#1E1718]">
-              <UserPlus className="h-4 w-4 text-[#7A1F2B]" />
-              {t.events}
-            </h2>
-            <div className="relative mt-3 space-y-2 before:absolute before:bottom-3 before:left-3 before:top-3 before:w-px before:bg-[#D9C7B4]">
-              {room.events.length ? (
-                room.events.slice(0, 8).map((event) => (
-                  <div
-                    className="relative flex items-start gap-2 rounded-2xl bg-[#F7F3EC] px-3 py-2 text-xs font-bold text-[#7A1F2B]"
-                    key={event.id}
-                  >
-                    <span className="relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F7F3EC]">
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="h-full w-full"
-                        draggable={false}
-                        src={werewolfUiAssets.timelineEventDot}
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-black text-[#1E1718]">
-                        {event.actorName ?? t.systemActor}
-                      </span>
-                      <span className="block truncate">
-                        {getEventLabel(event.type, locale)}
-                      </span>
-                    </span>
-                    <time
-                      className="shrink-0 pt-0.5 font-mono text-[10px] font-black text-[#7A1F2B]/52"
-                      dateTime={event.createdAt}
-                    >
-                      {getEventTimeLabel(event.createdAt, locale)}
-                    </time>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm font-bold text-[#7A1F2B]/70">-</p>
-              )}
-            </div>
-          </div>
-        </aside>
       </section>
     </div>
   );

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { after } from "next/server";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
 import {
   getActivityRoomChatPageData,
   getActivityRoomManagementData,
+  getUnreadActivityRoomTotalMessageCount,
   markActivityRoomChatRead,
 } from "@/features/activity-room-chat/services/activityRoomChat";
+import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
+import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getSignInHref } from "@/lib/auth-redirect";
 
@@ -62,15 +64,26 @@ export default async function ActivityRoomPage({
         policy: guestPolicy,
       };
 
+  let unreadMessageCount: number | null = null;
+
   if (viewerProfile && roomData.policy.canView) {
-    after(() => {
-      void markActivityRoomChatRead({
-        activityId,
-        profileId: viewerProfile.id,
-      }).catch((error: unknown) => {
-        console.error("Failed to mark activity room chat read", error);
-      });
+    await markActivityRoomChatRead({
+      activityId,
+      profileId: viewerProfile.id,
+    }).catch((error: unknown) => {
+      console.error("Failed to mark activity room chat read", error);
     });
+
+    unreadMessageCount = await Promise.all([
+      getUnreadDirectMessageCount(viewerProfile.id),
+      getUnreadActivityRoomTotalMessageCount(viewerProfile.id),
+    ])
+      .then(([directCount, roomCount]) => directCount + roomCount)
+      .catch((error: unknown) => {
+        console.error("Failed to load unread chat count after room read", error);
+
+        return null;
+      });
   }
 
   const management = viewerProfile
@@ -86,6 +99,9 @@ export default async function ActivityRoomPage({
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8">
+      {unreadMessageCount === null ? null : (
+        <DirectMessageUnreadCountHydrator unreadCount={unreadMessageCount} />
+      )}
       <ActivityRoomChatPage
         activity={roomData.activity}
         activityId={activityId}
