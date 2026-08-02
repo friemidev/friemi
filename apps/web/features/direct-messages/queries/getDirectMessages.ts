@@ -571,10 +571,10 @@ export async function getDirectMessageFriendRoster(
   return sortFriendRosterItems(profileItems);
 }
 
-export async function getUnreadDirectMessageConversationCount(
+export async function getUnreadDirectMessageCount(
   currentUserProfileId: string,
 ) {
-  const unreadConversations = await prisma.directMessage.findMany({
+  return prisma.directMessage.count({
     where: {
       readAt: null,
       senderId: {
@@ -591,14 +591,7 @@ export async function getUnreadDirectMessageConversationCount(
         ],
       },
     },
-    distinct: ["conversationId"],
-    select: {
-      conversationId: true,
-    },
-    take: 100,
   });
-
-  return unreadConversations.length;
 }
 
 export async function markDirectConversationRead({

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  Bell,
+  ChevronRight,
   ClipboardList,
   ExternalLink,
   LoaderCircle,
@@ -38,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
   formatChatDateSeparator,
+  formatChatListTimestamp,
   formatChatMessageTime,
   getChatDateKey,
 } from "@/lib/chatDateSeparators";
@@ -49,6 +52,7 @@ import {
 import { getActivityRoomChatCopy } from "../copy";
 import type {
   ActivityRoomChatActivityViewModel,
+  ActivityRoomAnnouncementViewModel,
   ActivityRoomManagementViewModel,
   ActivityRoomChatPolicy,
   ActivityRoomMessageViewModel,
@@ -464,6 +468,116 @@ function ChatDateSeparator({
       </span>
       <span className="h-px flex-1 bg-[#E7E2D6]" />
     </div>
+  );
+}
+
+function ActivityRoomAnnouncementNotice({
+  announcements,
+  locale,
+}: {
+  announcements: ActivityRoomAnnouncementViewModel[];
+  locale: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const copy = getActivityRoomChatCopy(locale).announcements;
+  const latestAnnouncement = announcements[0];
+
+  if (!latestAnnouncement) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        className="group flex min-h-10 w-full items-center gap-2 border-b border-[#E9E1CD] bg-white px-4 py-2 text-left transition active:bg-[#F7F7F0]"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          <Bell className="h-3.5 w-3.5" />
+          <span
+            aria-hidden="true"
+            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#E7457A] ring-2 ring-white"
+          />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-[12px] font-black text-[#156240]">
+              {copy.title}
+            </span>
+            <span className="min-w-0 truncate text-[12px] font-semibold text-[#5F635E]">
+              {latestAnnouncement.content}
+            </span>
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#8B907F] transition group-active:translate-x-0.5" />
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end bg-[#111210]/42 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:justify-center sm:p-6"
+          role="presentation"
+        >
+          <section
+            aria-labelledby="activity-room-announcement-title"
+            aria-modal="true"
+            className="max-h-[min(82svh,34rem)] w-full max-w-md overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
+            role="dialog"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#E9E1CD] px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+                  <Bell className="h-4 w-4" />
+                </span>
+                <h2
+                  className="truncate text-base font-black text-[#111210]"
+                  id="activity-room-announcement-title"
+                >
+                  {copy.title}
+                </h2>
+              </div>
+              <button
+                className="h-8 shrink-0 rounded-full px-3 text-xs font-black text-[#6C746A] transition active:bg-[#F7F7F0]"
+                onClick={() => setOpen(false)}
+                type="button"
+              >
+                {copy.close}
+              </button>
+            </div>
+            <div className="max-h-[calc(min(82svh,34rem)-3.5rem)] overflow-y-auto px-4 py-3">
+              <div className="grid gap-3">
+                {announcements.map((announcement, index) => (
+                  <article
+                    className="rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3.5 py-3"
+                    key={announcement.id}
+                  >
+                    <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
+                      <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
+                        {announcement.authorName}
+                      </span>
+                      {index === 0 ? (
+                        <span className="rounded-full bg-[#E7457A] px-2 py-1 text-white">
+                          {copy.latest}
+                        </span>
+                      ) : null}
+                      <span>
+                        {formatChatListTimestamp(
+                          announcement.createdAt,
+                          locale,
+                        )}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
+                      {announcement.content}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -898,6 +1012,13 @@ export function ActivityRoomChatPage({
           ) : null}
         </div>
       </header>
+
+      {activity?.announcements.length ? (
+        <ActivityRoomAnnouncementNotice
+          announcements={activity.announcements}
+          locale={locale}
+        />
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF8EA_100%)] px-3 py-4 sm:px-5">
         {policy.canView ? (

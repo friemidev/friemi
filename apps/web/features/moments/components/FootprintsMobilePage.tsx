@@ -2129,6 +2129,20 @@ function FootprintsMessageList({
       entry.searchText.toLocaleLowerCase().includes(normalizedSearchTerm),
     );
   }, [filteredEntries, normalizedSearchTerm]);
+  const directUnreadTotal = friends.reduce(
+    (total, friend) => total + friend.unreadCount,
+    0,
+  );
+  const roomUnreadTotal = activityRoomChats.reduce(
+    (total, room) => total + room.unreadCount,
+    0,
+  );
+  const mutualUnreadTotal = friends
+    .filter((friend) => friend.isMutualFollow)
+    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const followingUnreadTotal = friends
+    .filter((friend) => friend.isFollowing)
+    .reduce((total, friend) => total + friend.unreadCount, 0);
   const filters: Array<{
     count: number;
     icon: ComponentType<{ className?: string }>;
@@ -2138,7 +2152,7 @@ function FootprintsMessageList({
     label: string;
   }> = [
     {
-      count: defaultVisibleEntries.length,
+      count: directUnreadTotal + roomUnreadTotal,
       icon: MessageCircle,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2146,7 +2160,7 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.all,
     },
     {
-      count: activityRoomChats.length,
+      count: roomUnreadTotal,
       icon: UsersRound,
       iconClassName: "text-[#156240]",
       iconFrameClassName: "bg-[#ECF5EF]",
@@ -2154,7 +2168,7 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.rooms,
     },
     {
-      count: friends.filter((friend) => friend.isMutualFollow).length,
+      count: mutualUnreadTotal,
       icon: UsersRound,
       iconClassName: "text-[#6E46D6]",
       iconFrameClassName: "bg-[#F0ECFF]",
@@ -2162,7 +2176,7 @@ function FootprintsMessageList({
       label: pageCopy.messageFilters.mutual,
     },
     {
-      count: friends.filter((friend) => friend.isFollowing).length,
+      count: followingUnreadTotal,
       icon: Heart,
       iconClassName: "text-[#E7457A]",
       iconFrameClassName: "bg-[#FFF0F5]",
@@ -2229,7 +2243,7 @@ function FootprintsMessageList({
                     "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none",
                     isActive
                       ? "bg-white text-[#156240]"
-                      : "bg-[#F1F2EC] text-[#6F756E]",
+                      : "bg-[#FFEAF1] text-[#D6245F]",
                   )}
                 >
                   {filter.count > 99 ? "99+" : filter.count}
@@ -2517,10 +2531,18 @@ export function FootprintsMobilePage({
   const signInHref = getSignInHref(locale, "/footprints");
   const initialUnreadMessageCount = useMemo(
     () =>
-      messageFriends.filter((friend) => friend.unreadCount > 0).length +
-      activityRoomChats.filter((room) => room.unreadCount > 0).length,
+      messageFriends.reduce(
+        (total, friend) => total + friend.unreadCount,
+        0,
+      ) +
+      activityRoomChats.reduce(
+        (total, room) => total + room.unreadCount,
+        0,
+      ),
     [activityRoomChats, messageFriends],
   );
+  const unreadMessageBadgeText =
+    initialUnreadMessageCount > 99 ? "99+" : String(initialUnreadMessageCount);
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
     { key: "message", label: copy.tabs.message },
@@ -2597,8 +2619,16 @@ export function FootprintsMobilePage({
                     )}
                     onClick={() => setActiveTab(tab.key)}
                   >
-                    <span className="block truncate whitespace-nowrap">
-                      {tab.label}
+                    <span className="relative mx-auto inline-flex max-w-full items-center justify-center">
+                      <span className="block truncate whitespace-nowrap">
+                        {tab.label}
+                      </span>
+                      {tab.key === "message" && initialUnreadMessageCount > 0 ? (
+                        <span
+                          aria-label={unreadMessageBadgeText}
+                          className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-[#E7457A] ring-2 ring-[#FEFFF9]"
+                        />
+                      ) : null}
                     </span>
                     <span
                       className={cn(

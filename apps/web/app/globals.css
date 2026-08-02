@@ -197,6 +197,11 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.werewolf-room-fullscreen) {
+    padding-bottom: 0;
+    overflow-x: hidden;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) > .app-header,
   .app-layout-shell:has(.mobile-v23-home) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-home) [data-route-progress],
@@ -208,7 +213,10 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-create) > .app-header,
   .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
-  .app-layout-shell:has(.mobile-v23-create) [data-route-progress] {
+  .app-layout-shell:has(.mobile-v23-create) [data-route-progress],
+  .app-layout-shell:has(.werewolf-room-fullscreen) > .app-header,
+  .app-layout-shell:has(.werewolf-room-fullscreen) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.werewolf-room-fullscreen) [data-route-progress] {
     display: none;
   }
 }
@@ -1389,4 +1397,15 @@ html[data-home-motion-ready="true"]
     #1d1d1b,
     rgba(29, 29, 27, 0)
   ) !important;
+}
+
+@media (max-width: 767px) {
+  html:has(.werewolf-room-fullscreen),
+  body:has(.werewolf-room-fullscreen),
+  body:has(.werewolf-room-fullscreen) .app-layout-shell {
+    min-height: 100svh;
+    overflow: hidden;
+    background-color: #062a24 !important;
+    background-image: none !important;
+  }
 }

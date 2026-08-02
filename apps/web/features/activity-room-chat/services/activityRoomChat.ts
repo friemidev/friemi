@@ -65,6 +65,7 @@ export type ActivityRoomMessageViewModel = {
 };
 
 export type ActivityRoomChatActivityViewModel = {
+  announcements: ActivityRoomAnnouncementViewModel[];
   endAt: string | null;
   id: string;
   publicEventId: string | null;
@@ -73,6 +74,14 @@ export type ActivityRoomChatActivityViewModel = {
   status: ActivityStatus;
   title: string | null;
   type: ActivityType;
+};
+
+export type ActivityRoomAnnouncementViewModel = {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  isByOrganizer: boolean;
 };
 
 export type ActivityRoomChatPageData = {
@@ -154,6 +163,24 @@ const activityRoomPageSelect = {
   title: true,
   type: true,
   visibility: true,
+  announcements: {
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      authorId: true,
+      content: true,
+      createdAt: true,
+      author: {
+        select: {
+          friendCode: true,
+          nickname: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.ActivitySelect;
 
 const activityRoomRosterSelect = {
@@ -200,8 +227,19 @@ const activityRoomRosterSelect = {
 } satisfies Prisma.ActivitySelect;
 
 type ActivityRoomActivityForView = {
+  announcements: {
+    id: string;
+    authorId: string;
+    author: {
+      friendCode: string | null;
+      nickname: string;
+    };
+    content: string;
+    createdAt: Date;
+  }[];
   endAt: Date | null;
   id: string;
+  organizerId: string;
   publicEventId: string | null;
   requiresApproval: boolean;
   startAt: Date;
@@ -372,6 +410,18 @@ function mapActivityRoomActivity(
   const canShowTitle = policy.canView || activity.visibility === "PUBLIC";
 
   return {
+    announcements: policy.canView
+      ? activity.announcements.map((announcement) => ({
+          id: announcement.id,
+          authorName:
+            announcement.author.nickname.trim() ||
+            announcement.author.friendCode ||
+            "Friemi",
+          content: announcement.content,
+          createdAt: announcement.createdAt.toISOString(),
+          isByOrganizer: announcement.authorId === activity.organizerId,
+        }))
+      : [],
     endAt: activity.endAt?.toISOString() ?? null,
     id: activity.id,
     publicEventId: activity.publicEventId,
@@ -834,7 +884,7 @@ export async function getActivityRoomChatRoster(
     });
 }
 
-export async function getUnreadActivityRoomConversationCount(
+export async function getUnreadActivityRoomTotalMessageCount(
   viewerProfileId: string,
 ) {
   const rooms = await prisma.activity.findMany({
@@ -866,7 +916,10 @@ export async function getUnreadActivityRoomConversationCount(
     viewerProfileId,
   );
 
-  return unreadCountByActivityId.size;
+  return [...unreadCountByActivityId.values()].reduce(
+    (total, unreadCount) => total + unreadCount,
+    0,
+  );
 }
 
 export async function getUnreadActivityRoomMessageCount(
