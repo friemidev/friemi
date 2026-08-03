@@ -145,6 +145,7 @@ enum NotificationType {
   ACTIVITY_UPDATED
   ACTIVITY_CANCELLED
   ACTIVITY_ANNOUNCEMENT
+  ACTIVITY_CHECK_IN
   FRIEND_REQUEST
   ACTIVITY_COMMENTED
   COMMENT_REPLY
@@ -153,6 +154,7 @@ enum NotificationType {
   MOMENT_COMMENTED
   MOMENT_COMMENT_REPLY
   MOMENT_REPOSTED
+  CHARM_GIFT_RECEIVED
   REPORT_CREATED
 }
 
@@ -804,6 +806,7 @@ model CharmGiftEvent {
   sourceContextId    String?
   sender             UserProfile?     @relation("CharmGiftSender", fields: [senderProfileId], references: [id], onDelete: SetNull)
   recipient          UserProfile      @relation("CharmGiftRecipient", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+  notifications      Notification[]
   createdAt          DateTime         @default(now())
 
   @@index([recipientProfileId, createdAt])
@@ -1042,6 +1045,8 @@ model Notification {
   activity               Activity?             @relation(fields: [activityId], references: [id], onDelete: SetNull)
   activityAnnouncementId String?
   activityAnnouncement   ActivityAnnouncement? @relation(fields: [activityAnnouncementId], references: [id], onDelete: SetNull)
+  charmGiftEventId       String?
+  charmGiftEvent         CharmGiftEvent?       @relation(fields: [charmGiftEventId], references: [id], onDelete: SetNull)
   momentId               String?
   moment                 Moment?               @relation(fields: [momentId], references: [id], onDelete: SetNull)
   momentCommentId        String?
@@ -1053,6 +1058,7 @@ model Notification {
   @@index([recipientId, readAt, createdAt])
   @@index([activityId])
   @@index([activityAnnouncementId])
+  @@index([charmGiftEventId])
   @@index([momentId])
   @@index([momentCommentId])
 }

@@ -81,6 +81,7 @@ export default async function LocaleLayout({
             roomId: activeGameToolRoom.id,
           }),
         ),
+        id: activeGameToolRoom.id,
         kind: activeGameToolRoom.kind,
         privateSeatHref: activeGameToolPrivateSeatPath
           ? withLocale(locale, activeGameToolPrivateSeatPath)

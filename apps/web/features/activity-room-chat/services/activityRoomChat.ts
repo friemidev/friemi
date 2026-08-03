@@ -117,7 +117,18 @@ export type ActivityRoomManagementViewModel = {
   checkInRoster: ActivityCheckInParticipantViewModel[];
   coManagerDashboard: ActivityCoManagerDashboardViewModel | null;
   contactableParticipants: ActivityContactableParticipantViewModel[];
+  roomParticipants: ActivityRoomManagedParticipantViewModel[];
   requiresApproval: boolean;
+};
+
+export type ActivityRoomManagedParticipantViewModel = {
+  id: string;
+  status: ParticipantStatus;
+  user: {
+    id: string;
+    avatarUrl: string | null;
+    nickname: string;
+  };
 };
 
 type ResolveActivityRoomChatPolicyInput = {
@@ -786,6 +797,8 @@ export async function getActivityRoomManagementData({
           joinedAt: "asc",
         },
         select: {
+          id: true,
+          status: true,
           userProfile: {
             select: {
               id: true,
@@ -815,6 +828,21 @@ export async function getActivityRoomManagementData({
       avatarUrl: participant.userProfile.avatarUrl,
       nickname: participant.userProfile.nickname,
     }));
+  const roomParticipants = activity.participants
+    .filter(
+      (participant) =>
+        participant.userProfile.id !== activity.organizerId &&
+        roomParticipantStatuses.includes(participant.status),
+    )
+    .map((participant) => ({
+      id: participant.id,
+      status: participant.status,
+      user: {
+        id: participant.userProfile.id,
+        avatarUrl: participant.userProfile.avatarUrl,
+        nickname: participant.userProfile.nickname,
+      },
+    }));
   const [coManagerDashboard, checkInRoster] = await Promise.all([
     getActivityCoManagerDashboard(activity.id, viewerProfileId),
     getActivityCheckInRoster(activity.id, viewerProfileId),
@@ -827,6 +855,7 @@ export async function getActivityRoomManagementData({
     checkInRoster,
     coManagerDashboard,
     contactableParticipants,
+    roomParticipants,
     requiresApproval: activity.requiresApproval,
   };
 }

@@ -777,11 +777,6 @@ export function WerewolfCreateRoomPanel({
               aria-label={locale === "zh-CN" ? "返回" : "Back"}
               className="grid h-9 w-9 place-items-center rounded-full border border-[#CFA76A]/65 bg-[#06231F]/72 text-[#F8E9C8] shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:bg-[#0A3A32]"
               onClick={() => {
-                if (window.history.length > 1) {
-                  router.back();
-                  return;
-                }
-
                 router.push(withLocale(locale, "/game-tools"));
               }}
               type="button"

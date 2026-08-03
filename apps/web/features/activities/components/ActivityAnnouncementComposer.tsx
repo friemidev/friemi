@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Bell, Loader2, Megaphone, Send, X } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
@@ -28,15 +28,12 @@ function getAnnouncementCopy(locale: string) {
   if (locale === "fr") {
     return {
       title: "Annonce de groupe",
-      description:
-        "Envoyez un message unique a toutes les personnes deja inscrites ou en attente.",
       open: "Ouvrir l'annonce",
       placeholder:
         "Ex. : rendez-vous avance a 18h45, prenez une veste legere, entree par la porte sud.",
       send: "Notifier tout le monde",
       sending: "Envoi...",
       success: "Annonce envoyee aux participants.",
-      helper: "Visible ici et dans le centre de notifications.",
       close: "Fermer",
     };
   }
@@ -44,28 +41,23 @@ function getAnnouncementCopy(locale: string) {
   if (locale === "en") {
     return {
       title: "Group announcement",
-      description:
-        "Send one update to everyone who already joined or is waiting for approval.",
       open: "Open composer",
       placeholder:
         "Example: meetup moved to 6:45 PM, bring a light jacket, use the south entrance.",
       send: "Notify everyone",
       sending: "Sending...",
       success: "Announcement sent to participants.",
-      helper: "It will appear here and in notifications.",
       close: "Close",
     };
   }
 
   return {
     title: "群公告",
-    description: "给已经报名或正在等待审核的人统一发一条通知。",
     open: "发群公告",
     placeholder: "例如：集合时间改到 18:45，请带外套，从南门进入。",
     send: "通知所有参与者",
     sending: "发送中...",
     success: "公告已发送给参与者。",
-    helper: "会显示在这里，也会进入通知中心。",
     close: "关闭",
   };
 }
@@ -96,7 +88,6 @@ export function ActivityAnnouncementComposer({
   locale,
   compact = false,
 }: ActivityAnnouncementComposerProps) {
-  const descriptionId = useId();
   const [formKey, setFormKey] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [state, formAction] = useActionState(
@@ -147,9 +138,6 @@ export function ActivityAnnouncementComposer({
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-base font-semibold text-ink">{t.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-[#156240]">
-                {t.description}
-              </p>
             </div>
           </div>
 
@@ -177,7 +165,6 @@ export function ActivityAnnouncementComposer({
           role="presentation"
         >
           <div
-            aria-describedby={descriptionId}
             aria-modal="true"
             className="max-h-[calc(100svh-env(safe-area-inset-bottom)-2rem)] w-full overflow-y-auto rounded-[1.5rem] border border-[#D6D5B2] bg-[#FFF5E6] shadow-2xl sm:max-w-2xl"
             role="dialog"
@@ -190,12 +177,6 @@ export function ActivityAnnouncementComposer({
                 <h2 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
                   {t.open}
                 </h2>
-                <p
-                  id={descriptionId}
-                  className="mt-2 text-sm leading-6 text-zinc-600"
-                >
-                  {t.description}
-                </p>
               </div>
               <button
                 type="button"
@@ -230,8 +211,7 @@ export function ActivityAnnouncementComposer({
                 />
               </label>
 
-              <div className="flex items-center justify-between gap-3 text-xs text-[#8E8383]">
-                <span>{t.helper}</span>
+              <div className="flex justify-end text-xs text-[#8E8383]">
                 <span
                   className={cn(
                     contentLength >= maxAnnouncementLength

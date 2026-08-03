@@ -7,6 +7,7 @@ import {
   newUserFriemiCheckSourceKey,
   successfulActivityFragmentReward,
 } from "@/features/charm/charm";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import { prisma } from "@/lib/prisma";
 
 export class CharmGiftUnavailableError extends Error {
@@ -124,6 +125,18 @@ export async function recordReceivedCharmGift({
         },
       },
     });
+
+    if (senderProfileId && senderProfileId !== recipientProfileId) {
+      await createNotification(tx, {
+        actorId: senderProfileId,
+        activityId: sourceSurface === "ACTIVITY" ? sourceContextId : null,
+        charmGiftEventId: event.id,
+        dedupe: false,
+        momentId: sourceSurface === "MOMENT" ? sourceContextId : null,
+        recipientId: recipientProfileId,
+        type: "CHARM_GIFT_RECEIVED",
+      });
+    }
 
     return {
       balance,

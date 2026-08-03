@@ -560,7 +560,7 @@ function MobileHomeV23Experience({
             <h2 className="text-[17px] font-black tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="-mx-5 mt-3 flex snap-x gap-2.5 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
                   href={withLocale(locale, item.href)}
@@ -586,7 +586,7 @@ function MobileHomeV23Experience({
             </Link>
           </div>
 
-          <div className="-mx-5 mt-2.5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trendingActivities.length > 0
               ? trendingActivities
                   .slice(0, 5)

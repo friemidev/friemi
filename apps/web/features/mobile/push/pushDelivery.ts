@@ -17,6 +17,7 @@ export function normalizePushLocale(value: string | null): PushCopyLocale {
 
 export function getNotificationPath(input: {
   activityId: string | null;
+  actorId?: string | null;
   momentId?: string | null;
   type: NotificationType;
 }) {
@@ -45,6 +46,10 @@ export function getNotificationPath(input: {
     return "/messages";
   }
 
+  if (input.type === "CHARM_GIFT_RECEIVED") {
+    return input.actorId ? `/profile/${input.actorId}` : "/notifications";
+  }
+
   return "/notifications";
 }
 
@@ -61,6 +66,7 @@ function truncateMessagePreview(body: string) {
 export function getNotificationCopy(input: {
   activityTitle: string | null;
   actorName: string | null;
+  giftText?: string | null;
   locale: PushCopyLocale;
   messageBody?: string | null;
   type: NotificationType;
@@ -87,12 +93,14 @@ export function getNotificationCopy(input: {
   > = {
     "zh-CN": {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
+      ACTIVITY_CHECK_IN: `${activityTitle} 签到成功`,
       ACTIVITY_CANCELLED: `${activityTitle} 已取消`,
       ACTIVITY_COMMENTED: `${actorName} 评论了 ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} 有更新`,
       COMMENT_REPLY: `${actorName} 回复了你`,
       DIRECT_MESSAGE: `${actorName} 给你发来新消息`,
       FRIEND_REQUEST: `${actorName} 关注了你`,
+      CHARM_GIFT_RECEIVED: `${actorName} 给你送了礼物`,
       MOMENT_COMMENTED: `${actorName} 评论了你的足迹`,
       MOMENT_COMMENT_REPLY: `${actorName} 回复了你的评论`,
       MOMENT_LIKED: `${actorName} 点赞了你的足迹`,
@@ -108,12 +116,14 @@ export function getNotificationCopy(input: {
     },
     en: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
+      ACTIVITY_CHECK_IN: `Check-in confirmed for ${activityTitle}`,
       ACTIVITY_CANCELLED: `${activityTitle} was cancelled`,
       ACTIVITY_COMMENTED: `${actorName} commented on ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} was updated`,
       COMMENT_REPLY: `${actorName} replied to you`,
       DIRECT_MESSAGE: `${actorName} sent you a message`,
       FRIEND_REQUEST: `${actorName} started following you`,
+      CHARM_GIFT_RECEIVED: `${actorName} sent you a gift`,
       MOMENT_COMMENTED: `${actorName} commented on your moment`,
       MOMENT_COMMENT_REPLY: `${actorName} replied to your comment`,
       MOMENT_LIKED: `${actorName} liked your moment`,
@@ -129,12 +139,14 @@ export function getNotificationCopy(input: {
     },
     fr: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
+      ACTIVITY_CHECK_IN: `Pointage confirmé pour ${activityTitle}`,
       ACTIVITY_CANCELLED: `${activityTitle} a été annulée`,
       ACTIVITY_COMMENTED: `${actorName} a commenté ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} a été mise à jour`,
       COMMENT_REPLY: `${actorName} vous a répondu`,
       DIRECT_MESSAGE: `${actorName} vous a envoyé un message`,
       FRIEND_REQUEST: `${actorName} vous suit`,
+      CHARM_GIFT_RECEIVED: `${actorName} vous a envoyé un cadeau`,
       MOMENT_COMMENTED: `${actorName} a commenté votre moment`,
       MOMENT_COMMENT_REPLY: `${actorName} a répondu à votre commentaire`,
       MOMENT_LIKED: `${actorName} a aimé votre moment`,
@@ -154,6 +166,13 @@ export function getNotificationCopy(input: {
     return {
       body: truncateMessagePreview(input.messageBody),
       title: actorName,
+    };
+  }
+
+  if (input.type === "CHARM_GIFT_RECEIVED" && input.giftText?.trim()) {
+    return {
+      body: input.giftText,
+      title: copy[input.locale].CHARM_GIFT_RECEIVED ?? "Friemi",
     };
   }
 

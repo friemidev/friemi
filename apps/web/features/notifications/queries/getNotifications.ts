@@ -50,6 +50,13 @@ const notificationSelect = {
       createdAt: true,
     },
   },
+  charmGiftEvent: {
+    select: {
+      giftEmoji: true,
+      giftLabel: true,
+      totalCharmDelta: true,
+    },
+  },
   moment: {
     select: {
       id: true,
@@ -90,6 +97,11 @@ export type NotificationViewModel = {
     content: string;
     createdAt: string;
   } | null;
+  charmGiftEvent: {
+    giftEmoji: string;
+    giftLabel: string;
+    totalCharmDelta: number;
+  } | null;
   moment: {
     id: string;
     content: string | null;
@@ -128,6 +140,7 @@ function mapNotification(
           createdAt: notification.activityAnnouncement.createdAt.toISOString(),
         }
       : null,
+    charmGiftEvent: notification.charmGiftEvent,
     moment: notification.moment
       ? {
           id: notification.moment.id,

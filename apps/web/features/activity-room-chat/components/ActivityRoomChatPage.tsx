@@ -7,16 +7,15 @@ import {
   ArrowLeft,
   Bell,
   ChevronRight,
-  ClipboardList,
   ExternalLink,
   LoaderCircle,
   Lock,
   LogOut,
   MessageCircle,
   MoreHorizontal,
-  Pencil,
   SendHorizontal,
   Trash2,
+  UserMinus,
 } from "lucide-react";
 import {
   Fragment,
@@ -36,6 +35,7 @@ import {
   type CancelParticipationState,
 } from "@/features/activities/actions/cancelParticipation";
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
+import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
@@ -46,8 +46,10 @@ import {
 } from "@/lib/chatDateSeparators";
 import {
   deleteActivityRoomMessageAction,
+  removeActivityRoomParticipantAction,
   sendActivityRoomMessageAction,
   type ActivityRoomChatActionState,
+  type ActivityRoomMemberActionState,
 } from "../actions/activityRoomChatActions";
 import { getActivityRoomChatCopy } from "../copy";
 import type {
@@ -55,6 +57,7 @@ import type {
   ActivityRoomAnnouncementViewModel,
   ActivityRoomManagementViewModel,
   ActivityRoomChatPolicy,
+  ActivityRoomManagedParticipantViewModel,
   ActivityRoomMessageViewModel,
 } from "../services/activityRoomChat";
 
@@ -77,6 +80,7 @@ type ActivityRoomChatPageProps = {
 
 const initialActionState: ActivityRoomChatActionState = {};
 const initialLeaveState: CancelParticipationState = {};
+const initialMemberActionState: ActivityRoomMemberActionState = {};
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
@@ -85,9 +89,16 @@ function getAvatarInitial(name: string) {
 function getRoomManagementCopy(locale: string) {
   if (locale === "fr") {
     return {
+      backToRoom: "Retour au chat",
       close: "Fermer",
       contactParticipants: "Contacter",
-      edit: "Modifier",
+      kick: "Retirer",
+      kickCancel: "Annuler",
+      kickConfirm: "Retirer",
+      kickDescription: "Cette personne perdra l'acces a ce groupe.",
+      kickFailed: "Impossible de retirer cette personne.",
+      kickPending: "Retrait...",
+      kickTitle: "Retirer ce membre ?",
       label: "Options",
       leave: "Quitter le groupe",
       leaveCancel: "Rester",
@@ -99,16 +110,22 @@ function getRoomManagementCopy(locale: string) {
       leaveTitle: "Quitter ce groupe ?",
       manageTitle: "Gérer le groupe",
       members: "Membres",
-      signups: "Inscriptions",
       viewGroup: "Voir le groupe",
     };
   }
 
   if (locale === "en") {
     return {
+      backToRoom: "Back to chat",
       close: "Close",
       contactParticipants: "Contact",
-      edit: "Edit",
+      kick: "Remove",
+      kickCancel: "Cancel",
+      kickConfirm: "Remove",
+      kickDescription: "This person will lose access to this group.",
+      kickFailed: "Could not remove this member.",
+      kickPending: "Removing...",
+      kickTitle: "Remove this member?",
       label: "Options",
       leave: "Leave group",
       leaveCancel: "Stay",
@@ -120,15 +137,21 @@ function getRoomManagementCopy(locale: string) {
       leaveTitle: "Leave this group?",
       manageTitle: "Manage group",
       members: "Members",
-      signups: "Signups",
       viewGroup: "View group",
     };
   }
 
   return {
+    backToRoom: "返回群聊",
     close: "关闭",
     contactParticipants: "联系成员",
-    edit: "编辑聚吧",
+    kick: "移出",
+    kickCancel: "取消",
+    kickConfirm: "确认移出",
+    kickDescription: "对方将不能继续查看这个群聊。",
+    kickFailed: "暂时无法移出这位成员。",
+    kickPending: "移出中...",
+    kickTitle: "移出这位成员？",
     label: "群聊设置",
     leave: "退出本聚吧",
     leaveCancel: "暂不退出",
@@ -139,7 +162,6 @@ function getRoomManagementCopy(locale: string) {
     leaveTitle: "确认退出本聚吧？",
     manageTitle: "管理聚吧",
     members: "成员",
-    signups: "报名名单",
     viewGroup: "查看聚吧",
   };
 }
@@ -216,12 +238,7 @@ function ActivityRoomManagementMenu({
   const [open, setOpen] = useState(false);
   const copy = getRoomManagementCopy(locale);
 
-  const reviewHref = `${activityHref}${
-    management?.requiresApproval
-      ? "#participation-approval"
-      : "#activity-participants"
-  }`;
-  const editHref = withLocale(locale, `/activities/${activityId}/edit`);
+  const roomHref = withLocale(locale, `/lobby/${activityId}/room`);
   const canLeaveRoom = policy.role === "PARTICIPANT";
 
   return (
@@ -251,34 +268,23 @@ function ActivityRoomManagementMenu({
             </button>
           </div>
           <div className="grid gap-2">
-            <Link
+            <ContextualDetailLink
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+              detailSource={{
+                sourceHref: roomHref,
+                sourceKey: "messages",
+                sourceLabel: copy.backToRoom,
+                targetKey: `activity:${activityId}`,
+                targetKind: "activity",
+              }}
               href={activityHref}
               onClick={() => setOpen(false)}
             >
               <ExternalLink className="h-4 w-4" />
               {copy.viewGroup}
-            </Link>
-            {management?.canEditActivity ? (
-              <Link
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white transition active:scale-[0.98]"
-                href={editHref}
-                onClick={() => setOpen(false)}
-              >
-                <Pencil className="h-4 w-4" />
-                {copy.edit}
-              </Link>
-            ) : null}
+            </ContextualDetailLink>
             {management ? (
               <>
-                <Link
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition active:scale-[0.98]"
-                  href={reviewHref}
-                  onClick={() => setOpen(false)}
-                >
-                  <ClipboardList className="h-4 w-4" />
-                  {copy.signups}
-                </Link>
                 <ActivityAnnouncementComposer
                   activityId={activityId}
                   locale={locale}
@@ -297,6 +303,11 @@ function ActivityRoomManagementMenu({
                     locale={locale}
                   />
                 ) : null}
+                <ActivityRoomMemberManagementPanel
+                  activityId={activityId}
+                  locale={locale}
+                  members={management.roomParticipants}
+                />
                 <ActivityCheckInReviewPanel
                   activityId={activityId}
                   locale={locale}
@@ -324,6 +335,178 @@ function ActivityRoomManagementMenu({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function getRoomMemberStatusLabel(
+  status: ActivityRoomManagedParticipantViewModel["status"],
+  locale: string,
+) {
+  if (locale === "fr") {
+    return status === "PENDING" ? "En attente" : "Membre";
+  }
+
+  if (locale === "en") {
+    return status === "PENDING" ? "Pending" : "Member";
+  }
+
+  return status === "PENDING" ? "待确认" : "成员";
+}
+
+function ActivityRoomRemoveParticipantForm({
+  activityId,
+  locale,
+  member,
+}: {
+  activityId: string;
+  locale: string;
+  member: ActivityRoomManagedParticipantViewModel;
+}) {
+  const router = useRouter();
+  const copy = getRoomManagementCopy(locale);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState(
+    removeActivityRoomParticipantAction,
+    initialMemberActionState,
+  );
+
+  useEffect(() => {
+    if (!state.ok) {
+      return;
+    }
+
+    setConfirmOpen(false);
+    router.refresh();
+  }, [router, state.ok]);
+
+  return (
+    <form action={formAction} className="grid gap-2" noValidate>
+      <input name="activityId" type="hidden" value={activityId} />
+      <input name="locale" type="hidden" value={locale} />
+      <input name="participantId" type="hidden" value={member.id} />
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#E7E2D6] bg-[#FEFFF9] px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <RoomAvatar
+            avatarUrl={member.user.avatarUrl}
+            name={member.user.nickname}
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-[#111210]">
+              {member.user.nickname}
+            </p>
+            <p className="text-xs font-semibold text-[#6C746A]">
+              {getRoomMemberStatusLabel(member.status, locale)}
+            </p>
+          </div>
+        </div>
+        <button
+          className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#F0B7AE] bg-white px-3 text-xs font-black text-[#B5301F] transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          disabled={isPending}
+          onClick={() => setConfirmOpen(true)}
+          type="button"
+        >
+          {isPending ? (
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <UserMinus className="h-3.5 w-3.5" />
+          )}
+          {isPending ? copy.kickPending : copy.kick}
+        </button>
+      </div>
+      {state.formError ? (
+        <p className="px-2 text-xs font-bold leading-5 text-[#B5301F]">
+          {state.formError || copy.kickFailed}
+        </p>
+      ) : null}
+      {confirmOpen ? (
+        <div
+          className="fixed inset-0 z-[80] grid place-items-center bg-[#111210]/42 px-5 py-[max(1rem,env(safe-area-inset-top))]"
+          role="presentation"
+        >
+          <div
+            aria-describedby="activity-room-kick-description"
+            aria-labelledby="activity-room-kick-title"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-[1.25rem] border border-[#F0B7AE] bg-white p-5 shadow-[0_24px_70px_rgba(17,18,16,0.24)]"
+            role="alertdialog"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FFF1EF] text-[#B5301F]">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <h2
+              className="mt-4 text-lg font-black text-[#111210]"
+              id="activity-room-kick-title"
+            >
+              {copy.kickTitle}
+            </h2>
+            <p
+              className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]"
+              id="activity-room-kick-description"
+            >
+              {copy.kickDescription}
+            </p>
+            <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-black text-[#4F574F]">
+              {member.user.nickname}
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#4F574F] transition active:scale-[0.98]"
+                disabled={isPending}
+                onClick={() => setConfirmOpen(false)}
+                type="button"
+              >
+                {copy.kickCancel}
+              </button>
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-black text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                disabled={isPending}
+                type="submit"
+              >
+                {isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : null}
+                {isPending ? copy.kickPending : copy.kickConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
+function ActivityRoomMemberManagementPanel({
+  activityId,
+  locale,
+  members,
+}: {
+  activityId: string;
+  locale: string;
+  members: ActivityRoomManagedParticipantViewModel[];
+}) {
+  const copy = getRoomManagementCopy(locale);
+
+  if (members.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3">
+      <p className="mb-2 flex items-center gap-2 text-sm font-black text-[#156240]">
+        <UserMinus className="h-4 w-4" />
+        {copy.members}
+      </p>
+      <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+        {members.map((member) => (
+          <ActivityRoomRemoveParticipantForm
+            activityId={activityId}
+            key={member.id}
+            locale={locale}
+            member={member}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -924,6 +1107,7 @@ export function ActivityRoomChatPage({
     locale,
     `/lobby/${activity?.id ?? activityId}`,
   );
+  const messagesHref = withLocale(locale, "/footprints?tab=message");
   const state = getDeniedState({
     activity,
     activityHref,
@@ -984,7 +1168,10 @@ export function ActivityRoomChatPage({
         <button
           aria-label={copy.backToActivity}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2] transition active:scale-95"
-          onClick={() => router.back()}
+          onClick={() => {
+            router.replace(messagesHref);
+            router.refresh();
+          }}
           title={copy.backToActivity}
           type="button"
         >
