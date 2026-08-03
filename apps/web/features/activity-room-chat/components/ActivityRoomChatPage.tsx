@@ -137,7 +137,7 @@ function getRoomManagementCopy(locale: string) {
       leaveFailed: "Impossible de quitter pour le moment.",
       leavePending: "Sortie...",
       leaveTitle: "Quitter ce groupe ?",
-      manageTitle: "Gérer le groupe",
+      manageTitle: "Discussion",
       members: "Membres",
       membersCount: (count: number) => `${count} membre${count > 1 ? "s" : ""}`,
       moreMembers: "Voir plus",
@@ -179,7 +179,7 @@ function getRoomManagementCopy(locale: string) {
       leaveFailed: "Could not leave right now.",
       leavePending: "Leaving...",
       leaveTitle: "Leave this group?",
-      manageTitle: "Manage group",
+      manageTitle: "Chat",
       members: "Members",
       membersCount: (count: number) =>
         `${count} member${count === 1 ? "" : "s"}`,
@@ -221,7 +221,7 @@ function getRoomManagementCopy(locale: string) {
     leaveFailed: "暂时无法退出。",
     leavePending: "退出中...",
     leaveTitle: "确认退出本聚吧？",
-    manageTitle: "管理聚吧",
+    manageTitle: "群聊",
     members: "成员",
     membersCount: (count: number) => `${count} 位成员`,
     moreMembers: "查看更多成员",
@@ -1010,10 +1010,10 @@ function ActivityRoomAnnouncementNotice({
     <>
       <button
         className={cn(
-          "group flex w-full items-center gap-2 bg-white text-left transition active:bg-[#F7F7F0]",
+          "group flex items-center gap-2 bg-white text-left transition active:bg-[#F7F7F0]",
           isRow
-            ? "min-h-14 border-b border-[#EFEFEA] px-5 py-3 last:border-b-0"
-            : "min-h-10 border-b border-[#E9E1CD] px-4 py-2",
+            ? "min-h-14 w-full border-b border-[#EFEFEA] px-5 py-3 last:border-b-0"
+            : "mx-4 my-2 min-h-9 max-w-[calc(100%-2rem)] self-start rounded-full border border-[#D6D5B2] px-3 py-1.5 shadow-sm",
         )}
         onClick={() => setOpen(true)}
         type="button"
