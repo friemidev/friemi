@@ -79,12 +79,13 @@ export default async function WerewolfRoomPage({
     });
 
     if (activeRoom) {
-      const privateSeatPath = activeRoom.privateSeatToken
-        ? getGameToolPrivateSeatPath({
-            kind: activeRoom.kind,
-            privateSeatToken: activeRoom.privateSeatToken,
-          })
-        : null;
+      const privateSeatPath =
+        activeRoom.kind !== "WEREWOLF" && activeRoom.privateSeatToken
+          ? getGameToolPrivateSeatPath({
+              kind: activeRoom.kind,
+              privateSeatToken: activeRoom.privateSeatToken,
+            })
+          : null;
 
       redirect(
         withLocale(
@@ -120,6 +121,7 @@ export default async function WerewolfRoomPage({
           id: room.currentMember.id,
           isGuest: room.currentMember.isGuest,
           memberToken: room.currentMember.memberToken,
+          profileId: room.currentMember.profileId,
           readyAt: room.currentMember.readyAt?.toISOString() ?? null,
           seatedPrivateToken: room.currentMember.seatedPrivateToken,
           seatedSeatId: room.currentMember.seatedSeatId,
@@ -149,6 +151,7 @@ export default async function WerewolfRoomPage({
       isPlayerSeat: seat.isPlayerSeat,
       isViewerSeat: seat.isViewerSeat,
       privateToken: seat.privateToken,
+      profileId: seat.profileId,
       readyAt: seat.readyAt?.toISOString() ?? null,
       roleKey: seat.roleKey,
       roleLabel: seat.roleLabel,
@@ -172,6 +175,7 @@ export default async function WerewolfRoomPage({
     <main className="werewolf-room-fullscreen fixed inset-0 z-0 h-[100svh] w-screen overflow-hidden bg-[#062A24] px-0 py-0 md:static md:h-auto md:w-full md:bg-transparent">
       <WerewolfRoomOverview
         baseUrl={baseUrl}
+        isAuthenticated={Boolean(viewerProfile)}
         locale={locale}
         notice={notice}
         room={roomForClient}

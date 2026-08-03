@@ -46,10 +46,12 @@ import {
   werewolfUiAssets,
   type WerewolfAtmosphereId,
 } from "@/features/game-tools/werewolfCardAssets";
+import { UserProfilePreviewPopover } from "@/features/profile/components/UserProfilePreviewPopover";
 import { withLocale } from "@/lib/routes";
 
 type WerewolfRoomOverviewProps = {
   baseUrl: string;
+  isAuthenticated: boolean;
   locale: string;
   notice?: string | null;
   room: {
@@ -61,6 +63,7 @@ type WerewolfRoomOverviewProps = {
       id: string;
       isGuest: boolean;
       memberToken: string | null;
+      profileId: string | null;
       readyAt: string | null;
       seatedPrivateToken: string | null;
       seatedSeatId: string | null;
@@ -100,6 +103,7 @@ type WerewolfRoomOverviewProps = {
       isPlayerSeat: boolean;
       isViewerSeat: boolean;
       privateToken: string | null;
+      profileId: string | null;
       readyAt: string | null;
       roleKey: string | null;
       roleLabel: string | null;
@@ -517,22 +521,16 @@ function WerewolfAtmospherePicker({
     <div className="relative">
       <button
         aria-label={`${t.atmosphere}: ${selectedAtmosphere.name}`}
-        className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-[#F8DDA8]/38 bg-[#031F1B] text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition hover:scale-105 active:scale-95"
+        className="relative grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F] active:scale-95"
         onClick={cycleAtmosphere}
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(6,42,36,0.18), rgba(3,31,27,0.78)), url("${selectedAtmosphere.src}")`,
-          backgroundPosition: "center",
-          backgroundSize: "cover",
-        }}
         title={selectedAtmosphere.name}
         type="button"
       >
-        <span className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/15" />
-        <Palette className="relative h-4 w-4 drop-shadow" />
+        <Palette className="h-4 w-4" />
       </button>
 
       {showHint ? (
-        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full border border-[#D8A84E]/38 bg-[#062A24]/96 px-3 py-1.5 text-right text-[11px] font-black text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
+        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-black text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
           <span className="block truncate">{selectedAtmosphere.name}</span>
         </div>
       ) : null}
@@ -555,7 +553,7 @@ function WerewolfRoomQrDialog({
     <>
       <button
         aria-label={t.scanJoin}
-        className="grid h-10 w-10 place-items-center rounded-full bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] ring-1 ring-[#F8DDA8]/34 transition hover:bg-[#11483E] active:scale-95"
+        className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F] active:scale-95"
         onClick={() => setOpen(true)}
         title={t.scanJoin}
         type="button"
@@ -627,6 +625,7 @@ function getNoticeLabel(
 
 export function WerewolfRoomOverview({
   baseUrl,
+  isAuthenticated,
   locale,
   notice,
   room: initialRoom,
@@ -700,9 +699,6 @@ export function WerewolfRoomOverview({
         ? t.winnerWerewolf
         : null;
   const currentSeatPrivateToken = room.currentMember?.seatedPrivateToken;
-  const startEventId =
-    room.events.find((event) => event.type === "werewolf_room_started")?.id ??
-    "current";
   const noticeLabel = getNoticeLabel(notice, t);
   const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
 
@@ -1107,6 +1103,7 @@ export function WerewolfRoomOverview({
                 displayName: nextCurrentMember.displayName,
                 isClaimed: true,
                 isViewerSeat: true,
+                profileId: nextCurrentMember.profileId,
                 readyAt: null,
               };
             }
@@ -1119,6 +1116,7 @@ export function WerewolfRoomOverview({
                 displayName: t.empty,
                 isClaimed: false,
                 isViewerSeat: false,
+                profileId: null,
                 readyAt: null,
               };
             }
@@ -1202,6 +1200,7 @@ export function WerewolfRoomOverview({
                 displayName: t.empty,
                 isClaimed: false,
                 isViewerSeat: false,
+                profileId: null,
                 readyAt: null,
               }
             : seat,
@@ -1210,33 +1209,6 @@ export function WerewolfRoomOverview({
     });
   }, [t.empty]);
 
-  useEffect(() => {
-    if (room.status !== "IN_PROGRESS" || !currentSeatPrivateToken) {
-      return;
-    }
-
-    const storageKey = `friemi:werewolf:started-redirect:${room.id}:${startEventId}`;
-
-    if (window.sessionStorage.getItem(storageKey)) {
-      return;
-    }
-
-    window.sessionStorage.setItem(storageKey, "1");
-    router.replace(
-      withLocale(
-        locale,
-        `/game-tools/werewolf/seats/${currentSeatPrivateToken}`,
-      ),
-    );
-  }, [
-    currentSeatPrivateToken,
-    locale,
-    room.id,
-    room.status,
-    router,
-    startEventId,
-  ]);
-
   const currentViewerSeat =
     room.seats.find(
       (seat) =>
@@ -1244,7 +1216,9 @@ export function WerewolfRoomOverview({
         room.currentMember?.seatedSeatNumber === seat.seatNumber,
     ) ?? null;
   const judgeIsViewer = Boolean(judgeSeat?.isViewerSeat);
-  const playerReadyCount = playerSeats.filter((seat) => seat.readyAt).length;
+  const readySeatCount = room.seats.filter(
+    (seat) => seat.isClaimed && seat.readyAt,
+  ).length;
   const playerClaimedCount = playerSeats.filter(
     (seat) => seat.isClaimed,
   ).length;
@@ -1256,10 +1230,42 @@ export function WerewolfRoomOverview({
         : t.lobby;
   const centerSubtitle =
     room.status === "LOBBY"
-      ? `${playerReadyCount}/${room.seats.length} ${t.ready}`
+      ? `${readySeatCount}/${room.seats.length} ${t.ready}`
       : room.status === "IN_PROGRESS"
         ? `${playerClaimedCount}/${playerSeats.length} ${t.alive}`
         : room.variant.label;
+
+  const renderClaimedSeatAvatar = (
+    seat: WerewolfSeat,
+    className: string,
+  ) => {
+    const avatar = (
+      <WerewolfAvatar
+        avatarLabel={seat.avatarLabel}
+        avatarUrl={seat.avatarUrl}
+        className={className}
+      />
+    );
+
+    if (!seat.profileId || seat.isViewerSeat) {
+      return avatar;
+    }
+
+    return (
+      <UserProfilePreviewPopover
+        avatarUrl={seat.avatarUrl}
+        giftSourceContextId={room.id}
+        giftSourceSurface="OTHER"
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        nickname={seat.displayName}
+        profileId={seat.profileId}
+        triggerClassName="relative rounded-full transition active:scale-95"
+      >
+        {avatar}
+      </UserProfilePreviewPopover>
+    );
+  };
 
   const renderSeatNode = (seat: WerewolfSeat) => {
     const isCurrentSeat =
@@ -1275,24 +1281,30 @@ export function WerewolfRoomOverview({
           ? werewolfUiAssets.seatPlayerReady
           : werewolfUiAssets.seatPlayerOccupied
       : werewolfUiAssets.seatPlayerEmpty;
-    const nodeClass = `relative z-20 mx-auto flex min-h-[5.6rem] w-full max-w-[5.35rem] flex-col items-center justify-start text-center transition ${
+    const nodeClass = `relative z-20 mx-auto flex min-h-[5.4rem] w-full max-w-[5.25rem] flex-col items-center justify-start text-center transition ${
       isCurrentSeat ? "scale-[1.03]" : ""
     }`;
-    const tokenClass = `relative grid h-16 w-16 place-items-center rounded-full transition ${
+    const tokenClass = `relative grid h-[3.85rem] w-[3.85rem] place-items-center rounded-full transition ${
       seat.isDead ? "grayscale opacity-55" : ""
     } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
-    const seatNumberClass = `absolute -left-1 -top-1 z-20 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[10.5px] font-black shadow-[0_4px_12px_rgba(0,0,0,0.34)] ring-1 ${
+    const seatNumberClass = `absolute -left-0.5 -top-0.5 z-20 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black ring-1 ${
       isCurrentSeat
         ? "bg-[#F8DDA8] text-[#153B31] ring-white/70"
-        : "bg-[#FFF8DC] text-[#153B31] ring-white/60"
+        : "bg-[#FFF8DC]/96 text-[#153B31] ring-white/55"
     }`;
-    const seatNameClass = `mt-1.5 block max-w-full truncate rounded-full bg-[#031F1B]/88 px-2.5 py-0.5 text-[10.5px] font-black leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.42)] ring-1 ring-[#F8DDA8]/22 [text-shadow:0_1px_5px_rgba(0,0,0,0.95)] ${
+    const seatNameClass = `mt-1 block max-w-full truncate px-1 text-[10.5px] font-black leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
       seat.isDead
         ? "text-white/42"
         : isCurrentSeat
           ? "text-[#F8DDA8]"
           : "text-white"
     }`;
+    const readyBadge =
+      isLobby && seat.isClaimed && seat.readyAt ? (
+        <span className="mt-0.5 inline-flex h-4 items-center justify-center rounded-full bg-[#38A96D] px-1.5 text-[9px] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)]">
+          {t.ready}
+        </span>
+      ) : null;
 
     if (!seat.isClaimed && isLobby && canChooseSeat) {
       return (
@@ -1337,7 +1349,7 @@ export function WerewolfRoomOverview({
 
     return (
       <div className={nodeClass} key={seat.id}>
-        <span className={tokenClass}>
+        <div className={tokenClass}>
           <span className={seatNumberClass}>{seat.seatNumber}</span>
           <img
             alt=""
@@ -1347,20 +1359,20 @@ export function WerewolfRoomOverview({
             src={seatImage}
           />
           {seat.isClaimed ? (
-            <WerewolfAvatar
-              avatarLabel={seat.avatarLabel}
-              avatarUrl={seat.avatarUrl}
-              className="relative h-12 w-12 border border-[#F8DDA8]/34 text-sm"
-            />
+            renderClaimedSeatAvatar(
+              seat,
+              "relative h-12 w-12 border border-[#F8DDA8]/34 text-sm",
+            )
           ) : (
             <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-black text-[#F8DDA8] shadow-sm">
               {seat.seatNumber}
             </span>
           )}
-        </span>
+        </div>
         <span className={seatNameClass}>
           {seat.isClaimed ? seat.displayName : t.empty}
         </span>
+        {readyBadge}
       </div>
     );
   };
@@ -1377,16 +1389,16 @@ export function WerewolfRoomOverview({
             key={selectedAtmosphere.id}
             src={selectedAtmosphere.src}
           />
-          <div className="pointer-events-none absolute inset-0 bg-black/34" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[calc(var(--app-top-safe-area)+6.4rem)] bg-[#031F1B]/70" />
-          <div className="pointer-events-none absolute inset-x-2 top-[calc(var(--app-top-safe-area)+0.5rem)] z-10 h-[3.35rem] rounded-full bg-[#031F1B]/94 shadow-[0_10px_26px_rgba(0,0,0,0.34)] ring-1 ring-[#F8DDA8]/16" />
-          <div className="pointer-events-none absolute inset-x-8 top-[calc(var(--app-top-safe-area)+4.7rem)] h-20 rounded-b-full border-b border-[#D8A84E]/16 bg-[#F8DDA8]/4" />
-          <div className="pointer-events-none absolute inset-x-5 bottom-4 h-16 rounded-t-[2rem] border-t border-[#D8A84E]/18" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/56 via-black/18 to-black/42" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[calc(var(--app-top-safe-area)+4.35rem)] bg-[#052A24]" />
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.35rem)] z-10 h-px bg-[#F8DDA8]/24" />
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--app-top-safe-area)+4.38rem)] z-10 h-8 bg-gradient-to-b from-[#052A24]/58 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))] h-28 bg-gradient-to-t from-[#031F1B]/46 to-transparent" />
 
-          <div className="relative z-20 grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
+          <div className="relative z-20 grid h-10 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
             <button
               aria-label={t.back}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#F8DDA8]/38 bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.26)] transition hover:bg-[#11483E]"
+              className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
               onClick={() => {
                 if (room.currentMember && room.status !== "FINISHED") {
                   setExitDialogOpen(true);
@@ -1400,13 +1412,13 @@ export function WerewolfRoomOverview({
               <ArrowLeft className="h-5 w-5" />
             </button>
 
-            <div className="min-w-0 rounded-full bg-[#031F1B]/86 px-2 py-1 text-center shadow-[0_6px_18px_rgba(0,0,0,0.34)] ring-1 ring-[#F8DDA8]/22">
-              <p className="truncate text-sm font-black tracking-normal text-[#F8DDA8] [text-shadow:0_1px_6px_rgba(0,0,0,0.95)]">
+            <div className="min-w-0 px-1 text-center">
+              <p className="truncate text-sm font-black tracking-normal text-[#FFE1A6] [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
                 {room.variant.label}
               </p>
-              <p className="mt-0.5 text-[10px] font-black text-white/78 [text-shadow:0_1px_5px_rgba(0,0,0,0.85)]">
+              <p className="mt-0.5 text-[10px] font-black text-white/88 [text-shadow:0_1px_1px_rgba(0,0,0,0.62)]">
                 {t.code} ·{" "}
-                <span className="font-mono tracking-[0.18em] text-[#F0C36A]">
+                <span className="font-mono tracking-[0.18em] text-[#FFE1A6]">
                   {room.code}
                 </span>
               </p>
@@ -1437,7 +1449,7 @@ export function WerewolfRoomOverview({
               />
               <Link
                 aria-label={t.publicScreen}
-                className="grid h-10 w-10 place-items-center rounded-full border border-[#F8DDA8]/38 bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.28)] transition hover:bg-[#11483E]"
+                className="grid h-10 w-10 place-items-center rounded-full bg-[#07372F] text-[#FFE1A6] shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-[#F8DDA8]/36 transition hover:bg-[#0D493F]"
                 href={screenHref}
                 target="_blank"
               >
@@ -1541,18 +1553,17 @@ export function WerewolfRoomOverview({
           ) : null}
 
           <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 opacity-24 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
-            <div className="pointer-events-none absolute left-6 top-12 h-12 w-12 rounded-full border border-[#F8DDA8]/34 shadow-[inset_-8px_0_0_rgba(248,221,168,0.16)]" />
+            <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
             <div className="pointer-events-none absolute right-5 top-20 h-20 w-20 rounded-full bg-[#D8A84E]/8 blur-2xl" />
 
             <div className="relative flex min-h-0 flex-1 flex-col px-2 py-2">
               {judgeSeat ? (
                 <div className="relative z-30 mx-auto flex w-full max-w-[5.2rem] flex-col items-center text-center">
-                  <span className="mb-0.5 rounded-full bg-[#031F1B]/82 px-3 py-1 text-[11px] font-black text-[#F0C36A] shadow-[0_5px_14px_rgba(0,0,0,0.28)] ring-1 ring-[#D8A84E]/35">
+                  <span className="mb-0.5 px-2 text-[11px] font-black text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)]">
                     {t.judge}
                   </span>
                   {judgeSeat.isClaimed ? (
-                    <span
+                    <div
                       className={`relative grid h-14 w-14 place-items-center drop-shadow-[0_0_12px_rgba(240,195,106,0.42)] ${
                         judgeSeat.isDead ? "grayscale opacity-55" : ""
                       }`}
@@ -1564,12 +1575,11 @@ export function WerewolfRoomOverview({
                         draggable={false}
                         src={werewolfUiAssets.seatJudge}
                       />
-                      <WerewolfAvatar
-                        avatarLabel={judgeSeat.avatarLabel}
-                        avatarUrl={judgeSeat.avatarUrl}
-                        className="relative h-11 w-11 border border-[#F8DDA8]/34 text-xs"
-                      />
-                    </span>
+                      {renderClaimedSeatAvatar(
+                        judgeSeat,
+                        "relative h-11 w-11 border border-[#F8DDA8]/34 text-xs",
+                      )}
+                    </div>
                   ) : isLobby && canChooseSeat ? (
                     <form
                       action={seatAction}
@@ -1622,29 +1632,32 @@ export function WerewolfRoomOverview({
                       </span>
                     </span>
                   )}
-                  <span className="mt-1 block max-w-[5.2rem] truncate rounded-full bg-[#031F1B]/80 px-2 py-0.5 text-[10.5px] font-black leading-tight text-white shadow-[0_4px_12px_rgba(0,0,0,0.35)] ring-1 ring-[#F8DDA8]/16 [text-shadow:0_1px_5px_rgba(0,0,0,0.9)]">
+                  <span className="mt-1 block max-w-[5.2rem] truncate px-1 text-[10.5px] font-black leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)]">
                     {judgeSeat.isClaimed ? judgeSeat.displayName : t.empty}
                   </span>
+                  {isLobby && judgeSeat.isClaimed && judgeSeat.readyAt ? (
+                    <span className="mt-0.5 inline-flex h-4 items-center justify-center rounded-full bg-[#38A96D] px-1.5 text-[9px] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)]">
+                      {t.ready}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
 
               <div className="relative z-20 mt-2 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1">
-                <div className="grid content-start gap-2.5 rounded-[2rem] bg-[#031F1B]/38 px-1 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.18)] ring-1 ring-[#F8DDA8]/10">
+                <div className="grid content-start gap-2.5 px-0.5 py-2">
                   {leftTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
 
                 <div
-                  className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden rounded-[4.25rem] bg-black/24 px-3 py-3 shadow-[inset_0_0_28px_rgba(216,168,78,0.08)]"
+                  className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden px-3 py-3"
                 >
-                  <div className="pointer-events-none absolute inset-1.5 rounded-[3.75rem] border border-[#F8DDA8]/12" />
-                  <div className="pointer-events-none absolute inset-x-2 bottom-7 top-7 rounded-[3.4rem] border border-[#D8A84E]/14 bg-black/12" />
-                  <div className="pointer-events-none absolute inset-x-5 top-1/2 h-72 -translate-y-1/2 rounded-full bg-[#F0C36A]/5 blur-xl" />
-                  <div className="pointer-events-none absolute left-1/2 top-10 h-[calc(100%-5rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#F8DDA8]/16 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-6 bottom-9 top-9 rounded-full border border-white/38 bg-[#031F1B]/12" />
+                  <div className="pointer-events-none absolute left-1/2 top-12 h-[calc(100%-6rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/18 to-transparent" />
 
                   <Moon className="relative h-6 w-6 text-[#F0C36A]" />
 
-                  <div className="relative grid place-items-center rounded-[1.45rem] bg-[#031F1B]/48 px-2 py-3 text-center shadow-[0_10px_28px_rgba(0,0,0,0.24)] ring-1 ring-[#F8DDA8]/12">
-                    <div className="mb-3 grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-[#D8A84E]/34 bg-[#062A24] shadow-[inset_0_0_18px_rgba(248,221,168,0.10)]">
+                  <div className="relative grid place-items-center px-2 py-3 text-center">
+                    <div className="mb-3 grid h-16 w-16 place-items-center overflow-hidden rounded-full bg-[#062A24]/80 shadow-[0_12px_24px_rgba(0,0,0,0.28)] ring-1 ring-white/28">
                       <img
                         alt=""
                         aria-hidden="true"
@@ -1662,12 +1675,12 @@ export function WerewolfRoomOverview({
                     </p>
                   </div>
 
-                  <div className="relative grid h-8 w-8 place-items-center rounded-full border border-[#D8A84E]/30 bg-[#062A24]/84">
+                  <div className="relative grid h-8 w-8 place-items-center rounded-full bg-[#062A24]/78 ring-1 ring-white/24">
                     <Moon className="h-4 w-4 text-[#F0C36A]" />
                   </div>
                 </div>
 
-                <div className="grid content-start gap-2.5 rounded-[2rem] bg-[#031F1B]/38 px-1 py-2 shadow-[0_14px_34px_rgba(0,0,0,0.18)] ring-1 ring-[#F8DDA8]/10">
+                <div className="grid content-start gap-2.5 px-0.5 py-2">
                   {rightTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
               </div>
@@ -1700,7 +1713,7 @@ export function WerewolfRoomOverview({
               </form>
             ) : null}
 
-            {room.currentMember && currentViewerSeat?.privateToken ? (
+            {room.currentMember && currentViewerSeat ? (
               <div className="grid gap-2">
                 {isLobby ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -1715,11 +1728,21 @@ export function WerewolfRoomOverview({
                       }}
                     >
                       <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={currentViewerSeat.privateToken}
-                      />
+                      <input name="roomId" type="hidden" value={room.id} />
+                      {currentMemberToken ? (
+                        <input
+                          name="memberToken"
+                          type="hidden"
+                          value={currentMemberToken}
+                        />
+                      ) : null}
+                      {currentViewerSeat.privateToken ? (
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={currentViewerSeat.privateToken}
+                        />
+                      ) : null}
                       <input
                         name="operation"
                         type="hidden"
@@ -1746,11 +1769,21 @@ export function WerewolfRoomOverview({
                       }}
                     >
                       <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={currentViewerSeat.privateToken}
-                      />
+                      <input name="roomId" type="hidden" value={room.id} />
+                      {currentMemberToken ? (
+                        <input
+                          name="memberToken"
+                          type="hidden"
+                          value={currentMemberToken}
+                        />
+                      ) : null}
+                      {currentViewerSeat.privateToken ? (
+                        <input
+                          name="privateToken"
+                          type="hidden"
+                          value={currentViewerSeat.privateToken}
+                        />
+                      ) : null}
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
                         className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
@@ -1758,7 +1791,7 @@ export function WerewolfRoomOverview({
                       />
                     </form>
                   </div>
-                ) : (
+                ) : currentViewerSeat.privateToken ? (
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7]"
@@ -1778,7 +1811,7 @@ export function WerewolfRoomOverview({
                       {t.exitGame}
                     </button>
                   </div>
-                )}
+                ) : null}
 
                 {judgeIsViewer && judgeSeat?.privateToken && isLobby ? (
                   <form

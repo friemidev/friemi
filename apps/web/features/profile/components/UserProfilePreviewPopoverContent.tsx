@@ -28,6 +28,14 @@ type UserPreviewPayload = {
 
 type UserProfilePreviewPopoverContentProps = {
   avatarUrl: string | null;
+  giftSourceContextId?: string;
+  giftSourceSurface?:
+    | "PROFILE"
+    | "ACTIVITY"
+    | "MOMENT"
+    | "PLANET"
+    | "DIRECT_MESSAGE"
+    | "OTHER";
   isAuthenticated: boolean;
   isGuest?: boolean;
   locale: string;
@@ -134,6 +142,8 @@ function AddFriendQuickButton({
 
 export function UserProfilePreviewPopoverContent({
   avatarUrl,
+  giftSourceContextId,
+  giftSourceSurface = "PROFILE",
   isAuthenticated,
   isGuest = false,
   locale,
@@ -312,7 +322,8 @@ export function UserProfilePreviewPopoverContent({
                 recipientName={resolvedNickname}
                 recipientProfileId={profileId}
                 redirectPath={redirectPath}
-                sourceSurface="PROFILE"
+                sourceContextId={giftSourceContextId}
+                sourceSurface={giftSourceSurface}
                 triggerClassName="!h-7 w-full min-w-0 justify-center border border-[#F5D7DC]/80 bg-white !px-2 !text-[11px] font-semibold text-[#B5301F] hover:bg-[#FFF5E6]"
               />
             ) : null}

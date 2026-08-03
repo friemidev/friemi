@@ -44,7 +44,6 @@ import {
   getCharmProgress,
 } from "@/features/charm/charm";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
-import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -147,6 +146,27 @@ function getWerewolfStatsCopy(locale: string) {
     title: "狼人杀",
     win: "胜利",
     winRate: "胜率",
+  };
+}
+
+function getTrustBadgeCopy(locale: string, score: number) {
+  if (locale === "fr") {
+    return {
+      label: `Fiabilité ${score}`,
+      tooltip: "Fiabilité",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      label: `Trust ${score}`,
+      tooltip: "Trust",
+    };
+  }
+
+  return {
+    label: `信用值 ${score}`,
+    tooltip: "信用值",
   };
 }
 
@@ -1199,6 +1219,7 @@ function PublicMobileProfileHome({
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
               ) : null}
+              <TrustScoreBadge locale={locale} score={dashboard.trustScore} />
               <ProfileAchievementBadgeStrip
                 className="min-w-0 shrink-0"
                 items={publicAchievements}
@@ -1218,9 +1239,6 @@ function PublicMobileProfileHome({
             ) : null}
           </div>
           <div className="grid justify-items-end gap-2 pt-1">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_10px_22px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]">
-              <ShieldCheck className="h-4 w-4" />
-            </span>
             <PublicMobileProfileActions
               isAuthenticated={isAuthenticated}
               locale={locale}
@@ -1244,6 +1262,42 @@ function PublicMobileProfileHome({
 
       <PublicMobileTimeline dashboard={dashboard} locale={locale} />
     </div>
+  );
+}
+
+function TrustScoreBadge({
+  className,
+  locale,
+  score,
+}: {
+  className?: string;
+  locale: string;
+  score: number;
+}) {
+  const copy = getTrustBadgeCopy(locale, score);
+  const [active, setActive] = useState(false);
+
+  return (
+    <button
+      aria-expanded={active}
+      aria-label={copy.label}
+      className={cn(
+        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+        active ? "z-20" : "",
+        className,
+      )}
+      onClick={() => setActive((value) => !value)}
+      title={copy.label}
+      type="button"
+    >
+      <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={2.35} />
+      <span className="leading-none">{score}</span>
+      {active ? (
+        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+          {copy.tooltip}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -1733,6 +1787,7 @@ function SelfMobileProfileHome({
                 <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
                   {profile.nickname}
                 </h2>
+                <TrustScoreBadge locale={locale} score={dashboard.trustScore} />
                 <ProfileAchievementBadgeStrip
                   className="min-w-0 shrink-0"
                   items={publicAchievements}
@@ -1758,18 +1813,6 @@ function SelfMobileProfileHome({
             </div>
 
             <div className="flex shrink-0 items-start gap-2">
-              <div className="grid min-w-[3.25rem] justify-items-center gap-1 text-center">
-                <span className="max-w-[4.25rem] truncate text-[10px] font-bold text-[#4F574F]">
-                  {copy.trusted}
-                </span>
-                <span className="inline-flex min-h-8 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-2 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-                  <BadgeCheck className="h-4 w-4 shrink-0" />
-                  {dashboard.trustScore}
-                </span>
-                <span className="max-w-[4.25rem] truncate text-[9px] font-bold leading-none text-[#8B907F]">
-                  {getTrustLevelLabel(dashboard.trustScore, locale)}
-                </span>
-              </div>
               <button
                 type="button"
                 aria-label={copy.scan}
