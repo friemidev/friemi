@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ActivityPriorityAdminMenu } from "@/components/admin/ActivityPriorityManagementClient";
 import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
@@ -42,6 +43,7 @@ import {
 } from "@/features/public-events/queries/getPublicEvents";
 import { getPublicEventLocationDisplay } from "@/features/public-events/utils/locationDisplay";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { getActivityPriorityAdminSnapshot } from "@/features/activities/priority/adminActivityPriority";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -50,6 +52,7 @@ import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWea
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { MobileNavSectionOverride } from "@/components/navigation/MobileNavSectionOverride";
 import { getCopy } from "@/lib/copy";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import {
   buildCanonicalUrl,
   buildDetailShareMetadata,
@@ -174,9 +177,12 @@ export default async function PublicEventDetailPage({
   const t = getPublicEventCopy(locale);
   const appCopy = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
-  const viewerProfile = await perf.measure("viewer.profile", () =>
-    getOptionalCurrentUserProfileSnapshot(),
-  );
+  const [viewerProfile, isAdmin] = await Promise.all([
+    perf.measure("viewer.profile", () =>
+      getOptionalCurrentUserProfileSnapshot(),
+    ),
+    perf.measure("viewer.admin", () => isCurrentUserAdmin()),
+  ]);
   const publicEvent = await perf.measure("publicEvent.detail", () =>
     getPublicEventById(publicEventId, viewerProfile?.id),
   );
@@ -245,6 +251,14 @@ export default async function PublicEventDetailPage({
   const canCreateTeam = !isCancelled && !isEnded;
   const canOpenTicketLink = Boolean(publicEvent.ticketUrl) && canCreateTeam;
   const coverOfficialUrl = publicEvent.officialUrl?.trim() || null;
+  const activityPrioritySnapshot = isAdmin
+    ? await perf.measure("activityPriority.snapshot", () =>
+        getActivityPriorityAdminSnapshot({
+          targetId: publicEvent.id,
+          targetType: "PUBLIC_EVENT",
+        }),
+      )
+    : null;
   const ticketCtaLabel = getTicketCtaLabel(locale, publicEvent.ticketLabel);
   const unavailableReason = isCancelled ? t.eventCancelled : t.eventEnded;
   const teamSectionDescription = isCancelled
@@ -306,6 +320,15 @@ export default async function PublicEventDetailPage({
           />
         )}
         <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
+          {activityPrioritySnapshot ? (
+            <ActivityPriorityAdminMenu
+              initialSnapshot={activityPrioritySnapshot}
+              locale={locale}
+              targetId={publicEvent.id}
+              targetTitle={publicEvent.title}
+              targetType="PUBLIC_EVENT"
+            />
+          ) : null}
           <PublicEventFavoriteButton
             favoriteCount={publicEvent.favoriteCount}
             publicEventId={publicEvent.id}

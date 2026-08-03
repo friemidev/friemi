@@ -56,6 +56,11 @@ enum PublicEventStatus {
   CANCELLED
 }
 
+enum ActivityPriorityTargetType {
+  ACTIVITY
+  PUBLIC_EVENT
+}
+
 enum ParticipantStatus {
   JOINED
   PENDING
@@ -224,15 +229,15 @@ enum GameToolSubmissionKind {
 }
 
 model UserProfile {
-  id                      String                       @id @default(cuid())
-  clerkUserId             String                       @unique
+  id                      String                        @id @default(cuid())
+  clerkUserId             String                        @unique
   email                   String?
   emailVerifiedAt         DateTime?
   contactEmail            String?
   normalizedContactEmail  String?
   phone                   String?
   normalizedPhone         String?
-  friendCode              String?                      @unique @db.Char(6)
+  friendCode              String?                       @unique @db.Char(6)
   nickname                String
   firstName               String?
   lastName                String?
@@ -241,75 +246,77 @@ model UserProfile {
   normalizedWechatId      String?
   avatarUrl               String?
   bio                     String?
-  interests               String[]                     @default([])
-  status                  UserProfileStatus            @default(ACTIVE)
-  presenceStatus          UserPresenceStatus           @default(ONLINE)
+  interests               String[]                      @default([])
+  status                  UserProfileStatus             @default(ACTIVE)
+  presenceStatus          UserPresenceStatus            @default(ONLINE)
   lastActiveAt            DateTime?
-  role                    UserRole                     @default(USER)
-  isCoCreator             Boolean                      @default(false)
+  role                    UserRole                      @default(USER)
+  isCoCreator             Boolean                       @default(false)
   lastSignInAt            DateTime?
   clerkCreatedAt          DateTime?
   clerkUpdatedAt          DateTime?
   clerkDeletedAt          DateTime?
   syncedAt                DateTime?
-  activities              Activity[]                   @relation("ActivityOrganizer")
-  managedActivities       ActivityCoManager[]          @relation("ActivityCoManagerProfile")
-  addedCoManagers         ActivityCoManager[]          @relation("ActivityCoManagerAddedBy")
-  activityManagementLogs  ActivityManagementLog[]      @relation("ActivityManagementLogActor")
+  activities              Activity[]                    @relation("ActivityOrganizer")
+  managedActivities       ActivityCoManager[]           @relation("ActivityCoManagerProfile")
+  addedCoManagers         ActivityCoManager[]           @relation("ActivityCoManagerAddedBy")
+  activityManagementLogs  ActivityManagementLog[]       @relation("ActivityManagementLogActor")
   participations          ActivityParticipant[]
-  guestParticipations     GuestActivityParticipant[]   @relation("GuestLinkedUser")
+  guestParticipations     GuestActivityParticipant[]    @relation("GuestLinkedUser")
   comments                Comment[]
-  moments                 Moment[]                     @relation("MomentAuthor")
-  momentLikes             MomentLike[]                 @relation("MomentLikeUser")
-  momentComments          MomentComment[]              @relation("MomentCommentAuthor")
-  notifications           Notification[]               @relation("NotificationRecipient")
-  sentNotifications       Notification[]               @relation("NotificationActor")
+  moments                 Moment[]                      @relation("MomentAuthor")
+  momentLikes             MomentLike[]                  @relation("MomentLikeUser")
+  momentComments          MomentComment[]               @relation("MomentCommentAuthor")
+  notifications           Notification[]                @relation("NotificationRecipient")
+  sentNotifications       Notification[]                @relation("NotificationActor")
   favoriteActivities      ActivityFavorite[]
-  following               UserFollow[]                 @relation("UserFollowing")
-  followers               UserFollow[]                 @relation("UserFollowers")
-  sentFriendRequests      FriendRequest[]              @relation("FriendRequestRequester")
-  receivedFriendRequests  FriendRequest[]              @relation("FriendRequestReceiver")
-  friendshipsAsUserA      Friendship[]                 @relation("FriendshipUserA")
-  friendshipsAsUserB      Friendship[]                 @relation("FriendshipUserB")
-  conversationsAsUserA    Conversation[]               @relation("ConversationUserA")
-  conversationsAsUserB    Conversation[]               @relation("ConversationUserB")
-  sentDirectMessages      DirectMessage[]              @relation("DirectMessageSender")
-  activityRoomMessages    ActivityRoomMessage[]        @relation("ActivityRoomMessageSender")
-  deletedRoomMessages     ActivityRoomMessage[]        @relation("ActivityRoomMessageDeletedBy")
-  activityRoomReadStates  ActivityRoomReadState[]      @relation("ActivityRoomReadStateProfile")
+  following               UserFollow[]                  @relation("UserFollowing")
+  followers               UserFollow[]                  @relation("UserFollowers")
+  sentFriendRequests      FriendRequest[]               @relation("FriendRequestRequester")
+  receivedFriendRequests  FriendRequest[]               @relation("FriendRequestReceiver")
+  friendshipsAsUserA      Friendship[]                  @relation("FriendshipUserA")
+  friendshipsAsUserB      Friendship[]                  @relation("FriendshipUserB")
+  conversationsAsUserA    Conversation[]                @relation("ConversationUserA")
+  conversationsAsUserB    Conversation[]                @relation("ConversationUserB")
+  sentDirectMessages      DirectMessage[]               @relation("DirectMessageSender")
+  activityRoomMessages    ActivityRoomMessage[]         @relation("ActivityRoomMessageSender")
+  deletedRoomMessages     ActivityRoomMessage[]         @relation("ActivityRoomMessageDeletedBy")
+  activityRoomReadStates  ActivityRoomReadState[]       @relation("ActivityRoomReadStateProfile")
   achievements            UserAchievement[]
   equippedAchievements    UserEquippedAchievement[]
-  sentReferrals           UserReferral[]               @relation("UserReferralInviter")
-  receivedReferral        UserReferral?                @relation("UserReferralInvitee")
-  profileVisitsReceived   ProfileVisit[]               @relation("ProfileVisitTarget")
-  profileVisitsMade       ProfileVisit[]               @relation("ProfileVisitVisitor")
-  authoredAnnouncements   ActivityAnnouncement[]       @relation("ActivityAnnouncementAuthor")
-  submittedReports        Report[]                     @relation("ReportReporter")
-  reviewedReports         Report[]                     @relation("ReportReviewer")
+  sentReferrals           UserReferral[]                @relation("UserReferralInviter")
+  receivedReferral        UserReferral?                 @relation("UserReferralInvitee")
+  profileVisitsReceived   ProfileVisit[]                @relation("ProfileVisitTarget")
+  profileVisitsMade       ProfileVisit[]                @relation("ProfileVisitVisitor")
+  authoredAnnouncements   ActivityAnnouncement[]        @relation("ActivityAnnouncementAuthor")
+  submittedReports        Report[]                      @relation("ReportReporter")
+  reviewedReports         Report[]                      @relation("ReportReviewer")
   mobileDevices           MobileDevice[]
   trustScoreEvents        TrustScoreEvent[]
   charmBalance            UserCharmBalance?
-  sentCharmGiftEvents     CharmGiftEvent[]             @relation("CharmGiftSender")
-  receivedCharmGiftEvents CharmGiftEvent[]             @relation("CharmGiftRecipient")
+  sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
+  receivedCharmGiftEvents CharmGiftEvent[]              @relation("CharmGiftRecipient")
   friemiChecks            FriemiCheck[]
   blindBoxFragmentBalance UserBlindBoxFragmentBalance?
   blindBoxFragmentEvents  BlindBoxFragmentEvent[]
-  hostedGameToolRooms     GameToolRoom[]               @relation("GameToolRoomHost")
-  gameToolRoomMembers     GameToolRoomMember[]         @relation("GameToolRoomMemberProfile")
-  gameToolSeats           GameToolSeat[]               @relation("GameToolSeatProfile")
-  reviewedCheckIns        ActivityParticipant[]        @relation("ActivityCheckInReviewer")
-  gameToolEvents          GameToolEvent[]              @relation("GameToolEventActor")
-  gameToolSubmissions     GameToolSubmission[]         @relation("GameToolSubmissionProfile")
-  gameToolPlayerRecords   GameToolPlayerRecord[]       @relation("GameToolPlayerRecordProfile")
-  ownedPlanets            Planet[]                     @relation("PlanetOwner")
+  hostedGameToolRooms     GameToolRoom[]                @relation("GameToolRoomHost")
+  gameToolRoomMembers     GameToolRoomMember[]          @relation("GameToolRoomMemberProfile")
+  gameToolSeats           GameToolSeat[]                @relation("GameToolSeatProfile")
+  reviewedCheckIns        ActivityParticipant[]         @relation("ActivityCheckInReviewer")
+  gameToolEvents          GameToolEvent[]               @relation("GameToolEventActor")
+  gameToolSubmissions     GameToolSubmission[]          @relation("GameToolSubmissionProfile")
+  gameToolPlayerRecords   GameToolPlayerRecord[]        @relation("GameToolPlayerRecordProfile")
+  ownedPlanets            Planet[]                      @relation("PlanetOwner")
   planetMemberships       PlanetMember[]
-  planetMessages          PlanetMessage[]              @relation("PlanetMessageAuthor")
-  planetMoments           PlanetMoment[]               @relation("PlanetMomentAuthor")
-  planetMomentComments    PlanetMomentComment[]        @relation("PlanetMomentCommentAuthor")
-  planetMomentLikes       PlanetMomentLike[]           @relation("PlanetMomentLikeProfile")
-  planetCommentLikes      PlanetMomentCommentLike[]    @relation("PlanetCommentLikeProfile")
-  createdAt               DateTime                     @default(now())
-  updatedAt               DateTime                     @updatedAt
+  planetMessages          PlanetMessage[]               @relation("PlanetMessageAuthor")
+  planetMoments           PlanetMoment[]                @relation("PlanetMomentAuthor")
+  planetMomentComments    PlanetMomentComment[]         @relation("PlanetMomentCommentAuthor")
+  planetMomentLikes       PlanetMomentLike[]            @relation("PlanetMomentLikeProfile")
+  planetCommentLikes      PlanetMomentCommentLike[]     @relation("PlanetCommentLikeProfile")
+  activityPriorityUpdates ActivityPriorityOverride[]    @relation("ActivityPriorityOverrideUpdatedBy")
+  activityPriorityLogs    ActivityPriorityOverrideLog[] @relation("ActivityPriorityOverrideLogActor")
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
   publicEventFavorites    PublicEventFavorite[]
 
   @@index([nickname])
@@ -616,6 +623,40 @@ model PublicEvent {
   @@index([externalUrl])
   @@index([ticketUrl])
   @@index([importedAt])
+}
+
+model ActivityPriorityOverride {
+  id             String                     @id @default(cuid())
+  targetType     ActivityPriorityTargetType
+  targetId       String
+  initialBoost   Int                        @default(0)
+  boostStartedAt DateTime
+  boostExpiresAt DateTime?
+  note           String?                    @db.VarChar(240)
+  updatedById    String?
+  updatedBy      UserProfile?               @relation("ActivityPriorityOverrideUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@unique([targetType, targetId])
+  @@index([targetType, boostExpiresAt])
+  @@index([targetType, updatedAt])
+  @@index([updatedById, updatedAt])
+}
+
+model ActivityPriorityOverrideLog {
+  id         String                     @id @default(cuid())
+  targetType ActivityPriorityTargetType
+  targetId   String
+  oldBoost   Int                        @default(0)
+  newBoost   Int                        @default(0)
+  note       String?                    @db.VarChar(240)
+  actorId    String?
+  actor      UserProfile?               @relation("ActivityPriorityOverrideLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime                   @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model Merchant {

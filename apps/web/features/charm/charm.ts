@@ -471,10 +471,10 @@ export function getCharmLevelLabel(
 
   return {
     SOLITUDE: "独行者",
-    CHARM: "魅力",
-    SUPERSTAR: "闪耀明星",
-    LEGEND: "传奇",
-    FRIEMI_IDOL: "Friemi Idol",
+    CHARM: "心动者",
+    SUPERSTAR: "闪耀之星",
+    LEGEND: "人气传说",
+    FRIEMI_IDOL: "Friemi 顶流",
   }[levelId];
 }
 
