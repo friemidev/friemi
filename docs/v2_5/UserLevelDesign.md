@@ -148,15 +148,15 @@ Friemi Coins 与欧元的兑换，以及与礼物的兑换值
 
 魅力值不是积分。它可以对应称号。
 
-✊ Solitude 0
+✊ 独行者 / Solitude 0
 
-💗 Charm 500
+💗 心动者 / Charm 500
 
-💎 Superstar 5000
+💎 闪耀之星 / Superstar 5000
 
-👑 Legend 10000
+👑 人气传说 / Legend 10000
 
-🔥 Friemi Idol 100 000
+🔥 Friemi 顶流 / Friemi Idol 100 000
 
 魅力图标 显示位置
 

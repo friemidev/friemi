@@ -86,6 +86,10 @@ test("charm levels resolve at product thresholds", () => {
 
 test("charm levels expose localized user labels", () => {
   assert.equal(getCharmLevelLabel("SOLITUDE", "zh-CN"), "独行者");
+  assert.equal(getCharmLevelLabel("CHARM", "zh-CN"), "心动者");
+  assert.equal(getCharmLevelLabel("SUPERSTAR", "zh-CN"), "闪耀之星");
+  assert.equal(getCharmLevelLabel("LEGEND", "zh-CN"), "人气传说");
+  assert.equal(getCharmLevelLabel("FRIEMI_IDOL", "zh-CN"), "Friemi 顶流");
   assert.equal(getCharmLevelLabel("SOLITUDE", "en"), "Solitude");
   assert.equal(getCharmLevelLabel("SOLITUDE", "fr"), "Solitaire");
   assert.equal(getCharmLevelDescription("CHARM", "zh-CN"), "开始被更多人看见。");

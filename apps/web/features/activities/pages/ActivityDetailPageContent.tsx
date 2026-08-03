@@ -22,6 +22,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { Button } from "@chill-club/ui";
+import { ActivityPriorityAdminMenu } from "@/components/admin/ActivityPriorityManagementClient";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
@@ -44,6 +45,7 @@ import { ActivityMapPreview } from "@/features/activities/components/ActivityMap
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { ActivityShareDialogButton } from "@/features/activities/components/ActivityShareDialogButton";
 import { ActivityShareTools } from "@/features/activities/components/ActivityShareTools";
+import { getActivityPriorityAdminSnapshot } from "@/features/activities/priority/adminActivityPriority";
 import { CancelParticipationForm } from "@/features/activities/components/CancelParticipationForm";
 import { JoinActivityForm } from "@/features/activities/components/JoinActivityForm";
 import { ParticipationApprovalPanel } from "@/features/activities/components/ParticipationApprovalPanel";
@@ -89,6 +91,7 @@ import { ManualTranslationBundle } from "@/features/translations/components/Manu
 import { ActivityWeatherWidget } from "@/features/weather/components/ActivityWeatherWidget";
 import { getActivityWeatherWidgetInput } from "@/features/weather/activityWeather";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
+import { isCurrentUserAdmin } from "@/lib/admin-auth";
 import { getCategoryLabel, getCopy, getTypeLabel } from "@/lib/copy";
 import { isMobileUserAgent } from "@/lib/mobile-root-lobby-entry";
 import { prisma } from "@/lib/prisma";
@@ -519,21 +522,26 @@ function getPlayAgainCopy(locale: string) {
 
 function ActivityPlayAgainLink({
   activityId,
+  className,
   locale,
 }: {
   activityId: string;
+  className?: string;
   locale: string;
 }) {
   return (
     <Link
-      className="mx-auto mt-2 hidden min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-xs font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98] md:inline-flex"
+      className={cn(
+        "mx-auto mt-2 hidden min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-xs font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98] md:inline-flex",
+        className,
+      )}
       href={withLocale(
         locale,
         `/activities/new?copyActivityId=${encodeURIComponent(activityId)}`,
       )}
     >
       <Repeat2 className="h-3.5 w-3.5" />
-      {getPlayAgainCopy(locale)}
+      <span className="truncate">{getPlayAgainCopy(locale)}</span>
     </Link>
   );
 }
@@ -836,9 +844,12 @@ export async function ActivityDetailPageContent({
   const t = getCopy(locale);
   const analyticsLocale = normalizeAnalyticsLocale(locale);
   const publicEventCopy = getPublicEventCopy(locale);
-  const viewerProfile = await perf.measure("activity.viewerProfile", () =>
-    getOptionalCurrentUserProfileSnapshot(),
-  );
+  const [viewerProfile, isAdmin] = await Promise.all([
+    perf.measure("activity.viewerProfile", () =>
+      getOptionalCurrentUserProfileSnapshot(),
+    ),
+    perf.measure("activity.viewerAdmin", () => isCurrentUserAdmin()),
+  ]);
   const [viewerFriendIds, viewerFollowedProfileIds]: [string[], string[]] =
     viewerProfile?.id
       ? await perf.measure("activity.viewerRelations", () =>
@@ -880,6 +891,22 @@ export async function ActivityDetailPageContent({
 
     redirect(withLocale(locale, `/public-events/${publicEventId}`));
   }
+
+  const activityPriorityTarget =
+    activity.isActivityInfo && activity.publicEventId
+      ? {
+          targetId: activity.publicEventId,
+          targetType: "PUBLIC_EVENT" as const,
+        }
+      : {
+          targetId: activity.id,
+          targetType: "ACTIVITY" as const,
+        };
+  const activityPrioritySnapshot = isAdmin
+    ? await perf.measure("activity.prioritySnapshot", () =>
+        getActivityPriorityAdminSnapshot(activityPriorityTarget),
+      )
+    : null;
 
   if (viewerProfile?.id) {
     const notificationActivityId = activity.id;
@@ -1019,6 +1046,15 @@ export async function ActivityDetailPageContent({
             overlayClassName="bg-gradient-to-t from-black/14 via-transparent to-black/12"
           />
           <div className="absolute right-3 top-4 z-30 flex items-start gap-2 sm:right-5 sm:top-6">
+            {activityPrioritySnapshot ? (
+              <ActivityPriorityAdminMenu
+                initialSnapshot={activityPrioritySnapshot}
+                locale={locale}
+                targetId={activityPriorityTarget.targetId}
+                targetTitle={activity.title}
+                targetType={activityPriorityTarget.targetType}
+              />
+            ) : null}
             <ActivityFavoriteButton
               activityId={activity.id}
               favoriteCount={activity.favoriteCount}
@@ -1754,7 +1790,7 @@ export async function ActivityDetailPageContent({
     ) : null;
 
   return (
-    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:1.1rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 md:space-y-6 md:py-8">
+    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:1.1rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 max-md:py-0 md:space-y-6 md:py-8">
       <MobileNavSectionOverride section="lobby" />
       <DetailSourceRestore sourceKey="activity_detail" />
       <ClaimAutoCreatedActivityCelebration
@@ -1781,6 +1817,15 @@ export async function ActivityDetailPageContent({
           overlayClassName="bg-gradient-to-t from-black/16 via-transparent to-black/20"
         />
         <div className="absolute right-3 top-4 z-30 flex items-center gap-2 sm:right-5 sm:top-6">
+          {activityPrioritySnapshot ? (
+            <ActivityPriorityAdminMenu
+              initialSnapshot={activityPrioritySnapshot}
+              locale={locale}
+              targetId={activityPriorityTarget.targetId}
+              targetTitle={activity.title}
+              targetType={activityPriorityTarget.targetType}
+            />
+          ) : null}
           {!isTeamOperator ? (
             <ActivityFavoriteButton
               activityId={activity.id}
@@ -1838,9 +1883,18 @@ export async function ActivityDetailPageContent({
         <div className="space-y-4 md:hidden">
           {renderActivityDetailTogglePanels()}
           <div>
-            <p className="text-[12px] font-black leading-none text-[#111210]/72">
-              {t.activityDetail.organizerTitle}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[12px] font-black leading-none text-[#111210]/72">
+                {t.activityDetail.organizerTitle}
+              </p>
+              {showActivityRoomEntry ? (
+                <ActivityPlayAgainLink
+                  activityId={activity.id}
+                  className="ml-auto mr-0 mt-0 inline-flex min-h-8 max-w-[7.5rem] px-3 text-[11px] md:hidden"
+                  locale={locale}
+                />
+              ) : null}
+            </div>
             <div className="mt-2 flex items-center gap-3">
               <UserProfilePreviewPopover
                 avatarUrl={activity.organizer.avatarUrl}
@@ -1933,36 +1987,40 @@ export async function ActivityDetailPageContent({
             </div>
           ) : null}
           {isTeamOperator ? (
-            <div
-              className={cn(
-                "grid gap-2",
-                showActivityRoomEntry ? "grid-cols-2" : "grid-cols-1",
-              )}
-            >
-              <Link
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-black text-[#156240] transition active:scale-[0.98]"
-                href={activityEditHref}
+            <>
+              <div
+                className={cn(
+                  "grid gap-2",
+                  showActivityRoomEntry ? "grid-cols-2" : "grid-cols-1",
+                )}
               >
-                <PencilLine className="h-4 w-4" />
-                <span className="truncate">{operatorActionCopy.edit}</span>
-              </Link>
-              {showActivityRoomEntry ? (
-                <ActivityRoomEntryLink
-                  className="min-h-11 px-3 shadow-none"
-                  href={activityRoomHref}
-                  labelOverride={operatorActionCopy.manage}
-                  locale={locale}
-                  unreadCount={activityRoomUnreadCount}
-                />
-              ) : null}
-            </div>
+                <Link
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+                  href={activityEditHref}
+                >
+                  <PencilLine className="h-4 w-4" />
+                  <span className="truncate">{operatorActionCopy.edit}</span>
+                </Link>
+                {showActivityRoomEntry ? (
+                  <ActivityRoomEntryLink
+                    className="min-h-11 px-3 shadow-none"
+                    href={activityRoomHref}
+                    labelOverride={operatorActionCopy.manage}
+                    locale={locale}
+                    unreadCount={activityRoomUnreadCount}
+                  />
+                ) : null}
+              </div>
+            </>
           ) : showActivityRoomEntry ? (
-            <ActivityRoomEntryLink
-              className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
-              href={activityRoomHref}
-              locale={locale}
-              unreadCount={activityRoomUnreadCount}
-            />
+            <>
+              <ActivityRoomEntryLink
+                className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
+                href={activityRoomHref}
+                locale={locale}
+                unreadCount={activityRoomUnreadCount}
+              />
+            </>
           ) : null}
           {!isTeamOperator && canCancelViewerParticipation ? (
             <CancelParticipationForm
@@ -2217,6 +2275,12 @@ export async function ActivityDetailPageContent({
                       />
                     ) : null}
                   </div>
+                ) : null}
+                {showActivityRoomEntry ? (
+                  <ActivityPlayAgainLink
+                    activityId={activity.id}
+                    locale={locale}
+                  />
                 ) : null}
                 <JoinActivityForm
                   activityId={activity.id}
