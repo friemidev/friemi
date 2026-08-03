@@ -15,6 +15,7 @@ import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   Check,
+  LogOut,
   Monitor,
   Moon,
   Palette,
@@ -31,6 +32,12 @@ import {
   updateWerewolfReadyAction,
   type WerewolfRoomActionState,
 } from "@/features/game-tools/actions/werewolfRoomActions";
+import {
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  type StoredActiveGameToolRoom,
+} from "@/features/game-tools/activeGameToolRoomStorage";
 import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode";
 import {
   defaultWerewolfAtmosphere,
@@ -215,6 +222,10 @@ function getCopy(locale: string) {
       empty: "Libre",
       enterMember: "Entrer",
       events: "Dernières actions",
+      exitGame: "Quitter",
+      exitGameDescription:
+        "Partir garde le raccourci de la salle. Quitter vous retire de cette partie.",
+      exitGameTitle: "Quitter la partie ?",
       finished: "Partie terminée",
       foundation: "Loups-garous",
       host: "Hôte",
@@ -256,6 +267,7 @@ function getCopy(locale: string) {
       selectSeat: "Choisir",
       scanJoin: "Scanner pour entrer",
       share: "Invitation",
+      stayGame: "Rester",
       start: "Lancer",
       startConfirm: "Distribuer les rôles et verrouiller les places ?",
       startWaiting: "Attendez que toute la table soit prête.",
@@ -263,6 +275,7 @@ function getCopy(locale: string) {
       systemActor: "Table",
       unready: "Pas prêt",
       unreadyAction: "Annuler",
+      temporaryLeave: "Partir",
       waitingMember: "Entrez un nom, puis choisissez une place.",
       winnerGood: "Village gagnant",
       winnerWerewolf: "Loups gagnants",
@@ -286,6 +299,10 @@ function getCopy(locale: string) {
       empty: "Open",
       enterMember: "Enter",
       events: "Latest moves",
+      exitGame: "Exit game",
+      exitGameDescription:
+        "Step away keeps the room shortcut. Exit removes you from this game.",
+      exitGameTitle: "Exit game?",
       finished: "Game finished",
       foundation: "Werewolf",
       host: "Host",
@@ -327,6 +344,7 @@ function getCopy(locale: string) {
       selectSeat: "Choose",
       scanJoin: "Scan to join",
       share: "Invite link",
+      stayGame: "Stay",
       start: "Start game",
       startConfirm: "Deal roles and lock seats?",
       startWaiting: "Wait until the full table is ready.",
@@ -334,6 +352,7 @@ function getCopy(locale: string) {
       systemActor: "Table",
       unready: "Not ready",
       unreadyAction: "Cancel",
+      temporaryLeave: "Step away",
       waitingMember: "Enter a name, then choose a seat.",
       winnerGood: "Good team wins",
       winnerWerewolf: "Werewolf team wins",
@@ -356,6 +375,9 @@ function getCopy(locale: string) {
     empty: "空位",
     enterMember: "进入房间",
     events: "最近记录",
+    exitGame: "退出游戏",
+    exitGameDescription: "暂离会保留房间入口，退出游戏会离开本局。",
+    exitGameTitle: "退出提醒",
     finished: "本局已结束",
     foundation: "狼人杀",
     host: "房主",
@@ -397,6 +419,7 @@ function getCopy(locale: string) {
     selectSeat: "入座",
     scanJoin: "扫码进入房间",
     share: "邀请链接",
+    stayGame: "继续游戏",
     start: "开始游戏",
     startConfirm: "发身份后座位会锁定，确定开局？",
     startWaiting: "等所有人准备。",
@@ -404,6 +427,7 @@ function getCopy(locale: string) {
     systemActor: "房间",
     unready: "未准备",
     unreadyAction: "取消准备",
+    temporaryLeave: "暂离",
     waitingMember: "取个昵称入房。",
     winnerGood: "好人阵营获胜",
     winnerWerewolf: "狼人阵营获胜",
@@ -643,8 +667,10 @@ export function WerewolfRoomOverview({
     useState<WerewolfAtmosphereId>(defaultWerewolfAtmosphere.id);
   const [atmospherePreferenceReady, setAtmospherePreferenceReady] =
     useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const t = getCopy(locale);
   const selectedAtmosphere = getWerewolfAtmosphereById(selectedAtmosphereId);
+  const werewolfHomeHref = withLocale(locale, "/game-tools/werewolf");
   const joinUrl = `${baseUrl}${withLocale(
     locale,
     `/game-tools/werewolf/join/${room.code}`,
@@ -678,6 +704,7 @@ export function WerewolfRoomOverview({
     room.events.find((event) => event.type === "werewolf_room_started")?.id ??
     "current";
   const noticeLabel = getNoticeLabel(notice, t);
+  const canExitRoom = Boolean(currentSeatPrivateToken || room.currentMember);
 
   useEffect(() => {
     setSelectedAtmosphereId(getStoredWerewolfAtmosphereId());
@@ -699,6 +726,84 @@ export function WerewolfRoomOverview({
     }
   }, [atmospherePreferenceReady, selectedAtmosphereId]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const roomHrefParams = new URLSearchParams();
+
+    if (currentMemberToken) {
+      roomHrefParams.set("memberToken", currentMemberToken);
+    }
+
+    const roomHrefSuffix = roomHrefParams.toString()
+      ? `?${roomHrefParams.toString()}`
+      : "";
+
+    if (room.status === "IN_PROGRESS" && room.currentMember) {
+      try {
+        window.sessionStorage.removeItem(
+          DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        );
+        window.localStorage.setItem(
+          ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+          JSON.stringify({
+            code: room.code,
+            href: `${withLocale(locale, `/game-tools/werewolf/rooms/${room.id}`)}${roomHrefSuffix}`,
+            id: room.id,
+            kind: "WEREWOLF",
+            locale,
+            privateSeatHref: currentSeatPrivateToken
+              ? withLocale(
+                  locale,
+                  `/game-tools/werewolf/seats/${currentSeatPrivateToken}`,
+                )
+              : null,
+            seatNumber: room.currentMember.seatedSeatNumber,
+            title: room.title,
+          } satisfies StoredActiveGameToolRoom),
+        );
+        window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+      } catch {
+        // This shortcut is local-only; room actions still work without it.
+      }
+
+      return;
+    }
+
+    if (room.status === "FINISHED") {
+      try {
+        const storedValue = window.localStorage.getItem(
+          ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        );
+        const storedRoom = storedValue
+          ? (JSON.parse(storedValue) as Partial<StoredActiveGameToolRoom>)
+          : null;
+
+        if (storedRoom?.id === room.id) {
+          window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
+          window.sessionStorage.setItem(
+            DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+            room.id,
+          );
+          window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+        }
+      } catch {
+        // Ignore local shortcut cleanup failures.
+      }
+    }
+  }, [
+    currentMemberToken,
+    currentSeatPrivateToken,
+    locale,
+    room.code,
+    room.currentMember,
+    room.id,
+    room.status,
+    room.title,
+  ]);
+
   const canSubmitOnline = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
@@ -712,6 +817,24 @@ export function WerewolfRoomOverview({
     },
     [t.offline],
   );
+
+  const clearActiveRoomClientState = useCallback(() => {
+    try {
+      window.localStorage.removeItem(ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY);
+      window.sessionStorage.setItem(
+        DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        room.id,
+      );
+      window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+    } catch {
+      // The server action still removes the player from the game.
+    }
+  }, [room.id]);
+
+  const handleTemporaryLeave = useCallback(() => {
+    setExitDialogOpen(false);
+    router.push(werewolfHomeHref);
+  }, [router, werewolfHomeHref]);
 
   const broadcastRoomChange = useCallback(() => {
     broadcastChannelRef.current?.postMessage({
@@ -1261,13 +1384,21 @@ export function WerewolfRoomOverview({
           <div className="pointer-events-none absolute inset-x-5 bottom-4 h-16 rounded-t-[2rem] border-t border-[#D8A84E]/18" />
 
           <div className="relative z-20 grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-2">
-            <Link
+            <button
               aria-label={t.back}
               className="grid h-10 w-10 place-items-center rounded-full border border-[#F8DDA8]/38 bg-[#031F1B]/92 text-[#F8DDA8] shadow-[0_8px_20px_rgba(0,0,0,0.26)] transition hover:bg-[#11483E]"
-              href={withLocale(locale, "/game-tools/werewolf")}
+              onClick={() => {
+                if (room.currentMember && room.status !== "FINISHED") {
+                  setExitDialogOpen(true);
+                  return;
+                }
+
+                router.push(werewolfHomeHref);
+              }}
+              type="button"
             >
               <ArrowLeft className="h-5 w-5" />
-            </Link>
+            </button>
 
             <div className="min-w-0 rounded-full bg-[#031F1B]/86 px-2 py-1 text-center shadow-[0_6px_18px_rgba(0,0,0,0.34)] ring-1 ring-[#F8DDA8]/22">
               <p className="truncate text-sm font-black tracking-normal text-[#F8DDA8] [text-shadow:0_1px_6px_rgba(0,0,0,0.95)]">
@@ -1314,6 +1445,93 @@ export function WerewolfRoomOverview({
               </Link>
             </div>
           </div>
+
+          {exitDialogOpen ? (
+            <div
+              className="fixed inset-0 z-[95] grid place-items-end bg-black/52 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:place-items-center"
+              role="presentation"
+            >
+              <section
+                aria-modal="true"
+                className="w-full max-w-[22rem] rounded-[1.35rem] border border-[#F8DDA8]/32 bg-[#FFFDF7] p-4 text-[#153B31] shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
+                role="dialog"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FCE7E2] text-[#B5301F]">
+                    <LogOut className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-black leading-6">
+                      {t.exitGameTitle}
+                    </h2>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-[#153B31]/66">
+                      {t.exitGameDescription}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Close"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#153B31]/58 transition hover:bg-[#EDF3EA] active:scale-95"
+                    onClick={() => setExitDialogOpen(false)}
+                    type="button"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
+                    onClick={handleTemporaryLeave}
+                    type="button"
+                  >
+                    {t.temporaryLeave}
+                  </button>
+                  <form
+                    action={leaveAction}
+                    onSubmit={(event) => {
+                      if (!canSubmitOnline(event)) {
+                        return;
+                      }
+
+                      clearActiveRoomClientState();
+                    }}
+                  >
+                    <input name="intent" type="hidden" value="exit_room" />
+                    <input name="locale" type="hidden" value={locale} />
+                    {currentSeatPrivateToken ? (
+                      <input
+                        name="privateToken"
+                        type="hidden"
+                        value={currentSeatPrivateToken}
+                      />
+                    ) : (
+                      <>
+                        <input name="roomId" type="hidden" value={room.id} />
+                        <input
+                          name="memberToken"
+                          type="hidden"
+                          value={currentMemberToken}
+                        />
+                      </>
+                    )}
+                    <SubmitButton
+                      className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#B5301F] px-4 text-sm font-black text-white transition hover:bg-[#9F281B] disabled:cursor-not-allowed disabled:opacity-55"
+                      disabled={!canExitRoom}
+                      label={t.exitGame}
+                    />
+                  </form>
+                </div>
+
+                <button
+                  className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-black text-[#153B31]/62 transition hover:bg-[#EDF3EA]"
+                  onClick={() => setExitDialogOpen(false)}
+                  type="button"
+                >
+                  {t.stayGame}
+                </button>
+              </section>
+            </div>
+          ) : null}
 
           {noticeLabel ? (
             <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#D8A84E]/28 bg-[#F8DDA8]/12 px-3 py-2 text-xs font-black text-[#F8DDA8]">
@@ -1552,30 +1770,13 @@ export function WerewolfRoomOverview({
                       <Ticket className="h-4 w-4" />
                       {t.openSeat}
                     </Link>
-                    <form
-                      action={leaveAction}
-                      onSubmit={(event) => {
-                        if (!canSubmitOnline(event)) {
-                          return;
-                        }
-
-                        if (!window.confirm(t.leaveRoomConfirm)) {
-                          event.preventDefault();
-                        }
-                      }}
+                    <button
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-black text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 active:scale-[0.98]"
+                      onClick={() => setExitDialogOpen(true)}
+                      type="button"
                     >
-                      <input name="locale" type="hidden" value={locale} />
-                      <input
-                        name="privateToken"
-                        type="hidden"
-                        value={currentViewerSeat.privateToken}
-                      />
-                      <input name="responseMode" type="hidden" value="inline" />
-                      <SubmitButton
-                        className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-black text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 disabled:cursor-not-allowed disabled:opacity-55"
-                        label={t.leaveRoom}
-                      />
-                    </form>
+                      {t.exitGame}
+                    </button>
                   </div>
                 )}
 

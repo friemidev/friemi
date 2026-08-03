@@ -60,8 +60,10 @@ function hasStandardMobileNavOffset(pathname: string) {
   const localizedRouteSegment = segments[1];
 
   if (
+    firstRouteSegment === "game-tools" ||
     firstRouteSegment === "sign-in" ||
     firstRouteSegment === "sign-up" ||
+    localizedRouteSegment === "game-tools" ||
     localizedRouteSegment === "sign-in" ||
     localizedRouteSegment === "sign-up"
   ) {

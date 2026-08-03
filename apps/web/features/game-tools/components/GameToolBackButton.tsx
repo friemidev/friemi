@@ -33,11 +33,6 @@ export function GameToolBackButton({
       )}
       type="button"
       onClick={() => {
-        if (window.history.length > 1) {
-          router.back();
-          return;
-        }
-
         router.push(fallbackHref);
       }}
     >

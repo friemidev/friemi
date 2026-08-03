@@ -8,6 +8,7 @@ import {
   Clock3,
   ExternalLink,
   Flag,
+  Gift,
   Heart,
   MessageCircle,
   MoreHorizontal,
@@ -57,8 +58,11 @@ function getNotificationCategory(
   }
 
   if (type === "FRIEND_REQUEST") return "friends";
+  if (type === "CHARM_GIFT_RECEIVED") return "gift";
   if (type === "REPORT_CREATED") return "system";
-  if (type === "ACTIVITY_ANNOUNCEMENT") return "activity";
+  if (type === "ACTIVITY_ANNOUNCEMENT" || type === "ACTIVITY_CHECK_IN") {
+    return "activity";
+  }
   if (
     type === "ACTIVITY_COMMENTED" ||
     type === "COMMENT_REPLY" ||
@@ -129,16 +133,28 @@ function getNotificationText(
     notification.type === "PARTICIPATION_CONFIRMED" ||
     notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
+    notification.type === "ACTIVITY_CHECK_IN" ||
     notification.type === "ACTIVITY_COMMENTED" ||
     notification.type === "COMMENT_REPLY" ||
     notification.type === "DIRECT_MESSAGE" ||
     notification.type === "MOMENT_LIKED" ||
     notification.type === "MOMENT_COMMENTED" ||
     notification.type === "MOMENT_COMMENT_REPLY" ||
-    notification.type === "MOMENT_REPOSTED"
+    notification.type === "MOMENT_REPOSTED" ||
+    notification.type === "CHARM_GIFT_RECEIVED"
   ) {
     const copy = t.types[notification.type];
-    return { title: copy.title, body: copy.body(activityTitle, actorName) };
+    return notification.type === "CHARM_GIFT_RECEIVED"
+      ? {
+          title: copy.title,
+          body: copy.body(
+            notification.charmGiftEvent
+              ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+              : activityTitle,
+            actorName,
+          ),
+        }
+      : { title: copy.title, body: copy.body(activityTitle, actorName) };
   }
 
   if (notification.type === "PARTICIPATION_REJECTED") {
@@ -207,6 +223,7 @@ function getNotificationActionLabel(
   }
 
   if (notification.type === "FRIEND_REQUEST") return t.openProfile;
+  if (notification.type === "CHARM_GIFT_RECEIVED") return t.openProfile;
   if (notification.type === "REPORT_CREATED") return t.openReports;
   if (
     notification.type === "ACTIVITY_COMMENTED" ||
@@ -388,6 +405,16 @@ function getNotificationVisual(
     };
   }
 
+  if (type === "ACTIVITY_CHECK_IN") {
+    return {
+      icon: CheckCheck,
+      iconClassName: isUnread ? "bg-meadow text-paper" : "bg-fog text-forest",
+      cardClassName: isUnread
+        ? "border-sage bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
+
   if (
     type === "ACTIVITY_COMMENTED" ||
     type === "COMMENT_REPLY" ||
@@ -424,6 +451,16 @@ function getNotificationVisual(
     return {
       icon: Flag,
       iconClassName: isUnread ? "bg-danger text-paper" : "bg-rose text-danger",
+      cardClassName: isUnread
+        ? "border-rose bg-paper"
+        : "border-sand bg-paper/62",
+    };
+  }
+
+  if (type === "CHARM_GIFT_RECEIVED") {
+    return {
+      icon: Gift,
+      iconClassName: isUnread ? "bg-cream text-danger" : "bg-fog text-outline",
       cardClassName: isUnread
         ? "border-rose bg-paper"
         : "border-sand bg-paper/62",
@@ -474,6 +511,7 @@ function NotificationCard({
       : Boolean(notification.activity) ||
         notification.type === "REPORT_CREATED" ||
         notification.type === "DIRECT_MESSAGE" ||
+        notification.type === "CHARM_GIFT_RECEIVED" ||
         notification.type === "MOMENT_LIKED" ||
         notification.type === "MOMENT_COMMENTED" ||
         notification.type === "MOMENT_COMMENT_REPLY" ||

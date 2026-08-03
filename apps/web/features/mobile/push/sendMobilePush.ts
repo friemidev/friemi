@@ -263,6 +263,13 @@ export async function sendMobilePushForNotification(notificationId: string) {
       },
       actorDisplayName: true,
       actorId: true,
+      charmGiftEvent: {
+        select: {
+          giftEmoji: true,
+          giftLabel: true,
+          totalCharmDelta: true,
+        },
+      },
       momentId: true,
       recipientId: true,
       type: true,
@@ -331,11 +338,15 @@ export async function sendMobilePushForNotification(notificationId: string) {
       activityTitle: notification.activity?.title ?? null,
       actorName:
         notification.actor?.nickname ?? notification.actorDisplayName ?? null,
+      giftText: notification.charmGiftEvent
+        ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+        : null,
       locale,
       messageBody,
       type: notification.type,
     });
     const path = getNotificationPath({
+      actorId: notification.actorId,
       activityId: notification.activityId,
       momentId: notification.momentId,
       type: notification.type,

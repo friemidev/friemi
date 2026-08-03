@@ -554,6 +554,11 @@ const copy = {
               ? `${actorName}在「${activityTitle}」发布了群公告：${content}`
               : `${actorName}在「${activityTitle}」发布了群公告。`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "签到成功",
+          body: (activityTitle: string) =>
+            `你已成功签到「${activityTitle}」。`,
+        },
         FRIEND_REQUEST: {
           title: "新的关注",
           body: (_activityTitle: string, actorName = "有人") =>
@@ -588,6 +593,11 @@ const copy = {
           title: "足迹被转发",
           body: (_activityTitle: string, actorName = "有人") =>
             `${actorName}转发了你的足迹。`,
+        },
+        CHARM_GIFT_RECEIVED: {
+          title: "收到礼物",
+          body: (giftText: string, actorName = "有人") =>
+            `${actorName}送了你 ${giftText}。`,
         },
         DIRECT_MESSAGE: {
           title: "有新的私信",
@@ -1529,6 +1539,11 @@ const copy = {
               ? `${actorName} posted an update in "${activityTitle}": ${content}`
               : `${actorName} posted an update in "${activityTitle}".`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "Check-in confirmed",
+          body: (activityTitle: string) =>
+            `Your check-in for "${activityTitle}" is confirmed.`,
+        },
         FRIEND_REQUEST: {
           title: "New follower",
           body: (_activityTitle: string, actorName = "Someone") =>
@@ -1563,6 +1578,11 @@ const copy = {
           title: "Moment reposted",
           body: (_activityTitle: string, actorName = "Someone") =>
             `${actorName} reposted your moment.`,
+        },
+        CHARM_GIFT_RECEIVED: {
+          title: "Gift received",
+          body: (giftText: string, actorName = "Someone") =>
+            `${actorName} sent you ${giftText}.`,
         },
         DIRECT_MESSAGE: {
           title: "New message",
@@ -2557,6 +2577,11 @@ const copy = {
               ? `${actorName} a publie une annonce pour ? ${activityTitle} ? : ${content}`
               : `${actorName} a publie une annonce pour ? ${activityTitle} ?.`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "Présence confirmée",
+          body: (activityTitle: string) =>
+            `Votre présence à « ${activityTitle} » est confirmée.`,
+        },
         FRIEND_REQUEST: {
           title: "Nouvel abonné",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
@@ -2591,6 +2616,11 @@ const copy = {
           title: "Moment republié",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} a republié votre moment.`,
+        },
+        CHARM_GIFT_RECEIVED: {
+          title: "Cadeau reçu",
+          body: (giftText: string, actorName = "Quelqu'un") =>
+            `${actorName} vous a envoyé ${giftText}.`,
         },
         DIRECT_MESSAGE: {
           title: "Nouveau message",

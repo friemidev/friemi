@@ -298,6 +298,39 @@ export async function openNotificationActivityAction(formData: FormData) {
     redirect(withLocale(locale, "/admin/reports"));
   }
 
+  if (notification?.type === "CHARM_GIFT_RECEIVED") {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    if (notification.actorId) {
+      revalidatePath(withLocale(locale, `/profile/${notification.actorId}`));
+    }
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "profile",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.actorId
+          ? `/profile/${notification.actorId}`
+          : "/notifications",
+      ),
+    );
+  }
+
   if (notification?.type === "DIRECT_MESSAGE" && notification.actorId) {
     const conversation = await prisma.conversation.findUnique({
       where: {

@@ -6,7 +6,6 @@ import { after } from "next/server";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
@@ -72,6 +71,7 @@ import {
   getViewerFollowedProfileIds,
   getViewerFriendIds,
 } from "@/features/friends/queries/getViewerFriendIds";
+import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
@@ -176,14 +176,13 @@ function ActivityLayerHeader({
 }) {
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
-      <Link
-        aria-label={title}
+      <ActivityHistoryBackButton
+        ariaLabel={title}
         className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95"
-        href={backHref}
-        prefetch
+        fallbackHref={backHref}
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-      </Link>
+      </ActivityHistoryBackButton>
       <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
         {title}
       </p>
@@ -1464,11 +1463,6 @@ export async function ActivityDetailPageContent({
     activity.participantCount - mobileParticipantPreview.length,
     0,
   );
-  const canViewAnnouncements =
-    isTeamOperator ||
-    viewerParticipation?.status === "JOINED" ||
-    viewerParticipation?.status === "APPROVED" ||
-    viewerParticipation?.status === "PENDING";
   const canUseBoardGameTools =
     !activity.isActivityInfo &&
     activity.category === "BOARD_GAME" &&
@@ -1777,14 +1771,6 @@ export async function ActivityDetailPageContent({
             variant="icon"
           />
         </div>
-        <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-white/70">
-            {activityCategoryLabel}
-          </span>
-          <span className="rounded-full bg-white/86 px-2.5 py-1 text-[11px] font-black text-[#111210]/70 ring-1 ring-white/60">
-            {getTypeLabel(activity.type, locale)}
-          </span>
-        </div>
       </div>
       <div className="space-y-4 px-1 sm:px-0">
         <div className="md:hidden">
@@ -2077,12 +2063,6 @@ export async function ActivityDetailPageContent({
               </div>
             </div>
           </div>
-
-          <ActivityAnnouncementsSection
-            announcements={activity.announcements}
-            canView={canViewAnnouncements}
-            locale={locale}
-          />
         </article>
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
@@ -2539,110 +2519,5 @@ function ContactOrganizerForm({
       organizerNickname={organizerNickname}
       organizerProfileId={organizerProfileId}
     />
-  );
-}
-
-function getAnnouncementSectionCopy(locale: string) {
-  if (locale === "fr") {
-    return {
-      title: "Annonces du groupe",
-      empty: "Aucune annonce pour le moment.",
-      organizerEmpty:
-        "Utilisez cet espace pour prévenir tout le monde d'un changement d'heure, d'un point de rendez-vous ou d'un rappel utile.",
-      participantEmpty:
-        "Les nouvelles annonces de l'organisateur apparaîtront ici.",
-      locked:
-        "Rejoignez cette activité pour voir les annonces du groupe et les mises à jour de l'organisateur.",
-      organizerLabel: "Organisateur",
-      latestLabel: "Nouveau",
-    };
-  }
-
-  if (locale === "en") {
-    return {
-      title: "Group announcements",
-      empty: "No announcements yet.",
-      organizerEmpty:
-        "Use this space to notify everyone about time changes, meeting points, or quick reminders.",
-      participantEmpty: "New organizer announcements will appear here.",
-      locked:
-        "Join this activity to view group announcements and organizer updates.",
-      organizerLabel: "Organizer",
-      latestLabel: "Latest",
-    };
-  }
-
-  return {
-    title: "群公告",
-    empty: "暂时还没有公告。",
-    organizerEmpty: "这里可以统一通知时间变化、集合点、注意事项等。",
-    participantEmpty: "发起人的新公告会显示在这里。",
-    locked: "报名后可见群公告和发起人的最新通知。",
-    organizerLabel: "发起人",
-    latestLabel: "最新",
-  };
-}
-
-function ActivityAnnouncementsSection({
-  announcements,
-  canView,
-  locale,
-}: {
-  announcements: {
-    id: string;
-    authorName: string;
-    content: string;
-    createdAt: string;
-    isByOrganizer: boolean;
-  }[];
-  canView: boolean;
-  locale: string;
-}) {
-  const copy = getAnnouncementSectionCopy(locale);
-  const hasAnnouncements = announcements.length > 0;
-
-  if (!canView || !hasAnnouncements) {
-    return null;
-  }
-
-  return (
-    <details className="group">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-3.5 py-2 text-sm font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] [&::-webkit-details-marker]:hidden">
-        <Bell className="h-3.5 w-3.5" />
-        <span>{copy.title}</span>
-      </summary>
-      <section className="mt-3 rounded-[1.15rem] border border-[#D6D5B2] bg-white p-4">
-        <div className="mt-4 grid gap-2.5">
-          {announcements.map((announcement) => (
-            <article
-              key={announcement.id}
-              className={cn(
-                "rounded-[1rem] border bg-[#FEFFF9] px-4 py-3 shadow-sm",
-                announcement.id === announcements[0]?.id
-                  ? "border-[#8AB68E] ring-1 ring-[#8AB68E]/35"
-                  : "border-[#D6D5B2]",
-              )}
-            >
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[#8E8383]">
-                <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#156240] ring-1 ring-[#8AB68E]/45">
-                  {announcement.authorName || copy.organizerLabel}
-                </span>
-                {announcement.id === announcements[0]?.id ? (
-                  <span className="rounded-full bg-[#156240] px-2.5 py-1 font-semibold text-white">
-                    {copy.latestLabel}
-                  </span>
-                ) : null}
-                <span>
-                  {formatActivityDate(announcement.createdAt, locale)}
-                </span>
-              </div>
-              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink">
-                {announcement.content}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </details>
   );
 }

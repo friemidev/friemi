@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Moon, Sparkles, UsersRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Moon, UsersRound } from "lucide-react";
+import {
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+  ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+  type StoredActiveGameToolRoom,
+} from "@/features/game-tools/activeGameToolRoomStorage";
 import { cn } from "@/lib/utils";
 
 type ActiveGameToolFloatingWindowProps = {
   activeRoom: {
     code: string;
     href: string;
+    id: string;
     kind: "AVALON" | "STORYTELLER" | "WEREWOLF";
     privateSeatHref: string | null;
     seatNumber: number | null;
@@ -62,20 +70,124 @@ function getKindLabel(
   return copy.storyteller;
 }
 
+function readStoredActiveRoom(locale: string) {
+  try {
+    const rawValue = window.localStorage.getItem(
+      ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+    );
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<StoredActiveGameToolRoom>;
+
+    if (
+      parsed.locale !== locale ||
+      !parsed.id ||
+      !parsed.href ||
+      !parsed.kind ||
+      !parsed.title
+    ) {
+      return null;
+    }
+
+    return {
+      code: parsed.code ?? "",
+      href: parsed.href,
+      id: parsed.id,
+      kind: parsed.kind,
+      locale: parsed.locale,
+      privateSeatHref: parsed.privateSeatHref ?? null,
+      seatNumber:
+        typeof parsed.seatNumber === "number" ? parsed.seatNumber : null,
+      title: parsed.title,
+    } satisfies StoredActiveGameToolRoom;
+  } catch {
+    return null;
+  }
+}
+
 export function ActiveGameToolFloatingWindow({
   activeRoom,
   locale,
 }: ActiveGameToolFloatingWindowProps) {
   const pathname = usePathname();
+  const [storedRoom, setStoredRoom] = useState<StoredActiveGameToolRoom | null>(
+    null,
+  );
+  const [dismissedRoomId, setDismissedRoomId] = useState<string | null>(null);
 
-  if (!activeRoom) {
+  useEffect(() => {
+    const syncStoredRoom = () => {
+      setStoredRoom(readStoredActiveRoom(locale));
+
+      try {
+        setDismissedRoomId(
+          window.sessionStorage.getItem(
+            DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+          ),
+        );
+      } catch {
+        setDismissedRoomId(null);
+      }
+    };
+
+    syncStoredRoom();
+    window.addEventListener("storage", syncStoredRoom);
+    window.addEventListener(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT, syncStoredRoom);
+
+    return () => {
+      window.removeEventListener("storage", syncStoredRoom);
+      window.removeEventListener(
+        ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT,
+        syncStoredRoom,
+      );
+    };
+  }, [locale]);
+
+  useEffect(() => {
+    if (!activeRoom) {
+      return;
+    }
+
+    try {
+      const dismissedId = window.sessionStorage.getItem(
+        DISMISSED_ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+      );
+
+      if (dismissedId === activeRoom.id) {
+        return;
+      }
+
+      window.localStorage.setItem(
+        ACTIVE_GAME_TOOL_ROOM_STORAGE_KEY,
+        JSON.stringify({
+          ...activeRoom,
+          locale,
+        } satisfies StoredActiveGameToolRoom),
+      );
+      window.dispatchEvent(new Event(ACTIVE_GAME_TOOL_ROOM_STORAGE_EVENT));
+    } catch {
+      // Floating room persistence is a convenience; the server value still works.
+    }
+  }, [activeRoom, locale]);
+
+  const currentRoom =
+    activeRoom && activeRoom.id !== dismissedRoomId
+      ? activeRoom
+      : storedRoom && storedRoom.id !== dismissedRoomId
+        ? storedRoom
+        : null;
+
+  if (!currentRoom) {
     return null;
   }
 
   const isInsideActiveRoom =
-    pathname.startsWith(activeRoom.href) ||
-    (activeRoom.privateSeatHref
-      ? pathname.startsWith(activeRoom.privateSeatHref)
+    pathname.startsWith(currentRoom.href) ||
+    (currentRoom.privateSeatHref
+      ? pathname.startsWith(currentRoom.privateSeatHref)
       : false);
 
   if (isInsideActiveRoom) {
@@ -83,38 +195,30 @@ export function ActiveGameToolFloatingWindow({
   }
 
   const copy = getCopy(locale);
-  const kindLabel = getKindLabel(activeRoom.kind, copy);
-  const Icon = activeRoom.kind === "WEREWOLF" ? Moon : UsersRound;
-  const targetHref = activeRoom.privateSeatHref ?? activeRoom.href;
+  const kindLabel = getKindLabel(currentRoom.kind, copy);
+  const Icon = currentRoom.kind === "WEREWOLF" ? Moon : UsersRound;
+  const targetHref = currentRoom.privateSeatHref ?? currentRoom.href;
+  const label = `${copy.action}: ${kindLabel} · ${currentRoom.title}`;
 
   return (
     <Link
       href={targetHref}
+      aria-label={label}
       className={cn(
-        "fixed inset-x-4 bottom-[calc(5.9rem+env(safe-area-inset-bottom))] z-[55] mx-auto flex max-w-md items-center gap-3 rounded-[1.35rem] border border-[#D8B56A]/54 bg-[#052F28]/96 px-3.5 py-3 text-[#FFF6D6] shadow-[0_18px_46px_rgba(5,47,40,0.26)] backdrop-blur md:bottom-5 md:left-auto md:right-5 md:w-80 md:max-w-none",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-3 z-[55] grid h-12 w-12 place-items-center rounded-full border border-[#D8B56A]/58 bg-[#052F28] text-[#FFF6D6] shadow-[0_14px_30px_rgba(5,47,40,0.28)] md:bottom-5 md:right-5 md:h-[3.25rem] md:w-[3.25rem]",
         "transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#063A30] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CF7C]/70",
       )}
+      title={label}
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F2CF7C]/16 text-[#F2CF7C] ring-1 ring-[#F2CF7C]/34">
-        <Icon className="h-5 w-5" strokeWidth={2.3} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#F2CF7C]">
-          <Sparkles className="h-3.5 w-3.5" />
-          {kindLabel}
+      <span className="absolute inset-1 rounded-full bg-[#F2CF7C]/12" />
+      <Icon className="relative h-5 w-5 text-[#F2CF7C]" strokeWidth={2.35} />
+      {currentRoom.seatNumber ? (
+        <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F2CF7C] px-1 text-[10px] font-black leading-none text-[#052F28] ring-2 ring-white">
+          {currentRoom.seatNumber}
         </span>
-        <span className="mt-1 block truncate text-sm font-black leading-tight text-[#FFFDF7]">
-          {activeRoom.title}
-        </span>
-        <span className="mt-0.5 block text-[11px] font-bold text-[#FFF6D6]/76">
-          {activeRoom.seatNumber
-            ? `${copy.seat} ${activeRoom.seatNumber} · ${activeRoom.code}`
-            : activeRoom.code}
-        </span>
-      </span>
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FFF6D6] px-3 py-2 text-xs font-black text-[#052F28]">
-        {copy.action}
-        <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.4} />
+      ) : null}
+      <span className="sr-only">
+        {kindLabel} {currentRoom.code}
       </span>
     </Link>
   );

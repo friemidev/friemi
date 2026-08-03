@@ -26,11 +26,15 @@ function isLowerLevelActivityHref(href: string) {
 }
 
 function isSafeSourceContext(context: DetailSourceContext | null) {
-  return Boolean(
-    context &&
-    context.sourceKey !== "activity_detail" &&
-    !isLowerLevelActivityHref(context.sourceHref),
-  );
+  if (!context || context.sourceKey === "activity_detail") {
+    return false;
+  }
+
+  if (isLowerLevelActivityHref(context.sourceHref)) {
+    return context.sourceKey === "messages";
+  }
+
+  return true;
 }
 
 function getCurrentTargetPath() {

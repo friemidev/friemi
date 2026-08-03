@@ -7,6 +7,10 @@ import {
   applyStandardTrustScoreEvent,
   removeTrustScoreEvent,
 } from "@/features/trust/trustScoreEvents";
+import {
+  createNotification,
+  createNotifications,
+} from "@/features/notifications/utils/createNotification";
 import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
@@ -213,6 +217,15 @@ export async function reviewActivityCheckInAction(
           type: "NO_SHOW",
         });
 
+        if (participation.userProfileId !== profile.id) {
+          await createNotification(tx, {
+            actorId: profile.id,
+            activityId: result.data.activityId,
+            recipientId: participation.userProfileId,
+            type: "ACTIVITY_CHECK_IN",
+          });
+        }
+
         return { ok: true as const };
       }
 
@@ -348,6 +361,17 @@ export async function confirmAllPendingActivityCheckInsAction(
           ),
         ),
       );
+      await createNotifications(
+        tx,
+        pendingParticipants
+          .filter((participant) => participant.userProfileId !== profile.id)
+          .map((participant) => ({
+            actorId: profile.id,
+            activityId: result.data.activityId,
+            recipientId: participant.userProfileId,
+            type: "ACTIVITY_CHECK_IN",
+          })),
+      );
 
       return { confirmedCount: pendingParticipants.length };
     });
@@ -462,6 +486,18 @@ export async function confirmSelectedActivityCheckInsAction(
               }),
             ),
           ),
+        );
+
+        await createNotifications(
+          tx,
+          selectedParticipants
+            .filter((participant) => participant.userProfileId !== profile.id)
+            .map((participant) => ({
+              actorId: profile.id,
+              activityId: result.data.activityId,
+              recipientId: participant.userProfileId,
+              type: "ACTIVITY_CHECK_IN",
+            })),
         );
       }
 

@@ -46,6 +46,7 @@ import { StartDirectConversationButton } from "@/features/direct-messages/compon
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import {
@@ -1743,10 +1744,12 @@ const createMomentInitialState: CreateMomentState = {
 };
 
 function MomentImageUploadGrid({
+  className,
   copy,
   initialUrls,
   locale,
 }: {
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   initialUrls: string[];
   locale: string;
@@ -1765,7 +1768,7 @@ function MomentImageUploadGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className={cn("flex min-w-0 flex-wrap gap-2", className)}>
       {Array.from({ length: slotCount }).map((_, index) => (
         <ActivityCoverUpload
           key={index}
@@ -1776,7 +1779,13 @@ function MomentImageUploadGrid({
           locale={locale}
           name="imageUrls"
           onChange={(url) => updateUrl(index, url)}
-          splitPreviewClassName="col-span-1"
+          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-black text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
+          splitEmptyContainerClassName="contents"
+          splitEmptyIconClassName="h-7 w-7 text-[#156240]/62 shadow-none"
+          splitPreviewButtonClassName="h-20 sm:h-20"
+          splitPreviewCardClassName="shadow-none"
+          splitPreviewClassName="h-20 w-20 shrink-0"
+          splitRemoveButtonClassName="right-1 top-1 bg-white/92 px-2 py-1 text-[10px] text-[#9A2135] shadow-none ring-1 ring-[#E3DCC5] backdrop-blur-0 hover:bg-white"
           uploadEndpoint="/api/uploads/moment-image"
         />
       ))}
@@ -1892,11 +1901,11 @@ function MomentComposer({
         </span>
         <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
           <Image
-            src="/brand/v2_1/friemi-empty-state-mark.png"
+            src="/illustrations/ui/take-photo.png"
             alt=""
-            width={56}
-            height={56}
-            className="h-10 w-10 object-contain opacity-90"
+            width={64}
+            height={60}
+            className="h-11 w-11 object-contain"
           />
         </span>
       </Link>
@@ -1915,11 +1924,11 @@ function MomentComposer({
         </span>
         <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
           <Image
-            src="/brand/v2_1/friemi-empty-state-mark.png"
+            src="/illustrations/ui/take-photo.png"
             alt=""
-            width={56}
-            height={56}
-            className="h-10 w-10 object-contain opacity-90"
+            width={64}
+            height={60}
+            className="h-11 w-11 object-contain"
           />
         </span>
       </button>
@@ -1929,7 +1938,7 @@ function MomentComposer({
   return (
     <form
       action={formAction}
-      className="rounded-[1.35rem] border border-[#E3DCC5] bg-white p-4 shadow-[0_12px_34px_rgba(21,98,64,0.08)]"
+      className="rounded-[1.1rem] border border-[#E3DCC5] bg-white px-4 py-3 shadow-none"
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="visibility" type="hidden" value={visibility} />
@@ -1961,19 +1970,37 @@ function MomentComposer({
         key={state.ok ? "moment-content-empty" : "moment-content"}
         name="content"
         maxLength={500}
-        rows={3}
+        rows={4}
         placeholder={copy.composer}
-        className="mt-4 w-full resize-none rounded-2xl border border-[#E3DCC5] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-6 outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/12"
+        className="mt-3 min-h-[6.4rem] w-full resize-none border-0 border-b border-[#E3DCC5] bg-transparent px-0 py-2 text-sm font-semibold leading-6 outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758]"
         defaultValue={state.ok ? "" : state.values?.content}
       />
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <MomentImageUploadGrid
           key={state.ok ? "moment-images-empty" : "moment-images-active"}
+          className="flex-1"
           copy={copy}
           initialUrls={state.ok ? [] : (state.values?.imageUrls ?? [])}
           locale={locale}
         />
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70 transition active:scale-[0.98]"
+            onClick={() => setIsExpanded(false)}
+          >
+            {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {isPending ? copy.composerSubmitting : copy.composerSubmit}
+          </button>
+        </div>
       </div>
 
       {state.formError ? (
@@ -1981,23 +2008,6 @@ function MomentComposer({
           {state.formError}
         </p>
       ) : null}
-
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70"
-          onClick={() => setIsExpanded(false)}
-        >
-          {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)] disabled:opacity-60"
-        >
-          {isPending ? copy.composerSubmitting : copy.composerSubmit}
-        </button>
-      </div>
     </form>
   );
 }
@@ -2525,6 +2535,7 @@ export function FootprintsMobilePage({
   profile,
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
   const [feedScope, setFeedScope] = useState<MomentFeedScope>("PUBLIC");
   const isAuthenticated = Boolean(profile);
@@ -2541,8 +2552,18 @@ export function FootprintsMobilePage({
       ),
     [activityRoomChats, messageFriends],
   );
+  const { unreadDirectMessageCount } = useNotificationBadge(
+    initialUnreadMessageCount,
+  );
+  const [hasMountedUnreadCount, setHasMountedUnreadCount] = useState(false);
+  const lastRosterRefreshUnreadCountRef = useRef(initialUnreadMessageCount);
+  const displayedUnreadMessageCount = hasMountedUnreadCount
+    ? unreadDirectMessageCount
+    : initialUnreadMessageCount;
   const unreadMessageBadgeText =
-    initialUnreadMessageCount > 99 ? "99+" : String(initialUnreadMessageCount);
+    displayedUnreadMessageCount > 99
+      ? "99+"
+      : String(displayedUnreadMessageCount);
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
     { key: "message", label: copy.tabs.message },
@@ -2594,6 +2615,37 @@ export function FootprintsMobilePage({
     }
   }, [feedScope, profile]);
 
+  useEffect(() => {
+    lastRosterRefreshUnreadCountRef.current = initialUnreadMessageCount;
+  }, [initialUnreadMessageCount]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setHasMountedUnreadCount(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!profile || activeTab !== "message" || !hasMountedUnreadCount) {
+      return;
+    }
+
+    if (unreadDirectMessageCount === lastRosterRefreshUnreadCountRef.current) {
+      return;
+    }
+
+    lastRosterRefreshUnreadCountRef.current = unreadDirectMessageCount;
+    router.refresh();
+  }, [
+    activeTab,
+    profile,
+    router,
+    hasMountedUnreadCount,
+    unreadDirectMessageCount,
+  ]);
+
   return (
     <>
       <DirectMessageUnreadCountHydrator
@@ -2623,7 +2675,7 @@ export function FootprintsMobilePage({
                       <span className="block truncate whitespace-nowrap">
                         {tab.label}
                       </span>
-                      {tab.key === "message" && initialUnreadMessageCount > 0 ? (
+                      {tab.key === "message" && displayedUnreadMessageCount > 0 ? (
                         <span
                           aria-label={unreadMessageBadgeText}
                           className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-[#E7457A] ring-2 ring-[#FEFFF9]"
