@@ -252,6 +252,7 @@ export default async function ActivityLobbyPage({
         locale={locale}
         mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
         swipeActivities={swipeActivities}
+        viewerProfileId={profile.id}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView

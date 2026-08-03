@@ -9,8 +9,8 @@ import {
   BadgeCheck,
   Copy,
   Crown,
-  Eye,
   Gift,
+  Info,
   Medal,
   MoreHorizontal,
   Package,
@@ -19,11 +19,10 @@ import {
   Share2,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Trophy,
   UserRoundPlus,
   UsersRound,
-  WalletCards,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
@@ -38,7 +37,12 @@ import {
   parseAndroidQrScanPayload,
   resolveGlobalQrScanDestination,
 } from "@/features/scan/globalQrScanner";
-import { getCharmLevelLabel, getCharmProgress } from "@/features/charm/charm";
+import {
+  charmLevels,
+  getCharmLevelDescription,
+  getCharmLevelLabel,
+  getCharmProgress,
+} from "@/features/charm/charm";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
@@ -156,6 +160,14 @@ function getMobileProfileCopy(locale: string) {
       available: "Ouvert",
       bag: "Sac",
       charm: "Aura",
+      charmLevelsClose: "Compris",
+      charmLevelsCurrent: "Niveau actuel",
+      charmLevelsIntro:
+        "Les cadeaux recus augmentent votre aura. Elle montre la popularite, pas la fiabilite.",
+      charmLevelsOpen: "Voir les niveaux d'aura",
+      charmLevelsScore: "Aura",
+      charmLevelsStartingAt: "a partir de",
+      charmLevelsTitle: "Niveaux d'aura",
       copyCode: "Copier",
       copied: "Copié",
       created: "Sorties",
@@ -167,8 +179,15 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
+      myHangouts: "Mes sorties",
+      myHangoutsCreated: "Créées",
+      myHangoutsJoined: "Rejointes",
+      myHangoutsSaved: "Favoris",
+      myMoments: "Mes moments",
       more: "Plus",
       networkTitle: "Réseau",
+      noMyHangouts: "Aucune sortie créée.",
+      noMyMoments: "Aucun moment publié.",
       noTimeline: "Aucune activité publique pour le moment.",
       nextCharm: "Prochain",
       unfollowCancel: "Annuler",
@@ -191,7 +210,6 @@ function getMobileProfileCopy(locale: string) {
       soon: "Bientôt disponible",
       trusted: "Fiable",
       visitors: "Visites",
-      wallet: "Recharge",
     };
   }
 
@@ -204,6 +222,14 @@ function getMobileProfileCopy(locale: string) {
       available: "Open",
       bag: "Bag",
       charm: "Charm",
+      charmLevelsClose: "Got it",
+      charmLevelsCurrent: "Current level",
+      charmLevelsIntro:
+        "Gifts you receive raise your Charm. It shows popularity, not trust.",
+      charmLevelsOpen: "View Charm levels",
+      charmLevelsScore: "Charm",
+      charmLevelsStartingAt: "from",
+      charmLevelsTitle: "Charm levels",
       copyCode: "Copy",
       copied: "Copied",
       created: "Plans",
@@ -215,8 +241,15 @@ function getMobileProfileCopy(locale: string) {
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
+      myHangouts: "My Hangouts",
+      myHangoutsCreated: "Created",
+      myHangoutsJoined: "Joined",
+      myHangoutsSaved: "Saved",
+      myMoments: "My Moments",
       more: "More",
       networkTitle: "Network",
+      noMyHangouts: "No hangouts yet.",
+      noMyMoments: "No moments yet.",
       noTimeline: "No public activity yet.",
       nextCharm: "Next",
       unfollowCancel: "Cancel",
@@ -239,7 +272,6 @@ function getMobileProfileCopy(locale: string) {
       soon: "Coming soon",
       trusted: "Trusted",
       visitors: "Visits",
-      wallet: "Top up",
     };
   }
 
@@ -251,6 +283,13 @@ function getMobileProfileCopy(locale: string) {
     available: "可进入",
     bag: "背包",
     charm: "魅力值",
+    charmLevelsClose: "知道了",
+    charmLevelsCurrent: "当前等级",
+    charmLevelsIntro: "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
+    charmLevelsOpen: "查看魅力等级",
+    charmLevelsScore: "魅力值",
+    charmLevelsStartingAt: "达到",
+    charmLevelsTitle: "魅力等级",
     copyCode: "复制",
     copied: "已复制",
     created: "聚吧",
@@ -262,8 +301,15 @@ function getMobileProfileCopy(locale: string) {
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
+    myHangouts: "我的聚吧",
+    myHangoutsCreated: "我发起的",
+    myHangoutsJoined: "我参与的",
+    myHangoutsSaved: "我收藏的",
+    myMoments: "我的足迹",
     more: "更多",
     networkTitle: "关系",
+    noMyHangouts: "还没有发起聚吧。",
+    noMyMoments: "还没有发布足迹。",
     noTimeline: "暂时没有公开动态。",
     nextCharm: "下一等级",
     unfollowCancel: "暂不取消",
@@ -286,7 +332,6 @@ function getMobileProfileCopy(locale: string) {
     soon: "敬请期待",
     trusted: "信用值",
     visitors: "访客记录",
-    wallet: "充值",
   };
 }
 
@@ -595,29 +640,6 @@ function MobileStatLink({
   );
 }
 
-function ComingSoonFeature({
-  icon: Icon,
-  label,
-  soon,
-}: {
-  icon: LucideIcon;
-  label: string;
-  soon: string;
-}) {
-  return (
-    <button
-      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
-      onClick={() => window.alert(soon)}
-      type="button"
-    >
-      <span className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[radial-gradient(circle_at_30%_25%,#FFF3EE_0%,#FFE3DF_44%,#F7F2F4_100%)] text-[#F15F5B] shadow-[0_12px_22px_rgba(241,95,91,0.08)]">
-        <Icon className="h-[1.125rem] w-[1.125rem]" />
-      </span>
-      <span className="text-[11px] font-bold text-[#1D1D1B]">{label}</span>
-    </button>
-  );
-}
-
 function ProfileFeatureLink({
   href,
   icon: Icon,
@@ -783,33 +805,219 @@ function RecentCharmGifts({
   );
 }
 
-function SelfCharmFeature({
-  dashboard,
+function formatCharmScore(value: number) {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function CharmLevelsDialog({
   locale,
-  label,
+  onClose,
+  open,
+  progress,
 }: {
-  dashboard: ProfileDashboardViewModel;
-  label: string;
   locale: string;
+  onClose: () => void;
+  open: boolean;
+  progress: ReturnType<typeof getCharmProgress>;
 }) {
-  const progress = getCharmProgress(dashboard.charmScore);
-  const levelLabel = getCharmLevelLabel(progress.current, locale);
+  const copy = getMobileProfileCopy(locale);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, open]);
+
+  if (!open) {
+    return null;
+  }
 
   return (
-    <div className="grid min-w-0 justify-items-center gap-1.5 px-1 py-1.5 text-center">
-      <span className="relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[radial-gradient(circle_at_30%_25%,#F6EEFF_0%,#EFE7FF_46%,#FFF4EA_100%)] text-[#8A61CE] shadow-[0_10px_18px_rgba(138,97,206,0.12)] ring-1 ring-[#DBC8F3]">
-        <Sparkles className="h-[1.125rem] w-[1.125rem]" />
-        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FEFFF9] px-1 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
-          {progress.current.icon}
-        </span>
-      </span>
-      <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
-        {label}
-      </span>
-      <span className="max-w-full truncate whitespace-nowrap text-[10px] font-black text-[#8A61CE]">
-        {dashboard.charmScore} / {levelLabel}
-      </span>
+    <div
+      aria-labelledby="charm-levels-dialog-title"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/34 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center sm:justify-center sm:p-6"
+      role="dialog"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="w-full max-w-sm rounded-[1.4rem] bg-[#FEFFF9] p-4 shadow-[0_18px_54px_rgba(17,18,16,0.22)] ring-1 ring-[#D6D5B2]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#8A61CE]">
+              {copy.charmLevelsCurrent}
+            </p>
+            <h2
+              className="mt-1 text-xl font-black leading-tight text-[#111210]"
+              id="charm-levels-dialog-title"
+            >
+              {copy.charmLevelsTitle}
+            </h2>
+          </div>
+          <button
+            aria-label={copy.charmLevelsClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#E7E2D6] transition active:scale-95"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#4F574F]">
+          {copy.charmLevelsIntro}
+        </p>
+
+        <div className="mt-4 grid gap-1">
+          {charmLevels.map((level) => {
+            const active = level.id === progress.current.id;
+
+            return (
+              <div
+                className={cn(
+                  "grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-2.5 py-2",
+                  active ? "bg-[#F4F0FF] text-[#111210]" : "text-[#4F574F]",
+                )}
+                key={level.id}
+              >
+                <span className="text-lg" aria-hidden="true">
+                  {level.icon}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-black">
+                      {getCharmLevelLabel(level, locale)}
+                    </p>
+                    {active ? (
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
+                        {copy.charmLevelsCurrent}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-[#7A8276]">
+                    {getCharmLevelDescription(level, locale)}
+                  </p>
+                </div>
+                <p className="whitespace-nowrap text-xs font-black text-[#8A61CE]">
+                  {copy.charmLevelsStartingAt}{" "}
+                  {formatCharmScore(level.minScore)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+          onClick={onClose}
+          type="button"
+        >
+          {copy.charmLevelsClose}
+        </button>
+      </div>
     </div>
+  );
+}
+
+function CharmProgressPanel({
+  className,
+  dashboard,
+  isAuthenticated,
+  locale,
+  recipientName,
+  recipientProfileId,
+  showGiftAction = false,
+  showRecentGifts = false,
+}: {
+  className?: string;
+  dashboard: ProfileDashboardViewModel;
+  isAuthenticated?: boolean;
+  locale: string;
+  recipientName?: string;
+  recipientProfileId?: string;
+  showGiftAction?: boolean;
+  showRecentGifts?: boolean;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  const progress = getCharmProgress(dashboard.charmScore);
+  const levelLabel = getCharmLevelLabel(progress.current, locale);
+  const nextCharmLabel = progress.next
+    ? `${formatCharmScore(progress.score)} / ${formatCharmScore(progress.next.minScore)}`
+    : copy.maxCharm;
+  const progressWidth = `${Math.max(3, Math.round(progress.progressRatio * 100))}%`;
+  const [levelsOpen, setLevelsOpen] = useState(false);
+
+  return (
+    <>
+      <div className={cn("min-w-0", className)}>
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[26px] font-black leading-none text-[#A57AEB]">
+              {formatCharmScore(progress.score)}
+            </p>
+            <button
+              aria-label={copy.charmLevelsOpen}
+              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-black text-[#8B78B9] transition active:scale-[0.98]"
+              onClick={() => setLevelsOpen(true)}
+              type="button"
+            >
+              <span className="truncate">
+                {progress.current.icon} {levelLabel}
+              </span>
+              <Info className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </div>
+          <p className="shrink-0 text-xs font-bold text-[#7A8276]">
+            {nextCharmLabel}
+          </p>
+        </div>
+        <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
+          <div
+            className="h-full rounded-full bg-[#BFAAF4]"
+            style={{ width: progressWidth }}
+          />
+        </div>
+        {showGiftAction && recipientProfileId && recipientName ? (
+          <div className="mt-2 flex justify-end">
+            <CharmGiftDialog
+              isAuthenticated={Boolean(isAuthenticated)}
+              locale={locale}
+              recipientName={recipientName}
+              recipientProfileId={recipientProfileId}
+            />
+          </div>
+        ) : null}
+        {showRecentGifts ? (
+          <RecentCharmGifts
+            className="mt-3"
+            gifts={dashboard.recentCharmGifts}
+            label={copy.recentGifts}
+          />
+        ) : null}
+      </div>
+
+      <CharmLevelsDialog
+        locale={locale}
+        onClose={() => setLevelsOpen(false)}
+        open={levelsOpen}
+        progress={progress}
+      />
+    </>
   );
 }
 
@@ -938,12 +1146,6 @@ function PublicMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const charmProgress = getCharmProgress(dashboard.charmScore);
-  const charmLevelLabel = getCharmLevelLabel(charmProgress.current, locale);
-  const nextCharmLabel = charmProgress.next
-    ? `${charmProgress.score} / ${charmProgress.next.minScore}`
-    : charmLevelLabel;
-  const charmProgressWidth = `${Math.max(3, Math.round(charmProgress.progressRatio * 100))}%`;
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5">
@@ -1028,43 +1230,16 @@ function PublicMobileProfileHome({
           </div>
         </div>
 
-        <div className="mt-5 border-b border-[#E3DCC5] pb-5">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[26px] font-black leading-none text-[#A57AEB]">
-                {charmProgress.score}
-              </p>
-              <p className="mt-1 text-xs font-black text-[#8B78B9]">
-                {charmProgress.current.icon} {charmLevelLabel}
-              </p>
-            </div>
-            <p className="text-xs font-bold text-[#7A8276]">{nextCharmLabel}</p>
-          </div>
-          <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
-            <div
-              className="h-full rounded-full bg-[#BFAAF4]"
-              style={{ width: charmProgressWidth }}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-xs font-semibold text-[#8B907F]">
-              {charmProgress.next
-                ? `${copy.nextCharm} ${charmProgress.next.icon} ${getCharmLevelLabel(charmProgress.next, locale)}`
-                : copy.maxCharm}
-            </p>
-            <CharmGiftDialog
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              recipientName={profile.nickname}
-              recipientProfileId={profile.id}
-            />
-          </div>
-          <RecentCharmGifts
-            className="mt-3"
-            gifts={dashboard.recentCharmGifts}
-            label={copy.recentGifts}
-          />
-        </div>
+        <CharmProgressPanel
+          className="mt-5 border-b border-[#E3DCC5] pb-5"
+          dashboard={dashboard}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          recipientName={profile.nickname}
+          recipientProfileId={profile.id}
+          showGiftAction
+          showRecentGifts
+        />
       </section>
 
       <PublicMobileTimeline dashboard={dashboard} locale={locale} />
@@ -1619,6 +1794,12 @@ function SelfMobileProfileHome({
             locale={locale}
             nickname={profile.nickname}
           />
+
+          <CharmProgressPanel
+            className="mt-5 py-1"
+            dashboard={dashboard}
+            locale={locale}
+          />
         </div>
 
         <div className="mt-6 grid grid-cols-3">
@@ -1633,7 +1814,7 @@ function SelfMobileProfileHome({
             value={dashboard.friendCount}
           />
           <MobileStatLink
-            href={withLocale(locale, "/footprints")}
+            href={withLocale(locale, "/profile/moments")}
             label={copy.moments}
             value={dashboard.momentCount}
           />
@@ -1641,11 +1822,6 @@ function SelfMobileProfileHome({
       </section>
 
       <section className="mt-6 grid grid-cols-3 gap-y-4">
-        <SelfCharmFeature
-          dashboard={dashboard}
-          label={copy.charm}
-          locale={locale}
-        />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/invite")}
           icon={UserRoundPlus}
@@ -1653,21 +1829,10 @@ function SelfMobileProfileHome({
           tone="pink"
         />
         <ProfileFeatureLink
-          href={withLocale(locale, "/profile/visitors")}
-          icon={Eye}
-          label={copy.visitors}
-          tone="blue"
-        />
-        <ProfileFeatureLink
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
           status="0"
-        />
-        <ComingSoonFeature
-          icon={WalletCards}
-          label={copy.wallet}
-          soon={copy.soon}
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/shop")}
@@ -1675,7 +1840,12 @@ function SelfMobileProfileHome({
           label={copy.shop}
           tone="gold"
         />
-        <ComingSoonFeature icon={Gift} label={copy.giftWall} soon={copy.soon} />
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/gift-wall")}
+          icon={Gift}
+          label={copy.giftWall}
+          tone="pink"
+        />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
@@ -1769,11 +1939,6 @@ export function ProfileDashboardView({
   const showWerewolfStats =
     dashboard.werewolfStats.playerGameCount > 0 ||
     dashboard.werewolfStats.judgeCount > 0;
-  const profileCharmProgress = getCharmProgress(dashboard.charmScore);
-  const profileCharmLevelLabel = getCharmLevelLabel(
-    profileCharmProgress.current,
-    locale,
-  );
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
   const [currentPresenceStatus, setCurrentPresenceStatus] =
@@ -1919,25 +2084,12 @@ export function ProfileDashboardView({
                   showFriendCount={isSelf}
                   showJoinedCount={showPrivateParticipation}
                 />
-                <div className="rounded-2xl bg-white/72 px-4 py-3 ring-1 ring-[#E6DEC6]">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#1D1D1B]">
-                        {profileCharmProgress.current.icon}{" "}
-                        {profileCharmLevelLabel}
-                      </p>
-                      <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
-                        {dashboard.charmScore} {mobileCopy.charm}
-                      </p>
-                    </div>
-                    <Sparkles className="h-5 w-5 shrink-0 text-[#8A61CE]" />
-                  </div>
-                  <RecentCharmGifts
-                    className="mt-2"
-                    gifts={dashboard.recentCharmGifts}
-                    label={mobileCopy.recentGifts}
-                  />
-                </div>
+                <CharmProgressPanel
+                  className="rounded-2xl bg-white/72 px-4 py-3 ring-1 ring-[#E6DEC6]"
+                  dashboard={dashboard}
+                  locale={locale}
+                  showRecentGifts
+                />
                 <Link
                   href={withLocale(locale, "/messages")}
                   className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
@@ -2024,28 +2176,15 @@ export function ProfileDashboardView({
                   profileId={profile.id}
                   relationship={dashboard.viewerRelationship}
                 />
-                <div className="flex items-center justify-between gap-3 border-t border-[#D6D5B2]/55 pt-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#1D1D1B]">
-                      {profileCharmProgress.current.icon}{" "}
-                      {profileCharmLevelLabel}
-                    </p>
-                    <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
-                      {dashboard.charmScore} {mobileCopy.charm}
-                    </p>
-                  </div>
-                  <CharmGiftDialog
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    recipientName={profile.nickname}
-                    recipientProfileId={profile.id}
-                    triggerClassName="bg-white/80 ring-1 ring-[#E6DEC6]"
-                  />
-                </div>
-                <RecentCharmGifts
-                  className="border-t border-[#D6D5B2]/45 pt-2"
-                  gifts={dashboard.recentCharmGifts}
-                  label={mobileCopy.recentGifts}
+                <CharmProgressPanel
+                  className="border-t border-[#D6D5B2]/55 pt-2"
+                  dashboard={dashboard}
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  recipientName={profile.nickname}
+                  recipientProfileId={profile.id}
+                  showGiftAction
+                  showRecentGifts
                 />
               </div>
             </div>

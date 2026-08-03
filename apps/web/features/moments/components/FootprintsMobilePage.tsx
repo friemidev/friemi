@@ -66,7 +66,7 @@ import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
-type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING";
+type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING" | "MINE";
 type MessageRosterFilter =
   | "all"
   | "following"
@@ -86,6 +86,7 @@ type FootprintsViewerProfile = {
 
 type FootprintsMobilePageProps = {
   activityRoomChats: ActivityRoomChatRosterItemViewModel[];
+  initialMomentScope?: MomentFeedScope;
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
@@ -133,6 +134,7 @@ const copyByLocale = {
     emptyFeedDescription: "发一条晒晒，或者关注几个人后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
     feedFollowing: "我关注的",
+    feedMine: "我的",
     feedMutual: "互相关注",
     feedPublic: "广场",
     guestProfileDescription: "登录后可以管理头像、简介和个人码。",
@@ -222,6 +224,7 @@ const copyByLocale = {
     emptyFeedDescription: "Post one, or come back after following people.",
     feedError: "Moments could not load. Try again later.",
     feedFollowing: "Following",
+    feedMine: "Mine",
     feedMutual: "Mutual",
     feedPublic: "Public",
     guestProfileDescription:
@@ -315,6 +318,7 @@ const copyByLocale = {
       "Publiez un moment, ou revenez après avoir suivi quelques personnes.",
     feedError: "Les moments ne se chargent pas pour le moment.",
     feedFollowing: "Suivis",
+    feedMine: "Moi",
     feedMutual: "Mutuels",
     feedPublic: "Public",
     guestProfileDescription:
@@ -2523,6 +2527,7 @@ function FootprintsMessageRow({
 
 export function FootprintsMobilePage({
   activityRoomChats,
+  initialMomentScope = "PUBLIC",
   initialTab = "moment",
   locale,
   messageFriends,
@@ -2537,8 +2542,10 @@ export function FootprintsMobilePage({
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
-  const [feedScope, setFeedScope] = useState<MomentFeedScope>("PUBLIC");
   const isAuthenticated = Boolean(profile);
+  const [feedScope, setFeedScope] = useState<MomentFeedScope>(
+    isAuthenticated ? initialMomentScope : "PUBLIC",
+  );
   const signInHref = getSignInHref(locale, "/footprints");
   const initialUnreadMessageCount = useMemo(
     () =>
@@ -2587,6 +2594,10 @@ export function FootprintsMobilePage({
     });
   }, [moments]);
   const scopedMoments = useMemo(() => {
+    if (feedScope === "MINE") {
+      return dedupedMoments.filter((moment) => moment.isOwnMoment);
+    }
+
     if (feedScope === "MUTUAL") {
       return dedupedMoments.filter(
         (moment) => moment.isOwnMoment || moment.isAuthorMutualFollow,
@@ -2604,6 +2615,7 @@ export function FootprintsMobilePage({
   const feedScopeTabs: Array<{ key: MomentFeedScope; label: string }> = profile
     ? [
         { key: "PUBLIC", label: copy.feedPublic },
+        { key: "MINE", label: copy.feedMine },
         { key: "MUTUAL", label: copy.feedMutual },
         { key: "FOLLOWING", label: copy.feedFollowing },
       ]

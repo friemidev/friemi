@@ -15,6 +15,7 @@ import {
   getActivityCheckInRoster,
   type ActivityCheckInParticipantViewModel,
 } from "@/features/activities/queries/getActivityCheckInRoster";
+import { getMutualFollowProfileIds } from "@/features/follow/queries/followRelations";
 import { prisma } from "@/lib/prisma";
 
 export const activityRoomMessageMaxLength = 500;
@@ -117,8 +118,25 @@ export type ActivityRoomManagementViewModel = {
   checkInRoster: ActivityCheckInParticipantViewModel[];
   coManagerDashboard: ActivityCoManagerDashboardViewModel | null;
   contactableParticipants: ActivityContactableParticipantViewModel[];
+  inviteCandidates: ActivityRoomInviteCandidateViewModel[];
+  memberPreview: ActivityRoomMemberPreviewViewModel[];
   roomParticipants: ActivityRoomManagedParticipantViewModel[];
   requiresApproval: boolean;
+};
+
+export type ActivityRoomInviteCandidateViewModel = {
+  id: string;
+  avatarUrl: string | null;
+  friendCode: string | null;
+  nickname: string;
+};
+
+export type ActivityRoomMemberPreviewViewModel = {
+  id: string;
+  avatarUrl: string | null;
+  nickname: string;
+  role: "ORGANIZER" | "PARTICIPANT";
+  status: ParticipantStatus | null;
 };
 
 export type ActivityRoomManagedParticipantViewModel = {
@@ -772,9 +790,12 @@ export async function getActivityRoomManagementData({
     now,
   );
 
-  if (policy.role !== "ORGANIZER" && policy.role !== "CO_MANAGER") {
+  if (!policy.canView) {
     return null;
   }
+
+  const canManage =
+    policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
 
   const activity = await prisma.activity.findUnique({
     where: {
@@ -787,6 +808,18 @@ export async function getActivityRoomManagementData({
       requiresApproval: true,
       status: true,
       title: true,
+      coManagers: {
+        select: {
+          managerProfileId: true,
+        },
+      },
+      organizer: {
+        select: {
+          id: true,
+          avatarUrl: true,
+          nickname: true,
+        },
+      },
       participants: {
         where: {
           status: {
@@ -819,6 +852,9 @@ export async function getActivityRoomManagementData({
     activity.status === "ENDED" ||
     Boolean(activity.endAt && activity.endAt.getTime() <= now.getTime());
   const isCancelled = activity.status === "CANCELLED";
+  const coManagerProfileIds = new Set(
+    activity.coManagers.map((coManager) => coManager.managerProfileId),
+  );
   const contactableParticipants = activity.participants
     .filter(
       (participant) => participant.userProfile.id !== activity.organizerId,
@@ -832,7 +868,8 @@ export async function getActivityRoomManagementData({
     .filter(
       (participant) =>
         participant.userProfile.id !== activity.organizerId &&
-        roomParticipantStatuses.includes(participant.status),
+        !coManagerProfileIds.has(participant.userProfile.id) &&
+        ["JOINED", "APPROVED", "PENDING"].includes(participant.status),
     )
     .map((participant) => ({
       id: participant.id,
@@ -843,10 +880,106 @@ export async function getActivityRoomManagementData({
         nickname: participant.userProfile.nickname,
       },
     }));
-  const [coManagerDashboard, checkInRoster] = await Promise.all([
-    getActivityCoManagerDashboard(activity.id, viewerProfileId),
-    getActivityCheckInRoster(activity.id, viewerProfileId),
+  const memberPreview: ActivityRoomMemberPreviewViewModel[] = [
+    {
+      id: activity.organizer.id,
+      avatarUrl: activity.organizer.avatarUrl,
+      nickname: activity.organizer.nickname,
+      role: "ORGANIZER",
+      status: null,
+    },
+    ...activity.participants
+      .filter(
+        (participant) => participant.userProfile.id !== activity.organizerId,
+      )
+      .map((participant) => ({
+        id: participant.userProfile.id,
+        avatarUrl: participant.userProfile.avatarUrl,
+        nickname: participant.userProfile.nickname,
+        role: "PARTICIPANT" as const,
+        status: participant.status,
+      })),
+  ];
+  const activeOrPendingMemberIds = new Set([
+    activity.organizerId,
+    ...activity.participants.map(
+      (participant) => participant.userProfile.id,
+    ),
   ]);
+  const [coManagerDashboardResult, checkInRosterResult] =
+    await Promise.allSettled([
+      getActivityCoManagerDashboard(activity.id, viewerProfileId),
+      getActivityCheckInRoster(activity.id, viewerProfileId),
+    ]);
+  const coManagerDashboard =
+    coManagerDashboardResult.status === "fulfilled"
+      ? coManagerDashboardResult.value
+      : null;
+  const checkInRoster =
+    checkInRosterResult.status === "fulfilled" ? checkInRosterResult.value : [];
+
+  if (coManagerDashboardResult.status === "rejected") {
+    console.error(
+      "Failed to load activity room co-manager dashboard",
+      coManagerDashboardResult.reason,
+    );
+  }
+
+  if (checkInRosterResult.status === "rejected") {
+    console.error(
+      "Failed to load activity room check-in roster",
+      checkInRosterResult.reason,
+    );
+  }
+
+  if (!canManage) {
+    return {
+      activityTitle: activity.title,
+      canCancelActivity: false,
+      canEditActivity: false,
+      checkInRoster: [],
+      coManagerDashboard: null,
+      contactableParticipants: [],
+      inviteCandidates: [],
+      memberPreview,
+      roomParticipants: [],
+      requiresApproval: activity.requiresApproval,
+    };
+  }
+
+  let inviteCandidates: ActivityRoomInviteCandidateViewModel[] = [];
+  const mutualFollowIds = await getMutualFollowProfileIds(viewerProfileId);
+  const availableInviteIds = mutualFollowIds.filter(
+    (profileId) => !activeOrPendingMemberIds.has(profileId),
+  );
+
+  if (availableInviteIds.length > 0) {
+    inviteCandidates = (
+      await prisma.userProfile.findMany({
+        where: {
+          id: {
+            in: availableInviteIds,
+          },
+          status: "ACTIVE",
+        },
+        orderBy: [{ nickname: "asc" }, { id: "asc" }],
+        take: 40,
+        select: {
+          id: true,
+          avatarUrl: true,
+          friendCode: true,
+          nickname: true,
+        },
+      })
+    ).map((profile) => ({
+      id: profile.id,
+      avatarUrl: profile.avatarUrl,
+      friendCode: profile.friendCode,
+      nickname:
+        profile.nickname.trim() ||
+        (profile.friendCode ? `Friemi ${profile.friendCode}` : "Friemi"),
+    }));
+  }
 
   return {
     activityTitle: activity.title,
@@ -855,6 +988,8 @@ export async function getActivityRoomManagementData({
     checkInRoster,
     coManagerDashboard,
     contactableParticipants,
+    inviteCandidates,
+    memberPreview,
     roomParticipants,
     requiresApproval: activity.requiresApproval,
   };

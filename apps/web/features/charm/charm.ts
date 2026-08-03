@@ -451,10 +451,10 @@ export function getCharmLevelLabel(
 
   if (locale === "fr") {
     return {
-      SOLITUDE: "Solitude",
-      CHARM: "Charm",
+      SOLITUDE: "Solitaire",
+      CHARM: "Charme",
       SUPERSTAR: "Superstar",
-      LEGEND: "Legend",
+      LEGEND: "Legende",
       FRIEMI_IDOL: "Friemi Idol",
     }[levelId];
   }
@@ -470,11 +470,46 @@ export function getCharmLevelLabel(
   }
 
   return {
-    SOLITUDE: "Solitude",
-    CHARM: "Charm",
-    SUPERSTAR: "Superstar",
-    LEGEND: "Legend",
+    SOLITUDE: "独行者",
+    CHARM: "魅力",
+    SUPERSTAR: "闪耀明星",
+    LEGEND: "传奇",
     FRIEMI_IDOL: "Friemi Idol",
+  }[levelId];
+}
+
+export function getCharmLevelDescription(
+  level: CharmLevelDefinition | CharmLevelId,
+  locale: CharmLocale,
+) {
+  const levelId = typeof level === "string" ? level : level.id;
+
+  if (locale === "fr") {
+    return {
+      SOLITUDE: "Votre aura commence ici.",
+      CHARM: "Vous commencez a etre remarque.",
+      SUPERSTAR: "Vous etes tres visible dans la communaute.",
+      LEGEND: "Votre presence attire beaucoup de monde.",
+      FRIEMI_IDOL: "Vous faites partie des profils les plus suivis.",
+    }[levelId];
+  }
+
+  if (locale === "en") {
+    return {
+      SOLITUDE: "Your charm starts here.",
+      CHARM: "People are starting to notice you.",
+      SUPERSTAR: "You stand out in the community.",
+      LEGEND: "Your presence draws people in.",
+      FRIEMI_IDOL: "You are one of the most watched profiles.",
+    }[levelId];
+  }
+
+  return {
+    SOLITUDE: "魅力从这里开始。",
+    CHARM: "开始被更多人看见。",
+    SUPERSTAR: "在社区里很有存在感。",
+    LEGEND: "你的出现很容易带动大家。",
+    FRIEMI_IDOL: "Friemi 里的高人气用户。",
   }[levelId];
 }
 

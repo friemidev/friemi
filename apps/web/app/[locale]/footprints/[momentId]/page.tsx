@@ -15,6 +15,9 @@ type MomentDetailPageProps = {
     locale: string;
     momentId: string;
   }>;
+  searchParams?: Promise<{
+    from?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -87,10 +90,13 @@ export async function generateMetadata({
 
 export default async function MomentDetailPage({
   params,
+  searchParams,
 }: MomentDetailPageProps) {
   const { locale, momentId } = await params;
+  const query = await searchParams;
   const profile = await getOptionalCurrentUserProfileSnapshot();
   const moment = await getMomentDetail(momentId, profile?.id ?? null);
+  const fromProfileMoments = query?.from === "profile-moments";
 
   if (!moment) {
     notFound();
@@ -98,6 +104,12 @@ export default async function MomentDetailPage({
 
   return (
     <MomentDetailMobilePage
+      backHref={
+        fromProfileMoments ? "/profile/moments" : "/footprints?tab=moment"
+      }
+      deleteRedirectPath={
+        fromProfileMoments ? "/profile/moments" : "/footprints?tab=moment"
+      }
       locale={locale}
       moment={moment}
       profile={profile ? { id: profile.id } : null}

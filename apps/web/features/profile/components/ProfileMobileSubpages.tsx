@@ -6,7 +6,11 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronRight,
+  Eye,
+  Heart,
   MapPin,
+  MessageCircle,
+  Repeat2,
   Search,
   UsersRound,
 } from "lucide-react";
@@ -20,16 +24,23 @@ import {
 } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
 import type {
   ProfileFavoriteActivityViewModel,
   ProfileDashboardViewModel,
   ProfileFollowUserViewModel,
+  ProfileMomentViewModel,
   ProfileParticipationViewModel,
 } from "../queries/getProfileDashboard";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
 type HangoutsTab = "created" | "participation" | "favorite";
 type NetworkTab = "following" | "followers" | "mutual";
+type ProfileVisitSummaryViewModel = {
+  todayViewCount: number;
+  totalViewCount: number;
+  uniqueVisitorCount: number;
+};
 
 function getProfileSubpageCopy(locale: string) {
   if (locale === "fr") {
@@ -49,18 +60,26 @@ function getProfileSubpageCopy(locale: string) {
       joined: "Rejointes",
       joinedAt: "Rejoint",
       manage: "Gérer",
+      momentFallback: "Moment",
+      momentsTitle: "Mes moments",
       networkTitle: "Réseau",
       noBio: "Pas encore de bio.",
+      emptyMoments: "Aucun moment publié.",
       savedAt: "Sauvé",
       searchPeople: "Rechercher",
+      todayVisitors: "Aujourd'hui",
       follow: "Suivre",
       followBack: "Suivre aussi",
+      totalVisitors: "Vues",
       unfollow: "Ne plus suivre",
       unfollowCancel: "Annuler",
       unfollowConfirm: "Confirmer",
       unfollowDescription: "Vous ne serez plus en suivi mutuel.",
       unfollowTitle: "Ne plus suivre ?",
       view: "Voir",
+      visitors: "Visites",
+      visibilityFriends: "Mutuels",
+      visibilityPublic: "Public",
     };
   }
 
@@ -81,18 +100,26 @@ function getProfileSubpageCopy(locale: string) {
       joined: "Joined",
       joinedAt: "Joined",
       manage: "Manage",
+      momentFallback: "Moment",
+      momentsTitle: "My Moments",
       networkTitle: "Network",
       noBio: "No bio yet.",
+      emptyMoments: "No moments posted yet.",
       savedAt: "Saved",
       searchPeople: "Search people",
+      todayVisitors: "Today",
       follow: "Follow",
       followBack: "Follow back",
+      totalVisitors: "Views",
       unfollow: "Unfollow",
       unfollowCancel: "Cancel",
       unfollowConfirm: "Unfollow",
       unfollowDescription: "You will no longer follow each other.",
       unfollowTitle: "Unfollow this user?",
       view: "View",
+      visitors: "Visitors",
+      visibilityFriends: "Mutuals",
+      visibilityPublic: "Public",
     };
   }
 
@@ -112,18 +139,26 @@ function getProfileSubpageCopy(locale: string) {
     joined: "我参与的",
     joinedAt: "报名",
     manage: "管理",
+    momentFallback: "晒晒",
+    momentsTitle: "我的晒晒",
     networkTitle: "关系网",
     noBio: "还没有填写简介。",
+    emptyMoments: "还没有发布晒晒。",
     savedAt: "收藏",
     searchPeople: "搜索用户",
+    todayVisitors: "今日",
     follow: "关注",
     followBack: "回关",
+    totalVisitors: "总访问",
     unfollow: "取消关注",
     unfollowCancel: "暂不取消",
     unfollowConfirm: "确认取消",
     unfollowDescription: "取消后，你们将不再是互相关注。",
     unfollowTitle: "确认取消关注？",
     view: "查看",
+    visitors: "访客记录",
+    visibilityFriends: "互相关注",
+    visibilityPublic: "广场",
   };
 }
 
@@ -206,6 +241,167 @@ function EmptyPanel({ message }: { message: string }) {
 
 function compareIsoDate(left: string, right: string) {
   return new Date(right).getTime() - new Date(left).getTime();
+}
+
+function getMomentDateParts(value: string, locale: string) {
+  const date = new Date(value);
+
+  if (locale === "zh-CN") {
+    const parts = new Intl.DateTimeFormat("zh-CN", {
+      day: "numeric",
+      month: "numeric",
+      timeZone: "Europe/Paris",
+    }).formatToParts(date);
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+    return {
+      day,
+      key: `${date.getFullYear()}-${month}-${day}`,
+      month: month ? `${month}月` : "",
+    };
+  }
+
+  const parts = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "Europe/Paris",
+  }).formatToParts(date);
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+  return {
+    day,
+    key: `${date.getFullYear()}-${month}-${day}`,
+    month,
+  };
+}
+
+function getMomentTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
+  }).format(new Date(value));
+}
+
+function ProfileMomentRow({
+  locale,
+  moment,
+  showDate,
+}: {
+  locale: string;
+  moment: ProfileMomentViewModel;
+  showDate: boolean;
+}) {
+  const copy = getProfileSubpageCopy(locale);
+  const dateParts = getMomentDateParts(moment.createdAt, locale);
+  const content = moment.content?.trim() || copy.momentFallback;
+
+  return (
+    <Link
+      href={withLocale(locale, `/footprints/${moment.id}?from=profile-moments`)}
+      className="grid grid-cols-[3.1rem_minmax(0,1fr)] gap-3 border-b border-[#E3DCC5] py-4 last:border-b-0"
+    >
+      <div className="pt-0.5 text-center">
+        {showDate ? (
+          <>
+            <p className="text-[24px] font-black leading-none text-[#111210]">
+              {dateParts.day}
+            </p>
+            <p className="mt-1 text-[11px] font-bold leading-4 text-[#7A8276]">
+              {dateParts.month}
+            </p>
+          </>
+        ) : null}
+      </div>
+
+      <article className="min-w-0">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <p className="min-w-0 flex-1 line-clamp-2 text-[15px] font-bold leading-6 text-[#111210]">
+            {content}
+          </p>
+          <span className="shrink-0 pt-1 text-[11px] font-bold leading-none text-[#8B907F]">
+            {getMomentTime(moment.createdAt, locale)}
+          </span>
+        </div>
+
+        {moment.image ? (
+          // Moment images are user uploaded assets.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={moment.image.url}
+            alt=""
+            className="mt-2 aspect-square w-[8.25rem] rounded-2xl object-cover"
+          />
+        ) : null}
+
+        <div className="mt-2 flex items-center gap-4 text-[12px] font-black text-[#6C746A]">
+          <span className="inline-flex items-center gap-1">
+            <Heart className="h-4 w-4" />
+            {moment.likeCount}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <MessageCircle className="h-4 w-4" />
+            {moment.commentCount}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Repeat2 className="h-4 w-4" />
+            {moment.repostCount}
+          </span>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+export function ProfileMomentsMobilePage({
+  locale,
+  moments,
+}: {
+  locale: string;
+  moments: ProfileMomentViewModel[];
+}) {
+  const copy = getProfileSubpageCopy(locale);
+  const sortedMoments = useMemo(
+    () =>
+      [...moments].sort((left, right) =>
+        compareIsoDate(left.createdAt, right.createdAt),
+      ),
+    [moments],
+  );
+
+  return (
+    <SubpageShell title={copy.momentsTitle} locale={locale}>
+      <section className="mt-6 border-t border-[#E3DCC5]">
+        {sortedMoments.length > 0 ? (
+          sortedMoments.map((moment, index) => {
+            const dateParts = getMomentDateParts(moment.createdAt, locale);
+            const previousDateParts =
+              index > 0
+                ? getMomentDateParts(
+                    sortedMoments[index - 1].createdAt,
+                    locale,
+                  )
+                : null;
+
+            return (
+              <ProfileMomentRow
+                key={moment.id}
+                locale={locale}
+                moment={moment}
+                showDate={dateParts.key !== previousDateParts?.key}
+              />
+            );
+          })
+        ) : (
+          <div className="pt-6">
+            <EmptyPanel message={copy.emptyMoments} />
+          </div>
+        )}
+      </section>
+    </SubpageShell>
+  );
 }
 
 function getCompactActivityHref(
@@ -418,13 +614,15 @@ function FavoriteHangoutRow({
 
 export function ProfileHangoutsMobilePage({
   dashboard,
+  initialTab = "created",
   locale,
 }: {
   dashboard: ProfileDashboardViewModel;
+  initialTab?: HangoutsTab;
   locale: string;
 }) {
   const copy = getProfileSubpageCopy(locale);
-  const [activeTab, setActiveTab] = useState<HangoutsTab>("created");
+  const [activeTab, setActiveTab] = useState<HangoutsTab>(initialTab);
   const createdActivities = useMemo(
     () =>
       [...dashboard.createdActivities].sort((left, right) =>
@@ -599,9 +797,17 @@ function NetworkUserRow({
 export function ProfileNetworkMobilePage({
   dashboard,
   locale,
+  recentVisitors = [],
+  visitSummary = {
+    todayViewCount: 0,
+    totalViewCount: 0,
+    uniqueVisitorCount: 0,
+  },
 }: {
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  recentVisitors?: ProfileVisitorViewModel[];
+  visitSummary?: ProfileVisitSummaryViewModel;
 }) {
   const copy = getProfileSubpageCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
@@ -673,6 +879,7 @@ export function ProfileNetworkMobilePage({
       ),
     },
   ];
+  const visitorPreview = recentVisitors.slice(0, 3);
 
   function handleNetworkFollowChange(
     user: ProfileFollowUserViewModel,
@@ -751,6 +958,50 @@ export function ProfileNetworkMobilePage({
             {networkTabs.find((tab) => tab.key === activeTab)?.count ?? 0}
           </span>
         </label>
+        <Link
+          href={withLocale(locale, "/profile/visitors")}
+          className="mt-3 flex h-14 items-center gap-3 rounded-[1.1rem] bg-white px-3 text-[#111210] ring-1 ring-[#E3DCC5] transition active:scale-[0.99]"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] text-[#143376] ring-1 ring-[#C8D9F5]">
+            <Eye className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-black">
+              {copy.visitors}
+            </span>
+            <span className="block truncate text-xs font-semibold text-[#6C746A]">
+              {copy.todayVisitors} {visitSummary.todayViewCount} ·{" "}
+              {copy.totalVisitors} {visitSummary.totalViewCount}
+            </span>
+          </span>
+          {visitorPreview.length > 0 ? (
+            <span className="flex shrink-0 -space-x-2">
+              {visitorPreview.map((visit) => {
+                const initial =
+                  visit.visitor.nickname.trim().slice(0, 1) || "N";
+
+                return visit.visitor.avatarUrl ? (
+                  // User avatars are remote profile images.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={visit.visitor.avatarUrl}
+                    alt={visit.visitor.nickname}
+                    className="h-7 w-7 rounded-full border-2 border-white object-cover"
+                    key={visit.id}
+                  />
+                ) : (
+                  <span
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#DCEBDE] text-[10px] font-black text-[#156240]"
+                    key={visit.id}
+                  >
+                    {initial}
+                  </span>
+                );
+              })}
+            </span>
+          ) : null}
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#A3A48F]" />
+        </Link>
         <SegmentTabs
           active={activeTab}
           items={networkTabs}

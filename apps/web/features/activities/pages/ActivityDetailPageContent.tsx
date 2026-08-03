@@ -9,9 +9,10 @@ import {
   CalendarDays,
   CheckCircle2,
   ExternalLink,
+  FileText,
   MapPin,
   MessageCircle,
-  Pencil,
+  PencilLine,
   Repeat2,
   ShieldAlert,
   Store,
@@ -440,20 +441,44 @@ function getActivityRoomEntryCopy(locale: string) {
   };
 }
 
+function getActivityOperatorActionCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      edit: "Modifier",
+      manage: "Gérer",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      edit: "Edit",
+      manage: "Manage",
+    };
+  }
+
+  return {
+    edit: "编辑聚吧",
+    manage: "管理聚吧",
+  };
+}
+
 function ActivityRoomEntryLink({
   className,
   href,
+  labelOverride,
   locale,
   showDescription = false,
   unreadCount = 0,
 }: {
   className?: string;
   href: string;
+  labelOverride?: string;
   locale: string;
   showDescription?: boolean;
   unreadCount?: number;
 }) {
   const copy = getActivityRoomEntryCopy(locale);
+  const label = labelOverride ?? copy.label;
   const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
 
   return (
@@ -465,7 +490,7 @@ function ActivityRoomEntryLink({
       href={href}
     >
       <MessageCircle className="h-4 w-4" />
-      <span className="truncate">{copy.label}</span>
+      <span className="truncate">{label}</span>
       {showDescription ? (
         <span className="hidden min-w-0 truncate text-xs font-semibold text-white/74 sm:inline">
           {copy.description}
@@ -1349,6 +1374,7 @@ export async function ActivityDetailPageContent({
   const activityCategoryLabel = getCategoryLabel(activity.category, locale);
   const activityDateLabel = getActivityDateLabel(activity, locale);
   const activityLocationLabel = getActivityLocationLabel(activity);
+  const hasActivityDescription = activity.description.trim().length > 0;
   const activityAddressUrl = activity.isAddressHiddenFromViewer
     ? null
     : normalizeExternalUrl(activity.address);
@@ -1440,6 +1466,7 @@ export async function ActivityDetailPageContent({
     locale === "fr" ? "Carte" : locale === "en" ? "Map" : "地图";
   const mobileShareButtonLabel =
     locale === "fr" ? "Partager" : locale === "en" ? "Share" : "分享";
+  const operatorActionCopy = getActivityOperatorActionCopy(locale);
   const mobileCloseLabel =
     locale === "fr" ? "Fermer" : locale === "en" ? "Close" : "关闭";
   const mobileMapHref =
@@ -1520,66 +1547,68 @@ export async function ActivityDetailPageContent({
   const renderActivityDetailTogglePanels = (className?: string) => (
     <div className={cn("space-y-3 border-y border-[#E7E1CA] py-3", className)}>
       <div className="flex flex-wrap items-start gap-2">
-        <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
-          <summary className={mobileDetailSummaryButtonClassName}>
-            <Pencil className="h-3.5 w-3.5" />
-            <span>
-              {locale === "en"
-                ? "Details"
-                : locale === "fr"
-                  ? "Détails"
-                  : "详情"}
-            </span>
-          </summary>
-          <div className="mt-3 space-y-3 px-1">
-            <h2 className="text-sm font-black text-ink">
-              {locale === "en"
-                ? "Plan note"
-                : locale === "fr"
-                  ? "Note du groupe"
-                  : "聚吧说明"}
-            </h2>
-            <ActivityRichDescription
-              className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
-              copyFailedLabel={t.activityShare.copyFailed}
-              copyLabel={t.activityShare.copyLink}
-              copySuccessLabel={t.activityShare.copied}
-              entityId={detailAnalyticsEntity.entityId}
-              entityType={detailAnalyticsEntity.entityType}
-              locale={locale}
-              sourceSurface="activity_detail"
-              text={activity.description}
-            />
-            <ManualTranslationBundle
-              accessToken={accessToken ?? null}
-              entityId={activity.id}
-              entityType="activity"
-              fields={[
-                {
-                  field: "title",
-                  label: t.translation.fields.title,
-                  text: activity.title,
-                },
-                {
-                  field: "description",
-                  label: t.translation.fields.description,
-                  text: activity.description,
-                },
-                {
-                  field: "address",
-                  label: t.translation.fields.address,
-                  text: activityLocationLabel,
-                },
-                {
-                  field: "priceText",
-                  label: t.translation.fields.priceText,
-                  text: activity.priceText,
-                },
-              ]}
-              locale={locale}
-            />
-          </div>
-        </details>
+        {hasActivityDescription ? (
+          <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
+            <summary className={mobileDetailSummaryButtonClassName}>
+              <FileText className="h-3.5 w-3.5" />
+              <span>
+                {locale === "en"
+                  ? "Details"
+                  : locale === "fr"
+                    ? "Détails"
+                    : "详情"}
+              </span>
+            </summary>
+            <div className="mt-3 space-y-3 px-1">
+              <h2 className="text-sm font-black text-ink">
+                {locale === "en"
+                  ? "Plan note"
+                  : locale === "fr"
+                    ? "Note du groupe"
+                    : "聚吧说明"}
+              </h2>
+              <ActivityRichDescription
+                className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+                copyFailedLabel={t.activityShare.copyFailed}
+                copyLabel={t.activityShare.copyLink}
+                copySuccessLabel={t.activityShare.copied}
+                entityId={detailAnalyticsEntity.entityId}
+                entityType={detailAnalyticsEntity.entityType}
+                locale={locale}
+                sourceSurface="activity_detail"
+                text={activity.description}
+              />
+              <ManualTranslationBundle
+                accessToken={accessToken ?? null}
+                entityId={activity.id}
+                entityType="activity"
+                fields={[
+                  {
+                    field: "title",
+                    label: t.translation.fields.title,
+                    text: activity.title,
+                  },
+                  {
+                    field: "description",
+                    label: t.translation.fields.description,
+                    text: activity.description,
+                  },
+                  {
+                    field: "address",
+                    label: t.translation.fields.address,
+                    text: activityLocationLabel,
+                  },
+                  {
+                    field: "priceText",
+                    label: t.translation.fields.priceText,
+                    text: activity.priceText,
+                  },
+                ]}
+                locale={locale}
+              />
+            </div>
+          </details>
+        ) : null}
 
         {activity.publicEvent ? (
           <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
@@ -1639,79 +1668,90 @@ export async function ActivityDetailPageContent({
       </div>
     </div>
   );
-  const renderActivityDetailDesktop = () => (
-    <div className="hidden space-y-4 border-y border-[#E7E1CA] py-4 md:block">
-      <div className="space-y-3">
-        <h2 className="text-sm font-black text-ink">
-          {locale === "en" ? "Details" : locale === "fr" ? "Détails" : "详情"}
-        </h2>
-        <ActivityRichDescription
-          className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
-          copyFailedLabel={t.activityShare.copyFailed}
-          copyLabel={t.activityShare.copyLink}
-          copySuccessLabel={t.activityShare.copied}
-          entityId={detailAnalyticsEntity.entityId}
-          entityType={detailAnalyticsEntity.entityType}
-          locale={locale}
-          sourceSurface="activity_detail"
-          text={activity.description}
-        />
-        <ManualTranslationBundle
-          accessToken={accessToken ?? null}
-          entityId={activity.id}
-          entityType="activity"
-          fields={[
-            {
-              field: "title",
-              label: t.translation.fields.title,
-              text: activity.title,
-            },
-            {
-              field: "description",
-              label: t.translation.fields.description,
-              text: activity.description,
-            },
-            {
-              field: "address",
-              label: t.translation.fields.address,
-              text: activityLocationLabel,
-            },
-            {
-              field: "priceText",
-              label: t.translation.fields.priceText,
-              text: activity.priceText,
-            },
-          ]}
-          locale={locale}
-        />
-      </div>
-
-      {activity.publicEvent ? (
-        <div className="border-t border-[#E7E1CA] pt-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-black text-[#156240]">
-                {publicEventCopy.linkedEventTitle}
-              </p>
-              <p className="mt-1 line-clamp-2 text-sm font-black leading-6 text-ink">
-                {activity.publicEvent.title}
-              </p>
-            </div>
-            <Link
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
-              href={withLocale(
-                locale,
-                `/public-events/${activity.publicEvent.id}`,
-              )}
-            >
-              {publicEventCopy.linkedEventCta}
-              <ExternalLink className="h-4 w-4" />
-            </Link>
+  const renderActivityDetailDesktop = () =>
+    hasActivityDescription || activity.publicEvent ? (
+      <div className="hidden space-y-4 border-y border-[#E7E1CA] py-4 md:block">
+        {hasActivityDescription ? (
+          <div className="space-y-3">
+            <h2 className="text-sm font-black text-ink">
+              {locale === "en"
+                ? "Details"
+                : locale === "fr"
+                  ? "Détails"
+                  : "详情"}
+            </h2>
+            <ActivityRichDescription
+              className="whitespace-pre-wrap text-sm leading-7 text-zinc-600"
+              copyFailedLabel={t.activityShare.copyFailed}
+              copyLabel={t.activityShare.copyLink}
+              copySuccessLabel={t.activityShare.copied}
+              entityId={detailAnalyticsEntity.entityId}
+              entityType={detailAnalyticsEntity.entityType}
+              locale={locale}
+              sourceSurface="activity_detail"
+              text={activity.description}
+            />
+            <ManualTranslationBundle
+              accessToken={accessToken ?? null}
+              entityId={activity.id}
+              entityType="activity"
+              fields={[
+                {
+                  field: "title",
+                  label: t.translation.fields.title,
+                  text: activity.title,
+                },
+                {
+                  field: "description",
+                  label: t.translation.fields.description,
+                  text: activity.description,
+                },
+                {
+                  field: "address",
+                  label: t.translation.fields.address,
+                  text: activityLocationLabel,
+                },
+                {
+                  field: "priceText",
+                  label: t.translation.fields.priceText,
+                  text: activity.priceText,
+                },
+              ]}
+              locale={locale}
+            />
           </div>
-        </div>
-      ) : null}
-    </div>
-  );
+        ) : null}
+
+        {activity.publicEvent ? (
+          <div
+            className={cn(
+              hasActivityDescription ? "border-t border-[#E7E1CA] pt-4" : null,
+            )}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-black text-[#156240]">
+                  {publicEventCopy.linkedEventTitle}
+                </p>
+                <p className="mt-1 line-clamp-2 text-sm font-black leading-6 text-ink">
+                  {activity.publicEvent.title}
+                </p>
+              </div>
+              <Link
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
+                href={withLocale(
+                  locale,
+                  `/public-events/${activity.publicEvent.id}`,
+                )}
+              >
+                {publicEventCopy.linkedEventCta}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
 
   return (
     <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:1.1rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 md:space-y-6 md:py-8">
@@ -1892,7 +1932,31 @@ export async function ActivityDetailPageContent({
               </div>
             </div>
           ) : null}
-          {showActivityRoomEntry ? (
+          {isTeamOperator ? (
+            <div
+              className={cn(
+                "grid gap-2",
+                showActivityRoomEntry ? "grid-cols-2" : "grid-cols-1",
+              )}
+            >
+              <Link
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+                href={activityEditHref}
+              >
+                <PencilLine className="h-4 w-4" />
+                <span className="truncate">{operatorActionCopy.edit}</span>
+              </Link>
+              {showActivityRoomEntry ? (
+                <ActivityRoomEntryLink
+                  className="min-h-11 px-3 shadow-none"
+                  href={activityRoomHref}
+                  labelOverride={operatorActionCopy.manage}
+                  locale={locale}
+                  unreadCount={activityRoomUnreadCount}
+                />
+              ) : null}
+            </div>
+          ) : showActivityRoomEntry ? (
             <ActivityRoomEntryLink
               className="shadow-[0_12px_26px_rgba(21,98,64,0.18)]"
               href={activityRoomHref}
@@ -2067,19 +2131,31 @@ export async function ActivityDetailPageContent({
 
         <aside className="order-first flex h-fit w-full min-w-0 max-w-full flex-col lg:sticky lg:top-24 lg:order-2">
           {isTeamOperator ? (
-            showActivityRoomEntry ? (
-              <div className="order-1 hidden rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3 md:block">
-                <ActivityRoomEntryLink
-                  href={activityRoomHref}
-                  locale={locale}
-                  unreadCount={activityRoomUnreadCount}
-                />
+            <div className="order-1 hidden rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3 md:block">
+              <div className="grid gap-2">
+                <Link
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98]"
+                  href={activityEditHref}
+                >
+                  <PencilLine className="h-4 w-4" />
+                  {operatorActionCopy.edit}
+                </Link>
+                {showActivityRoomEntry ? (
+                  <ActivityRoomEntryLink
+                    href={activityRoomHref}
+                    labelOverride={operatorActionCopy.manage}
+                    locale={locale}
+                    unreadCount={activityRoomUnreadCount}
+                  />
+                ) : null}
+              </div>
+              {showActivityRoomEntry ? (
                 <ActivityPlayAgainLink
                   activityId={activity.id}
                   locale={locale}
                 />
-              </div>
-            ) : null
+              ) : null}
+            </div>
           ) : (
             <div className="order-1 hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white p-4 md:block">
               <div className="mb-4">

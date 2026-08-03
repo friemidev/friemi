@@ -13,6 +13,7 @@ type FootprintsPageProps = {
     locale: string;
   }>;
   searchParams?: Promise<{
+    scope?: string;
     tab?: string;
   }>;
 };
@@ -45,6 +46,14 @@ export default async function FootprintsPage({
         : query?.tab === "planet" || query?.tab === "profile"
           ? "planet"
           : null;
+  const requestedMomentScope =
+    query?.scope === "mine"
+      ? "MINE"
+      : query?.scope === "mutual"
+        ? "MUTUAL"
+        : query?.scope === "following"
+          ? "FOLLOWING"
+          : "PUBLIC";
   const perf = createPerformanceTracker({
     locale,
     route: "/footprints",
@@ -145,6 +154,7 @@ export default async function FootprintsPage({
   return (
     <FootprintsMobilePage
       locale={locale}
+      initialMomentScope={requestedMomentScope}
       initialTab={initialTab}
       moments={momentsResult.moments}
       momentFeedError={Boolean(momentsResult.error)}

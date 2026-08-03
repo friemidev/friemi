@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
+import { ActivityRoomManagePage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
 import {
   getActivityRoomChatPageData,
-  getUnreadActivityRoomTotalMessageCount,
-  markActivityRoomChatRead,
+  getActivityRoomManagementData,
 } from "@/features/activity-room-chat/services/activityRoomChat";
-import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
-import { getUnreadDirectMessageCount } from "@/features/direct-messages/queries/getDirectMessages";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { getSignInHref } from "@/lib/auth-redirect";
 
-type ActivityRoomPageProps = {
+type ActivityRoomManageRouteProps = {
   params: Promise<{
     activityId: string;
     locale: string;
@@ -33,18 +30,19 @@ const guestPolicy = {
   role: "NONE",
 } as const;
 
-export default async function ActivityRoomPage({
+export default async function ActivityRoomManageRoute({
   params,
-}: ActivityRoomPageProps) {
+}: ActivityRoomManageRouteProps) {
   const { activityId, locale } = await params;
-  const redirectPath = `/lobby/${activityId}/room`;
+  const redirectPath = `/lobby/${activityId}/room/manage`;
   const viewerProfile = await getOptionalCurrentUserProfileSnapshot();
   const roomData = viewerProfile
     ? await getActivityRoomChatPageData({
         activityId,
+        limit: 1,
         viewerProfileId: viewerProfile.id,
       }).catch((error: unknown) => {
-        console.error("Failed to load activity room chat", error);
+        console.error("Failed to load activity room info", error);
 
         return {
           activity: null,
@@ -62,42 +60,25 @@ export default async function ActivityRoomPage({
         messages: [],
         policy: guestPolicy,
       };
+  const management =
+    viewerProfile && roomData.policy.canView
+      ? await getActivityRoomManagementData({
+          activityId,
+          viewerProfileId: viewerProfile.id,
+        }).catch((error: unknown) => {
+          console.error("Failed to load activity room management", error);
 
-  let unreadMessageCount: number | null = null;
-
-  if (viewerProfile && roomData.policy.canView) {
-    await markActivityRoomChatRead({
-      activityId,
-      profileId: viewerProfile.id,
-    }).catch((error: unknown) => {
-      console.error("Failed to mark activity room chat read", error);
-    });
-
-    unreadMessageCount = await Promise.all([
-      getUnreadDirectMessageCount(viewerProfile.id),
-      getUnreadActivityRoomTotalMessageCount(viewerProfile.id),
-    ])
-      .then(([directCount, roomCount]) => directCount + roomCount)
-      .catch((error: unknown) => {
-        console.error(
-          "Failed to load unread chat count after room read",
-          error,
-        );
-
-        return null;
-      });
-  }
+          return null;
+        })
+      : null;
 
   return (
     <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8">
-      {unreadMessageCount === null ? null : (
-        <DirectMessageUnreadCountHydrator unreadCount={unreadMessageCount} />
-      )}
-      <ActivityRoomChatPage
+      <ActivityRoomManagePage
         activity={roomData.activity}
         activityId={activityId}
         locale={locale}
-        messages={roomData.messages}
+        management={management}
         policy={roomData.policy}
         signInHref={getSignInHref(locale, redirectPath)}
         viewer={

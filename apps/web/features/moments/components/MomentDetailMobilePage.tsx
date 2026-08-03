@@ -7,6 +7,8 @@ import { withLocale } from "@/lib/routes";
 import { MomentDetailContent, getFootprintsCopy } from "./FootprintsMobilePage";
 
 type MomentDetailMobilePageProps = {
+  backHref?: string;
+  deleteRedirectPath?: string;
   locale: string;
   moment: MomentFeedItemViewModel;
   profile: {
@@ -15,6 +17,8 @@ type MomentDetailMobilePageProps = {
 };
 
 export function MomentDetailMobilePage({
+  backHref = "/footprints?tab=moment",
+  deleteRedirectPath = "/footprints?tab=moment",
   locale,
   moment,
   profile,
@@ -26,7 +30,7 @@ export function MomentDetailMobilePage({
       <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1rem)] md:min-h-[calc(100vh-4rem)] md:max-w-3xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
         <header className="flex items-center justify-between pb-5">
           <Link
-            href={withLocale(locale, "/footprints?tab=moment")}
+            href={withLocale(locale, backHref)}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#1D1D1B] shadow-[0_8px_20px_rgba(21,98,64,0.08)]"
             aria-label="Back"
           >
@@ -39,7 +43,7 @@ export function MomentDetailMobilePage({
         </header>
 
         <MomentDetailContent
-          deleteRedirectPath="/footprints?tab=moment"
+          deleteRedirectPath={deleteRedirectPath}
           isAuthenticated={Boolean(profile)}
           locale={locale}
           moment={moment}
