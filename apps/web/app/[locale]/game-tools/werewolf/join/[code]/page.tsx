@@ -98,12 +98,13 @@ export default async function WerewolfJoinPage({
     });
 
     if (activeRoom) {
-      const privateSeatPath = activeRoom.privateSeatToken
-        ? getGameToolPrivateSeatPath({
-            kind: activeRoom.kind,
-            privateSeatToken: activeRoom.privateSeatToken,
-          })
-        : null;
+      const privateSeatPath =
+        activeRoom.kind !== "WEREWOLF" && activeRoom.privateSeatToken
+          ? getGameToolPrivateSeatPath({
+              kind: activeRoom.kind,
+              privateSeatToken: activeRoom.privateSeatToken,
+            })
+          : null;
 
       redirect(
         withLocale(

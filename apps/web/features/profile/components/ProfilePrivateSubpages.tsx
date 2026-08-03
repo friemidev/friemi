@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  Archive,
   ArrowLeft,
   BadgeCheck,
   Box,
@@ -29,8 +28,10 @@ import {
   Sparkles,
   Star,
   Ticket,
+  Trophy,
   UserRoundPlus,
   UsersRound,
+  WalletCards,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -60,6 +61,7 @@ import type {
   ProfileBagCheckItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
+import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfileGiftWall";
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
 import type { ProfileShopGiftRecipient } from "@/features/charm/queries/getProfileShopGiftRecipients";
 import type { ProfileVisitorViewModel } from "@/features/profile-visits/queries/getProfileVisitors";
@@ -146,10 +148,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
       bag: {
         available: "Disponibles",
         blindBox: "Mystère",
-        checkList: "Chèques",
-        emptyChecks: "Aucun chèque pour le moment",
+        checkList: "Objets",
+        emptyChecks: "Aucun objet pour le moment",
         emptyDescription:
-          "Les chèques Friemi, fragments de boîte mystère et cadeaux reçus apparaîtront ici.",
+          "Les objets que vous obtenez apparaîtront ici.",
         emptyTitle: "Sac vide pour le moment",
         exchange: "Échanger",
         exchangeReady: "Prêt",
@@ -159,7 +161,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         redeemed: "Utilisé",
         redeemedBoxes: "Échangés",
         statusAvailable: "Disponible",
-        subtitle: "Vos objets Friemi seront regroupés ici.",
+        subtitle: "Objets, fragments et chèques Friemi.",
         title: "Sac",
         usedAt: "Utilisé",
       },
@@ -201,17 +203,33 @@ function getProfilePrivateSubpageCopy(locale: string) {
         charm: "Charm",
         close: "Fermer",
         emptyDescription:
-          "La boutique affichera les cadeaux, chèques et objets échangeables après ouverture.",
+          "Les cadeaux disponibles apparaîtront ici.",
         emptyTitle: "Boutique en préparation",
         giftCatalog: "Cadeaux",
         noFriends: "Suivez quelqu'un pour offrir un cadeau.",
+        recharge: "Recharger",
+        rechargeSoon: "Bientôt disponible",
         seasonalLocked: "Événement",
         send: "Envoyer",
         sendEntry: "Offrir",
         sending: "Envoi...",
         sent: "Cadeau envoyé",
-        subtitle: "Cadeaux Friemi.",
+        subtitle: "Uniquement des cadeaux Friemi.",
         title: "Boutique",
+      },
+      giftWall: {
+        charm: "Aura",
+        emptyLeaderboard: "Personne dans le classement pour le moment.",
+        emptyRoom: "Les cadeaux reçus rempliront cette pièce.",
+        giftCount: "Quantité",
+        giftStats: "Cadeaux reçus",
+        lastGift: "Dernier cadeau",
+        leaderboard: "Classement",
+        roomTitle: "Votre pièce à cadeaux",
+        senders: "Personnes",
+        subtitle: "Votre collection de cadeaux reçus.",
+        title: "Mur de cadeaux",
+        totalGifts: "Cadeaux",
       },
       visitors: {
         emptyDescription:
@@ -273,10 +291,9 @@ function getProfilePrivateSubpageCopy(locale: string) {
       bag: {
         available: "Available",
         blindBox: "Blind box",
-        checkList: "Checks",
-        emptyChecks: "No checks yet",
-        emptyDescription:
-          "Friemi checks, blind-box fragments, and received gifts will appear here.",
+        checkList: "Items",
+        emptyChecks: "No items yet",
+        emptyDescription: "Items you collect will appear here.",
         emptyTitle: "Your bag is empty",
         exchange: "Redeem",
         exchangeReady: "Ready",
@@ -286,7 +303,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         redeemed: "Used",
         redeemedBoxes: "Redeemed",
         statusAvailable: "Available",
-        subtitle: "Your Friemi items will live here.",
+        subtitle: "Items, fragments, and Friemi checks.",
         title: "Bag",
         usedAt: "Used",
       },
@@ -327,17 +344,33 @@ function getProfilePrivateSubpageCopy(locale: string) {
         charm: "Charm",
         close: "Close",
         emptyDescription:
-          "The shop will show gifts, checks, and exchangeable items once opened.",
+          "Available gifts will appear here.",
         emptyTitle: "Shop is preparing",
         giftCatalog: "Gifts",
         noFriends: "Follow someone to send a gift.",
+        recharge: "Top up",
+        rechargeSoon: "Coming soon",
         seasonalLocked: "Event",
         send: "Send",
         sendEntry: "Send gift",
         sending: "Sending...",
         sent: "Gift sent",
-        subtitle: "Friemi gifts.",
+        subtitle: "Friemi gifts only.",
         title: "Shop",
+      },
+      giftWall: {
+        charm: "Charm",
+        emptyLeaderboard: "No one is on the board yet.",
+        emptyRoom: "Gifts you receive will fill this room.",
+        giftCount: "Gift count",
+        giftStats: "Received gifts",
+        lastGift: "Latest gift",
+        leaderboard: "Leaderboard",
+        roomTitle: "Your gift room",
+        senders: "People",
+        subtitle: "Your received gift collection.",
+        title: "Gift Wall",
+        totalGifts: "Gifts",
       },
       visitors: {
         emptyDescription:
@@ -397,9 +430,9 @@ function getProfilePrivateSubpageCopy(locale: string) {
     bag: {
       available: "可用",
       blindBox: "盲盒",
-      checkList: "支票",
-      emptyChecks: "暂时没有支票",
-      emptyDescription: "Friemi 支票、盲盒碎片和收到的礼物会统一放在这里。",
+      checkList: "物品",
+      emptyChecks: "暂时没有物品",
+      emptyDescription: "你获得的物品会出现在这里。",
       emptyTitle: "背包暂时为空",
       exchange: "兑换",
       exchangeReady: "可兑换",
@@ -409,7 +442,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       redeemed: "已使用",
       redeemedBoxes: "已兑换",
       statusAvailable: "可用",
-      subtitle: "未来承接支票、盲盒和礼物。",
+      subtitle: "物品、碎片和支票。",
       title: "背包",
       usedAt: "使用",
     },
@@ -449,17 +482,33 @@ function getProfilePrivateSubpageCopy(locale: string) {
       chooseFriend: "选择对象",
       charm: "魅力",
       close: "关闭",
-      emptyDescription: "礼物、支票和可兑换物品上线后会显示在这里。",
+      emptyDescription: "可送礼物会显示在这里。",
       emptyTitle: "商城准备中",
       giftCatalog: "礼物",
       noFriends: "关注用户后可以送礼。",
+      recharge: "充值",
+      rechargeSoon: "敬请期待",
       seasonalLocked: "节日开放",
       send: "送出",
       sendEntry: "去送礼",
       sending: "送出中...",
       sent: "礼物已送出",
-      subtitle: "Friemi 礼物。",
+      subtitle: "只提供 Friemi 礼物。",
       title: "商城",
+    },
+    giftWall: {
+      charm: "魅力",
+      emptyLeaderboard: "还没有送礼排行。",
+      emptyRoom: "收到的礼物会摆满这里。",
+      giftCount: "礼物数量",
+      giftStats: "收到的礼物",
+      lastGift: "最近收到",
+      leaderboard: "送礼排行榜",
+      roomTitle: "我的礼物房间",
+      senders: "送礼人",
+      subtitle: "收藏别人送给你的礼物。",
+      title: "礼物墙",
+      totalGifts: "礼物",
     },
     visitors: {
       emptyDescription: "登录用户访问你的主页后，会在这里留下记录。",
@@ -597,6 +646,8 @@ function Avatar({
 }
 
 export function ProfilePrivatePageShell({
+  backFallbackPath = "/profile",
+  backMode = "profile",
   children,
   icon: Icon,
   locale,
@@ -606,6 +657,8 @@ export function ProfilePrivatePageShell({
   title,
   tone = "green",
 }: {
+  backFallbackPath?: string;
+  backMode?: "profile" | "history";
   children: React.ReactNode;
   icon: LucideIcon;
   locale: string;
@@ -617,17 +670,39 @@ export function ProfilePrivatePageShell({
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const toneClasses = getToneClasses(tone);
+  const backHref = withLocale(locale, backFallbackPath);
+  const backControlClassName =
+    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#D6D5B2] transition active:scale-95";
+  const handleHistoryBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.assign(backHref);
+  };
 
   return (
     <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] mx-auto min-h-dvh w-full max-w-xl bg-[#FEFFF9] px-5 text-[#111210] md:min-h-[70vh] md:rounded-[1.5rem] md:border md:border-[#E4DCC7] md:shadow-[0_18px_60px_rgba(21,98,64,0.08)]">
       <header className="flex items-center justify-between gap-3">
-        <Link
-          href={withLocale(locale, "/profile")}
-          aria-label={copy.back}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#D6D5B2] transition active:scale-95"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        {backMode === "history" ? (
+          <button
+            type="button"
+            aria-label={copy.back}
+            className={backControlClassName}
+            onClick={handleHistoryBack}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        ) : (
+          <Link
+            href={backHref}
+            aria-label={copy.back}
+            className={backControlClassName}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        )}
         <h1 className="min-w-0 flex-1 truncate text-center text-xl font-black text-[#111210]">
           {title}
         </h1>
@@ -1636,11 +1711,16 @@ function ReferralInviteBinder({
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-black text-[#8B907F]">
-              {copy.invite.alreadyBound}
+              {copy.invite.inviterLabel}
             </p>
             <p className="mt-0.5 truncate text-sm font-black text-[#111210]">
-              {copy.invite.inviterLabel} · {boundReferral.inviter.nickname}
+              {boundReferral.inviter.nickname}
             </p>
+            {boundReferral.inviter.friendCode ? (
+              <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
+                @{boundReferral.inviter.friendCode}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -1779,24 +1859,6 @@ export function ProfileInvitePageView({
           />
         ) : null}
 
-        <section className="mt-5 grid grid-cols-3 gap-2">
-          <MetricPill
-            icon={UserRoundPlus}
-            label={copy.invite.invited}
-            value={stats.invitedCount}
-          />
-          <MetricPill
-            icon={UsersRound}
-            label={copy.invite.accepted}
-            value={stats.friendshipAcceptedCount}
-          />
-          <MetricPill
-            icon={CalendarDays}
-            label={copy.invite.firstJoined}
-            value={stats.firstParticipationCount}
-          />
-        </section>
-
         <section className="mt-6 rounded-[1.25rem] bg-white/88 p-3 ring-1 ring-[#E3DCC5]">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF0F3] text-[#E83F83] ring-1 ring-[#F5C5D7]">
@@ -1830,6 +1892,14 @@ export function ProfileInvitePageView({
         />
 
         <section className="mt-6">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <h2 className="text-sm font-black text-[#111210]">
+              {copy.invite.invited}
+            </h2>
+            <span className="rounded-full bg-[#F7F7F0] px-2.5 py-1 text-xs font-black text-[#156240]">
+              {stats.invitedCount}
+            </span>
+          </div>
           {stats.recentReferrals.length > 0 ? (
             <div className="divide-y divide-[#E8E1CF] rounded-[1.25rem] bg-white/88 px-3 ring-1 ring-[#E3DCC5]">
               {stats.recentReferrals.map((referral) => (
@@ -1855,12 +1925,9 @@ export function ProfileInvitePageView({
               ))}
             </div>
           ) : (
-            <StatusPanel
-              icon={UserRoundPlus}
-              title={copy.invite.emptyTitle}
-              description={copy.invite.emptyDescription}
-              tone="pink"
-            />
+            <p className="px-1 py-3 text-sm font-bold text-[#6C746A]">
+              {copy.invite.emptyTitle}
+            </p>
           )}
         </section>
       </ProfilePrivatePageShell>
@@ -1884,6 +1951,8 @@ export function ProfileVisitorsPageView({
 
   return (
     <ProfilePrivatePageShell
+      backFallbackPath="/profile/network"
+      backMode="history"
       icon={Eye}
       locale={locale}
       showIntro={false}
@@ -2014,125 +2083,101 @@ export function ProfileBagPageView({
         />
       ) : null}
 
-      <section className="mt-5 grid grid-cols-3 gap-2">
-        <MetricPill
-          icon={Ticket}
-          label={copy.bag.available}
-          value={bag.availableCheckCount}
-        />
-        <MetricPill
-          icon={Gem}
-          label={copy.bag.blindBox}
-          value={bag.blindBoxCheckCount}
-        />
-        <MetricPill
-          icon={Archive}
-          label={copy.bag.fragment}
-          value={bag.fragmentBalance.current}
-        />
-      </section>
-
-      <section className="mt-6 rounded-[1.35rem] bg-white/88 p-4 ring-1 ring-[#D6D5B2]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-[#156240]">
-              {copy.bag.fragment}
-            </p>
-            <p className="mt-2 text-2xl font-black text-[#111210]">
-              {bag.fragmentBalance.current}/{bag.fragmentBalance.required}
-            </p>
-          </div>
-          <span
-            className={cn(
-              "inline-flex h-7 shrink-0 items-center rounded-full px-2 text-[10px] font-black ring-1",
-              bag.fragmentBalance.canRedeem
-                ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
-            )}
-          >
-            {bag.fragmentBalance.canRedeem
-              ? copy.bag.exchangeReady
-              : `${bag.fragmentBalance.current}/${bag.fragmentBalance.required}`}
-          </span>
-        </div>
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#EFEAD7]">
-          <div
-            className="h-full rounded-full bg-[#156240]"
-            style={{ width: `${Math.round(fragmentRatio * 100)}%` }}
-          />
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-xs font-bold text-[#6C746A]">
-            {copy.bag.redeemedBoxes}:{" "}
-            {bag.fragmentBalance.redeemedBlindBoxCount}
-          </p>
-          <RedeemBlindBoxForm
-            canRedeem={bag.fragmentBalance.canRedeem}
-            locale={locale}
-          />
-        </div>
-      </section>
-
       <section className="mt-6">
         <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
           {copy.bag.checkList}
         </h2>
-        {bag.checks.length > 0 ? (
-          <div className="mt-3 grid gap-3">
-            {bag.checks.map((check) => {
-              const available = check.status === "AVAILABLE";
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <article className="grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1 ring-[#D6D5B2]">
+            <div className="flex items-start justify-between gap-2">
+              <span className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
+                <Gem className="h-5 w-5" />
+              </span>
+              <span
+                className={cn(
+                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-black ring-1",
+                  bag.fragmentBalance.canRedeem
+                    ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                    : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+                )}
+              >
+                {bag.fragmentBalance.canRedeem
+                  ? copy.bag.exchangeReady
+                  : `${bag.fragmentBalance.current}/${bag.fragmentBalance.required}`}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-[#111210]">
+                {copy.bag.fragment}
+              </p>
+              <p className="mt-1 text-xs font-bold text-[#6C746A]">
+                {copy.bag.redeemedBoxes}:{" "}
+                {bag.fragmentBalance.redeemedBlindBoxCount}
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#EFEAD7]">
+                <div
+                  className="h-full rounded-full bg-[#156240]"
+                  style={{ width: `${Math.round(fragmentRatio * 100)}%` }}
+                />
+              </div>
+            </div>
+            {bag.fragmentBalance.canRedeem ? (
+              <div className="mt-3">
+                <RedeemBlindBoxForm
+                  canRedeem={bag.fragmentBalance.canRedeem}
+                  locale={locale}
+                />
+              </div>
+            ) : null}
+          </article>
 
-              return (
-                <article
-                  className={cn(
-                    "rounded-[1.2rem] p-3 ring-1",
-                    available
-                      ? "bg-white/90 ring-[#D6D5B2]"
-                      : "bg-[#F7F5EA]/82 ring-[#E8E1CF]",
-                  )}
-                  key={check.id}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] ring-1",
-                        available
-                          ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                          : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
-                      )}
-                    >
-                      <CheckStatusIcon status={check.status} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-[#111210]">
-                        {getCheckTypeCopy(check.type, locale)}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
-                        {getCheckDateCopy(check, locale)}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
-                        available
-                          ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
-                          : "bg-white text-[#6C746A] ring-[#DFDAC5]",
-                      )}
-                    >
-                      {getCheckStatusCopy(check.status, locale)}
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <StatusPanel
-            icon={Box}
-            title={copy.bag.emptyChecks}
-            description={copy.bag.emptyDescription}
-          />
-        )}
+          {bag.checks.map((check) => {
+            const available = check.status === "AVAILABLE";
+
+            return (
+              <article
+                className={cn(
+                  "grid min-h-[10.5rem] content-between rounded-[1.15rem] bg-white p-3 ring-1",
+                  available
+                    ? "ring-[#D6D5B2]"
+                    : "opacity-78 ring-[#E8E1CF]",
+                )}
+                key={check.id}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] ring-1",
+                      available
+                        ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                        : "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]",
+                    )}
+                  >
+                    <CheckStatusIcon status={check.status} />
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                      available
+                        ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
+                        : "bg-white text-[#6C746A] ring-[#DFDAC5]",
+                    )}
+                  >
+                    {getCheckStatusCopy(check.status, locale)}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="line-clamp-2 text-sm font-black leading-5 text-[#111210]">
+                    {getCheckTypeCopy(check.type, locale)}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
+                    {getCheckDateCopy(check, locale)}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
     </ProfilePrivatePageShell>
   );
@@ -2186,6 +2231,19 @@ export function ProfileShopPageView({
     <ProfilePrivatePageShell
       icon={ShoppingBag}
       locale={locale}
+      right={
+        <button
+          aria-label={copy.shop.recharge}
+          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-black text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
+          onClick={() => showToast(copy.shop.rechargeSoon)}
+          type="button"
+        >
+          <WalletCards className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate whitespace-nowrap">
+            {copy.shop.recharge}
+          </span>
+        </button>
+      }
       showIntro={false}
       subtitle={copy.shop.subtitle}
       title={copy.shop.title}
@@ -2256,6 +2314,261 @@ export function ProfileShopPageView({
         recipients={giftRecipients}
       />
       <FriemiToast message={toastMessage} />
+    </ProfilePrivatePageShell>
+  );
+}
+
+function GiftWallMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="min-w-0 px-2">
+      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#6C746A]">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
+      </div>
+      <p className="mt-2 truncate text-xl font-black leading-none text-[#111210]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function GiftWallRoomGift({
+  className,
+  featured = false,
+  gift,
+}: {
+  className?: string;
+  featured?: boolean;
+  gift: ProfileGiftWallViewModel["topGifts"][number];
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute z-20 grid -translate-x-1/2 justify-items-center gap-1",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "relative flex items-center justify-center rounded-[1.05rem] bg-[#FFFDF8] leading-none ring-1 ring-[#E5CF95] shadow-[0_10px_22px_rgba(92,64,22,0.1)]",
+          "after:absolute after:-bottom-2 after:left-1/2 after:h-2 after:w-[72%] after:-translate-x-1/2 after:rounded-[999px] after:bg-[#D8C28C]/55",
+          featured
+            ? "h-[4.8rem] w-[4.8rem] text-[42px]"
+            : "h-14 w-14 text-[32px]",
+        )}
+      >
+        {gift.giftEmoji}
+      </span>
+      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-black text-[#6C5515] ring-1 ring-[#E8D59D]">
+        x{gift.quantity}
+      </span>
+    </div>
+  );
+}
+
+function GiftWallLeaderboardRow({
+  index,
+  item,
+}: {
+  index: number;
+  item: ProfileGiftWallViewModel["topSenders"][number];
+}) {
+  return (
+    <li className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 py-3">
+      <span className="text-center text-sm font-black text-[#B7892A]">
+        {index + 1}
+      </span>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar
+          avatarUrl={item.sender.avatarUrl}
+          name={item.sender.nickname}
+        />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-[#111210]">
+            {item.sender.nickname}
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-[#6C746A]">
+            {item.quantity} · +{item.charm}
+          </p>
+        </div>
+      </div>
+      <Trophy
+        className={cn(
+          "h-4 w-4",
+          index === 0 ? "text-[#D8A72E]" : "text-[#B7B8A3]",
+        )}
+      />
+    </li>
+  );
+}
+
+export function ProfileGiftWallPageView({
+  giftWall,
+  hasError,
+  locale,
+}: {
+  giftWall: ProfileGiftWallViewModel;
+  hasError?: boolean;
+  locale: string;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const roomGifts = giftWall.topGifts.slice(0, 6);
+  const roomGiftSpots = [
+    "left-[50%] top-[36%]",
+    "left-[25%] top-[30%] rotate-[-7deg]",
+    "left-[75%] top-[30%] rotate-[7deg]",
+    "left-[20%] top-[56%] rotate-[5deg]",
+    "left-[80%] top-[56%] rotate-[-5deg]",
+    "left-[50%] top-[63%] rotate-[2deg]",
+  ];
+
+  return (
+    <ProfilePrivatePageShell
+      icon={Gift}
+      locale={locale}
+      showIntro={false}
+      subtitle={copy.giftWall.subtitle}
+      title={copy.giftWall.title}
+      tone="pink"
+    >
+      {hasError ? (
+        <StatusPanel
+          icon={Gift}
+          title={copy.errorTitle}
+          description={copy.errorDescription}
+          tone="pink"
+        />
+      ) : null}
+
+      <section className="mt-6">
+        <div className="flex items-end justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#B7892A]">
+              {copy.giftWall.giftStats}
+            </p>
+            <h2 className="mt-1 truncate text-lg font-black text-[#111210]">
+              {copy.giftWall.roomTitle}
+            </h2>
+          </div>
+          {giftWall.lastGiftAt ? (
+            <p className="shrink-0 text-xs font-bold text-[#6C746A]">
+              {copy.giftWall.lastGift} {formatDate(giftWall.lastGiftAt)}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="relative mt-3 h-[24rem] overflow-hidden rounded-[1.6rem] bg-[#F5EFE3]">
+          <div className="absolute inset-x-[9%] top-6 bottom-[6.8rem] rounded-t-[1.7rem] bg-[#FFFDF6]" />
+          <div className="absolute bottom-[6.8rem] left-[9%] top-10 w-[14%] origin-right -skew-y-6 bg-[#EFE7D7]" />
+          <div className="absolute bottom-[6.8rem] right-[9%] top-10 w-[14%] origin-left skew-y-6 bg-[#EFE7D7]" />
+          <div className="absolute inset-x-[8%] bottom-0 h-[8rem] bg-[#E9E0CF] [clip-path:polygon(7%_0,93%_0,100%_100%,0_100%)]" />
+          <div className="absolute left-[17%] right-[17%] top-[42%] h-2 rounded-full bg-[#D7C28D]" />
+          <div className="absolute left-[20%] right-[20%] top-[69%] h-2 rounded-full bg-[#D7C28D]" />
+          <div className="absolute bottom-8 left-1/2 h-16 w-[11rem] -translate-x-1/2 rounded-[50%] bg-[#D4BE87]/55" />
+          <div className="absolute bottom-12 left-1/2 h-16 w-[9rem] -translate-x-1/2 rounded-t-[50%] bg-[#FDF7E8]" />
+          <div className="absolute bottom-12 left-1/2 h-px w-[9rem] -translate-x-1/2 bg-[#D7C28D]" />
+
+          {roomGifts.length > 0 ? (
+            roomGifts.map((gift, index) => (
+              <GiftWallRoomGift
+                className={roomGiftSpots[index]}
+                featured={index === 0}
+                gift={gift}
+                key={gift.giftId}
+              />
+            ))
+          ) : (
+            <div className="absolute inset-x-8 top-[37%] z-20 grid justify-items-center gap-3 text-center">
+              <span className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-[#FFF7DC] text-3xl ring-1 ring-[#E8D59D]">
+                🎁
+              </span>
+              <p className="text-sm font-black leading-6 text-[#6C746A]">
+                {copy.giftWall.emptyRoom}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-4 grid grid-cols-3 rounded-[1.2rem] bg-[#F7F7F0] px-2 py-3">
+        <GiftWallMetric
+          icon={Gift}
+          label={copy.giftWall.totalGifts}
+          value={giftWall.totalGiftCount}
+        />
+        <GiftWallMetric
+          icon={UsersRound}
+          label={copy.giftWall.senders}
+          value={giftWall.senderCount}
+        />
+        <GiftWallMetric
+          icon={Sparkles}
+          label={copy.giftWall.charm}
+          value={`+${giftWall.totalCharm}`}
+        />
+      </section>
+
+      <section className="mt-6">
+        <h2 className="px-1 text-sm font-black text-[#111210]">
+          {copy.giftWall.leaderboard}
+        </h2>
+        {giftWall.topSenders.length > 0 ? (
+          <ol className="mt-2 divide-y divide-[#E8E1CF]">
+            {giftWall.topSenders.map((item, index) => (
+              <GiftWallLeaderboardRow
+                index={index}
+                item={item}
+                key={item.sender.id}
+              />
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-2 px-4 py-6 text-center text-sm font-bold text-[#6C746A]">
+            {copy.giftWall.emptyLeaderboard}
+          </p>
+        )}
+      </section>
+
+      <section className="mt-6">
+        <h2 className="px-1 text-sm font-black text-[#111210]">
+          {copy.giftWall.giftCount}
+        </h2>
+        {giftWall.topGifts.length > 0 ? (
+          <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-5">
+            {giftWall.topGifts.map((gift) => (
+              <article
+                className="min-w-0"
+                key={gift.giftId}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-[#FFF7DC] text-[30px] leading-none">
+                    {gift.giftEmoji}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-[#111210]">
+                      {gift.giftLabel}
+                    </p>
+                    <p className="mt-0.5 text-xs font-bold text-[#6C746A]">
+                      x{gift.quantity}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 truncate text-sm font-black text-[#111210]">
+                  +{gift.charm}
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
     </ProfilePrivatePageShell>
   );
 }

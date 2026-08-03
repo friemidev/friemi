@@ -35,7 +35,8 @@ type ActivityCoverUploadProps = {
   uploadEndpoint?: string;
 };
 
-const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+const acceptedImageTypes =
+  "image/*,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp";
 const maxFileSize = 4 * 1024 * 1024;
 type UploadErrorCode =
   | "STORAGE_NOT_CONFIGURED"
@@ -134,7 +135,7 @@ export function ActivityCoverUpload({
       return;
     }
 
-    if (!allowedTypes.includes(file.type)) {
+    if (file.type && !file.type.toLowerCase().startsWith("image/")) {
       setError(t.coverTypeError);
       return;
     }
@@ -201,7 +202,7 @@ export function ActivityCoverUpload({
         <input name={name} type="hidden" value={submittedImageUrl} />
         <input
           ref={inputRef}
-          accept={allowedTypes.join(",")}
+          accept={acceptedImageTypes}
           className="hidden"
           type="file"
           onChange={(event) => {
@@ -279,6 +280,14 @@ export function ActivityCoverUpload({
                   isFallbackPreview ? fallbackImageClassName : "object-cover",
                 )}
               />
+              {!isUploading && isFallbackPreview ? (
+                <span className="absolute inset-x-3 bottom-3 flex justify-center">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-[#0B6B45] shadow-sm ring-1 ring-[#D6D5B2]">
+                    <UploadCloud className="h-3.5 w-3.5" aria-hidden />
+                    {t.coverTapToUpload}
+                  </span>
+                </span>
+              ) : null}
               {isUploading ? (
                 <span className="absolute inset-0 grid place-items-center bg-black/24 text-white">
                   <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
@@ -319,7 +328,7 @@ export function ActivityCoverUpload({
       <input name={name} type="hidden" value={submittedImageUrl} />
       <input
         ref={inputRef}
-        accept={allowedTypes.join(",")}
+        accept={acceptedImageTypes}
         className="hidden"
         type="file"
         onChange={(event) => {

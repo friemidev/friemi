@@ -8,6 +8,8 @@ import {
   getActiveCharmGifts,
   getCharmGiftDefinition,
   getCharmLevel,
+  getCharmLevelDescription,
+  getCharmLevelLabel,
   getCharmProgress,
   normalizeGiftQuantity,
   successfulActivityFragmentReward,
@@ -80,6 +82,13 @@ test("charm levels resolve at product thresholds", () => {
   assert.equal(getCharmLevel(5000).id, "SUPERSTAR");
   assert.equal(getCharmLevel(10000).id, "LEGEND");
   assert.equal(getCharmLevel(100000).id, "FRIEMI_IDOL");
+});
+
+test("charm levels expose localized user labels", () => {
+  assert.equal(getCharmLevelLabel("SOLITUDE", "zh-CN"), "独行者");
+  assert.equal(getCharmLevelLabel("SOLITUDE", "en"), "Solitude");
+  assert.equal(getCharmLevelLabel("SOLITUDE", "fr"), "Solitaire");
+  assert.equal(getCharmLevelDescription("CHARM", "zh-CN"), "开始被更多人看见。");
 });
 
 test("charm progress points to the next level", () => {

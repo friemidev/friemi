@@ -197,7 +197,10 @@ export function ActiveGameToolFloatingWindow({
   const copy = getCopy(locale);
   const kindLabel = getKindLabel(currentRoom.kind, copy);
   const Icon = currentRoom.kind === "WEREWOLF" ? Moon : UsersRound;
-  const targetHref = currentRoom.privateSeatHref ?? currentRoom.href;
+  const targetHref =
+    currentRoom.kind === "WEREWOLF"
+      ? currentRoom.href
+      : currentRoom.privateSeatHref ?? currentRoom.href;
   const label = `${copy.action}: ${kindLabel} · ${currentRoom.title}`;
 
   return (

@@ -53,6 +53,7 @@ type MobileLobbyV23ViewProps = {
   locale: string;
   mineActivities?: ActivityCardViewModel[];
   swipeActivities?: ActivityCardViewModel[];
+  viewerProfileId?: string | null;
 };
 
 type MobileLobbyV23CategoryFilterId = ActivityCategory | "all";
@@ -74,6 +75,7 @@ type MobileLobbyV23Copy = {
   loadFailedTitle: string;
   mineEmptyTitle: string;
   mineEmptyDescription: string;
+  hostedBadge: string;
   participants: string;
   retryLabel: string;
   tabs: Record<MobileLobbyV23TabId, string>;
@@ -227,6 +229,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       mineEmptyTitle: "Aucune de vos sorties",
       mineEmptyDescription:
         "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
+      hostedBadge: "Créé",
       participants: "pers.",
       retryLabel: "Réessayer",
       tabs: {
@@ -253,6 +256,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       loadFailedTitle: "Could not load",
       mineEmptyTitle: "No personal plans yet",
       mineEmptyDescription: "Sign in to see plans you're hosting or joining.",
+      hostedBadge: "Host",
       participants: "people",
       retryLabel: "Retry",
       tabs: {
@@ -276,6 +280,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     loadFailedTitle: "加载失败",
     mineEmptyTitle: "暂无我的聚吧",
     mineEmptyDescription: "登录后可以看到你发起和参加的聚吧。",
+    hostedBadge: "我发起的",
     participants: "人",
     retryLabel: "重试",
     tabs: {
@@ -675,10 +680,12 @@ function MobileLobbyV23ActivityRow({
   activity,
   copy,
   locale,
+  showHostedBadge = false,
 }: {
   activity: ActivityCardViewModel;
   copy: MobileLobbyV23Copy;
   locale: string;
+  showHostedBadge?: boolean;
 }) {
   const participantText =
     activity.capacity > 0
@@ -705,8 +712,15 @@ function MobileLobbyV23ActivityRow({
         </h2>
         <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-[#111210]/58">
           <UsersRound className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">
-            {participantText} · {activity.city || copy.participants}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 truncate">
+              {participantText} · {activity.city || copy.participants}
+            </span>
+            {showHostedBadge ? (
+              <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-black leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
+                {copy.hostedBadge}
+              </span>
+            ) : null}
           </span>
         </p>
         <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-[#111210]/54">
@@ -739,6 +753,7 @@ export function MobileLobbyV23View({
   locale,
   mineActivities,
   swipeActivities = [],
+  viewerProfileId = null,
 }: MobileLobbyV23ViewProps) {
   const copy = getMobileLobbyV23Copy(locale);
   const [selectedTab, setSelectedTab] =
@@ -1020,6 +1035,11 @@ export function MobileLobbyV23View({
                   copy={copy}
                   key={getActivityKey(activity)}
                   locale={locale}
+                  showHostedBadge={
+                    displayedActiveTab === "mine" &&
+                    Boolean(viewerProfileId) &&
+                    activity.organizerId === viewerProfileId
+                  }
                 />
               ))}
             </div>

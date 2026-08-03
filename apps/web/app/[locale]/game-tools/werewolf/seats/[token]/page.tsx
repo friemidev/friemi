@@ -91,12 +91,13 @@ export default async function WerewolfSeatPage({
     });
 
     if (activeRoom) {
-      const privateSeatPath = activeRoom.privateSeatToken
-        ? getGameToolPrivateSeatPath({
-            kind: activeRoom.kind,
-            privateSeatToken: activeRoom.privateSeatToken,
-          })
-        : null;
+      const privateSeatPath =
+        activeRoom.kind !== "WEREWOLF" && activeRoom.privateSeatToken
+          ? getGameToolPrivateSeatPath({
+              kind: activeRoom.kind,
+              privateSeatToken: activeRoom.privateSeatToken,
+            })
+          : null;
 
       redirect(
         withLocale(
@@ -134,6 +135,14 @@ export default async function WerewolfSeatPage({
     );
   const showPlayerFullScreenCard =
     seat.room.status === "IN_PROGRESS" && !isCurrentSeatJudge;
+  const roomHref = withLocale(
+    locale,
+    `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
+  );
+
+  if (!showPlayerFullScreenCard) {
+    redirect(roomHref);
+  }
 
   return (
     <>
@@ -161,10 +170,7 @@ export default async function WerewolfSeatPage({
           roleKey={seat.roleKey as WerewolfRoleKey | null}
           roleAlignment={seat.roleAlignment}
           roomUpdatedAt={seat.room.updatedAt.toISOString()}
-          roomHref={withLocale(
-            locale,
-            `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
-          )}
+          roomHref={roomHref}
           roomState={roomState}
           roomStatus={seat.room.status}
           seatDisplayName={seat.displayName}

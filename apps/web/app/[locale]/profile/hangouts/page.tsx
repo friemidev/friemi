@@ -11,6 +11,9 @@ type ProfileHangoutsPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    tab?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -60,8 +63,16 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
 
 export default async function ProfileHangoutsPage({
   params,
+  searchParams,
 }: ProfileHangoutsPageProps) {
   const { locale } = await params;
+  const query = await searchParams;
+  const requestedTab =
+    query?.tab === "participation"
+      ? "participation"
+      : query?.tab === "favorite"
+        ? "favorite"
+        : "created";
   const profile = await ensureCurrentUserProfile(locale, "/profile/hangouts");
   const dashboard = await getProfileDashboard(profile.id).catch(
     (error: unknown) => {
@@ -73,7 +84,11 @@ export default async function ProfileHangoutsPage({
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
-      <ProfileHangoutsMobilePage dashboard={dashboard} locale={locale} />
+      <ProfileHangoutsMobilePage
+        dashboard={dashboard}
+        initialTab={requestedTab}
+        locale={locale}
+      />
     </PageContainer>
   );
 }

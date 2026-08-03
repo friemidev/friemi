@@ -6,6 +6,10 @@ import {
   getProfileDashboard,
   type ProfileDashboardViewModel,
 } from "@/features/profile/queries/getProfileDashboard";
+import {
+  getProfileVisitSummary,
+  getRecentProfileVisitors,
+} from "@/features/profile-visits/queries/getProfileVisitors";
 
 type ProfileNetworkPageProps = {
   params: Promise<{
@@ -58,6 +62,12 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   };
 }
 
+const emptyVisitSummary = {
+  todayViewCount: 0,
+  totalViewCount: 0,
+  uniqueVisitorCount: 0,
+};
+
 export default async function ProfileNetworkPage({
   params,
 }: ProfileNetworkPageProps) {
@@ -70,10 +80,31 @@ export default async function ProfileNetworkPage({
       return getEmptyProfileDashboard();
     },
   );
+  const visitResult = await Promise.all([
+    getProfileVisitSummary(profile.id),
+    getRecentProfileVisitors(profile.id, 3),
+  ])
+    .then(([summary, visitors]) => ({
+      summary,
+      visitors,
+    }))
+    .catch((error: unknown) => {
+      console.error("Failed to load profile network visitors", error);
+
+      return {
+        summary: emptyVisitSummary,
+        visitors: [],
+      };
+    });
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
-      <ProfileNetworkMobilePage dashboard={dashboard} locale={locale} />
+      <ProfileNetworkMobilePage
+        dashboard={dashboard}
+        locale={locale}
+        recentVisitors={visitResult.visitors}
+        visitSummary={visitResult.summary}
+      />
     </PageContainer>
   );
 }
