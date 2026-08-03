@@ -173,20 +173,31 @@ function getLobbyLayerTitle(locale: string) {
 
 function ActivityLayerHeader({
   backHref,
+  returnMode = "context",
   title,
 }: {
   backHref: string;
+  returnMode?: "context" | "path";
   title: string;
 }) {
+  const buttonClassName =
+    "inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95";
+
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
-      <ActivityHistoryBackButton
-        ariaLabel={title}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95"
-        fallbackHref={backHref}
-      >
-        <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-      </ActivityHistoryBackButton>
+      {returnMode === "path" ? (
+        <Link aria-label={title} className={buttonClassName} href={backHref}>
+          <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+        </Link>
+      ) : (
+        <ActivityHistoryBackButton
+          ariaLabel={title}
+          className={buttonClassName}
+          fallbackHref={backHref}
+        >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+        </ActivityHistoryBackButton>
+      )}
       <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
         {title}
       </p>
@@ -448,20 +459,20 @@ function getActivityOperatorActionCopy(locale: string) {
   if (locale === "fr") {
     return {
       edit: "Modifier",
-      manage: "Gérer",
+      manage: "Discussion",
     };
   }
 
   if (locale === "en") {
     return {
       edit: "Edit",
-      manage: "Manage",
+      manage: "Chat",
     };
   }
 
   return {
     edit: "编辑聚吧",
-    manage: "管理聚吧",
+    manage: "群聊",
   };
 }
 
@@ -1800,6 +1811,7 @@ export async function ActivityDetailPageContent({
       />
       <ActivityLayerHeader
         backHref={withLocale(locale, "/lobby")}
+        returnMode="path"
         title={mobileDetailTitle}
       />
       <DetailSourceReturnLink
