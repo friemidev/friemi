@@ -1,4 +1,4 @@
-# v2.5 关系系统调整 Checklist
+# v2.6 关系系统调整 Checklist
 
 ## 目标
 
