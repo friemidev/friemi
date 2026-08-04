@@ -1,8 +1,8 @@
-# Friemi v2.5 全局开发 Checklist
+# Friemi v2.6 全局开发 Checklist
 
 ## 0. 版本目标
 
-v2.5 是 Friemi 从“活动/组局工具”向“轻社交社区”过渡的版本。核心不是堆功能，而是补齐用户关系、局内互动、Profile 资产展示和社交回访路径。
+v2.6 是 Friemi 从“活动/组局工具”向“轻社交社区”过渡的版本。核心不是堆功能，而是补齐用户关系、局内互动、Profile 资产展示和社交回访路径。
 
 本版本围绕三个结果推进：
 
@@ -10,17 +10,17 @@ v2.5 是 Friemi 从“活动/组局工具”向“轻社交社区”过渡的版
 - 用户之间能连接：好友、陌生人私聊、邀请、通知。
 - Profile 有展示价值：信用、魅力、成就、背包、商城、访客、邀请。
 
-v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。所有实现优先选择稳定、轻量、可迁移、可后续扩展的方案。
+v2.6 不做完整商业化，不做复杂等级系统，不做实时大系统。所有实现优先选择稳定、轻量、可迁移、可后续扩展的方案。
 
 ## 1. 优先级定义
 
 - P0：地基。数据模型、权限、middleware、服务层。没有 P0，后续 UI 都不能安全上线。
 - P1：核心用户功能。用户能看见、能使用、能形成闭环的页面和交互。
-- P2：自动触发和体验补齐。依赖 P0/P1 后做，但属于 v2.5 正式上线必要范围。
+- P2：自动触发和体验补齐。依赖 P0/P1 后做，但属于 v2.6 正式上线必要范围。
 - P3：上线收尾。迁移、测试、公告、版本号、生产验证。
-- Pn：明确暂缓。不进入 v2.5，除非后续单独改范围。
+- Pn：明确暂缓。不进入 v2.6，除非后续单独改范围。
 
-后续每个 v2.5 子 PR 都应该在对应任务里更新 checkbox，不再只在文档末尾汇总。
+后续每个 v2.6 子 PR 都应该在对应任务里更新 checkbox，不再只在文档末尾汇总。
 
 ## 2. 当前基础
 
@@ -52,7 +52,7 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 - [ ] 非好友聊天允许破冰，但必须有限制
 - [ ] 信用值代表可靠，不代表人气
 - [ ] 魅力值代表被喜欢，不代表可靠
-- [ ] 贡献值代表平台价值，v2.5 先设计和少量记录，不强展示
+- [ ] 贡献值代表平台价值，v2.6 先设计和少量记录，不强展示
 - [ ] 成就是展示层，不直接等于信用、魅力或贡献
 
 ### 3.2 工程原则
@@ -76,8 +76,8 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 - PR：`PR 01`
 - Priority：`P0`
-- Branch：`feature/v2-5-data-foundation`
-- 目标：一次性打好 v2.5 社交资产的数据和权限地基，不改用户可见 UI 行为。
+- Branch：`feature/v2-6-data-foundation`
+- 目标：一次性打好 v2.6 社交资产的数据和权限地基，不改用户可见 UI 行为。
 
 ### 4.1 Prisma 模型
 
@@ -106,7 +106,7 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 - [ ] 只给 Friemi 用户创建的组局/活动开放
 - [ ] 纯采集的 `PUBLIC_EVENT` 不直接开放群聊
 - [ ] 公共活动下创建的用户组局可以有群聊，群聊归属用户组局
-- [x] v2.5 不加图片、回复、reaction、在线状态、已读回执、群聊未读红点
+- [x] v2.6 不加图片、回复、reaction、在线状态、已读回执、群聊未读红点
 
 #### UserAchievement
 
@@ -238,8 +238,8 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 
 - PR：`PR 02`
 - Priority：`P0`
-- Branch：`feature/v2-5-social-services`
-- 目标：把 v2.5 的核心权限、幂等、查询和写入规则沉到服务层，后续 UI 只调用统一能力。
+- Branch：`feature/v2-6-social-services`
+- 目标：把 v2.6 的核心权限、幂等、查询和写入规则沉到服务层，后续 UI 只调用统一能力。
 
 ### 5.1 局内群聊服务
 
@@ -267,7 +267,7 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 - [x] 游客不可查看消息内容
 - [x] 纯公共采集活动不可查看和发送，除非进入的是其下用户组局
 - [x] 活动取消后默认只读
-- [x] 活动结束后 v2.5 默认只读，后续可调整
+- [x] 活动结束后 v2.6 默认只读，后续可调整
 - [x] 删除消息：本人、Organizer、Co-manager 可删除
 
 消息规则：
@@ -319,7 +319,7 @@ v2.5 不做完整商业化，不做复杂等级系统，不做实时大系统。
 - [x] `getAchievementProgress(profileId)`
 - [x] `getPublicAchievementWall(profileId)`
 
-v2.5 首批成就：
+v2.6 首批成就：
 
 - [x] `hello_world`：第一次参加活动
 - [x] `open_minded`：第一次组织活动
@@ -348,7 +348,7 @@ v2.5 首批成就：
 奖励边界：
 
 - [x] 单纯打开邀请链接不奖励
-- [x] 单纯注册是否奖励贡献值后续再定，v2.5 不公开
+- [x] 单纯注册是否奖励贡献值后续再定，v2.6 不公开
 - [x] 信用值 `INVITE_FRIEND` 建议在成为好友或首次真实参加活动后触发，避免刷号
 - [x] 同一个 invitee 只能给 inviter 触发一次奖励
 
@@ -391,7 +391,7 @@ v2.5 首批成就：
 
 - PR：`PR 03`
 - Priority：`P1`
-- Branch：`feature/v2-5-profile-hub-pages`
+- Branch：`feature/v2-6-profile-hub-pages`
 - 目标：把 Profile 里的成就、背包、商城、邀请、访客从“敬请期待”改成可进入的真实页面骨架。
 
 ### 6.1 新增路由
@@ -436,7 +436,7 @@ v2.5 首批成就：
 
 - PR：`PR 04`
 - Priority：`P1`
-- Branch：`feature/v2-5-referrals-visitors`
+- Branch：`feature/v2-6-referrals-visitors`
 - 目标：完成用户拉新和回访路径，让邀请、归因、访客记录形成最小闭环。
 
 ### 7.1 邀请好友页
@@ -505,7 +505,7 @@ v2.5 首批成就：
 
 - PR：`PR 05`
 - Priority：`P1`
-- Branch：`feature/v2-5-profile-assets`
+- Branch：`feature/v2-6-profile-assets`
 - 目标：让 Profile 资产入口具备实际展示价值，但不引入真实支付和复杂商业化。
 
 ### 8.1 成就页
@@ -567,7 +567,7 @@ v2.5 首批成就：
 
 - PR：`PR 06`
 - Priority：`P1`
-- Branch：`feature/v2-5-activity-room-chat`
+- Branch：`feature/v2-6-activity-room-chat`
 - 目标：让已加入同一活动/组局的用户可以在局内沟通，沉淀活动关系。
 
 ### 9.1 路由与入口
@@ -599,7 +599,7 @@ v2.5 首批成就：
 - [x] 本人、Organizer、Co-manager 可删除消息
 - [x] 删除时校验消息属于当前活动，避免跨活动误操作
 - [x] 删除后显示“消息已删除”状态，不硬删除 UI 记录
-- [x] v2.5 不做全局未读红点
+- [x] v2.6 不做全局未读红点
 
 ### 9.4 本 PR 验收标准
 
@@ -620,7 +620,7 @@ v2.5 首批成就：
 
 - PR：`PR 07`
 - Priority：`P1`
-- Branch：`feature/v2-5-stranger-direct-messages`
+- Branch：`feature/v2-6-stranger-direct-messages`
 - 目标：把全局 1 对 1 私聊从“好友私聊”扩展为受控陌生人破冰聊天。
 
 ### 10.1 入口
@@ -673,7 +673,7 @@ v2.5 首批成就：
 
 - PR：`PR 08`
 - Priority：`P2`
-- Branch：`feature/v2-5-notifications-redesign`
+- Branch：`feature/v2-6-notifications-redesign`
 - 目标：重做通知页面移动端信息架构，让通知只承担事件提醒，不和消息系统混淆。
 
 ### 11.1 页面结构
@@ -727,7 +727,7 @@ v2.5 首批成就：
 
 - PR：`PR 09`
 - Priority：`P2`
-- Branch：`feature/v2-5-moment-action-bar`
+- Branch：`feature/v2-6-moment-action-bar`
 - 目标：优化晒晒动态底部点赞、评论、送礼操作，让互动清楚但不抢内容。
 
 ### 12.1 列表页
@@ -768,7 +768,7 @@ v2.5 首批成就：
 
 - PR：`PR 10`
 - Priority：`P2`
-- Branch：`feature/v2-5-social-rewards-automation`
+- Branch：`feature/v2-6-social-rewards-automation`
 - 目标：把成就、邀请、背包奖励接入真实业务触发点，形成可用闭环。
 
 ### 13.1 成就触发
@@ -823,22 +823,22 @@ v2.5 首批成就：
 
 - PR：`PR 11`
 - Priority：`P3`
-- Branch：`chore/v2-5-release-hardening`
-- 目标：完成 v2.5 上线前稳定性、迁移、文案和版本公告收尾。
+- Branch：`chore/v2-6-release-hardening`
+- 目标：完成 v2.6 上线前稳定性、迁移、文案和版本公告收尾。
 
 ### 14.0 发布前置 Gate
 
-- [x] `feature/v2-5-social-rewards-automation` 已合入 `dev`
+- [x] `feature/v2-6-social-rewards-automation` 已合入 `dev`
 - [x] 当前分支已经基于包含 PR10 的最新 `dev` rebase 或 merge
 - [x] `apps/web/features/social-rewards/` 存在
 - [x] `syncRecentEndedActivitySocialRewards` 已接入定时同步
-- [x] v2.5 更新公告只描述已经合入当前发布分支的功能
+- [x] v2.6 更新公告只描述已经合入当前发布分支的功能
 
 当前检查：本地 `dev` 已按顺序合入 PR10 与 PR11；推送到 `origin/dev` 后发布前置 Gate 满足。
 
 ### 14.1 本地验证
 
-- [x] 本地数据库执行全部 v2.5 migration
+- [x] 本地数据库执行全部 v2.6 migration
 - [x] Prisma Client 为最新生成结果
 - [x] `npm run typecheck --workspace=apps/web`
 - [x] `npm test --workspace=apps/web`
@@ -950,9 +950,9 @@ SELECT
 
 ### 14.4 公告与版本
 
-- [x] `apps/web/app/[locale]/updates` 写入 v2.5 更新公告
-- [x] Footer 版本号更新为 v2.5
-- [x] Top News 默认配置指向 v2.5 更新公告
+- [x] `apps/web/app/[locale]/updates` 写入 v2.6 更新公告
+- [x] Footer 版本号更新为 v2.6
+- [ ] Top News 默认配置后续可单独指向 v2.6 更新公告
 - [x] 检查 sitemap 不包含私有 Profile 子页
 - [x] 检查 robots/noindex 不阻挡公开可索引页面
 - [x] 检查登录回跳不丢 `redirect_url`
@@ -963,9 +963,9 @@ SELECT
 - [x] 本地迁移成功
 - [x] 预览迁移成功
 - [x] 生产迁移 SQL 已准备
-- [x] v2.5 更新公告已上线
-- [x] Footer 显示 v2.5
-- [x] Top News fallback 显示 v2.5
+- [x] v2.6 更新公告已上线
+- [x] Footer 显示 v2.6
+- [ ] Top News fallback 后续可单独切到 v2.6
 - [x] 新私有页面不进入 sitemap
 - [x] 公开 Profile 和公开活动页面仍可被索引
 - [ ] 移动端没有中间滚动条遮挡底部导航
@@ -980,7 +980,7 @@ SELECT
 
 - Priority：`Pn`
 - Branch：`none`
-- 目标：明确不进入 v2.5 的内容，避免开发过程扩大范围。
+- 目标：明确不进入 v2.6 的内容，避免开发过程扩大范围。
 
 - [ ] 真实支付和 Coins 充值
 - [ ] 礼物购买结算
@@ -1000,12 +1000,12 @@ SELECT
 
 Pn 验收标准：
 
-- [ ] v2.5 PR 中不引入上述范围
+- [ ] v2.6 PR 中不引入上述范围
 - [ ] 如果必须引入，先更新本文档并单独确认范围
 
 ## 16. 最小上线标准
 
-v2.5 可以拆多次 PR，但正式打 v2.5 时至少满足：
+v2.6 可以拆多次 PR，但正式打 v2.6 时至少满足：
 
 - [ ] Profile 五个占位入口全部变成真实页面
 - [ ] 邀请链接可以复制并完成新用户归因
@@ -1030,7 +1030,7 @@ v2.5 可以拆多次 PR，但正式打 v2.5 时至少满足：
 - [ ] 通知红点只代表通知中心未读事件
 - [ ] 私聊未读只进入消息/足迹消息入口
 - [ ] 晒晒互动不重新进入通知红点，除非后续补足足迹内独立互动入口
-- [ ] 局内群聊 v2.5 不做全局红点，避免和私聊/通知混淆
+- [ ] 局内群聊 v2.6 不做全局红点，避免和私聊/通知混淆
 
 ### 17.2 Profile 隐私
 
@@ -1052,7 +1052,7 @@ v2.5 可以拆多次 PR，但正式打 v2.5 时至少满足：
 - [ ] 魅力值只代表被送礼带来的社交展示
 - [ ] 贡献值只代表对平台产生的价值
 - [ ] 成就是展示层，不直接等于信用、魅力或贡献
-- [ ] Experience/Level 不在 v2.5 单独上线
+- [ ] Experience/Level 不在 v2.6 单独上线
 
 ### 17.5 奖励防刷
 
