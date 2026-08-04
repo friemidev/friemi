@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Camera, Check, ImagePlus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { defaultProfileAvatars } from "../defaultAvatars";
@@ -13,9 +13,11 @@ type ProfileAvatarPickerProps = {
   disabled?: boolean;
   initial?: string;
   locale: string;
+  hideUploadAction?: boolean;
   name?: string;
   onChange: (avatarUrl: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
+  sideContent?: ReactNode;
   value: string | null;
   variant?: "inline" | "sheet";
 };
@@ -90,11 +92,13 @@ function getUploadErrorMessage(locale: string, error?: string) {
 export function ProfileAvatarPicker({
   className,
   disabled = false,
+  hideUploadAction = false,
   initial,
   locale,
   name,
   onChange,
   onUploadingChange,
+  sideContent,
   value,
   variant = "inline",
 }: ProfileAvatarPickerProps) {
@@ -180,7 +184,7 @@ export function ProfileAvatarPicker({
           event.currentTarget.value = "";
         }}
       />
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <button
           type="button"
           className={cn(
@@ -212,24 +216,28 @@ export function ProfileAvatarPicker({
             )}
           </span>
         </button>
-        <div className="min-w-0">
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-[#156240] px-4 text-xs font-black text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
-            disabled={isBusy}
-            onClick={openFilePicker}
-          >
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <ImagePlus className="h-4 w-4" aria-hidden />
-            )}
-            {isUploading ? copy.uploading : copy.upload}
-          </button>
-          <p className="mt-1 text-[11px] font-semibold leading-4 text-[#767A70]">
-            {copy.fileHint}
-          </p>
-        </div>
+        {sideContent ? (
+          <div className="min-w-0 flex-1">{sideContent}</div>
+        ) : !hideUploadAction ? (
+          <div className="min-w-0">
+            <button
+              type="button"
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[#156240] px-4 text-xs font-black text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+              disabled={isBusy}
+              onClick={openFilePicker}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <ImagePlus className="h-4 w-4" aria-hidden />
+              )}
+              {isUploading ? copy.uploading : copy.upload}
+            </button>
+            <p className="mt-1 text-[11px] font-semibold leading-4 text-[#767A70]">
+              {copy.fileHint}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-2">

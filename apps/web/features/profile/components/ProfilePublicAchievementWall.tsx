@@ -130,10 +130,12 @@ export function ProfileAchievementIcon({
   achievementKey,
   className,
   iconClassName,
+  transparent = false,
 }: {
   achievementKey: AchievementKey;
   className?: string;
   iconClassName?: string;
+  transparent?: boolean;
 }) {
   const visual = achievementVisuals[achievementKey];
   const Icon = visual.icon;
@@ -142,7 +144,7 @@ export function ProfileAchievementIcon({
     <span
       className={cn(
         "flex shrink-0 items-center justify-center rounded-[1rem] ring-1",
-        visual.surface,
+        transparent ? "bg-transparent" : visual.surface,
         visual.text,
         visual.ring,
         className,

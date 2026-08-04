@@ -1015,6 +1015,25 @@ export function MomentDetailContent({
           </span>
         </div>
 
+        <div className="mb-5 overflow-hidden rounded-[1.15rem] border border-[#E3DCC5] bg-white">
+          {isAuthenticated ? (
+            <MomentCommentForm
+              copy={copy}
+              locale={locale}
+              momentId={moment.id}
+            />
+          ) : (
+            <div className="bg-white/88 px-4 py-3">
+              <Link
+                href={signInHref}
+                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+              >
+                {copy.signInToInteract}
+              </Link>
+            </div>
+          )}
+        </div>
+
         {moment.recentComments.length > 0 ? (
           <div className="space-y-4">
             {moment.recentComments.map((comment) => (
@@ -1062,25 +1081,6 @@ export function MomentDetailContent({
             </p>
           </div>
         )}
-
-        <div className="mt-5 overflow-hidden rounded-[1.15rem] border border-[#E3DCC5] bg-white">
-          {isAuthenticated ? (
-            <MomentCommentForm
-              copy={copy}
-              locale={locale}
-              momentId={moment.id}
-            />
-          ) : (
-            <div className="bg-white/88 px-4 py-3">
-              <Link
-                href={signInHref}
-                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
-              >
-                {copy.signInToInteract}
-              </Link>
-            </div>
-          )}
-        </div>
       </section>
 
       {previewIndex !== null ? (

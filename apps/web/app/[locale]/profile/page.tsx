@@ -1,7 +1,10 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
-import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
+import {
+  getPublicAchievementWall,
+  getUnlockedAchievementWall,
+} from "@/features/achievements/queries/getUserAchievements";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -63,6 +66,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       friendCode: null,
       avatarUrl: null,
       bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et relations.",
+      homeCity: "Paris",
       isCoCreator: false,
       isOnline: false,
       presenceDisplayStatus: null,
@@ -77,6 +81,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       friendCode: null,
       avatarUrl: null,
       bio: "Sign in when you want to keep your plans, traces, and follows together.",
+      homeCity: "Paris",
       isCoCreator: false,
       isOnline: false,
       presenceDisplayStatus: null,
@@ -90,6 +95,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     friendCode: null,
     avatarUrl: null,
     bio: "登录后可以同步你的聚吧、足迹和关注关系。",
+    homeCity: "Paris",
     isCoCreator: false,
     isOnline: false,
     presenceDisplayStatus: null,
@@ -100,7 +106,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { locale } = await params;
   const profile = await getOptionalCurrentUserProfileSnapshot();
-  const [dashboardResult, publicAchievements] = profile
+  const [dashboardResult, publicAchievements, achievementPreviewItems] = profile
     ? await Promise.all([
         getProfileDashboard(profile.id)
           .then((dashboard) => ({ dashboard, error: null }))
@@ -117,12 +123,18 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
           return [];
         }),
+        getUnlockedAchievementWall(profile.id).catch((error: unknown) => {
+          console.error("Failed to load unlocked profile achievements", error);
+
+          return [];
+        }),
       ])
     : [
         {
           dashboard: getEmptyProfileDashboard(),
           error: null,
         },
+        [],
         [],
       ];
   const isAuthenticated = Boolean(profile);
@@ -139,6 +151,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         friendCode: profile.friendCode,
         avatarUrl: profile.avatarUrl,
         bio: profile.bio,
+        homeCity: profile.homeCity ?? "Paris",
         isCoCreator: profile.isCoCreator,
         isOnline: profilePresence?.isOnline ?? false,
         presenceDisplayStatus: profilePresence?.displayStatus ?? null,
@@ -157,6 +170,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         isSelf={isAuthenticated}
         locale={locale}
         profile={profileViewModel}
+        achievementPreviewItems={achievementPreviewItems}
         publicAchievements={publicAchievements}
       />
     </PageContainer>

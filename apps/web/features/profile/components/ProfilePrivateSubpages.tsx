@@ -194,7 +194,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         share: "Partager",
         shareText: "Rejoins-moi sur Friemi.",
         subtitle: "Partagez votre code avec de nouvelles personnes.",
-        title: "Inviter",
+        title: "Code d'invitation",
       },
       loading: "Chargement",
       shop: {
@@ -335,7 +335,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         share: "Share",
         shareText: "Join me on Friemi.",
         subtitle: "Share your code with new people.",
-        title: "Invite",
+        title: "Invite code",
       },
       loading: "Loading",
       shop: {
@@ -474,7 +474,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       share: "分享",
       shareText: "来 Friemi 和我一起聚聚。",
       subtitle: "把邀请码分享给新朋友。",
-      title: "邀请",
+      title: "邀请码",
     },
     loading: "加载中",
     shop: {

@@ -31,6 +31,7 @@ import type { Prisma } from "@prisma/client";
 const activityResultLimit = 6;
 export const globalSearchMainResultPageSize = 10;
 const merchantResultLimit = 5;
+const searchRecommendationLimit = 12;
 const userResultLimit = 12;
 const searchResultProbeSize = 1;
 
@@ -84,6 +85,12 @@ export type GlobalSearchMainActivityResults = {
   totalCount: number;
   hasMore: boolean;
   nextOffset: number;
+};
+
+export type GlobalSearchRecommendations = {
+  activities: ActivityCardViewModel[];
+  hangouts: ActivityCardViewModel[];
+  users: GlobalSearchUserViewModel[];
 };
 
 function getActivityTermSearchWhere(term: string): Prisma.ActivityWhereInput {
@@ -212,6 +219,104 @@ function mapPublicEventToSearchActivityCard(
     merchant: null,
     friendSignal: null,
     isFavorited: event.isFavorited,
+  };
+}
+
+export async function getGlobalSearchRecommendations(
+  currentUserProfileId?: string | null,
+): Promise<GlobalSearchRecommendations> {
+  const perf = createActionPerformanceTracker({
+    action: "search.recommendations",
+  });
+  const activityNow = getActivityFloatingNow();
+  const publicEventNow = new Date();
+  const [users, hangouts, publicEvents] = await Promise.all([
+    perf.measure("user.list", () =>
+      prisma.userProfile.findMany({
+        where: {
+          status: "ACTIVE",
+          ...(currentUserProfileId
+            ? {
+                id: {
+                  not: currentUserProfileId,
+                },
+              }
+            : {}),
+        },
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: {
+          id: true,
+          nickname: true,
+          friendCode: true,
+          avatarUrl: true,
+        },
+      }),
+    ),
+    perf.measure("hangout.list", () =>
+      prisma.activity.findMany({
+        where: {
+          AND: [
+            getVisibleActivityWhere({ now: activityNow }),
+            {
+              type: {
+                not: "PUBLIC_EVENT",
+              },
+            },
+          ],
+        },
+        orderBy: [{ startAt: "asc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: activityCardSelect,
+      }),
+    ),
+    perf.measure("publicEvent.list", () =>
+      prisma.publicEvent.findMany({
+        where: getUpcomingPublicEventWhere(publicEventNow),
+        orderBy: [{ startAt: "asc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: publicEventSelect,
+      }),
+    ),
+  ]);
+  const [userRelationshipStatuses, hangoutsWithFavoriteState, eventsWithFavoriteState] =
+    await Promise.all([
+      perf.measure("user.relationships", () =>
+        getSearchUserRelationshipStatuses(
+          currentUserProfileId,
+          users.map((user) => user.id),
+        ),
+      ),
+      perf.measure("hangout.favoriteState", () =>
+        attachActivityFavoriteStates(
+          hangouts.map(getActivityCardViewModel),
+          currentUserProfileId,
+        ),
+      ),
+      perf.measure("publicEvent.favoriteState", () =>
+        attachPublicEventFavoriteStates(
+          publicEvents.map(getPublicEventCardViewModel),
+          currentUserProfileId,
+        ),
+      ),
+    ]);
+
+  perf.finish({
+    activityCount: eventsWithFavoriteState.length,
+    hangoutCount: hangoutsWithFavoriteState.length,
+    userCount: users.length,
+  });
+
+  return {
+    activities: eventsWithFavoriteState.map(mapPublicEventToSearchActivityCard),
+    hangouts: hangoutsWithFavoriteState,
+    users: users.map((user) => ({
+      id: user.id,
+      nickname: getSearchUserDisplayName(user),
+      friendCode: user.friendCode,
+      avatarUrl: user.avatarUrl,
+      relationshipStatus: userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+    })),
   };
 }
 

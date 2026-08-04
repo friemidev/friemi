@@ -7,12 +7,16 @@ import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
   BadgeCheck,
+  ChevronRight,
   Copy,
   Crown,
   Gift,
+  Heart,
   Info,
   Lock,
+  MapPin,
   Medal,
+  MessageCircle,
   MoreHorizontal,
   Package,
   ScanLine,
@@ -20,8 +24,8 @@ import {
   Share2,
   ShieldCheck,
   ShoppingBag,
+  Ticket,
   Trophy,
-  UserRoundPlus,
   UsersRound,
   X,
   type LucideIcon,
@@ -59,7 +63,10 @@ import {
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
 import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
-import { ProfileAchievementBadgeStrip } from "./ProfilePublicAchievementWall";
+import {
+  ProfileAchievementBadgeStrip,
+  ProfileAchievementIcon,
+} from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
 import {
@@ -89,6 +96,7 @@ type ProfileDashboardViewProps = {
   isSelf?: boolean;
   locale: string;
   profile: PublicProfileViewModel;
+  achievementPreviewItems?: PublicAchievementWallItem[];
   publicAchievements?: PublicAchievementWallItem[];
 };
 
@@ -172,6 +180,151 @@ function getTrustBadgeCopy(locale: string, score: number) {
   };
 }
 
+const defaultProfileHomeCity = "Paris";
+const profileCityCountries = [
+  {
+    cities: [
+      "Paris",
+      "Lyon",
+      "Marseille",
+      "Toulouse",
+      "Nice",
+      "Nantes",
+      "Strasbourg",
+      "Montpellier",
+      "Bordeaux",
+      "Lille",
+      "Rennes",
+      "Grenoble",
+      "Dijon",
+      "Reims",
+      "Tours",
+      "Angers",
+      "Avignon",
+      "Rouen",
+    ],
+    key: "FR",
+    labels: {
+      "zh-CN": "法国",
+      en: "France",
+      fr: "France",
+    },
+  },
+  {
+    cities: [
+      "北京",
+      "上海",
+      "广州",
+      "深圳",
+      "杭州",
+      "成都",
+      "南京",
+      "武汉",
+      "西安",
+      "重庆",
+      "苏州",
+      "天津",
+    ],
+    key: "CN",
+    labels: {
+      "zh-CN": "中国",
+      en: "China",
+      fr: "Chine",
+    },
+  },
+  {
+    cities: [
+      "Berlin",
+      "Munich",
+      "Hamburg",
+      "Frankfurt",
+      "Cologne",
+      "Düsseldorf",
+      "Stuttgart",
+    ],
+    key: "DE",
+    labels: {
+      "zh-CN": "德国",
+      en: "Germany",
+      fr: "Allemagne",
+    },
+  },
+  {
+    cities: ["Rome", "Milan", "Florence", "Turin", "Bologna", "Venice"],
+    key: "IT",
+    labels: {
+      "zh-CN": "意大利",
+      en: "Italy",
+      fr: "Italie",
+    },
+  },
+  {
+    cities: ["Madrid", "Barcelona", "Valencia", "Seville", "Bilbao", "Granada"],
+    key: "ES",
+    labels: {
+      "zh-CN": "西班牙",
+      en: "Spain",
+      fr: "Espagne",
+    },
+  },
+  {
+    cities: ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven"],
+    key: "NL",
+    labels: {
+      "zh-CN": "荷兰",
+      en: "Netherlands",
+      fr: "Pays-Bas",
+    },
+  },
+  {
+    cities: ["Brussels", "Antwerp", "Ghent", "Leuven"],
+    key: "BE",
+    labels: {
+      "zh-CN": "比利时",
+      en: "Belgium",
+      fr: "Belgique",
+    },
+  },
+  {
+    cities: ["Geneva", "Zurich", "Lausanne", "Basel", "Bern"],
+    key: "CH",
+    labels: {
+      "zh-CN": "瑞士",
+      en: "Switzerland",
+      fr: "Suisse",
+    },
+  },
+  {
+    cities: [
+      "London",
+      "Manchester",
+      "Birmingham",
+      "Edinburgh",
+      "Oxford",
+      "Cambridge",
+    ],
+    key: "UK",
+    labels: {
+      "zh-CN": "英国",
+      en: "United Kingdom",
+      fr: "Royaume-Uni",
+    },
+  },
+] as const;
+
+function normalizeProfileHomeCity(value: string | null | undefined) {
+  const normalizedCity = value?.trim();
+
+  return normalizedCity || defaultProfileHomeCity;
+}
+
+function getProfileHomeCityLabel(
+  city: string | null | undefined,
+  _locale: string,
+) {
+  return normalizeProfileHomeCity(city);
+}
+
 function getMobileProfileCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -195,9 +348,11 @@ function getMobileProfileCopy(locale: string) {
       created: "Sorties",
       editProfile: "Modifier",
       friends: "Réseau",
+      friendsFeature: "Amis",
       giftWall: "Cadeaux",
       hangoutsTitle: "Mes sorties",
       invite: "Inviter",
+      inviteCode: "Code",
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
@@ -257,9 +412,11 @@ function getMobileProfileCopy(locale: string) {
       created: "Plans",
       editProfile: "Edit",
       friends: "Network",
+      friendsFeature: "Friends",
       giftWall: "Gifts",
       hangoutsTitle: "My Plans",
       invite: "Invite",
+      inviteCode: "Invite code",
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
@@ -317,9 +474,11 @@ function getMobileProfileCopy(locale: string) {
     created: "聚吧",
     editProfile: "编辑资料",
     friends: "关系",
+    friendsFeature: "朋友",
     giftWall: "礼物墙",
     hangoutsTitle: "我的聚吧",
     invite: "邀请",
+    inviteCode: "邀请码",
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
@@ -397,10 +556,14 @@ function ProfileAvatar({
   isOnline?: boolean;
   name: string;
   presenceDisplayStatus?: UserPresenceDisplayStatus;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "xl";
 }) {
   const sizeClass =
-    size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
+    size === "sm"
+      ? "h-12 w-12 text-base"
+      : size === "xl"
+        ? "h-20 w-20 text-4xl"
+        : "h-16 w-16 text-3xl";
   const dotClass = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
   const visiblePresenceStatus =
     presenceDisplayStatus ?? (isOnline ? "ONLINE" : null);
@@ -647,26 +810,370 @@ function GuestProfilePlaceholder({
   );
 }
 
-function MobileStatLink({
+function getProfileSummaryCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      charm: "Aura",
+      friends: "Amis",
+      hangouts: "Sorties",
+      moments: "Moments",
+      trust: "Fiabilité",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      charm: "Charm",
+      friends: "Friends",
+      hangouts: "Hangouts",
+      moments: "Moments",
+      trust: "Trust",
+    };
+  }
+
+  return {
+    charm: "魅力值",
+    friends: "朋友",
+    hangouts: "聚吧",
+    moments: "足迹",
+    trust: "信用值",
+  };
+}
+
+function MobileProfileSummaryStrip({
+  dashboard,
+  locale,
+}: {
+  dashboard: ProfileDashboardViewModel;
+  locale: string;
+}) {
+  const copy = getProfileSummaryCopy(locale);
+  const stats = [
+    { label: copy.hangouts, value: dashboard.createdActivityCount },
+    { label: copy.friends, value: dashboard.friendCount },
+    { label: copy.moments, value: dashboard.momentCount },
+  ];
+
+  return (
+    <div className="mt-5 grid grid-cols-[minmax(0,1fr)_5.65rem] items-center gap-3">
+      <div className="grid min-w-0 grid-cols-3">
+        {stats.map((item) => (
+          <div className="min-w-0 px-1.5 py-1.5 text-center" key={item.label}>
+            <p className="text-[21px] font-black leading-[1.08] text-[#111210]">
+              {item.value}
+            </p>
+            <p className="mt-1 truncate text-[10px] font-bold leading-4 text-[#4F574F]">
+              {item.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid min-w-0 gap-2 border-l border-[#E3DCC5] pl-3">
+        <div className="grid grid-cols-[1.7rem_minmax(0,1fr)] items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#EEF7EF] text-[#156240]">
+            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
+              {copy.trust}
+            </span>
+            <span className="mt-1 block text-[16px] font-black leading-none text-[#156240] tabular-nums">
+              {dashboard.trustScore}
+            </span>
+          </span>
+        </div>
+        <div className="grid grid-cols-[1.7rem_minmax(0,1fr)] items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF0F3] text-[#E7457A]">
+            <Heart className="h-3.5 w-3.5 fill-current" strokeWidth={2.35} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
+              {copy.charm}
+            </span>
+            <span className="mt-1 block text-[16px] font-black leading-none text-[#111210] tabular-nums">
+              {formatCharmScore(dashboard.charmScore)}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ProfilePreviewTabKey = "moments" | "hangouts" | "badges";
+
+function getProfilePreviewTabsCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      badges: "Badges",
+      emptyBadges: "Voir les badges",
+      emptyHangouts: "Aucune sortie pour le moment.",
+      emptyMoments: "Aucun moment pour le moment.",
+      hangouts: "Sorties",
+      moments: "Moments",
+      viewAll: "Tout voir",
+      achievementTitles: {
+        active_guest_20: "Invité actif",
+        co_creator: "Co-créateur",
+        hello_world: "Première sortie",
+        host_20: "Hôte 20",
+        open_minded: "Esprit ouvert",
+        trusted_profile: "Profil fiable",
+      },
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      badges: "Badges",
+      emptyBadges: "View badges",
+      emptyHangouts: "No hangouts yet.",
+      emptyMoments: "No moments yet.",
+      hangouts: "Hangouts",
+      moments: "Moments",
+      viewAll: "View all",
+      achievementTitles: {
+        active_guest_20: "Active Guest",
+        co_creator: "Co-creator",
+        hello_world: "First Plan",
+        host_20: "Host 20",
+        open_minded: "Open Minded",
+        trusted_profile: "Trusted Profile",
+      },
+    };
+  }
+
+  return {
+    badges: "勋章",
+    emptyBadges: "查看勋章",
+    emptyHangouts: "还没有聚吧。",
+    emptyMoments: "还没有足迹。",
+    hangouts: "聚吧",
+    moments: "足迹",
+    viewAll: "查看全部",
+    achievementTitles: {
+      active_guest_20: "活跃玩家",
+      co_creator: "共创者",
+      hello_world: "初次见面",
+      host_20: "主理人 20",
+      open_minded: "开放主理人",
+      trusted_profile: "可信资料",
+    },
+  };
+}
+
+function getProfilePreviewTabHref(locale: string, tab: ProfilePreviewTabKey) {
+  if (tab === "moments") {
+    return withLocale(locale, "/profile/moments");
+  }
+
+  if (tab === "hangouts") {
+    return withLocale(locale, "/profile/hangouts");
+  }
+
+  return withLocale(locale, "/profile/achievements");
+}
+
+function ProfilePreviewTabs({
+  achievementPreviewItems,
+  dashboard,
+  locale,
+}: {
+  achievementPreviewItems: PublicAchievementWallItem[];
+  dashboard: ProfileDashboardViewModel;
+  locale: string;
+}) {
+  const copy = getProfilePreviewTabsCopy(locale);
+  const [activeTab, setActiveTab] = useState<ProfilePreviewTabKey>("moments");
+  const tabs: Array<{ key: ProfilePreviewTabKey; label: string }> = [
+    { key: "moments", label: copy.moments },
+    { key: "hangouts", label: copy.hangouts },
+    { key: "badges", label: copy.badges },
+  ];
+  const momentItems = dashboard.moments
+    .filter((moment) => moment.content?.trim() || moment.image)
+    .slice(0, 3);
+  const seenActivityIds = new Set<string>();
+  const hangoutItems = [
+    ...dashboard.createdActivities,
+    ...dashboard.participations.map((participation) => participation.activity),
+    ...dashboard.favoriteActivities.map((favorite) => favorite.activity),
+  ].filter((activity) => {
+    if (seenActivityIds.has(activity.id)) {
+      return false;
+    }
+
+    seenActivityIds.add(activity.id);
+    return true;
+  }).slice(0, 3);
+  const badgeItems = achievementPreviewItems;
+  const activeHref = getProfilePreviewTabHref(locale, activeTab);
+
+  return (
+    <section className="mt-5 bg-white">
+      <div
+        aria-label="Profile preview"
+        className="grid grid-cols-3 border-b border-[#E7E1CA]"
+        role="tablist"
+      >
+        {tabs.map((tab) => {
+          const active = activeTab === tab.key;
+
+          return (
+            <button
+              aria-selected={active}
+              className="relative h-8 min-w-0 px-1 text-center text-[11px] font-semibold text-[#4F574F] transition active:scale-[0.98]"
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              role="tab"
+              type="button"
+            >
+              <span className={cn("truncate", active && "text-[#111210]")}>
+                {tab.label}
+              </span>
+              {active ? (
+                <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-[#156240]" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 grid min-h-[7.9rem] grid-cols-3 gap-2.5">
+        {activeTab === "moments" ? (
+          momentItems.length > 0 ? (
+            momentItems.map((moment) => (
+              <Link
+                className="group min-w-0"
+                href={withLocale(locale, `/footprints/${moment.id}`)}
+                key={moment.id}
+              >
+                <PreviewImage
+                  alt=""
+                  fallbackSrc="/illustrations/ui/take-photo.png"
+                  src={moment.image?.url ?? null}
+                />
+                <p className="mt-2 line-clamp-2 min-h-8 text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {moment.content?.trim() || copy.moments}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-[#7A8276]">
+                  <span className="inline-flex items-center gap-1">
+                    <Heart className="h-3 w-3 fill-current text-[#E7457A]" />
+                    {moment.likeCount}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    {moment.commentCount}
+                  </span>
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyMoments} />
+          )
+        ) : null}
+
+        {activeTab === "hangouts" ? (
+          hangoutItems.length > 0 ? (
+            hangoutItems.map((activity) => (
+              <Link
+                className="group min-w-0"
+                href={withLocale(locale, getActivityDetailPath(activity.id))}
+                key={activity.id}
+              >
+                <PreviewImage
+                  alt=""
+                  fallbackSrc="/illustrations/ui/take-photo.png"
+                  src={activity.coverImageUrl}
+                />
+                <p className="mt-2 line-clamp-2 min-h-8 text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {activity.title}
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-[#7A8276]">
+                  <UsersRound className="h-3 w-3 text-[#156240]" />
+                  {activity.participantCount}
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyHangouts} />
+          )
+        ) : null}
+
+        {activeTab === "badges" ? (
+          badgeItems.length > 0 ? (
+            badgeItems.map((item) => (
+              <Link
+                className="group min-w-0"
+                href={activeHref}
+                key={item.definition.key}
+              >
+                <div className="flex aspect-[1.22/1] items-center justify-center rounded-xl bg-transparent transition group-active:scale-[0.98]">
+                  <ProfileAchievementIcon
+                    achievementKey={item.definition.key}
+                    className="h-12 w-12 rounded-full"
+                    iconClassName="h-6 w-6"
+                    transparent
+                  />
+                </div>
+                <p className="mt-2 line-clamp-2 min-h-8 text-center text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {copy.achievementTitles[item.definition.key] ??
+                    item.definition.title}
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyBadges} />
+          )
+        ) : null}
+      </div>
+
+      <Link
+        className="mx-auto mt-2 flex h-7 w-fit items-center justify-center gap-1 text-[10.5px] font-semibold text-[#156240] transition active:scale-[0.98]"
+        href={activeHref}
+      >
+        {copy.viewAll} {tabs.find((tab) => tab.key === activeTab)?.label}
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </section>
+  );
+}
+
+function PreviewImage({
+  alt,
+  fallbackSrc,
+  src,
+}: {
+  alt: string;
+  fallbackSrc: string;
+  src: string | null;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl bg-[#F8F7F2]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt={alt}
+        className="aspect-[1.22/1] w-full object-cover transition group-active:scale-[0.98]"
+        src={src || fallbackSrc}
+      />
+    </div>
+  );
+}
+
+function ProfilePreviewEmpty({
   href,
   label,
-  value,
 }: {
   href: string;
   label: string;
-  value: number;
 }) {
   return (
     <Link
+      className="col-span-3 flex min-h-[7.5rem] items-center justify-center rounded-xl bg-[#F8F7F2] px-4 text-center text-[12px] font-semibold text-[#6C746A] transition active:scale-[0.98]"
       href={href}
-      className="min-w-0 px-2 py-2 text-center transition active:scale-[0.98]"
     >
-      <p className="text-[22px] font-black leading-none text-[#111210]">
-        {value}
-      </p>
-      <p className="mt-1 text-[10px] font-bold leading-3 text-[#4F574F]">
-        {label}
-      </p>
+      {label}
     </Link>
   );
 }
@@ -686,34 +1193,36 @@ function ProfileFeatureLink({
   locked?: boolean;
   lockedLabel?: string;
   status?: string;
-  tone?: "green" | "pink" | "blue" | "gold";
+  tone?: "green" | "pink" | "blue" | "gold" | "gray";
 }) {
   const toneClass =
     locked
-      ? "bg-white text-[#8B907F] ring-[#D6D5B2]"
+      ? "bg-[#F5F4EF] text-[#9A9A90]"
       : tone === "pink"
-      ? "bg-[radial-gradient(circle_at_30%_25%,#FFF5F7_0%,#FFE6EE_48%,#F7F2F4_100%)] text-[#E83F83] ring-[#F5C5D7]"
+      ? "bg-[#FFF1F6] text-[#F05B91]"
       : tone === "blue"
-        ? "bg-[radial-gradient(circle_at_30%_25%,#EEF5FF_0%,#E6F0FF_48%,#F7F4EC_100%)] text-[#143376] ring-[#C8D9F5]"
+        ? "bg-[#F1F6FF] text-[#4D83E9]"
         : tone === "gold"
-          ? "bg-[radial-gradient(circle_at_30%_25%,#FFF9E8_0%,#FFF1C9_48%,#F6F2E7_100%)] text-[#7D641C] ring-[#E8D59D]"
-          : "bg-[radial-gradient(circle_at_30%_25%,#F3FAEF_0%,#E4F3DF_48%,#F7F3E9_100%)] text-[#156240] ring-[#BFD8B9]";
+          ? "bg-[#FFF6DE] text-[#D79A13]"
+          : tone === "gray"
+            ? "bg-[#F3F4F1] text-[#737870]"
+            : "bg-[#EEF8F2] text-[#189560]";
 
   const content = (
     <>
       <span
         className={cn(
-          "relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] shadow-[0_10px_18px_rgba(21,98,64,0.08)] ring-1",
+          "relative flex h-12 w-12 items-center justify-center rounded-full",
           toneClass,
         )}
       >
-        <Icon className="h-[1.125rem] w-[1.125rem]" />
+        <Icon className="h-5 w-5" strokeWidth={2.25} />
         {locked ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#6C746A] ring-1 ring-[#D6D5B2]">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
             <Lock className="h-3 w-3" strokeWidth={2.4} />
           </span>
         ) : status ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-[#FEFFF9] px-1.5 text-[9px] font-black leading-none text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">{status}</span>
           </span>
         ) : null}
@@ -1278,11 +1787,6 @@ function PublicMobileProfileHome({
                 @{profile.friendCode}
               </p>
             ) : null}
-            {profile.bio ? (
-              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[#4F574F]">
-                {profile.bio}
-              </p>
-            ) : null}
           </div>
           <div className="grid justify-items-end gap-2 pt-1">
             <PublicMobileProfileActions
@@ -1307,6 +1811,11 @@ function PublicMobileProfileHome({
       </section>
 
       <PublicMobileTimeline dashboard={dashboard} locale={locale} />
+      <MobileProfileAboutCard
+        bio={profile.bio ?? ""}
+        locale={locale}
+        nickname={profile.nickname}
+      />
     </div>
   );
 }
@@ -1350,10 +1859,12 @@ function TrustScoreBadge({
 function getProfileBioEditorCopy(locale: string) {
   if (locale === "fr") {
     return {
+      about: "À propos de",
       bioLabel: "Bio",
       cancel: "Annuler",
       edit: "Modifier",
-      empty: "Pas encore de bio.",
+      empty:
+        "Explore les sorties, les moments et de nouvelles rencontres sur Friemi.",
       placeholder: "Ajoutez une courte présentation",
       save: "Enregistrer",
       saving: "Enregistrement...",
@@ -1362,10 +1873,11 @@ function getProfileBioEditorCopy(locale: string) {
 
   if (locale === "en") {
     return {
+      about: "About",
       bioLabel: "Bio",
       cancel: "Cancel",
       edit: "Edit",
-      empty: "No bio yet.",
+      empty: "Exploring hangouts, moments, and new people on Friemi.",
       placeholder: "Write a short intro",
       save: "Save",
       saving: "Saving...",
@@ -1373,14 +1885,51 @@ function getProfileBioEditorCopy(locale: string) {
   }
 
   return {
+    about: "关于",
     bioLabel: "简介",
     cancel: "取消",
     edit: "编辑",
-    empty: "还没有填写简介。",
+    empty: "正在 Friemi 探索城市里的聚会、活动和新朋友。",
     placeholder: "简单介绍一下自己",
     save: "保存",
     saving: "保存中...",
   };
+}
+
+function getProfileAboutTitle(locale: string, nickname: string) {
+  const copy = getProfileBioEditorCopy(locale);
+  const name = nickname.trim() || "Friemi";
+
+  return locale === "zh-CN" ? `${copy.about} ${name}` : `${copy.about} ${name}`;
+}
+
+function MobileProfileAboutCard({
+  bio,
+  editButton,
+  locale,
+  nickname,
+}: {
+  bio: string;
+  editButton?: React.ReactNode;
+  locale: string;
+  nickname: string;
+}) {
+  const copy = getProfileBioEditorCopy(locale);
+  const displayBio = bio.trim() || copy.empty;
+
+  return (
+    <section className="mt-6 rounded-[1.35rem] border border-[#EEE7D5] bg-white px-4 py-4">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <h3 className="min-w-0 truncate text-[16px] font-black leading-6 text-[#111210]">
+          {getProfileAboutTitle(locale, nickname)}
+        </h3>
+        {editButton}
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#4F574F]">
+        {displayBio}
+      </p>
+    </section>
+  );
 }
 
 const mobileBioInitialState: UpdateProfileIdentityState = {};
@@ -1420,22 +1969,24 @@ function MobileProfileBioEditor({
 
   return (
     <>
-      <div className="mt-3 flex min-w-0 items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-[#4F574F]">
-          {savedBio.trim() || copy.empty}
-        </p>
-        <button
-          className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
-          type="button"
-          onClick={() => setOpen(true)}
-        >
-          {copy.edit}
-        </button>
-      </div>
+      <MobileProfileAboutCard
+        bio={savedBio}
+        editButton={
+          <button
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+            type="button"
+            onClick={() => setOpen(true)}
+          >
+            {copy.edit}
+          </button>
+        }
+        locale={locale}
+        nickname={nickname}
+      />
 
       {open ? (
         <div
-          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/32 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/28 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
           role="dialog"
           aria-modal="true"
           onMouseDown={(event) => {
@@ -1525,9 +2076,14 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
     return {
       cancel: "Annuler",
       change: "Changer l'avatar",
+      city: "Ville",
+      cityPickerSearch: "Rechercher ou saisir une ville",
+      cityPickerTitle: "Choisir une ville",
       save: "Enregistrer",
       saving: "Enregistrement...",
-      title: "Avatar",
+      status: "Statut",
+      title: "Profil",
+      useCity: "Utiliser",
     };
   }
 
@@ -1535,41 +2091,232 @@ function getMobileProfileAvatarEditorCopy(locale: string) {
     return {
       cancel: "Cancel",
       change: "Change avatar",
+      city: "City",
+      cityPickerSearch: "Search or enter a city",
+      cityPickerTitle: "Choose city",
       save: "Save",
       saving: "Saving...",
-      title: "Avatar",
+      status: "Status",
+      title: "Profile",
+      useCity: "Use",
     };
   }
 
   return {
     cancel: "取消",
     change: "修改头像",
+    city: "城市",
+    cityPickerSearch: "搜索或输入城市",
+    cityPickerTitle: "选择城市",
     save: "保存",
     saving: "保存中...",
-    title: "头像",
+    status: "状态",
+    title: "个人主页",
+    useCity: "使用",
   };
+}
+
+function getProfileCityCountryLabel(
+  country: (typeof profileCityCountries)[number],
+  locale: string,
+) {
+  const localeKey = locale === "fr" || locale === "en" ? locale : "zh-CN";
+
+  return country.labels[localeKey];
+}
+
+function ProfileCityPickerField({
+  label,
+  locale,
+  onChange,
+  value,
+}: {
+  label: string;
+  locale: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const copy = getMobileProfileAvatarEditorCopy(locale);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalizedValue = normalizeProfileHomeCity(value);
+  const normalizedQuery = query.trim();
+  const normalizedQueryKey = normalizedQuery.toLocaleLowerCase();
+  const cityExists = profileCityCountries.some((country) =>
+    country.cities.some(
+      (city) => city.toLocaleLowerCase() === normalizedQueryKey,
+    ),
+  );
+  const canUseCustomCity = normalizedQuery.length > 0 && !cityExists;
+
+  const handleSelect = (nextCity: string) => {
+    onChange(normalizeProfileHomeCity(nextCity));
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
+        type="button"
+        onClick={() => setOpen(true)}
+      >
+        <span className="shrink-0 text-[11px] text-[#4F574F]">{label}</span>
+        <span className="inline-flex min-w-0 items-center gap-1">
+          <span className="truncate">
+            {getProfileHomeCityLabel(normalizedValue, locale)}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#0B7A4B]" />
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[10001] flex items-end bg-[#111210]/30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setOpen(false);
+            }
+          }}
+        >
+          <div className="max-h-[82dvh] w-full overflow-hidden rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-lg font-black text-[#111210]">
+                {copy.cityPickerTitle}
+              </h4>
+              <button
+                aria-label={copy.cancel}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <input
+              className="mt-4 h-11 w-full rounded-full bg-white px-4 text-sm font-bold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A7A99D] focus:ring-[#8AB68E]"
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") {
+                  return;
+                }
+
+                event.preventDefault();
+                if (canUseCustomCity) {
+                  handleSelect(normalizedQuery);
+                }
+              }}
+              placeholder={copy.cityPickerSearch}
+            />
+
+            <div className="mt-4 max-h-[58dvh] overflow-y-auto pr-1">
+              {canUseCustomCity ? (
+                <button
+                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-black text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
+                  type="button"
+                  onClick={() => handleSelect(normalizedQuery)}
+                >
+                  <span className="min-w-0 truncate">
+                    {copy.useCity} {normalizedQuery}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                </button>
+              ) : null}
+
+              <div className="grid gap-4">
+                {profileCityCountries.map((country) => {
+                  const countryLabel = getProfileCityCountryLabel(
+                    country,
+                    locale,
+                  );
+                  const cities = normalizedQueryKey
+                    ? country.cities.filter(
+                        (city) =>
+                          city.toLocaleLowerCase().includes(
+                            normalizedQueryKey,
+                          ) ||
+                          countryLabel
+                            .toLocaleLowerCase()
+                            .includes(normalizedQueryKey),
+                      )
+                    : country.cities;
+
+                  if (cities.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <section key={country.key} className="grid gap-2">
+                      <p className="px-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#7B8178]">
+                        {countryLabel}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {cities.map((city) => {
+                          const active = normalizedValue === city;
+
+                          return (
+                            <button
+                              key={`${country.key}-${city}`}
+                              className={cn(
+                                "rounded-full px-3 py-2 text-xs font-black transition active:scale-[0.98]",
+                                active
+                                  ? "bg-[#0B7A4B] text-white"
+                                  : "bg-white text-[#111210] ring-1 ring-[#E1DEC9]",
+                              )}
+                              type="button"
+                              onClick={() => handleSelect(city)}
+                            >
+                              {city}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 function MobileProfileAvatarEditor({
   avatarUrl,
   bio,
+  homeCity,
   initial,
   isOnline,
   locale,
   name,
   nickname,
+  onPresenceStatusChange,
   onSaved,
   presenceDisplayStatus,
+  presenceStatus,
 }: {
   avatarUrl: string | null;
   bio: string | null;
+  homeCity: string | null;
   initial: string;
   isOnline: boolean;
   locale: string;
   name: string;
   nickname: string;
-  onSaved: (avatarUrl: string | null) => void;
+  onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
+  onSaved: (nextValue: {
+    avatarUrl: string | null;
+    homeCity: string | null;
+  }) => void;
   presenceDisplayStatus?: UserPresenceDisplayStatus;
+  presenceStatus: UserPresenceStatusValue;
 }) {
   const copy = getMobileProfileAvatarEditorCopy(locale);
   const router = useRouter();
@@ -1580,6 +2327,7 @@ function MobileProfileAvatarEditor({
   const [open, setOpen] = useState(false);
   const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
   const [avatarDirty, setAvatarDirty] = useState(false);
+  const [cityValue, setCityValue] = useState(normalizeProfileHomeCity(homeCity));
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   useEffect(() => {
@@ -1588,15 +2336,32 @@ function MobileProfileAvatarEditor({
   }, [avatarUrl]);
 
   useEffect(() => {
-    if (!state.success || state.avatarUrl === undefined) {
+    setCityValue(normalizeProfileHomeCity(homeCity));
+  }, [homeCity]);
+
+  useEffect(() => {
+    if (!state.success) {
       return;
     }
 
-    onSaved(state.avatarUrl);
+    onSaved({
+      avatarUrl: state.avatarUrl === undefined ? avatarValue : state.avatarUrl,
+      homeCity: state.homeCity === undefined ? cityValue : state.homeCity,
+    });
     setAvatarDirty(false);
     setOpen(false);
     router.refresh();
-  }, [onSaved, router, state.avatarUrl, state.success]);
+  }, [
+    avatarValue,
+    cityValue,
+    onSaved,
+    router,
+    state.avatarUrl,
+    state.homeCity,
+    state.success,
+  ]);
+
+  const cityDirty = cityValue !== normalizeProfileHomeCity(homeCity);
 
   return (
     <>
@@ -1612,7 +2377,7 @@ function MobileProfileAvatarEditor({
           isOnline={isOnline}
           name={name}
           presenceDisplayStatus={presenceDisplayStatus}
-          size="sm"
+          size="xl"
         />
       </button>
 
@@ -1627,11 +2392,7 @@ function MobileProfileAvatarEditor({
             }
           }}
         >
-          <form
-            action={formAction}
-            className="w-full rounded-[1.6rem] bg-white p-4 ring-1 ring-[#E6E6E0]"
-            noValidate
-          >
+          <div className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-black text-[#111210]">
                 {copy.title}
@@ -1644,39 +2405,74 @@ function MobileProfileAvatarEditor({
                 {copy.cancel}
               </button>
             </div>
-            <input name="locale" type="hidden" value={locale} />
-            <input name="afterSave" type="hidden" value="refresh" />
-            <input name="nickname" type="hidden" value={nickname} />
-            <input name="bio" type="hidden" value={bio ?? ""} />
-            {avatarDirty && avatarValue ? (
-              <input name="avatarUrl" type="hidden" value={avatarValue} />
-            ) : null}
-            <ProfileAvatarPicker
-              className="mt-4"
-              initial={initial}
-              locale={locale}
-              name={name}
-              onChange={(nextAvatarUrl) => {
-                setAvatarValue(nextAvatarUrl);
-                setAvatarDirty(true);
-              }}
-              onUploadingChange={setIsAvatarUploading}
-              value={avatarValue}
-              variant="sheet"
-            />
-            {state.formError ? (
-              <p className="mt-3 text-xs font-semibold text-[#9A2135]">
-                {state.formError}
-              </p>
-            ) : null}
-            <div className="mt-4 flex justify-end">
-              <MobileProfileAvatarSubmitButton
-                disabled={!avatarDirty || isAvatarUploading}
-                label={copy.save}
-                pendingLabel={copy.saving}
+
+            <div className="mt-4">
+              <ProfileAvatarPicker
+                hideUploadAction
+                initial={initial}
+                locale={locale}
+                name={name}
+                onChange={(nextAvatarUrl) => {
+                  setAvatarValue(nextAvatarUrl);
+                  setAvatarDirty(true);
+                }}
+                onUploadingChange={setIsAvatarUploading}
+                value={avatarValue}
+                variant="sheet"
+                sideContent={
+                  <div className="grid gap-3">
+                    <div className="grid gap-1.5">
+                      <p className="text-[11px] font-black text-[#4F574F]">
+                        {copy.status}
+                      </p>
+                      <ProfilePresenceControl
+                        locale={locale}
+                        onStatusChange={onPresenceStatusChange}
+                        status={presenceStatus}
+                      />
+                    </div>
+
+                    <form action={formAction} className="grid gap-2" noValidate>
+                      <input name="locale" type="hidden" value={locale} />
+                      <input name="afterSave" type="hidden" value="refresh" />
+                      <input name="nickname" type="hidden" value={nickname} />
+                      <input name="bio" type="hidden" value={bio ?? ""} />
+                      <input name="homeCity" type="hidden" value={cityValue} />
+                      {avatarDirty && avatarValue ? (
+                        <input
+                          name="avatarUrl"
+                          type="hidden"
+                          value={avatarValue}
+                        />
+                      ) : null}
+
+                      <ProfileCityPickerField
+                        label={copy.city}
+                        locale={locale}
+                        onChange={setCityValue}
+                        value={cityValue}
+                      />
+
+                      {state.formError ? (
+                        <p className="text-xs font-semibold text-[#9A2135]">
+                          {state.formError}
+                        </p>
+                      ) : null}
+                      <div className="flex justify-end">
+                        <MobileProfileAvatarSubmitButton
+                          disabled={
+                            (!avatarDirty && !cityDirty) || isAvatarUploading
+                          }
+                          label={copy.save}
+                          pendingLabel={copy.saving}
+                        />
+                      </div>
+                    </form>
+                  </div>
+                }
               />
             </div>
-          </form>
+          </div>
         </div>
       ) : null}
     </>
@@ -1706,6 +2502,7 @@ function MobileProfileAvatarSubmitButton({
 }
 
 function SelfMobileProfileHome({
+  achievementPreviewItems,
   dashboard,
   locale,
   onPresenceStatusChange,
@@ -1714,6 +2511,7 @@ function SelfMobileProfileHome({
   profileInitial,
   publicAchievements,
 }: {
+  achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
   onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
@@ -1725,12 +2523,19 @@ function SelfMobileProfileHome({
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
+  const [currentHomeCity, setCurrentHomeCity] = useState(
+    normalizeProfileHomeCity(profile.homeCity),
+  );
   const [copied, setCopied] = useState(false);
   const nativeQrScanPendingRef = useRef(false);
 
   useEffect(() => {
     setCurrentAvatarUrl(profile.avatarUrl);
   }, [profile.avatarUrl]);
+
+  useEffect(() => {
+    setCurrentHomeCity(normalizeProfileHomeCity(profile.homeCity));
+  }, [profile.homeCity]);
 
   const copyFriendCode = async () => {
     if (!profile.friendCode) {
@@ -1816,30 +2621,35 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-white px-5 pb-28 pt-7">
+    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-white px-5 pb-28 pt-9">
       <section>
         <div>
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-4">
             <MobileProfileAvatarEditor
               avatarUrl={currentAvatarUrl}
               bio={profile.bio}
+              homeCity={currentHomeCity}
               initial={profileInitial}
               isOnline={presenceStatus === "ONLINE"}
               locale={locale}
               name={profile.nickname}
               nickname={profile.nickname}
-              onSaved={setCurrentAvatarUrl}
+              onPresenceStatusChange={onPresenceStatusChange}
+              onSaved={(nextValue) => {
+                setCurrentAvatarUrl(nextValue.avatarUrl);
+                setCurrentHomeCity(normalizeProfileHomeCity(nextValue.homeCity));
+              }}
               presenceDisplayStatus={
                 presenceStatus === "INVISIBLE" ? null : presenceStatus
               }
+              presenceStatus={presenceStatus}
             />
 
-            <div className="min-w-0 flex-1 pt-1">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+            <div className="min-w-0 flex-1 pt-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-[22px] font-black leading-tight text-[#111210]">
                   {profile.nickname}
                 </h2>
-                <TrustScoreBadge locale={locale} score={dashboard.trustScore} />
                 <ProfileAchievementBadgeStrip
                   className="min-w-0 shrink-0"
                   items={publicAchievements}
@@ -1847,21 +2657,26 @@ function SelfMobileProfileHome({
                   locale={locale}
                 />
               </div>
-              {profile.friendCode ? (
-                <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                {profile.friendCode ? (
                   <button
-                    className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
+                    aria-label={copied ? copy.copied : copy.copyCode}
+                    className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F] transition active:scale-[0.98]"
                     onClick={copyFriendCode}
+                    title={copied ? copy.copied : copy.copyCode}
                     type="button"
                   >
-                    <span>{profile.friendCode}</span>
+                    <span className="tabular-nums">{profile.friendCode}</span>
                     <Copy className="h-3.5 w-3.5 shrink-0" />
-                    <span className="tracking-normal">
-                      {copied ? copy.copied : copy.copyCode}
-                    </span>
                   </button>
-                </div>
-              ) : null}
+                ) : null}
+                <span className="inline-flex min-w-0 items-center gap-1 text-[11px] font-bold text-[#6C746A]">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F56D62]" />
+                  <span className="truncate">
+                    {getProfileHomeCityLabel(currentHomeCity, locale)}
+                  </span>
+                </span>
+              </div>
             </div>
 
             <div className="flex shrink-0 items-start gap-2">
@@ -1877,50 +2692,22 @@ function SelfMobileProfileHome({
             </div>
           </div>
 
-          <div className="mt-3">
-            <ProfilePresenceControl
-              locale={locale}
-              onStatusChange={onPresenceStatusChange}
-              status={presenceStatus}
-            />
-          </div>
-          <MobileProfileBioEditor
-            bio={profile.bio}
-            locale={locale}
-            nickname={profile.nickname}
-          />
-
-          <CharmProgressPanel
-            className="mt-5 py-1"
-            dashboard={dashboard}
-            locale={locale}
-          />
         </div>
 
-        <div className="mt-6 grid grid-cols-3">
-          <MobileStatLink
-            href={withLocale(locale, "/profile/hangouts")}
-            label={copy.created}
-            value={dashboard.createdActivityCount}
-          />
-          <MobileStatLink
-            href={withLocale(locale, "/profile/network")}
-            label={copy.friends}
-            value={dashboard.friendCount}
-          />
-          <MobileStatLink
-            href={withLocale(locale, "/profile/moments")}
-            label={copy.moments}
-            value={dashboard.momentCount}
-          />
-        </div>
+        <MobileProfileSummaryStrip dashboard={dashboard} locale={locale} />
       </section>
 
-      <section className="mt-6 grid grid-cols-3 gap-y-4">
+      <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/network")}
+          icon={UsersRound}
+          label={copy.friendsFeature}
+          tone="blue"
+        />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/invite")}
-          icon={UserRoundPlus}
-          label={copy.invite}
+          icon={Ticket}
+          label={copy.inviteCode}
           tone="pink"
         />
         <ProfileFeatureLink
@@ -1949,18 +2736,25 @@ function SelfMobileProfileHome({
           status={String(achievementCatalog.length)}
           tone="gold"
         />
-        <Link
+        <ProfileFeatureLink
           href={withLocale(locale, "/account/settings")}
-          className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
-        >
-          <span className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[#FFF7DC] text-[#5F5743] shadow-[0_10px_18px_rgba(160,128,40,0.12)] ring-1 ring-[#E8D59D]">
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </span>
-          <span className="text-[11px] font-bold text-[#1D1D1B]">
-            {copy.settings}
-          </span>
-        </Link>
+          icon={Settings}
+          label={copy.settings}
+          tone="gray"
+        />
       </section>
+
+      <ProfilePreviewTabs
+        achievementPreviewItems={achievementPreviewItems}
+        dashboard={dashboard}
+        locale={locale}
+      />
+
+      <MobileProfileBioEditor
+        bio={profile.bio}
+        locale={locale}
+        nickname={profile.nickname}
+      />
     </div>
   );
 }
@@ -2018,6 +2812,7 @@ function WerewolfStatsPanel({
 }
 
 export function ProfileDashboardView({
+  achievementPreviewItems = [],
   dashboard,
   hasDashboardError = false,
   isAuthenticated = false,
@@ -2078,6 +2873,7 @@ export function ProfileDashboardView({
       <div className="md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
+            achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
             onPresenceStatusChange={setCurrentPresenceStatus}

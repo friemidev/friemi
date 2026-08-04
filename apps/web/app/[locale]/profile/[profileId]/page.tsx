@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
-import { getPublicAchievementWall } from "@/features/achievements/queries/getUserAchievements";
+import {
+  getPublicAchievementWall,
+  getUnlockedAchievementWall,
+} from "@/features/achievements/queries/getUserAchievements";
 import { ProfileVisitTracker } from "@/features/profile-visits/components/ProfileVisitTracker";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
@@ -75,25 +78,31 @@ export default async function PublicProfilePage({
   const dashboardPromise = isSelf
     ? getProfileDashboard(profile.id)
     : getPublicProfileDashboard(profile.id, viewerProfile?.id);
-  const [dashboardResult, publicAchievements] = await Promise.all([
-    dashboardPromise
-      .then((dashboard) => ({ dashboard, error: null }))
-      .catch((error: unknown) => {
-        console.error("Failed to load public profile dashboard", error);
+  const [dashboardResult, publicAchievements, achievementPreviewItems] =
+    await Promise.all([
+      dashboardPromise
+        .then((dashboard) => ({ dashboard, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load public profile dashboard", error);
 
-        return {
-          dashboard: getEmptyProfileDashboard(),
-          error,
-        };
-      }),
-    isSelf
-      ? Promise.resolve([])
-      : getPublicAchievementWall(profile.id).catch((error: unknown) => {
-          console.error("Failed to load public achievement wall", error);
-
-          return [];
+          return {
+            dashboard: getEmptyProfileDashboard(),
+            error,
+          };
         }),
-  ]);
+      isSelf
+        ? Promise.resolve([])
+        : getPublicAchievementWall(profile.id).catch((error: unknown) => {
+            console.error("Failed to load public achievement wall", error);
+
+            return [];
+          }),
+      getUnlockedAchievementWall(profile.id).catch((error: unknown) => {
+        console.error("Failed to load unlocked public achievements", error);
+
+        return [];
+      }),
+    ]);
 
   return (
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
@@ -107,6 +116,7 @@ export default async function PublicProfilePage({
         isSelf={isSelf}
         locale={locale}
         profile={profile}
+        achievementPreviewItems={achievementPreviewItems}
         publicAchievements={publicAchievements}
       />
     </PageContainer>

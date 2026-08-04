@@ -32,6 +32,7 @@ function shouldHideHeaderOnMobile(pathname: string, locale: string) {
     pathname === withLocale(locale, "/lobby") ||
     pathname === withLocale(locale, "/activities") ||
     pathname === withLocale(locale, "/notifications") ||
+    pathname === withLocale(locale, "/search") ||
     pathname === localizedAdminActivityPriorityPath ||
     pathname.startsWith(localizedActivitiesPrefix) ||
     pathname.startsWith(localizedFootprintsPrefix) ||

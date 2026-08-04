@@ -128,16 +128,14 @@ export function FriemiAlertProvider({ locale }: FriemiAlertProviderProps) {
   }
 
   return createPortal(
-    <div className="friemi-alert-overlay fixed inset-0 z-[1200] flex items-center justify-center bg-[#111210]/34 px-5 py-[calc(1.25rem+env(safe-area-inset-top))] backdrop-blur-[3px]">
+    <div className="friemi-alert-overlay fixed inset-0 z-[1200] flex items-center justify-center bg-[#F7F8F4] px-5 py-[calc(1.25rem+env(safe-area-inset-top))]">
       <section
         aria-describedby={messageId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="friemi-alert-card relative w-full max-w-[20.5rem] overflow-hidden rounded-[1.45rem] border border-[#D6D5B2]/75 bg-[linear-gradient(180deg,#FFFFFF_0%,#FEFFF9_72%,#FFF5E6_100%)] text-[#111210] shadow-[0_22px_56px_rgba(29,29,27,0.18)] ring-1 ring-white/90"
+        className="friemi-alert-card relative w-full max-w-[20.5rem] overflow-hidden rounded-[1.45rem] border border-[#D6D5B2] bg-white text-[#111210] shadow-[0_22px_56px_rgba(29,29,27,0.16)]"
         role="alertdialog"
       >
-        <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-[#8AB68E]/16 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 left-4 h-24 w-24 rounded-full bg-[#F09182]/12 blur-2xl" />
         <div className="relative px-5 pb-4 pt-5">
           <div className="flex items-center">
             <span className="relative block h-8 w-[6.9rem]">

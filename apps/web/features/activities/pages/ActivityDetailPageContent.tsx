@@ -3,13 +3,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { after } from "next/server";
+import type { ReactNode } from "react";
 import { formatActivityDate } from "@chill-club/shared";
 import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
-  FileText,
   MapPin,
   MessageCircle,
   PencilLine,
@@ -78,7 +78,6 @@ import { ActivityHistoryBackButton } from "@/features/activities/components/Acti
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
-import { getGoogleMapsSearchUrl } from "@/features/maps/googleMaps";
 import { ActivityOrganizerContactForm } from "@/features/direct-messages/components/ActivityOrganizerContactForm";
 import { getUnreadActivityRoomMessageCount } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getPublicEventCopy } from "@/features/public-events/copy";
@@ -172,10 +171,12 @@ function getLobbyLayerTitle(locale: string) {
 }
 
 function ActivityLayerHeader({
+  action,
   backHref,
   returnMode = "context",
   title,
 }: {
+  action?: ReactNode;
   backHref: string;
   returnMode?: "context" | "path";
   title: string;
@@ -201,6 +202,7 @@ function ActivityLayerHeader({
       <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
         {title}
       </p>
+      <div className="flex justify-end">{action}</div>
     </div>
   );
 }
@@ -543,7 +545,7 @@ function ActivityPlayAgainLink({
   return (
     <Link
       className={cn(
-        "mx-auto mt-2 hidden min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-xs font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98] md:inline-flex",
+        "mx-auto mt-2 hidden w-fit items-center justify-center gap-1.5 bg-transparent text-xs font-black leading-6 text-[#156240] transition hover:text-[#0F4D32] active:scale-[0.98] md:inline-flex",
         className,
       )}
       href={withLocale(
@@ -1549,29 +1551,13 @@ export async function ActivityDetailPageContent({
       : locale === "en"
         ? "Share plan"
         : "聚吧分享";
-  const mobileMapLabel =
-    locale === "fr" ? "Carte" : locale === "en" ? "Map" : "地图";
-  const mobileShareButtonLabel =
-    locale === "fr" ? "Partager" : locale === "en" ? "Share" : "分享";
+  const mobileInlineDetailLabel =
+    locale === "fr" ? "Détails" : locale === "en" ? "Details" : "详情";
+  const mobileMapOpenLabel =
+    locale === "fr" ? "Y aller" : locale === "en" ? "Go" : "前往";
   const operatorActionCopy = getActivityOperatorActionCopy(locale);
   const mobileCloseLabel =
     locale === "fr" ? "Fermer" : locale === "en" ? "Close" : "关闭";
-  const mobileMapHref =
-    !protectedLocationNotice && !activityAddressUrl
-      ? getGoogleMapsSearchUrl({
-          address: activityLocationLabel,
-          city: activity.city,
-          latitude: activity.latitude,
-          longitude: activity.longitude,
-          queryAddress: activity.address,
-        })
-      : null;
-  const mobileDetailActionButtonClassName =
-    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[12px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]";
-  const mobileDetailSummaryButtonClassName = cn(
-    mobileDetailActionButtonClassName,
-    "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-  );
   const mobileParticipantPreview = participantPreview.slice(0, 6);
   const extraParticipantCount = Math.max(
     activity.participantCount - mobileParticipantPreview.length,
@@ -1631,22 +1617,56 @@ export async function ActivityDetailPageContent({
       sharePath={privateSharePath}
     />
   );
-  const renderActivityDetailTogglePanels = (className?: string) => (
-    <div className={cn("space-y-3 border-y border-[#E7E1CA] py-3", className)}>
-      <div className="flex flex-wrap items-start gap-2">
-        {hasActivityDescription ? (
-          <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
-            <summary className={mobileDetailSummaryButtonClassName}>
-              <FileText className="h-3.5 w-3.5" />
-              <span>
-                {locale === "en"
-                  ? "Details"
-                  : locale === "fr"
-                    ? "Détails"
-                    : "详情"}
+  const canShowMobileMapPreview =
+    !protectedLocationNotice &&
+    !activityAddressUrl &&
+    (activity.latitude !== null ||
+      activity.longitude !== null ||
+      Boolean(activityLocationLabel.trim()));
+  const hasMobileDetailContent =
+    hasActivityDescription ||
+    Boolean(protectedLocationNotice) ||
+    canShowMobileMapPreview;
+  const renderMobileActivityDescriptionDisclosure = () =>
+    hasMobileDetailContent ? (
+      <details className="group">
+        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold leading-5 text-[#111210]/55">
+            <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+                <span>{activityParticipantLabel}</span>
               </span>
-            </summary>
-            <div className="mt-3 space-y-3 px-1">
+              <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+                <span className="truncate">{activityDateLabel}</span>
+              </span>
+            </div>
+            <span className="shrink-0 whitespace-nowrap text-[12px] font-black text-[#156240] underline-offset-2 group-open:underline">
+              {mobileInlineDetailLabel}
+            </span>
+          </div>
+        </summary>
+        <div className="mt-3 space-y-3 border-t border-[#E7E1CA] pt-3">
+          {protectedLocationNotice ? (
+            <ProtectedDetailNotice
+              icon={protectedLocationIsOnline ? "link" : "address"}
+              label={protectedLocationNotice}
+            />
+          ) : canShowMobileMapPreview ? (
+            <ActivityMapPreview
+              address={activityLocationLabel}
+              city={activity.city}
+              className="shadow-none"
+              latitude={activity.latitude}
+              longitude={activity.longitude}
+              openLabel={mobileMapOpenLabel}
+              queryAddress={activity.address}
+              title={t.activityDetail.locationMapTitle}
+            />
+          ) : null}
+          {hasActivityDescription ? (
+            <div className="space-y-3">
               <h2 className="text-sm font-black text-ink">
                 {locale === "en"
                   ? "Plan note"
@@ -1694,67 +1714,80 @@ export async function ActivityDetailPageContent({
                 locale={locale}
               />
             </div>
-          </details>
-        ) : null}
-
-        {activity.publicEvent ? (
-          <details className="group min-w-0 shrink-0 [&[open]]:basis-full">
-            <summary className={mobileDetailSummaryButtonClassName}>
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>{publicEventCopy.linkedEventTitle}</span>
-            </summary>
-            <div className="mt-3 space-y-2 px-1">
-              <p className="line-clamp-2 text-base font-black leading-6 text-ink">
-                {activity.publicEvent.title}
-              </p>
-              <p className="text-sm leading-6 text-zinc-600">
-                {publicEventCopy.linkedEventDescription}
-              </p>
-              {activity.publicEvent.status === "CANCELLED" ? (
-                <p className="inline-flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-700 ring-1 ring-red-200">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{publicEventCopy.eventCancelled}</span>
-                </p>
-              ) : null}
-              <Link
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white transition hover:bg-[#0F4D32] active:scale-[0.98]"
-                href={withLocale(
-                  locale,
-                  `/public-events/${activity.publicEvent.id}`,
-                )}
-              >
-                {publicEventCopy.linkedEventCta}
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            </div>
-          </details>
-        ) : null}
-
-        <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
-          {mobileMapHref ? (
-            <a
-              aria-label={t.activityDetail.openGoogleMaps}
-              className={mobileDetailActionButtonClassName}
-              href={mobileMapHref}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <MapPin className="h-3.5 w-3.5" strokeWidth={2.4} />
-              <span>{mobileMapLabel}</span>
-            </a>
           ) : null}
-          <ActivityShareDialogButton
-            className="h-auto w-auto gap-1.5 px-3 py-1.5 text-[12px] font-black leading-none ring-[#D6D5B2] shadow-none hover:bg-[#F6FAF4]"
-            closeLabel={mobileCloseLabel}
-            label={mobileShareLabel}
-            triggerLabel={mobileShareButtonLabel}
-          >
-            {renderTeamShareTools({ collapsible: false })}
-          </ActivityShareDialogButton>
         </div>
+      </details>
+    ) : (
+      <div className="flex min-w-0 items-center gap-3 overflow-hidden text-[12px] font-semibold leading-5 text-[#111210]/55">
+        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+          <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+          <span>{activityParticipantLabel}</span>
+        </span>
+        <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
+          <span className="truncate">{activityDateLabel}</span>
+        </span>
       </div>
-    </div>
-  );
+    );
+
+  const renderMobilePriceAndLinkedEventRow = () => {
+    if (!activityPriceLabel && !activity.publicEvent) {
+      return null;
+    }
+
+    if (!activity.publicEvent) {
+      return activityPriceLabel ? (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <WalletCards className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
+          <span className="truncate">{activityPriceLabel}</span>
+        </div>
+      ) : null;
+    }
+
+    return (
+      <details className="group">
+        <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-3 [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            {activityPriceLabel ? (
+              <>
+                <WalletCards className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
+                <span className="truncate">{activityPriceLabel}</span>
+              </>
+            ) : (
+              <span aria-hidden="true" />
+            )}
+          </span>
+          <span className="inline-flex max-w-[8.25rem] shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap py-0.5 text-[12px] font-black leading-6 text-[#156240] transition active:scale-[0.98]">
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 truncate leading-6">
+              {publicEventCopy.linkedEventTitle}
+            </span>
+          </span>
+        </summary>
+        <div className="mt-3 space-y-2 border-t border-[#E7E1CA] pt-3">
+          <p className="line-clamp-2 text-sm font-black leading-5 text-ink">
+            {activity.publicEvent.title}
+          </p>
+          <p className="text-xs font-semibold leading-5 text-[#111210]/55">
+            {publicEventCopy.linkedEventDescription}
+          </p>
+          {activity.publicEvent.status === "CANCELLED" ? (
+            <p className="inline-flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700 ring-1 ring-red-200">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{publicEventCopy.eventCancelled}</span>
+            </p>
+          ) : null}
+          <Link
+            className="inline-flex h-8 items-center justify-center gap-2 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition hover:bg-[#0F4D32] active:scale-[0.98]"
+            href={withLocale(locale, `/public-events/${activity.publicEvent.id}`)}
+          >
+            {publicEventCopy.linkedEventCta}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </details>
+    );
+  };
   const renderActivityDetailDesktop = () =>
     hasActivityDescription || activity.publicEvent ? (
       <div className="hidden space-y-4 border-y border-[#E7E1CA] py-4 md:block">
@@ -1850,6 +1883,15 @@ export async function ActivityDetailPageContent({
         locale={locale}
       />
       <ActivityLayerHeader
+        action={
+          <ActivityShareDialogButton
+            className="h-9 w-9 bg-white text-[#111210]/70 shadow-none ring-[#E7E1CA] hover:bg-white hover:text-[#156240]"
+            closeLabel={mobileCloseLabel}
+            label={mobileShareLabel}
+          >
+            {renderTeamShareTools({ collapsible: false })}
+          </ActivityShareDialogButton>
+        }
         backHref={withLocale(locale, "/lobby")}
         title={mobileDetailTitle}
       />
@@ -1910,29 +1952,20 @@ export async function ActivityDetailPageContent({
       </div>
       <div className="space-y-4 px-1 sm:px-0">
         <div className="md:hidden">
-          <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1.5 text-[12px] font-semibold leading-5 text-[#111210]/55">
-            <span className="inline-flex items-center gap-1.5">
-              <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
-              {activityParticipantLabel}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8AB68E]" />
-              {activityDateLabel}
-            </span>
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
-              <span className="line-clamp-1">{activityShareLocationLabel}</span>
-            </span>
-            {activityPriceLabel ? (
-              <span className="inline-flex items-center gap-1.5">
-                <WalletCards className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
-                {activityPriceLabel}
+          <div className="space-y-1.5 text-[12px] font-semibold leading-5 text-[#111210]/55">
+            {renderMobileActivityDescriptionDisclosure()}
+            <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1.5">
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F09182]" />
+                <span className="line-clamp-1">
+                  {activityShareLocationLabel}
+                </span>
               </span>
-            ) : null}
+            </div>
+            {renderMobilePriceAndLinkedEventRow()}
           </div>
         </div>
         <div className="space-y-4 md:hidden">
-          {renderActivityDetailTogglePanels()}
           <div>
             <div className="flex items-center justify-between gap-3">
               <p className="text-[12px] font-black leading-none text-[#111210]/72">
@@ -1941,7 +1974,7 @@ export async function ActivityDetailPageContent({
               {showActivityRoomEntry ? (
                 <ActivityPlayAgainLink
                   activityId={activity.id}
-                  className="ml-auto mr-0 mt-0 inline-flex min-h-8 max-w-[7.5rem] px-3 text-[11px] md:hidden"
+                  className="ml-auto mr-0 mt-0 inline-flex min-h-7 max-w-[7.5rem] px-0.5 text-[11px] md:hidden"
                   locale={locale}
                 />
               ) : null}
