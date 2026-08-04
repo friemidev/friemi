@@ -2699,6 +2699,12 @@ function SelfMobileProfileHome({
 
       <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
         <ProfileFeatureLink
+          href={withLocale(locale, "/profile/gift-wall")}
+          icon={Gift}
+          label={copy.giftWall}
+          tone="pink"
+        />
+        <ProfileFeatureLink
           href={withLocale(locale, "/profile/network")}
           icon={UsersRound}
           label={copy.friendsFeature}
@@ -2711,23 +2717,10 @@ function SelfMobileProfileHome({
           tone="pink"
         />
         <ProfileFeatureLink
-          href={withLocale(locale, "/profile/bag")}
-          icon={Package}
-          label={copy.bag}
-          locked
-          lockedLabel={copy.soon}
-        />
-        <ProfileFeatureLink
           href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
           tone="gold"
-        />
-        <ProfileFeatureLink
-          href={withLocale(locale, "/profile/gift-wall")}
-          icon={Gift}
-          label={copy.giftWall}
-          tone="pink"
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/achievements")}
@@ -2735,6 +2728,13 @@ function SelfMobileProfileHome({
           label={copy.achievements}
           status={String(achievementCatalog.length)}
           tone="gold"
+        />
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/bag")}
+          icon={Package}
+          label={copy.bag}
+          locked
+          lockedLabel={copy.soon}
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/account/settings")}
