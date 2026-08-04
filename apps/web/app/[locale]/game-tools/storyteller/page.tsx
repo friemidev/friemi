@@ -155,7 +155,11 @@ export default async function StorytellerToolPage({
     gameToolDefinitions[1];
 
   return (
-    <PageContainer className="max-w-[88rem] space-y-5 pb-28 pt-4 sm:pb-14 sm:pt-7">
+    <PageContainer
+      className="max-w-[88rem] space-y-5 sm:pb-14 sm:pt-7"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <Link
         className="inline-flex h-10 items-center gap-2 rounded-full border border-[#8AB68E]/55 bg-white/82 px-4 text-sm font-bold text-[#156240] shadow-sm transition hover:bg-[#F1F2EC]"
         href={withLocale(locale, "/game-tools")}

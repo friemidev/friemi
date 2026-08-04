@@ -1,20 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import {
-  CalendarDays,
-  ChevronDown,
-  MessageCircle,
-  UserPlus,
-} from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
-import {
-  AddFriendDialog,
-  IncomingFriendRequestsPanel,
-  RequestCountBadge,
-} from "@/features/friends/components/FriendsDashboard";
+import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import { openDirectConversationAction } from "../actions/directMessageActions";
@@ -23,7 +13,6 @@ import type {
   DirectConversationActivitySignalViewModel,
   DirectMessageFriendRosterItemViewModel,
 } from "../queries/getDirectMessages";
-import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { MessageAvatar } from "./MessageAvatar";
 
 type DesktopFriendRosterPanelProps = {
@@ -32,10 +21,7 @@ type DesktopFriendRosterPanelProps = {
     activityId: string;
   } | null;
   currentUserProfileId: string;
-  currentUserFriendCode?: string | null;
   friends: DirectMessageFriendRosterItemViewModel[];
-  initialAddFriendOpen?: boolean;
-  incomingRequests?: FriendRequestViewModel[];
   locale: string;
   selectedConversationId?: string;
 };
@@ -43,20 +29,11 @@ type DesktopFriendRosterPanelProps = {
 export function DesktopFriendRosterPanel({
   activityContextQuery = null,
   currentUserProfileId,
-  currentUserFriendCode = null,
   friends,
-  initialAddFriendOpen = false,
-  incomingRequests = [],
   locale,
   selectedConversationId,
 }: DesktopFriendRosterPanelProps) {
-  const [addFriendOpen, setAddFriendOpen] = useState(
-    initialAddFriendOpen && incomingRequests.length > 0,
-  );
   const t = getDirectMessagesCopy(locale);
-  const redirectPath = selectedConversationId
-    ? `/messages/${selectedConversationId}`
-    : "/messages";
 
   return (
     <aside className="overflow-hidden rounded-[1.45rem] border border-sand bg-white/72 shadow-[0_18px_48px_rgba(21,98,64,0.08)] ring-1 ring-white/70 lg:flex lg:h-[calc(100dvh-6.5rem)] lg:flex-col">
@@ -72,26 +49,17 @@ export function DesktopFriendRosterPanel({
             {t.friendListDescription}
           </p>
         </div>
-        <button
-          type="button"
+        <Link
           className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition hover:-translate-y-0.5 hover:bg-team-bg hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-          aria-label={t.addFriend}
-          title={t.addFriend}
-          onClick={() => setAddFriendOpen(true)}
+          aria-label={t.findPeople}
+          href={withLocale(locale, "/search")}
+          title={t.findPeople}
         >
-          <UserPlus className="h-4 w-4" />
-          <RequestCountBadge count={incomingRequests.length} />
-        </button>
+          <Search className="h-4 w-4" />
+        </Link>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#FEFFF9]/72 p-2.5">
-        <IncomingFriendRequestsPanel
-          className="mb-3"
-          incomingRequests={incomingRequests}
-          locale={locale}
-          redirectPath={redirectPath}
-          returnTo="messages"
-        />
         {friends.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-sand bg-white/70 p-4">
             <h3 className="text-sm font-semibold text-ink">
@@ -104,7 +72,7 @@ export function DesktopFriendRosterPanel({
         ) : (
           friends.map((friend) => (
             <DesktopFriendRosterRow
-              key={friend.friendshipId}
+              key={friend.rosterId}
               currentUserProfileId={currentUserProfileId}
               friend={friend}
               isActive={friend.conversationId === selectedConversationId}
@@ -118,16 +86,6 @@ export function DesktopFriendRosterPanel({
           ))
         )}
       </div>
-
-      {addFriendOpen ? (
-        <AddFriendDialog
-          currentUserFriendCode={currentUserFriendCode}
-          incomingRequests={incomingRequests}
-          locale={locale}
-          onClose={() => setAddFriendOpen(false)}
-          returnTo="messages"
-        />
-      ) : null}
     </aside>
   );
 }
@@ -179,6 +137,8 @@ function DesktopFriendRosterRow({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
+  const unreadCount = friend.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -199,11 +159,18 @@ function DesktopFriendRosterRow({
     <>
       <MessageAvatar
         avatarUrl={friend.friend.avatarUrl}
+        isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
+        presenceDisplayStatus={friend.friend.presenceDisplayStatus}
       />
       <span className="min-w-0">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="truncate text-sm font-semibold">
+          <span
+            className={cn(
+              "truncate text-sm",
+              unreadCount > 0 ? "font-black" : "font-semibold",
+            )}
+          >
             {friend.friend.nickname}
           </span>
           <span
@@ -212,13 +179,22 @@ function DesktopFriendRosterRow({
               isActive ? "text-[#8E8383]" : "text-[#8E8383]",
             )}
           >
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
+          {unreadCount > 0 ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              {unreadBadgeText}
+            </span>
+          ) : null}
         </span>
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",
-            isActive ? "text-[#156240]" : "text-[#156240]",
+            unreadCount > 0
+              ? "font-black text-ink"
+              : isActive
+                ? "text-[#156240]"
+                : "text-[#156240]",
           )}
         >
           {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
@@ -251,6 +227,7 @@ function DesktopFriendRosterRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
+          <input name="redirectPath" type="hidden" value="/messages" />
           <input
             name="friendProfileId"
             type="hidden"

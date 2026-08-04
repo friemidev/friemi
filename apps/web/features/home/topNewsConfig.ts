@@ -23,14 +23,14 @@ type MobileHomeTopNewsConfigItem = {
 const mobileHomeTopNewsConfig: MobileHomeTopNewsConfigItem[] = [
   {
     active: true,
-    href: "/updates/v2_4",
-    id: "v2-4-release",
-    image: "/readme/v2_4/game-tools.png",
+    href: "/updates/v2_5",
+    id: "v2-5-release",
+    image: "/brand/v2_1/friemi-og-default-1200x630.png",
     order: 10,
     title: {
-      en: "Friemi v2.4 updates",
-      fr: "Nouveautes Friemi v2.4",
-      "zh-CN": "Friemi v2.4 更新",
+      en: "Friemi v2.5 updates",
+      fr: "Nouveautes Friemi v2.5",
+      "zh-CN": "Friemi v2.5 更新",
     },
   },
   {

@@ -42,22 +42,22 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       already: "Your check-in has already been sent.",
-      closed: "This hangout cannot be checked in.",
+      closed: "This plan cannot be checked in.",
       failed: "Could not check in right now.",
       setup: "Check-in is still being set up. Try again after the database update.",
       forbidden: "Only approved participants can check in.",
-      invalid: "This hangout was not found.",
+      invalid: "This plan was not found.",
       window: "Check-in opens 6 hours before start and closes 24 hours after the end.",
     };
   }
 
   return {
-    already: "你已经提交过签到，等待组局管理人员确认。",
-    closed: "这个组局当前不能签到。",
+    already: "你已经提交过签到，等待聚吧管理人员确认。",
+    closed: "这个聚吧当前不能签到。",
     failed: "暂时无法签到，请稍后再试。",
     setup: "签到功能正在同步数据库，请更新数据库后再试。",
     forbidden: "只有已通过的参与者可以签到。",
-    invalid: "没有找到这个组局。",
+    invalid: "没有找到这个聚吧。",
     window: "签到会在开始前 6 小时开放，并在结束后 24 小时关闭。",
   };
 }

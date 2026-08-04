@@ -10,6 +10,7 @@ type ActivityShareDialogButtonProps = {
   className?: string;
   closeLabel: string;
   label: string;
+  triggerLabel?: string;
 };
 
 export function ActivityShareDialogButton({
@@ -17,6 +18,7 @@ export function ActivityShareDialogButton({
   className,
   closeLabel,
   label,
+  triggerLabel,
 }: ActivityShareDialogButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -25,20 +27,26 @@ export function ActivityShareDialogButton({
       <button
         aria-label={label}
         className={cn(
-          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95",
+          "inline-flex h-9 w-9 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white text-[#156240] shadow-sm ring-1 ring-[#8AB68E] transition active:scale-95",
           className,
         )}
         onClick={() => setOpen(true)}
         type="button"
       >
-        <Share2 className="h-4 w-4" strokeWidth={2.4} />
+        <Share2
+          className={cn("h-4 w-4", triggerLabel ? "h-3.5 w-3.5" : null)}
+          strokeWidth={2.4}
+        />
+        {triggerLabel ? (
+          <span className="whitespace-nowrap leading-none">{triggerLabel}</span>
+        ) : null}
       </button>
 
       {open ? (
         <div
           aria-label={label}
           aria-modal="true"
-          className="fixed inset-0 z-[85] flex items-end bg-black/38 px-3 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:items-center sm:justify-center sm:p-6"
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/38 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:px-4 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pt-[calc(env(safe-area-inset-top)+1rem)]"
           role="dialog"
         >
           <button
@@ -47,7 +55,7 @@ export function ActivityShareDialogButton({
             onClick={() => setOpen(false)}
             type="button"
           />
-          <div className="relative max-h-[82svh] w-full max-w-md overflow-y-auto rounded-[1.25rem] bg-[#FEFFF9] p-3 shadow-2xl ring-1 ring-[#8AB68E]">
+          <div className="relative max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[1.25rem] bg-[#FEFFF9] p-3 shadow-2xl ring-1 ring-[#8AB68E] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem)]">
             <button
               aria-label={closeLabel}
               className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-zinc-600 shadow-sm ring-1 ring-[#D6D5B2] transition active:scale-95"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, Copy, Pencil, Save, X } from "lucide-react";
@@ -9,9 +10,11 @@ import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
 import { useViewerProfile } from "./ViewerProfileProvider";
 
 type ProfileIdentityFormProps = {
+  avatarUrl?: string | null;
   bio?: string | null;
   friendCode: string;
   locale: string;
@@ -21,17 +24,22 @@ type ProfileIdentityFormProps = {
 const initialState: UpdateProfileIdentityState = {};
 
 export function ProfileIdentityForm({
+  avatarUrl = null,
   bio = null,
   friendCode,
   locale,
   nickname,
 }: ProfileIdentityFormProps) {
   const { setNickname } = useViewerProfile();
+  const router = useRouter();
   const [state, formAction] = useActionState(
     updateProfileIdentityAction,
     initialState,
   );
   const [editing, setEditing] = useState(false);
+  const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const [bioValue, setBioValue] = useState(bio ?? "");
   const [nicknameValue, setNicknameValue] = useState(nickname);
   const [copied, setCopied] = useState(false);
@@ -58,6 +66,11 @@ export function ProfileIdentityForm({
   }, [nickname]);
 
   useEffect(() => {
+    setAvatarValue(avatarUrl);
+    setAvatarDirty(false);
+  }, [avatarUrl]);
+
+  useEffect(() => {
     setBioValue(bio ?? "");
   }, [bio]);
 
@@ -70,9 +83,21 @@ export function ProfileIdentityForm({
     if (state.bio !== undefined) {
       setBioValue(state.bio ?? "");
     }
+    if (state.avatarUrl !== undefined) {
+      setAvatarValue(state.avatarUrl ?? "");
+      setAvatarDirty(false);
+    }
     setNicknameValue(state.nickname);
     setEditing(false);
-  }, [setNickname, state.nickname, state.success]);
+    router.refresh();
+  }, [
+    router,
+    setNickname,
+    state.avatarUrl,
+    state.bio,
+    state.nickname,
+    state.success,
+  ]);
 
   async function copyFriendCode() {
     try {
@@ -132,6 +157,25 @@ export function ProfileIdentityForm({
         >
           <input name="locale" type="hidden" value={locale} />
           <input name="afterSave" type="hidden" value="refresh" />
+          {avatarDirty && avatarValue ? (
+            <input name="avatarUrl" type="hidden" value={avatarValue} />
+          ) : null}
+          <div className="grid gap-2">
+            <span className="text-xs font-medium text-zinc-500">
+              {locale === "en" ? "Avatar" : locale === "fr" ? "Avatar" : "头像"}
+            </span>
+            <ProfileAvatarPicker
+              initial={nicknameValue.charAt(0).toUpperCase()}
+              locale={locale}
+              name={nicknameValue}
+              onChange={(nextAvatarUrl) => {
+                setAvatarValue(nextAvatarUrl);
+                setAvatarDirty(true);
+              }}
+              onUploadingChange={setIsAvatarUploading}
+              value={avatarValue}
+            />
+          </div>
           <label className="grid gap-1.5">
             <span className="text-xs font-medium text-zinc-500">
               {t.nicknameLabel}
@@ -162,6 +206,7 @@ export function ProfileIdentityForm({
             <p className="text-xs text-red-600">{state.formError}</p>
           ) : null}
           <ProfileIdentitySubmitButton
+            disabled={isAvatarUploading}
             label={t.saveNickname}
             pendingLabel={t.savingNickname}
           />
@@ -172,9 +217,11 @@ export function ProfileIdentityForm({
 }
 
 function ProfileIdentitySubmitButton({
+  disabled = false,
   label,
   pendingLabel,
 }: {
+  disabled?: boolean;
   label: string;
   pendingLabel: string;
 }) {
@@ -183,7 +230,7 @@ function ProfileIdentitySubmitButton({
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       variant="secondary"
       className="h-10 gap-2 whitespace-nowrap bg-white"
     >

@@ -240,9 +240,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "favorites":
         return "Favoris";
       case "friendHosted":
-        return "Amis hotes";
+        return "Vos suivis";
       case "friendJoined":
-        return "Amis inscrits";
+        return "Suivis inscrits";
       default:
         return fallback;
     }
@@ -259,9 +259,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
       case "favorites":
         return "Favorites";
       case "friendHosted":
-        return "Hosted by friends";
+        return "People you follow host";
       case "friendJoined":
-        return "Joined by friends";
+        return "People you follow joined";
       default:
         return fallback;
     }
@@ -277,9 +277,9 @@ function getFilterLabel(locale: string, id: LobbyFilterId, fallback: string) {
     case "favorites":
       return "我收藏的";
     case "friendHosted":
-      return "好友发起";
+      return "关注的人发起";
     case "friendJoined":
-      return "好友参加";
+      return "关注的人参加";
     default:
       return fallback;
   }
@@ -304,7 +304,7 @@ function getEmptyCategoryCopy(locale: string) {
 
   return {
     title: "这里暂时还没有内容。",
-    description: "可以切换看看其他分类，先组个局，或者去发现新的活动。",
+    description: "可以切换看看其他分类，也可以先发起一场聚吧。",
   };
 }
 
@@ -336,10 +336,10 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
   if (locale === "fr") {
     return [
       {
-        href: "/friends",
-        label: "Ajouter des amis",
+        href: "/search",
+        label: "Trouver des personnes",
         description:
-          "Ajoutez d'abord vos proches. Dès qu'ils lancent un plan ou rejoignent une sortie, vous le verrez ici.",
+          "Suivez des personnes qui vous intéressent. Leurs groupes apparaîtront ici.",
         tone: "primary",
       },
       {
@@ -362,10 +362,10 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
   if (locale === "en") {
     return [
       {
-        href: "/friends",
-        label: "Add friends first",
+        href: "/search",
+        label: "Find people",
         description:
-          "Bring your people in first. As soon as they start a plan or join one, it will show up here.",
+          "Follow people you are interested in. Their plans will appear here.",
         tone: "primary",
       },
       {
@@ -387,17 +387,16 @@ function getEmptyLobbyActions(locale: string): EmptyLobbyAction[] {
 
   return [
     {
-      href: "/friends",
-      label: "先去加好友",
-      description:
-        "把常一起玩的人先加进来。他们一组局、一起报名，你马上就能在这里看到。",
+      href: "/search",
+      label: "去找人",
+      description: "关注几个感兴趣的人。他们发起或参加聚吧时，这里会显示。",
       tone: "primary",
     },
     {
       href: "/activities/new",
-      label: "我来组局",
+      label: "聚聚",
       description:
-        "公园、逛展、看电影，想到什么就先组个局，看看谁会跟上你一起出发。",
+        "公园、逛展、看电影，想到什么就先聚聚，看看谁会跟上你一起出发。",
       tone: "secondary",
     },
     {
@@ -432,7 +431,7 @@ function getLobbyFilterCopy(locale: string) {
   return {
     category: "范围",
     status: "状态",
-    title: "筛选组局",
+    title: "筛选聚吧",
     type: "类型",
   };
 }
@@ -807,14 +806,14 @@ function getActivityLobbyPreviewCopy(locale: string) {
   }
 
   return {
-    eyebrow: "组队大厅",
+    eyebrow: "聚吧",
     title: "先逛逛",
-    description: "公开组局可以直接看，登录后可以报名、收藏和管理。",
+    description: "公开聚吧可以直接看，登录后可以报名、收藏和管理。",
     signIn: "登录",
     browse: "看活动",
-    emptyTitle: "暂时还没有公开组局",
-    emptyDescription: "有新的公开组局后，会先显示在这里。",
-    sectionTitle: "公开组局",
+    emptyTitle: "暂时还没有公开聚吧",
+    emptyDescription: "有新的公开聚吧后，会先显示在这里。",
+    sectionTitle: "公开聚吧",
   };
 }
 
@@ -2652,10 +2651,10 @@ export function ActivityLobbyView({
           <div className="sm:hidden">
             <button
               type="button"
-              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#8AB68E] bg-[linear-gradient(135deg,rgba(255,250,242,0.98),rgba(247,255,243,0.94))] px-3 text-left shadow-[0_8px_20px_rgba(29,29,27,0.07)] transition active:scale-[0.99]"
+              className="group grid h-11 w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-full border border-[#8AB68E] bg-white px-3 text-left transition active:scale-[0.99]"
               onClick={openMobileFilter}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] shadow-inner shadow-white/50 ring-1 ring-[#8AB68E]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0">
@@ -2691,8 +2690,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
-                        : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
+                        ? "border-[#156240] bg-[#156240] text-white"
+                        : "border-[#D6D5B2] bg-white text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2701,7 +2700,7 @@ export function ActivityLobbyView({
                         className={cn(
                           "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                           active
-                            ? "bg-white/78 text-[#156240]"
+                            ? "bg-white text-[#156240]"
                             : "bg-[#F1F2EC] text-[#156240]",
                         )}
                       >
@@ -2730,8 +2729,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:px-3.5 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240] shadow-[0_3px_8px_rgba(54,151,88,0.1)]"
-                        : "border-[#D6D5B2] bg-white/88 text-[#156240] hover:border-[#8AB68E] hover:bg-white",
+                        ? "border-[#156240] bg-[#156240] text-white"
+                        : "border-[#D6D5B2] bg-white text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2753,8 +2752,8 @@ export function ActivityLobbyView({
                     className={cn(
                       "inline-flex h-7 max-w-[8.75rem] shrink-0 items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition sm:h-9 sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-sm",
                       active
-                        ? "border-[#8AB68E] bg-[#F1F2EC] text-[#156240]"
-                        : "border-[#D6D5B2] bg-team-bg text-[#156240] hover:border-[#8AB68E]",
+                        ? "border-[#156240] bg-[#156240] text-white"
+                        : "border-[#D6D5B2] bg-white text-[#156240] hover:border-[#8AB68E]",
                     )}
                   >
                     <span className="min-w-0 truncate">{option.label}</span>
@@ -2762,7 +2761,7 @@ export function ActivityLobbyView({
                       className={cn(
                         "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs",
                         active
-                          ? "bg-white/70 text-[#156240]"
+                          ? "bg-white text-[#156240]"
                           : "bg-[#F1F2EC] text-[#156240]",
                       )}
                     >
@@ -2839,7 +2838,7 @@ export function ActivityLobbyView({
                 ? "Votre hall se remplira avec vos plans, mais vous pouvez déjà partir d'une sortie ouverte ou lancer votre premier groupe."
                 : locale === "en"
                   ? "Your own lobby will grow with your plans. For now, start from an open activity or create your first crew."
-                  : "你的个人组队动态会慢慢长出来。现在可以先从公开活动找人一起去，或者发起第一个局。"}
+                  : "你的聚吧记录会慢慢多起来。现在可以先从公开活动找人一起去，或者发起第一个聚吧。"}
             </p>
           </div>
 
@@ -2888,14 +2887,14 @@ export function ActivityLobbyView({
                       ? "Des occasions pour commencer"
                       : locale === "en"
                         ? "Good first chances"
-                        : "适合先组起来的机会"}
+                        : "适合先聚起来的机会"}
                   </h3>
                   <p className="mt-0.5 text-xs leading-5 text-zinc-500 sm:text-sm">
                     {locale === "fr"
                       ? "Ces sorties ouvertes peuvent devenir votre premier plan."
                       : locale === "en"
                         ? "Open activities that can become your first crew."
-                        : "这些公开活动可以直接变成你的第一个组局。"}
+                        : "这些公开活动可以直接变成你的第一个聚吧。"}
                   </p>
                 </div>
                 <Link
@@ -2994,14 +2993,14 @@ export function ActivityLobbyView({
                       ? "Transformez une sortie ouverte en plan"
                       : locale === "en"
                         ? "Turn an open activity into a crew"
-                        : "从一个公开活动开始组队"}
+                        : "从公开活动开始约人"}
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-zinc-600">
                     {locale === "fr"
                       ? "Votre reseau est encore leger. Ces sorties donnent tout de suite une raison de contacter quelqu'un."
                       : locale === "en"
                         ? "Your network is still light. These activities give you a concrete reason to start."
-                        : "好友和记录还少时，先用这些真实活动作为组队种子。"}
+                        : "关注和记录还少时，先用这些真实活动作为组局起点。"}
                   </p>
                 </div>
                 <Link

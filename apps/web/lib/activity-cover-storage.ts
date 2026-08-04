@@ -5,11 +5,20 @@ import { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 export { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
 
 export const maxActivityCoverFileSize = 4 * 1024 * 1024;
+export const maxProfileAvatarFileSize = 2 * 1024 * 1024;
 const defaultBucket = "activity-covers";
 const allowedMimeTypes = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "image/avif": "avif",
+  "image/gif": "gif",
+  "image/bmp": "bmp",
+} as const;
+const mimeTypeAliases = {
+  "image/jpg": "image/jpeg",
+  "image/x-png": "image/png",
+  "image/x-ms-bmp": "image/bmp",
 } as const;
 const readyBuckets = new Set<string>();
 
@@ -68,7 +77,7 @@ export function shouldMirrorCoverImage(imageUrl: string) {
 export function detectActivityCoverMimeType(
   buffer: Buffer,
 ): AllowedCoverMimeType | null {
-  if (buffer.length < 12) {
+  if (buffer.length < 8) {
     return null;
   }
 
@@ -96,7 +105,55 @@ export function detectActivityCoverMimeType(
     return "image/webp";
   }
 
+  const gifSignature = buffer.subarray(0, 6).toString("ascii");
+
+  if (gifSignature === "GIF87a" || gifSignature === "GIF89a") {
+    return "image/gif";
+  }
+
+  if (buffer[0] === 0x42 && buffer[1] === 0x4d) {
+    return "image/bmp";
+  }
+
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(4, 8).toString("ascii") === "ftyp"
+  ) {
+    const brands = buffer
+      .subarray(8, Math.min(buffer.length, 64))
+      .toString("ascii");
+
+    if (brands.includes("avif") || brands.includes("avis")) {
+      return "image/avif";
+    }
+  }
+
   return null;
+}
+
+export function normalizeActivityCoverMimeType(
+  mimeType: string | null | undefined,
+): AllowedCoverMimeType | null {
+  const normalized = mimeType?.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized in allowedMimeTypes) {
+    return normalized as AllowedCoverMimeType;
+  }
+
+  return (
+    mimeTypeAliases[normalized as keyof typeof mimeTypeAliases] ?? null
+  );
+}
+
+export function getAllowedActivityCoverMimeTypes() {
+  return [
+    ...Object.keys(allowedMimeTypes),
+    ...Object.keys(mimeTypeAliases),
+  ];
 }
 
 function getSafePathSegment(value: string) {
@@ -113,7 +170,7 @@ async function ensurePublicBucket(storage: StorageClient, bucket: string) {
   if (!bucketResult.error) {
     const updated = await storage.updateBucket(bucket, {
       public: true,
-      allowedMimeTypes: Object.keys(allowedMimeTypes),
+      allowedMimeTypes: getAllowedActivityCoverMimeTypes(),
       fileSizeLimit: maxActivityCoverFileSize,
     });
 
@@ -132,7 +189,7 @@ async function ensurePublicBucket(storage: StorageClient, bucket: string) {
 
   const created = await storage.createBucket(bucket, {
     public: true,
-    allowedMimeTypes: Object.keys(allowedMimeTypes),
+    allowedMimeTypes: getAllowedActivityCoverMimeTypes(),
     fileSizeLimit: maxActivityCoverFileSize,
   });
 
@@ -199,6 +256,42 @@ export async function uploadTopNewsImageBuffer(
   return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
     pathPrefix: "top-news",
   });
+}
+
+export async function uploadProfileAvatarBuffer(
+  userId: string,
+  fileBuffer: Buffer,
+  detectedMimeType: AllowedCoverMimeType,
+): Promise<ActivityCoverUploadResult> {
+  return uploadPublicImageBuffer(userId, fileBuffer, detectedMimeType, {
+    pathPrefix: "profile-avatars",
+  });
+}
+
+export function isUploadedProfileAvatarUrl(imageUrl: string) {
+  const config = getActivityCoverStorageConfig();
+
+  if (!config) {
+    return false;
+  }
+
+  try {
+    const url = new URL(imageUrl);
+    const supabaseUrl = new URL(config.supabaseUrl);
+    const expectedPrefix = `/storage/v1/object/public/${config.bucket}/profile-avatars/`;
+    const protocolAllowed =
+      process.env.NODE_ENV === "production"
+        ? url.protocol === "https:"
+        : url.protocol === "https:" || url.protocol === "http:";
+
+    return (
+      protocolAllowed &&
+      url.hostname === supabaseUrl.hostname &&
+      url.pathname.startsWith(expectedPrefix)
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function uploadPublicImageBuffer(

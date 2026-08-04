@@ -1,24 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import {
-  CalendarDays,
-  ChevronDown,
-  MessageCircle,
-  UserPlus,
-} from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
-import { Button } from "@chill-club/ui";
+import { CalendarDays, ChevronDown, MessageCircle, Search } from "lucide-react";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { withLocale } from "@/lib/routes";
-import {
-  AddFriendDialog,
-  IncomingFriendRequestsPanel,
-  RequestCountBadge,
-} from "@/features/friends/components/FriendsDashboard";
+import { cn } from "@/lib/utils";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
@@ -30,26 +19,16 @@ import { MessageAvatar } from "./MessageAvatar";
 
 type MobileFriendChatRosterProps = {
   currentUserProfileId: string;
-  currentUserFriendCode?: string | null;
   friends: DirectMessageFriendRosterItemViewModel[];
-  initialAddFriendOpen?: boolean;
-  incomingRequests?: FriendRequestViewModel[];
   locale: string;
 };
 
 export function MobileFriendChatRoster({
   currentUserProfileId,
-  currentUserFriendCode = null,
   friends,
-  initialAddFriendOpen = false,
-  incomingRequests = [],
   locale,
 }: MobileFriendChatRosterProps) {
-  const [addFriendOpen, setAddFriendOpen] = useState(
-    initialAddFriendOpen && incomingRequests.length > 0,
-  );
   const t = getDirectMessagesCopy(locale);
-  const redirectPath = "/messages";
 
   return (
     <section className="space-y-4 pb-24 lg:hidden">
@@ -62,16 +41,14 @@ export function MobileFriendChatRoster({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)]">
             <MessageCircle className="h-5 w-5" />
           </span>
-          <button
-            type="button"
+          <Link
             className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-moss shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-sand transition active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-moss/30"
-            aria-label={t.addFriend}
-            title={t.addFriend}
-            onClick={() => setAddFriendOpen(true)}
+            aria-label={t.findPeople}
+            href={withLocale(locale, "/search")}
+            title={t.findPeople}
           >
-            <UserPlus className="h-4 w-4" />
-            <RequestCountBadge count={incomingRequests.length} />
-          </button>
+            <Search className="h-4 w-4" />
+          </Link>
         </div>
         <div className="min-w-0">
           <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-moss">
@@ -86,13 +63,6 @@ export function MobileFriendChatRoster({
         </div>
       </div>
 
-      <IncomingFriendRequestsPanel
-        incomingRequests={incomingRequests}
-        locale={locale}
-        redirectPath={redirectPath}
-        returnTo="messages"
-      />
-
       {friends.length === 0 ? (
         <div className="rounded-[1.2rem] border border-dashed border-sand bg-white/70 p-5 shadow-[0_10px_24px_rgba(21,98,64,0.06)]">
           <h2 className="text-base font-semibold text-ink">
@@ -101,22 +71,19 @@ export function MobileFriendChatRoster({
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#156240]">
             {t.emptyFriendListDescription}
           </p>
-          <Button
-            type="button"
-            variant="secondary"
-            className="relative mt-5 h-11 gap-2 rounded-full bg-white px-5 text-moss ring-1 ring-sand"
-            onClick={() => setAddFriendOpen(true)}
+          <Link
+            className="relative mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-moss ring-1 ring-sand"
+            href={withLocale(locale, "/search")}
           >
-            <UserPlus className="h-4 w-4" />
-            {t.addFriend}
-            <RequestCountBadge count={incomingRequests.length} />
-          </Button>
+            <Search className="h-4 w-4" />
+            {t.findPeople}
+          </Link>
         </div>
       ) : (
         <div className="grid gap-2">
           {friends.map((friend) => (
             <MobileFriendChatRow
-              key={friend.friendshipId}
+              key={friend.rosterId}
               currentUserProfileId={currentUserProfileId}
               friend={friend}
               locale={locale}
@@ -124,16 +91,6 @@ export function MobileFriendChatRoster({
           ))}
         </div>
       )}
-
-      {addFriendOpen ? (
-        <AddFriendDialog
-          currentUserFriendCode={currentUserFriendCode}
-          incomingRequests={incomingRequests}
-          locale={locale}
-          onClose={() => setAddFriendOpen(false)}
-          returnTo="messages"
-        />
-      ) : null}
     </section>
   );
 }
@@ -149,6 +106,8 @@ function MobileFriendChatRow({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
+  const unreadCount = friend.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -162,18 +121,35 @@ function MobileFriendChatRow({
     <>
       <MessageAvatar
         avatarUrl={friend.friend.avatarUrl}
+        isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
+        presenceDisplayStatus={friend.friend.presenceDisplayStatus}
       />
       <span className="min-w-0">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="truncate text-sm font-semibold text-ink">
+          <span
+            className={cn(
+              "truncate text-sm text-ink",
+              unreadCount > 0 ? "font-black" : "font-semibold",
+            )}
+          >
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#8E8383]">
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
+          {unreadCount > 0 ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              {unreadBadgeText}
+            </span>
+          ) : null}
         </span>
-        <span className="mt-1 block truncate text-xs leading-5 text-[#156240]">
+        <span
+          className={cn(
+            "mt-1 block truncate text-xs leading-5",
+            unreadCount > 0 ? "font-black text-ink" : "text-[#156240]",
+          )}
+        >
           {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
         </span>
       </span>
@@ -195,6 +171,11 @@ function MobileFriendChatRow({
       ) : (
         <form action={openDirectConversationAction}>
           <input name="locale" type="hidden" value={locale} />
+          <input
+            name="redirectPath"
+            type="hidden"
+            value="/footprints?tab=message"
+          />
           <input
             name="friendProfileId"
             type="hidden"

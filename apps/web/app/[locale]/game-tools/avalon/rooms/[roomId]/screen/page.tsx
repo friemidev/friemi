@@ -76,7 +76,11 @@ export default async function AvalonPublicScreenPage({
   };
 
   return (
-    <PageContainer className="max-w-[110rem] pb-6 pt-4 sm:pt-6">
+    <PageContainer
+      className="max-w-[110rem] sm:pt-6"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <AvalonLiveRefresh
         enabled={room.status !== "FINISHED"}
         intervalMs={3500}

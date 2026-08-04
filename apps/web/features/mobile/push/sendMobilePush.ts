@@ -261,7 +261,15 @@ export async function sendMobilePushForNotification(notificationId: string) {
           nickname: true,
         },
       },
+      actorDisplayName: true,
       actorId: true,
+      charmGiftEvent: {
+        select: {
+          giftEmoji: true,
+          giftLabel: true,
+          totalCharmDelta: true,
+        },
+      },
       momentId: true,
       recipientId: true,
       type: true,
@@ -328,12 +336,17 @@ export async function sendMobilePushForNotification(notificationId: string) {
     const locale = normalizePushLocale(device.locale);
     const copy = getNotificationCopy({
       activityTitle: notification.activity?.title ?? null,
-      actorName: notification.actor?.nickname ?? null,
+      actorName:
+        notification.actor?.nickname ?? notification.actorDisplayName ?? null,
+      giftText: notification.charmGiftEvent
+        ? `${notification.charmGiftEvent.giftEmoji} ${notification.charmGiftEvent.giftLabel} +${notification.charmGiftEvent.totalCharmDelta}`
+        : null,
       locale,
       messageBody,
       type: notification.type,
     });
     const path = getNotificationPath({
+      actorId: notification.actorId,
       activityId: notification.activityId,
       momentId: notification.momentId,
       type: notification.type,

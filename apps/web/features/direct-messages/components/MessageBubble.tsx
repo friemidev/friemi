@@ -1,9 +1,9 @@
 "use client";
 
-import { formatActivityDate } from "@chill-club/shared";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
+import { formatChatMessageTime } from "@/lib/chatDateSeparators";
 import { getDirectMessagesCopy } from "../copy";
 import type { DirectMessageUserViewModel } from "../queries/getDirectMessages";
 import { MessageAvatar } from "./MessageAvatar";
@@ -114,7 +114,7 @@ export function MessageBubble({
               isMine ? "text-white/65" : "text-[#8E8383]",
             )}
           >
-            {statusLabel ?? formatActivityDate(createdAt, locale)}
+            {statusLabel ?? formatChatMessageTime(createdAt, locale)}
           </p>
         )}
       </div>
@@ -142,7 +142,13 @@ function MessageBubbleAvatar({
       }}
       title={user.nickname}
     >
-      <MessageAvatar avatarUrl={user.avatarUrl} name={user.nickname} size="sm" />
+      <MessageAvatar
+        avatarUrl={user.avatarUrl}
+        isOnline={user.isOnline}
+        name={user.nickname}
+        presenceDisplayStatus={user.presenceDisplayStatus}
+        size="sm"
+      />
     </ContextualDetailLink>
   );
 }

@@ -31,7 +31,7 @@ const reportCopy = {
     targetTypes: {
       USER_PROFILE: "用户",
       PUBLIC_EVENT: "活动",
-      ACTIVITY: "活动 / 组队",
+      ACTIVITY: "活动 / 聚吧",
       COMMENT: "评论",
       MOMENT: "足迹",
       MOMENT_COMMENT: "足迹评论",
@@ -86,7 +86,7 @@ const reportCopy = {
       reviewedBy: (name: string) => `处理人：${name}`,
       analytics: {
         averageReviewTime: "平均处理",
-        conversionRate: "转组队率",
+        conversionRate: "转聚吧率",
         hours: (count: number) => `${count} 小时`,
         lessThanOneHour: "< 1 小时",
         newReports: "新举报",
@@ -96,7 +96,7 @@ const reportCopy = {
           `最近 ${days} 天的举报处理和公共活动来源表现。`,
         operationsTitle: "运营概览",
         pendingReports: "待处理",
-        publicEventTeams: "转成组队",
+        publicEventTeams: "转成聚吧",
         sourceClicks: "来源点击",
         targetDistribution: "举报对象",
       },

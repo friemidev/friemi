@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PaginationControl } from "@/components/ui/PaginationControl";
 import { ActivityAgendaList } from "@/features/activities/components/ActivityAgendaList";
+import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import { ActivityResultsFilterBar } from "@/features/activities/components/ActivityResultsFilterBar";
 import { ActivityCard } from "@/features/activities/components/ActivityCard";
 import { ActivityFilters } from "@/features/activities/components/ActivityFilters";
@@ -337,6 +338,26 @@ export default async function ActivitiesPage({
     }
   }
 
+  const emptySwipeActivities =
+    !activitiesResult.error &&
+    activitiesResult.list &&
+    activitiesResult.list.activities.length === 0
+      ? await perf
+          .measure("activity.emptySwipe", () =>
+            getActivityList(normalizeActivityFilters(), {
+              pageSize: 8,
+              publicInfoOnly: true,
+              viewerProfileId: viewerProfile?.id,
+            }),
+          )
+          .then((list) => list.activities)
+          .catch((error: unknown) => {
+            console.error("Failed to load activity empty swipe", error);
+
+            return [];
+          })
+      : [];
+
   perf.finish(
     {
       hasFilters,
@@ -383,22 +404,34 @@ export default async function ActivitiesPage({
         />
       ) : !activitiesResult.list ||
         activitiesResult.list.activities.length === 0 ? (
-        <EmptyState
-          actionHref={
-            hasFilters ? withLocale(locale, "/activities") : undefined
-          }
-          actionLabel={hasFilters ? t.activityFilters.reset : undefined}
-          title={
-            hasFilters
-              ? t.activities.emptyFilteredTitle
-              : t.activities.emptyTitle
-          }
-          description={
-            hasFilters
-              ? t.activities.emptyFilteredDescription
-              : t.activities.emptyDescription
-          }
-        />
+        <section className="space-y-4">
+          <EmptyState
+            actionHref={
+              hasFilters ? withLocale(locale, "/activities") : undefined
+            }
+            actionLabel={hasFilters ? t.activityFilters.reset : undefined}
+            title={
+              hasFilters
+                ? t.activities.emptyFilteredTitle
+                : t.activities.emptyTitle
+            }
+            description={
+              hasFilters
+                ? t.activities.emptyFilteredDescription
+                : t.activities.emptyDescription
+            }
+          />
+          {emptySwipeActivities.length > 0 ? (
+            <ActivitySwipeDiscovery
+              activities={emptySwipeActivities}
+              favoriteRedirectPath="/activities"
+              isAuthenticated={Boolean(viewerProfile)}
+              locale={locale}
+              shuffleDeck={false}
+              sourceSurface="activity_list"
+            />
+          ) : null}
+        </section>
       ) : (
         <section className="space-y-3 md:border-t md:border-sand md:pt-4 sm:space-y-4">
           <div className="flex items-end justify-between gap-2 px-1 sm:gap-3">
@@ -438,6 +471,7 @@ export default async function ActivitiesPage({
                         : activity.id
                     }
                     activity={activity}
+                    activityListPreview
                     isAuthenticated={Boolean(viewerProfile)}
                     isOwnActivity={
                       Boolean(viewerProfile) &&

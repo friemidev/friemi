@@ -23,13 +23,20 @@ type ActivityCoverUploadProps = {
   onChange?: (url: string) => void;
   onUploadingChange?: (isUploading: boolean) => void;
   signInHref?: string;
+  splitEmptyButtonClassName?: string;
+  splitEmptyContainerClassName?: string;
+  splitEmptyIconClassName?: string;
+  splitPreviewButtonClassName?: string;
+  splitPreviewCardClassName?: string;
+  splitRemoveButtonClassName?: string;
   splitPreviewClassName?: string;
   splitPreviewBelow?: boolean;
   submitFallbackValue?: boolean;
   uploadEndpoint?: string;
 };
 
-const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+const acceptedImageTypes =
+  "image/*,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp";
 const maxFileSize = 4 * 1024 * 1024;
 type UploadErrorCode =
   | "STORAGE_NOT_CONFIGURED"
@@ -57,6 +64,12 @@ export function ActivityCoverUpload({
   onChange,
   onUploadingChange,
   signInHref,
+  splitEmptyButtonClassName,
+  splitEmptyContainerClassName,
+  splitEmptyIconClassName,
+  splitPreviewButtonClassName,
+  splitPreviewCardClassName,
+  splitRemoveButtonClassName,
   splitPreviewClassName,
   splitPreviewBelow = false,
   submitFallbackValue = false,
@@ -122,7 +135,7 @@ export function ActivityCoverUpload({
       return;
     }
 
-    if (!allowedTypes.includes(file.type)) {
+    if (file.type && !file.type.toLowerCase().startsWith("image/")) {
       setError(t.coverTypeError);
       return;
     }
@@ -189,7 +202,7 @@ export function ActivityCoverUpload({
         <input name={name} type="hidden" value={submittedImageUrl} />
         <input
           ref={inputRef}
-          accept={allowedTypes.join(",")}
+          accept={acceptedImageTypes}
           className="hidden"
           type="file"
           onChange={(event) => {
@@ -200,12 +213,18 @@ export function ActivityCoverUpload({
           }}
         />
         {!displayImageUrl ? (
-          <div className="grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg">
+          <div
+            className={cn(
+              "grid gap-2 text-base font-semibold text-zinc-700 sm:text-lg",
+              splitEmptyContainerClassName,
+            )}
+          >
             <button
               type="button"
               className={cn(
                 "flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-[#F6F5F1] px-4 text-sm font-semibold text-zinc-400 shadow-[inset_0_0_0_1px_rgba(29,29,27,0.04),0_10px_24px_rgba(29,29,27,0.035)] transition hover:bg-[#F1F0EB] hover:text-zinc-600",
                 isUploading && "cursor-wait opacity-80",
+                splitEmptyButtonClassName,
               )}
               disabled={isUploading}
               onClick={() => inputRef.current?.click()}
@@ -220,7 +239,10 @@ export function ActivityCoverUpload({
               ) : (
                 <span
                   aria-hidden
-                  className="grid h-8 w-8 place-items-center rounded-full bg-white text-zinc-400 shadow-sm"
+                  className={cn(
+                    "grid h-8 w-8 place-items-center rounded-full bg-white text-zinc-400 shadow-sm",
+                    splitEmptyIconClassName,
+                  )}
                 >
                   <Plus className="h-4 w-4" />
                 </span>
@@ -232,6 +254,7 @@ export function ActivityCoverUpload({
           <div
             className={cn(
               "relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_22px_rgba(29,29,27,0.08)] ring-1 ring-[#E4DDC8]",
+              splitPreviewCardClassName,
               splitPreviewClassName ?? "col-span-2",
             )}
           >
@@ -241,6 +264,7 @@ export function ActivityCoverUpload({
                 "relative block h-36 w-full bg-[#F6F5F1] text-left transition sm:h-44",
                 !isUploading && "cursor-pointer hover:opacity-95",
                 isUploading && "cursor-wait opacity-80",
+                splitPreviewButtonClassName,
               )}
               disabled={isUploading}
               onClick={() => inputRef.current?.click()}
@@ -256,6 +280,14 @@ export function ActivityCoverUpload({
                   isFallbackPreview ? fallbackImageClassName : "object-cover",
                 )}
               />
+              {!isUploading && isFallbackPreview ? (
+                <span className="absolute inset-x-3 bottom-3 flex justify-center">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-[#0B6B45] shadow-sm ring-1 ring-[#D6D5B2]">
+                    <UploadCloud className="h-3.5 w-3.5" aria-hidden />
+                    {t.coverTapToUpload}
+                  </span>
+                </span>
+              ) : null}
               {isUploading ? (
                 <span className="absolute inset-0 grid place-items-center bg-black/24 text-white">
                   <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
@@ -265,7 +297,10 @@ export function ActivityCoverUpload({
             {imageUrl ? (
               <button
                 type="button"
-                className="absolute right-2.5 top-2.5 z-10 rounded-full bg-[#1D1D1B]/62 px-3 py-1.5 text-xs font-black leading-none text-white shadow-[0_8px_18px_rgba(29,29,27,0.18)] backdrop-blur-md transition hover:bg-[#1D1D1B]/76 active:scale-95"
+                className={cn(
+                  "absolute right-2.5 top-2.5 z-10 rounded-full bg-[#1D1D1B]/62 px-3 py-1.5 text-xs font-black leading-none text-white shadow-[0_8px_18px_rgba(29,29,27,0.18)] backdrop-blur-md transition hover:bg-[#1D1D1B]/76 active:scale-95",
+                  splitRemoveButtonClassName,
+                )}
                 disabled={isUploading}
                 onClick={() => updateImageUrl("")}
                 aria-label={t.coverRemove}
@@ -293,7 +328,7 @@ export function ActivityCoverUpload({
       <input name={name} type="hidden" value={submittedImageUrl} />
       <input
         ref={inputRef}
-        accept={allowedTypes.join(",")}
+        accept={acceptedImageTypes}
         className="hidden"
         type="file"
         onChange={(event) => {

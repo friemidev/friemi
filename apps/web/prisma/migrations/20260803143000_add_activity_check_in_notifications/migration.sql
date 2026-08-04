@@ -1,0 +1,1 @@
+ALTER TYPE "public"."NotificationType" ADD VALUE IF NOT EXISTS 'ACTIVITY_CHECK_IN';

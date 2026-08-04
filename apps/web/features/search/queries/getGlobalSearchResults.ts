@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { brand } from "@/lib/brand";
 import { createActionPerformanceTracker } from "@/lib/performance";
-import { attachActivityFavoriteStates, attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
+import {
+  attachActivityFavoriteStates,
+  attachPublicEventFavoriteStates,
+} from "@/features/favorites/queries/getViewerActivityFavorite";
 import {
   activityCardSelect,
   getActivityCoverTone,
@@ -11,6 +14,7 @@ import {
 } from "@/features/activities/queries/getActivities";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityFloatingNow } from "@/features/activities/utils/activityDisplay";
+import { getFollowRelationStateMap } from "@/features/follow/queries/followRelations";
 import {
   getPublicEventCardViewModel,
   getUpcomingPublicEventWhere,
@@ -18,10 +22,6 @@ import {
 } from "@/features/public-events/queries/getPublicEvents";
 import type { PublicEventCardViewModel } from "@/features/public-events/types";
 import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/findFriendRequestTarget";
-import {
-  getFriendshipPair,
-  getFriendshipPairKey,
-} from "@/features/friends/utils/friendship";
 import {
   getGlobalSearchTerms,
   normalizeGlobalSearchQuery,
@@ -31,6 +31,7 @@ import type { Prisma } from "@prisma/client";
 const activityResultLimit = 6;
 export const globalSearchMainResultPageSize = 10;
 const merchantResultLimit = 5;
+const searchRecommendationLimit = 12;
 const userResultLimit = 12;
 const searchResultProbeSize = 1;
 
@@ -39,8 +40,9 @@ export type GlobalSearchMainActivityResultMode = "strict" | "related";
 export type GlobalSearchUserRelationshipStatus =
   | "AVAILABLE"
   | "SELF"
-  | "FRIENDS"
-  | "PENDING";
+  | "FOLLOWING"
+  | "FOLLOWED_BY"
+  | "MUTUAL";
 
 export type GlobalSearchMerchantViewModel = {
   id: string;
@@ -83,6 +85,12 @@ export type GlobalSearchMainActivityResults = {
   totalCount: number;
   hasMore: boolean;
   nextOffset: number;
+};
+
+export type GlobalSearchRecommendations = {
+  activities: ActivityCardViewModel[];
+  hangouts: ActivityCardViewModel[];
+  users: GlobalSearchUserViewModel[];
 };
 
 function getActivityTermSearchWhere(term: string): Prisma.ActivityWhereInput {
@@ -214,6 +222,104 @@ function mapPublicEventToSearchActivityCard(
   };
 }
 
+export async function getGlobalSearchRecommendations(
+  currentUserProfileId?: string | null,
+): Promise<GlobalSearchRecommendations> {
+  const perf = createActionPerformanceTracker({
+    action: "search.recommendations",
+  });
+  const activityNow = getActivityFloatingNow();
+  const publicEventNow = new Date();
+  const [users, hangouts, publicEvents] = await Promise.all([
+    perf.measure("user.list", () =>
+      prisma.userProfile.findMany({
+        where: {
+          status: "ACTIVE",
+          ...(currentUserProfileId
+            ? {
+                id: {
+                  not: currentUserProfileId,
+                },
+              }
+            : {}),
+        },
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: {
+          id: true,
+          nickname: true,
+          friendCode: true,
+          avatarUrl: true,
+        },
+      }),
+    ),
+    perf.measure("hangout.list", () =>
+      prisma.activity.findMany({
+        where: {
+          AND: [
+            getVisibleActivityWhere({ now: activityNow }),
+            {
+              type: {
+                not: "PUBLIC_EVENT",
+              },
+            },
+          ],
+        },
+        orderBy: [{ startAt: "asc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: activityCardSelect,
+      }),
+    ),
+    perf.measure("publicEvent.list", () =>
+      prisma.publicEvent.findMany({
+        where: getUpcomingPublicEventWhere(publicEventNow),
+        orderBy: [{ startAt: "asc" }, { id: "asc" }],
+        take: searchRecommendationLimit,
+        select: publicEventSelect,
+      }),
+    ),
+  ]);
+  const [userRelationshipStatuses, hangoutsWithFavoriteState, eventsWithFavoriteState] =
+    await Promise.all([
+      perf.measure("user.relationships", () =>
+        getSearchUserRelationshipStatuses(
+          currentUserProfileId,
+          users.map((user) => user.id),
+        ),
+      ),
+      perf.measure("hangout.favoriteState", () =>
+        attachActivityFavoriteStates(
+          hangouts.map(getActivityCardViewModel),
+          currentUserProfileId,
+        ),
+      ),
+      perf.measure("publicEvent.favoriteState", () =>
+        attachPublicEventFavoriteStates(
+          publicEvents.map(getPublicEventCardViewModel),
+          currentUserProfileId,
+        ),
+      ),
+    ]);
+
+  perf.finish({
+    activityCount: eventsWithFavoriteState.length,
+    hangoutCount: hangoutsWithFavoriteState.length,
+    userCount: users.length,
+  });
+
+  return {
+    activities: eventsWithFavoriteState.map(mapPublicEventToSearchActivityCard),
+    hangouts: hangoutsWithFavoriteState,
+    users: users.map((user) => ({
+      id: user.id,
+      nickname: getSearchUserDisplayName(user),
+      friendCode: user.friendCode,
+      avatarUrl: user.avatarUrl,
+      relationshipStatus: userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+    })),
+  };
+}
+
 function sortSearchActivityCards(
   left: ActivityCardViewModel,
   right: ActivityCardViewModel,
@@ -264,11 +370,17 @@ function getSearchActivityNearNowSortKey(
   const comparisonNow = getSearchActivityReferenceNow(activity, referenceNow);
   const nowTime = comparisonNow.getTime();
   const startTime = new Date(activity.startAt).getTime();
-  const endTime = activity.endAt ? new Date(activity.endAt).getTime() : startTime;
+  const endTime = activity.endAt
+    ? new Date(activity.endAt).getTime()
+    : startTime;
   const isEnded = isSearchActivityEndedAt(activity, comparisonNow);
 
   return {
-    distanceMs: getNearestSearchTimeRangeDistanceMs(startTime, endTime, nowTime),
+    distanceMs: getNearestSearchTimeRangeDistanceMs(
+      startTime,
+      endTime,
+      nowTime,
+    ),
     group: isEnded ? 1 : 0,
   };
 }
@@ -500,8 +612,7 @@ export async function getGlobalSearchResults(
       nickname: getSearchUserDisplayName(user),
       friendCode: user.friendCode,
       avatarUrl: user.avatarUrl,
-      relationshipStatus:
-        userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+      relationshipStatus: userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
     })),
     userCount,
     activities: [],
@@ -607,19 +718,21 @@ export async function getGlobalSearchMainActivityResults(
       }),
     ),
   ]);
-  const [activityResultsWithFavoriteState, publicEventResultsWithFavoriteState] =
-    await perf.measure("favoriteState", () =>
-      Promise.all([
-        attachActivityFavoriteStates(
-          activities.map(getActivityCardViewModel),
-          currentUserProfileId,
-        ),
-        attachPublicEventFavoriteStates(
-          publicEvents.map(getPublicEventCardViewModel),
-          currentUserProfileId,
-        ),
-      ]),
-    );
+  const [
+    activityResultsWithFavoriteState,
+    publicEventResultsWithFavoriteState,
+  ] = await perf.measure("favoriteState", () =>
+    Promise.all([
+      attachActivityFavoriteStates(
+        activities.map(getActivityCardViewModel),
+        currentUserProfileId,
+      ),
+      attachPublicEventFavoriteStates(
+        publicEvents.map(getPublicEventCardViewModel),
+        currentUserProfileId,
+      ),
+    ]),
+  );
   const mixedResults = await perf.measure("merge.sort", async () => {
     const publicEventIdsAlreadyShownByActivity = new Set(
       activityResultsWithFavoriteState
@@ -688,75 +801,29 @@ async function getSearchUserRelationshipStatuses(
     return statuses;
   }
 
-  const peerIds = userIds.filter((userId) => userId !== currentUserProfileId);
-
-  if (peerIds.length === 0) {
-    return statuses;
-  }
-
-  const friendshipPairs = peerIds.map((peerId) =>
-    getFriendshipPair(currentUserProfileId, peerId),
-  );
-  const pendingPairKeys = peerIds.map((peerId) =>
-    getFriendshipPairKey(currentUserProfileId, peerId),
-  );
-  const [friendships, pendingRequests] = await Promise.all([
-    prisma.friendship.findMany({
-      where: {
-        OR: friendshipPairs,
-      },
-      select: {
-        userAId: true,
-        userBId: true,
-      },
-    }),
-    prisma.friendRequest.findMany({
-      where: {
-        status: "PENDING",
-        OR: [
-          {
-            pendingPairKey: {
-              in: pendingPairKeys,
-            },
-          },
-          {
-            requesterId: currentUserProfileId,
-            receiverId: {
-              in: peerIds,
-            },
-          },
-          {
-            requesterId: {
-              in: peerIds,
-            },
-            receiverId: currentUserProfileId,
-          },
-        ],
-      },
-      select: {
-        requesterId: true,
-        receiverId: true,
-      },
-    }),
-  ]);
-
-  friendships.forEach((friendship) => {
-    const peerId =
-      friendship.userAId === currentUserProfileId
-        ? friendship.userBId
-        : friendship.userAId;
-
-    statuses.set(peerId, "FRIENDS");
+  const relationMap = await getFollowRelationStateMap({
+    targetProfileIds: userIds,
+    viewerProfileId: currentUserProfileId,
   });
 
-  pendingRequests.forEach((request) => {
-    const peerId =
-      request.requesterId === currentUserProfileId
-        ? request.receiverId
-        : request.requesterId;
+  relationMap.forEach((relation, userId) => {
+    if (relation.isSelf) {
+      statuses.set(userId, "SELF");
+      return;
+    }
 
-    if (statuses.get(peerId) !== "FRIENDS") {
-      statuses.set(peerId, "PENDING");
+    if (relation.isMutualFollow) {
+      statuses.set(userId, "MUTUAL");
+      return;
+    }
+
+    if (relation.viewerFollowsTarget) {
+      statuses.set(userId, "FOLLOWING");
+      return;
+    }
+
+    if (relation.targetFollowsViewer) {
+      statuses.set(userId, "FOLLOWED_BY");
     }
   });
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { markReferralMutualFollowAcceptedBetween } from "@/features/referrals/services/referrals";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
@@ -14,8 +15,10 @@ const toggleFollowSchema = z.object({
 });
 
 export type ToggleFollowState = {
+  becameMutualFollow?: boolean;
   formError?: string;
   isFollowing?: boolean;
+  isMutualFollow?: boolean;
   ok?: boolean;
 };
 
@@ -79,6 +82,17 @@ export async function toggleFollowUserAction(
       id: true,
     },
   });
+  const targetFollowsViewer = await prisma.userFollow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: targetUserProfileId,
+        followingId: viewerProfile.id,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
 
   const localizedPath = withLocale(locale, redirectPath);
 
@@ -91,9 +105,12 @@ export async function toggleFollowUserAction(
 
     revalidatePath(localizedPath);
     revalidatePath(withLocale(locale, "/profile"));
+    revalidatePath(withLocale(locale, "/profile/network"));
 
     return {
+      becameMutualFollow: false,
       isFollowing: false,
+      isMutualFollow: false,
       ok: true,
     };
   }
@@ -105,11 +122,26 @@ export async function toggleFollowUserAction(
     },
   });
 
+  const isMutualFollow = Boolean(targetFollowsViewer);
+
+  if (isMutualFollow) {
+    await markReferralMutualFollowAcceptedBetween(
+      viewerProfile.id,
+      targetUserProfileId,
+    ).catch((error: unknown) => {
+      console.error("Failed to mark referral mutual follow accepted", error);
+    });
+  }
+
   revalidatePath(localizedPath);
   revalidatePath(withLocale(locale, "/profile"));
+  revalidatePath(withLocale(locale, "/profile/invite"));
+  revalidatePath(withLocale(locale, "/profile/network"));
 
   return {
+    becameMutualFollow: isMutualFollow,
     isFollowing: true,
+    isMutualFollow,
     ok: true,
   };
 }

@@ -33,18 +33,25 @@ type DirectMessagesCopy = {
   imageUploadFailed: string;
   imageUploading: string;
   removeImage: string;
+  sendGift: string;
   backToMessages: string;
   viewProfile: string;
   openFriends: string;
+  findPeople: string;
   openConversation: (name: string) => string;
+  openRoomChat: (title: string) => string;
+  openingConversation: string;
   searchPlaceholder: string;
   startConversation: string;
+  nonFriendLimitNotice: (remaining: number) => string;
+  nonFriendWaitNotice: string;
   activityContextLabel: string;
   activityContextCta: string;
   activityMessageSuggestion: (title: string) => string;
   sourceActivityLabel: (title: string) => string;
-  addFriend: string;
   startChat: string;
+  roomChatLabel: string;
+  roomChatEmptyPreview: string;
   activitySignal: (
     date: string,
     title: string,
@@ -65,27 +72,29 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     return {
       title: "Messages",
       description:
-        "Échangez simplement avec vos amis autour des sorties à venir.",
+        "Échangez simplement depuis un profil ou autour des sorties à venir.",
       listTitle: "Discussions",
       listDescription: "Vos conversations récentes.",
-      friendListTitle: "Amis",
-      friendListDescription: "Touchez un ami pour discuter",
+      friendListTitle: "Discussions",
+      friendListDescription: "Ouvrez une discussion ou trouvez quelqu'un.",
       threadTitle: (name: string) => `Discussion avec ${name}`,
       emptyListTitle: "Aucune discussion",
-      emptyListDescription: "Ajoutez un ami pour commencer à discuter.",
-      emptyFriendListTitle: "Aucun ami pour le moment",
-      emptyFriendListDescription: "Ajoutez un ami pour commencer.",
+      emptyListDescription:
+        "Ouvrez un profil ou une sortie pour démarrer une discussion.",
+      emptyFriendListTitle: "Aucune discussion",
+      emptyFriendListDescription:
+        "Trouvez quelqu'un à suivre ou ouvrez un profil.",
       emptyThreadTitle: "Aucun message",
       emptyThreadDescription:
         "Envoyez un premier message court pour préparer la prochaine sortie.",
       noSelectedTitle: "Choisissez une discussion",
       noSelectedDescription:
-        "Sélectionnez un ami pour lire ou envoyer un message.",
+        "Sélectionnez une discussion pour lire ou envoyer un message.",
       lastMessageEmpty: "Aucun message pour le moment",
       messagePlaceholder: "Écrire un message...",
-      readOnlyTitle: "Conversation en lecture seule",
+      readOnlyTitle: "Envoi indisponible",
       readOnlyDescription:
-        "L'historique reste visible, mais vous devez redevenir amis pour envoyer un nouveau message.",
+        "Vous pouvez lire cette discussion, mais pas envoyer de nouveau message pour le moment.",
       send: "Envoyer",
       sending: "Envoi...",
       sendingStatus: "Envoi...",
@@ -98,19 +107,29 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       imageUploadFailed: "Image impossible à importer.",
       imageUploading: "Import...",
       removeImage: "Retirer l'image",
+      sendGift: "Cadeau",
       backToMessages: "Messages",
       viewProfile: "Voir le profil",
-      openFriends: "Voir les amis",
+      openFriends: "Trouver quelqu'un",
+      findPeople: "Trouver quelqu'un",
       openConversation: (name: string) => `Ouvrir la discussion avec ${name}`,
+      openRoomChat: (title: string) => `Ouvrir la discussion : ${title}`,
+      openingConversation: "Ouverture...",
       searchPlaceholder: "Rechercher une discussion",
       startConversation: "Message",
+      nonFriendLimitNotice: (remaining) =>
+        remaining > 1
+          ? "Vous pouvez envoyer 2 messages. La discussion continue après sa réponse."
+          : "Encore 1 message. La discussion continue après sa réponse.",
+      nonFriendWaitNotice: "Attendez sa réponse pour continuer.",
       activityContextLabel: "À propos de cette sortie",
       activityContextCta: "Voir la sortie",
       activityMessageSuggestion: (title: string) =>
         `Bonjour, j'ai une question sur « ${title} ».`,
       sourceActivityLabel: (title: string) => `Depuis « ${title} »`,
-      addFriend: "Ajouter",
       startChat: "Démarrer la discussion",
+      roomChatLabel: "Groupe",
+      roomChatEmptyPreview: "Aucun message pour le moment",
       activitySignal: (date: string, title: string, state) =>
         state === "ONGOING"
           ? `En cours : « ${title} »`
@@ -123,12 +142,17 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         `Afficher ${count} activité(s) récente(s) de plus`,
       collapseActivities: "Réduire",
       youPrefix: "Vous :",
-      invalidRequest: "Requête invalide. Réessayez plus tard.",
+      invalidRequest: "Vérifiez puis réessayez.",
       failed: "Message impossible à envoyer pour le moment.",
       errors: {
+        AUTH_REQUIRED: "Connectez-vous pour envoyer un message.",
         SELF_CONVERSATION:
           "Vous ne pouvez pas créer une conversation avec vous-même.",
-        NOT_FRIENDS: "Vous devez être amis pour démarrer cette conversation.",
+        LOW_TRUST:
+          "Vous ne pouvez pas démarrer cette discussion pour le moment.",
+        NOT_FRIENDS: "Cette discussion n'est pas disponible pour le moment.",
+        NON_FRIEND_LIMIT_REACHED:
+          "Attendez une réponse avant d'envoyer un autre message.",
         CONVERSATION_UNAVAILABLE: "Cette conversation n'est plus disponible.",
         EMPTY_BODY: "Le message ne peut pas être vide.",
         BODY_TOO_LONG: "Le message est trop long.",
@@ -141,26 +165,26 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
   if (locale === "en") {
     return {
       title: "Messages",
-      description: "Chat with friends before an activity.",
+      description: "Chat from a profile or around an upcoming activity.",
       listTitle: "Chats",
       listDescription: "Your recent conversations.",
-      friendListTitle: "Friends",
-      friendListDescription: "Tap a friend to chat",
+      friendListTitle: "Chats",
+      friendListDescription: "Open a chat or find someone.",
       threadTitle: (name: string) => `Chat with ${name}`,
       emptyListTitle: "No chats yet",
-      emptyListDescription: "Add a friend to start chatting.",
-      emptyFriendListTitle: "No friends yet",
-      emptyFriendListDescription: "Add a friend to start chatting.",
+      emptyListDescription: "Open a profile or activity to start a chat.",
+      emptyFriendListTitle: "No chats yet",
+      emptyFriendListDescription: "Find someone to follow or open a profile.",
       emptyThreadTitle: "No messages yet",
       emptyThreadDescription:
         "Send a short first message to plan the next activity.",
       noSelectedTitle: "Pick a chat",
-      noSelectedDescription: "Select a friend to read or send messages.",
+      noSelectedDescription: "Select a chat to read or send messages.",
       lastMessageEmpty: "No messages yet",
       messagePlaceholder: "Write a message...",
-      readOnlyTitle: "Read-only chat",
+      readOnlyTitle: "Messages paused",
       readOnlyDescription:
-        "The history stays visible, but you need to be friends again before sending a new message.",
+        "You can still read this chat, but new messages are unavailable right now.",
       send: "Send",
       sending: "Sending...",
       sendingStatus: "Sending...",
@@ -173,19 +197,29 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
       imageUploadFailed: "Image could not be uploaded.",
       imageUploading: "Uploading...",
       removeImage: "Remove image",
+      sendGift: "Gift",
       backToMessages: "Messages",
       viewProfile: "View profile",
-      openFriends: "Open friends",
+      openFriends: "Find people",
+      findPeople: "Find people",
       openConversation: (name: string) => `Open chat with ${name}`,
+      openRoomChat: (title: string) => `Open room chat: ${title}`,
+      openingConversation: "Opening...",
       searchPlaceholder: "Search chats",
       startConversation: "Message",
+      nonFriendLimitNotice: (remaining) =>
+        remaining > 1
+          ? "You can send 2 messages. Keep chatting after they reply."
+          : "1 message left. Keep chatting after they reply.",
+      nonFriendWaitNotice: "Wait for a reply to keep chatting.",
       activityContextLabel: "About this activity",
       activityContextCta: "View activity",
       activityMessageSuggestion: (title: string) =>
         `Hi, I have a question about "${title}".`,
       sourceActivityLabel: (title: string) => `From "${title}"`,
-      addFriend: "Add",
       startChat: "Start chat",
+      roomChatLabel: "Group chat",
+      roomChatEmptyPreview: "No messages yet",
       activitySignal: (date: string, title: string, state) =>
         state === "ONGOING"
           ? `At "${title}" now`
@@ -198,11 +232,15 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
         `Show ${count} more recent activities`,
       collapseActivities: "Collapse",
       youPrefix: "You:",
-      invalidRequest: "Invalid request. Try again later.",
+      invalidRequest: "Check it and try again.",
       failed: "Message could not be sent right now.",
       errors: {
+        AUTH_REQUIRED: "Sign in to send a message.",
         SELF_CONVERSATION: "You cannot start a conversation with yourself.",
-        NOT_FRIENDS: "You need to be friends to start this conversation.",
+        LOW_TRUST: "You can't start this chat right now.",
+        NOT_FRIENDS: "This chat is not available right now.",
+        NON_FRIEND_LIMIT_REACHED:
+          "Wait for a reply before sending another message.",
         CONVERSATION_UNAVAILABLE: "This conversation is no longer available.",
         EMPTY_BODY: "Message cannot be empty.",
         BODY_TOO_LONG: "Message is too long.",
@@ -214,24 +252,24 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
 
   return {
     title: "消息",
-    description: "和好友聊聊，活动前快速确认。",
+    description: "从个人主页或聚吧里快速开启聊天。",
     listTitle: "聊天列表",
-    listDescription: "最近联系的好友。",
-    friendListTitle: "好友列表",
-    friendListDescription: "点一位好友，开始聊天",
+    listDescription: "最近联系的人。",
+    friendListTitle: "聊聊",
+    friendListDescription: "打开对话，或找人关注。",
     threadTitle: (name: string) => `和 ${name} 的聊天`,
     emptyListTitle: "还没有聊天",
-    emptyListDescription: "添加好友后，就可以在这里聊天。",
-    emptyFriendListTitle: "暂无好友",
-    emptyFriendListDescription: "添加好友后即可开始聊天。",
+    emptyListDescription: "从个人主页或聚吧进入后，就可以在这里聊天。",
+    emptyFriendListTitle: "还没有聊天",
+    emptyFriendListDescription: "去找人关注，或从个人主页发消息。",
     emptyThreadTitle: "还没有消息",
     emptyThreadDescription: "发送第一条简短消息，约定活动前的信息。",
     noSelectedTitle: "选择一个聊天",
-    noSelectedDescription: "选择一位好友，查看或发送消息。",
+    noSelectedDescription: "选择一个聊天，查看或发送消息。",
     lastMessageEmpty: "还没有消息",
     messagePlaceholder: "输入消息...",
-    readOnlyTitle: "当前聊天只读",
-    readOnlyDescription: "历史消息仍可查看，但需要重新成为好友后才能继续发送。",
+    readOnlyTitle: "暂时不能发送",
+    readOnlyDescription: "你可以继续查看聊天记录，暂时不能发送新消息。",
     send: "发送",
     sending: "发送中...",
     sendingStatus: "发送中...",
@@ -244,19 +282,29 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     imageUploadFailed: "图片上传失败，请稍后再试。",
     imageUploading: "上传中...",
     removeImage: "移除图片",
+    sendGift: "送礼",
     backToMessages: "消息",
     viewProfile: "查看主页",
-    openFriends: "查看好友",
+    openFriends: "找人",
+    findPeople: "找人",
     openConversation: (name: string) => `打开和 ${name} 的聊天`,
+    openRoomChat: (title: string) => `打开「${title}」群聊`,
+    openingConversation: "打开中...",
     searchPlaceholder: "搜索聊天",
     startConversation: "发消息",
-    activityContextLabel: "关于这个组局",
-    activityContextCta: "查看组局",
+    nonFriendLimitNotice: (remaining) =>
+      remaining > 1
+        ? "可以先发 2 条消息，对方回复后继续聊。"
+        : "还可以再发 1 条，对方回复后继续聊。",
+    nonFriendWaitNotice: "等对方回复后，就可以继续聊。",
+    activityContextLabel: "关于这个聚吧",
+    activityContextCta: "查看聚吧",
     activityMessageSuggestion: (title: string) =>
       `你好，我想了解一下「${title}」的具体安排。`,
     sourceActivityLabel: (title: string) => `来自「${title}」`,
-    addFriend: "添加",
     startChat: "开始聊天",
+    roomChatLabel: "聚吧群聊",
+    roomChatEmptyPreview: "还没有消息",
     activitySignal: (date: string, title: string, state) =>
       state === "ONGOING"
         ? `正在参加「${title}」`
@@ -268,11 +316,14 @@ export function getDirectMessagesCopy(locale: string): DirectMessagesCopy {
     showMoreActivitiesLabel: (count: number) => `展开 ${count} 个近期活动`,
     collapseActivities: "收起",
     youPrefix: "你：",
-    invalidRequest: "请求无效，请稍后再试。",
+    invalidRequest: "请检查后再试。",
     failed: "消息暂时无法发送，请稍后重试。",
     errors: {
+      AUTH_REQUIRED: "登录后才能发送消息。",
       SELF_CONVERSATION: "不能和自己创建会话。",
-      NOT_FRIENDS: "只有好友之间可以创建会话。",
+      LOW_TRUST: "暂时不能主动发消息。",
+      NOT_FRIENDS: "暂时不能开始聊天。",
+      NON_FRIEND_LIMIT_REACHED: "请等待对方回复后再继续发送。",
       CONVERSATION_UNAVAILABLE: "这段会话已不可用。",
       EMPTY_BODY: "消息不能为空。",
       BODY_TOO_LONG: "消息内容过长。",

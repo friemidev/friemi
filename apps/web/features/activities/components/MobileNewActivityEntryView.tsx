@@ -20,7 +20,7 @@ function getMobileEntryCopy(locale: string) {
   if (locale === "fr") {
     return {
       activity: "Activités",
-      createDescription: "Lance une sortie et invite tes amis.",
+      createDescription: "Lance une sortie et invite du monde.",
       createTitle: "Créer une sortie",
       partyToolsDescription: "Des outils pour animer vos soirées jeux.",
       partyToolsTitle: "Outils de jeu",
@@ -43,13 +43,13 @@ function getMobileEntryCopy(locale: string) {
   if (locale === "en") {
     return {
       activity: "Activity",
-      createDescription: "Start a hangout and invite your friends.",
-      createTitle: "Create Hangout",
+      createDescription: "Start a plan and invite people.",
+      createTitle: "Create Plan",
       partyToolsDescription: "Use tools to make your game night better.",
       partyToolsTitle: "Party Tools",
       question: "What do you want to create?",
       seeAll: "See all",
-      title: "Create Hangout",
+      title: "Create Plan",
       ended: "Ended",
       live: "Live",
       startsInHours: (hours: number) => `In ${hours}h`,
@@ -66,12 +66,12 @@ function getMobileEntryCopy(locale: string) {
   return {
     activity: "活动",
     createDescription: "发起一个线下约局，邀请朋友加入。",
-    createTitle: "创建组局",
+    createTitle: "创建聚吧",
     partyToolsDescription: "用工具让现场桌游更顺。",
     partyToolsTitle: "桌游工具",
     question: "想创建什么？",
     seeAll: "全部",
-    title: "我要组局",
+    title: "聚聚",
     ended: "已结束",
     live: "进行中",
     startsInHours: (hours: number) => `${hours} 小时后开始`,
@@ -253,7 +253,7 @@ export function MobileNewActivityEntryView({
   const copy = getMobileEntryCopy(locale);
 
   return (
-    <main className="mobile-v23-create min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.2rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.55rem)] text-[#111210] md:hidden">
+    <main className="mobile-v23-create app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.05rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>

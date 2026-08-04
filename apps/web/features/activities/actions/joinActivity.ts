@@ -297,40 +297,51 @@ export async function joinActivityAction(
             );
           }
 
-          let hasFriendshipAccess = false;
+          let hasMutualFollowAccess = false;
           let hasSharedLinkAccess = false;
 
           if (
             activity.visibility === "PRIVATE" &&
             activity.organizerId !== profile.id
           ) {
-            const friendship = await tx.friendship.findFirst({
+            const follows = await tx.userFollow.findMany({
               where: {
                 OR: [
                   {
-                    userAId: profile.id,
-                    userBId: activity.organizerId,
+                    followerId: profile.id,
+                    followingId: activity.organizerId,
                   },
                   {
-                    userAId: activity.organizerId,
-                    userBId: profile.id,
+                    followerId: activity.organizerId,
+                    followingId: profile.id,
                   },
                 ],
               },
               select: {
-                id: true,
+                followerId: true,
+                followingId: true,
               },
             });
 
-            hasFriendshipAccess = Boolean(friendship);
+            hasMutualFollowAccess =
+              follows.some(
+                (follow) =>
+                  follow.followerId === profile.id &&
+                  follow.followingId === activity.organizerId,
+              ) &&
+              follows.some(
+                (follow) =>
+                  follow.followerId === activity.organizerId &&
+                  follow.followingId === profile.id,
+              );
             hasSharedLinkAccess =
               Boolean(result.data.accessToken) &&
               activity.shareEnabled &&
               activity.shareToken === result.data.accessToken;
 
-            if (!hasFriendshipAccess && !hasSharedLinkAccess) {
+            if (!hasMutualFollowAccess && !hasSharedLinkAccess) {
               return getJoinFailure(
-                "这是私人局，仅发起人的好友可以报名。",
+                "这是私人局，仅互关用户可以报名。",
                 "activity_unavailable",
               );
             }
@@ -464,7 +475,7 @@ export async function joinActivityAction(
           const requiresTrustReview = isLowTrustScore(trustScore);
           const nextStatus: ParticipantStatus =
             activity.visibility === "PRIVATE" &&
-            !hasFriendshipAccess &&
+            !hasMutualFollowAccess &&
             hasSharedLinkAccess
               ? "PENDING"
               : activity.requiresApproval || requiresTrustReview

@@ -25,6 +25,7 @@ import {
   getGameToolRoomPath,
 } from "@/features/game-tools/gameToolRooms";
 import { NicknameRequiredGate } from "@/features/profile/components/NicknameRequiredGate";
+import { PresenceHeartbeat } from "@/features/profile/components/PresenceHeartbeat";
 import { ViewerProfileProvider } from "@/features/profile/components/ViewerProfileProvider";
 import { getOptionalLayoutViewerState } from "@/lib/auth";
 import { hasClerkKeys } from "@/lib/clerk";
@@ -80,6 +81,7 @@ export default async function LocaleLayout({
             roomId: activeGameToolRoom.id,
           }),
         ),
+        id: activeGameToolRoom.id,
         kind: activeGameToolRoom.kind,
         privateSeatHref: activeGameToolPrivateSeatPath
           ? withLocale(locale, activeGameToolPrivateSeatPath)
@@ -120,14 +122,13 @@ export default async function LocaleLayout({
                 viewerPhone={viewerProfile?.phone ?? null}
                 viewerWechatId={viewerProfile?.wechatId ?? null}
                 viewerNickname={viewerProfile?.nickname ?? null}
-                incomingFriendRequests={[]}
                 unreadNotificationCount={
                   viewerState.initialUnreadNotificationCount
                 }
               />
               <MobileScrollProgress />
               <IdleRoutePrefetcher
-                enabled={Boolean(viewerProfile)}
+                enabled
                 idleDelayMs={1600}
                 locale={locale}
               />
@@ -143,6 +144,7 @@ export default async function LocaleLayout({
                 </>
               ) : null}
               {viewerProfile ? <NicknameRequiredGate locale={locale} /> : null}
+              {viewerProfile ? <PresenceHeartbeat /> : null}
               {children}
               <ActiveGameToolFloatingWindow
                 activeRoom={activeGameToolFloatingRoom}

@@ -3,6 +3,7 @@ import {
   syncActivityNoShowTrustScoreEvents,
   syncCleanHalfYearTrustScoreEvents,
 } from "@/features/trust/trustScoreEvents";
+import { syncRecentEndedActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,9 +38,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [noShow, cleanHalfYear] = await Promise.all([
+    const [noShow, cleanHalfYear, socialRewards] = await Promise.all([
       syncActivityNoShowTrustScoreEvents(),
       syncCleanHalfYearTrustScoreEvents(),
+      syncRecentEndedActivitySocialRewards(),
     ]);
 
     return NextResponse.json({
@@ -47,6 +49,7 @@ export async function GET(request: NextRequest) {
       summary: {
         cleanHalfYear,
         noShow,
+        socialRewards,
       },
     });
   } catch (error) {

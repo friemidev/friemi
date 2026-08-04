@@ -3,19 +3,21 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronDown,
+  Gift,
   MessageCircle,
   MoreVertical,
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { formatActivityDate, formatActivityDateOnly } from "@chill-club/shared";
+import { formatActivityDateOnly } from "@chill-club/shared";
 import { Button } from "@chill-club/ui";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { DetailSourceRestore } from "@/features/navigation/components/DetailSourceRestore";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
-import { openDirectConversationAction } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivitySignalViewModel,
@@ -27,6 +29,7 @@ import { MessageAvatar } from "./MessageAvatar";
 import { MessageThreadBackButton } from "./MessageThreadBackButton";
 import { MessageThreadAutoRefresh } from "./MessageThreadAutoRefresh";
 import { MessageThreadClient } from "./MessageThreadClient";
+import { StartDirectConversationButton } from "./StartDirectConversationButton";
 
 type ConversationListPanelProps = {
   conversations: DirectConversationListItemViewModel[];
@@ -73,7 +76,7 @@ export function ConversationListPanel({
               {t.emptyListDescription}
             </p>
           </div>
-          <Link href={withLocale(locale, "/friends")} className="w-full">
+          <Link href={withLocale(locale, "/search")} className="w-full">
             <Button variant="secondary" className="w-full gap-2 rounded-full">
               <UsersRound className="h-4 w-4" />
               {t.openFriends}
@@ -110,6 +113,8 @@ function ConversationListItem({
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = conversation.lastMessage;
+  const unreadCount = conversation.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const sourceLabel = lastMessage?.sourceActivity
     ? t.sourceActivityLabel(lastMessage.sourceActivity.title)
@@ -136,11 +141,18 @@ function ConversationListItem({
       >
         <MessageAvatar
           avatarUrl={conversation.peer.avatarUrl}
+          isOnline={conversation.peer.isOnline}
           name={conversation.peer.nickname}
+          presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
         />
         <span className="min-w-0">
           <span className="flex min-w-0 items-start gap-2">
-            <span className="truncate text-sm font-semibold">
+            <span
+              className={cn(
+                "truncate text-sm",
+                unreadCount > 0 ? "font-black" : "font-semibold",
+              )}
+            >
               {conversation.peer.nickname}
             </span>
             <span
@@ -149,13 +161,22 @@ function ConversationListItem({
                 isActive ? "text-[#8E8383]" : "text-[#8E8383]",
               )}
             >
-              {formatActivityDate(time, locale)}
+              {formatChatListTimestamp(time, locale)}
             </span>
+            {unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : null}
           </span>
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
-              isActive ? "text-[#156240]" : "text-[#156240]",
+              unreadCount > 0
+                ? "font-black text-ink"
+                : isActive
+                  ? "text-[#156240]"
+                  : "text-[#156240]",
             )}
           >
             {sourceLabel ? `${sourceLabel} · ${preview}` : preview}
@@ -312,7 +333,7 @@ export function MessageThread({
     <section className="mx-0 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white/78 shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:min-h-[calc(100dvh-8.25rem)] md:rounded-[1.45rem] md:border md:border-sand md:ring-1 md:ring-white/70 lg:h-[calc(100dvh-6.5rem)] lg:min-h-0">
       <DetailSourceRestore sourceKey="messages" />
       <MessageThreadAutoRefresh conversationId={conversation.id} />
-      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4">
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-sand bg-[linear-gradient(135deg,#FEFFF9_0%,#FFF5E6_62%,#DEAAB3_100%)] p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <div className="flex h-9 w-9 items-center justify-start">
           <MessageThreadBackButton
             fallbackHref={withLocale(locale, backHref)}
@@ -347,6 +368,23 @@ export function MessageThread({
               <UserRound className="h-4 w-4 shrink-0" />
               <span className="truncate">{t.viewProfile}</span>
             </ContextualDetailLink>
+            <CharmGiftDialog
+              isAuthenticated
+              locale={locale}
+              recipientName={conversation.peer.nickname}
+              recipientProfileId={conversation.peer.id}
+              redirectPath={`/messages/${conversation.id}`}
+              sourceContextId={conversation.id}
+              sourceSurface="DIRECT_MESSAGE"
+              triggerAriaLabel={t.sendGift}
+              triggerClassName="flex h-auto w-full min-w-0 justify-start rounded-none bg-transparent px-3 py-2 text-sm font-medium text-[#9A2135] shadow-none hover:bg-[#FFF5E6] focus-visible:ring-[#E7457A]/24"
+              triggerContent={
+                <>
+                  <Gift className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t.sendGift}</span>
+                </>
+              }
+            />
           </div>
         </details>
       </div>
@@ -364,6 +402,7 @@ export function MessageThread({
         initialMessages={conversation.messages}
         locale={locale}
         peer={conversation.peer}
+        sendPolicy={conversation.sendPolicy}
       />
     </section>
   );
@@ -379,13 +418,12 @@ export function StartConversationButton({
   const t = getDirectMessagesCopy(locale);
 
   return (
-    <form action={openDirectConversationAction} className="grid">
-      <input name="locale" type="hidden" value={locale} />
-      <input name="friendProfileId" type="hidden" value={friendProfileId} />
-      <Button type="submit" variant="secondary" className="gap-2">
-        <MessageCircle className="h-4 w-4" />
-        {t.startConversation}
-      </Button>
-    </form>
+    <StartDirectConversationButton
+      buttonClassName="w-full bg-white/72 text-[#156240] shadow-none ring-1 ring-[#8AB68E] hover:bg-white hover:text-[#111210]"
+      label={t.startConversation}
+      locale={locale}
+      peerProfileId={friendProfileId}
+      redirectPath="/messages"
+    />
   );
 }

@@ -166,6 +166,7 @@ export const getWerewolfRoomById = cache(
             memberToken: currentMember.profileId
               ? null
               : currentMember.memberToken,
+            profileId: currentMember.profileId,
             readyAt: currentMember.readyAt,
             seatedPrivateToken: currentMember.seatedSeat?.privateToken ?? null,
             seatedSeatId: currentMember.seatedSeatId,

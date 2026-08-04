@@ -51,6 +51,7 @@ export type EditableActivityResult =
     }
   | {
       status: "locked";
+      reason: "cancelled" | "ended";
     }
   | {
       status: "not-found";
@@ -122,12 +123,21 @@ export async function getEditableActivityById(
   }
 
   if (
-    activity.status === "CANCELLED" ||
+    activity.status === "CANCELLED"
+  ) {
+    return {
+      status: "locked",
+      reason: "cancelled",
+    };
+  }
+
+  if (
     activity.status === "ENDED" ||
     (activity.endAt ?? activity.startAt) <= new Date()
   ) {
     return {
       status: "locked",
+      reason: "ended",
     };
   }
 

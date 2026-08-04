@@ -40,6 +40,36 @@ function normalizeText(value: string | null | undefined) {
   return (value ?? "").trim();
 }
 
+function getLockedEditError({
+  locale,
+  status,
+}: {
+  locale: string;
+  status: "CANCELLED" | "ENDED";
+}) {
+  if (status === "CANCELLED") {
+    if (locale === "fr") {
+      return "Ce plan est annulé et ne peut plus être modifié.";
+    }
+
+    if (locale === "en") {
+      return "This plan was cancelled and can no longer be edited.";
+    }
+
+    return "活动已取消，无法编辑。";
+  }
+
+  if (locale === "fr") {
+    return "Ce plan est terminé et ne peut plus être modifié.";
+  }
+
+  if (locale === "en") {
+    return "This plan has ended and can no longer be edited.";
+  }
+
+  return "活动已结束，无法编辑。";
+}
+
 export async function updateActivityAction(
   previousState: UpdateActivityState,
   formData: FormData,
@@ -123,15 +153,22 @@ export async function updateActivityAction(
     );
   }
 
+  if (editableActivity.status === "CANCELLED") {
+    return buildActivityErrorState(
+      previousState,
+      rawInput,
+      getLockedEditError({ locale, status: "CANCELLED" }),
+    );
+  }
+
   if (
-    editableActivity.status === "CANCELLED" ||
     editableActivity.status === "ENDED" ||
     (editableActivity.endAt ?? editableActivity.startAt) <= new Date()
   ) {
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "活动已结束或已取消，不能继续编辑。",
+      getLockedEditError({ locale, status: "ENDED" }),
     );
   }
 

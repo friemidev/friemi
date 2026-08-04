@@ -3,11 +3,17 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { createActionPerformanceTracker } from "@/lib/performance";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { getViewerFollowedProfileIds } from "@/features/friends/queries/getViewerFriendIds";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { Prisma } from "@prisma/client";
+import {
+  compareActivityPriorityCards,
+  getActiveActivityPriorityOverrideTargets,
+  getActivityPriorityOverrideMap,
+  getActivityPriorityTargetKey,
+} from "@/features/activities/priority/activityPriority";
 import type {
   ActivityStatus,
   ActivityVisibility,
@@ -602,7 +608,7 @@ async function getActivityRelationWhere(
     };
   }
 
-  const friendIds = await getViewerFriendIds(viewerProfileId);
+  const friendIds = await getViewerFollowedProfileIds(viewerProfileId);
 
   if (friendIds.length === 0) {
     return {
@@ -1486,7 +1492,7 @@ async function attachJoinableActivityStates(
   );
   const viewerFriendIds =
     viewerProfileId && teamActivities.length > 0
-      ? await getViewerFriendIds(viewerProfileId)
+      ? await getViewerFollowedProfileIds(viewerProfileId)
       : [];
   const [
     publicEventActivitiesWithState,
@@ -1768,6 +1774,137 @@ function compareRankedActivities(
   return compareRankedActivitiesByStartAt(left, right, "asc");
 }
 
+function shouldApplyActivityPriorityRanking(
+  filters: Pick<ActivityFilters, "sort"> | undefined,
+) {
+  return filters?.sort !== "shortDuration" && filters?.sort !== "longDuration";
+}
+
+async function sortRankedActivitiesWithPriority(
+  rankedActivities: RankedActivityCard[],
+  filters: Pick<ActivityFilters, "sort" | "timeStates"> | undefined,
+  now: Date,
+  fallbackCompare: (
+    left: RankedActivityCard,
+    right: RankedActivityCard,
+  ) => number,
+) {
+  if (!shouldApplyActivityPriorityRanking(filters)) {
+    return [...rankedActivities].sort(fallbackCompare);
+  }
+
+  const priorityOverrides = await getActivityPriorityOverrideMap(
+    rankedActivities.map((rankedActivity) =>
+      getActivityPriorityTargetKey(rankedActivity.card),
+    ),
+  );
+
+  return [...rankedActivities].sort((left, right) => {
+    const priorityDiff = compareActivityPriorityCards(
+      priorityOverrides,
+      now,
+      left,
+      right,
+    );
+
+    return priorityDiff || fallbackCompare(left, right);
+  });
+}
+
+function mergeActivityQueryResultsById(
+  baseRows: ActivityQueryResult[],
+  priorityRows: ActivityQueryResult[],
+) {
+  const byId = new Map(baseRows.map((row) => [row.id, row]));
+
+  for (const row of priorityRows) {
+    byId.set(row.id, row);
+  }
+
+  return Array.from(byId.values());
+}
+
+function mergePublicEventQueryResultsById(
+  baseRows: PublicEventQueryResult[],
+  priorityRows: PublicEventQueryResult[],
+) {
+  const byId = new Map(baseRows.map((row) => [row.id, row]));
+
+  for (const row of priorityRows) {
+    byId.set(row.id, row);
+  }
+
+  return Array.from(byId.values());
+}
+
+async function addActivePriorityCandidates({
+  activities,
+  activityWhere,
+  now,
+  publicEventWhere,
+  publicEvents,
+}: {
+  activities: ActivityQueryResult[];
+  activityWhere: Prisma.ActivityWhereInput;
+  now: Date;
+  publicEventWhere: Prisma.PublicEventWhereInput | null;
+  publicEvents: PublicEventQueryResult[];
+}) {
+  const activePriorityTargets =
+    await getActiveActivityPriorityOverrideTargets(now);
+
+  if (activePriorityTargets.length === 0) {
+    return { activities, publicEvents };
+  }
+
+  const priorityActivityIds = activePriorityTargets
+    .filter((target) => target.targetType === "ACTIVITY")
+    .map((target) => target.targetId);
+  const priorityPublicEventIds = activePriorityTargets
+    .filter((target) => target.targetType === "PUBLIC_EVENT")
+    .map((target) => target.targetId);
+  const [priorityActivities, priorityPublicEvents] = await Promise.all([
+    priorityActivityIds.length > 0
+      ? prisma.activity.findMany({
+          select: activityCardSelect,
+          where: {
+            AND: [
+              activityWhere,
+              {
+                id: {
+                  in: priorityActivityIds,
+                },
+              },
+            ],
+          },
+        })
+      : [],
+    publicEventWhere && priorityPublicEventIds.length > 0
+      ? prisma.publicEvent.findMany({
+          select: publicEventCardSelect,
+          where: {
+            AND: [
+              publicEventWhere,
+              {
+                id: {
+                  in: priorityPublicEventIds,
+                },
+              },
+            ],
+          },
+        })
+      : [],
+  ]);
+
+  return {
+    activities: mergeActivityQueryResultsById(activities, priorityActivities),
+    publicEvents: mergePublicEventQueryResultsById(
+      publicEvents,
+      priorityPublicEvents,
+    ),
+  };
+}
+
 function getActivityFloatingDateKey(value: Date | string) {
   const { year, month, day } = getTimeZoneDateParts(
     value instanceof Date ? value : new Date(value),
@@ -1915,26 +2052,31 @@ export async function getActivities(
     },
     { id: "asc" },
   ];
-  const [activities, publicEvents] = await Promise.all([
+  const activityWhere: Prisma.ActivityWhereInput = {
+    AND: [baseWhere, filterWhere, relationWhere],
+  };
+  const publicEventWhere: Prisma.PublicEventWhereInput | null =
+    shouldIncludePublicEvents(options.filters)
+      ? {
+          AND: [
+            getVisiblePublicEventWhere({
+              includePast: options.includePast,
+              now: publicEventNow,
+            }),
+            getPublicEventFilterWhere(options.filters),
+          ],
+        }
+      : null;
+  const [baseActivities, basePublicEvents] = await Promise.all([
     prisma.activity.findMany({
-      where: {
-        AND: [baseWhere, filterWhere, relationWhere],
-      },
+      where: activityWhere,
       orderBy,
       take: limit,
       select: activityCardSelect,
     }),
-    shouldIncludePublicEvents(options.filters)
+    publicEventWhere
       ? prisma.publicEvent.findMany({
-          where: {
-            AND: [
-              getVisiblePublicEventWhere({
-                includePast: options.includePast,
-                now: publicEventNow,
-              }),
-              getPublicEventFilterWhere(options.filters),
-            ],
-          },
+          where: publicEventWhere,
           orderBy: [
             {
               startAt: options.filters?.sort === "latest" ? "desc" : "asc",
@@ -1946,16 +2088,26 @@ export async function getActivities(
         })
       : Promise.resolve([]),
   ]);
-  const rankedActivities = [
-    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getActivityRankedCardViewModel,
-    ),
-    ...publicEvents.map(getPublicEventActivityCardViewModel),
-  ]
-    .sort((left, right) =>
-      compareRankedActivities(options.filters, left, right),
+  const { activities, publicEvents } = await addActivePriorityCandidates({
+    activities: baseActivities,
+    activityWhere,
+    now: publicEventNow,
+    publicEventWhere,
+    publicEvents: basePublicEvents,
+  });
+  const rankedActivities = (
+    await sortRankedActivitiesWithPriority(
+      [
+        ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+          getActivityRankedCardViewModel,
+        ),
+        ...publicEvents.map(getPublicEventActivityCardViewModel),
+      ],
+      options.filters,
+      publicEventNow,
+      (left, right) => compareRankedActivities(options.filters, left, right),
     )
-    .slice(0, limit);
+  ).slice(0, limit);
 
   return attachJoinableActivityStates(
     rankedActivities,
@@ -2007,20 +2159,24 @@ async function getUpcomingHomeActivitiesUncached(
     take: safeLimit,
     select: homePublicEventPreviewSelect,
   });
-  const rankedActivities = [
-    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getHomeActivityPreviewCardViewModel,
-    ),
-    ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
-  ]
-    .sort((left, right) =>
-      compareRankedActivities(
-        { sort: "soonest", timeStates: getDefaultActivityTimeStates() },
-        left,
-        right,
-      ),
+  const rankedActivities = (
+    await sortRankedActivitiesWithPriority(
+      [
+        ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+          getHomeActivityPreviewCardViewModel,
+        ),
+        ...publicEvents.map(getHomePublicEventPreviewCardViewModel),
+      ],
+      { sort: "soonest", timeStates: getDefaultActivityTimeStates() },
+      publicEventNow,
+      (left, right) =>
+        compareRankedActivities(
+          { sort: "soonest", timeStates: getDefaultActivityTimeStates() },
+          left,
+          right,
+        ),
     )
-    .slice(0, safeLimit);
+  ).slice(0, safeLimit);
 
   return rankedActivities.map((activity) => activity.card);
 }
@@ -2392,7 +2548,7 @@ async function getOrderedActivityList(
   const readLimit = shouldReadFullNearNowActivityCandidates(filters)
     ? totalCount
     : page * pageSize;
-  const [activities, publicEvents] = await Promise.all([
+  const [baseActivities, basePublicEvents] = await Promise.all([
     prisma.activity.findMany({
       where,
       orderBy: getActivityListOrderBy(filters),
@@ -2408,18 +2564,33 @@ async function getOrderedActivityList(
         })
       : [],
   ]);
+  const { activities, publicEvents } = await addActivePriorityCandidates({
+    activities: baseActivities,
+    activityWhere: where,
+    now: publicEventNow,
+    publicEventWhere,
+    publicEvents: basePublicEvents,
+  });
   const rankedActivities = [
     ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
       getActivityRankedCardViewModel,
     ),
     ...publicEvents.map(getPublicEventActivityCardViewModel),
-  ]
-    .sort((left, right) => compareRankedActivities(filters, left, right))
-    .slice((page - 1) * pageSize, page * pageSize);
+  ];
+  const sortedActivities = await sortRankedActivitiesWithPriority(
+    rankedActivities,
+    filters,
+    publicEventNow,
+    (left, right) => compareRankedActivities(filters, left, right),
+  );
+  const pageActivities = sortedActivities.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
 
   return {
     activities: await attachJoinableActivityStates(
-      rankedActivities,
+      pageActivities,
       viewerProfileId,
     ),
     page,
@@ -2560,16 +2731,20 @@ async function getRecommendedActivityList(
       : [],
   ]);
   const dailySeed = getDailyRankingSeed(now);
-  const rankedActivities = [
-    ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
-      getActivityRankedCardViewModel,
-    ),
-    ...publicEvents.map(getPublicEventActivityCardViewModel),
-  ]
-    .sort((left, right) =>
-      compareRecommendedRankedActivities(now, dailySeed, left, right),
+  const rankedActivities = (
+    await sortRankedActivitiesWithPriority(
+      [
+        ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
+          getActivityRankedCardViewModel,
+        ),
+        ...publicEvents.map(getPublicEventActivityCardViewModel),
+      ],
+      filters,
+      now,
+      (left, right) =>
+        compareRecommendedRankedActivities(now, dailySeed, left, right),
     )
-    .slice((page - 1) * pageSize, page * pageSize);
+  ).slice((page - 1) * pageSize, page * pageSize);
 
   return {
     activities: await attachJoinableActivityStates(
@@ -2646,7 +2821,7 @@ async function getPublicInfoOnlyActivityList(
   const readLimit = shouldReadFullNearNowActivityCandidates(publicInfoFilters)
     ? totalCount
     : page * pageSize + 1;
-  const [activities, publicEvents] = await Promise.all([
+  const [baseActivities, basePublicEvents] = await Promise.all([
     perf.measure("activity.list", () =>
       prisma.activity.findMany({
         where: activityWhere,
@@ -2664,17 +2839,31 @@ async function getPublicInfoOnlyActivityList(
       }),
     ),
   ]);
+  const { activities, publicEvents } = await perf.measure(
+    "priority.candidates",
+    () =>
+      addActivePriorityCandidates({
+        activities: baseActivities,
+        activityWhere,
+        now: publicEventNow,
+        publicEventWhere,
+        publicEvents: basePublicEvents,
+      }),
+  );
   const allRankedActivities = await perf.measure("rank.slice", async () => {
     const ranked = [
       ...filterDuplicateLegacyActivityInfoRows(activities, publicEvents).map(
         getActivityRankedCardViewModel,
       ),
       ...publicEvents.map(getPublicEventActivityCardViewModel),
-    ].sort((left, right) =>
-      compareRankedActivities(publicInfoFilters, left, right),
-    );
+    ];
 
-    return ranked;
+    return sortRankedActivitiesWithPriority(
+      ranked,
+      publicInfoFilters,
+      publicEventNow,
+      (left, right) => compareRankedActivities(publicInfoFilters, left, right),
+    );
   });
   const rankedActivities = allRankedActivities.slice(
     (page - 1) * pageSize,

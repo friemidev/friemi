@@ -151,9 +151,9 @@ const allFrenchCities = [
 const selectClassName =
   "h-11 w-full rounded-lg border border-[#D6D5B2] bg-white px-3 text-base font-semibold text-zinc-800 outline-none transition focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20 sm:h-12 sm:px-4 sm:text-lg";
 const compactInputClassName =
-  "h-11 rounded-xl border border-[#D8D2C2] bg-white px-3 text-base font-semibold text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg";
+  "h-11 min-w-0 rounded-xl border border-[#D8D2C2] bg-white px-3 text-base font-semibold text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:h-12 sm:px-4 sm:text-lg";
 const compactTextareaClassName =
-  "min-h-24 rounded-xl border border-[#D8D2C2] bg-white px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
+  "min-h-24 min-w-0 rounded-xl border border-[#D8D2C2] bg-white px-3 py-2.5 text-base font-medium leading-7 text-zinc-800 shadow-[0_1px_0_rgba(29,29,27,0.03)] placeholder:text-zinc-400 focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/15 sm:px-4 sm:py-3 sm:text-lg sm:leading-8";
 const longDurationThresholdMs = 24 * 60 * 60 * 1000;
 const newActivityDraftStorageKey = "friemi:new-activity-form-draft:v1";
 const newActivityDraftMaxAgeMs = 24 * 60 * 60 * 1000;
@@ -505,7 +505,7 @@ function getLongDurationConfirmCopy(locale: string) {
 
   return {
     eyebrow: "发布前确认",
-    title: "这个组局持续超过一天",
+    title: "这个聚吧持续超过一天",
     description:
       "默认结束时间仍与活动整体结束时间一致。如果你只是想约其中某一场，可以返回修改结束时间。",
     start: "开始",
@@ -687,7 +687,7 @@ function getPublicEventTeamFormCopy(locale: string) {
       activityContent: "Comment vous voulez y aller",
       title: "Nom du groupe",
       titlePlaceholder: "Ex. Sortie groupée après le travail",
-      description: "Message pour les personnes qui veulent venir",
+      description: "Présentation du groupe",
       descriptionPlaceholder:
         "Expliquez le point de rendez-vous, l'ambiance et les détails utiles.",
       itinerary: "Notes de rendez-vous",
@@ -707,7 +707,7 @@ function getPublicEventTeamFormCopy(locale: string) {
       activityContent: "How you want to go",
       title: "Crew name",
       titlePlaceholder: "Example: After-work group for this event",
-      description: "Message for people who want to join",
+      description: "Crew intro",
       descriptionPlaceholder:
         "Explain the meetup point, vibe, and useful details.",
       itinerary: "Meetup notes",
@@ -722,17 +722,17 @@ function getPublicEventTeamFormCopy(locale: string) {
   }
 
   return {
-    cardTitle: "组局信息",
+    cardTitle: "聚吧信息",
     activityContent: "这次怎么约",
-    title: "组局标题",
+    title: "聚吧标题",
     titlePlaceholder: "例如：下班后一起去看展",
-    description: "给想加入的人看的说明",
+    description: "聚吧介绍",
     descriptionPlaceholder: "说明集合方式、同行氛围和需要提前知道的信息。",
     itinerary: "集合备注",
     itineraryPlaceholder: "例如：入口处集合，结束后附近喝咖啡。",
     timeLocation: "集合时间和地点",
-    peoplePrice: "组局人数和费用",
-    capacity: "组局人数上限",
+    peoplePrice: "聚吧人数和费用",
+    capacity: "聚吧人数上限",
     minParticipants: "最少同行人数",
     priceText: "费用说明",
   };
@@ -2780,17 +2780,17 @@ export function NewActivityForm({
                 <ActivityPlacePicker
                   addressErrors={state.fieldErrors?.address}
                   addressFooter={
-                    <label className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-[#D6D5B2] bg-white/82 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:text-[#156240]">
+                    <label className="flex w-full min-w-0 max-w-full cursor-pointer items-start gap-2 rounded-2xl border border-[#D6D5B2] bg-white/82 px-3 py-2 text-sm font-semibold leading-5 text-zinc-700 transition hover:border-[#8AB68E] hover:bg-white has-[:checked]:border-[#8AB68E] has-[:checked]:bg-[#F1F2EC] has-[:checked]:text-[#156240] sm:inline-flex sm:w-auto sm:items-center sm:rounded-full">
                       <input
                         className="peer sr-only"
                         defaultChecked={values?.hideAddressFromNonParticipants}
                         name="hideAddressFromNonParticipants"
                         type="checkbox"
                       />
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#8E8383]/70 bg-white text-white transition peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:[&>svg]:opacity-100">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[#8E8383]/70 bg-white text-white transition peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:[&>svg]:opacity-100 sm:mt-0">
                         <Check className="h-3 w-3 opacity-0 transition" />
                       </span>
-                      <span className="min-w-0 truncate">
+                      <span className="min-w-0 flex-1 whitespace-normal break-words sm:flex-none sm:truncate">
                         {t.form.hideAddressFromNonParticipants}
                       </span>
                     </label>
@@ -2899,7 +2899,7 @@ export function NewActivityForm({
                         key={value}
                         type="button"
                         className={cn(
-                          "h-11 rounded-full border px-4 text-base font-semibold transition",
+                          "min-w-0 overflow-hidden rounded-full border px-3 py-2.5 text-base font-semibold leading-tight transition",
                           active
                             ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
                             : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
@@ -2907,9 +2907,11 @@ export function NewActivityForm({
                         aria-pressed={active}
                         onClick={() => setPriceType(value)}
                       >
-                        {value === "FREE"
-                          ? priceModeCopy.free
-                          : priceModeCopy.paid}
+                        <span className="block truncate">
+                          {value === "FREE"
+                            ? priceModeCopy.free
+                            : priceModeCopy.paid}
+                        </span>
                       </button>
                     );
                   })}
@@ -2971,7 +2973,7 @@ export function NewActivityForm({
                         key={value}
                         type="button"
                         className={cn(
-                          "h-11 rounded-full border px-3 text-sm font-semibold transition sm:text-base",
+                          "min-w-0 overflow-hidden rounded-full border px-3 py-2.5 text-sm font-semibold leading-tight transition sm:text-base",
                           active
                             ? "border-[#369758] bg-[#369758] text-white shadow-[0_8px_18px_rgba(21,98,64,0.16)]"
                             : "border-[#D6D5B2] bg-white/84 text-zinc-700 hover:border-[#8AB68E] hover:text-[#156240]",
@@ -2983,7 +2985,7 @@ export function NewActivityForm({
                           )
                         }
                       >
-                        {label}
+                        <span className="block truncate">{label}</span>
                       </button>
                     );
                   })}

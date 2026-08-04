@@ -34,6 +34,7 @@ import {
   largeActivityCapacityThreshold,
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { syncProfileAchievements } from "@/features/achievements/services/achievements";
 
 export type CreateActivityState = ActivityFormState;
 
@@ -372,7 +373,7 @@ export async function createActivityAction(
     isLowTrustScore(trustScore) &&
     isLargeActivityCapacity(submittedCapacity)
   ) {
-    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型组局。`;
+    const message = `信用值低于 60 时暂时不能创建 ${largeActivityCapacityThreshold} 人及以上的大型聚吧。`;
 
     recordLatency({
       status: "failed",
@@ -462,7 +463,7 @@ export async function createActivityAction(
     return buildActivityErrorState(
       previousState,
       rawInput,
-      "发布组局失败，请稍后重试。",
+      "发布聚吧失败，请稍后重试。",
     );
   }
 
@@ -523,6 +524,10 @@ export async function createActivityAction(
     },
     status: "success",
     userProfileId: profile.id,
+  });
+
+  await syncProfileAchievements(profile.id).catch((error) => {
+    console.error("Failed to sync organizer achievements after create", error);
   });
 
   revalidateTag(OPEN_LOBBY_ACTIVITIES_TAG);

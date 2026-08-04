@@ -129,7 +129,7 @@ function getSwipeKindCopy(locale: string, isActivityInfo: boolean) {
 
   return isActivityInfo
     ? { label: "活动", note: "公开活动" }
-    : { label: "组局", note: "用户发起" };
+    : { label: "聚吧", note: "用户发起" };
 }
 
 function getSwipeMixCopy(locale: string) {
@@ -141,7 +141,7 @@ function getSwipeMixCopy(locale: string) {
     return { activity: "Event 3", team: "Crew 1" };
   }
 
-  return { activity: "活动 3", team: "组局 1" };
+  return { activity: "活动 3", team: "聚吧 1" };
 }
 
 function getSwipeActivityKey(activity: ActivityCardViewModel) {

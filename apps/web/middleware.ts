@@ -8,6 +8,11 @@ import {
   getMobileRootLobbyRedirectPath,
   localeCookieName,
 } from "./lib/mobile-root-lobby-entry";
+import {
+  getReferralCodeToStore,
+  referralCookieMaxAgeSeconds,
+  referralCookieName,
+} from "./features/referrals/referralCode";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -22,18 +27,29 @@ const isProtectedRoute = createRouteMatcher([
   "/:locale/friends(.*)",
   "/:locale/messages(.*)",
   "/:locale/notifications(.*)",
+  "/:locale/profile/achievements(.*)",
+  "/:locale/profile/bag(.*)",
   "/:locale/profile/hangouts(.*)",
+  "/:locale/profile/invite(.*)",
   "/:locale/profile/network(.*)",
+  "/:locale/profile/shop(.*)",
+  "/:locale/profile/visitors(.*)",
 ]);
 const isAdminPageRoute = createRouteMatcher(["/:locale/admin(.*)"]);
 const isAdminApiRoute = createRouteMatcher(["/api/admin(.*)"]);
 const isUploadApiRoute = createRouteMatcher(["/api/uploads(.*)"]);
+const isActivityRoomChatApiRoute = createRouteMatcher([
+  "/api/activity-room-chat(.*)",
+]);
 const isUserPreviewApiRoute = createRouteMatcher(["/api/user-preview(.*)"]);
 const isFriendsApiRoute = createRouteMatcher(["/api/friends(.*)"]);
 const isDirectMessagesApiRoute = createRouteMatcher([
   "/api/direct-messages(.*)",
 ]);
 const isNotificationsApiRoute = createRouteMatcher(["/api/notifications(.*)"]);
+const isProfileVisitsApiRoute = createRouteMatcher(["/api/profile-visits(.*)"]);
+const isProfileApiRoute = createRouteMatcher(["/api/profile(.*)"]);
+const isReferralsApiRoute = createRouteMatcher(["/api/referrals(.*)"]);
 const isLobbyApiRoute = createRouteMatcher(["/api/lobby(.*)"]);
 const isAnalyticsApiRoute = createRouteMatcher(["/api/analytics(.*)"]);
 const isSearchApiRoute = createRouteMatcher(["/api/search(.*)"]);
@@ -71,9 +87,34 @@ function redirectToSignIn(request: NextRequest) {
     search: request.nextUrl.search,
   });
 
-  return NextResponse.redirect(
-    new URL(getSignInHref(locale, redirectTarget), request.url),
+  return withReferralCookie(
+    request,
+    NextResponse.redirect(
+      new URL(getSignInHref(locale, redirectTarget), request.url),
+    ),
   );
+}
+
+function withReferralCookie<TResponse extends NextResponse>(
+  request: NextRequest,
+  response: TResponse,
+) {
+  const referralCode = getReferralCodeToStore({
+    existingCookie: request.cookies.get(referralCookieName)?.value,
+    incomingRef: request.nextUrl.searchParams.get("ref"),
+  });
+
+  if (referralCode) {
+    response.cookies.set(referralCookieName, referralCode, {
+      httpOnly: true,
+      maxAge: referralCookieMaxAgeSeconds,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
+
+  return response;
 }
 
 function getCanonicalHostRedirectUrl(request: NextRequest) {
@@ -110,7 +151,10 @@ export default clerkMiddleware(async (auth, request) => {
   const canonicalHostRedirectUrl = getCanonicalHostRedirectUrl(request);
 
   if (canonicalHostRedirectUrl) {
-    return NextResponse.redirect(canonicalHostRedirectUrl);
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(canonicalHostRedirectUrl),
+    );
   }
 
   const mobileRootLobbyPath = getMobileRootLobbyRedirectPath({
@@ -122,13 +166,19 @@ export default clerkMiddleware(async (auth, request) => {
   });
 
   if (mobileRootLobbyPath) {
-    return NextResponse.redirect(new URL(mobileRootLobbyPath, request.url));
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(new URL(mobileRootLobbyPath, request.url)),
+    );
   }
 
   const localeRootHomePath = getLocaleRootHomeRedirectPath(request);
 
   if (localeRootHomePath) {
-    return NextResponse.redirect(new URL(localeRootHomePath, request.url));
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(new URL(localeRootHomePath, request.url)),
+    );
   }
 
   if (hasClerkKeys() && isProtectedRoute(request)) {
@@ -147,14 +197,17 @@ export default clerkMiddleware(async (auth, request) => {
 
     if (!authState.userId) {
       if (isAdminApiRoute(request)) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return withReferralCookie(
+          request,
+          NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        );
       }
 
       return redirectToSignIn(request);
     }
 
     if (isAdminApiRoute(request)) {
-      return NextResponse.next();
+      return withReferralCookie(request, NextResponse.next());
     }
   }
 
@@ -163,50 +216,69 @@ export default clerkMiddleware(async (auth, request) => {
       const { userId } = await auth();
 
       if (!userId) {
-        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+        return withReferralCookie(
+          request,
+          NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }),
+        );
       }
     }
 
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isActivityRoomChatApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isUserPreviewApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isFriendsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isDirectMessagesApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isNotificationsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isProfileVisitsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isProfileApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
+  }
+
+  if (isReferralsApiRoute(request)) {
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isLobbyApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isAnalyticsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isSearchApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isTranslationsApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
   if (isMobileApiRoute(request)) {
-    return NextResponse.next();
+    return withReferralCookie(request, NextResponse.next());
   }
 
-  return intlMiddleware(request);
+  return withReferralCookie(request, intlMiddleware(request));
 });
 
 export const config = {
@@ -215,11 +287,15 @@ export const config = {
     "/:locale/updates",
     "/:locale/updates/:path*",
     "/api/admin/:path*",
+    "/api/activity-room-chat/:path*",
     "/api/uploads/:path*",
     "/api/user-preview/:path*",
     "/api/friends/:path*",
     "/api/direct-messages/:path*",
     "/api/notifications/:path*",
+    "/api/profile/:path*",
+    "/api/profile-visits/:path*",
+    "/api/referrals/:path*",
     "/api/lobby/:path*",
     "/api/analytics/:path*",
     "/api/search/:path*",

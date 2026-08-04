@@ -21,6 +21,7 @@ const accountSettingsCopy = {
     description: "管理语言偏好、账号资料、安全和登录状态。",
     accountSettings: "账号设置",
     accountSecurity: "账号与安全",
+    activityPriorityAdmin: "活动权重管理",
     topNewsAdmin: "Top News 管理",
     language: "语言",
     signOut: "退出登录",
@@ -32,6 +33,7 @@ const accountSettingsCopy = {
       "Manage language, account profile, security, and sign-in state.",
     accountSettings: "Account settings",
     accountSecurity: "Account & security",
+    activityPriorityAdmin: "Activity priority admin",
     topNewsAdmin: "Top News admin",
     language: "Language",
     signOut: "Sign out",
@@ -42,6 +44,7 @@ const accountSettingsCopy = {
     description: "Gerez la langue, le profil, la securite et la connexion.",
     accountSettings: "Parametres du compte",
     accountSecurity: "Compte et securite",
+    activityPriorityAdmin: "Priorite des activites",
     topNewsAdmin: "Admin Top News",
     language: "Langue",
     signOut: "Deconnexion",
@@ -76,7 +79,7 @@ export default async function AccountSettingsPage({
   ]);
 
   return (
-    <PageContainer className="relative isolate min-h-[calc(100svh-5.15rem)] max-w-xl overflow-hidden px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.15rem)] md:min-h-[70vh] md:pb-12 md:pt-10">
+    <PageContainer className="app-mobile-page-shell [--app-mobile-page-top-gap:1.15rem] [--app-mobile-page-bottom-gap:1.75rem] relative isolate max-w-xl overflow-hidden px-5 md:min-h-[70vh] md:pb-12 md:pt-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
@@ -109,6 +112,9 @@ export default async function AccountSettingsPage({
           <AccountSettingsActionList
             accountSecurityLabel={copy.accountSecurity}
             accountSettingsLabel={copy.accountSettings}
+            adminActivityPriorityLabel={
+              isAdmin ? copy.activityPriorityAdmin : undefined
+            }
             adminTopNewsLabel={isAdmin ? copy.topNewsAdmin : undefined}
             locale={locale}
             signOutLabel={copy.signOut}

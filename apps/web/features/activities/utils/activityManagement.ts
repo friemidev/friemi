@@ -1,6 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getFriendshipPair } from "@/features/friends/utils/friendship";
 
 export const maxActivityCoManagers = 3;
 
@@ -63,20 +62,40 @@ export async function assertCanManageActivity(
   };
 }
 
-export async function areProfilesFriends(
+export async function areProfilesMutualFollows(
   profileId: string,
   otherProfileId: string,
   client: ActivityManagementClient = prisma,
 ) {
-  const pair = getFriendshipPair(profileId, otherProfileId);
-  const friendship = await client.friendship.findUnique({
+  const follows = await client.userFollow.findMany({
     where: {
-      userAId_userBId: pair,
+      OR: [
+        {
+          followerId: profileId,
+          followingId: otherProfileId,
+        },
+        {
+          followerId: otherProfileId,
+          followingId: profileId,
+        },
+      ],
     },
     select: {
-      id: true,
+      followerId: true,
+      followingId: true,
     },
   });
 
-  return Boolean(friendship);
+  return (
+    follows.some(
+      (follow) =>
+        follow.followerId === profileId &&
+        follow.followingId === otherProfileId,
+    ) &&
+    follows.some(
+      (follow) =>
+        follow.followerId === otherProfileId &&
+        follow.followingId === profileId,
+    )
+  );
 }

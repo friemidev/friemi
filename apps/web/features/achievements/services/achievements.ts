@@ -1,0 +1,508 @@
+import { Prisma, type ParticipantStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import {
+  achievementCatalog,
+  isAchievementKey,
+  maxEquippedAchievementCount,
+  type AchievementDefinition,
+  type AchievementKey,
+} from "../achievementCatalog";
+
+type DbClient = typeof prisma | Prisma.TransactionClient;
+
+export type AchievementSource = {
+  sourceId?: string | null;
+  sourceType?: string | null;
+};
+
+export type AchievementProgressSnapshot = {
+  hostedActivityCount: number;
+  isCoCreator: boolean;
+  participationCount: number;
+  trustScore: number;
+};
+
+export type UserAchievementProgressItem = {
+  definition: AchievementDefinition;
+  isEquipped: boolean;
+  isUnlocked: boolean;
+  progress: number;
+  target: number;
+  unlockedAt: string | null;
+};
+
+export type PublicAchievementWallItem = {
+  definition: AchievementDefinition;
+  sourceId: string | null;
+  sourceType: string | null;
+  unlockedAt: string;
+};
+
+type PublicAchievementRecord = {
+  achievementKey: string;
+  sourceId: string | null;
+  sourceType: string | null;
+  unlockedAt: Date;
+};
+
+export class AchievementDomainError extends Error {
+  code: "UNKNOWN_ACHIEVEMENT";
+
+  constructor(code: "UNKNOWN_ACHIEVEMENT") {
+    super(code);
+    this.name = "AchievementDomainError";
+    this.code = code;
+  }
+}
+
+const participationAchievementStatuses: ParticipantStatus[] = [
+  "APPROVED",
+  "JOINED",
+];
+
+function getEndedActivityWhere(now: Date): Prisma.ActivityWhereInput {
+  return {
+    OR: [
+      {
+        status: "ENDED",
+      },
+      {
+        endAt: {
+          lte: now,
+        },
+      },
+      {
+        endAt: null,
+        startAt: {
+          lte: now,
+        },
+      },
+    ],
+  };
+}
+
+function getNoActivityCheckInSignalWhere(): Prisma.ActivityWhereInput {
+  return {
+    participants: {
+      none: {
+        OR: [
+          {
+            checkInCancelledAt: {
+              not: null,
+            },
+          },
+          {
+            checkInRequestedAt: {
+              not: null,
+            },
+          },
+          {
+            checkedInAt: {
+              not: null,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+function clampProgress(progress: number, target: number) {
+  return Math.max(0, Math.min(target, progress));
+}
+
+export function getAchievementProgressValue(
+  definition: AchievementDefinition,
+  snapshot: AchievementProgressSnapshot,
+) {
+  if (definition.metric === "isCoCreator") {
+    return snapshot.isCoCreator ? 1 : 0;
+  }
+
+  return snapshot[definition.metric];
+}
+
+export function resolveAchievementProgress({
+  equippedKeys = new Set<AchievementKey>(),
+  snapshot,
+  unlockedAtByKey = new Map<AchievementKey, string>(),
+}: {
+  equippedKeys?: Set<AchievementKey>;
+  snapshot: AchievementProgressSnapshot;
+  unlockedAtByKey?: Map<AchievementKey, string>;
+}) {
+  return achievementCatalog.map((definition) => {
+    const rawProgress = getAchievementProgressValue(definition, snapshot);
+    const progress = clampProgress(rawProgress, definition.target);
+    const unlockedAt = unlockedAtByKey.get(definition.key) ?? null;
+
+    return {
+      definition,
+      isEquipped: equippedKeys.has(definition.key),
+      isUnlocked: Boolean(unlockedAt) || rawProgress >= definition.target,
+      progress,
+      target: definition.target,
+      unlockedAt,
+    } satisfies UserAchievementProgressItem;
+  });
+}
+
+async function getEquippedAchievementKeySet(db: DbClient, profileId: string) {
+  const equippedAchievements = await db.userEquippedAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      achievementKey: true,
+    },
+    take: maxEquippedAchievementCount,
+  });
+
+  return new Set(
+    equippedAchievements.flatMap((achievement) =>
+      isAchievementKey(achievement.achievementKey)
+        ? [achievement.achievementKey]
+        : [],
+    ),
+  );
+}
+
+async function getAchievementSnapshot(
+  db: DbClient,
+  profileId: string,
+): Promise<AchievementProgressSnapshot> {
+  const now = new Date();
+  const [profile, participationCount, hostedActivityCount, trustScore] =
+    await Promise.all([
+      db.userProfile.findUnique({
+        where: {
+          id: profileId,
+        },
+        select: {
+          isCoCreator: true,
+        },
+      }),
+      db.activityParticipant.count({
+        where: {
+          OR: [
+            {
+              checkedInAt: {
+                not: null,
+              },
+            },
+            {
+              activity: {
+                AND: [
+                  getEndedActivityWhere(now),
+                  getNoActivityCheckInSignalWhere(),
+                ],
+              },
+            },
+          ],
+          status: {
+            in: participationAchievementStatuses,
+          },
+          activity: {
+            status: {
+              not: "CANCELLED",
+            },
+            type: {
+              not: "PUBLIC_EVENT",
+            },
+          },
+          userProfileId: profileId,
+        },
+      }),
+      db.activity.count({
+        where: {
+          organizerId: profileId,
+          status: {
+            not: "DRAFT",
+          },
+          type: {
+            not: "PUBLIC_EVENT",
+          },
+        },
+      }),
+      getTrustScore(db, profileId),
+    ]);
+
+  return {
+    hostedActivityCount,
+    isCoCreator: Boolean(profile?.isCoCreator),
+    participationCount,
+    trustScore,
+  };
+}
+
+async function getUnlockedAchievementMap(db: DbClient, profileId: string) {
+  const achievements = await db.userAchievement.findMany({
+    where: {
+      profileId,
+    },
+    select: {
+      achievementKey: true,
+      unlockedAt: true,
+    },
+  });
+
+  return new Map(
+    achievements.flatMap((achievement) =>
+      isAchievementKey(achievement.achievementKey)
+        ? [
+            [
+              achievement.achievementKey,
+              achievement.unlockedAt.toISOString(),
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+}
+
+export async function grantAchievement(
+  profileId: string,
+  achievementKey: AchievementKey,
+  source: AchievementSource = {},
+) {
+  if (!isAchievementKey(achievementKey)) {
+    throw new AchievementDomainError("UNKNOWN_ACHIEVEMENT");
+  }
+
+  const existingAchievement = await prisma.userAchievement.findUnique({
+    where: {
+      profileId_achievementKey: {
+        achievementKey,
+        profileId,
+      },
+    },
+  });
+
+  if (existingAchievement) {
+    return {
+      achievement: existingAchievement,
+      created: false,
+    };
+  }
+
+  try {
+    const achievement = await prisma.userAchievement.create({
+      data: {
+        achievementKey,
+        profileId,
+        sourceId: source.sourceId ?? null,
+        sourceType: source.sourceType ?? null,
+      },
+    });
+
+    return {
+      achievement,
+      created: true,
+    };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const achievement = await prisma.userAchievement.findUniqueOrThrow({
+        where: {
+          profileId_achievementKey: {
+            achievementKey,
+            profileId,
+          },
+        },
+      });
+
+      return {
+        achievement,
+        created: false,
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function syncProfileAchievements(profileId: string) {
+  const [snapshot, unlockedAtByKey, equippedKeys] = await Promise.all([
+    getAchievementSnapshot(prisma, profileId),
+    getUnlockedAchievementMap(prisma, profileId),
+    getEquippedAchievementKeySet(prisma, profileId),
+  ]);
+  const progressItems = resolveAchievementProgress({
+    equippedKeys,
+    snapshot,
+    unlockedAtByKey,
+  });
+  const newlyUnlocked = [];
+  const nextUnlockedAtByKey = new Map(unlockedAtByKey);
+
+  for (const item of progressItems) {
+    if (!item.unlockedAt && item.isUnlocked) {
+      const result = await grantAchievement(profileId, item.definition.key, {
+        sourceType: "sync",
+      });
+
+      newlyUnlocked.push(result);
+      nextUnlockedAtByKey.set(
+        item.definition.key,
+        result.achievement.unlockedAt.toISOString(),
+      );
+    }
+  }
+
+  return {
+    newlyUnlockedCount: newlyUnlocked.filter((result) => result.created).length,
+    progress: resolveAchievementProgress({
+      equippedKeys,
+      snapshot,
+      unlockedAtByKey: nextUnlockedAtByKey,
+    }),
+  };
+}
+
+export async function getAchievementProgress(profileId: string) {
+  const [snapshot, unlockedAtByKey, equippedKeys] = await Promise.all([
+    getAchievementSnapshot(prisma, profileId),
+    getUnlockedAchievementMap(prisma, profileId),
+    getEquippedAchievementKeySet(prisma, profileId),
+  ]);
+
+  return resolveAchievementProgress({
+    equippedKeys,
+    snapshot,
+    unlockedAtByKey,
+  });
+}
+
+export async function getPublicAchievementWall(profileId: string) {
+  const equippedAchievements = await prisma.userEquippedAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      achievementKey: true,
+    },
+    take: maxEquippedAchievementCount,
+  });
+  const equippedKeys = equippedAchievements.flatMap((achievement) =>
+    isAchievementKey(achievement.achievementKey)
+      ? [achievement.achievementKey]
+      : [],
+  );
+
+  if (equippedKeys.length === 0) {
+    return [];
+  }
+
+  const achievements = await prisma.userAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: equippedKeys,
+      },
+      profileId,
+    },
+    select: {
+      achievementKey: true,
+      sourceId: true,
+      sourceType: true,
+      unlockedAt: true,
+    },
+    take: maxEquippedAchievementCount,
+  });
+
+  return resolvePublicAchievementWallItems({
+    achievements,
+    equippedKeys,
+  });
+}
+
+export async function getUnlockedAchievementWall(profileId: string) {
+  const achievements = await prisma.userAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    select: {
+      achievementKey: true,
+      sourceId: true,
+      sourceType: true,
+      unlockedAt: true,
+    },
+  });
+  const achievementsByKey = new Map(
+    achievements.map((achievement) => [
+      achievement.achievementKey,
+      achievement,
+    ]),
+  );
+
+  return achievementCatalog.flatMap((definition) => {
+    const achievement = achievementsByKey.get(definition.key);
+
+    if (!achievement) {
+      return [];
+    }
+
+    return {
+      definition,
+      sourceId: achievement.sourceId,
+      sourceType: achievement.sourceType,
+      unlockedAt: achievement.unlockedAt.toISOString(),
+    } satisfies PublicAchievementWallItem;
+  });
+}
+
+export function resolvePublicAchievementWallItems({
+  achievements,
+  equippedKeys,
+}: {
+  achievements: PublicAchievementRecord[];
+  equippedKeys: AchievementKey[];
+}) {
+  const achievementsByKey = new Map(
+    achievements.map((achievement) => [
+      achievement.achievementKey,
+      achievement,
+    ]),
+  );
+  const orderedAchievements = equippedKeys
+    .slice(0, maxEquippedAchievementCount)
+    .flatMap((key) => {
+      const achievement = achievementsByKey.get(key);
+
+      return achievement ? [achievement] : [];
+    });
+
+  return orderedAchievements.flatMap((achievement) => {
+    if (!isAchievementKey(achievement.achievementKey)) {
+      return [];
+    }
+
+    const definition = achievementCatalog.find(
+      (item) => item.key === achievement.achievementKey,
+    );
+
+    if (!definition) {
+      return [];
+    }
+
+    return {
+      definition,
+      sourceId: achievement.sourceId,
+      sourceType: achievement.sourceType,
+      unlockedAt: achievement.unlockedAt.toISOString(),
+    } satisfies PublicAchievementWallItem;
+  });
+}

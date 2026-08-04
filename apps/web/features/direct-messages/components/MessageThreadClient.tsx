@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 import { formatActivityDate } from "@chill-club/shared";
@@ -9,17 +15,25 @@ import { getActivityDetailPath } from "@/features/activities/utils/activityRoute
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
+  formatChatDateSeparator,
+  getChatDateKey,
+} from "@/lib/chatDateSeparators";
+import {
   sendDirectMessageAction,
   type DirectMessageActionState,
 } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
 import type {
   DirectConversationActivityContextViewModel,
+  DirectConversationThreadViewModel,
   DirectMessageThreadItemViewModel,
   DirectMessageUserViewModel,
 } from "../queries/getDirectMessages";
 import { MessageBubble, type MessageBubbleViewModel } from "./MessageBubble";
-import { MessageComposer, type OptimisticMessagePayload } from "./MessageComposer";
+import {
+  MessageComposer,
+  type OptimisticMessagePayload,
+} from "./MessageComposer";
 import { MessageThreadScrollAnchor } from "./MessageThreadScrollAnchor";
 
 type MessageThreadClientProps = {
@@ -31,6 +45,7 @@ type MessageThreadClientProps = {
   initialMessages: DirectMessageThreadItemViewModel[];
   locale: string;
   peer: DirectMessageUserViewModel;
+  sendPolicy: DirectConversationThreadViewModel["sendPolicy"];
 };
 
 function createClientMessageId() {
@@ -47,6 +62,30 @@ const defaultActionState: DirectMessageActionState = {
   },
 };
 
+function ChatDateSeparator({
+  createdAt,
+  locale,
+}: {
+  createdAt: string;
+  locale: string;
+}) {
+  const label = formatChatDateSeparator(createdAt, locale);
+
+  if (!label) {
+    return null;
+  }
+
+  return (
+    <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#8B907F] ring-1 ring-[#E7E2D6]">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-[#E7E2D6]" />
+    </div>
+  );
+}
+
 export function MessageThreadClient({
   activityContext,
   canSend,
@@ -56,14 +95,26 @@ export function MessageThreadClient({
   initialMessages,
   locale,
   peer,
+  sendPolicy,
 }: MessageThreadClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [messages, setMessages] =
     useState<MessageBubbleViewModel[]>(initialMessages);
+  const [localRemainingNonFriendMessages, setLocalRemainingNonFriendMessages] =
+    useState(sendPolicy.remainingNonFriendMessages);
   const t = getDirectMessagesCopy(locale);
   const hasMessages = messages.length > 0;
   const lastMessageId = messages[messages.length - 1]?.id;
+  const canSendNow =
+    canSend &&
+    (localRemainingNonFriendMessages === null ||
+      localRemainingNonFriendMessages > 0);
+  const policyNotice = getSendPolicyNotice(
+    sendPolicy,
+    locale,
+    localRemainingNonFriendMessages,
+  );
 
   useEffect(() => {
     setMessages((currentMessages) => {
@@ -78,6 +129,28 @@ export function MessageThreadClient({
       return [...initialMessages, ...optimisticMessages];
     });
   }, [initialMessages]);
+
+  useEffect(() => {
+    setLocalRemainingNonFriendMessages(sendPolicy.remainingNonFriendMessages);
+  }, [sendPolicy.remainingNonFriendMessages]);
+
+  const decrementLocalRemainingNonFriendMessages = useCallback(() => {
+    if (sendPolicy.remainingNonFriendMessages !== null) {
+      setLocalRemainingNonFriendMessages((current) =>
+        current === null ? current : Math.max(0, current - 1),
+      );
+    }
+  }, [sendPolicy.remainingNonFriendMessages]);
+
+  const restoreLocalRemainingNonFriendMessages = useCallback(() => {
+    const maxRemaining = sendPolicy.remainingNonFriendMessages;
+
+    if (maxRemaining !== null) {
+      setLocalRemainingNonFriendMessages((current) =>
+        current === null ? current : Math.min(current + 1, maxRemaining),
+      );
+    }
+  }, [sendPolicy.remainingNonFriendMessages]);
 
   const handleOptimisticSend = useCallback(
     (payload: OptimisticMessagePayload) => {
@@ -97,9 +170,11 @@ export function MessageThreadClient({
         },
       ]);
 
+      decrementLocalRemainingNonFriendMessages();
+
       return clientMessageId;
     },
-    [currentUser.id],
+    [currentUser.id, decrementLocalRemainingNonFriendMessages],
   );
 
   const handleOptimisticCommit = useCallback(
@@ -143,8 +218,9 @@ export function MessageThreadClient({
             : message,
         ),
       );
+      restoreLocalRemainingNonFriendMessages();
     },
-    [],
+    [restoreLocalRemainingNonFriendMessages],
   );
 
   const handleRetryMessage = useCallback(
@@ -159,6 +235,7 @@ export function MessageThreadClient({
             : currentMessage,
         ),
       );
+      decrementLocalRemainingNonFriendMessages();
 
       const submitFormData = new FormData();
       submitFormData.set("locale", locale);
@@ -196,31 +273,56 @@ export function MessageThreadClient({
       conversationId,
       handleOptimisticCommit,
       handleOptimisticFailure,
+      decrementLocalRemainingNonFriendMessages,
       locale,
     ],
   );
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-4 sm:px-5">
         {activityContext ? (
-          <ActivityContextCard activityContext={activityContext} locale={locale} />
+          <ActivityContextCard
+            activityContext={activityContext}
+            locale={locale}
+          />
         ) : null}
+        {policyNotice ? <SendPolicyNotice label={policyNotice} /> : null}
         {hasMessages ? (
-          <div className={cn("grid gap-3", activityContext ? "mt-4" : "")}>
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                {...message}
-                locale={locale}
-                onRetry={
-                  message.deliveryStatus === "failed"
-                    ? handleRetryMessage
-                    : undefined
-                }
-                sender={message.isMine ? currentUser : peer}
-              />
-            ))}
+          <div
+            className={cn(
+              "grid gap-3",
+              activityContext || policyNotice ? "mt-4" : "",
+            )}
+          >
+            {messages.map((message, index) => {
+              const previousMessage = messages[index - 1];
+              const showDateSeparator =
+                !previousMessage ||
+                getChatDateKey(previousMessage.createdAt) !==
+                  getChatDateKey(message.createdAt);
+
+              return (
+                <Fragment key={message.id}>
+                  {showDateSeparator ? (
+                    <ChatDateSeparator
+                      createdAt={message.createdAt}
+                      locale={locale}
+                    />
+                  ) : null}
+                  <MessageBubble
+                    {...message}
+                    locale={locale}
+                    onRetry={
+                      message.deliveryStatus === "failed" && canSendNow
+                        ? handleRetryMessage
+                        : undefined
+                    }
+                    sender={message.isMine ? currentUser : peer}
+                  />
+                </Fragment>
+              );
+            })}
             <MessageThreadScrollAnchor lastMessageId={lastMessageId} />
           </div>
         ) : (
@@ -230,7 +332,9 @@ export function MessageThreadClient({
                 {t.emptyThreadTitle}
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#156240]">
-                {canSend ? t.emptyThreadDescription : t.readOnlyDescription}
+                {canSendNow
+                  ? t.emptyThreadDescription
+                  : (policyNotice ?? t.readOnlyDescription)}
               </p>
             </div>
           </div>
@@ -241,6 +345,7 @@ export function MessageThreadClient({
         <MessageComposer
           activityId={activityContext?.id}
           conversationId={conversationId}
+          disabled={!canSendNow}
           initialBody={initialBody}
           locale={locale}
           onOptimisticCommit={handleOptimisticCommit}
@@ -248,7 +353,10 @@ export function MessageThreadClient({
           onOptimisticSend={handleOptimisticSend}
         />
       ) : (
-        <ReadOnlyMessageComposer locale={locale} />
+        <ReadOnlyMessageComposer
+          description={policyNotice ?? t.readOnlyDescription}
+          locale={locale}
+        />
       )}
     </>
   );
@@ -309,16 +417,58 @@ function ActivityContextCard({
   );
 }
 
-function ReadOnlyMessageComposer({ locale }: { locale: string }) {
+function getSendPolicyNotice(
+  sendPolicy: DirectConversationThreadViewModel["sendPolicy"],
+  locale: string,
+  localRemainingNonFriendMessages: number | null,
+) {
+  const t = getDirectMessagesCopy(locale);
+
+  if (sendPolicy.isMutualFollow || sendPolicy.hasPeerReplied) {
+    return null;
+  }
+
+  if (sendPolicy.reason === "LOW_TRUST") {
+    return t.errors.LOW_TRUST;
+  }
+
+  if (sendPolicy.reason !== "ALLOWED") {
+    return sendPolicy.reason === "NON_FRIEND_LIMIT_REACHED"
+      ? t.nonFriendWaitNotice
+      : t.errors[sendPolicy.reason];
+  }
+
+  if (localRemainingNonFriendMessages === null) {
+    return null;
+  }
+
+  return localRemainingNonFriendMessages > 0
+    ? t.nonFriendLimitNotice(localRemainingNonFriendMessages)
+    : t.nonFriendWaitNotice;
+}
+
+function SendPolicyNotice({ label }: { label: string }) {
+  return (
+    <div className="rounded-[1rem] border border-[#D6D5B2] bg-white/78 px-3 py-2.5 text-xs font-black leading-5 text-[#6C746A] shadow-[0_10px_24px_rgba(21,98,64,0.06)]">
+      {label}
+    </div>
+  );
+}
+
+function ReadOnlyMessageComposer({
+  description,
+  locale,
+}: {
+  description: string;
+  locale: string;
+}) {
   const t = getDirectMessagesCopy(locale);
 
   return (
     <div className="shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
       <div className="rounded-[1rem] border border-dashed border-sand bg-team-bg px-3 py-3">
         <p className="text-sm font-semibold text-ink">{t.readOnlyTitle}</p>
-        <p className="mt-1 text-xs leading-5 text-[#156240]">
-          {t.readOnlyDescription}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-[#156240]">{description}</p>
       </div>
     </div>
   );

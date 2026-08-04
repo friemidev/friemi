@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileHangoutsMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -10,9 +11,18 @@ type ProfileHangoutsPageProps = {
   params: Promise<{
     locale: string;
   }>;
+  searchParams?: Promise<{
+    tab?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  robots: {
+    follow: false,
+    index: false,
+  },
+};
 
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
@@ -44,26 +54,39 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
       friendshipId: null,
       isFriend: false,
       isFollowing: false,
+      isMutualFollow: false,
       pendingFriendRequest: null,
+      targetFollowsViewer: false,
     },
   };
 }
 
 export default async function ProfileHangoutsPage({
   params,
+  searchParams,
 }: ProfileHangoutsPageProps) {
   const { locale } = await params;
+  const query = await searchParams;
+  const requestedTab =
+    query?.tab === "participation"
+      ? "participation"
+      : query?.tab === "favorite"
+        ? "favorite"
+        : "created";
   const profile = await ensureCurrentUserProfile(locale, "/profile/hangouts");
-  const dashboard = await getProfileDashboard(profile.id).catch((error: unknown) => {
-    console.error("Failed to load profile hangouts", error);
+  const dashboard = await getProfileDashboard(profile.id).catch(
+    (error: unknown) => {
+      console.error("Failed to load profile hangouts", error);
 
-    return getEmptyProfileDashboard();
-  });
+      return getEmptyProfileDashboard();
+    },
+  );
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
       <ProfileHangoutsMobilePage
         dashboard={dashboard}
+        initialTab={requestedTab}
         locale={locale}
       />
     </PageContainer>

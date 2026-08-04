@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileDashboardView } from "@/features/profile/components/ProfileDashboardView";
-import { DetailSourceReturnLink } from "@/features/navigation/components/DetailSourceReturnLink";
+import {
+  getPublicAchievementWall,
+  getUnlockedAchievementWall,
+} from "@/features/achievements/queries/getUserAchievements";
+import { ProfileVisitTracker } from "@/features/profile-visits/components/ProfileVisitTracker";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import {
   getProfileDashboard,
@@ -49,7 +53,9 @@ function getEmptyProfileDashboard(): ProfileDashboardViewModel {
       friendshipId: null,
       isFriend: false,
       isFollowing: false,
+      isMutualFollow: false,
       pendingFriendRequest: null,
+      targetFollowsViewer: false,
     },
   };
 }
@@ -62,6 +68,7 @@ export default async function PublicProfilePage({
   const isSelf = viewerProfile?.id === profileId;
   const profile = await getPublicProfileById(profileId, {
     includePrivateFields: isSelf,
+    viewerProfileId: viewerProfile?.id ?? null,
   });
 
   if (!profile) {
@@ -71,20 +78,37 @@ export default async function PublicProfilePage({
   const dashboardPromise = isSelf
     ? getProfileDashboard(profile.id)
     : getPublicProfileDashboard(profile.id, viewerProfile?.id);
-  const dashboardResult = await dashboardPromise
-    .then((dashboard) => ({ dashboard, error: null }))
-    .catch((error: unknown) => {
-      console.error("Failed to load public profile dashboard", error);
+  const [dashboardResult, publicAchievements, achievementPreviewItems] =
+    await Promise.all([
+      dashboardPromise
+        .then((dashboard) => ({ dashboard, error: null }))
+        .catch((error: unknown) => {
+          console.error("Failed to load public profile dashboard", error);
 
-      return {
-        dashboard: getEmptyProfileDashboard(),
-        error,
-      };
-    });
+          return {
+            dashboard: getEmptyProfileDashboard(),
+            error,
+          };
+        }),
+      isSelf
+        ? Promise.resolve([])
+        : getPublicAchievementWall(profile.id).catch((error: unknown) => {
+            console.error("Failed to load public achievement wall", error);
+
+            return [];
+          }),
+      getUnlockedAchievementWall(profile.id).catch((error: unknown) => {
+        console.error("Failed to load unlocked public achievements", error);
+
+        return [];
+      }),
+    ]);
 
   return (
     <PageContainer className="space-y-4 max-md:px-0 max-md:py-0">
-      <DetailSourceReturnLink locale={locale} />
+      {viewerProfile && !isSelf ? (
+        <ProfileVisitTracker profileId={profile.id} />
+      ) : null}
       <ProfileDashboardView
         dashboard={dashboardResult.dashboard}
         hasDashboardError={Boolean(dashboardResult.error)}
@@ -92,6 +116,8 @@ export default async function PublicProfilePage({
         isSelf={isSelf}
         locale={locale}
         profile={profile}
+        achievementPreviewItems={achievementPreviewItems}
+        publicAchievements={publicAchievements}
       />
     </PageContainer>
   );

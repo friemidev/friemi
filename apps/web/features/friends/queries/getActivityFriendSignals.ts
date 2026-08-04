@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ParticipantStatus } from "@prisma/client";
+import { getViewerFollowedProfileIds } from "./getViewerFriendIds";
 import type {
   ActivityCardViewModel,
   ActivityFriendSignalUserViewModel,
@@ -11,15 +12,6 @@ const friendSignalParticipantStatuses: ParticipantStatus[] = [
   "JOINED",
   "APPROVED",
 ];
-
-function getOtherFriendId(
-  friendship: { userAId: string; userBId: string },
-  viewerProfileId: string,
-) {
-  return friendship.userAId === viewerProfileId
-    ? friendship.userBId
-    : friendship.userAId;
-}
 
 function getSignalFromFriends(
   friends: ActivityFriendSignalUserViewModel[],
@@ -48,22 +40,7 @@ export async function getActivityFriendSignalMap(
   }
 
   const friendIds =
-    viewerFriendIds ??
-    Array.from(
-      new Set(
-        (
-          await prisma.friendship.findMany({
-            where: {
-              OR: [{ userAId: viewerProfileId }, { userBId: viewerProfileId }],
-            },
-            select: {
-              userAId: true,
-              userBId: true,
-            },
-          })
-        ).map((friendship) => getOtherFriendId(friendship, viewerProfileId)),
-      ),
-    );
+    viewerFriendIds ?? (await getViewerFollowedProfileIds(viewerProfileId));
 
   if (friendIds.length === 0) {
     return new Map<string, ActivityFriendSignalViewModel>();

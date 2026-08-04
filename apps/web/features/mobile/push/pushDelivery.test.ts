@@ -41,8 +41,16 @@ test("getNotificationPath routes activity and message notifications correctly", 
   );
   assert.equal(
     getNotificationPath({
+      actorId: "sender_1",
       activityId: null,
+      type: "CHARM_GIFT_RECEIVED",
+    }),
+    "/profile/sender_1",
+  );
+  assert.equal(
+    getNotificationPath({
       type: "DIRECT_MESSAGE",
+      activityId: null,
     }),
     "/messages",
   );
@@ -59,6 +67,37 @@ test("getNotificationCopy keeps localized fallback copy", () => {
     {
       body: "有新的举报需要处理",
       title: "Friemi",
+    },
+  );
+});
+
+test("getNotificationCopy includes check-in success copy", () => {
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: "来吧",
+      actorName: "friemi",
+      locale: "zh-CN",
+      type: "ACTIVITY_CHECK_IN",
+    }),
+    {
+      body: "来吧 签到成功",
+      title: "Friemi",
+    },
+  );
+});
+
+test("getNotificationCopy includes received gift detail", () => {
+  assert.deepEqual(
+    getNotificationCopy({
+      actorName: "hoting",
+      activityTitle: null,
+      giftText: "🌹 玫瑰 +5",
+      locale: "zh-CN",
+      type: "CHARM_GIFT_RECEIVED",
+    }),
+    {
+      body: "🌹 玫瑰 +5",
+      title: "hoting 给你送了礼物",
     },
   );
 });

@@ -7,6 +7,11 @@ import {
   applyStandardTrustScoreEvent,
   removeTrustScoreEvent,
 } from "@/features/trust/trustScoreEvents";
+import {
+  createNotification,
+  createNotifications,
+} from "@/features/notifications/utils/createNotification";
+import { syncActivitySocialRewards } from "@/features/social-rewards/services/socialRewardTriggers";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const reviewActivityCheckInSchema = z.object({
@@ -68,7 +73,7 @@ function getCopy(locale: string) {
 
   return {
     failed: "暂时无法更新这个签到。",
-    forbidden: "只有组局发起人和管理人员可以确认签到。",
+    forbidden: "只有聚吧发起人和管理人员可以确认签到。",
     invalid: "请求无效。",
     missing: "没有找到这个签到记录。",
     none: "暂无待确认签到。",
@@ -212,6 +217,15 @@ export async function reviewActivityCheckInAction(
           type: "NO_SHOW",
         });
 
+        if (participation.userProfileId !== profile.id) {
+          await createNotification(tx, {
+            actorId: profile.id,
+            activityId: result.data.activityId,
+            recipientId: participation.userProfileId,
+            type: "ACTIVITY_CHECK_IN",
+          });
+        }
+
         return { ok: true as const };
       }
 
@@ -241,6 +255,14 @@ export async function reviewActivityCheckInAction(
         formError:
           reviewResult.reason === "forbidden" ? copy.forbidden : copy.missing,
       };
+    }
+
+    if (result.data.decision === "confirm") {
+      await syncActivitySocialRewards({
+        activityId: result.data.activityId,
+      }).catch((error) => {
+        console.error("Failed to sync rewards after check-in review", error);
+      });
     }
 
     return { success: true };
@@ -339,6 +361,17 @@ export async function confirmAllPendingActivityCheckInsAction(
           ),
         ),
       );
+      await createNotifications(
+        tx,
+        pendingParticipants
+          .filter((participant) => participant.userProfileId !== profile.id)
+          .map((participant) => ({
+            actorId: profile.id,
+            activityId: result.data.activityId,
+            recipientId: participant.userProfileId,
+            type: "ACTIVITY_CHECK_IN",
+          })),
+      );
 
       return { confirmedCount: pendingParticipants.length };
     });
@@ -346,6 +379,12 @@ export async function confirmAllPendingActivityCheckInsAction(
     if (confirmResult.confirmedCount === 0) {
       return { formError: copy.none };
     }
+
+    await syncActivitySocialRewards({
+      activityId: result.data.activityId,
+    }).catch((error) => {
+      console.error("Failed to sync rewards after batch check-in", error);
+    });
 
     return {
       confirmedCount: confirmResult.confirmedCount,
@@ -448,6 +487,18 @@ export async function confirmSelectedActivityCheckInsAction(
             ),
           ),
         );
+
+        await createNotifications(
+          tx,
+          selectedParticipants
+            .filter((participant) => participant.userProfileId !== profile.id)
+            .map((participant) => ({
+              actorId: profile.id,
+              activityId: result.data.activityId,
+              recipientId: participant.userProfileId,
+              type: "ACTIVITY_CHECK_IN",
+            })),
+        );
       }
 
       if (cancelledParticipants.length > 0) {
@@ -493,6 +544,14 @@ export async function confirmSelectedActivityCheckInsAction(
         reviewedCount: participantIds.length,
       };
     });
+
+    if (reviewResult.confirmedCount > 0) {
+      await syncActivitySocialRewards({
+        activityId: result.data.activityId,
+      }).catch((error) => {
+        console.error("Failed to sync rewards after selected check-ins", error);
+      });
+    }
 
     return {
       confirmedCount: reviewResult.confirmedCount,

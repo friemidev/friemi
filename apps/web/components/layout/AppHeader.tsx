@@ -5,7 +5,6 @@ import { BrandLockup } from "@/components/brand/BrandLockup";
 import { withLocale } from "@/lib/routes";
 import { DesktopNav } from "@/components/navigation/DesktopNav";
 import { UserMenu } from "@/components/navigation/UserMenu";
-import type { FriendRequestViewModel } from "@/features/friends/queries/getFriendsDashboard";
 import {
   GlobalSearchForm,
   GlobalSearchIconLink,
@@ -24,7 +23,6 @@ type AppHeaderProps = {
   viewerPhone?: string | null;
   viewerWechatId?: string | null;
   viewerNickname?: string | null;
-  incomingFriendRequests?: FriendRequestViewModel[];
 };
 
 export function AppHeader({
@@ -39,7 +37,6 @@ export function AppHeader({
   viewerPhone = null,
   viewerWechatId = null,
   viewerNickname = null,
-  incomingFriendRequests = [],
 }: AppHeaderProps) {
   return (
     <AppHeaderChrome locale={locale}>
@@ -86,7 +83,6 @@ export function AppHeader({
               viewerPhone={viewerPhone}
               viewerWechatId={viewerWechatId}
               viewerNickname={viewerNickname}
-              incomingFriendRequests={incomingFriendRequests}
               unreadNotificationCount={unreadNotificationCount}
             />
           </div>

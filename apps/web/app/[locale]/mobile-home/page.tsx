@@ -35,7 +35,6 @@ import {
   getCanonicalMetadataBaseUrl,
   getGeneralPageShareDescription,
 } from "@/lib/share-metadata";
-import { cn } from "@/lib/utils";
 import { MobileHomeV23CategoryCarousel } from "./MobileHomeV23CategoryCarousel";
 import { MobileHomeV23NotificationLink } from "./MobileHomeV23NotificationLink";
 
@@ -114,19 +113,19 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureKicker: "Friemi Hall",
     searchPlaceholder: "搜索活动、组局或朋友",
     categoriesTitle: "按心情找活动",
-    categoriesDescription: "从饭局、展览、音乐到运动，找到今日份心动。",
+    categoriesDescription: "从桌游、旅行、艺术到饭局，找到今日份心动。",
     categories: [
-      { category: "FOOD", image: "dining.png", label: "饭局" },
-      { category: "WANDER", image: "wandering.png", label: "闲逛" },
-      { category: "AUDIO_VISUAL", image: "movies.png", label: "视听" },
-      { category: "ART", image: "art.png", label: "艺术" },
       { category: "BOARD_GAME", image: "board-games.png", label: "桌游" },
-      { category: "GROWTH", image: "growth.png", label: "进步" },
       { category: "TRAVEL", image: "travel.png", label: "旅行" },
+      { category: "ART", image: "art.png", label: "艺术" },
+      { category: "WANDER", image: "wandering.png", label: "闲逛" },
       { category: "MUSIC", image: "music.png", label: "音乐" },
+      { category: "AUDIO_VISUAL", image: "movies.png", label: "视听" },
+      { category: "GROWTH", image: "growth.png", label: "进步" },
       { category: "SPORTS", image: "sports.png", label: "运动" },
+      { category: "FOOD", image: "dining.png", label: "饭局" },
     ],
-    createPlanLabel: "我要组局",
+    createPlanLabel: "聚聚",
     activityEyebrow: "Live from Friemi",
     activityTitle: "从一次小局开始",
     activityDescription:
@@ -153,20 +152,20 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureDescription:
       "A quick way to see what is happening before opening the details.",
     featureKicker: "Friemi Hall",
-    searchPlaceholder: "Search activities, crews, or friends",
+    searchPlaceholder: "Search activities, crews, or people",
     categoriesTitle: "Browse by mood",
     categoriesDescription:
-      "Food, galleries, music, sports, and small city plans.",
+      "Games, trips, art, music, sports, and small city plans.",
     categories: [
-      { category: "FOOD", image: "dining.png", label: "Food" },
-      { category: "WANDER", image: "wandering.png", label: "Wander" },
-      { category: "AUDIO_VISUAL", image: "movies.png", label: "Watch" },
-      { category: "ART", image: "art.png", label: "Art" },
       { category: "BOARD_GAME", image: "board-games.png", label: "Games" },
-      { category: "GROWTH", image: "growth.png", label: "Grow" },
       { category: "TRAVEL", image: "travel.png", label: "Trips" },
+      { category: "ART", image: "art.png", label: "Art" },
+      { category: "WANDER", image: "wandering.png", label: "Wander" },
       { category: "MUSIC", image: "music.png", label: "Music" },
+      { category: "AUDIO_VISUAL", image: "movies.png", label: "Watch" },
+      { category: "GROWTH", image: "growth.png", label: "Grow" },
       { category: "SPORTS", image: "sports.png", label: "Sports" },
+      { category: "FOOD", image: "dining.png", label: "Food" },
     ],
     createPlanLabel: "Start",
     activityEyebrow: "Live from Friemi",
@@ -195,20 +194,20 @@ const mobileHomeCopy: Record<string, MobileHomeCopy> = {
     featureDescription:
       "Voyez les sorties en cours de préparation avant d'ouvrir le détail.",
     featureKicker: "Friemi Hall",
-    searchPlaceholder: "Rechercher activités, groupes ou amis",
+    searchPlaceholder: "Rechercher activités, groupes ou personnes",
     categoriesTitle: "Explorer par envie",
     categoriesDescription:
-      "Repas, expos, musique, sport et petites sorties en ville.",
+      "Jeux, voyages, art, musique, sport et petites sorties en ville.",
     categories: [
-      { category: "FOOD", image: "dining.png", label: "Repas" },
-      { category: "WANDER", image: "wandering.png", label: "Balade" },
-      { category: "AUDIO_VISUAL", image: "movies.png", label: "Écran" },
-      { category: "ART", image: "art.png", label: "Art" },
       { category: "BOARD_GAME", image: "board-games.png", label: "Jeux" },
-      { category: "GROWTH", image: "growth.png", label: "Progrès" },
       { category: "TRAVEL", image: "travel.png", label: "Voyage" },
+      { category: "ART", image: "art.png", label: "Art" },
+      { category: "WANDER", image: "wandering.png", label: "Balade" },
       { category: "MUSIC", image: "music.png", label: "Musique" },
+      { category: "AUDIO_VISUAL", image: "movies.png", label: "Écran" },
+      { category: "GROWTH", image: "growth.png", label: "Progrès" },
       { category: "SPORTS", image: "sports.png", label: "Sport" },
+      { category: "FOOD", image: "dining.png", label: "Repas" },
     ],
     createPlanLabel: "Lancer",
     activityEyebrow: "Live from Friemi",
@@ -245,15 +244,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "Qu'avez-vous envie de faire aujourd'hui ?",
       searchPlaceholder: "Rechercher activités ou personnes...",
       location: "Paris",
+      activityCategoriesTitle: "Catégories d'activités",
       filters: [
-        { href: "/activities", label: "Activités" },
-        { href: "/lobby?tab=nearby", label: "Groupes proches" },
-        { href: "/lobby?tab=today", label: "Aujourd'hui" },
-        { href: "/lobby?tab=friends", label: "Groupes d'amis" },
+        { href: "/activities?q=gratuit", label: "Gratuit" },
+        { href: "/activities?city=Paris", label: "Proche" },
+        { href: "/activities?dateRange=TODAY", label: "Aujourd'hui" },
+        { href: "/activities?q=week-end", label: "Week-end" },
+        { href: "/activities", label: "Plus" },
       ],
-      categoriesTitle: "Catégories populaires",
+      categoriesTitle: "Catégories de groupes",
       topNewsTitle: "🔥 Top News",
-      trendingTitle: "Tendance aujourd'hui",
+      trendingTitle: "Groupes populaires",
       seeAll: "Voir tout",
       participantsLabel: "personnes",
       distanceFallback: "800m",
@@ -269,7 +270,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
           category: "MUSIC",
           coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
           href: "/activities?category=MUSIC",
-          meta: "2 amis y vont",
+          meta: "2 personnes suivies",
           title: "Jazz au parc",
         },
         {
@@ -296,15 +297,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       subtitle: "What are you up to today?",
       searchPlaceholder: "Search activities or people...",
       location: "Paris",
+      activityCategoriesTitle: "Activity Categories",
       filters: [
-        { href: "/activities", label: "Activities" },
-        { href: "/lobby?tab=nearby", label: "Nearby Hangouts" },
-        { href: "/lobby?tab=today", label: "Today" },
-        { href: "/lobby?tab=friends", label: "Friend Hangouts" },
+        { href: "/activities?q=free", label: "Free" },
+        { href: "/activities?city=Paris", label: "Nearby" },
+        { href: "/activities?dateRange=TODAY", label: "Today" },
+        { href: "/activities?q=weekend", label: "Weekend" },
+        { href: "/activities", label: "More" },
       ],
-      categoriesTitle: "Popular Categories",
+      categoriesTitle: "Plan Categories",
       topNewsTitle: "🔥 Top News",
-      trendingTitle: "Trending Today",
+      trendingTitle: "Popular Plans",
       seeAll: "See all",
       participantsLabel: "people",
       distanceFallback: "800m",
@@ -320,7 +323,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
           category: "MUSIC",
           coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
           href: "/activities?category=MUSIC",
-          meta: "2 friends going",
+          meta: "2 followed people",
           title: "Jazz in the Park",
         },
         {
@@ -333,7 +336,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
       ],
       bottomNav: {
         home: "Home",
-        hangout: "Hangout",
+        hangout: "Plans",
         create: "Create",
         moment: "Activity",
         profile: "Profile",
@@ -346,15 +349,17 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
     subtitle: "今天想做点什么？",
     searchPlaceholder: "搜索活动或用户...",
     location: "巴黎",
+    activityCategoriesTitle: "活动分类",
     filters: [
-      { href: "/activities", label: "发现活动" },
-      { href: "/lobby?tab=nearby", label: "附近组局" },
-      { href: "/lobby?tab=today", label: "今日组局" },
-      { href: "/lobby?tab=friends", label: "好友组局" },
+      { href: "/activities?q=%E5%85%8D%E8%B4%B9", label: "免费" },
+      { href: "/activities?city=Paris", label: "附近" },
+      { href: "/activities?dateRange=TODAY", label: "今日" },
+      { href: "/activities?q=%E5%91%A8%E6%9C%AB", label: "周末" },
+      { href: "/activities", label: "更多" },
     ],
-    categoriesTitle: "热门分类",
+    categoriesTitle: "聚吧分类",
     topNewsTitle: "🔥 Top News",
-    trendingTitle: "今日热门",
+    trendingTitle: "热门聚吧",
     seeAll: "查看全部",
     participantsLabel: "人",
     distanceFallback: "800m",
@@ -370,7 +375,7 @@ function getMobileHomeV23Copy(locale: string, viewerName: string | null) {
         category: "MUSIC",
         coverImageUrl: "/home/v2_1/friemi-home-v21-friends-arrival.jpg",
         href: "/activities?category=MUSIC",
-        meta: "2 位好友参加",
+        meta: "2 位关注的人",
         title: "公园爵士",
       },
       {
@@ -448,7 +453,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
   return (
     <>
       <HomeLuxuryMotion />
-      <main className="overflow-x-hidden bg-[#FEFFF9] text-[#1D1D1B]">
+      <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
@@ -488,28 +493,28 @@ function MobileHomeV23Experience({
   const trendingActivities = swipeActivities.slice(2, 8);
 
   return (
-    <section className="mobile-v23-home min-h-[100svh] bg-[#FEFFF9] pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.15rem)] text-[#111210] md:hidden">
+    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
-        <header className="flex min-h-[6.75rem] items-start justify-between gap-4 pt-2">
+        <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pt-1">
           <Link
             href={withLocale(locale, "/home?view=desktop")}
-            className="mt-2 inline-flex shrink-0"
+            className="mt-1.5 inline-flex shrink-0"
             aria-label="Friemi"
           >
-            <BrandLockup className="h-10 w-[8.4rem]" priority size="md" />
+            <BrandLockup className="h-9 w-[7.55rem]" priority size="md" />
           </Link>
 
-          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-4">
+          <div className="flex min-w-0 items-center justify-end gap-1.5 pt-3">
             <MobileHomeV23CitySelector currentCity={copy.location} />
             <MobileHomeV23NotificationLink locale={locale} />
           </div>
         </header>
 
-        <section className="pt-2">
-          <h1 className="text-[26px] font-black leading-tight tracking-normal text-[#111210]">
+        <section>
+          <h1 className="text-[23px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
-          <p className="mt-1 text-[15px] font-medium leading-6 text-[#111210]/72">
+          <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
             {copy.subtitle}
           </p>
 
@@ -518,20 +523,21 @@ function MobileHomeV23Experience({
             locale={locale}
             placeholder={copy.searchPlaceholder}
             variant="page"
-            className="mt-6 w-full [&_button]:right-2 [&_button]:h-10 [&_button]:w-10 [&_input]:h-[3.55rem] [&_input]:rounded-[1.05rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-14 [&_input]:text-[15px] [&_input]:font-semibold [&_input]:shadow-[0_18px_38px_rgba(23,36,28,0.06)] [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
+            className="mt-4 w-full [&_button]:right-1.5 [&_button]:h-9 [&_button]:w-9 [&_input]:h-12 [&_input]:rounded-[0.95rem] [&_input]:border-[#D7D5C8] [&_input]:bg-white [&_input]:pr-12 [&_input]:text-[14px] [&_input]:font-semibold [&_input]:shadow-none [&_input]:placeholder:text-[#111210]/46 [&_svg]:left-4 [&_svg]:text-[#111210]/44"
           />
 
-          <div className="mt-5 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {copy.filters.map((filter, index) => (
+          <div className="mt-4 flex items-end justify-between gap-3">
+            <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
+              {copy.activityCategoriesTitle}
+            </h2>
+          </div>
+
+          <div className="mt-2.5 flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {copy.filters.map((filter) => (
               <Link
                 key={filter.label}
                 href={withLocale(locale, filter.href)}
-                className={cn(
-                  "inline-flex h-11 shrink-0 items-center justify-center rounded-full px-5 text-[14px] font-extrabold shadow-[0_10px_22px_rgba(21,98,64,0.07)] ring-1 transition active:scale-[0.96]",
-                  index === 0
-                    ? "bg-[#096B45] text-white ring-[#096B45]"
-                    : "bg-white text-[#123D31] ring-[#D7D5C8]",
-                )}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-3.5 text-[13px] font-extrabold text-[#123D31] transition active:scale-[0.96]"
               >
                 {filter.label}
               </Link>
@@ -539,8 +545,8 @@ function MobileHomeV23Experience({
           </div>
         </section>
 
-        <section className="mt-7">
-          <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+        <section className="mt-5">
+          <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
           <MobileHomeV23CategoryCarousel
@@ -550,14 +556,13 @@ function MobileHomeV23Experience({
         </section>
 
         {topNewsItems.length > 0 ? (
-          <section className="mt-4">
-            <h2 className="text-[19px] font-black tracking-normal text-[#064133]">
+          <section className="mt-3">
+            <h2 className="text-[17px] font-black tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
-                  href={withLocale(locale, item.href)}
                   image={item.image}
                   key={item.id}
                   title={item.title}
@@ -567,9 +572,9 @@ function MobileHomeV23Experience({
           </section>
         ) : null}
 
-        <section className="mt-6">
+        <section className="mt-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[18px] font-black tracking-normal text-[#111210]">
+            <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
               {copy.trendingTitle}
             </h2>
             <Link
@@ -580,7 +585,7 @@ function MobileHomeV23Experience({
             </Link>
           </div>
 
-          <div className="-mx-5 mt-4 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {trendingActivities.length > 0
               ? trendingActivities
                   .slice(0, 5)
@@ -607,32 +612,29 @@ function MobileHomeV23Experience({
 }
 
 function MobileHomeV23NewsCard({
-  href,
   image,
   title,
 }: {
-  href: string;
   image: string;
   title: string;
 }) {
   return (
-    <IntentPrefetchLink
-      href={href}
-      prefetchOnVisible
-      className="group relative h-[10.55rem] min-w-[19.7rem] snap-start overflow-hidden rounded-[1.18rem] bg-[#123D31] shadow-[0_18px_34px_rgba(18,61,49,0.12)]"
+    <article
+      className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+      aria-label={title}
     >
       {/* Admin-managed images can be local paths or HTTPS URLs. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={image}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-active:scale-[1.03]"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
-      <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#123D31] shadow-sm">
+      <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-extrabold text-[#123D31] shadow-sm">
         {title}
       </span>
-    </IntentPrefetchLink>
+    </article>
   );
 }
 
@@ -755,7 +757,7 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-3.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-white px-3.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-1.5 min-[390px]:gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
         <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
@@ -842,13 +844,13 @@ function MobileHomeExperience({
                     }
                   }
                 >
-                  <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-center justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
+                  <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-end justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
                     <Image
                       src={getMobileHomeIllustrationSrc(category.image)}
                       alt=""
                       width={96}
                       height={96}
-                      className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
+                      className="relative z-10 h-full w-full object-contain object-bottom drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
                     />
                   </span>
                   <span className="mobile-home-category__label">

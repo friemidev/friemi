@@ -11,6 +11,9 @@ import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 import { applyPhoneVerifiedTrustScore } from "@/features/trust/trustScoreEvents";
+import { syncProfileAchievements } from "@/features/achievements/services/achievements";
+import { isDefaultProfileAvatarSrc } from "@/features/profile/defaultAvatars";
+import { isUploadedProfileAvatarUrl } from "@/lib/activity-cover-storage";
 import {
   normalizeGuestEmail,
   normalizeGuestPhone,
@@ -18,8 +21,10 @@ import {
 } from "@/features/guest-participants/utils/contactIdentity";
 
 export type UpdateProfileIdentityState = {
+  avatarUrl?: string | null;
   bio?: string | null;
   formError?: string;
+  homeCity?: string | null;
   nickname?: string;
   success?: boolean;
 };
@@ -42,7 +47,21 @@ export type UpdateProfileContactBindingsState = {
 
 const updateProfileIdentitySchema = z.object({
   afterSave: z.enum(["refresh", "redirect"]).default("redirect"),
+  avatarUrl: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        isDefaultProfileAvatarSrc(value) ||
+        isUploadedProfileAvatarUrl(value),
+      {
+        message: "invalid-avatar",
+      },
+    ),
   bio: z.string().trim().max(160).optional(),
+  homeCity: z.string().trim().max(80).optional(),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
   returnTo: z.string().optional(),
@@ -86,7 +105,13 @@ export async function updateProfileIdentityAction(
   const t = getCopy(fallbackLocale).profile;
   const result = updateProfileIdentitySchema.safeParse({
     afterSave: getString(formData, "afterSave") || "redirect",
+    avatarUrl: formData.has("avatarUrl")
+      ? getString(formData, "avatarUrl")
+      : undefined,
     bio: formData.has("bio") ? getString(formData, "bio") : undefined,
+    homeCity: formData.has("homeCity")
+      ? getString(formData, "homeCity")
+      : undefined,
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
     returnTo: getString(formData, "returnTo"),
@@ -98,7 +123,8 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { afterSave, bio, locale, nickname, returnTo } = result.data;
+  const { afterSave, avatarUrl, bio, homeCity, locale, nickname, returnTo } =
+    result.data;
   const perf = createActionPerformanceTracker({
     action: "updateProfileIdentity",
   });
@@ -113,7 +139,9 @@ export async function updateProfileIdentityAction(
         id: profile.id,
       },
       data: {
+        ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
         ...(bio !== undefined ? { bio: bio || null } : {}),
+        ...(homeCity !== undefined ? { homeCity: homeCity || null } : {}),
         nickname,
       },
     }),
@@ -125,7 +153,9 @@ export async function updateProfileIdentityAction(
     });
 
     return {
+      avatarUrl: avatarUrl !== undefined ? avatarUrl || null : undefined,
       bio: bio !== undefined ? bio || null : undefined,
+      homeCity: homeCity !== undefined ? homeCity || null : undefined,
       nickname,
       success: true,
     };
@@ -431,6 +461,10 @@ export async function updateProfileContactBindingsAction(
       console.error("Failed to award phone trust score", error);
     });
   }
+
+  await syncProfileAchievements(profile.id).catch((error) => {
+    console.error("Failed to sync profile achievements after binding", error);
+  });
 
   revalidateNicknamePaths(locale);
 

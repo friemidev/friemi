@@ -331,6 +331,7 @@ export async function reviewParticipationAction(
         formError: reviewResult.error,
       };
     }
+
   } catch (error) {
     if (isPrismaTransactionConflictError(error)) {
       return {

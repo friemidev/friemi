@@ -7,6 +7,7 @@ import { queueAnalyticsEvent } from "@/features/analytics/server";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
+import { getVisibleNotificationWhere } from "../queries/getNotifications";
 import { getConversationPair } from "@/features/direct-messages/utils/conversation";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 
@@ -14,6 +15,17 @@ function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+function getNotificationIdList(notificationIds: readonly string[]) {
+  return Array.from(
+    new Set(
+      notificationIds.filter(
+        (notificationId) =>
+          typeof notificationId === "string" && notificationId.length > 0,
+      ),
+    ),
+  ).slice(0, 100);
 }
 
 function trackNotificationOpened({
@@ -58,10 +70,10 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   await prisma.notification.updateMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: null,
-    },
+    }),
     data: {
       readAt: new Date(),
     },
@@ -78,11 +90,11 @@ export async function markNotificationReadAction(formData: FormData) {
 
   if (notificationId) {
     await prisma.notification.updateMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
         readAt: null,
-      },
+      }),
       data: {
         readAt: new Date(),
       },
@@ -100,10 +112,10 @@ export async function deleteNotificationAction(formData: FormData) {
 
   if (notificationId) {
     await prisma.notification.deleteMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
-      },
+      }),
     });
   }
 
@@ -123,10 +135,37 @@ export async function deleteNotificationClientAction(
 
   if (notificationId) {
     await prisma.notification.deleteMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
-      },
+      }),
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function deleteNotificationsClientAction(
+  locale: string,
+  notificationIds: string[],
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+  const ids = getNotificationIdList(notificationIds);
+
+  if (ids.length > 0) {
+    await prisma.notification.deleteMany({
+      where: getVisibleNotificationWhere({
+        id: {
+          in: ids,
+        },
+        recipientId: profile.id,
+      }),
     });
   }
 
@@ -147,11 +186,42 @@ export async function markNotificationReadClientAction(
 
   if (notificationId) {
     await prisma.notification.updateMany({
-      where: {
+      where: getVisibleNotificationWhere({
         id: notificationId,
         recipientId: profile.id,
         readAt: null,
+      }),
+      data: {
+        readAt: new Date(),
       },
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function markNotificationsReadClientAction(
+  locale: string,
+  notificationIds: string[],
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+  const ids = getNotificationIdList(notificationIds);
+
+  if (ids.length > 0) {
+    await prisma.notification.updateMany({
+      where: getVisibleNotificationWhere({
+        id: {
+          in: ids,
+        },
+        recipientId: profile.id,
+        readAt: null,
+      }),
       data: {
         readAt: new Date(),
       },
@@ -171,10 +241,10 @@ export async function markAllNotificationsReadClientAction(locale: string) {
   );
 
   await prisma.notification.updateMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: null,
-    },
+    }),
     data: {
       readAt: new Date(),
     },
@@ -190,12 +260,12 @@ export async function deleteReadNotificationsAction(formData: FormData) {
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
 
   await prisma.notification.deleteMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: {
         not: null,
       },
-    },
+    }),
   });
 
   revalidatePath(withLocale(locale, "/notifications"));
@@ -210,12 +280,12 @@ export async function deleteReadNotificationsClientAction(locale: string) {
   );
 
   await prisma.notification.deleteMany({
-    where: {
+    where: getVisibleNotificationWhere({
       recipientId: profile.id,
       readAt: {
         not: null,
       },
-    },
+    }),
   });
 
   revalidatePath(withLocale(normalizedLocale, "/notifications"));
@@ -228,10 +298,10 @@ export async function openNotificationActivityAction(formData: FormData) {
   const notificationId = getString(formData, "notificationId");
   const profile = await ensureCurrentUserProfile(locale, "/notifications");
   const notification = await prisma.notification.findFirst({
-    where: {
+    where: getVisibleNotificationWhere({
       id: notificationId,
       recipientId: profile.id,
-    },
+    }),
     select: {
       actorId: true,
       activityId: true,
@@ -295,6 +365,39 @@ export async function openNotificationActivityAction(formData: FormData) {
       userProfileId: profile.id,
     });
     redirect(withLocale(locale, "/admin/reports"));
+  }
+
+  if (notification?.type === "CHARM_GIFT_RECEIVED") {
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    revalidatePath(withLocale(locale, "/notifications"));
+    if (notification.actorId) {
+      revalidatePath(withLocale(locale, `/profile/${notification.actorId}`));
+    }
+    trackNotificationOpened({
+      locale,
+      notificationId,
+      targetType: "profile",
+      type: notification.type,
+      userProfileId: profile.id,
+    });
+    redirect(
+      withLocale(
+        locale,
+        notification.actorId
+          ? `/profile/${notification.actorId}`
+          : "/notifications",
+      ),
+    );
   }
 
   if (notification?.type === "DIRECT_MESSAGE" && notification.actorId) {

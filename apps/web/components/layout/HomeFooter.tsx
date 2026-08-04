@@ -48,7 +48,7 @@ export function HomeFooter({ locale }: HomeFooterProps) {
 
   return (
     <footer className="mt-4 border-t border-[#156240]/30 bg-[#156240] text-white">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="app-page-mobile-safe-bottom mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[1.2fr_0.9fr_0.7fr]">
           <div className="space-y-4">
             <Link
@@ -106,9 +106,9 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               {t.versionLabel}{" "}
               <Link
                 className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-                href={withLocale(locale, "/updates/v2_4")}
+                href={withLocale(locale, "/updates/v2_6")}
               >
-                v2.4
+                v2.6
               </Link>
             </p>
             <p className="inline-flex items-center gap-2 text-xs text-white/45 md:justify-end">

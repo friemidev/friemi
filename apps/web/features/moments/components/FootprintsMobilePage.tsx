@@ -3,7 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent, MouseEvent, ReactNode, TouchEvent } from "react";
+import type {
+  ComponentType,
+  KeyboardEvent,
+  MouseEvent,
+  TouchEvent,
+} from "react";
 import {
   useActionState,
   useEffect,
@@ -18,25 +23,30 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  Gift,
   Globe2,
   Heart,
   MessageCircle,
   MoreHorizontal,
-  Repeat2,
   Search,
   SendHorizontal,
   Share2,
   Trash2,
-  UserPlus,
   UserRound,
+  UsersRound,
   X,
 } from "lucide-react";
 import { ActivityCoverUpload } from "@/features/activities/components/ActivityCoverUpload";
+import type { ActivityRoomChatRosterItemViewModel } from "@/features/activity-room-chat/services/activityRoomChat";
+import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { DirectMessageUnreadCountHydrator } from "@/features/direct-messages/components/DirectMessageUnreadCountHydrator";
 import { MessageAvatar } from "@/features/direct-messages/components/MessageAvatar";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { getDirectMessagesCopy } from "@/features/direct-messages/copy";
 import type { DirectMessageFriendRosterItemViewModel } from "@/features/direct-messages/queries/getDirectMessages";
-import { AddFriendDialog } from "@/features/friends/components/FriendsDashboard";
+import { FollowButton } from "@/features/follow/components/FollowButton";
+import { useNotificationBadge } from "@/features/notifications/components/NotificationBadgeProvider";
 import { PlanetSquarePage } from "@/features/planets/components/PlanetPages";
 import type { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import {
@@ -44,7 +54,6 @@ import {
   createMomentCommentAction,
   deleteMomentAction,
   deleteMomentCommentAction,
-  repostMomentAction,
   toggleMomentLikeAction,
   type CreateMomentCommentState,
   type CreateMomentState,
@@ -52,11 +61,18 @@ import {
 import type { MomentFeedItemViewModel } from "@/features/moments/queries/getMomentFeed";
 import { ReportDialog } from "@/features/reports/components/ReportDialog";
 import { getSignInHref } from "@/lib/auth-redirect";
+import { formatChatListTimestamp } from "@/lib/chatDateSeparators";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 type FootprintsTab = "message" | "moment" | "planet";
-type MomentFeedScope = "PUBLIC" | "FRIENDS";
+type MomentFeedScope = "PUBLIC" | "MUTUAL" | "FOLLOWING" | "MINE";
+type MessageRosterFilter =
+  | "all"
+  | "following"
+  | "followers"
+  | "mutual"
+  | "rooms";
 type PlanetSquare = Awaited<ReturnType<typeof getPlanetSquare>>;
 
 type FootprintsViewerProfile = {
@@ -69,6 +85,8 @@ type FootprintsViewerProfile = {
 };
 
 type FootprintsMobilePageProps = {
+  activityRoomChats: ActivityRoomChatRosterItemViewModel[];
+  initialMomentScope?: MomentFeedScope;
   initialTab?: FootprintsTab;
   locale: string;
   messageFriends: DirectMessageFriendRosterItemViewModel[];
@@ -80,6 +98,81 @@ type FootprintsMobilePageProps = {
   planetSquareError?: boolean;
   profile: FootprintsViewerProfile | null;
 };
+
+function getFootprintsTabFromSearch(search: string): FootprintsTab | null {
+  const tab = new URLSearchParams(search).get("tab");
+
+  if (tab === "message" || tab === "moment" || tab === "planet") {
+    return tab;
+  }
+
+  return null;
+}
+
+function getMomentScopeFromSearch(search: string): MomentFeedScope {
+  const scope = new URLSearchParams(search).get("scope");
+
+  if (scope === "mine") {
+    return "MINE";
+  }
+
+  if (scope === "mutual") {
+    return "MUTUAL";
+  }
+
+  if (scope === "following") {
+    return "FOLLOWING";
+  }
+
+  return "PUBLIC";
+}
+
+function getMomentScopeParam(scope: MomentFeedScope) {
+  if (scope === "MINE") {
+    return "mine";
+  }
+
+  if (scope === "MUTUAL") {
+    return "mutual";
+  }
+
+  if (scope === "FOLLOWING") {
+    return "following";
+  }
+
+  return null;
+}
+
+function getFootprintsTabPath(tab: FootprintsTab, scope: MomentFeedScope) {
+  const params = new URLSearchParams({ tab });
+  const scopeParam = tab === "moment" ? getMomentScopeParam(scope) : null;
+
+  if (scopeParam) {
+    params.set("scope", scopeParam);
+  }
+
+  return `/footprints?${params.toString()}`;
+}
+
+function updateFootprintsHistoryUrl(
+  locale: string,
+  tab: FootprintsTab,
+  scope: MomentFeedScope,
+  mode: "push" | "replace",
+) {
+  const nextUrl = withLocale(locale, getFootprintsTabPath(tab, scope));
+
+  if (window.location.pathname + window.location.search === nextUrl) {
+    return;
+  }
+
+  if (mode === "replace") {
+    window.history.replaceState(window.history.state, "", nextUrl);
+    return;
+  }
+
+  window.history.pushState(window.history.state, "", nextUrl);
+}
 
 type MomentCard = {
   author: string;
@@ -94,12 +187,12 @@ type MomentCard = {
 
 const copyByLocale = {
   "zh-CN": {
-    title: "足迹",
+    title: "世界",
     settings: "设置",
     tabs: {
-      message: "消息",
+      message: "聊聊",
       moment: "晒晒",
-      planet: "星球",
+      planet: "星星",
     },
     composer: "分享此刻的心情或精彩瞬间...",
     addPhoto: "添加照片",
@@ -108,46 +201,57 @@ const copyByLocale = {
     composerSubmitting: "发布中...",
     commentPlaceholder: "写评论...",
     commentSubmit: "发送",
+    close: "关闭",
     delete: "删除",
     detail: "详情",
+    more: "更多",
     emptyFeedTitle: "还没有动态",
-    emptyFeedDescription: "发一条足迹，或者添加好友后再回来看看。",
+    emptyFeedDescription: "发一条晒晒，或者关注几个人后再回来看看。",
     feedError: "动态暂时加载失败，请稍后再试。",
-    feedFriends: "好友",
-    feedPublic: "公共",
-    guestProfileDescription: "登录后可以管理头像、简介和好友码。",
+    feedFollowing: "我关注的",
+    feedMine: "我的",
+    feedMutual: "互相关注",
+    feedPublic: "广场",
+    guestProfileDescription: "登录后可以管理头像、简介和个人码。",
     guestProfileTitle: "登录查看主页",
-    guestMessageDescription: "登录后可以查看好友私聊和组局沟通。",
-    guestMessageTitle: "登录查看消息",
+    guestMessageDescription: "登录后可以查看私聊和组局聊天。",
+    guestMessageTitle: "登录查看聊聊",
     signIn: "登录",
     signInToInteract: "登录后互动",
     signInToPost: "登录后发布足迹",
     report: "举报",
     shareCopied: "链接已复制",
     shareFailed: "暂时无法分享",
-    visibilityFriends: "好友可见",
+    visibilityFriends: "互关可见",
     visibilityLabel: "发布范围",
     visibilityPublic: "公开",
     like: "点赞",
     comment: "评论",
+    gift: "送礼",
     share: "分享链接",
-    repost: "转发",
     commentSheetTitle: "评论",
     loadMoreComments: "查看全部评论",
     emptyComments: "还没有评论",
     originalMoment: "原足迹",
     originalUnavailable: "原足迹已不可见",
     viewOriginal: "查看原文",
-    messageTitle: "消息",
-    messageDescription: "好友私聊和组局沟通都在这里。",
-    openMessages: "进入消息",
+    messageTitle: "聊聊",
+    messageDescription: "私聊和组局聊天都在这里。",
+    messageFilters: {
+      all: "聊聊",
+      following: "我关注的",
+      followers: "关注我的",
+      mutual: "互相关注",
+      rooms: "群聊",
+    },
+    openMessages: "进入聊聊",
     notificationTitle: "通知",
     notificationDescription: "报名、评论和点赞提醒会汇总到通知中心。",
     openNotifications: "查看通知",
     profileTitle: "我的主页",
-    profileDescription: "头像、简介和好友码仍在个人主页管理。",
+    profileDescription: "头像、简介和个人码仍在个人主页管理。",
     openProfile: "编辑主页",
-    friendCode: "好友码",
+    friendCode: "个人码",
     bioFallback: "还没有填写简介。",
     samples: [
       {
@@ -173,7 +277,7 @@ const copyByLocale = {
     ] satisfies MomentCard[],
   },
   en: {
-    title: "Trace",
+    title: "World",
     settings: "Settings",
     tabs: {
       message: "Message",
@@ -187,17 +291,21 @@ const copyByLocale = {
     composerSubmitting: "Posting...",
     commentPlaceholder: "Write a comment...",
     commentSubmit: "Send",
+    close: "Close",
     delete: "Delete",
     detail: "Details",
+    more: "More",
     emptyFeedTitle: "No moments yet",
-    emptyFeedDescription: "Post one, or come back after adding friends.",
+    emptyFeedDescription: "Post one, or come back after following people.",
     feedError: "Moments could not load. Try again later.",
-    feedFriends: "Friends",
+    feedFollowing: "Following",
+    feedMine: "Mine",
+    feedMutual: "Mutual",
     feedPublic: "Public",
     guestProfileDescription:
-      "Sign in to manage your avatar, bio, and friend code.",
+      "Sign in to manage your avatar, bio, and Friemi ID.",
     guestProfileTitle: "Sign in to view your profile",
-    guestMessageDescription: "Sign in to see friend chats and plan messages.",
+    guestMessageDescription: "Sign in to see chats and plan messages.",
     guestMessageTitle: "Sign in to view messages",
     signIn: "Sign in",
     signInToInteract: "Sign in to interact",
@@ -205,13 +313,13 @@ const copyByLocale = {
     report: "Report",
     shareCopied: "Link copied",
     shareFailed: "Could not share",
-    visibilityFriends: "Friends",
+    visibilityFriends: "Mutual",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "Like",
     comment: "Comment",
+    gift: "Gift",
     share: "Share link",
-    repost: "Repost",
     commentSheetTitle: "Comments",
     loadMoreComments: "View all comments",
     emptyComments: "No comments yet",
@@ -219,7 +327,14 @@ const copyByLocale = {
     originalUnavailable: "Original moment is unavailable",
     viewOriginal: "View original",
     messageTitle: "Messages",
-    messageDescription: "Friend chats and plan details stay here.",
+    messageDescription: "Chats and plan details stay here.",
+    messageFilters: {
+      all: "Chats",
+      following: "Following",
+      followers: "Followers",
+      mutual: "Mutual",
+      rooms: "Groups",
+    },
     openMessages: "Open messages",
     notificationTitle: "Notifications",
     notificationDescription:
@@ -227,9 +342,9 @@ const copyByLocale = {
     openNotifications: "Open notifications",
     profileTitle: "Profile",
     profileDescription:
-      "Manage your avatar, bio, and friend code from your profile.",
+      "Manage your avatar, bio, and Friemi ID from your profile.",
     openProfile: "Edit profile",
-    friendCode: "Friend code",
+    friendCode: "Friemi ID",
     bioFallback: "No bio yet.",
     samples: [
       {
@@ -255,7 +370,7 @@ const copyByLocale = {
     ] satisfies MomentCard[],
   },
   fr: {
-    title: "Trace",
+    title: "Monde",
     settings: "Réglages",
     tabs: {
       message: "Message",
@@ -269,16 +384,20 @@ const copyByLocale = {
     composerSubmitting: "Publication...",
     commentPlaceholder: "Écrire un commentaire...",
     commentSubmit: "Envoyer",
+    close: "Fermer",
     delete: "Supprimer",
     detail: "Détails",
+    more: "Plus",
     emptyFeedTitle: "Aucun moment pour l'instant",
     emptyFeedDescription:
-      "Publiez un moment, ou revenez après avoir ajouté des amis.",
+      "Publiez un moment, ou revenez après avoir suivi quelques personnes.",
     feedError: "Les moments ne se chargent pas pour le moment.",
-    feedFriends: "Amis",
+    feedFollowing: "Suivis",
+    feedMine: "Moi",
+    feedMutual: "Mutuels",
     feedPublic: "Public",
     guestProfileDescription:
-      "Connecte-toi pour gérer ton avatar, ta bio et ton code ami.",
+      "Connecte-toi pour gérer ton avatar, ta bio et ton ID Friemi.",
     guestProfileTitle: "Connecte-toi pour voir ton profil",
     guestMessageDescription:
       "Connecte-toi pour voir tes discussions et messages de sorties.",
@@ -289,13 +408,13 @@ const copyByLocale = {
     report: "Signaler",
     shareCopied: "Lien copié",
     shareFailed: "Partage impossible",
-    visibilityFriends: "Amis",
+    visibilityFriends: "Mutuels",
     visibilityLabel: "Audience",
     visibilityPublic: "Public",
     like: "J'aime",
     comment: "Commenter",
+    gift: "Cadeau",
     share: "Partager le lien",
-    repost: "Republier",
     commentSheetTitle: "Commentaires",
     loadMoreComments: "Voir tous les commentaires",
     emptyComments: "Aucun commentaire pour le moment",
@@ -303,8 +422,14 @@ const copyByLocale = {
     originalUnavailable: "Moment original indisponible",
     viewOriginal: "Voir l'original",
     messageTitle: "Messages",
-    messageDescription:
-      "Les échanges entre amis et autour des plans restent ici.",
+    messageDescription: "Les échanges et messages de plans restent ici.",
+    messageFilters: {
+      all: "Messages",
+      following: "Suivis",
+      followers: "Me suivent",
+      mutual: "Mutuels",
+      rooms: "Groupes",
+    },
     openMessages: "Ouvrir les messages",
     notificationTitle: "Notifications",
     notificationDescription:
@@ -312,9 +437,9 @@ const copyByLocale = {
     openNotifications: "Voir les notifications",
     profileTitle: "Profil",
     profileDescription:
-      "Gérez votre avatar, bio et code ami depuis votre profil.",
+      "Gérez votre avatar, bio et ID Friemi depuis votre profil.",
     openProfile: "Modifier le profil",
-    friendCode: "Code ami",
+    friendCode: "ID Friemi",
     bioFallback: "Aucune bio pour le moment.",
     samples: [
       {
@@ -385,6 +510,209 @@ function ProfileAvatar({
   );
 }
 
+const momentActionButtonClassName =
+  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
+
+function MomentActionBar({
+  className,
+  commentHref,
+  copy,
+  isAuthenticated,
+  isOwnMoment,
+  locale,
+  moment,
+  onCommentClick,
+  signInHref,
+}: {
+  className?: string;
+  commentHref?: string;
+  copy: ReturnType<typeof getFootprintsCopy>;
+  isAuthenticated: boolean;
+  isOwnMoment: boolean;
+  locale: string;
+  moment: MomentFeedItemViewModel;
+  onCommentClick?: () => void;
+  signInHref: string;
+}) {
+  const commentContent = (
+    <>
+      <MessageCircle className="h-[18px] w-[18px] shrink-0" />
+      <span className="min-w-0 tabular-nums leading-none">
+        {moment.commentCount}
+      </span>
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 text-[#51594F]",
+        className,
+      )}
+    >
+      <OptimisticMomentLikeButton
+        className={momentActionButtonClassName}
+        copy={copy}
+        formClassName="min-w-0"
+        isAuthenticated={isAuthenticated}
+        locale={locale}
+        moment={moment}
+        signInHref={signInHref}
+      />
+
+      {commentHref ? (
+        <Link
+          href={commentHref}
+          className={momentActionButtonClassName}
+          aria-label={copy.comment}
+        >
+          {commentContent}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className={momentActionButtonClassName}
+          aria-label={copy.comment}
+          onClick={onCommentClick}
+        >
+          {commentContent}
+        </button>
+      )}
+
+      <MomentGiftAction
+        className={momentActionButtonClassName}
+        copy={copy}
+        isAuthenticated={isAuthenticated}
+        isOwnMoment={isOwnMoment}
+        locale={locale}
+        moment={moment}
+      />
+    </div>
+  );
+}
+
+function MomentMoreMenu({
+  buttonClassName,
+  className,
+  copy,
+  deleteRedirectPath,
+  detailHref,
+  isAuthenticated,
+  isOwnMoment,
+  locale,
+  moment,
+  showDetailAction,
+}: {
+  buttonClassName?: string;
+  className?: string;
+  copy: ReturnType<typeof getFootprintsCopy>;
+  deleteRedirectPath?: string;
+  detailHref: string;
+  isAuthenticated: boolean;
+  isOwnMoment: boolean;
+  locale: string;
+  moment: MomentFeedItemViewModel;
+  showDetailAction: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const directMessageCopy = getDirectMessagesCopy(locale);
+
+  return (
+    <div
+      className={cn("relative min-w-0", className)}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          setMenuOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className={cn(
+          "inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1D1D1B]/70 transition hover:bg-[#F7F7F0] active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24",
+          buttonClassName,
+        )}
+        aria-label={copy.more}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <MoreHorizontal className="h-[18px] w-[18px] shrink-0" />
+        <span className="sr-only">{copy.more}</span>
+      </button>
+
+      {menuOpen ? (
+        <>
+          <button
+            aria-label={copy.close}
+            className="fixed inset-0 z-10 cursor-default bg-transparent"
+            onClick={() => setMenuOpen(false)}
+            tabIndex={-1}
+            type="button"
+          />
+          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
+            {showDetailAction ? (
+              <Link
+                className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
+                href={detailHref}
+              >
+                <Eye className="h-4 w-4" />
+                {copy.detail}
+              </Link>
+            ) : null}
+            <ShareMomentButton
+              className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
+              copy={copy}
+              href={detailHref}
+            />
+            {!isOwnMoment ? (
+              <StartDirectConversationButton
+                buttonClassName="h-auto w-full justify-start rounded-none bg-transparent px-3 py-2.5 text-left text-[#156240] shadow-none hover:bg-[#F7F7F0] hover:text-[#111210]"
+                className="min-w-0"
+                errorClassName="px-3 pb-2"
+                label={directMessageCopy.startConversation}
+                locale={locale}
+                peerProfileId={moment.author.id}
+                redirectPath={`/footprints/${moment.id}`}
+              />
+            ) : null}
+            {isOwnMoment ? (
+              <form action={deleteMomentAction}>
+                <input name="locale" type="hidden" value={locale} />
+                <input name="momentId" type="hidden" value={moment.id} />
+                {deleteRedirectPath ? (
+                  <input
+                    name="redirectPath"
+                    type="hidden"
+                    value={deleteRedirectPath}
+                  />
+                ) : null}
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {copy.delete}
+                </button>
+              </form>
+            ) : (
+              <ReportDialog
+                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                redirectPath={`/footprints/${moment.id}`}
+                targetId={moment.id}
+                targetType="MOMENT"
+                variant="link"
+              />
+            )}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export function FeedCard({
   deleteRedirectPath,
   isAuthenticated,
@@ -401,18 +729,12 @@ export function FeedCard({
   viewerProfileId: string | null;
 }) {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
   const isOwnMoment = viewerProfileId === moment.author.id;
   const hasImages = moment.images.length > 0;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
   const openDetail = () => router.push(detailHref);
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target;
@@ -441,7 +763,7 @@ export function FeedCard({
     <>
       <article
         className={cn(
-          "cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+          "cursor-pointer overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
           hasImages
             ? "bg-transparent pb-5"
             : "rounded-[1.35rem] border border-[#E3DCC5] bg-white shadow-[0_12px_34px_rgba(21,98,64,0.08)]",
@@ -472,7 +794,7 @@ export function FeedCard({
               />
             </Link>
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
                     {moment.author.nickname}
@@ -481,70 +803,6 @@ export function FeedCard({
                     {formatActivityDate(moment.createdAt, locale)}
                   </p>
                 </div>
-                <div
-                  className="relative"
-                  onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1D1D1B]/62 transition hover:bg-[#F1F2EC]"
-                    aria-label="More"
-                    onClick={() => setMenuOpen((open) => !open)}
-                  >
-                    <MoreHorizontal className="h-5 w-5" />
-                  </button>
-                  {menuOpen ? (
-                    <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
-                      <Link
-                        className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
-                        href={detailHref}
-                      >
-                        <Eye className="h-4 w-4" />
-                        {copy.detail}
-                      </Link>
-                      <ShareMomentButton
-                        className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
-                        copy={copy}
-                        href={detailHref}
-                      />
-                      {isOwnMoment ? (
-                        <form action={deleteMomentAction}>
-                          <input name="locale" type="hidden" value={locale} />
-                          <input
-                            name="momentId"
-                            type="hidden"
-                            value={moment.id}
-                          />
-                          {deleteRedirectPath ? (
-                            <input
-                              name="redirectPath"
-                              type="hidden"
-                              value={deleteRedirectPath}
-                            />
-                          ) : null}
-                          <button
-                            type="submit"
-                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            {copy.delete}
-                          </button>
-                        </form>
-                      ) : (
-                        <ReportDialog
-                          className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
-                          isAuthenticated={isAuthenticated}
-                          locale={locale}
-                          redirectPath={`/footprints/${moment.id}`}
-                          targetId={moment.id}
-                          targetType="MOMENT"
-                          variant="link"
-                        />
-                      )}
-                    </div>
-                  ) : null}
-                </div>
               </div>
               {!hasImages && moment.content ? (
                 <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#1D1D1B]">
@@ -552,6 +810,17 @@ export function FeedCard({
                 </p>
               ) : null}
             </div>
+            <MomentMoreMenu
+              className="ml-auto shrink-0"
+              copy={copy}
+              deleteRedirectPath={deleteRedirectPath}
+              detailHref={detailHref}
+              isAuthenticated={isAuthenticated}
+              isOwnMoment={isOwnMoment}
+              locale={locale}
+              moment={moment}
+              showDetailAction
+            />
           </div>
 
           {moment.resharedMoment ? (
@@ -563,57 +832,46 @@ export function FeedCard({
           ) : null}
 
           {moment.images.length > 0 ? (
-            <MomentImageGrid
-              images={moment.images}
-              onImageClick={setPreviewIndex}
-            />
+            <div className="pl-[3.25rem]">
+              <MomentImageGrid
+                images={moment.images}
+                onImageClick={setPreviewIndex}
+                variant="feed"
+              />
+            </div>
           ) : null}
 
           {hasImages && moment.content ? (
-            <p className="mt-3 whitespace-pre-wrap px-1 text-[14px] font-semibold leading-6 text-[#1D1D1B]">
+            <p className="mt-3 whitespace-pre-wrap pl-[3.25rem] pr-1 text-[14px] font-semibold leading-6 text-[#1D1D1B]">
               {moment.content}
             </p>
           ) : null}
         </div>
 
-        <div
+        <MomentActionBar
           className={cn(
-            "grid grid-cols-3 py-3 text-[#1D1D1B]/76",
-            hasImages ? "px-0 pb-1 pt-2" : "px-4",
+            "py-0.5",
+            hasImages
+              ? "ml-[3.25rem] mt-2 max-w-[15rem]"
+              : "mx-4 mt-3 border-y border-[#E8E4D4]",
           )}
-        >
-          <OptimisticMomentLikeButton
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-full py-2 text-sm font-bold"
-            aria-label={copy.comment}
-            onClick={() => setCommentsOpen(true)}
-          >
-            <MessageCircle className="h-[18px] w-[18px]" />
-            <span>{moment.commentCount}</span>
-          </button>
-          <RepostMomentButton
-            canRepost={canRepost}
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-        </div>
+          copy={copy}
+          isAuthenticated={isAuthenticated}
+          isOwnMoment={isOwnMoment}
+          locale={locale}
+          moment={moment}
+          onCommentClick={() => setCommentsOpen(true)}
+          signInHref={signInHref}
+        />
 
         {moment.recentComments.length > 0 ? (
           <button
             type="button"
             className={cn(
               "mb-3 block rounded-2xl bg-[#F7F7F0] px-3 py-2 text-left transition hover:bg-[#F1F2EC]",
-              hasImages ? "w-full" : "mx-4 w-[calc(100%-2rem)]",
+              hasImages
+                ? "ml-[3.25rem] w-[calc(100%-3.25rem)]"
+                : "mx-4 w-[calc(100%-2rem)]",
             )}
             onClick={() => setCommentsOpen(true)}
           >
@@ -676,16 +934,10 @@ export function MomentDetailContent({
   copy: ReturnType<typeof getFootprintsCopy>;
   viewerProfileId: string | null;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const detailHref = withLocale(locale, `/footprints/${moment.id}`);
   const signInHref = getSignInHref(locale, `/footprints/${moment.id}`);
   const isOwnMoment = viewerProfileId === moment.author.id;
-  const canRepost =
-    isAuthenticated &&
-    (isOwnMoment ||
-      moment.visibility === "PUBLIC" ||
-      Boolean(moment.resharedMoment));
 
   return (
     <>
@@ -709,55 +961,17 @@ export function MomentDetailContent({
               {formatActivityDate(moment.createdAt, locale)}
             </p>
           </div>
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1D1D1B]/70 transition hover:bg-[#F1F2EC]"
-              aria-label="More"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-            {menuOpen ? (
-              <div className="absolute right-0 top-10 z-20 min-w-36 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
-                <ShareMomentButton
-                  className="w-full px-3 py-2.5 text-left hover:bg-[#F7F7F0]"
-                  copy={copy}
-                  href={detailHref}
-                />
-                {isOwnMoment ? (
-                  <form action={deleteMomentAction}>
-                    <input name="locale" type="hidden" value={locale} />
-                    <input name="momentId" type="hidden" value={moment.id} />
-                    {deleteRedirectPath ? (
-                      <input
-                        name="redirectPath"
-                        type="hidden"
-                        value={deleteRedirectPath}
-                      />
-                    ) : null}
-                    <button
-                      type="submit"
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[#9A2135] transition hover:bg-[#FFF0F0]"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {copy.delete}
-                    </button>
-                  </form>
-                ) : (
-                  <ReportDialog
-                    className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    redirectPath={`/footprints/${moment.id}`}
-                    targetId={moment.id}
-                    targetType="MOMENT"
-                    variant="link"
-                  />
-                )}
-              </div>
-            ) : null}
-          </div>
+          <MomentMoreMenu
+            className="ml-auto shrink-0"
+            copy={copy}
+            deleteRedirectPath={deleteRedirectPath}
+            detailHref={detailHref}
+            isAuthenticated={isAuthenticated}
+            isOwnMoment={isOwnMoment}
+            locale={locale}
+            moment={moment}
+            showDetailAction={false}
+          />
         </header>
 
         {moment.content ? (
@@ -780,35 +994,21 @@ export function MomentDetailContent({
             <MomentImageGrid
               images={moment.images}
               onImageClick={setPreviewIndex}
+              variant="detail"
             />
           </div>
         ) : null}
 
-        <div className="mt-5 grid grid-cols-3 border-y border-[#E8E4D4] py-3 text-[#1D1D1B]/76">
-          <OptimisticMomentLikeButton
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-          <a
-            href="#moment-comments"
-            className="inline-flex items-center justify-center gap-2 rounded-full py-2 text-sm font-bold"
-            aria-label={copy.comment}
-          >
-            <MessageCircle className="h-[18px] w-[18px]" />
-            <span>{moment.commentCount}</span>
-          </a>
-          <RepostMomentButton
-            canRepost={canRepost}
-            copy={copy}
-            isAuthenticated={isAuthenticated}
-            locale={locale}
-            moment={moment}
-            signInHref={signInHref}
-          />
-        </div>
+        <MomentActionBar
+          className="mt-5 border-y border-[#E8E4D4] py-2"
+          commentHref="#moment-comments"
+          copy={copy}
+          isAuthenticated={isAuthenticated}
+          isOwnMoment={isOwnMoment}
+          locale={locale}
+          moment={moment}
+          signInHref={signInHref}
+        />
       </article>
 
       <section id="moment-comments" className="border-t border-[#E8E4D4] pt-5">
@@ -819,6 +1019,25 @@ export function MomentDetailContent({
           <span className="rounded-full bg-[#F3F8EB] px-2.5 py-1 text-xs font-black text-[#156240]">
             {moment.commentCount}
           </span>
+        </div>
+
+        <div className="mb-5 overflow-hidden rounded-[1.15rem] border border-[#E3DCC5] bg-white">
+          {isAuthenticated ? (
+            <MomentCommentForm
+              copy={copy}
+              locale={locale}
+              momentId={moment.id}
+            />
+          ) : (
+            <div className="bg-white/88 px-4 py-3">
+              <Link
+                href={signInHref}
+                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+              >
+                {copy.signInToInteract}
+              </Link>
+            </div>
+          )}
         </div>
 
         {moment.recentComments.length > 0 ? (
@@ -868,25 +1087,6 @@ export function MomentDetailContent({
             </p>
           </div>
         )}
-
-        <div className="mt-5 overflow-hidden rounded-[1.15rem] border border-[#E3DCC5] bg-white">
-          {isAuthenticated ? (
-            <MomentCommentForm
-              copy={copy}
-              locale={locale}
-              momentId={moment.id}
-            />
-          ) : (
-            <div className="bg-white/88 px-4 py-3">
-              <Link
-                href={signInHref}
-                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
-              >
-                {copy.signInToInteract}
-              </Link>
-            </div>
-          )}
-        </div>
       </section>
 
       {previewIndex !== null ? (
@@ -901,13 +1101,17 @@ export function MomentDetailContent({
 }
 
 function OptimisticMomentLikeButton({
+  className,
   copy,
+  formClassName,
   isAuthenticated,
   locale,
   moment,
   signInHref,
 }: {
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
+  formClassName?: string;
   isAuthenticated: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
@@ -928,11 +1132,13 @@ function OptimisticMomentLikeButton({
     <>
       <Heart
         className={cn(
-          "h-[18px] w-[18px]",
+          "h-[18px] w-[18px] shrink-0",
           optimisticLike.isLiked ? "fill-current" : null,
         )}
       />
-      <span>{optimisticLike.count}</span>
+      <span className="min-w-0 tabular-nums leading-none">
+        {optimisticLike.count}
+      </span>
     </>
   );
 
@@ -940,7 +1146,10 @@ function OptimisticMomentLikeButton({
     return (
       <Link
         href={signInHref}
-        className="inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold"
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
+          className,
+        )}
         aria-label={copy.signInToInteract}
       >
         {content}
@@ -954,6 +1163,7 @@ function OptimisticMomentLikeButton({
         toggleOptimisticLike(null);
         await toggleMomentLikeAction(formData);
       }}
+      className={formClassName}
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="momentId" type="hidden" value={moment.id} />
@@ -961,6 +1171,7 @@ function OptimisticMomentLikeButton({
         type="submit"
         className={cn(
           "inline-flex items-center gap-2 rounded-full py-2 text-sm font-bold",
+          className,
           optimisticLike.isLiked ? "text-[#E7457A]" : null,
         )}
         aria-label={copy.like}
@@ -971,92 +1182,60 @@ function OptimisticMomentLikeButton({
   );
 }
 
-function RepostMomentButton({
-  canRepost,
+function MomentGiftAction({
+  className,
   copy,
   isAuthenticated,
+  isOwnMoment,
   locale,
   moment,
-  signInHref,
 }: {
-  canRepost: boolean;
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   isAuthenticated: boolean;
+  isOwnMoment: boolean;
   locale: string;
   moment: MomentFeedItemViewModel;
-  signInHref: string;
 }) {
-  const [optimisticCount, addOptimisticRepost] = useOptimistic(
-    moment.repostCount,
-    (current, _action: null) => current + 1,
+  const triggerClassName = cn(
+    className,
+    "text-[#9A2135] hover:bg-[#FFF4F4] focus-visible:ring-[#E7457A]/24",
   );
-
-  const content = (
+  const triggerContent = (
     <>
-      <Repeat2 className="h-[18px] w-[18px]" />
-      <span>{optimisticCount}</span>
+      <Gift className="h-[18px] w-[18px] shrink-0" />
+      <span className="min-w-0 tabular-nums leading-none">
+        {moment.giftCount}
+      </span>
     </>
   );
 
-  if (!isAuthenticated) {
+  if (isOwnMoment) {
     return (
-      <Link
-        href={signInHref}
-        className="ml-auto inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold"
-        aria-label={copy.signInToInteract}
+      <button
+        aria-label={copy.gift}
+        className={cn(triggerClassName, "cursor-default")}
+        disabled
+        type="button"
       >
-        {content}
-      </Link>
+        {triggerContent}
+      </button>
     );
   }
 
   return (
-    <form
-      action={async (formData) => {
-        if (!canRepost) {
-          return;
-        }
-
-        addOptimisticRepost(null);
-        await repostMomentAction(formData);
-      }}
-      className="flex justify-end"
-    >
-      <input name="locale" type="hidden" value={locale} />
-      <input name="momentId" type="hidden" value={moment.id} />
-      <RepostMomentSubmitButton
-        canRepost={canRepost}
-        label={copy.repost}
-        content={content}
-      />
-    </form>
-  );
-}
-
-function RepostMomentSubmitButton({
-  canRepost,
-  content,
-  label,
-}: {
-  canRepost: boolean;
-  content: ReactNode;
-  label: string;
-}) {
-  const { pending } = useFormStatus();
-  const disabled = !canRepost || pending;
-
-  return (
-    <button
-      type="submit"
-      className={cn(
-        "inline-flex items-center justify-end gap-2 rounded-full py-2 text-sm font-bold",
-        disabled && "cursor-not-allowed opacity-35",
-      )}
-      disabled={disabled}
-      aria-label={label}
-    >
-      {content}
-    </button>
+    <CharmGiftDialog
+      isAuthenticated={isAuthenticated}
+      locale={locale}
+      recipientName={moment.author.nickname}
+      recipientProfileId={moment.author.id}
+      redirectPath={`/footprints/${moment.id}`}
+      sourceContextId={moment.id}
+      sourceSurface="MOMENT"
+      triggerAriaLabel={copy.gift}
+      triggerClassName={triggerClassName}
+      triggerContent={triggerContent}
+    />
   );
 }
 
@@ -1224,9 +1403,11 @@ function MomentCommentSheet({
 function MomentImageGrid({
   images,
   onImageClick,
+  variant = "feed",
 }: {
   images: MomentFeedItemViewModel["images"];
   onImageClick: (index: number) => void;
+  variant?: "detail" | "feed";
 }) {
   if (images.length === 0) {
     return null;
@@ -1234,37 +1415,63 @@ function MomentImageGrid({
 
   if (images.length === 1) {
     const [image] = images;
+    const width = image.width ?? 1;
+    const height = image.height ?? 1;
+    const isWide = width / height >= 1.18;
+    const isTall = height / width >= 1.18;
 
     return (
-      <div>
+      <div
+        className={cn(
+          variant === "feed"
+            ? isWide
+              ? "w-[min(14.5rem,72vw)]"
+              : isTall
+                ? "w-[min(10.8rem,54vw)]"
+                : "w-[min(12.5rem,62vw)]"
+            : "w-full",
+        )}
+      >
         <MomentImageFrame
           imageUrl={image.url}
-          ratio="aspect-square"
+          ratio={
+            isWide
+              ? "aspect-[4/3]"
+              : isTall
+                ? "aspect-[3/4]"
+                : "aspect-square"
+          }
           onClick={() => onImageClick(0)}
         />
       </div>
     );
   }
 
-  const visibleImages = images.slice(0, 4);
+  const visibleImages = images.slice(0, 9);
+  const useTwoColumns = images.length === 2 || images.length === 4;
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div
+      className={cn(
+        "grid gap-1.5",
+        useTwoColumns
+          ? "w-[min(11.75rem,58vw)] grid-cols-2"
+          : "w-[min(15rem,74vw)] grid-cols-3",
+        variant === "detail" && "w-full",
+      )}
+    >
       {visibleImages.map((image, index) => (
         <MomentImageFrame
           key={image.id}
           imageUrl={image.url}
           moreCount={
-            images.length > visibleImages.length && index === 3
+            images.length > visibleImages.length &&
+            index === visibleImages.length - 1
               ? images.length - visibleImages.length
               : 0
           }
           onClick={() => onImageClick(index)}
-          ratio={
-            images.length === 3 && index === 0
-              ? "col-span-2 aspect-[4/3]"
-              : "aspect-square"
-          }
+          ratio="aspect-square"
         />
       ))}
     </div>
@@ -1650,10 +1857,12 @@ const createMomentInitialState: CreateMomentState = {
 };
 
 function MomentImageUploadGrid({
+  className,
   copy,
   initialUrls,
   locale,
 }: {
+  className?: string;
   copy: ReturnType<typeof getFootprintsCopy>;
   initialUrls: string[];
   locale: string;
@@ -1672,7 +1881,7 @@ function MomentImageUploadGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className={cn("flex min-w-0 flex-wrap gap-2", className)}>
       {Array.from({ length: slotCount }).map((_, index) => (
         <ActivityCoverUpload
           key={index}
@@ -1683,7 +1892,13 @@ function MomentImageUploadGrid({
           locale={locale}
           name="imageUrls"
           onChange={(url) => updateUrl(index, url)}
-          splitPreviewClassName="col-span-1"
+          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-black text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
+          splitEmptyContainerClassName="contents"
+          splitEmptyIconClassName="h-7 w-7 text-[#156240]/62 shadow-none"
+          splitPreviewButtonClassName="h-20 sm:h-20"
+          splitPreviewCardClassName="shadow-none"
+          splitPreviewClassName="h-20 w-20 shrink-0"
+          splitRemoveButtonClassName="right-1 top-1 bg-white/92 px-2 py-1 text-[10px] text-[#9A2135] shadow-none ring-1 ring-[#E3DCC5] backdrop-blur-0 hover:bg-white"
           uploadEndpoint="/api/uploads/moment-image"
         />
       ))}
@@ -1797,13 +2012,13 @@ function MomentComposer({
         <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
           {copy.composer}
         </span>
-        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
           <Image
-            src="/brand/v2_1/friemi-empty-state-mark.png"
+            src="/illustrations/ui/take-photo.png"
             alt=""
-            width={56}
-            height={56}
-            className="h-10 w-10 object-contain opacity-90"
+            width={64}
+            height={60}
+            className="h-11 w-11 object-contain"
           />
         </span>
       </Link>
@@ -1820,13 +2035,13 @@ function MomentComposer({
         <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
           {copy.composer}
         </span>
-        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
           <Image
-            src="/brand/v2_1/friemi-empty-state-mark.png"
+            src="/illustrations/ui/take-photo.png"
             alt=""
-            width={56}
-            height={56}
-            className="h-10 w-10 object-contain opacity-90"
+            width={64}
+            height={60}
+            className="h-11 w-11 object-contain"
           />
         </span>
       </button>
@@ -1836,7 +2051,7 @@ function MomentComposer({
   return (
     <form
       action={formAction}
-      className="rounded-[1.35rem] border border-[#E3DCC5] bg-white p-4 shadow-[0_12px_34px_rgba(21,98,64,0.08)]"
+      className="rounded-[1.1rem] border border-[#E3DCC5] bg-white px-4 py-3 shadow-none"
     >
       <input name="locale" type="hidden" value={locale} />
       <input name="visibility" type="hidden" value={visibility} />
@@ -1868,19 +2083,37 @@ function MomentComposer({
         key={state.ok ? "moment-content-empty" : "moment-content"}
         name="content"
         maxLength={500}
-        rows={3}
+        rows={4}
         placeholder={copy.composer}
-        className="mt-4 w-full resize-none rounded-2xl border border-[#E3DCC5] bg-[#FEFFF9] px-4 py-3 text-sm font-semibold leading-6 outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758] focus:ring-2 focus:ring-[#369758]/12"
+        className="mt-3 min-h-[6.4rem] w-full resize-none border-0 border-b border-[#E3DCC5] bg-transparent px-0 py-2 text-sm font-semibold leading-6 outline-none transition placeholder:text-[#8E8383]/72 focus:border-[#369758]"
         defaultValue={state.ok ? "" : state.values?.content}
       />
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <MomentImageUploadGrid
           key={state.ok ? "moment-images-empty" : "moment-images-active"}
+          className="flex-1"
           copy={copy}
           initialUrls={state.ok ? [] : (state.values?.imageUrls ?? [])}
           locale={locale}
         />
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70 transition active:scale-[0.98]"
+            onClick={() => setIsExpanded(false)}
+          >
+            {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {isPending ? copy.composerSubmitting : copy.composerSubmit}
+          </button>
+        </div>
       </div>
 
       {state.formError ? (
@@ -1888,23 +2121,6 @@ function MomentComposer({
           {state.formError}
         </p>
       ) : null}
-
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70"
-          onClick={() => setIsExpanded(false)}
-        >
-          {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)] disabled:opacity-60"
-        >
-          {isPending ? copy.composerSubmitting : copy.composerSubmit}
-        </button>
-      </div>
     </form>
   );
 }
@@ -1937,94 +2153,231 @@ function FootprintsAuthPrompt({
 }
 
 function FootprintsMessageList({
-  currentUserFriendCode,
+  activityRoomChats,
   currentUserProfileId,
   friends,
   hasError,
   locale,
 }: {
-  currentUserFriendCode?: string | null;
   currentUserProfileId: string;
+  activityRoomChats: ActivityRoomChatRosterItemViewModel[];
   friends: DirectMessageFriendRosterItemViewModel[];
   hasError?: boolean;
   locale: string;
 }) {
   const t = getDirectMessagesCopy(locale);
+  const pageCopy = getFootprintsCopy(locale);
   const [searchTerm, setSearchTerm] = useState("");
-  const [addFriendOpen, setAddFriendOpen] = useState(false);
-  const sortedFriends = useMemo(
-    () =>
-      [...friends].sort((friendA, friendB) => {
-        const timeA = new Date(
-          friendA.lastMessage?.createdAt ??
-            friendA.lastMessageAt ??
-            friendA.createdAt,
-        ).getTime();
-        const timeB = new Date(
-          friendB.lastMessage?.createdAt ??
-            friendB.lastMessageAt ??
-            friendB.createdAt,
-        ).getTime();
-
-        return (
-          timeB - timeA ||
-          friendA.friendshipId.localeCompare(friendB.friendshipId)
-        );
-      }),
-    [friends],
-  );
-  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
-  const visibleFriends = useMemo(() => {
-    if (!normalizedSearchTerm) {
-      return sortedFriends;
-    }
-
-    return sortedFriends.filter((friend) => {
-      const searchable = [
+  const [activeFilter, setActiveFilter] = useState<MessageRosterFilter>("all");
+  const sortedEntries = useMemo(() => {
+    const directEntries = friends.map((friend) => ({
+      kind: "direct" as const,
+      id: friend.rosterId,
+      searchText: [
         friend.friend.nickname,
         friend.friend.friendCode,
         friend.friend.bio,
         friend.lastMessage?.body,
       ]
         .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase();
+        .join(" "),
+      sortTime: new Date(
+        friend.lastMessage?.createdAt ??
+          friend.lastMessageAt ??
+          friend.createdAt,
+      ).getTime(),
+      friend,
+    }));
+    const roomEntries = activityRoomChats.map((room) => ({
+      kind: "room" as const,
+      id: `room:${room.id}`,
+      searchText: [
+        room.title,
+        room.city,
+        room.lastMessage?.body,
+        room.lastMessage?.senderName,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      sortTime: new Date(room.lastMessage?.createdAt ?? room.startAt).getTime(),
+      room,
+    }));
 
-      return searchable.includes(normalizedSearchTerm);
-    });
-  }, [normalizedSearchTerm, sortedFriends]);
+    return [...directEntries, ...roomEntries].sort(
+      (entryA, entryB) =>
+        entryB.sortTime - entryA.sortTime || entryA.id.localeCompare(entryB.id),
+    );
+  }, [activityRoomChats, friends]);
+  const defaultVisibleEntries = useMemo(
+    () =>
+      sortedEntries.filter((entry) =>
+        entry.kind === "direct"
+          ? Boolean(entry.friend.lastMessage)
+          : Boolean(entry.room.lastMessage),
+      ),
+    [sortedEntries],
+  );
+  const filteredEntries = useMemo(() => {
+    if (activeFilter === "following") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.isFollowing,
+      );
+    }
+
+    if (activeFilter === "followers") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.targetFollowsViewer,
+      );
+    }
+
+    if (activeFilter === "mutual") {
+      return sortedEntries.filter(
+        (entry) => entry.kind === "direct" && entry.friend.isMutualFollow,
+      );
+    }
+
+    if (activeFilter === "rooms") {
+      return sortedEntries.filter((entry) => entry.kind === "room");
+    }
+
+    return defaultVisibleEntries;
+  }, [activeFilter, defaultVisibleEntries, sortedEntries]);
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const visibleEntries = useMemo(() => {
+    if (!normalizedSearchTerm) {
+      return filteredEntries;
+    }
+
+    return filteredEntries.filter((entry) =>
+      entry.searchText.toLocaleLowerCase().includes(normalizedSearchTerm),
+    );
+  }, [filteredEntries, normalizedSearchTerm]);
+  const directUnreadTotal = friends.reduce(
+    (total, friend) => total + friend.unreadCount,
+    0,
+  );
+  const roomUnreadTotal = activityRoomChats.reduce(
+    (total, room) => total + room.unreadCount,
+    0,
+  );
+  const mutualUnreadTotal = friends
+    .filter((friend) => friend.isMutualFollow)
+    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const followingUnreadTotal = friends
+    .filter((friend) => friend.isFollowing)
+    .reduce((total, friend) => total + friend.unreadCount, 0);
+  const filters: Array<{
+    count: number;
+    icon: ComponentType<{ className?: string }>;
+    iconClassName: string;
+    iconFrameClassName: string;
+    key: MessageRosterFilter;
+    label: string;
+  }> = [
+    {
+      count: directUnreadTotal + roomUnreadTotal,
+      icon: MessageCircle,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "all",
+      label: pageCopy.messageFilters.all,
+    },
+    {
+      count: roomUnreadTotal,
+      icon: UsersRound,
+      iconClassName: "text-[#156240]",
+      iconFrameClassName: "bg-[#ECF5EF]",
+      key: "rooms",
+      label: pageCopy.messageFilters.rooms,
+    },
+    {
+      count: mutualUnreadTotal,
+      icon: UsersRound,
+      iconClassName: "text-[#6E46D6]",
+      iconFrameClassName: "bg-[#F0ECFF]",
+      key: "mutual",
+      label: pageCopy.messageFilters.mutual,
+    },
+    {
+      count: followingUnreadTotal,
+      icon: Heart,
+      iconClassName: "text-[#E7457A]",
+      iconFrameClassName: "bg-[#FFF0F5]",
+      key: "following",
+      label: pageCopy.messageFilters.following,
+    },
+  ];
   const toolbar = (
-    <div className="mt-4 flex items-center gap-2.5">
-      <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
-        <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
-        <input
-          type="search"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder={t.searchPlaceholder}
-          className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
-        />
-      </label>
-      <button
-        type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
-        aria-label={t.addFriend}
-        title={t.addFriend}
-        onClick={() => setAddFriendOpen(true)}
-      >
-        <UserPlus className="h-4 w-4" />
-      </button>
+    <div className="mt-4">
+      <div className="flex items-center gap-2.5">
+        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[1rem] border border-[#E7E2D6] bg-white px-3 text-[#6F756E] shadow-[0_1px_0_rgba(29,29,27,0.025)]">
+          <Search className="h-4 w-4 shrink-0 text-[#7C827B]" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder={t.searchPlaceholder}
+            className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#111210] outline-none placeholder:text-[#9A9A90]"
+          />
+        </label>
+        <Link
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E7E2D6] bg-white text-[#111210] shadow-[0_4px_14px_rgba(29,29,27,0.055)] transition active:scale-[0.97]"
+          aria-label={t.findPeople}
+          href={withLocale(locale, "/search")}
+          title={t.findPeople}
+        >
+          <Search className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {filters.map((filter) => {
+          const isActive = activeFilter === filter.key;
+          const Icon = filter.icon;
+
+          return (
+            <button
+              key={filter.key}
+              type="button"
+              className={cn(
+                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-black transition duration-150 active:scale-[0.98]",
+                isActive
+                  ? "border-[#156240] bg-[#156240] text-white"
+                  : "border border-[#E7E2D6] bg-white text-[#111210]",
+              )}
+              onClick={() => setActiveFilter(filter.key)}
+            >
+              <span
+                className={cn(
+                  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition",
+                  isActive ? "bg-white/16" : filter.iconFrameClassName,
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    isActive ? "text-white" : filter.iconClassName,
+                  )}
+                />
+              </span>
+              <span>{filter.label}</span>
+              {filter.count > 0 ? (
+                <span
+                  className={cn(
+                    "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none",
+                    isActive
+                      ? "bg-white text-[#156240]"
+                      : "bg-[#FFEAF1] text-[#D6245F]",
+                  )}
+                >
+                  {filter.count > 99 ? "99+" : filter.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
-  const addFriendDialog = addFriendOpen ? (
-    <AddFriendDialog
-      currentUserFriendCode={currentUserFriendCode}
-      locale={locale}
-      onClose={() => setAddFriendOpen(false)}
-      returnTo="footprints"
-    />
-  ) : null;
-
   if (hasError) {
     return (
       <section>
@@ -2032,12 +2385,11 @@ function FootprintsMessageList({
         <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-4 text-sm font-semibold leading-6 text-[#777A74]">
           {t.emptyListDescription}
         </div>
-        {addFriendDialog}
       </section>
     );
   }
 
-  if (friends.length === 0) {
+  if (friends.length === 0 && activityRoomChats.length === 0) {
     return (
       <section>
         {toolbar}
@@ -2049,7 +2401,6 @@ function FootprintsMessageList({
             {t.emptyFriendListDescription}
           </p>
         </div>
-        {addFriendDialog}
       </section>
     );
   }
@@ -2057,24 +2408,104 @@ function FootprintsMessageList({
   return (
     <section>
       {toolbar}
-      {visibleFriends.length > 0 ? (
+      {visibleEntries.length > 0 ? (
         <div className="mt-3 divide-y divide-[#EFE9DE] border-y border-[#EFE9DE] bg-transparent">
-          {visibleFriends.map((friend) => (
-            <FootprintsMessageRow
-              key={friend.friendshipId}
-              currentUserProfileId={currentUserProfileId}
-              friend={friend}
-              locale={locale}
-            />
-          ))}
+          {visibleEntries.map((entry) =>
+            entry.kind === "direct" ? (
+              <FootprintsMessageRow
+                key={entry.id}
+                currentUserProfileId={currentUserProfileId}
+                friend={entry.friend}
+                locale={locale}
+                showBackFollowAction={activeFilter === "followers"}
+              />
+            ) : (
+              <FootprintsRoomChatRow
+                key={entry.id}
+                locale={locale}
+                room={entry.room}
+              />
+            ),
+          )}
         </div>
       ) : (
         <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6 text-sm font-semibold leading-6 text-[#777A74]">
           {t.emptyListTitle}
         </div>
       )}
-      {addFriendDialog}
     </section>
+  );
+}
+
+function FootprintsRoomChatRow({
+  locale,
+  room,
+}: {
+  locale: string;
+  room: ActivityRoomChatRosterItemViewModel;
+}) {
+  const t = getDirectMessagesCopy(locale);
+  const lastMessage = room.lastMessage;
+  const unreadCount = room.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
+  const preview = lastMessage
+    ? `${lastMessage.isMine ? t.youPrefix : `${lastMessage.senderName}: `}${
+        lastMessage.body.trim() || t.imageMessage
+      }`
+    : t.roomChatEmptyPreview;
+  const time = lastMessage?.createdAt ?? room.startAt;
+
+  return (
+    <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
+      <Link
+        aria-label={t.openRoomChat(room.title)}
+        className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        href={withLocale(locale, `/lobby/${room.id}/room`)}
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ECF5EF] text-[#156240] ring-1 ring-[#D8E8DC]">
+          {room.coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+              src={room.coverImageUrl}
+            />
+          ) : (
+            <UsersRound className="h-5 w-5" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-start gap-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-black leading-5 text-[#111210]">
+                {room.title}
+              </span>
+            </span>
+            <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
+              {formatChatListTimestamp(time, locale)}
+            </span>
+          </span>
+          <span className="mt-1 flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[13px] leading-5",
+                unreadCount > 0
+                  ? "font-black text-[#111210]"
+                  : "font-semibold text-[#5F635E]",
+              )}
+            >
+              {preview}
+            </span>
+            {unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </Link>
+    </article>
   );
 }
 
@@ -2082,74 +2513,132 @@ function FootprintsMessageRow({
   currentUserProfileId,
   friend,
   locale,
+  showBackFollowAction,
 }: {
   currentUserProfileId: string;
   friend: DirectMessageFriendRosterItemViewModel;
   locale: string;
+  showBackFollowAction: boolean;
 }) {
   const t = getDirectMessagesCopy(locale);
   const lastMessage = friend.lastMessage;
+  const unreadCount = friend.unreadCount;
+  const unreadBadgeText = unreadCount > 99 ? "99+" : String(unreadCount);
   const isMine = lastMessage?.senderId === currentUserProfileId;
   const preview = lastMessage
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const shouldShowBackFollow =
+    showBackFollowAction && friend.relationshipKind === "followed_by";
+  const followBackLabel =
+    locale === "en" ? "Follow" : locale === "fr" ? "Suivre" : "回关";
+  const mutualLabel =
+    locale === "en" ? "Mutual" : locale === "fr" ? "Mutuel" : "互关";
   const content = (
     <>
       <MessageAvatar
         avatarUrl={friend.friend.avatarUrl}
+        isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
+        presenceDisplayStatus={friend.friend.presenceDisplayStatus}
       />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="truncate text-[14px] font-black leading-5 text-[#111210]">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-black leading-5 text-[#111210]">
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
-            {formatActivityDate(time, locale)}
+            {formatChatListTimestamp(time, locale)}
           </span>
         </span>
-        <span className="mt-1 block truncate text-[13px] font-semibold leading-5 text-[#5F635E]">
-          {preview}
+        <span className="mt-1 flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-[13px] leading-5",
+              unreadCount > 0
+                ? "font-black text-[#111210]"
+                : "font-semibold text-[#5F635E]",
+            )}
+          >
+            {preview}
+          </span>
+          {unreadCount > 0 ? (
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              {unreadBadgeText}
+            </span>
+          ) : null}
         </span>
       </span>
     </>
   );
+  const backFollowAction = shouldShowBackFollow ? (
+    <div className="shrink-0 self-center">
+      <FollowButton
+        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        activeLabel={mutualLabel}
+        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        fullWidth={false}
+        inactiveLabel={followBackLabel}
+        isAuthenticated
+        isFollowing={friend.isFollowing}
+        locale={locale}
+        redirectPath="/footprints?tab=message"
+        targetUserProfileId={friend.friend.id}
+      />
+    </div>
+  ) : null;
 
   return (
     <article className="min-w-0 transition active:bg-[#F7F7F0]/72">
       {friend.conversationId ? (
-        <Link
-          aria-label={t.openConversation(friend.friend.nickname)}
-          className="flex min-w-0 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
-          href={withLocale(locale, `/messages/${friend.conversationId}`)}
-        >
-          {content}
-        </Link>
-      ) : (
-        <form action={openDirectConversationAction}>
-          <input name="locale" type="hidden" value={locale} />
-          <input
-            name="friendProfileId"
-            type="hidden"
-            value={friend.friend.id}
-          />
-          <button
-            type="submit"
-            className="flex w-full min-w-0 items-center gap-3 px-1 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
             aria-label={t.openConversation(friend.friend.nickname)}
+            className="flex min-w-0 flex-1 items-center gap-3 px-1 py-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+            href={withLocale(locale, `/messages/${friend.conversationId}`)}
           >
             {content}
-          </button>
-        </form>
+          </Link>
+          {backFollowAction}
+        </div>
+      ) : (
+        <div className="flex min-w-0 items-center gap-2">
+          <form
+            action={openDirectConversationAction}
+            className="min-w-0 flex-1"
+          >
+            <input name="locale" type="hidden" value={locale} />
+            <input
+              name="redirectPath"
+              type="hidden"
+              value="/footprints?tab=message"
+            />
+            <input
+              name="friendProfileId"
+              type="hidden"
+              value={friend.friend.id}
+            />
+            <button
+              type="submit"
+              className="flex w-full min-w-0 items-center gap-3 px-1 py-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#111210]/15"
+              aria-label={t.openConversation(friend.friend.nickname)}
+            >
+              {content}
+            </button>
+          </form>
+          {backFollowAction}
+        </div>
       )}
     </article>
   );
 }
 
 export function FootprintsMobilePage({
-  initialTab = "message",
+  activityRoomChats,
+  initialMomentScope = "PUBLIC",
+  initialTab = "moment",
   locale,
   messageFriends,
   messageRosterError = false,
@@ -2161,10 +2650,40 @@ export function FootprintsMobilePage({
   profile,
 }: FootprintsMobilePageProps) {
   const copy = useMemo(() => getFootprintsCopy(locale), [locale]);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<FootprintsTab>(initialTab);
-  const [feedScope, setFeedScope] = useState<MomentFeedScope>("PUBLIC");
   const isAuthenticated = Boolean(profile);
-  const signInHref = getSignInHref(locale, "/footprints");
+  const [feedScope, setFeedScope] = useState<MomentFeedScope>(
+    isAuthenticated ? initialMomentScope : "PUBLIC",
+  );
+  const signInHref = getSignInHref(
+    locale,
+    getFootprintsTabPath(activeTab, feedScope),
+  );
+  const initialUnreadMessageCount = useMemo(
+    () =>
+      messageFriends.reduce(
+        (total, friend) => total + friend.unreadCount,
+        0,
+      ) +
+      activityRoomChats.reduce(
+        (total, room) => total + room.unreadCount,
+        0,
+      ),
+    [activityRoomChats, messageFriends],
+  );
+  const { unreadDirectMessageCount } = useNotificationBadge(
+    initialUnreadMessageCount,
+  );
+  const [hasMountedUnreadCount, setHasMountedUnreadCount] = useState(false);
+  const lastRosterRefreshUnreadCountRef = useRef(initialUnreadMessageCount);
+  const displayedUnreadMessageCount = hasMountedUnreadCount
+    ? unreadDirectMessageCount
+    : initialUnreadMessageCount;
+  const unreadMessageBadgeText =
+    displayedUnreadMessageCount > 99
+      ? "99+"
+      : String(displayedUnreadMessageCount);
 
   const tabs: Array<{ key: FootprintsTab; label: string }> = [
     { key: "message", label: copy.tabs.message },
@@ -2187,14 +2706,31 @@ export function FootprintsMobilePage({
       return true;
     });
   }, [moments]);
-  const scopedMoments = useMemo(
-    () => dedupedMoments.filter((moment) => moment.visibility === feedScope),
-    [dedupedMoments, feedScope],
-  );
+  const scopedMoments = useMemo(() => {
+    if (feedScope === "MINE") {
+      return dedupedMoments.filter((moment) => moment.isOwnMoment);
+    }
+
+    if (feedScope === "MUTUAL") {
+      return dedupedMoments.filter(
+        (moment) => moment.isOwnMoment || moment.isAuthorMutualFollow,
+      );
+    }
+
+    if (feedScope === "FOLLOWING") {
+      return dedupedMoments.filter(
+        (moment) => moment.isOwnMoment || moment.isAuthorFollowedByViewer,
+      );
+    }
+
+    return dedupedMoments.filter((moment) => moment.visibility === "PUBLIC");
+  }, [dedupedMoments, feedScope]);
   const feedScopeTabs: Array<{ key: MomentFeedScope; label: string }> = profile
     ? [
         { key: "PUBLIC", label: copy.feedPublic },
-        { key: "FRIENDS", label: copy.feedFriends },
+        { key: "MINE", label: copy.feedMine },
+        { key: "MUTUAL", label: copy.feedMutual },
+        { key: "FOLLOWING", label: copy.feedFollowing },
       ]
     : [{ key: "PUBLIC", label: copy.feedPublic }];
 
@@ -2204,133 +2740,222 @@ export function FootprintsMobilePage({
     }
   }, [feedScope, profile]);
 
+  useEffect(() => {
+    const readUrlState = () => {
+      const nextTab = getFootprintsTabFromSearch(window.location.search);
+      const nextScope = getMomentScopeFromSearch(window.location.search);
+
+      setActiveTab(nextTab ?? "moment");
+      setFeedScope(profile ? nextScope : "PUBLIC");
+    };
+
+    if (!getFootprintsTabFromSearch(window.location.search)) {
+      updateFootprintsHistoryUrl(
+        locale,
+        initialTab,
+        profile ? initialMomentScope : "PUBLIC",
+        "replace",
+      );
+    }
+
+    window.addEventListener("popstate", readUrlState);
+
+    return () => {
+      window.removeEventListener("popstate", readUrlState);
+    };
+  }, [initialMomentScope, initialTab, locale, profile]);
+
+  function handleTopTabChange(nextTab: FootprintsTab) {
+    setActiveTab(nextTab);
+    updateFootprintsHistoryUrl(locale, nextTab, feedScope, "push");
+  }
+
+  function handleFeedScopeChange(nextScope: MomentFeedScope) {
+    setFeedScope(nextScope);
+
+    if (activeTab === "moment") {
+      updateFootprintsHistoryUrl(locale, "moment", nextScope, "replace");
+    }
+  }
+
+  useEffect(() => {
+    lastRosterRefreshUnreadCountRef.current = initialUnreadMessageCount;
+  }, [initialUnreadMessageCount]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setHasMountedUnreadCount(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!profile || activeTab !== "message" || !hasMountedUnreadCount) {
+      return;
+    }
+
+    if (unreadDirectMessageCount === lastRosterRefreshUnreadCountRef.current) {
+      return;
+    }
+
+    lastRosterRefreshUnreadCountRef.current = unreadDirectMessageCount;
+    router.refresh();
+  }, [
+    activeTab,
+    profile,
+    router,
+    hasMountedUnreadCount,
+    unreadDirectMessageCount,
+  ]);
+
   return (
-    <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
-      <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-        <nav className="mx-auto grid max-w-md grid-cols-3 border-b border-[#E3DCC5] text-center">
-          {tabs.map((tab) => {
-            const active = activeTab === tab.key;
+    <>
+      <DirectMessageUnreadCountHydrator
+        unreadCount={initialUnreadMessageCount}
+      />
+      <main className="min-h-screen bg-white pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+        <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
+          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5">
+            <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
+              {copy.title}
+            </h1>
+            <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center">
+              {tabs.map((tab) => {
+                const active = activeTab === tab.key;
 
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                className={cn(
-                  "relative pb-3 text-sm font-black tracking-normal transition",
-                  active ? "text-[#111210]" : "text-[#1D1D1B]/58",
-                )}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-                <span
-                  className={cn(
-                    "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-10 rounded-full bg-[#156240] transition",
-                    active ? "opacity-100" : "opacity-0",
-                  )}
-                />
-              </button>
-            );
-          })}
-        </nav>
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={cn(
+                      "relative min-w-0 px-1 pb-3 text-[13px] font-black tracking-normal transition",
+                      active ? "text-[#111210]" : "text-[#1D1D1B]/58",
+                    )}
+                    onClick={() => handleTopTabChange(tab.key)}
+                  >
+                    <span className="relative mx-auto inline-flex max-w-full items-center justify-center">
+                      <span className="block truncate whitespace-nowrap">
+                        {tab.label}
+                      </span>
+                      {tab.key === "message" && displayedUnreadMessageCount > 0 ? (
+                        <span
+                          aria-label={unreadMessageBadgeText}
+                          className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-[#E7457A] ring-2 ring-[#FEFFF9]"
+                        />
+                      ) : null}
+                    </span>
+                    <span
+                      className={cn(
+                        "absolute inset-x-0 -bottom-px mx-auto h-[3px] w-9 rounded-full bg-[#156240] transition",
+                        active ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </nav>
+          </header>
 
-        {activeTab === "moment" ? (
-          <section className="mt-5 space-y-5 md:mt-8">
-            <div className="md:mx-auto md:max-w-2xl">
-              <MomentComposer copy={copy} locale={locale} profile={profile} />
-            </div>
-
-            <div className="inline-flex h-7 rounded-full bg-[#F7F7F0] p-0.5 text-[11px] font-black text-[#156240]">
-              {feedScopeTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  className={cn(
-                    "rounded-full px-2.5 transition",
-                    feedScope === tab.key
-                      ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
-                      : "text-[#156240]/62",
-                  )}
-                  onClick={() => setFeedScope(tab.key)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {momentFeedError ? (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
-                {copy.feedError}
+          {activeTab === "moment" ? (
+            <section className="mt-5 space-y-5 md:mt-8">
+              <div className="md:mx-auto md:max-w-2xl">
+                <MomentComposer copy={copy} locale={locale} profile={profile} />
               </div>
-            ) : scopedMoments.length > 0 ? (
-              <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
-                {scopedMoments.map((moment) => (
-                  <FeedCard
-                    key={moment.id}
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    moment={moment}
-                    copy={copy}
-                    viewerProfileId={profile?.id ?? null}
-                  />
+
+              <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-black text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {feedScopeTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={cn(
+                      "h-7 shrink-0 rounded-full px-3.5 transition",
+                      feedScope === tab.key
+                        ? "bg-[#156240] text-white"
+                        : "bg-[#F7F8F4] text-[#156240]",
+                    )}
+                    onClick={() => handleFeedScopeChange(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
                 ))}
               </div>
-            ) : (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
-                <p className="text-[15px] font-black text-[#111210]">
-                  {copy.emptyFeedTitle}
-                </p>
-                <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
-                  {copy.emptyFeedDescription}
-                </p>
-              </div>
-            )}
-          </section>
-        ) : null}
 
-        {activeTab === "message" ? (
-          <section className="md:mx-auto md:max-w-2xl">
-            {profile ? (
-              <FootprintsMessageList
-                currentUserFriendCode={profile.friendCode}
-                currentUserProfileId={profile.id}
-                friends={messageFriends}
-                hasError={messageRosterError}
-                locale={locale}
-              />
-            ) : (
-              <div className="mt-5">
-                <FootprintsAuthPrompt
-                  actionLabel={copy.signIn}
-                  description={copy.guestMessageDescription}
-                  href={signInHref}
-                  title={copy.guestMessageTitle}
+              {momentFeedError ? (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383] md:mx-auto md:max-w-2xl">
+                  {copy.feedError}
+                </div>
+              ) : scopedMoments.length > 0 ? (
+                <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 xl:grid-cols-3">
+                  {scopedMoments.map((moment) => (
+                    <FeedCard
+                      key={moment.id}
+                      isAuthenticated={isAuthenticated}
+                      locale={locale}
+                      moment={moment}
+                      copy={copy}
+                      viewerProfileId={profile?.id ?? null}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
+                  <p className="text-[15px] font-black text-[#111210]">
+                    {copy.emptyFeedTitle}
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">
+                    {copy.emptyFeedDescription}
+                  </p>
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === "message" ? (
+            <section className="md:mx-auto md:max-w-2xl">
+              {profile ? (
+                <FootprintsMessageList
+                  currentUserProfileId={profile.id}
+                  activityRoomChats={activityRoomChats}
+                  friends={messageFriends}
+                  hasError={messageRosterError}
+                  locale={locale}
                 />
-              </div>
-            )}
-          </section>
-        ) : null}
+              ) : (
+                <div className="mt-5">
+                  <FootprintsAuthPrompt
+                    actionLabel={copy.signIn}
+                    description={copy.guestMessageDescription}
+                    href={signInHref}
+                    title={copy.guestMessageTitle}
+                  />
+                </div>
+              )}
+            </section>
+          ) : null}
 
-        {activeTab === "planet" ? (
-          <section className="mt-5 md:mx-auto md:max-w-3xl">
-            {planetSquareError ? (
-              <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
-                {locale === "fr"
-                  ? "Les planètes ne se chargent pas pour le moment."
-                  : locale === "en"
-                    ? "Planets could not load right now."
-                    : "星球暂时加载失败，请稍后再试。"}
-              </div>
-            ) : (
-              <PlanetSquarePage
-                canCreate={canCreatePlanet}
-                embedded
-                locale={locale}
-                planets={planets}
-              />
-            )}
-          </section>
-        ) : null}
-      </div>
-    </main>
+          {activeTab === "planet" ? (
+            <section className="mt-5 md:mx-auto md:max-w-3xl">
+              {planetSquareError ? (
+                <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-5 text-sm font-semibold leading-6 text-[#8E8383]">
+                  {locale === "fr"
+                    ? "Les planètes ne se chargent pas pour le moment."
+                    : locale === "en"
+                      ? "Planets could not load right now."
+                      : "星球暂时加载失败，请稍后再试。"}
+                </div>
+              ) : (
+                <PlanetSquarePage
+                  canCreate={canCreatePlanet}
+                  embedded
+                  locale={locale}
+                  planets={planets}
+                />
+              )}
+            </section>
+          ) : null}
+        </div>
+      </main>
+    </>
   );
 }

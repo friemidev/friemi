@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { getProfileFollowCopy } from "../copy";
 import type {
   ProfileFriendUserViewModel,
+  ProfileFollowUserViewModel,
 } from "../queries/getProfileDashboard";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import type { ProfileSectionKey } from "./ProfileActivitySections";
@@ -18,7 +19,11 @@ type ProfileOverviewPanelProps = {
   activeActivitySection?: ProfileSectionKey;
   createdCount: number;
   joinedCount: number;
+  followersCount: number;
+  followingCount: number;
   friendCount: number;
+  followers: ProfileFollowUserViewModel[];
+  following: ProfileFollowUserViewModel[];
   friends: ProfileFriendUserViewModel[];
   locale: string;
   createdLabel: string;
@@ -28,7 +33,7 @@ type ProfileOverviewPanelProps = {
   showJoinedCount?: boolean;
 };
 
-type SocialPanelKey = "friends" | null;
+type SocialPanelKey = "following" | "followers" | "mutual" | null;
 
 function InteractiveStatCard({
   active,
@@ -117,7 +122,11 @@ export function ProfileOverviewPanel({
   activeActivitySection = "created",
   createdCount,
   joinedCount,
+  followersCount,
+  followingCount,
   friendCount,
+  followers,
+  following,
   friends,
   locale,
   createdLabel,
@@ -129,19 +138,48 @@ export function ProfileOverviewPanel({
   const [activePanel, setActivePanel] = useState<SocialPanelKey>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const t = getProfileFollowCopy(locale);
-  const statCount =
-    1 + (showJoinedCount ? 1 : 0) + (showFriendCount ? 1 : 0);
+  const statCount = 1 + (showJoinedCount ? 1 : 0) + (showFriendCount ? 3 : 0);
   const statsGridClass =
-    statCount === 3
-      ? "grid w-full grid-cols-3 gap-2"
-      : "grid w-full grid-cols-2 gap-2";
-
-  const activeList = friends;
-  const activeCount = friendCount;
-  const activeTitle = t.friendsTitle;
-  const activeDescription = t.friendsDescription;
-  const emptyTitle = t.friendsEmptyTitle;
-  const emptyDescription = t.friendsEmptyDescription;
+    statCount >= 5
+      ? "grid w-full grid-cols-2 gap-2 sm:grid-cols-5"
+      : statCount === 3
+        ? "grid w-full grid-cols-3 gap-2"
+        : "grid w-full grid-cols-2 gap-2";
+  const activePanelConfig =
+    activePanel === "following"
+      ? {
+          count: followingCount,
+          description: t.followingDescription,
+          emptyDescription: t.followingEmptyDescription,
+          emptyTitle: t.followingEmptyTitle,
+          list: following,
+          title: t.followingTitle,
+        }
+      : activePanel === "followers"
+        ? {
+            count: followersCount,
+            description: t.followersDescription,
+            emptyDescription: t.followersEmptyDescription,
+            emptyTitle: t.followersEmptyTitle,
+            list: followers,
+            title: t.followersTitle,
+          }
+        : activePanel === "mutual"
+          ? {
+              count: friendCount,
+              description: t.friendsDescription,
+              emptyDescription: t.friendsEmptyDescription,
+              emptyTitle: t.friendsEmptyTitle,
+              list: friends,
+              title: t.friendsTitle,
+            }
+          : null;
+  const activeList = activePanelConfig?.list ?? [];
+  const activeCount = activePanelConfig?.count ?? 0;
+  const activeTitle = activePanelConfig?.title ?? "";
+  const activeDescription = activePanelConfig?.description ?? "";
+  const emptyTitle = activePanelConfig?.emptyTitle ?? "";
+  const emptyDescription = activePanelConfig?.emptyDescription ?? "";
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredList = normalizedQuery
     ? activeList.filter((user) =>
@@ -182,12 +220,26 @@ export function ProfileOverviewPanel({
           />
         ) : null}
         {showFriendCount ? (
-          <InteractiveStatCard
-            active={activePanel === "friends"}
-            label={t.friendCount}
-            onClick={() => openPanel("friends")}
-            value={friendCount}
-          />
+          <>
+            <InteractiveStatCard
+              active={activePanel === "following"}
+              label={t.followingCount}
+              onClick={() => openPanel("following")}
+              value={followingCount}
+            />
+            <InteractiveStatCard
+              active={activePanel === "followers"}
+              label={t.followersCount}
+              onClick={() => openPanel("followers")}
+              value={followersCount}
+            />
+            <InteractiveStatCard
+              active={activePanel === "mutual"}
+              label={t.friendCount}
+              onClick={() => openPanel("mutual")}
+              value={friendCount}
+            />
+          </>
         ) : null}
       </div>
 
@@ -267,11 +319,7 @@ export function ProfileOverviewPanel({
               ) : (
                 <div className="grid gap-3">
                   {filteredList.map((user) => (
-                    <CompactUserRow
-                      key={user.id}
-                      locale={locale}
-                      user={user}
-                    />
+                    <CompactUserRow key={user.id} locale={locale} user={user} />
                   ))}
                 </div>
               )}

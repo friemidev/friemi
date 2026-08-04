@@ -56,7 +56,8 @@ function getCopy(locale: string) {
   if (locale === "fr") {
     return {
       failed: "Impossible d'envoyer l'annonce pour le moment.",
-      forbidden: "Seul l'organisateur peut envoyer une annonce.",
+      forbidden:
+        "Seul l'organisateur ou un gestionnaire peut envoyer une annonce.",
       locked: "Cette activite est terminee ou annulee.",
       invalid: "Verifiez le contenu de l'annonce.",
     };
@@ -65,7 +66,7 @@ function getCopy(locale: string) {
   if (locale === "en") {
     return {
       failed: "The announcement could not be sent right now.",
-      forbidden: "Only the organizer can send an announcement.",
+      forbidden: "Only the host or a manager can send an announcement.",
       locked: "This activity has ended or was cancelled.",
       invalid: "Check the announcement content and try again.",
     };
@@ -73,7 +74,7 @@ function getCopy(locale: string) {
 
   return {
     failed: "公告暂时发送失败，请稍后重试。",
-    forbidden: "只有发起人可以发送群公告。",
+    forbidden: "只有发起人或协管可以发送群公告。",
     locked: "活动已结束或已取消，不能再发送群公告。",
     invalid: "请检查公告内容后再发送。",
   };
@@ -109,7 +110,18 @@ export async function sendActivityAnnouncementAction(
     const activity = await prisma.activity.findFirst({
       where: {
         id: result.data.activityId,
-        organizerId: profile.id,
+        OR: [
+          {
+            organizerId: profile.id,
+          },
+          {
+            coManagers: {
+              some: {
+                managerProfileId: profile.id,
+              },
+            },
+          },
+        ],
       },
       select: activitySelect,
     });
@@ -173,6 +185,12 @@ export async function sendActivityAnnouncementAction(
 
     revalidatePath(
       withLocale(result.data.locale, getActivityDetailPath(activity.id)),
+    );
+    revalidatePath(
+      withLocale(result.data.locale, `/lobby/${activity.id}/room`),
+    );
+    revalidatePath(
+      withLocale(result.data.locale, `/lobby/${activity.id}/room/manage`),
     );
     revalidatePath(withLocale(result.data.locale, "/notifications"));
 

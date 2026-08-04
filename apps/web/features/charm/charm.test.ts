@@ -3,10 +3,13 @@ import test from "node:test";
 import {
   blindBoxFragmentExchangeCount,
   calculateCharmFromReceivedGifts,
+  canRedeemBlindBoxFragments,
   charmGiftCatalog,
   getActiveCharmGifts,
   getCharmGiftDefinition,
   getCharmLevel,
+  getCharmLevelDescription,
+  getCharmLevelLabel,
   getCharmProgress,
   normalizeGiftQuantity,
   successfulActivityFragmentReward,
@@ -38,11 +41,15 @@ test("negative gifts stay in the catalog but are disabled for launch", () => {
   assert.equal(getCharmGiftDefinition("egg")?.launchEnabled, false);
   assert.equal(getCharmGiftDefinition("bomb")?.launchEnabled, false);
   assert.equal(getCharmGiftDefinition("police_car")?.launchEnabled, false);
-  assert.ok(!getActiveCharmGifts().some((gift) => gift.category === "negative"));
+  assert.ok(
+    !getActiveCharmGifts().some((gift) => gift.category === "negative"),
+  );
 });
 
 test("seasonal gifts stay out of the default picker until triggered", () => {
-  assert.ok(!getActiveCharmGifts().some((gift) => gift.category === "seasonal"));
+  assert.ok(
+    !getActiveCharmGifts().some((gift) => gift.category === "seasonal"),
+  );
   assert.ok(
     getActiveCharmGifts({ includeSeasonal: true }).some(
       (gift) => gift.category === "seasonal",
@@ -77,6 +84,17 @@ test("charm levels resolve at product thresholds", () => {
   assert.equal(getCharmLevel(100000).id, "FRIEMI_IDOL");
 });
 
+test("charm levels expose localized user labels", () => {
+  assert.equal(getCharmLevelLabel("SOLITUDE", "zh-CN"), "独行者");
+  assert.equal(getCharmLevelLabel("CHARM", "zh-CN"), "心动者");
+  assert.equal(getCharmLevelLabel("SUPERSTAR", "zh-CN"), "闪耀之星");
+  assert.equal(getCharmLevelLabel("LEGEND", "zh-CN"), "人气传说");
+  assert.equal(getCharmLevelLabel("FRIEMI_IDOL", "zh-CN"), "Friemi 顶流");
+  assert.equal(getCharmLevelLabel("SOLITUDE", "en"), "Solitude");
+  assert.equal(getCharmLevelLabel("SOLITUDE", "fr"), "Solitaire");
+  assert.equal(getCharmLevelDescription("CHARM", "zh-CN"), "开始被更多人看见。");
+});
+
 test("charm progress points to the next level", () => {
   const progress = getCharmProgress(250);
 
@@ -90,4 +108,11 @@ test("blind box fragment constants match the MVP rule", () => {
   assert.equal(successfulActivityFragmentReward, 1);
   assert.equal(blindBoxFragmentExchangeCount, 10);
   assert.ok(charmGiftCatalog.length >= 19);
+});
+
+test("blind box fragment redemption requires ten fragments", () => {
+  assert.equal(canRedeemBlindBoxFragments(null), false);
+  assert.equal(canRedeemBlindBoxFragments(9), false);
+  assert.equal(canRedeemBlindBoxFragments(10), true);
+  assert.equal(canRedeemBlindBoxFragments(10.9), true);
 });

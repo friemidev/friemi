@@ -214,7 +214,7 @@ function PlanetCover({ coverImageUrl, index }: { coverImageUrl: string | null; i
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-[100svh] bg-[#f6f1ea] pb-[calc(6.4rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+0.8rem)] text-[#151713] md:bg-[#edf4fa] md:py-10">
+    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:0.8rem] [--app-mobile-page-bottom-gap:1.25rem] bg-[#f6f1ea] text-[#151713] md:bg-[#edf4fa] md:py-10">
       {children}
     </main>
   );
@@ -263,7 +263,7 @@ export function PlanetSquarePage({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-[#d9d4b5] p-8 text-center text-sm text-[#7e827d]">
-          杩樻病鏈夋槦鐞冿紝鎴愪负绗竴涓垱寤哄畠鐨勪汉鍚с€?
+          {"\u8FD8\u6CA1\u6709\u661F\u7403\uFF0C\u6210\u4E3A\u7B2C\u4E00\u4E2A\u521B\u5EFA\u5B83\u7684\u4EBA\u5427\u3002"}
         </div>
       )}
       {canCreate ? (
@@ -377,7 +377,7 @@ function MomentOrbitCard({
           <span className="h-full w-full rounded-full border border-white/50 bg-[radial-gradient(circle_at_32%_30%,rgba(255,255,255,.7),transparent_28%),linear-gradient(145deg,transparent_45%,rgba(20,55,42,.2)_46%_56%,transparent_57%)]" />
         )}
       </span>
-      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">{moment.content.slice(0, 4) || "路路"}</span>
+      <span className="mt-1 block line-clamp-1 text-[10px] font-bold leading-3 text-[#4d6658]">{moment.content.slice(0, 4) || "\u661F\u7403"}</span>
     </Link>
   );
 }
@@ -416,7 +416,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">馃獝</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">{"\u{1F680}"}</span>
             <div className="min-w-0">
               <h1 className="truncate text-sm font-black">{getPlanetName(planet, locale)}</h1>
               <p className="text-[10px] text-[#7d877e]">
@@ -506,7 +506,7 @@ export function PlanetMomentPage({ locale, moment }: { locale: string; moment: P
     ? "Rejoignez cette planete et attendez la validation pour envoyer un commentaire."
     : locale === "en"
       ? "Join this planet and wait for approval before sending a comment."
-      : "加入星球并通过审核后，才可以发送弹幕。";
+      : "\u52A0\u5165\u661F\u7403\u5E76\u901A\u8FC7\u5BA1\u6838\u540E\uFF0C\u624D\u53EF\u4EE5\u53D1\u9001\u5F39\u5E55\u3002";
 
   return (
     <PageShell>

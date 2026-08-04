@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FootprintsMobilePage } from "@/features/moments/components/FootprintsMobilePage";
+import { getActivityRoomChatRoster } from "@/features/activity-room-chat/services/activityRoomChat";
 import { getDirectMessageFriendRoster } from "@/features/direct-messages/queries/getDirectMessages";
 import { getMomentFeed } from "@/features/moments/queries/getMomentFeed";
 import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligibility";
@@ -12,6 +13,7 @@ type FootprintsPageProps = {
     locale: string;
   }>;
   searchParams?: Promise<{
+    scope?: string;
     tab?: string;
   }>;
 };
@@ -22,7 +24,8 @@ export async function generateMetadata({
   params,
 }: FootprintsPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const title = locale === "zh-CN" ? "足迹" : "Trace";
+  const title =
+    locale === "zh-CN" ? "世界" : locale === "fr" ? "Monde" : "World";
 
   return {
     title: `${title} | Friemi`,
@@ -43,6 +46,14 @@ export default async function FootprintsPage({
         : query?.tab === "planet" || query?.tab === "profile"
           ? "planet"
           : null;
+  const requestedMomentScope =
+    query?.scope === "mine"
+      ? "MINE"
+      : query?.scope === "mutual"
+        ? "MUTUAL"
+        : query?.scope === "following"
+          ? "FOLLOWING"
+          : "PUBLIC";
   const perf = createPerformanceTracker({
     locale,
     route: "/footprints",
@@ -50,10 +61,15 @@ export default async function FootprintsPage({
   const profile = await perf.measure("viewer.profile", () =>
     getOptionalCurrentUserProfileSnapshot(),
   );
-  const initialTab = requestedTab ?? (profile ? "message" : "moment");
+  const initialTab = requestedTab ?? "moment";
   const viewerProfileId = profile?.id ?? null;
-  const [momentsResult, messageFriendsResult, planetsResult, canCreateResult] =
-    await Promise.all([
+  const [
+    momentsResult,
+    messageFriendsResult,
+    activityRoomChatsResult,
+    planetsResult,
+    canCreateResult,
+  ] = await Promise.all([
       perf
         .measure("moments.feed", () => getMomentFeed(viewerProfileId))
         .then((moments) => ({ moments, error: null }))
@@ -80,6 +96,21 @@ export default async function FootprintsPage({
               };
             })
         : Promise.resolve({ friends: [], error: null }),
+      profile
+        ? perf
+            .measure("messages.activityRooms", () =>
+              getActivityRoomChatRoster(profile.id),
+            )
+            .then((rooms) => ({ rooms, error: null }))
+            .catch((error: unknown) => {
+              console.error("Failed to load footprints room chat roster", error);
+
+              return {
+                rooms: [],
+                error,
+              };
+            })
+        : Promise.resolve({ rooms: [], error: null }),
       perf
         .measure("planets.square", () => getPlanetSquare(viewerProfileId))
         .then((planets) => ({ planets, error: null }))
@@ -106,6 +137,7 @@ export default async function FootprintsPage({
   perf.finish(
     {
       initialTab,
+      activityRoomChatCount: activityRoomChatsResult.rooms.length,
       messageFriendCount: messageFriendsResult.friends.length,
       momentCount: momentsResult.moments.length,
       planetCount: planetsResult.planets.length,
@@ -122,11 +154,15 @@ export default async function FootprintsPage({
   return (
     <FootprintsMobilePage
       locale={locale}
+      initialMomentScope={requestedMomentScope}
       initialTab={initialTab}
       moments={momentsResult.moments}
       momentFeedError={Boolean(momentsResult.error)}
       messageFriends={messageFriendsResult.friends}
-      messageRosterError={Boolean(messageFriendsResult.error)}
+      activityRoomChats={activityRoomChatsResult.rooms}
+      messageRosterError={Boolean(
+        messageFriendsResult.error || activityRoomChatsResult.error,
+      )}
       profile={
         profile
           ? {

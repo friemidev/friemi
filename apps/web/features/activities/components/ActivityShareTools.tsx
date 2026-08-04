@@ -1,15 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  ChevronDown,
-  Download,
-  ImageIcon,
-  Link as LinkIcon,
-  QrCode,
-  Share2,
-  X,
-} from "lucide-react";
+import { Download, ImageIcon, Share2, X } from "lucide-react";
 import QRCode from "qrcode";
 import { Button } from "@chill-club/ui";
 import type {
@@ -21,7 +13,6 @@ import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-import { ActivityCopyButton } from "./ActivityCopyButton";
 import { WechatShareConfigurator } from "./WechatShareConfigurator";
 
 type ActivityShareToolsProps = {
@@ -42,6 +33,22 @@ type ActivityShareToolsProps = {
 };
 
 type WebShareMode = "copy" | "native" | "wechat";
+
+type ActivityPosterDownloadButtonProps = {
+  activityTitle: string;
+  analyticsEntityId: string;
+  analyticsEntityType: AnalyticsEntityType;
+  analyticsSourceSurface?: AnalyticsSourceSurface;
+  categoryLabel: string;
+  className?: string;
+  coverImageUrl?: string | null;
+  dateLabel: string;
+  description: string;
+  locationLabel: string;
+  locale: string;
+  priceLabel: string;
+  sharePath?: string | null;
+};
 
 type DrawLineOptions = {
   color?: string;
@@ -76,6 +83,125 @@ function getUrlHost(value: string) {
 
 function isWechatWebView(userAgent: string) {
   return /MicroMessenger/i.test(userAgent);
+}
+
+async function generateActivityPosterDataUrl({
+  activityTitle,
+  activityUrl,
+  categoryLabel,
+  coverImageUrl,
+  dateLabel,
+  description,
+  locationLabel,
+  priceLabel,
+  t,
+}: {
+  activityTitle: string;
+  activityUrl: string;
+  categoryLabel: string;
+  coverImageUrl?: string | null;
+  dateLabel: string;
+  description: string;
+  locationLabel: string;
+  priceLabel: string;
+  t: ReturnType<typeof getCopy>["activityShare"];
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Canvas context is not available");
+  }
+
+  context.fillStyle = "#FEFFF9";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#F1F2EC";
+  context.fillRect(0, 0, canvas.width, 360);
+  let hasCoverBackground = false;
+
+  if (coverImageUrl) {
+    try {
+      const { image, objectUrl } = await loadFetchedImage(
+        getActivityCoverDisplayUrl(coverImageUrl),
+      );
+      drawImageCover(context, image, 0, 0, canvas.width, 360);
+      URL.revokeObjectURL(objectUrl);
+      context.fillStyle = "rgba(0, 0, 0, 0.38)";
+      context.fillRect(0, 0, canvas.width, 360);
+      hasCoverBackground = true;
+    } catch {
+      context.fillStyle = "#369758";
+      context.fillRect(0, 0, 140, 360);
+    }
+  } else {
+    context.fillStyle = "#369758";
+    context.fillRect(0, 0, 140, 360);
+  }
+
+  await drawBrandHeader(context, hasCoverBackground);
+
+  drawPill(context, categoryLabel, 72, 286);
+
+  drawWrappedText(context, activityTitle, 72, 440, 936, 68, {
+    font: "800 62px sans-serif",
+    maxLines: 2,
+  });
+
+  drawWrappedText(context, description, 72, 616, 936, 38, {
+    color: "#8E8383",
+    font: "400 30px sans-serif",
+    maxLines: 2,
+  });
+
+  const cardWidth = 448;
+  drawInfoCard(context, t.posterTime, dateLabel, 72, 710, cardWidth, {
+    height: 158,
+    maxLines: 2,
+  });
+  drawInfoCard(context, t.posterPrice, priceLabel, 560, 710, cardWidth, {
+    height: 158,
+    maxLines: 2,
+  });
+  drawInfoCard(context, t.posterLocation, locationLabel, 72, 890, 936, {
+    height: 174,
+    lineHeight: 34,
+    maxLines: 3,
+    valueFont: "700 28px sans-serif",
+  });
+
+  const qrDataUrl = await QRCode.toDataURL(activityUrl, {
+    color: {
+      dark: "#1D1D1B",
+      light: "#FEFFF9",
+    },
+    margin: 1,
+    width: 260,
+  });
+  const qrImage = await loadImage(qrDataUrl);
+  const urlHost = getUrlHost(activityUrl);
+
+  context.fillStyle = "#FEFFF9";
+  context.beginPath();
+  context.roundRect(72, 1096, 936, 170, 28);
+  context.fill();
+  context.drawImage(qrImage, 786, 1122, 118, 118);
+  context.font = "800 34px sans-serif";
+  context.fillStyle = "#1D1D1B";
+  context.fillText(t.posterScanTitle, 108, 1160);
+  context.font = "400 26px sans-serif";
+  context.fillStyle = "#8E8383";
+  drawWrappedText(context, t.posterScanDescription, 108, 1204, 610, 32, {
+    color: "#8E8383",
+    font: "400 26px sans-serif",
+    maxLines: 1,
+  });
+  context.font = "700 24px sans-serif";
+  context.fillStyle = "#156240";
+  context.fillText(urlHost, 108, 1242);
+
+  return canvas.toDataURL("image/png");
 }
 
 function resolveWechatShareImageUrl(
@@ -313,13 +439,13 @@ async function drawBrandHeader(
   }
 }
 
-export function ActivityShareTools({
+export function ActivityPosterDownloadButton({
   activityTitle,
   analyticsEntityId,
   analyticsEntityType,
   analyticsSourceSurface = "activity_detail",
   categoryLabel,
-  collapsible = true,
+  className,
   coverImageUrl,
   dateLabel,
   description,
@@ -327,22 +453,13 @@ export function ActivityShareTools({
   locale,
   priceLabel,
   sharePath = null,
-  shareKind = "activity",
-}: ActivityShareToolsProps) {
+}: ActivityPosterDownloadButtonProps) {
   const t = getCopy(locale).activityShare;
   const [activityUrl, setActivityUrl] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
-  const [wechatShareImageUrl, setWechatShareImageUrl] = useState<string | null>(
-    null,
-  );
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<
-    "idle" | "downloading" | "failed"
-  >("idle");
-  const [qrDownloadState, setQrDownloadState] = useState<
     "idle" | "downloading" | "failed"
   >("idle");
   const posterFileName = useMemo(
@@ -353,9 +470,183 @@ export function ActivityShareTools({
       )}-next-fun-club.png`,
     [activityTitle, dateLabel],
   );
-  const qrFileName = useMemo(
-    () => `${sanitizeFileName(activityTitle)}-next-fun-club-qr.png`,
-    [activityTitle],
+
+  useEffect(() => {
+    const resolvedUrl = sharePath
+      ? new URL(sharePath, window.location.origin).toString()
+      : window.location.href;
+
+    setActivityUrl(resolvedUrl);
+  }, [sharePath]);
+
+  useEffect(() => {
+    if (isWechatWebView(navigator.userAgent)) {
+      setShareMode("wechat");
+    }
+  }, []);
+
+  async function handleDownloadPoster() {
+    if (!activityUrl) {
+      return;
+    }
+
+    setDownloadState("downloading");
+
+    try {
+      const posterDataUrl = await generateActivityPosterDataUrl({
+        activityTitle,
+        activityUrl,
+        categoryLabel,
+        coverImageUrl,
+        dateLabel,
+        description,
+        locationLabel,
+        priceLabel,
+        t,
+      });
+
+      if (shareMode === "wechat") {
+        setPosterPreviewUrl(posterDataUrl);
+        setPosterPreviewOpen(true);
+      } else {
+        const link = document.createElement("a");
+        link.download = posterFileName;
+        link.href = posterDataUrl;
+        link.click();
+      }
+
+      trackClientAnalyticsEvent({
+        name: "poster_downloaded",
+        entityId: analyticsEntityId,
+        entityType: analyticsEntityType,
+        sourceSurface: analyticsSourceSurface,
+        properties: {
+          has_cover_image: Boolean(coverImageUrl),
+          has_qr_code: true,
+          share_mode:
+            shareMode === "wechat" ? "wechat_long_press" : "poster_download",
+        },
+      });
+      setDownloadState("idle");
+    } catch (error) {
+      console.error("Failed to generate activity poster", error);
+      setDownloadState("failed");
+    }
+  }
+
+  const buttonLabel =
+    downloadState === "downloading"
+      ? t.downloading
+      : shareMode === "wechat"
+        ? t.savePoster
+        : t.downloadPoster;
+
+  return (
+    <>
+      <Button
+        aria-label={buttonLabel}
+        className={cn(
+          "h-10 w-full gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
+          downloadState === "failed" && "text-red-600 ring-red-200",
+          className,
+        )}
+        disabled={!activityUrl || downloadState === "downloading"}
+        onClick={handleDownloadPoster}
+        type="button"
+        variant="secondary"
+      >
+        {shareMode === "wechat" ? (
+          <ImageIcon className="h-4 w-4 shrink-0" />
+        ) : (
+          <Download className="h-4 w-4 shrink-0" />
+        )}
+        <span className="min-w-0 truncate">{buttonLabel}</span>
+      </Button>
+      {posterPreviewUrl && posterPreviewOpen ? (
+        <div
+          aria-label={t.posterPreviewTitle}
+          aria-modal="true"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/72 px-4 py-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+          role="dialog"
+        >
+          <button
+            aria-label={t.closePosterPreview}
+            className="absolute inset-0 cursor-default"
+            onClick={() => setPosterPreviewOpen(false)}
+            type="button"
+          />
+          <div className="relative flex max-h-full w-full max-w-[390px] flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-full border border-white/15 bg-black/45 px-3 py-2 text-white shadow-lg backdrop-blur">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {t.longPressPoster}
+                </p>
+                <p className="truncate text-xs text-white/70">
+                  {t.posterSaveHint}
+                </p>
+              </div>
+              <button
+                aria-label={t.closePosterPreview}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/12 text-white ring-1 ring-white/20 transition hover:bg-white/20"
+                onClick={() => setPosterPreviewOpen(false)}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="relative min-h-0 overflow-hidden rounded-2xl bg-[#FEFFF9] shadow-2xl ring-1 ring-white/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={t.posterPreviewAlt}
+                className="max-h-[calc(100vh-9.5rem)] w-full select-auto object-contain"
+                draggable={false}
+                src={posterPreviewUrl}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+export function ActivityShareTools({
+  activityTitle,
+  analyticsEntityId,
+  analyticsEntityType,
+  analyticsSourceSurface = "activity_detail",
+  categoryLabel,
+  coverImageUrl,
+  dateLabel,
+  description,
+  locationLabel,
+  locale,
+  priceLabel,
+  sharePath = null,
+  shareKind = "activity",
+}: ActivityShareToolsProps) {
+  const t = useMemo(() => getCopy(locale).activityShare, [locale]);
+  const [activityUrl, setActivityUrl] = useState("");
+  const [shareHelpOpen, setShareHelpOpen] = useState(false);
+  const [shareMode, setShareMode] = useState<WebShareMode>("copy");
+  const [wechatShareImageUrl, setWechatShareImageUrl] = useState<string | null>(
+    null,
+  );
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
+  const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
+  const [posterPreviewState, setPosterPreviewState] = useState<
+    "idle" | "loading" | "failed"
+  >("idle");
+  const [downloadState, setDownloadState] = useState<
+    "idle" | "downloading" | "failed"
+  >("idle");
+  const posterFileName = useMemo(
+    () =>
+      `${sanitizeFileName(activityTitle)}-${sanitizeFileName(dateLabel).slice(
+        0,
+        36,
+      )}-next-fun-club.png`,
+    [activityTitle, dateLabel],
   );
 
   useEffect(() => {
@@ -391,6 +682,60 @@ export function ActivityShareTools({
     );
   }, [activityUrl, coverImageUrl, shareKind]);
 
+  useEffect(() => {
+    if (!activityUrl) {
+      setPosterPreviewUrl(null);
+      setPosterPreviewState("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setPosterPreviewState("loading");
+
+    generateActivityPosterDataUrl({
+      activityTitle,
+      activityUrl,
+      categoryLabel,
+      coverImageUrl,
+      dateLabel,
+      description,
+      locationLabel,
+      priceLabel,
+      t,
+    })
+      .then((posterDataUrl) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPosterPreviewUrl(posterDataUrl);
+        setPosterPreviewState("idle");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Failed to generate activity poster preview", error);
+        setPosterPreviewUrl(null);
+        setPosterPreviewState("failed");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activityTitle,
+    activityUrl,
+    categoryLabel,
+    coverImageUrl,
+    dateLabel,
+    description,
+    locationLabel,
+    priceLabel,
+    t,
+  ]);
+
   async function handleSystemShare() {
     if (!activityUrl) {
       return;
@@ -421,110 +766,31 @@ export function ActivityShareTools({
     setDownloadState("downloading");
 
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1080;
-      canvas.height = 1350;
-      const context = canvas.getContext("2d");
+      const posterDataUrl =
+        posterPreviewUrl ??
+        (await generateActivityPosterDataUrl({
+          activityTitle,
+          activityUrl,
+          categoryLabel,
+          coverImageUrl,
+          dateLabel,
+          description,
+          locationLabel,
+          priceLabel,
+          t,
+        }));
 
-      if (!context) {
-        throw new Error("Canvas context is not available");
+      if (!posterPreviewUrl) {
+        setPosterPreviewUrl(posterDataUrl);
       }
-
-      context.fillStyle = "#FEFFF9";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#F1F2EC";
-      context.fillRect(0, 0, canvas.width, 360);
-      let hasCoverBackground = false;
-
-      if (coverImageUrl) {
-        try {
-          const { image, objectUrl } = await loadFetchedImage(
-            getActivityCoverDisplayUrl(coverImageUrl),
-          );
-          drawImageCover(context, image, 0, 0, canvas.width, 360);
-          URL.revokeObjectURL(objectUrl);
-          context.fillStyle = "rgba(0, 0, 0, 0.38)";
-          context.fillRect(0, 0, canvas.width, 360);
-          hasCoverBackground = true;
-        } catch {
-          context.fillStyle = "#369758";
-          context.fillRect(0, 0, 140, 360);
-        }
-      } else {
-        context.fillStyle = "#369758";
-        context.fillRect(0, 0, 140, 360);
-      }
-
-      await drawBrandHeader(context, hasCoverBackground);
-
-      drawPill(context, categoryLabel, 72, 286);
-
-      drawWrappedText(context, activityTitle, 72, 440, 936, 68, {
-        font: "800 62px sans-serif",
-        maxLines: 2,
-      });
-
-      drawWrappedText(context, description, 72, 616, 936, 38, {
-        color: "#8E8383",
-        font: "400 30px sans-serif",
-        maxLines: 2,
-      });
-
-      const cardWidth = 448;
-      drawInfoCard(context, t.posterTime, dateLabel, 72, 710, cardWidth, {
-        height: 158,
-        maxLines: 2,
-      });
-      drawInfoCard(context, t.posterPrice, priceLabel, 560, 710, cardWidth, {
-        height: 158,
-        maxLines: 2,
-      });
-      drawInfoCard(context, t.posterLocation, locationLabel, 72, 890, 936, {
-        height: 174,
-        lineHeight: 34,
-        maxLines: 3,
-        valueFont: "700 28px sans-serif",
-      });
-
-      const qrDataUrl = await QRCode.toDataURL(activityUrl, {
-        color: {
-          dark: "#1D1D1B",
-          light: "#FEFFF9",
-        },
-        margin: 1,
-        width: 260,
-      });
-      const qrImage = await loadImage(qrDataUrl);
-      const urlHost = getUrlHost(activityUrl);
-
-      context.fillStyle = "#FEFFF9";
-      context.beginPath();
-      context.roundRect(72, 1096, 936, 170, 28);
-      context.fill();
-      context.drawImage(qrImage, 786, 1122, 118, 118);
-      context.font = "800 34px sans-serif";
-      context.fillStyle = "#1D1D1B";
-      context.fillText(t.posterScanTitle, 108, 1160);
-      context.font = "400 26px sans-serif";
-      context.fillStyle = "#8E8383";
-      drawWrappedText(context, t.posterScanDescription, 108, 1204, 610, 32, {
-        color: "#8E8383",
-        font: "400 26px sans-serif",
-        maxLines: 1,
-      });
-      context.font = "700 24px sans-serif";
-      context.fillStyle = "#156240";
-      context.fillText(urlHost, 108, 1242);
-
-      const posterDataUrl = canvas.toDataURL("image/png");
-      setPosterPreviewUrl(posterDataUrl);
-      setPosterPreviewOpen(true);
 
       if (shareMode !== "wechat") {
         const link = document.createElement("a");
         link.download = posterFileName;
         link.href = posterDataUrl;
         link.click();
+      } else {
+        setPosterPreviewOpen(true);
       }
 
       trackClientAnalyticsEvent({
@@ -543,62 +809,23 @@ export function ActivityShareTools({
     } catch (error) {
       console.error("Failed to generate activity poster", error);
       setDownloadState("failed");
-    }
-  }
-
-  async function handleDownloadQrCode() {
-    if (!activityUrl) {
-      return;
-    }
-
-    setQrDownloadState("downloading");
-
-    try {
-      const qrDataUrl = await QRCode.toDataURL(activityUrl, {
-        color: {
-          dark: "#1D1D1B",
-          light: "#FEFFF9",
-        },
-        margin: 2,
-        width: 720,
-      });
-      const link = document.createElement("a");
-      link.download = qrFileName;
-      link.href = qrDataUrl;
-      link.click();
-      trackClientAnalyticsEvent({
-        name: "qr_code_shared",
-        entityId: analyticsEntityId,
-        entityType: analyticsEntityType,
-        sourceSurface: analyticsSourceSurface,
-        properties: {
-          share_mode: "qr_download",
-        },
-      });
-      setQrDownloadState("idle");
-    } catch (error) {
-      console.error("Failed to generate activity QR code", error);
-      setQrDownloadState("failed");
+      setPosterPreviewState("failed");
     }
   }
 
   const canDownload = Boolean(activityUrl) && downloadState !== "downloading";
-  const canDownloadQr =
-    Boolean(activityUrl) && qrDownloadState !== "downloading";
   const shareTitle = shareKind === "team" ? t.teamTitle : t.activityTitle;
   const shareDescription =
     shareKind === "team" ? t.teamDescription : t.activityDescription;
-  const usesSystemSharePrimary = shareMode !== "copy";
   const posterButtonLabel =
     downloadState === "downloading"
       ? t.downloading
       : shareMode === "wechat"
         ? t.savePoster
         : t.downloadPoster;
-  const showSecondaryActions = !collapsible || expanded;
 
   return (
-    <div className="rounded-[1.1rem] border border-[#8AB68E] bg-[#FEFFF9] p-3 shadow-sm">
+    <div className="rounded-[1.1rem] border border-[#8AB68E] bg-white p-3 shadow-sm">
       <WechatShareConfigurator
         description={description || shareDescription}
         enabled={shareKind === "team"}
@@ -608,7 +835,7 @@ export function ActivityShareTools({
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F4F7F0] text-[#156240] ring-1 ring-[#8AB68E]">
             <Share2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
@@ -618,60 +845,19 @@ export function ActivityShareTools({
             </p>
           </div>
         </div>
-        {collapsible ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
-            onClick={() => setExpanded((value) => !value)}
-            title={expanded ? t.collapse : t.expand}
-          >
-            <ChevronDown
-              className={cn("h-4 w-4 transition", expanded && "rotate-180")}
-            />
-            <span className="sr-only">{expanded ? t.collapse : t.expand}</span>
-          </button>
-        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {usesSystemSharePrimary ? (
-          <Button
-            className="h-10 gap-2 rounded-full border-[#1D1D1B] bg-[#1D1D1B] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#1D1D1B]"
-            disabled={!activityUrl}
-            onClick={handleSystemShare}
-            type="button"
-            variant="secondary"
-          >
-            <Share2 className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">{t.systemShare}</span>
-          </Button>
-        ) : activityUrl ? (
-          <ActivityCopyButton
-            analyticsEvent={{
-              name: "link_copied",
-              entityId: analyticsEntityId,
-              entityType: analyticsEntityType,
-              sourceSurface: analyticsSourceSurface,
-            }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] hover:bg-[#FEFFF9]"
-            failedLabel={t.copyFailed}
-            label={t.copyLink}
-            successLabel={t.copied}
-            value={activityUrl}
-          >
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </ActivityCopyButton>
-        ) : (
-          <button
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#8AB68E]"
-            disabled
-            type="button"
-          >
-            <LinkIcon className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </button>
-        )}
+        <Button
+          className="h-10 gap-2 rounded-full border-[#1D1D1B] bg-[#1D1D1B] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#1D1D1B]"
+          disabled={!activityUrl}
+          onClick={handleSystemShare}
+          type="button"
+          variant="secondary"
+        >
+          <Share2 className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">{t.systemShare}</span>
+        </Button>
         <Button
           className={cn(
             "h-10 gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
@@ -690,80 +876,26 @@ export function ActivityShareTools({
           <span className="min-w-0 truncate">{posterButtonLabel}</span>
         </Button>
       </div>
-
-      {showSecondaryActions ? (
-        <div className="mt-2 grid gap-2 border-t border-[#D6D5B2] pt-2 sm:grid-cols-2 lg:grid-cols-1">
-          {usesSystemSharePrimary && activityUrl ? (
-            <ActivityCopyButton
-              analyticsEvent={{
-                name: "link_copied",
-                entityId: analyticsEntityId,
-                entityType: analyticsEntityType,
-                sourceSurface: analyticsSourceSurface,
-              }}
-              className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
-              failedLabel={t.copyFailed}
-              label={t.copyLink}
-              successLabel={t.copied}
-              value={activityUrl}
-            >
-              <span className="min-w-0 truncate">{t.copyLink}</span>
-            </ActivityCopyButton>
-          ) : null}
-          <ActivityCopyButton
-            analyticsEvent={{
-              name: "field_copied",
-              entityId: analyticsEntityId,
-              entityType: analyticsEntityType,
-              sourceSurface: analyticsSourceSurface,
-              properties: {
-                field_name: "title",
-              },
-            }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
-            failedLabel={t.copyFailed}
-            label={t.copyTitle}
-            successLabel={t.copied}
-            value={activityTitle}
-          >
-            <span className="min-w-0 truncate">{t.copyTitle}</span>
-          </ActivityCopyButton>
-          <Button
-            className={cn(
-              "h-10 gap-2 rounded-full border-[#D6D5B2] bg-white px-3 text-sm font-medium text-ink shadow-none hover:bg-[#FEFFF9]",
-              !canDownloadQr && "opacity-70",
-            )}
-            disabled={!canDownloadQr}
-            onClick={handleDownloadQrCode}
-            type="button"
-            variant="secondary"
-          >
-            <QrCode className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">
-              {qrDownloadState === "downloading"
-                ? t.qrDownloading
-                : t.downloadQr}
-            </span>
-          </Button>
-        </div>
-      ) : null}
-
-      {showSecondaryActions && activityUrl ? (
-        <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-[#D6D5B2]">
-          <LinkIcon className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">{getUrlHost(activityUrl)}</span>
-        </div>
-      ) : null}
-      {downloadState === "failed" ? (
+      {downloadState === "failed" || posterPreviewState === "failed" ? (
         <p className="mt-2 text-xs leading-5 text-red-600">
           {t.downloadFailed}
         </p>
       ) : null}
-      {qrDownloadState === "failed" ? (
-        <p className="mt-2 text-xs leading-5 text-red-600">
-          {t.qrDownloadFailed}
-        </p>
-      ) : null}
+      <div className="mt-3 overflow-hidden rounded-[1rem] border border-[#D6D5B2] bg-white p-2">
+        {posterPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={t.posterPreviewAlt}
+            className="max-h-[52dvh] w-full rounded-[0.75rem] object-contain"
+            draggable={false}
+            src={posterPreviewUrl}
+          />
+        ) : (
+          <div className="flex min-h-[18rem] w-full items-center justify-center rounded-[0.75rem] bg-[#F7F7F0] text-sm font-semibold text-[#6C746A]">
+            {posterPreviewState === "failed" ? t.downloadFailed : t.downloading}
+          </div>
+        )}
+      </div>
       {shareHelpOpen ? (
         <div
           aria-label={t.systemShare}
@@ -803,23 +935,6 @@ export function ActivityShareTools({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            {activityUrl ? (
-              <ActivityCopyButton
-                analyticsEvent={{
-                  name: "link_copied",
-                  entityId: analyticsEntityId,
-                  entityType: analyticsEntityType,
-                  sourceSurface: analyticsSourceSurface,
-                }}
-                className="mt-4 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] hover:bg-[#FEFFF9]"
-                failedLabel={t.copyFailed}
-                label={t.copyLink}
-                successLabel={t.copied}
-                value={activityUrl}
-              >
-                <span className="min-w-0 truncate">{t.copyLink}</span>
-              </ActivityCopyButton>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -865,25 +980,6 @@ export function ActivityShareTools({
               />
             </div>
           </div>
-        </div>
-      ) : null}
-      {posterPreviewUrl && shareMode !== "wechat" ? (
-        <div className="relative mt-3 overflow-hidden rounded-md bg-white ring-1 ring-zinc-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt={t.posterPreviewAlt}
-            className="aspect-[4/5] w-full object-cover"
-            src={posterPreviewUrl}
-          />
-          <a
-            aria-label={t.downloadPoster}
-            className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink shadow-sm ring-1 ring-black/10 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss"
-            download={posterFileName}
-            href={posterPreviewUrl}
-            title={t.downloadPoster}
-          >
-            <Download className="h-4 w-4" />
-          </a>
         </div>
       ) : null}
     </div>

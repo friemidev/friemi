@@ -4,15 +4,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { useClerk } from "@clerk/nextjs";
 import {
   ArrowLeft,
   BadgeCheck,
+  ChevronRight,
   Copy,
   Crown,
-  Eye,
   Gift,
+  Heart,
+  Info,
+  Lock,
+  MapPin,
   Medal,
+  MessageCircle,
   MoreHorizontal,
   Package,
   ScanLine,
@@ -20,16 +24,15 @@ import {
   Share2,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
+  Ticket,
   Trophy,
-  UserRoundPlus,
   UsersRound,
-  WalletCards,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { FollowButton } from "@/features/follow/components/FollowButton";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
-import { getFriendsCopy } from "@/features/friends/copy";
 import {
   isDetailSourceReturnPage,
   readDetailSourceContext,
@@ -40,28 +43,46 @@ import {
   resolveGlobalQrScanDestination,
 } from "@/features/scan/globalQrScanner";
 import {
+  charmLevels,
+  getCharmLevelDescription,
   getCharmLevelLabel,
   getCharmProgress,
 } from "@/features/charm/charm";
 import { CharmGiftDialog } from "@/features/charm/components/CharmGiftDialog";
-import { getTrustLevelLabel } from "@/features/trust/trustScore";
 import { getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getSignInHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
+import { achievementCatalog } from "@/features/achievements/achievementCatalog";
+import type { PublicAchievementWallItem } from "@/features/achievements/queries/getUserAchievements";
 import {
   ProfileActivitySections,
   type ProfileSectionKey,
 } from "./ProfileActivitySections";
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 import { ProfileIdentityForm } from "./ProfileIdentityForm";
+import { ProfileAvatarPicker } from "./ProfileAvatarPicker";
+import {
+  ProfileAchievementBadgeStrip,
+  ProfileAchievementIcon,
+} from "./ProfilePublicAchievementWall";
 import { ProfileOverviewPanel } from "./ProfileOverviewPanel";
 import { ProfileSocialActions } from "./ProfileSocialActions";
 import {
   updateProfileIdentityAction,
   type UpdateProfileIdentityState,
 } from "../actions/updateProfileIdentity";
+import {
+  updateProfilePresenceAction,
+  type UpdateProfilePresenceState,
+} from "../actions/updateProfilePresence";
+import {
+  getPresenceCopy,
+  userPresenceStatuses,
+  type UserPresenceDisplayStatus,
+  type UserPresenceStatusValue,
+} from "../presence";
 import type {
   ProfileDashboardViewModel,
   PublicProfileViewModel,
@@ -75,7 +96,11 @@ type ProfileDashboardViewProps = {
   isSelf?: boolean;
   locale: string;
   profile: PublicProfileViewModel;
+  achievementPreviewItems?: PublicAchievementWallItem[];
+  publicAchievements?: PublicAchievementWallItem[];
 };
+
+const profilePresenceInitialState: UpdateProfilePresenceState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
@@ -134,31 +159,221 @@ function getWerewolfStatsCopy(locale: string) {
   };
 }
 
+function getTrustBadgeCopy(locale: string, score: number) {
+  if (locale === "fr") {
+    return {
+      label: `Fiabilité ${score}`,
+      tooltip: "Fiabilité",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      label: `Trust ${score}`,
+      tooltip: "Trust",
+    };
+  }
+
+  return {
+    label: `信用值 ${score}`,
+    tooltip: "信用值",
+  };
+}
+
+const defaultProfileHomeCity = "Paris";
+const profileCityCountries = [
+  {
+    cities: [
+      "Paris",
+      "Lyon",
+      "Marseille",
+      "Toulouse",
+      "Nice",
+      "Nantes",
+      "Strasbourg",
+      "Montpellier",
+      "Bordeaux",
+      "Lille",
+      "Rennes",
+      "Grenoble",
+      "Dijon",
+      "Reims",
+      "Tours",
+      "Angers",
+      "Avignon",
+      "Rouen",
+    ],
+    key: "FR",
+    labels: {
+      "zh-CN": "法国",
+      en: "France",
+      fr: "France",
+    },
+  },
+  {
+    cities: [
+      "北京",
+      "上海",
+      "广州",
+      "深圳",
+      "杭州",
+      "成都",
+      "南京",
+      "武汉",
+      "西安",
+      "重庆",
+      "苏州",
+      "天津",
+    ],
+    key: "CN",
+    labels: {
+      "zh-CN": "中国",
+      en: "China",
+      fr: "Chine",
+    },
+  },
+  {
+    cities: [
+      "Berlin",
+      "Munich",
+      "Hamburg",
+      "Frankfurt",
+      "Cologne",
+      "Düsseldorf",
+      "Stuttgart",
+    ],
+    key: "DE",
+    labels: {
+      "zh-CN": "德国",
+      en: "Germany",
+      fr: "Allemagne",
+    },
+  },
+  {
+    cities: ["Rome", "Milan", "Florence", "Turin", "Bologna", "Venice"],
+    key: "IT",
+    labels: {
+      "zh-CN": "意大利",
+      en: "Italy",
+      fr: "Italie",
+    },
+  },
+  {
+    cities: ["Madrid", "Barcelona", "Valencia", "Seville", "Bilbao", "Granada"],
+    key: "ES",
+    labels: {
+      "zh-CN": "西班牙",
+      en: "Spain",
+      fr: "Espagne",
+    },
+  },
+  {
+    cities: ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven"],
+    key: "NL",
+    labels: {
+      "zh-CN": "荷兰",
+      en: "Netherlands",
+      fr: "Pays-Bas",
+    },
+  },
+  {
+    cities: ["Brussels", "Antwerp", "Ghent", "Leuven"],
+    key: "BE",
+    labels: {
+      "zh-CN": "比利时",
+      en: "Belgium",
+      fr: "Belgique",
+    },
+  },
+  {
+    cities: ["Geneva", "Zurich", "Lausanne", "Basel", "Bern"],
+    key: "CH",
+    labels: {
+      "zh-CN": "瑞士",
+      en: "Switzerland",
+      fr: "Suisse",
+    },
+  },
+  {
+    cities: [
+      "London",
+      "Manchester",
+      "Birmingham",
+      "Edinburgh",
+      "Oxford",
+      "Cambridge",
+    ],
+    key: "UK",
+    labels: {
+      "zh-CN": "英国",
+      en: "United Kingdom",
+      fr: "Royaume-Uni",
+    },
+  },
+] as const;
+
+function normalizeProfileHomeCity(value: string | null | undefined) {
+  const normalizedCity = value?.trim();
+
+  return normalizedCity || defaultProfileHomeCity;
+}
+
+function getProfileHomeCityLabel(
+  city: string | null | undefined,
+  _locale: string,
+) {
+  return normalizeProfileHomeCity(city);
+}
+
 function getMobileProfileCopy(locale: string) {
   if (locale === "fr") {
     return {
       accountSecurity: "Compte et sécurité",
       accountSettings: "Paramètres du compte",
       achievements: "Badges",
-      addFriend: "Ajouter",
+      addFriend: "Suivre",
+      available: "Ouvert",
       bag: "Sac",
       charm: "Aura",
+      charmLevelsClose: "Compris",
+      charmLevelsCurrent: "Niveau actuel",
+      charmLevelsIntro:
+        "Les cadeaux recus augmentent votre aura. Elle montre la popularite, pas la fiabilite.",
+      charmLevelsOpen: "Voir les niveaux d'aura",
+      charmLevelsScore: "Aura",
+      charmLevelsStartingAt: "a partir de",
+      charmLevelsTitle: "Niveaux d'aura",
       copyCode: "Copier",
       copied: "Copié",
       created: "Sorties",
       editProfile: "Modifier",
-      friends: "Amis",
+      friends: "Réseau",
+      friendsFeature: "Amis",
       giftWall: "Cadeaux",
       hangoutsTitle: "Mes sorties",
       invite: "Inviter",
+      inviteCode: "Code",
       maxCharm: "Niveau max",
       message: "Message",
       moments: "Moments",
+      myHangouts: "Mes sorties",
+      myHangoutsCreated: "Créées",
+      myHangoutsJoined: "Rejointes",
+      myHangoutsSaved: "Favoris",
+      myMoments: "Mes moments",
       more: "Plus",
-      networkTitle: "Mes amis",
+      networkTitle: "Réseau",
+      noMyHangouts: "Aucune sortie créée.",
+      noMyMoments: "Aucun moment publié.",
       noTimeline: "Aucune activité publique pour le moment.",
       nextCharm: "Prochain",
-      pendingFriend: "Demandé",
+      unfollowCancel: "Annuler",
+      unfollowConfirm: "Confirmer",
+      unfollowDescription: "Vous ne serez plus en suivi mutuel.",
+      unfollowTitle: "Ne plus suivre ?",
+      followBack: "Suivre aussi",
+      mutualFollow: "Mutuel",
+      pendingFriend: "Suivi",
       profileTitle: "Profile",
       publicTimeline: "Activité",
       recentGifts: "Reçus",
@@ -172,7 +387,6 @@ function getMobileProfileCopy(locale: string) {
       soon: "Bientôt disponible",
       trusted: "Fiable",
       visitors: "Visites",
-      wallet: "Recharge",
     };
   }
 
@@ -181,25 +395,49 @@ function getMobileProfileCopy(locale: string) {
       accountSecurity: "Account & security",
       accountSettings: "Account settings",
       achievements: "Badges",
-      addFriend: "Add friend",
+      addFriend: "Follow",
+      available: "Open",
       bag: "Bag",
       charm: "Charm",
+      charmLevelsClose: "Got it",
+      charmLevelsCurrent: "Current level",
+      charmLevelsIntro:
+        "Gifts you receive raise your Charm. It shows popularity, not trust.",
+      charmLevelsOpen: "View Charm levels",
+      charmLevelsScore: "Charm",
+      charmLevelsStartingAt: "from",
+      charmLevelsTitle: "Charm levels",
       copyCode: "Copy",
       copied: "Copied",
-      created: "Hangouts",
+      created: "Plans",
       editProfile: "Edit",
-      friends: "Friends",
+      friends: "Network",
+      friendsFeature: "Friends",
       giftWall: "Gifts",
-      hangoutsTitle: "My Hangouts",
+      hangoutsTitle: "My Plans",
       invite: "Invite",
+      inviteCode: "Invite code",
       maxCharm: "Top level",
       message: "Message",
       moments: "Moments",
+      myHangouts: "My Hangouts",
+      myHangoutsCreated: "Created",
+      myHangoutsJoined: "Joined",
+      myHangoutsSaved: "Saved",
+      myMoments: "My Moments",
       more: "More",
-      networkTitle: "My Friends",
+      networkTitle: "Network",
+      noMyHangouts: "No hangouts yet.",
+      noMyMoments: "No moments yet.",
       noTimeline: "No public activity yet.",
       nextCharm: "Next",
-      pendingFriend: "Requested",
+      unfollowCancel: "Cancel",
+      unfollowConfirm: "Unfollow",
+      unfollowDescription: "You will no longer follow each other.",
+      unfollowTitle: "Unfollow this user?",
+      followBack: "Follow back",
+      mutualFollow: "Mutual",
+      pendingFriend: "Following",
       profileTitle: "Profile",
       publicTimeline: "Activity",
       recentGifts: "Received",
@@ -213,7 +451,6 @@ function getMobileProfileCopy(locale: string) {
       soon: "Coming soon",
       trusted: "Trusted",
       visitors: "Visits",
-      wallet: "Top up",
     };
   }
 
@@ -221,25 +458,48 @@ function getMobileProfileCopy(locale: string) {
     accountSecurity: "账号与安全",
     accountSettings: "账号设置",
     achievements: "成就",
-    addFriend: "加好友",
+    addFriend: "关注",
+    available: "可进入",
     bag: "背包",
     charm: "魅力值",
+    charmLevelsClose: "知道了",
+    charmLevelsCurrent: "当前等级",
+    charmLevelsIntro: "别人送你的礼物会提升魅力值。它代表受欢迎程度，不代表信用。",
+    charmLevelsOpen: "查看魅力等级",
+    charmLevelsScore: "魅力值",
+    charmLevelsStartingAt: "达到",
+    charmLevelsTitle: "魅力等级",
     copyCode: "复制",
     copied: "已复制",
-    created: "组局",
+    created: "聚吧",
     editProfile: "编辑资料",
-    friends: "好友",
+    friends: "关系",
+    friendsFeature: "朋友",
     giftWall: "礼物墙",
-    hangoutsTitle: "我的组局",
-    invite: "邀请好友",
+    hangoutsTitle: "我的聚吧",
+    invite: "邀请",
+    inviteCode: "邀请码",
     maxCharm: "最高等级",
     message: "发消息",
     moments: "足迹",
+    myHangouts: "我的聚吧",
+    myHangoutsCreated: "我发起的",
+    myHangoutsJoined: "我参与的",
+    myHangoutsSaved: "我收藏的",
+    myMoments: "我的足迹",
     more: "更多",
-    networkTitle: "我的好友",
+    networkTitle: "关系",
+    noMyHangouts: "还没有发起聚吧。",
+    noMyMoments: "还没有发布足迹。",
     noTimeline: "暂时没有公开动态。",
     nextCharm: "下一等级",
-    pendingFriend: "已申请",
+    unfollowCancel: "暂不取消",
+    unfollowConfirm: "确认取消",
+    unfollowDescription: "取消后，你们将不再是互相关注。",
+    unfollowTitle: "确认取消关注？",
+    followBack: "回关",
+    mutualFollow: "互相关注",
+    pendingFriend: "已关注",
     profileTitle: "Profile",
     publicTimeline: "动态",
     recentGifts: "最近收到",
@@ -253,7 +513,6 @@ function getMobileProfileCopy(locale: string) {
     soon: "敬请期待",
     trusted: "信用值",
     visitors: "访客记录",
-    wallet: "充值",
   };
 }
 
@@ -287,38 +546,133 @@ function getGuestProfileCopy(locale: string) {
 function ProfileAvatar({
   avatarUrl,
   initial,
+  isOnline = false,
   name,
+  presenceDisplayStatus,
   size = "lg",
 }: {
   avatarUrl: string | null;
   initial: string;
+  isOnline?: boolean;
   name: string;
-  size?: "sm" | "lg";
+  presenceDisplayStatus?: UserPresenceDisplayStatus;
+  size?: "sm" | "lg" | "xl";
 }) {
   const sizeClass =
-    size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
-
-  if (avatarUrl) {
-    return (
-      // User avatars are stored as remote URLs from Clerk/user data.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatarUrl}
-        alt={name}
-        className={cn(sizeClass, "shrink-0 rounded-full object-cover")}
-      />
-    );
-  }
+    size === "sm"
+      ? "h-12 w-12 text-base"
+      : size === "xl"
+        ? "h-20 w-20 text-4xl"
+        : "h-16 w-16 text-3xl";
+  const dotClass = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+  const visiblePresenceStatus =
+    presenceDisplayStatus ?? (isOnline ? "ONLINE" : null);
+  const dotColorClass =
+    visiblePresenceStatus === "AWAY" ? "bg-[#F0B84D]" : "bg-[#2FBF62]";
 
   return (
-    <div
-      className={cn(
-        sizeClass,
-        "flex shrink-0 items-center justify-center rounded-full bg-[#E83F83] font-medium text-white shadow-[0_14px_28px_rgba(232,63,131,0.18)]",
+    <span className="relative shrink-0">
+      {avatarUrl ? (
+        // User avatars are stored as remote URLs from Clerk/user data.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={name}
+          className={cn(
+            sizeClass,
+            "rounded-full bg-white object-cover ring-1 ring-[#DAD9C8]",
+          )}
+        />
+      ) : (
+        <span
+          className={cn(
+            sizeClass,
+            "relative flex items-center justify-center overflow-hidden rounded-full bg-[#E83F83] font-medium text-white ring-1 ring-[#DAD9C8]",
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-[5px] rounded-full border border-white/25"
+          />
+          <span className="relative">{initial}</span>
+        </span>
       )}
-    >
-      {initial}
-    </div>
+      {visiblePresenceStatus ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            dotClass,
+            dotColorClass,
+            "absolute bottom-0 right-0 rounded-full ring-2 ring-white",
+          )}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+function ProfilePresenceControl({
+  locale,
+  onStatusChange,
+  status,
+}: {
+  locale: string;
+  onStatusChange?: (status: UserPresenceStatusValue) => void;
+  status: UserPresenceStatusValue;
+}) {
+  const copy = getPresenceCopy(locale);
+  const [state, formAction] = useActionState(
+    updateProfilePresenceAction,
+    profilePresenceInitialState,
+  );
+  const currentStatus = state.status ?? status;
+  const statusDotClass: Record<UserPresenceStatusValue, string> = {
+    ONLINE: "bg-[#2FBF62]",
+    AWAY: "bg-[#F0B84D]",
+    INVISIBLE: "bg-[#B8B8B0]",
+  };
+
+  useEffect(() => {
+    if (state.status) {
+      onStatusChange?.(state.status);
+    }
+  }, [onStatusChange, state.status]);
+
+  return (
+    <form action={formAction} className="flex min-w-0 flex-wrap gap-1.5">
+      <input name="locale" type="hidden" value={locale} />
+      {userPresenceStatuses.map((presenceStatus) => {
+        const active = currentStatus === presenceStatus;
+
+        return (
+          <button
+            key={presenceStatus}
+            type="submit"
+            name="status"
+            value={presenceStatus}
+            className={cn(
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black transition active:scale-[0.98]",
+              active
+                ? "bg-[#156240] text-white"
+                : "border border-[#E7E2D6] bg-white text-[#4F574F]",
+            )}
+            aria-label={`${copy.label}: ${copy.statuses[presenceStatus]}`}
+            title={copy.statuses[presenceStatus]}
+            onClick={() => onStatusChange?.(presenceStatus)}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-2 w-2 rounded-full",
+                active ? "ring-1 ring-white/40" : "",
+                statusDotClass[presenceStatus],
+              )}
+            />
+            <span>{copy.statuses[presenceStatus]}</span>
+          </button>
+        );
+      })}
+    </form>
   );
 }
 
@@ -346,18 +700,11 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5 md:hidden">
+      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
           <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.title}
           </h1>
-          <Link
-            href={settingsHref}
-            aria-label={copy.settings}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
-          >
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </Link>
         </header>
 
         <section className="mt-6">
@@ -365,7 +712,9 @@ function GuestProfilePlaceholder({
             <ProfileAvatar
               avatarUrl={profile.avatarUrl}
               initial={profileInitial}
+              isOnline={profile.isOnline}
               name={profile.nickname}
+              presenceDisplayStatus={profile.presenceDisplayStatus}
               size="sm"
             />
             <div className="min-w-0">
@@ -406,6 +755,13 @@ function GuestProfilePlaceholder({
             >
               {copy.browsePlanets}
             </Link>
+            <Link
+              href={settingsHref}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
+            >
+              <Settings className="h-4 w-4" />
+              {copy.settings}
+            </Link>
           </div>
         </section>
       </div>
@@ -417,7 +773,9 @@ function GuestProfilePlaceholder({
               <ProfileAvatar
                 avatarUrl={profile.avatarUrl}
                 initial={profileInitial}
+                isOnline={profile.isOnline}
                 name={profile.nickname}
+                presenceDisplayStatus={profile.presenceDisplayStatus}
               />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-moss">{copy.title}</p>
@@ -452,50 +810,454 @@ function GuestProfilePlaceholder({
   );
 }
 
-function MobileStatLink({
+function getProfileSummaryCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      charm: "Aura",
+      friends: "Amis",
+      hangouts: "Sorties",
+      moments: "Moments",
+      trust: "Fiabilité",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      charm: "Charm",
+      friends: "Friends",
+      hangouts: "Hangouts",
+      moments: "Moments",
+      trust: "Trust",
+    };
+  }
+
+  return {
+    charm: "魅力值",
+    friends: "朋友",
+    hangouts: "聚吧",
+    moments: "足迹",
+    trust: "信用值",
+  };
+}
+
+function MobileProfileSummaryStrip({
+  dashboard,
+  locale,
+}: {
+  dashboard: ProfileDashboardViewModel;
+  locale: string;
+}) {
+  const copy = getProfileSummaryCopy(locale);
+  const stats = [
+    { label: copy.hangouts, value: dashboard.createdActivityCount },
+    { label: copy.friends, value: dashboard.friendCount },
+    { label: copy.moments, value: dashboard.momentCount },
+  ];
+
+  return (
+    <div className="mt-5 grid grid-cols-[minmax(0,1fr)_5.65rem] items-center gap-3">
+      <div className="grid min-w-0 grid-cols-3">
+        {stats.map((item) => (
+          <div className="min-w-0 px-1.5 py-1.5 text-center" key={item.label}>
+            <p className="text-[21px] font-black leading-[1.08] text-[#111210]">
+              {item.value}
+            </p>
+            <p className="mt-1 truncate text-[10px] font-bold leading-4 text-[#4F574F]">
+              {item.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid min-w-0 gap-2 border-l border-[#E3DCC5] pl-3">
+        <div className="grid grid-cols-[1.7rem_minmax(0,1fr)] items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#EEF7EF] text-[#156240]">
+            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
+              {copy.trust}
+            </span>
+            <span className="mt-1 block text-[16px] font-black leading-none text-[#156240] tabular-nums">
+              {dashboard.trustScore}
+            </span>
+          </span>
+        </div>
+        <div className="grid grid-cols-[1.7rem_minmax(0,1fr)] items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF0F3] text-[#E7457A]">
+            <Heart className="h-3.5 w-3.5 fill-current" strokeWidth={2.35} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
+              {copy.charm}
+            </span>
+            <span className="mt-1 block text-[16px] font-black leading-none text-[#111210] tabular-nums">
+              {formatCharmScore(dashboard.charmScore)}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ProfilePreviewTabKey = "moments" | "hangouts" | "badges";
+
+function getProfilePreviewTabsCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      badges: "Badges",
+      emptyBadges: "Voir les badges",
+      emptyHangouts: "Aucune sortie pour le moment.",
+      emptyMoments: "Aucun moment pour le moment.",
+      hangouts: "Sorties",
+      moments: "Moments",
+      viewAll: "Tout voir",
+      achievementTitles: {
+        active_guest_20: "Invité actif",
+        co_creator: "Co-créateur",
+        hello_world: "Première sortie",
+        host_20: "Hôte 20",
+        open_minded: "Esprit ouvert",
+        trusted_profile: "Profil fiable",
+      },
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      badges: "Badges",
+      emptyBadges: "View badges",
+      emptyHangouts: "No hangouts yet.",
+      emptyMoments: "No moments yet.",
+      hangouts: "Hangouts",
+      moments: "Moments",
+      viewAll: "View all",
+      achievementTitles: {
+        active_guest_20: "Active Guest",
+        co_creator: "Co-creator",
+        hello_world: "First Plan",
+        host_20: "Host 20",
+        open_minded: "Open Minded",
+        trusted_profile: "Trusted Profile",
+      },
+    };
+  }
+
+  return {
+    badges: "勋章",
+    emptyBadges: "查看勋章",
+    emptyHangouts: "还没有聚吧。",
+    emptyMoments: "还没有足迹。",
+    hangouts: "聚吧",
+    moments: "足迹",
+    viewAll: "查看全部",
+    achievementTitles: {
+      active_guest_20: "活跃玩家",
+      co_creator: "共创者",
+      hello_world: "初次见面",
+      host_20: "主理人 20",
+      open_minded: "开放主理人",
+      trusted_profile: "可信资料",
+    },
+  };
+}
+
+function getProfilePreviewTabHref(locale: string, tab: ProfilePreviewTabKey) {
+  if (tab === "moments") {
+    return withLocale(locale, "/profile/moments");
+  }
+
+  if (tab === "hangouts") {
+    return withLocale(locale, "/profile/hangouts");
+  }
+
+  return withLocale(locale, "/profile/achievements");
+}
+
+function ProfilePreviewTabs({
+  achievementPreviewItems,
+  dashboard,
+  locale,
+}: {
+  achievementPreviewItems: PublicAchievementWallItem[];
+  dashboard: ProfileDashboardViewModel;
+  locale: string;
+}) {
+  const copy = getProfilePreviewTabsCopy(locale);
+  const [activeTab, setActiveTab] = useState<ProfilePreviewTabKey>("moments");
+  const tabs: Array<{ key: ProfilePreviewTabKey; label: string }> = [
+    { key: "moments", label: copy.moments },
+    { key: "hangouts", label: copy.hangouts },
+    { key: "badges", label: copy.badges },
+  ];
+  const momentItems = dashboard.moments
+    .filter((moment) => moment.content?.trim() || moment.image)
+    .slice(0, 3);
+  const seenActivityIds = new Set<string>();
+  const hangoutItems = [
+    ...dashboard.createdActivities,
+    ...dashboard.participations.map((participation) => participation.activity),
+    ...dashboard.favoriteActivities.map((favorite) => favorite.activity),
+  ].filter((activity) => {
+    if (seenActivityIds.has(activity.id)) {
+      return false;
+    }
+
+    seenActivityIds.add(activity.id);
+    return true;
+  }).slice(0, 3);
+  const badgeItems = achievementPreviewItems;
+  const activeHref = getProfilePreviewTabHref(locale, activeTab);
+
+  return (
+    <section className="mt-5 bg-white">
+      <div
+        aria-label="Profile preview"
+        className="grid grid-cols-3 border-b border-[#E7E1CA]"
+        role="tablist"
+      >
+        {tabs.map((tab) => {
+          const active = activeTab === tab.key;
+
+          return (
+            <button
+              aria-selected={active}
+              className="relative h-8 min-w-0 px-1 text-center text-[11px] font-semibold text-[#4F574F] transition active:scale-[0.98]"
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              role="tab"
+              type="button"
+            >
+              <span className={cn("truncate", active && "text-[#111210]")}>
+                {tab.label}
+              </span>
+              {active ? (
+                <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-[#156240]" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 grid min-h-[7.9rem] grid-cols-3 gap-2.5">
+        {activeTab === "moments" ? (
+          momentItems.length > 0 ? (
+            momentItems.map((moment) => (
+              <Link
+                className="group min-w-0"
+                href={withLocale(locale, `/footprints/${moment.id}`)}
+                key={moment.id}
+              >
+                <PreviewImage
+                  alt=""
+                  fallbackSrc="/illustrations/ui/take-photo.png"
+                  src={moment.image?.url ?? null}
+                />
+                <p className="mt-2 line-clamp-2 min-h-8 text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {moment.content?.trim() || copy.moments}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-[#7A8276]">
+                  <span className="inline-flex items-center gap-1">
+                    <Heart className="h-3 w-3 fill-current text-[#E7457A]" />
+                    {moment.likeCount}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    {moment.commentCount}
+                  </span>
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyMoments} />
+          )
+        ) : null}
+
+        {activeTab === "hangouts" ? (
+          hangoutItems.length > 0 ? (
+            hangoutItems.map((activity) => (
+              <Link
+                className="group min-w-0"
+                href={withLocale(locale, getActivityDetailPath(activity.id))}
+                key={activity.id}
+              >
+                <PreviewImage
+                  alt=""
+                  fallbackSrc="/illustrations/ui/take-photo.png"
+                  src={activity.coverImageUrl}
+                />
+                <p className="mt-2 line-clamp-2 min-h-8 text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {activity.title}
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-[#7A8276]">
+                  <UsersRound className="h-3 w-3 text-[#156240]" />
+                  {activity.participantCount}
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyHangouts} />
+          )
+        ) : null}
+
+        {activeTab === "badges" ? (
+          badgeItems.length > 0 ? (
+            badgeItems.map((item) => (
+              <Link
+                className="group min-w-0"
+                href={activeHref}
+                key={item.definition.key}
+              >
+                <div className="flex aspect-[1.22/1] items-center justify-center rounded-xl bg-transparent transition group-active:scale-[0.98]">
+                  <ProfileAchievementIcon
+                    achievementKey={item.definition.key}
+                    className="h-12 w-12 rounded-full"
+                    iconClassName="h-6 w-6"
+                    transparent
+                  />
+                </div>
+                <p className="mt-2 line-clamp-2 min-h-8 text-center text-[10.5px] font-semibold leading-4 text-[#111210]">
+                  {copy.achievementTitles[item.definition.key] ??
+                    item.definition.title}
+                </p>
+              </Link>
+            ))
+          ) : (
+            <ProfilePreviewEmpty href={activeHref} label={copy.emptyBadges} />
+          )
+        ) : null}
+      </div>
+
+      <Link
+        className="mx-auto mt-2 flex h-7 w-fit items-center justify-center gap-1 text-[10.5px] font-semibold text-[#156240] transition active:scale-[0.98]"
+        href={activeHref}
+      >
+        {copy.viewAll} {tabs.find((tab) => tab.key === activeTab)?.label}
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </section>
+  );
+}
+
+function PreviewImage({
+  alt,
+  fallbackSrc,
+  src,
+}: {
+  alt: string;
+  fallbackSrc: string;
+  src: string | null;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl bg-[#F8F7F2]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt={alt}
+        className="aspect-[1.22/1] w-full object-cover transition group-active:scale-[0.98]"
+        src={src || fallbackSrc}
+      />
+    </div>
+  );
+}
+
+function ProfilePreviewEmpty({
   href,
   label,
-  value,
 }: {
   href: string;
   label: string;
-  value: number;
 }) {
   return (
     <Link
+      className="col-span-3 flex min-h-[7.5rem] items-center justify-center rounded-xl bg-[#F8F7F2] px-4 text-center text-[12px] font-semibold text-[#6C746A] transition active:scale-[0.98]"
       href={href}
-      className="min-w-0 px-2 py-2 text-center transition active:scale-[0.98]"
     >
-      <p className="text-[22px] font-black leading-none text-[#111210]">
-        {value}
-      </p>
-      <p className="mt-1 text-[10px] font-bold leading-3 text-[#4F574F]">
-        {label}
-      </p>
+      {label}
     </Link>
   );
 }
 
-function ComingSoonFeature({
+function ProfileFeatureLink({
+  href,
   icon: Icon,
   label,
-  soon,
+  locked = false,
+  lockedLabel,
+  status,
+  tone = "green",
 }: {
+  href: string;
   icon: LucideIcon;
   label: string;
-  soon: string;
+  locked?: boolean;
+  lockedLabel?: string;
+  status?: string;
+  tone?: "green" | "pink" | "blue" | "gold" | "gray";
 }) {
-  return (
-    <button
-      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
-      onClick={() => window.alert(soon)}
-      type="button"
-    >
-      <span className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[radial-gradient(circle_at_30%_25%,#FFF3EE_0%,#FFE3DF_44%,#F7F2F4_100%)] text-[#F15F5B] shadow-[0_12px_22px_rgba(241,95,91,0.08)]">
-        <Icon className="h-[1.125rem] w-[1.125rem]" />
+  const toneClass =
+    locked
+      ? "bg-[#F5F4EF] text-[#9A9A90]"
+      : tone === "pink"
+      ? "bg-[#FFF1F6] text-[#F05B91]"
+      : tone === "blue"
+        ? "bg-[#F1F6FF] text-[#4D83E9]"
+        : tone === "gold"
+          ? "bg-[#FFF6DE] text-[#D79A13]"
+          : tone === "gray"
+            ? "bg-[#F3F4F1] text-[#737870]"
+            : "bg-[#EEF8F2] text-[#189560]";
+
+  const content = (
+    <>
+      <span
+        className={cn(
+          "relative flex h-12 w-12 items-center justify-center rounded-full",
+          toneClass,
+        )}
+      >
+        <Icon className="h-5 w-5" strokeWidth={2.25} />
+        {locked ? (
+          <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#8B907F] ring-1 ring-[#D6D5B2]">
+            <Lock className="h-3 w-3" strokeWidth={2.4} />
+          </span>
+        ) : status ? (
+          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
+            <span className="truncate">{status}</span>
+          </span>
+        ) : null}
       </span>
-      <span className="text-[11px] font-bold text-[#1D1D1B]">{label}</span>
-    </button>
+      <span
+        className={cn(
+          "max-w-full truncate text-[11px] font-bold",
+          locked ? "text-[#6C746A]" : "text-[#1D1D1B]",
+        )}
+      >
+        {label}
+      </span>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <button
+        type="button"
+        aria-disabled="true"
+        className="grid min-w-0 cursor-default justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center opacity-80"
+        title={lockedLabel ?? label}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -536,49 +1298,47 @@ function PublicMobileProfileActions({
   relationship: ProfileDashboardViewModel["viewerRelationship"];
 }) {
   const copy = getMobileProfileCopy(locale);
-
-  if (!isAuthenticated) {
-    return (
-      <Link
-        href={getSignInHref(locale, `/profile/${profileId}`)}
-        className="inline-flex h-8 items-center justify-center rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#8AB68E]"
-      >
-        {copy.addFriend}
-      </Link>
-    );
-  }
-
-  if (relationship.isFriend) {
-    return (
-      <form action={openDirectConversationAction}>
-        <input name="locale" type="hidden" value={locale} />
-        <input name="friendProfileId" type="hidden" value={profileId} />
-        <button
-          className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)]"
-          type="submit"
-        >
-          {copy.message}
-        </button>
-      </form>
-    );
-  }
-
-  if (relationship.pendingFriendRequest === "sent") {
-    return (
-      <span className="inline-flex h-8 items-center justify-center rounded-full bg-white px-3 text-[11px] font-black text-[#156240] ring-1 ring-[#8AB68E]">
-        {copy.pendingFriend}
-      </span>
-    );
-  }
+  const redirectPath = `/profile/${profileId}`;
+  const activeLabel = relationship.targetFollowsViewer
+    ? copy.mutualFollow
+    : copy.pendingFriend;
+  const inactiveLabel = relationship.targetFollowsViewer
+    ? copy.followBack
+    : copy.addFriend;
 
   return (
-    <div className="min-w-[74px] [&_button]:!h-8 [&_button]:!px-3 [&_button]:!text-[11px] [&_svg]:!hidden">
-      <ProfileSocialActions
+    <div className="flex items-center justify-end gap-2">
+      <FollowButton
+        activeButtonClassName="!h-8 !min-h-8 min-w-[5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeLabel={activeLabel}
+        buttonClassName="!h-8 !min-h-8 min-w-[4.5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        fullWidth={false}
+        inactiveLabel={inactiveLabel}
         isAuthenticated={isAuthenticated}
+        isFollowing={relationship.isFollowing}
         locale={locale}
-        profileId={profileId}
-        relationship={relationship}
+        redirectPath={redirectPath}
+        targetUserProfileId={profileId}
+        unfollowConfirm={{
+          cancelLabel: copy.unfollowCancel,
+          confirmLabel: copy.unfollowConfirm,
+          description: copy.unfollowDescription,
+          title: copy.unfollowTitle,
+        }}
       />
+      {isAuthenticated ? (
+        <form action={openDirectConversationAction}>
+          <input name="locale" type="hidden" value={locale} />
+          <input name="friendProfileId" type="hidden" value={profileId} />
+          <input name="redirectPath" type="hidden" value={redirectPath} />
+          <button
+            className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)] active:scale-[0.98]"
+            type="submit"
+          >
+            {copy.message}
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }
@@ -600,10 +1360,7 @@ function RecentCharmGifts({
 
   return (
     <div
-      className={cn(
-        "flex min-w-0 flex-wrap items-center gap-1.5",
-        className,
-      )}
+      className={cn("flex min-w-0 flex-wrap items-center gap-1.5", className)}
     >
       <span className="mr-0.5 text-[11px] font-bold text-[#8B907F]">
         {label}
@@ -622,33 +1379,219 @@ function RecentCharmGifts({
   );
 }
 
-function SelfCharmFeature({
-  dashboard,
+function formatCharmScore(value: number) {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function CharmLevelsDialog({
   locale,
-  label,
+  onClose,
+  open,
+  progress,
 }: {
-  dashboard: ProfileDashboardViewModel;
-  label: string;
   locale: string;
+  onClose: () => void;
+  open: boolean;
+  progress: ReturnType<typeof getCharmProgress>;
 }) {
-  const progress = getCharmProgress(dashboard.charmScore);
-  const levelLabel = getCharmLevelLabel(progress.current, locale);
+  const copy = getMobileProfileCopy(locale);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, open]);
+
+  if (!open) {
+    return null;
+  }
 
   return (
-    <div className="grid min-w-0 justify-items-center gap-1.5 px-1 py-1.5 text-center">
-      <span className="relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[radial-gradient(circle_at_30%_25%,#F6EEFF_0%,#EFE7FF_46%,#FFF4EA_100%)] text-[#8A61CE] shadow-[0_10px_18px_rgba(138,97,206,0.12)] ring-1 ring-[#DBC8F3]">
-        <Sparkles className="h-[1.125rem] w-[1.125rem]" />
-        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FEFFF9] px-1 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
-          {progress.current.icon}
-        </span>
-      </span>
-      <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
-        {label}
-      </span>
-      <span className="max-w-full truncate whitespace-nowrap text-[10px] font-black text-[#8A61CE]">
-        {dashboard.charmScore} / {levelLabel}
-      </span>
+    <div
+      aria-labelledby="charm-levels-dialog-title"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/34 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center sm:justify-center sm:p-6"
+      role="dialog"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="w-full max-w-sm rounded-[1.4rem] bg-[#FEFFF9] p-4 shadow-[0_18px_54px_rgba(17,18,16,0.22)] ring-1 ring-[#D6D5B2]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#8A61CE]">
+              {copy.charmLevelsCurrent}
+            </p>
+            <h2
+              className="mt-1 text-xl font-black leading-tight text-[#111210]"
+              id="charm-levels-dialog-title"
+            >
+              {copy.charmLevelsTitle}
+            </h2>
+          </div>
+          <button
+            aria-label={copy.charmLevelsClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#E7E2D6] transition active:scale-95"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#4F574F]">
+          {copy.charmLevelsIntro}
+        </p>
+
+        <div className="mt-4 grid gap-1">
+          {charmLevels.map((level) => {
+            const active = level.id === progress.current.id;
+
+            return (
+              <div
+                className={cn(
+                  "grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-2.5 py-2",
+                  active ? "bg-[#F4F0FF] text-[#111210]" : "text-[#4F574F]",
+                )}
+                key={level.id}
+              >
+                <span className="text-lg" aria-hidden="true">
+                  {level.icon}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-black">
+                      {getCharmLevelLabel(level, locale)}
+                    </p>
+                    {active ? (
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
+                        {copy.charmLevelsCurrent}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-[#7A8276]">
+                    {getCharmLevelDescription(level, locale)}
+                  </p>
+                </div>
+                <p className="whitespace-nowrap text-xs font-black text-[#8A61CE]">
+                  {copy.charmLevelsStartingAt}{" "}
+                  {formatCharmScore(level.minScore)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+          onClick={onClose}
+          type="button"
+        >
+          {copy.charmLevelsClose}
+        </button>
+      </div>
     </div>
+  );
+}
+
+function CharmProgressPanel({
+  className,
+  dashboard,
+  isAuthenticated,
+  locale,
+  recipientName,
+  recipientProfileId,
+  showGiftAction = false,
+  showRecentGifts = false,
+}: {
+  className?: string;
+  dashboard: ProfileDashboardViewModel;
+  isAuthenticated?: boolean;
+  locale: string;
+  recipientName?: string;
+  recipientProfileId?: string;
+  showGiftAction?: boolean;
+  showRecentGifts?: boolean;
+}) {
+  const copy = getMobileProfileCopy(locale);
+  const progress = getCharmProgress(dashboard.charmScore);
+  const levelLabel = getCharmLevelLabel(progress.current, locale);
+  const nextCharmLabel = progress.next
+    ? `${formatCharmScore(progress.score)} / ${formatCharmScore(progress.next.minScore)}`
+    : copy.maxCharm;
+  const progressWidth = `${Math.max(3, Math.round(progress.progressRatio * 100))}%`;
+  const [levelsOpen, setLevelsOpen] = useState(false);
+
+  return (
+    <>
+      <div className={cn("min-w-0", className)}>
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[26px] font-black leading-none text-[#A57AEB]">
+              {formatCharmScore(progress.score)}
+            </p>
+            <button
+              aria-label={copy.charmLevelsOpen}
+              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-black text-[#8B78B9] transition active:scale-[0.98]"
+              onClick={() => setLevelsOpen(true)}
+              type="button"
+            >
+              <span className="truncate">
+                {progress.current.icon} {levelLabel}
+              </span>
+              <Info className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </div>
+          <p className="shrink-0 text-xs font-bold text-[#7A8276]">
+            {nextCharmLabel}
+          </p>
+        </div>
+        <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
+          <div
+            className="h-full rounded-full bg-[#BFAAF4]"
+            style={{ width: progressWidth }}
+          />
+        </div>
+        {showGiftAction && recipientProfileId && recipientName ? (
+          <div className="mt-2 flex justify-end">
+            <CharmGiftDialog
+              isAuthenticated={Boolean(isAuthenticated)}
+              locale={locale}
+              recipientName={recipientName}
+              recipientProfileId={recipientProfileId}
+            />
+          </div>
+        ) : null}
+        {showRecentGifts ? (
+          <RecentCharmGifts
+            className="mt-3"
+            gifts={dashboard.recentCharmGifts}
+            label={copy.recentGifts}
+          />
+        ) : null}
+      </div>
+
+      <CharmLevelsDialog
+        locale={locale}
+        onClose={() => setLevelsOpen(false)}
+        open={levelsOpen}
+        progress={progress}
+      />
+    </>
   );
 }
 
@@ -767,23 +1710,19 @@ function PublicMobileProfileHome({
   locale,
   profile,
   profileInitial,
+  publicAchievements,
 }: {
   dashboard: ProfileDashboardViewModel;
   isAuthenticated: boolean;
   locale: string;
   profile: PublicProfileViewModel;
   profileInitial: string;
+  publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const charmProgress = getCharmProgress(dashboard.charmScore);
-  const charmLevelLabel = getCharmLevelLabel(charmProgress.current, locale);
-  const nextCharmLabel = charmProgress.next
-    ? `${charmProgress.score} / ${charmProgress.next.minScore}`
-    : charmLevelLabel;
-  const charmProgressWidth = `${Math.max(3, Math.round(charmProgress.progressRatio * 100))}%`;
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5">
+    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
       <header className="flex items-center justify-between gap-3">
         <button
           aria-label="Back"
@@ -823,7 +1762,9 @@ function PublicMobileProfileHome({
           <ProfileAvatar
             avatarUrl={profile.avatarUrl}
             initial={profileInitial}
+            isOnline={profile.isOnline}
             name={profile.nickname}
+            presenceDisplayStatus={profile.presenceDisplayStatus}
           />
           <div className="min-w-0 pt-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -833,22 +1774,21 @@ function PublicMobileProfileHome({
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
               ) : null}
+              <TrustScoreBadge locale={locale} score={dashboard.trustScore} />
+              <ProfileAchievementBadgeStrip
+                className="min-w-0 shrink-0"
+                items={publicAchievements}
+                limit={3}
+                locale={locale}
+              />
             </div>
             {profile.friendCode ? (
               <p className="mt-1 text-xs font-bold text-[#6C746A]">
                 @{profile.friendCode}
               </p>
             ) : null}
-            {profile.bio ? (
-              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[#4F574F]">
-                {profile.bio}
-              </p>
-            ) : null}
           </div>
           <div className="grid justify-items-end gap-2 pt-1">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_10px_22px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]">
-              <ShieldCheck className="h-4 w-4" />
-            </span>
             <PublicMobileProfileActions
               isAuthenticated={isAuthenticated}
               locale={locale}
@@ -858,59 +1798,73 @@ function PublicMobileProfileHome({
           </div>
         </div>
 
-        <div className="mt-7 border-b border-[#E3DCC5] pb-5">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[26px] font-black leading-none text-[#A57AEB]">
-                {charmProgress.score}
-              </p>
-              <p className="mt-1 text-xs font-black text-[#8B78B9]">
-                {charmProgress.current.icon} {charmLevelLabel}
-              </p>
-            </div>
-            <p className="text-xs font-bold text-[#7A8276]">
-              {nextCharmLabel}
-            </p>
-          </div>
-          <div className="mt-3 h-2 rounded-full bg-[#EFEAD7]">
-            <div
-              className="h-full rounded-full bg-[#BFAAF4]"
-              style={{ width: charmProgressWidth }}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-xs font-semibold text-[#8B907F]">
-              {charmProgress.next
-                ? `${copy.nextCharm} ${charmProgress.next.icon} ${getCharmLevelLabel(charmProgress.next, locale)}`
-                : copy.maxCharm}
-            </p>
-            <CharmGiftDialog
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              recipientName={profile.nickname}
-              recipientProfileId={profile.id}
-            />
-          </div>
-          <RecentCharmGifts
-            className="mt-3"
-            gifts={dashboard.recentCharmGifts}
-            label={copy.recentGifts}
-          />
-        </div>
+        <CharmProgressPanel
+          className="mt-5 border-b border-[#E3DCC5] pb-5"
+          dashboard={dashboard}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          recipientName={profile.nickname}
+          recipientProfileId={profile.id}
+          showGiftAction
+          showRecentGifts
+        />
       </section>
 
       <PublicMobileTimeline dashboard={dashboard} locale={locale} />
+      <MobileProfileAboutCard
+        bio={profile.bio ?? ""}
+        locale={locale}
+        nickname={profile.nickname}
+      />
     </div>
+  );
+}
+
+function TrustScoreBadge({
+  className,
+  locale,
+  score,
+}: {
+  className?: string;
+  locale: string;
+  score: number;
+}) {
+  const copy = getTrustBadgeCopy(locale, score);
+  const [active, setActive] = useState(false);
+
+  return (
+    <button
+      aria-expanded={active}
+      aria-label={copy.label}
+      className={cn(
+        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+        active ? "z-20" : "",
+        className,
+      )}
+      onClick={() => setActive((value) => !value)}
+      title={copy.label}
+      type="button"
+    >
+      <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={2.35} />
+      <span className="leading-none">{score}</span>
+      {active ? (
+        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+          {copy.tooltip}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
 function getProfileBioEditorCopy(locale: string) {
   if (locale === "fr") {
     return {
+      about: "À propos de",
       bioLabel: "Bio",
       cancel: "Annuler",
       edit: "Modifier",
-      empty: "Pas encore de bio.",
+      empty:
+        "Explore les sorties, les moments et de nouvelles rencontres sur Friemi.",
       placeholder: "Ajoutez une courte présentation",
       save: "Enregistrer",
       saving: "Enregistrement...",
@@ -919,10 +1873,11 @@ function getProfileBioEditorCopy(locale: string) {
 
   if (locale === "en") {
     return {
+      about: "About",
       bioLabel: "Bio",
       cancel: "Cancel",
       edit: "Edit",
-      empty: "No bio yet.",
+      empty: "Exploring hangouts, moments, and new people on Friemi.",
       placeholder: "Write a short intro",
       save: "Save",
       saving: "Saving...",
@@ -930,14 +1885,51 @@ function getProfileBioEditorCopy(locale: string) {
   }
 
   return {
+    about: "关于",
     bioLabel: "简介",
     cancel: "取消",
     edit: "编辑",
-    empty: "还没有填写简介。",
+    empty: "正在 Friemi 探索城市里的聚会、活动和新朋友。",
     placeholder: "简单介绍一下自己",
     save: "保存",
     saving: "保存中...",
   };
+}
+
+function getProfileAboutTitle(locale: string, nickname: string) {
+  const copy = getProfileBioEditorCopy(locale);
+  const name = nickname.trim() || "Friemi";
+
+  return locale === "zh-CN" ? `${copy.about} ${name}` : `${copy.about} ${name}`;
+}
+
+function MobileProfileAboutCard({
+  bio,
+  editButton,
+  locale,
+  nickname,
+}: {
+  bio: string;
+  editButton?: React.ReactNode;
+  locale: string;
+  nickname: string;
+}) {
+  const copy = getProfileBioEditorCopy(locale);
+  const displayBio = bio.trim() || copy.empty;
+
+  return (
+    <section className="mt-6 rounded-[1.35rem] border border-[#EEE7D5] bg-white px-4 py-4">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <h3 className="min-w-0 truncate text-[16px] font-black leading-6 text-[#111210]">
+          {getProfileAboutTitle(locale, nickname)}
+        </h3>
+        {editButton}
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-[14px] font-semibold leading-6 text-[#4F574F]">
+        {displayBio}
+      </p>
+    </section>
+  );
 }
 
 const mobileBioInitialState: UpdateProfileIdentityState = {};
@@ -977,22 +1969,24 @@ function MobileProfileBioEditor({
 
   return (
     <>
-      <div className="mt-3 flex min-w-0 items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm font-semibold leading-5 text-[#4F574F]">
-          {savedBio.trim() || copy.empty}
-        </p>
-        <button
-          className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
-          type="button"
-          onClick={() => setOpen(true)}
-        >
-          {copy.edit}
-        </button>
-      </div>
+      <MobileProfileAboutCard
+        bio={savedBio}
+        editButton={
+          <button
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+            type="button"
+            onClick={() => setOpen(true)}
+          >
+            {copy.edit}
+          </button>
+        }
+        locale={locale}
+        nickname={nickname}
+      />
 
       {open ? (
         <div
-          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/32 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/28 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
           role="dialog"
           aria-modal="true"
           onMouseDown={(event) => {
@@ -1075,22 +2069,473 @@ function MobileProfileBioSubmitButton({
   );
 }
 
+const mobileAvatarInitialState: UpdateProfileIdentityState = {};
+
+function getMobileProfileAvatarEditorCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      cancel: "Annuler",
+      change: "Changer l'avatar",
+      city: "Ville",
+      cityPickerSearch: "Rechercher ou saisir une ville",
+      cityPickerTitle: "Choisir une ville",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      status: "Statut",
+      title: "Profil",
+      useCity: "Utiliser",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      cancel: "Cancel",
+      change: "Change avatar",
+      city: "City",
+      cityPickerSearch: "Search or enter a city",
+      cityPickerTitle: "Choose city",
+      save: "Save",
+      saving: "Saving...",
+      status: "Status",
+      title: "Profile",
+      useCity: "Use",
+    };
+  }
+
+  return {
+    cancel: "取消",
+    change: "修改头像",
+    city: "城市",
+    cityPickerSearch: "搜索或输入城市",
+    cityPickerTitle: "选择城市",
+    save: "保存",
+    saving: "保存中...",
+    status: "状态",
+    title: "个人主页",
+    useCity: "使用",
+  };
+}
+
+function getProfileCityCountryLabel(
+  country: (typeof profileCityCountries)[number],
+  locale: string,
+) {
+  const localeKey = locale === "fr" || locale === "en" ? locale : "zh-CN";
+
+  return country.labels[localeKey];
+}
+
+function ProfileCityPickerField({
+  label,
+  locale,
+  onChange,
+  value,
+}: {
+  label: string;
+  locale: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const copy = getMobileProfileAvatarEditorCopy(locale);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalizedValue = normalizeProfileHomeCity(value);
+  const normalizedQuery = query.trim();
+  const normalizedQueryKey = normalizedQuery.toLocaleLowerCase();
+  const cityExists = profileCityCountries.some((country) =>
+    country.cities.some(
+      (city) => city.toLocaleLowerCase() === normalizedQueryKey,
+    ),
+  );
+  const canUseCustomCity = normalizedQuery.length > 0 && !cityExists;
+
+  const handleSelect = (nextCity: string) => {
+    onChange(normalizeProfileHomeCity(nextCity));
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
+        type="button"
+        onClick={() => setOpen(true)}
+      >
+        <span className="shrink-0 text-[11px] text-[#4F574F]">{label}</span>
+        <span className="inline-flex min-w-0 items-center gap-1">
+          <span className="truncate">
+            {getProfileHomeCityLabel(normalizedValue, locale)}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#0B7A4B]" />
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[10001] flex items-end bg-[#111210]/30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setOpen(false);
+            }
+          }}
+        >
+          <div className="max-h-[82dvh] w-full overflow-hidden rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-lg font-black text-[#111210]">
+                {copy.cityPickerTitle}
+              </h4>
+              <button
+                aria-label={copy.cancel}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <input
+              className="mt-4 h-11 w-full rounded-full bg-white px-4 text-sm font-bold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A7A99D] focus:ring-[#8AB68E]"
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") {
+                  return;
+                }
+
+                event.preventDefault();
+                if (canUseCustomCity) {
+                  handleSelect(normalizedQuery);
+                }
+              }}
+              placeholder={copy.cityPickerSearch}
+            />
+
+            <div className="mt-4 max-h-[58dvh] overflow-y-auto pr-1">
+              {canUseCustomCity ? (
+                <button
+                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-black text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
+                  type="button"
+                  onClick={() => handleSelect(normalizedQuery)}
+                >
+                  <span className="min-w-0 truncate">
+                    {copy.useCity} {normalizedQuery}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                </button>
+              ) : null}
+
+              <div className="grid gap-4">
+                {profileCityCountries.map((country) => {
+                  const countryLabel = getProfileCityCountryLabel(
+                    country,
+                    locale,
+                  );
+                  const cities = normalizedQueryKey
+                    ? country.cities.filter(
+                        (city) =>
+                          city.toLocaleLowerCase().includes(
+                            normalizedQueryKey,
+                          ) ||
+                          countryLabel
+                            .toLocaleLowerCase()
+                            .includes(normalizedQueryKey),
+                      )
+                    : country.cities;
+
+                  if (cities.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <section key={country.key} className="grid gap-2">
+                      <p className="px-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#7B8178]">
+                        {countryLabel}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {cities.map((city) => {
+                          const active = normalizedValue === city;
+
+                          return (
+                            <button
+                              key={`${country.key}-${city}`}
+                              className={cn(
+                                "rounded-full px-3 py-2 text-xs font-black transition active:scale-[0.98]",
+                                active
+                                  ? "bg-[#0B7A4B] text-white"
+                                  : "bg-white text-[#111210] ring-1 ring-[#E1DEC9]",
+                              )}
+                              type="button"
+                              onClick={() => handleSelect(city)}
+                            >
+                              {city}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function MobileProfileAvatarEditor({
+  avatarUrl,
+  bio,
+  homeCity,
+  initial,
+  isOnline,
+  locale,
+  name,
+  nickname,
+  onPresenceStatusChange,
+  onSaved,
+  presenceDisplayStatus,
+  presenceStatus,
+}: {
+  avatarUrl: string | null;
+  bio: string | null;
+  homeCity: string | null;
+  initial: string;
+  isOnline: boolean;
+  locale: string;
+  name: string;
+  nickname: string;
+  onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
+  onSaved: (nextValue: {
+    avatarUrl: string | null;
+    homeCity: string | null;
+  }) => void;
+  presenceDisplayStatus?: UserPresenceDisplayStatus;
+  presenceStatus: UserPresenceStatusValue;
+}) {
+  const copy = getMobileProfileAvatarEditorCopy(locale);
+  const router = useRouter();
+  const [state, formAction] = useActionState(
+    updateProfileIdentityAction,
+    mobileAvatarInitialState,
+  );
+  const [open, setOpen] = useState(false);
+  const [avatarValue, setAvatarValue] = useState<string | null>(avatarUrl);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [cityValue, setCityValue] = useState(normalizeProfileHomeCity(homeCity));
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+
+  useEffect(() => {
+    setAvatarValue(avatarUrl);
+    setAvatarDirty(false);
+  }, [avatarUrl]);
+
+  useEffect(() => {
+    setCityValue(normalizeProfileHomeCity(homeCity));
+  }, [homeCity]);
+
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    onSaved({
+      avatarUrl: state.avatarUrl === undefined ? avatarValue : state.avatarUrl,
+      homeCity: state.homeCity === undefined ? cityValue : state.homeCity,
+    });
+    setAvatarDirty(false);
+    setOpen(false);
+    router.refresh();
+  }, [
+    avatarValue,
+    cityValue,
+    onSaved,
+    router,
+    state.avatarUrl,
+    state.homeCity,
+    state.success,
+  ]);
+
+  const cityDirty = cityValue !== normalizeProfileHomeCity(homeCity);
+
+  return (
+    <>
+      <button
+        aria-label={copy.change}
+        className="group relative shrink-0 rounded-full transition active:scale-95"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
+        <ProfileAvatar
+          avatarUrl={avatarUrl}
+          initial={initial}
+          isOnline={isOnline}
+          name={name}
+          presenceDisplayStatus={presenceDisplayStatus}
+          size="xl"
+        />
+      </button>
+
+      {open ? (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end bg-[#111210]/32 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setOpen(false);
+            }
+          }}
+        >
+          <div className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-black text-[#111210]">
+                {copy.title}
+              </h3>
+              <button
+                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                {copy.cancel}
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <ProfileAvatarPicker
+                hideUploadAction
+                initial={initial}
+                locale={locale}
+                name={name}
+                onChange={(nextAvatarUrl) => {
+                  setAvatarValue(nextAvatarUrl);
+                  setAvatarDirty(true);
+                }}
+                onUploadingChange={setIsAvatarUploading}
+                value={avatarValue}
+                variant="sheet"
+                sideContent={
+                  <div className="grid gap-3">
+                    <div className="grid gap-1.5">
+                      <p className="text-[11px] font-black text-[#4F574F]">
+                        {copy.status}
+                      </p>
+                      <ProfilePresenceControl
+                        locale={locale}
+                        onStatusChange={onPresenceStatusChange}
+                        status={presenceStatus}
+                      />
+                    </div>
+
+                    <form action={formAction} className="grid gap-2" noValidate>
+                      <input name="locale" type="hidden" value={locale} />
+                      <input name="afterSave" type="hidden" value="refresh" />
+                      <input name="nickname" type="hidden" value={nickname} />
+                      <input name="bio" type="hidden" value={bio ?? ""} />
+                      <input name="homeCity" type="hidden" value={cityValue} />
+                      {avatarDirty && avatarValue ? (
+                        <input
+                          name="avatarUrl"
+                          type="hidden"
+                          value={avatarValue}
+                        />
+                      ) : null}
+
+                      <ProfileCityPickerField
+                        label={copy.city}
+                        locale={locale}
+                        onChange={setCityValue}
+                        value={cityValue}
+                      />
+
+                      {state.formError ? (
+                        <p className="text-xs font-semibold text-[#9A2135]">
+                          {state.formError}
+                        </p>
+                      ) : null}
+                      <div className="flex justify-end">
+                        <MobileProfileAvatarSubmitButton
+                          disabled={
+                            (!avatarDirty && !cityDirty) || isAvatarUploading
+                          }
+                          label={copy.save}
+                          pendingLabel={copy.saving}
+                        />
+                      </div>
+                    </form>
+                  </div>
+                }
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function MobileProfileAvatarSubmitButton({
+  disabled = false,
+  label,
+  pendingLabel,
+}: {
+  disabled?: boolean;
+  label: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      disabled={pending || disabled}
+      type="submit"
+    >
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
 function SelfMobileProfileHome({
+  achievementPreviewItems,
   dashboard,
   locale,
+  onPresenceStatusChange,
+  presenceStatus,
   profile,
   profileInitial,
+  publicAchievements,
 }: {
+  achievementPreviewItems: PublicAchievementWallItem[];
   dashboard: ProfileDashboardViewModel;
   locale: string;
+  onPresenceStatusChange: (status: UserPresenceStatusValue) => void;
+  presenceStatus: UserPresenceStatusValue;
   profile: PublicProfileViewModel;
   profileInitial: string;
+  publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
   const router = useRouter();
-  const { openUserProfile } = useClerk();
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatarUrl);
+  const [currentHomeCity, setCurrentHomeCity] = useState(
+    normalizeProfileHomeCity(profile.homeCity),
+  );
   const [copied, setCopied] = useState(false);
   const nativeQrScanPendingRef = useRef(false);
+
+  useEffect(() => {
+    setCurrentAvatarUrl(profile.avatarUrl);
+  }, [profile.avatarUrl]);
+
+  useEffect(() => {
+    setCurrentHomeCity(normalizeProfileHomeCity(profile.homeCity));
+  }, [profile.homeCity]);
 
   const copyFriendCode = async () => {
     if (!profile.friendCode) {
@@ -1176,143 +2621,140 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-5">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
-          {copy.profileTitle}
-        </h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={copy.scan}
-            title={copy.scan}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
-            onClick={openGlobalQrScanner}
-          >
-            <ScanLine className="h-[1.125rem] w-[1.125rem]" />
-          </button>
-          <Link
-            href={withLocale(locale, "/account/settings")}
-            aria-label={copy.settings}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FFF7DC] text-[#5F5743] shadow-[0_8px_18px_rgba(160,128,40,0.15)] ring-1 ring-[#E8D59D] transition active:scale-95"
-          >
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </Link>
-        </div>
-      </header>
-
-      <section className="mt-6">
-        <div className="grid grid-cols-[4rem_minmax(0,1fr)_3.25rem] items-start gap-3">
-          <button
-            aria-label={copy.editProfile}
-            className="group relative shrink-0 rounded-full transition active:scale-95"
-            onClick={() => openUserProfile()}
-            type="button"
-          >
-            <ProfileAvatar
-              avatarUrl={profile.avatarUrl}
-              initial={profileInitial}
-              name={profile.nickname}
-              size="sm"
-            />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
-              {profile.nickname}
-            </h2>
-            {profile.friendCode ? (
-              <button
-                className="mt-0.5 inline-flex items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F]"
-                onClick={copyFriendCode}
-                type="button"
-              >
-                <span>{profile.friendCode}</span>
-                <Copy className="h-3.5 w-3.5" />
-                <span className="tracking-normal">
-                  {copied ? copy.copied : copy.copyCode}
-                </span>
-              </button>
-            ) : null}
-            <MobileProfileBioEditor
+    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-white px-5 pb-28 pt-9">
+      <section>
+        <div>
+          <div className="flex items-start gap-4">
+            <MobileProfileAvatarEditor
+              avatarUrl={currentAvatarUrl}
               bio={profile.bio}
+              homeCity={currentHomeCity}
+              initial={profileInitial}
+              isOnline={presenceStatus === "ONLINE"}
               locale={locale}
+              name={profile.nickname}
               nickname={profile.nickname}
+              onPresenceStatusChange={onPresenceStatusChange}
+              onSaved={(nextValue) => {
+                setCurrentAvatarUrl(nextValue.avatarUrl);
+                setCurrentHomeCity(normalizeProfileHomeCity(nextValue.homeCity));
+              }}
+              presenceDisplayStatus={
+                presenceStatus === "INVISIBLE" ? null : presenceStatus
+              }
+              presenceStatus={presenceStatus}
             />
+
+            <div className="min-w-0 flex-1 pt-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-[22px] font-black leading-tight text-[#111210]">
+                  {profile.nickname}
+                </h2>
+                <ProfileAchievementBadgeStrip
+                  className="min-w-0 shrink-0"
+                  items={publicAchievements}
+                  limit={3}
+                  locale={locale}
+                />
+              </div>
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                {profile.friendCode ? (
+                  <button
+                    aria-label={copied ? copy.copied : copy.copyCode}
+                    className="inline-flex min-w-0 shrink items-center gap-1.5 text-left text-[11px] font-bold text-[#4F574F] transition active:scale-[0.98]"
+                    onClick={copyFriendCode}
+                    title={copied ? copy.copied : copy.copyCode}
+                    type="button"
+                  >
+                    <span className="tabular-nums">{profile.friendCode}</span>
+                    <Copy className="h-3.5 w-3.5 shrink-0" />
+                  </button>
+                ) : null}
+                <span className="inline-flex min-w-0 items-center gap-1 text-[11px] font-bold text-[#6C746A]">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-[#F56D62]" />
+                  <span className="truncate">
+                    {getProfileHomeCityLabel(currentHomeCity, locale)}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-start gap-2">
+              <button
+                type="button"
+                aria-label={copy.scan}
+                title={copy.scan}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+                onClick={openGlobalQrScanner}
+              >
+                <ScanLine className="h-[1.125rem] w-[1.125rem]" />
+              </button>
+            </div>
           </div>
-          <div className="grid justify-items-center gap-1 text-center">
-            <span className="text-[10px] font-bold text-[#4F574F]">
-              {copy.trusted}
-            </span>
-            <span className="inline-flex min-h-8 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-2 text-[11px] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
-              <BadgeCheck className="h-4 w-4 shrink-0" />
-              {dashboard.trustScore}
-            </span>
-            <span className="max-w-[4.75rem] truncate text-[9px] font-bold leading-none text-[#8B907F]">
-              {getTrustLevelLabel(dashboard.trustScore, locale)}
-            </span>
-          </div>
+
         </div>
 
-        <div className="mt-6 grid grid-cols-3">
-          <MobileStatLink
-            href={withLocale(locale, "/profile/hangouts")}
-            label={copy.created}
-            value={dashboard.createdActivityCount}
-          />
-          <MobileStatLink
-            href={withLocale(locale, "/profile/network")}
-            label={copy.friends}
-            value={dashboard.friendCount}
-          />
-          <MobileStatLink
-            href={withLocale(locale, "/footprints")}
-            label={copy.moments}
-            value={dashboard.momentCount}
-          />
-        </div>
+        <MobileProfileSummaryStrip dashboard={dashboard} locale={locale} />
       </section>
 
-      <section className="mt-6 grid grid-cols-3 gap-y-4">
-        <SelfCharmFeature
-          dashboard={dashboard}
-          label={copy.charm}
-          locale={locale}
+      <section className="mt-6 grid grid-cols-4 gap-x-1 gap-y-5">
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/gift-wall")}
+          icon={Gift}
+          label={copy.giftWall}
+          tone="pink"
         />
-        <ComingSoonFeature
-          icon={UserRoundPlus}
-          label={copy.invite}
-          soon={copy.soon}
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/network")}
+          icon={UsersRound}
+          label={copy.friendsFeature}
+          tone="blue"
         />
-        <ComingSoonFeature icon={Eye} label={copy.visitors} soon={copy.soon} />
-        <ComingSoonFeature icon={Package} label={copy.bag} soon={copy.soon} />
-        <ComingSoonFeature
-          icon={WalletCards}
-          label={copy.wallet}
-          soon={copy.soon}
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/invite")}
+          icon={Ticket}
+          label={copy.inviteCode}
+          tone="pink"
         />
-        <ComingSoonFeature
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/shop")}
           icon={ShoppingBag}
           label={copy.shop}
-          soon={copy.soon}
+          tone="gold"
         />
-        <ComingSoonFeature icon={Gift} label={copy.giftWall} soon={copy.soon} />
-        <ComingSoonFeature
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/achievements")}
           icon={Medal}
           label={copy.achievements}
-          soon={copy.soon}
+          status={String(achievementCatalog.length)}
+          tone="gold"
         />
-        <Link
+        <ProfileFeatureLink
+          href={withLocale(locale, "/profile/bag")}
+          icon={Package}
+          label={copy.bag}
+          locked
+          lockedLabel={copy.soon}
+        />
+        <ProfileFeatureLink
           href={withLocale(locale, "/account/settings")}
-          className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
-        >
-          <span className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[#FFF7DC] text-[#5F5743] shadow-[0_10px_18px_rgba(160,128,40,0.12)] ring-1 ring-[#E8D59D]">
-            <Settings className="h-[1.125rem] w-[1.125rem]" />
-          </span>
-          <span className="text-[11px] font-bold text-[#1D1D1B]">
-            {copy.settings}
-          </span>
-        </Link>
+          icon={Settings}
+          label={copy.settings}
+          tone="gray"
+        />
       </section>
+
+      <ProfilePreviewTabs
+        achievementPreviewItems={achievementPreviewItems}
+        dashboard={dashboard}
+        locale={locale}
+      />
+
+      <MobileProfileBioEditor
+        bio={profile.bio}
+        locale={locale}
+        nickname={profile.nickname}
+      />
     </div>
   );
 }
@@ -1370,6 +2812,7 @@ function WerewolfStatsPanel({
 }
 
 export function ProfileDashboardView({
+  achievementPreviewItems = [],
   dashboard,
   hasDashboardError = false,
   isAuthenticated = false,
@@ -1377,9 +2820,9 @@ export function ProfileDashboardView({
   isSelf = false,
   locale,
   profile,
+  publicAchievements = [],
 }: ProfileDashboardViewProps) {
   const t = getCopy(locale);
-  const friendsCopy = getFriendsCopy(locale);
   const mobileCopy = getMobileProfileCopy(locale);
   const selfMetricLabels = getSelfProfileMetricLabels(locale);
   const profileInitial = profile.nickname.trim().slice(0, 1) || "N";
@@ -1387,13 +2830,10 @@ export function ProfileDashboardView({
   const showWerewolfStats =
     dashboard.werewolfStats.playerGameCount > 0 ||
     dashboard.werewolfStats.judgeCount > 0;
-  const profileCharmProgress = getCharmProgress(dashboard.charmScore);
-  const profileCharmLevelLabel = getCharmLevelLabel(
-    profileCharmProgress.current,
-    locale,
-  );
   const [activeProfileSection, setActiveProfileSection] =
     useState<ProfileSectionKey>("created");
+  const [currentPresenceStatus, setCurrentPresenceStatus] =
+    useState<UserPresenceStatusValue>(profile.presenceStatus);
 
   useEffect(() => {
     const context = readDetailSourceContext();
@@ -1413,6 +2853,10 @@ export function ProfileDashboardView({
     }
   }, [isSelf]);
 
+  useEffect(() => {
+    setCurrentPresenceStatus(profile.presenceStatus);
+  }, [profile.id, profile.presenceStatus]);
+
   if (isGuestPlaceholder) {
     return (
       <GuestProfilePlaceholder
@@ -1429,10 +2873,14 @@ export function ProfileDashboardView({
       <div className="md:hidden">
         {isSelf ? (
           <SelfMobileProfileHome
+            achievementPreviewItems={achievementPreviewItems}
             dashboard={dashboard}
             locale={locale}
+            onPresenceStatusChange={setCurrentPresenceStatus}
+            presenceStatus={currentPresenceStatus}
             profile={profile}
             profileInitial={profileInitial}
+            publicAchievements={publicAchievements}
           />
         ) : (
           <PublicMobileProfileHome
@@ -1441,6 +2889,7 @@ export function ProfileDashboardView({
             locale={locale}
             profile={profile}
             profileInitial={profileInitial}
+            publicAchievements={publicAchievements}
           />
         )}
       </div>
@@ -1457,26 +2906,32 @@ export function ProfileDashboardView({
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.95fr)] lg:items-start">
               <div className="grid min-w-0 gap-3">
                 <div className="flex min-w-0 items-center gap-4">
-                  {profile.avatarUrl ? (
-                    // User avatars are stored as remote URLs from Clerk/user data.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profile.avatarUrl}
-                      alt={profile.nickname}
-                      className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-lg font-semibold text-white sm:h-16 sm:w-16 sm:text-xl">
-                      {profileInitial}
-                    </div>
-                  )}
+                  <ProfileAvatar
+                    avatarUrl={profile.avatarUrl}
+                    initial={profileInitial}
+                    isOnline={currentPresenceStatus === "ONLINE"}
+                    name={profile.nickname}
+                    presenceDisplayStatus={
+                      currentPresenceStatus === "INVISIBLE"
+                        ? null
+                        : currentPresenceStatus
+                    }
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-moss">
                       {t.profile.title}
                     </p>
-                    <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
-                      {profile.nickname}
-                    </h1>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                      <h1 className="truncate text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
+                        {profile.nickname}
+                      </h1>
+                      <ProfileAchievementBadgeStrip
+                        className="min-w-0 shrink-0"
+                        items={publicAchievements}
+                        limit={3}
+                        locale={locale}
+                      />
+                    </div>
                     {profile.isCoCreator ? (
                       <CoCreatorIdentityBadge
                         className="mt-2"
@@ -1493,6 +2948,7 @@ export function ProfileDashboardView({
                 {profile.friendCode ? (
                   <div className="max-w-xl">
                     <ProfileIdentityForm
+                      avatarUrl={profile.avatarUrl}
                       bio={profile.bio}
                       friendCode={profile.friendCode}
                       locale={locale}
@@ -1500,6 +2956,11 @@ export function ProfileDashboardView({
                     />
                   </div>
                 ) : null}
+                <ProfilePresenceControl
+                  locale={locale}
+                  onStatusChange={setCurrentPresenceStatus}
+                  status={currentPresenceStatus}
+                />
               </div>
 
               <div className="flex min-w-0 flex-col gap-3">
@@ -1508,6 +2969,10 @@ export function ProfileDashboardView({
                   createdCount={dashboard.createdActivityCount}
                   joinedCount={dashboard.participationCount}
                   friendCount={dashboard.friendCount}
+                  followers={dashboard.followers}
+                  followersCount={dashboard.followersCount}
+                  following={dashboard.following}
+                  followingCount={dashboard.followingCount}
                   friends={dashboard.friends}
                   locale={locale}
                   createdLabel={selfMetricLabels.created}
@@ -1516,57 +2981,46 @@ export function ProfileDashboardView({
                   showFriendCount={isSelf}
                   showJoinedCount={showPrivateParticipation}
                 />
-                <div className="rounded-2xl bg-white/72 px-4 py-3 ring-1 ring-[#E6DEC6]">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#1D1D1B]">
-                        {profileCharmProgress.current.icon}{" "}
-                        {profileCharmLevelLabel}
-                      </p>
-                      <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
-                        {dashboard.charmScore} {mobileCopy.charm}
-                      </p>
-                    </div>
-                    <Sparkles className="h-5 w-5 shrink-0 text-[#8A61CE]" />
-                  </div>
-                  <RecentCharmGifts
-                    className="mt-2"
-                    gifts={dashboard.recentCharmGifts}
-                    label={mobileCopy.recentGifts}
-                  />
-                </div>
+                <CharmProgressPanel
+                  className="rounded-2xl bg-white/72 px-4 py-3 ring-1 ring-[#E6DEC6]"
+                  dashboard={dashboard}
+                  locale={locale}
+                  showRecentGifts
+                />
                 <Link
                   href={withLocale(locale, "/messages")}
                   className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white/85 px-4 text-sm font-medium text-zinc-950 shadow-sm ring-1 ring-sand transition hover:bg-white sm:w-fit lg:self-end"
                 >
                   <UsersRound className="h-4 w-4" />
-                  {friendsCopy.openFriends}
+                  {mobileCopy.networkTitle}
                 </Link>
               </div>
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] md:items-center">
               <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                {profile.avatarUrl ? (
-                  // User avatars are stored as remote URLs from Clerk/user data.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.avatarUrl}
-                    alt={profile.nickname}
-                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white sm:h-16 sm:w-16"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-moss text-base font-semibold text-white ring-2 ring-white sm:h-16 sm:w-16 sm:text-xl">
-                    {profileInitial}
-                  </div>
-                )}
+                <ProfileAvatar
+                  avatarUrl={profile.avatarUrl}
+                  initial={profileInitial}
+                  isOnline={profile.isOnline}
+                  name={profile.nickname}
+                  presenceDisplayStatus={profile.presenceDisplayStatus}
+                />
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
                     {t.profile.title}
                   </p>
-                  <h1 className="mt-0.5 truncate text-xl font-semibold tracking-normal text-ink sm:mt-1 sm:text-3xl">
-                    {profile.nickname}
-                  </h1>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2 sm:mt-1">
+                    <h1 className="truncate text-xl font-semibold tracking-normal text-ink sm:text-3xl">
+                      {profile.nickname}
+                    </h1>
+                    <ProfileAchievementBadgeStrip
+                      className="min-w-0 shrink-0"
+                      items={publicAchievements}
+                      limit={3}
+                      locale={locale}
+                    />
+                  </div>
                   {profile.isCoCreator ? (
                     <CoCreatorIdentityBadge className="mt-2" locale={locale} />
                   ) : null}
@@ -1620,28 +3074,15 @@ export function ProfileDashboardView({
                   profileId={profile.id}
                   relationship={dashboard.viewerRelationship}
                 />
-                <div className="flex items-center justify-between gap-3 border-t border-[#D6D5B2]/55 pt-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#1D1D1B]">
-                      {profileCharmProgress.current.icon}{" "}
-                      {profileCharmLevelLabel}
-                    </p>
-                    <p className="mt-0.5 text-xs font-medium text-[#7A8276]">
-                      {dashboard.charmScore} {mobileCopy.charm}
-                    </p>
-                  </div>
-                  <CharmGiftDialog
-                    isAuthenticated={isAuthenticated}
-                    locale={locale}
-                    recipientName={profile.nickname}
-                    recipientProfileId={profile.id}
-                    triggerClassName="bg-white/80 ring-1 ring-[#E6DEC6]"
-                  />
-                </div>
-                <RecentCharmGifts
-                  className="border-t border-[#D6D5B2]/45 pt-2"
-                  gifts={dashboard.recentCharmGifts}
-                  label={mobileCopy.recentGifts}
+                <CharmProgressPanel
+                  className="border-t border-[#D6D5B2]/55 pt-2"
+                  dashboard={dashboard}
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  recipientName={profile.nickname}
+                  recipientProfileId={profile.id}
+                  showGiftAction
+                  showRecentGifts
                 />
               </div>
             </div>

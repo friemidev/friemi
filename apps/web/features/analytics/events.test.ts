@@ -89,7 +89,7 @@ test("assertAnalyticsEventRequirements requires source surface for activity metr
   );
 });
 
-test("assertAnalyticsEventRequirements requires safe friend request context", () => {
+test("assertAnalyticsEventRequirements requires safe relationship request context", () => {
   assert.throws(() =>
     assertAnalyticsEventRequirements({
       name: "friend_request_sent",

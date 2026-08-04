@@ -27,7 +27,7 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
   const latestUpdate = updates[0];
 
   return (
-    <main className="relative isolate overflow-hidden bg-[#FEFFF9]">
+    <main className="relative isolate overflow-hidden bg-white">
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <header className="grid gap-7 rounded-[2rem] border border-[#D6D5B2] bg-white/[0.78] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] backdrop-blur sm:p-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div className="min-w-0">

@@ -9,7 +9,7 @@
   --friemi-palette-rose: #deaab3;
   --friemi-palette-ice: #deebff;
   --friemi-palette-meadow: #369758;
-  --friemi-palette-paper: #fefff9;
+  --friemi-palette-paper: #ffffff;
   --friemi-palette-outline: #8e8383;
   --friemi-palette-sand: #d6d5b2;
   --friemi-palette-danger: #b5301f;
@@ -22,7 +22,7 @@
   --friemi-rose-rgb: 222 170 179;
   --friemi-ice-rgb: 222 235 255;
   --friemi-meadow-rgb: 54 151 88;
-  --friemi-paper-rgb: 254 255 249;
+  --friemi-paper-rgb: 255 255 255;
   --friemi-outline-rgb: 142 131 131;
   --friemi-sand-rgb: 214 213 178;
   --friemi-danger-rgb: 181 48 31;
@@ -39,7 +39,7 @@
   --app-top-safe-area: env(safe-area-inset-top);
   --app-bottom-safe-area: env(safe-area-inset-bottom);
   --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
-  --app-mobile-nav-height: 5.15rem;
+  --app-mobile-nav-height: 4.35rem;
 }
 
 * {
@@ -48,14 +48,14 @@
 
 html {
   min-height: 100%;
-  background: var(--friemi-palette-paper);
+  background: #ffffff;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100%;
   margin: 0;
-  background: var(--friemi-palette-paper);
+  background: #ffffff;
   color: var(--friemi-palette-ink);
 }
 
@@ -168,8 +168,46 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: calc(6rem + var(--app-bottom-safe-area));
   }
 
+  .app-mobile-page-shell {
+    min-height: calc(100svh - var(--app-bottom-safe-area));
+    min-height: calc(100dvh - var(--app-bottom-safe-area));
+    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem));
+    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem));
+  }
+
+  /*
+   * Opt-in safe-area helpers for PageContainer (see its `mobileSafeTop` /
+   * `mobileSafeBottom` props): pages whose mobile header/nav is hidden
+   * need this clearance themselves instead of hand-rolling
+   * env(safe-area-inset-*) math per page. Not applied automatically to
+   * every page because some (e.g. profile) intentionally zero out
+   * PageContainer's own padding and defer to a nested
+   * .app-mobile-page-shell child instead — auto-applying here would
+   * double the padding on those.
+   */
+  .app-page-mobile-safe-top {
+    padding-top: calc(var(--app-top-safe-area) + var(--app-mobile-page-top-gap, 1rem)) !important;
+  }
+
+  .app-page-mobile-safe-bottom {
+    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)) !important;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) {
     padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.mobile-v23-lobby-detail) {
+    padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.mobile-v23-admin-priority) {
+    padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.werewolf-room-fullscreen) {
+    padding-bottom: 0;
+    overflow-x: hidden;
   }
 
   .app-layout-shell:has(.mobile-v23-home) > .app-header,
@@ -181,10 +219,22 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
+  .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
+  .app-layout-shell:has(.mobile-v23-admin-priority) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-admin-priority) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-create) > .app-header,
   .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
-  .app-layout-shell:has(.mobile-v23-create) [data-route-progress] {
+  .app-layout-shell:has(.mobile-v23-create) [data-route-progress],
+  .app-layout-shell:has(.werewolf-room-fullscreen) > .app-header,
+  .app-layout-shell:has(.werewolf-room-fullscreen) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.werewolf-room-fullscreen) [data-route-progress] {
     display: none;
+  }
+
+  html[data-friemi-activity-priority-editor-open="true"] .app-mobile-nav,
+  html[data-friemi-activity-priority-editor-open="true"] [data-mobile-scroll-progress],
+  html[data-friemi-activity-priority-editor-open="true"] [data-route-progress] {
+    display: none !important;
   }
 }
 
@@ -1271,5 +1321,108 @@ html[data-home-motion-ready="true"]
 
   .friemi-shimmer::after {
     opacity: 0;
+  }
+}
+
+/*
+ * Global flat UI pass.
+ * Keep the palette accents, but remove the old warm paper backgrounds,
+ * card shadows, and gradient fills from the application chrome.
+ */
+:where(
+  html,
+  body,
+  .app-layout-shell,
+  .app-mobile-page-shell,
+  .auth-page-shell,
+  .route-loading-shell
+) {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+:where(
+  [class*="bg-[linear-gradient"],
+  [class*="bg-[radial-gradient"],
+  [class*="bg-gradient-to-"],
+  [class*="[background-image:linear-gradient"],
+  [class*="[background-image:radial-gradient"],
+  [style*="linear-gradient"],
+  [style*="radial-gradient"],
+  .app-orientation-lock,
+  .app-orientation-lock__panel,
+  .friemi-alert-card,
+  .friemi-shimmer
+) {
+  background-image: none !important;
+}
+
+:where(
+  .text-white[class*="bg-[linear-gradient"],
+  .text-white[class*="bg-gradient-to-"]
+) {
+  background-color: var(--friemi-palette-forest) !important;
+}
+
+:where(*, *::before, *::after) {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+}
+
+:where([class*="shadow"], [class*="drop-shadow"]) {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+  filter: none !important;
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow) !important;
+}
+
+:where(
+  .app-orientation-lock__panel,
+  .app-orientation-lock__device,
+  .app-orientation-lock__hint,
+  .friemi-shimmer,
+  .co-creator-benefit-row:hover
+) {
+  box-shadow: none !important;
+}
+
+.friemi-shimmer::after {
+  display: none !important;
+}
+
+.home-hero-scrim {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(29, 29, 27, 0.76),
+      rgba(29, 29, 27, 0.38) 45%,
+      rgba(29, 29, 27, 0.12)
+    ),
+    linear-gradient(
+      180deg,
+      rgba(29, 29, 27, 0.2),
+      rgba(29, 29, 27, 0.72)
+    ) !important;
+}
+
+.home-hero-bottom-scrim {
+  background-image: linear-gradient(
+    0deg,
+    #1d1d1b,
+    rgba(29, 29, 27, 0)
+  ) !important;
+}
+
+@media (max-width: 767px) {
+  html:has(.werewolf-room-fullscreen),
+  body:has(.werewolf-room-fullscreen),
+  body:has(.werewolf-room-fullscreen) .app-layout-shell {
+    min-height: 100svh;
+    overflow: hidden;
+    background-color: #062a24 !important;
+    background-image: none !important;
   }
 }

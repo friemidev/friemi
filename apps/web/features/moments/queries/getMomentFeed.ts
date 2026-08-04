@@ -1,6 +1,7 @@
 import type { MomentVisibility, Prisma } from "@prisma/client";
 import { cache } from "react";
 import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import { getFollowRelationshipBuckets } from "@/features/follow/queries/followRelations";
 import { prisma } from "@/lib/prisma";
 
 const momentAuthorSelect = {
@@ -130,7 +131,11 @@ export type MomentFeedItemViewModel = {
   author: MomentFeedAuthorViewModel;
   content: string | null;
   visibility: MomentVisibility;
+  isAuthorFollowedByViewer: boolean;
+  isAuthorMutualFollow: boolean;
+  isOwnMoment: boolean;
   images: MomentFeedImageViewModel[];
+  giftCount: number;
   likeCount: number;
   commentCount: number;
   repostCount: number;
@@ -152,12 +157,23 @@ function mapAuthor(author: MomentFeedQueryResult["author"]) {
   };
 }
 
-function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
+function mapMoment(
+  moment: MomentFeedQueryResult,
+  giftCount = 0,
+  viewerProfileId: string | null = null,
+  followedProfileIds: ReadonlySet<string> = new Set<string>(),
+  mutualFollowProfileIds: ReadonlySet<string> = new Set<string>(),
+): MomentFeedItemViewModel {
+  const isOwnMoment = viewerProfileId === moment.author.id;
+
   return {
     id: moment.id,
     author: mapAuthor(moment.author),
     content: moment.content,
     visibility: moment.visibility,
+    isAuthorFollowedByViewer: followedProfileIds.has(moment.author.id),
+    isAuthorMutualFollow: mutualFollowProfileIds.has(moment.author.id),
+    isOwnMoment,
     images: moment.images.map((image) => ({
       id: image.id,
       url: image.url,
@@ -165,6 +181,7 @@ function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
       height: image.height,
       sortOrder: image.sortOrder,
     })),
+    giftCount,
     likeCount: moment.likeCount,
     commentCount: moment.commentCount,
     repostCount: moment.repostCount,
@@ -200,6 +217,33 @@ function mapMoment(moment: MomentFeedQueryResult): MomentFeedItemViewModel {
   };
 }
 
+async function getMomentGiftCountMap(momentIds: string[]) {
+  if (momentIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.charmGiftEvent.groupBy({
+    by: ["sourceContextId"],
+    where: {
+      sourceContextId: {
+        in: momentIds,
+      },
+      sourceSurface: "MOMENT",
+    },
+    _sum: {
+      quantity: true,
+    },
+  });
+
+  return new Map(
+    groups.flatMap((group) =>
+      group.sourceContextId
+        ? [[group.sourceContextId, group._sum.quantity ?? 0]]
+        : [],
+    ),
+  );
+}
+
 export async function getVisibleMomentWhere(
   momentId: string,
   viewerProfileId: string | null,
@@ -230,14 +274,21 @@ export async function getVisibleMomentWhere(
 
 export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
   const visibilityRules: Prisma.MomentWhereInput[] = [{ visibility: "PUBLIC" }];
+  let followedProfileIds = new Set<string>();
+  let mutualFollowProfileIds = new Set<string>();
 
   if (viewerProfileId) {
-    const friendIds = await getViewerFriendIds(viewerProfileId);
+    const buckets = await getFollowRelationshipBuckets(viewerProfileId);
+    followedProfileIds = new Set([
+      ...buckets.followingOnlyIds,
+      ...buckets.mutualFollowIds,
+    ]);
+    mutualFollowProfileIds = new Set(buckets.mutualFollowIds);
 
     visibilityRules.unshift({ authorId: viewerProfileId });
     visibilityRules.push({
       authorId: {
-        in: friendIds,
+        in: buckets.mutualFollowIds,
       },
       visibility: "FRIENDS",
     });
@@ -256,7 +307,19 @@ export const getMomentFeed = cache(async (viewerProfileId: string | null) => {
     select: getMomentFeedSelect(viewerProfileId),
   });
 
-  return moments.map(mapMoment);
+  const giftCountByMomentId = await getMomentGiftCountMap(
+    moments.map((moment) => moment.id),
+  );
+
+  return moments.map((moment) =>
+    mapMoment(
+      moment,
+      giftCountByMomentId.get(moment.id) ?? 0,
+      viewerProfileId,
+      followedProfileIds,
+      mutualFollowProfileIds,
+    ),
+  );
 });
 
 export const getMomentDetail = cache(
@@ -266,6 +329,16 @@ export const getMomentDetail = cache(
       select: getMomentFeedSelect(viewerProfileId, { commentTake: 100 }),
     });
 
-    return moment ? mapMoment(moment) : null;
+    if (!moment) {
+      return null;
+    }
+
+    const giftCountByMomentId = await getMomentGiftCountMap([moment.id]);
+
+    return mapMoment(
+      moment,
+      giftCountByMomentId.get(moment.id) ?? 0,
+      viewerProfileId,
+    );
   },
 );

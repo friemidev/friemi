@@ -4,6 +4,7 @@ import {
   detectActivityCoverMimeType,
   getActivityCoverStorageConfig,
   maxActivityCoverFileSize,
+  normalizeActivityCoverMimeType,
   uploadActivityCoverBuffer,
   type ActivityCoverStorageErrorCode,
 } from "@/lib/activity-cover-storage";
@@ -11,12 +12,6 @@ import { hasClerkKeys } from "@/lib/clerk";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const allowedMimeTypes = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-} as const;
 
 function uploadError(error: ActivityCoverStorageErrorCode, status: number) {
   return NextResponse.json({ error }, { status });
@@ -50,8 +45,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "MISSING_FILE" }, { status: 400 });
   }
 
-  if (!(file.type in allowedMimeTypes)) {
-    return NextResponse.json({ error: "UNSUPPORTED_FILE_TYPE" }, { status: 400 });
+  const uploadedMimeType = normalizeActivityCoverMimeType(file.type);
+
+  if (file.type && !uploadedMimeType) {
+    return NextResponse.json(
+      { error: "UNSUPPORTED_FILE_TYPE" },
+      { status: 400 },
+    );
   }
 
   if (file.size > maxActivityCoverFileSize) {
@@ -61,8 +61,14 @@ export async function POST(request: Request) {
   const fileBuffer = Buffer.from(await file.arrayBuffer());
   const detectedMimeType = detectActivityCoverMimeType(fileBuffer);
 
-  if (detectedMimeType !== file.type) {
-    return NextResponse.json({ error: "INVALID_IMAGE_CONTENT" }, { status: 400 });
+  if (
+    !detectedMimeType ||
+    (uploadedMimeType && detectedMimeType !== uploadedMimeType)
+  ) {
+    return NextResponse.json(
+      { error: "INVALID_IMAGE_CONTENT" },
+      { status: 400 },
+    );
   }
 
   const uploaded = await uploadActivityCoverBuffer(

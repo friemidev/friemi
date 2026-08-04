@@ -4,7 +4,10 @@ import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
 import { attachActivityFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { attachPublicEventFavoriteStates } from "@/features/favorites/queries/getViewerActivityFavorite";
 import { getActivityFriendSignalMap } from "@/features/friends/queries/getActivityFriendSignals";
-import { getViewerFriendIds } from "@/features/friends/queries/getViewerFriendIds";
+import {
+  getViewerFollowedProfileIds,
+  getViewerFriendIds,
+} from "@/features/friends/queries/getViewerFriendIds";
 import {
   getPublicEventCardViewModel,
   publicEventSelect,
@@ -129,6 +132,7 @@ type ActivityLobbyQueryContext = {
   accessibleWhere: Prisma.ActivityWhereInput;
   activeVisibleWhere: Prisma.ActivityWhereInput;
   archivedWhere: Prisma.ActivityWhereInput;
+  mutualFollowIds: string[];
   friendIds: string[];
   ownTeamCardWhere: Prisma.ActivityWhereInput;
   teamCardWhere: Prisma.ActivityWhereInput;
@@ -344,7 +348,10 @@ function getLobbySwipeExcludeIds(excludeIds?: string[]) {
   }
 
   return {
-    activityIds: Array.from(activityIds).slice(0, activityLobbySwipeExcludeLimit),
+    activityIds: Array.from(activityIds).slice(
+      0,
+      activityLobbySwipeExcludeLimit,
+    ),
     publicEventIds: Array.from(publicEventIds).slice(
       0,
       activityLobbySwipeExcludeLimit,
@@ -483,7 +490,7 @@ async function getLobbySwipePublicEventActivityPageUncached(
     ? await decorateLobbyActivities(
         teamCards,
         viewerProfileId,
-        await getViewerFriendIds(viewerProfileId),
+        await getViewerFollowedProfileIds(viewerProfileId),
       )
     : teamCards;
   const publicEventActivities = cardsWithFavoriteState.map(
@@ -651,7 +658,8 @@ function buildLobbyPriorityFeed({
 
 async function getLobbyQueryContext(
   viewerProfileId: string,
-  friendIds: string[],
+  mutualFollowIds: string[],
+  followedProfileIds: string[] = mutualFollowIds,
 ): Promise<ActivityLobbyQueryContext> {
   const now = new Date();
   const visibleWhere = getVisibleActivityWhere({
@@ -699,7 +707,7 @@ async function getLobbyQueryContext(
               },
             },
           },
-          ...buildPrivateActivityFriendAccessWhere(friendIds),
+          ...buildPrivateActivityFriendAccessWhere(mutualFollowIds),
         ],
       },
     ],
@@ -713,7 +721,8 @@ async function getLobbyQueryContext(
     accessibleWhere,
     activeVisibleWhere,
     archivedWhere,
-    friendIds,
+    mutualFollowIds,
+    friendIds: followedProfileIds,
     ownTeamCardWhere,
     teamCardWhere,
     visibleWhere,
@@ -731,12 +740,21 @@ export async function getActivityLobbyFeedPage(
     status?: ActivityLobbyFeedStatus;
   } = {},
 ): Promise<ActivityLobbyFeedPage> {
-  const context =
-    options.context ??
-    (await getLobbyQueryContext(
+  let context = options.context;
+
+  if (!context) {
+    const [mutualFollowIds, followedProfileIds] = await Promise.all([
+      getViewerFriendIds(viewerProfileId),
+      getViewerFollowedProfileIds(viewerProfileId),
+    ]);
+
+    context = await getLobbyQueryContext(
       viewerProfileId,
-      await getViewerFriendIds(viewerProfileId),
-    ));
+      mutualFollowIds,
+      followedProfileIds,
+    );
+  }
+
   const decorate = options.decorate ?? true;
   const status = options.status ?? "all";
   const requestedPage = options.page ?? 1;
@@ -1093,29 +1111,26 @@ async function getFriendJoinedLobbySection(context: ActivityLobbyQueryContext) {
 export async function getActivityLobbyInitial(
   viewerProfileId: string,
 ): Promise<ActivityLobbyViewModel> {
-  const sectionContext = await getLobbyQueryContext(viewerProfileId, []);
-  const friendIdsPromise = getViewerFriendIds(viewerProfileId);
-  const [
-    friendIds,
-    allActivityFeed,
-    openActivities,
-    createdActivities,
-    joinedActivities,
-  ] = await Promise.all([
-    friendIdsPromise,
-    friendIdsPromise.then((resolvedFriendIds) =>
-      getLobbyQueryContext(viewerProfileId, resolvedFriendIds).then(
-        (feedContext) =>
-          getActivityLobbyFeedPage(viewerProfileId, {
-            context: feedContext,
-            decorate: false,
-          }),
-      ),
-    ),
-    getOpenLobbySection(viewerProfileId, sectionContext),
-    getCreatedLobbySection(viewerProfileId, sectionContext),
-    getJoinedLobbySection(viewerProfileId, sectionContext),
+  const [mutualFollowIds, followedProfileIds] = await Promise.all([
+    getViewerFriendIds(viewerProfileId),
+    getViewerFollowedProfileIds(viewerProfileId),
   ]);
+  const sectionContext = await getLobbyQueryContext(viewerProfileId, [], []);
+  const feedContext = await getLobbyQueryContext(
+    viewerProfileId,
+    mutualFollowIds,
+    followedProfileIds,
+  );
+  const [allActivityFeed, openActivities, createdActivities, joinedActivities] =
+    await Promise.all([
+      getActivityLobbyFeedPage(viewerProfileId, {
+        context: feedContext,
+        decorate: false,
+      }),
+      getOpenLobbySection(viewerProfileId, sectionContext),
+      getCreatedLobbySection(viewerProfileId, sectionContext),
+      getJoinedLobbySection(viewerProfileId, sectionContext),
+    ]);
   const uniqueActivities = Array.from(
     new Map(
       [
@@ -1129,7 +1144,7 @@ export async function getActivityLobbyInitial(
   const decoratedActivities = await decorateLobbyActivities(
     uniqueActivities,
     viewerProfileId,
-    friendIds,
+    followedProfileIds,
   );
   const decoratedByKey = new Map(
     decoratedActivities.map((activity) => [
@@ -1173,8 +1188,15 @@ export async function getActivityLobbySection(
   viewerProfileId: string,
   sectionId: ActivityLobbySectionId,
 ) {
-  const friendIds = await getViewerFriendIds(viewerProfileId);
-  const context = await getLobbyQueryContext(viewerProfileId, friendIds);
+  const [mutualFollowIds, followedProfileIds] = await Promise.all([
+    getViewerFriendIds(viewerProfileId),
+    getViewerFollowedProfileIds(viewerProfileId),
+  ]);
+  const context = await getLobbyQueryContext(
+    viewerProfileId,
+    mutualFollowIds,
+    followedProfileIds,
+  );
   const activities =
     sectionId === "open"
       ? await getOpenLobbySection(viewerProfileId, context)
@@ -1235,9 +1257,7 @@ export async function getActivityLobby(
 
 async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
   const now = new Date();
-  const categoryWhere: Prisma.ActivityWhereInput = category
-    ? { category }
-    : {};
+  const categoryWhere: Prisma.ActivityWhereInput = category ? { category } : {};
   const publicTeamWhere: Prisma.ActivityWhereInput = {
     AND: [
       getVisibleActivityWhere({

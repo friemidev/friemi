@@ -91,12 +91,13 @@ export default async function WerewolfSeatPage({
     });
 
     if (activeRoom) {
-      const privateSeatPath = activeRoom.privateSeatToken
-        ? getGameToolPrivateSeatPath({
-            kind: activeRoom.kind,
-            privateSeatToken: activeRoom.privateSeatToken,
-          })
-        : null;
+      const privateSeatPath =
+        activeRoom.kind !== "WEREWOLF" && activeRoom.privateSeatToken
+          ? getGameToolPrivateSeatPath({
+              kind: activeRoom.kind,
+              privateSeatToken: activeRoom.privateSeatToken,
+            })
+          : null;
 
       redirect(
         withLocale(
@@ -134,6 +135,14 @@ export default async function WerewolfSeatPage({
     );
   const showPlayerFullScreenCard =
     seat.room.status === "IN_PROGRESS" && !isCurrentSeatJudge;
+  const roomHref = withLocale(
+    locale,
+    `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
+  );
+
+  if (!showPlayerFullScreenCard) {
+    redirect(roomHref);
+  }
 
   return (
     <>
@@ -142,8 +151,10 @@ export default async function WerewolfSeatPage({
         className={
           showPlayerFullScreenCard
             ? "werewolf-seat-mobile-fullscreen !max-w-none !px-0 !py-0 max-md:!fixed max-md:!inset-0 max-md:!m-0 max-md:!h-[100svh] max-md:!w-screen max-md:!overflow-hidden max-md:!bg-[#090A0C] md:px-4 md:pb-6 md:pt-4"
-            : "max-w-3xl pb-28 pt-4 sm:pb-12 sm:pt-7"
+            : "max-w-3xl sm:pb-12 sm:pt-7"
         }
+        mobileSafeBottom={!showPlayerFullScreenCard}
+        mobileSafeTop={!showPlayerFullScreenCard}
       >
         <WerewolfPrivateSeatCard
           allReady={allReady}
@@ -159,10 +170,7 @@ export default async function WerewolfSeatPage({
           roleKey={seat.roleKey as WerewolfRoleKey | null}
           roleAlignment={seat.roleAlignment}
           roomUpdatedAt={seat.room.updatedAt.toISOString()}
-          roomHref={withLocale(
-            locale,
-            `/game-tools/werewolf/rooms/${seat.roomId}${roomMemberQuery}`,
-          )}
+          roomHref={roomHref}
           roomState={roomState}
           roomStatus={seat.room.status}
           seatDisplayName={seat.displayName}

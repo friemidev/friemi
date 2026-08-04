@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
 import { Gift, Sparkles, X } from "lucide-react";
-import {
-  getActiveCharmGifts,
-  getCharmGiftLabel,
-} from "@/features/charm/charm";
+import { getActiveCharmGifts, getCharmGiftLabel } from "@/features/charm/charm";
 import {
   sendCharmGiftAction,
   type SendCharmGiftState,
@@ -19,9 +18,20 @@ import { cn } from "@/lib/utils";
 type CharmGiftDialogProps = {
   isAuthenticated: boolean;
   locale: string;
+  redirectPath?: string;
   recipientName: string;
   recipientProfileId: string;
+  sourceContextId?: string;
+  sourceSurface?:
+    | "PROFILE"
+    | "ACTIVITY"
+    | "MOMENT"
+    | "PLANET"
+    | "DIRECT_MESSAGE"
+    | "OTHER";
+  triggerAriaLabel?: string;
   triggerClassName?: string;
+  triggerContent?: ReactNode;
 };
 
 const initialGiftState: SendCharmGiftState = {};
@@ -92,13 +102,19 @@ function SendGiftSubmitButton({
 export function CharmGiftDialog({
   isAuthenticated,
   locale,
+  redirectPath,
   recipientName,
   recipientProfileId,
+  sourceContextId,
+  sourceSurface = "PROFILE",
+  triggerAriaLabel,
   triggerClassName,
+  triggerContent,
 }: CharmGiftDialogProps) {
   const copy = getGiftDialogCopy(locale);
   const gifts = useMemo(() => getActiveCharmGifts(), []);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [attemptId, setAttemptId] = useState("");
   const [selectedGiftId, setSelectedGiftId] = useState(gifts[0]?.id ?? "");
   const [state, formAction] = useActionState(
@@ -106,8 +122,19 @@ export function CharmGiftDialog({
     initialGiftState,
   );
   const router = useRouter();
-  const redirectPath = `/profile/${recipientProfileId}`;
+  const giftRedirectPath = redirectPath ?? `/profile/${recipientProfileId}`;
   const formError = state.attemptId === attemptId ? state.formError : undefined;
+  const triggerLabel = triggerAriaLabel ?? copy.sendGift;
+  const triggerInner = triggerContent ?? (
+    <>
+      <Gift className="h-4 w-4 shrink-0" />
+      {copy.sendGift}
+    </>
+  );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
@@ -143,14 +170,14 @@ export function CharmGiftDialog({
   if (!isAuthenticated) {
     return (
       <Link
-        href={getSignInHref(locale, redirectPath)}
+        href={getSignInHref(locale, giftRedirectPath)}
+        aria-label={triggerLabel}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
           triggerClassName,
         )}
       >
-        <Gift className="h-4 w-4 shrink-0" />
-        {copy.sendGift}
+        {triggerInner}
       </Link>
     );
   }
@@ -162,6 +189,7 @@ export function CharmGiftDialog({
   return (
     <>
       <button
+        aria-label={triggerLabel}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
           triggerClassName,
@@ -172,111 +200,129 @@ export function CharmGiftDialog({
         }}
         type="button"
       >
-        <Gift className="h-4 w-4 shrink-0" />
-        {copy.sendGift}
+        {triggerInner}
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#111210]/28 px-4 pb-4 pt-12 backdrop-blur-[2px] md:items-center md:pb-12">
-          <button
-            aria-label={copy.close}
-            className="absolute inset-0 cursor-default"
-            onClick={() => setOpen(false)}
-            type="button"
-          />
-          <div
-            aria-modal="true"
-            className="relative max-h-[calc(100dvh-2rem)] w-full max-w-[390px] overflow-hidden rounded-[1.5rem] bg-[#FEFFF9] shadow-[0_26px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E4DDBE]"
-            role="dialog"
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-[#ECE5CD] px-5 pb-4 pt-5">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 text-[17px] font-black leading-tight text-[#111210]">
-                  <Sparkles className="h-4 w-4 text-[#A57AEB]" />
-                  {copy.title}
-                </p>
-                <p className="mt-1 truncate text-xs font-bold text-[#7A8276]">
-                  {copy.to} {recipientName}
-                </p>
-              </div>
+      {open && mounted
+        ? createPortal(
+            <div className="fixed inset-0 z-[180] flex items-end justify-center bg-[#111210]/28 px-4 pb-4 pt-12 backdrop-blur-[2px] md:items-center md:pb-12">
               <button
                 aria-label={copy.close}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+                className="absolute inset-0 cursor-default"
                 onClick={() => setOpen(false)}
                 type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form
-              action={formAction}
-              className="grid max-h-[calc(100dvh-8.5rem)] gap-4 overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <input name="attemptId" type="hidden" value={attemptId} />
-              <input name="giftId" type="hidden" value={selectedGiftId} />
-              <input name="locale" type="hidden" value={locale} />
-              <input
-                name="recipientProfileId"
-                type="hidden"
-                value={recipientProfileId}
               />
-              <input name="redirectPath" type="hidden" value={redirectPath} />
+              <div
+                aria-modal="true"
+                className="relative max-h-[calc(100dvh-2rem)] w-full max-w-[390px] overflow-hidden rounded-[1.5rem] bg-[#FEFFF9] shadow-[0_26px_70px_rgba(17,18,16,0.22)] ring-1 ring-[#E4DDBE]"
+                role="dialog"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-[#ECE5CD] px-5 pb-4 pt-5">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-[17px] font-black leading-tight text-[#111210]">
+                      <Sparkles className="h-4 w-4 text-[#A57AEB]" />
+                      {copy.title}
+                    </p>
+                    <p className="mt-1 truncate text-xs font-bold text-[#7A8276]">
+                      {copy.to} {recipientName}
+                    </p>
+                  </div>
+                  <button
+                    aria-label={copy.close}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#1D1D1B] ring-1 ring-[#ECE6D5] transition active:scale-95"
+                    onClick={() => setOpen(false)}
+                    type="button"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {gifts.map((gift) => {
-                  const selected = selectedGiftId === gift.id;
+                <form
+                  action={formAction}
+                  className="grid max-h-[calc(100dvh-8.5rem)] gap-4 overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <input name="attemptId" type="hidden" value={attemptId} />
+                  <input name="giftId" type="hidden" value={selectedGiftId} />
+                  <input name="locale" type="hidden" value={locale} />
+                  <input
+                    name="sourceSurface"
+                    type="hidden"
+                    value={sourceSurface}
+                  />
+                  {sourceContextId ? (
+                    <input
+                      name="sourceContextId"
+                      type="hidden"
+                      value={sourceContextId}
+                    />
+                  ) : null}
+                  <input
+                    name="recipientProfileId"
+                    type="hidden"
+                    value={recipientProfileId}
+                  />
+                  <input
+                    name="redirectPath"
+                    type="hidden"
+                    value={giftRedirectPath}
+                  />
 
-                  return (
+                  <div className="grid grid-cols-3 gap-2">
+                    {gifts.map((gift) => {
+                      const selected = selectedGiftId === gift.id;
+
+                      return (
+                        <button
+                          aria-pressed={selected}
+                          className={cn(
+                            "grid min-h-[78px] min-w-0 content-center justify-items-center gap-1 rounded-lg border px-2 py-2 text-center transition active:scale-[0.98]",
+                            selected
+                              ? "border-[#156240] bg-[#F4FAF0] shadow-[0_10px_18px_rgba(21,98,64,0.10)]"
+                              : "border-[#E6DEC6] bg-white/72",
+                          )}
+                          key={gift.id}
+                          onClick={() => setSelectedGiftId(gift.id)}
+                          type="button"
+                        >
+                          <span className="text-[22px] leading-none">
+                            {gift.emoji}
+                          </span>
+                          <span className="max-w-full truncate text-[11px] font-black text-[#1D1D1B]">
+                            {getCharmGiftLabel(gift, locale)}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#7A8276]">
+                            +{gift.charmValue}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {formError ? (
+                    <p className="text-xs font-bold text-[#9A2135]">
+                      {formError}
+                    </p>
+                  ) : null}
+
+                  <div className="flex items-center justify-end gap-2">
                     <button
-                      aria-pressed={selected}
-                      className={cn(
-                        "grid min-h-[78px] min-w-0 content-center justify-items-center gap-1 rounded-lg border px-2 py-2 text-center transition active:scale-[0.98]",
-                        selected
-                          ? "border-[#156240] bg-[#F4FAF0] shadow-[0_10px_18px_rgba(21,98,64,0.10)]"
-                          : "border-[#E6DEC6] bg-white/72",
-                      )}
-                      key={gift.id}
-                      onClick={() => setSelectedGiftId(gift.id)}
+                      className="inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-black text-[#4F574F] transition active:scale-95"
+                      onClick={() => setOpen(false)}
                       type="button"
                     >
-                      <span className="text-[22px] leading-none">
-                        {gift.emoji}
-                      </span>
-                      <span className="max-w-full truncate text-[11px] font-black text-[#1D1D1B]">
-                        {getCharmGiftLabel(gift, locale)}
-                      </span>
-                      <span className="text-[10px] font-bold text-[#7A8276]">
-                        +{gift.charmValue}
-                      </span>
+                      {copy.cancel}
                     </button>
-                  );
-                })}
+                    <SendGiftSubmitButton
+                      label={copy.send}
+                      pendingLabel={copy.sending}
+                    />
+                  </div>
+                </form>
               </div>
-
-              {formError ? (
-                <p className="text-xs font-bold text-[#9A2135]">
-                  {formError}
-                </p>
-              ) : null}
-
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  className="inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-black text-[#4F574F] transition active:scale-95"
-                  onClick={() => setOpen(false)}
-                  type="button"
-                >
-                  {copy.cancel}
-                </button>
-                <SendGiftSubmitButton
-                  label={copy.send}
-                  pendingLabel={copy.sending}
-                />
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

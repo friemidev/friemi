@@ -38,11 +38,8 @@ import {
   type ActivityTimeState,
 } from "@/features/activities/utils/activityFilters";
 import { getActivityCategoryIllustrationSrc } from "@/features/activities/utils/activityCategoryVisuals";
-import {
-  activityListEntryUpdatedEvent,
-  getActivityListFallbackHref,
-  readActivityListEntryHref,
-} from "@/features/navigation/activityListEntryReturn";
+import { consumeActivityListBackLoopGuard } from "@/features/activities/utils/activityBackLoopGuard";
+import { readPreviousAppRouteHref } from "@/features/navigation/appRouteHistory";
 import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -99,6 +96,30 @@ function getMobileActivitiesCopy(locale: string) {
   };
 }
 
+function isActivityDetailReferrer(referrer: string) {
+  if (!referrer || typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const url = new URL(referrer, window.location.origin);
+
+    if (url.origin !== window.location.origin) {
+      return false;
+    }
+
+    return (
+      /\/public-events\/[^/?#]+(?:[/?#]|$)/.test(url.pathname) ||
+      /\/lobby\/[^/?#]+(?:[/?#]|$)/.test(url.pathname) ||
+      /\/activities\/(?!new(?:[/?#]|$))[^/?#]+(?:[/?#]|$)/.test(
+        url.pathname,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function MobileActivitiesToolbar({
   cities,
   filters,
@@ -109,23 +130,9 @@ export function MobileActivitiesToolbar({
   const t = getCopy(locale);
   const copy = getMobileActivitiesCopy(locale);
   const activitiesHref = withLocale(locale, "/activities");
-  const fallbackBackHref = getActivityListFallbackHref(locale);
-  const [backHref, setBackHref] = useState(fallbackBackHref);
+  const backHref = withLocale(locale, "/activities/new");
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState(filters.keyword ?? "");
-
-  useEffect(() => {
-    function syncBackHref() {
-      setBackHref(readActivityListEntryHref(locale) ?? fallbackBackHref);
-    }
-
-    syncBackHref();
-    window.addEventListener(activityListEntryUpdatedEvent, syncBackHref);
-
-    return () => {
-      window.removeEventListener(activityListEntryUpdatedEvent, syncBackHref);
-    };
-  }, [fallbackBackHref, locale]);
 
   useEffect(() => {
     setKeyword(filters.keyword ?? "");
@@ -174,6 +181,28 @@ export function MobileActivitiesToolbar({
   function pushFilter(nextFilters: Partial<ActivityFilters>) {
     router.push(buildFilterHref(nextFilters));
     setOpen(false);
+  }
+
+  function handleBack() {
+    if (consumeActivityListBackLoopGuard()) {
+      router.replace(backHref);
+      return;
+    }
+
+    if (
+      isActivityDetailReferrer(readPreviousAppRouteHref() ?? "") ||
+      isActivityDetailReferrer(document.referrer)
+    ) {
+      router.replace(backHref);
+      return;
+    }
+
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push(backHref);
   }
 
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
@@ -258,7 +287,7 @@ export function MobileActivitiesToolbar({
           aria-label={copy.back}
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#111210] shadow-[0_10px_24px_rgba(17,18,16,0.06)] transition active:scale-95"
           type="button"
-          onClick={() => router.push(backHref)}
+          onClick={handleBack}
         >
           <ArrowLeft className="h-[1.12rem] w-[1.12rem]" />
         </button>

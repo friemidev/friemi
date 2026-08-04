@@ -9,6 +9,14 @@ import { cn } from "@/lib/utils";
 type UserProfilePreviewPopoverProps = {
   avatarUrl: string | null;
   children: React.ReactNode;
+  giftSourceContextId?: string;
+  giftSourceSurface?:
+    | "PROFILE"
+    | "ACTIVITY"
+    | "MOMENT"
+    | "PLANET"
+    | "DIRECT_MESSAGE"
+    | "OTHER";
   isGuest?: boolean;
   isAuthenticated?: boolean;
   locale: string;
@@ -43,6 +51,8 @@ function getCurrentRedirectPath(pathname: string, locale: string) {
 export function UserProfilePreviewPopover({
   avatarUrl,
   children,
+  giftSourceContextId,
+  giftSourceSurface,
   isGuest = false,
   isAuthenticated = false,
   locale,
@@ -280,6 +290,8 @@ export function UserProfilePreviewPopover({
             >
               <LazyUserProfilePreviewPopoverContent
                 avatarUrl={avatarUrl}
+                giftSourceContextId={giftSourceContextId}
+                giftSourceSurface={giftSourceSurface}
                 isGuest={isGuest}
                 isAuthenticated={isAuthenticated}
                 locale={locale}

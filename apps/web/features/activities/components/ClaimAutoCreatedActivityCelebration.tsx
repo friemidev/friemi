@@ -49,10 +49,10 @@ function getCelebrationCopy(locale: string) {
 
   return {
     close: "先看详情",
-    cta: "去编辑组局",
+    cta: "去编辑聚吧",
     eyebrow: "认领成功",
-    title: "这个组局已经变成你的了！",
-    description: "你现在可以自由编辑组局！",
+    title: "这个聚吧已经变成你的了！",
+    description: "你现在可以自由编辑聚吧！",
   };
 }
 

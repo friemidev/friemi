@@ -13,10 +13,14 @@ export function getVisibleNotificationWhere(
   where: Prisma.NotificationWhereInput = {},
 ): Prisma.NotificationWhereInput {
   return {
-    ...where,
-    type: {
-      notIn: notificationCenterExcludedTypes,
-    },
+    AND: [
+      where,
+      {
+        type: {
+          notIn: notificationCenterExcludedTypes,
+        },
+      },
+    ],
   };
 }
 
@@ -31,6 +35,7 @@ const notificationSelect = {
       nickname: true,
     },
   },
+  actorDisplayName: true,
   activity: {
     select: {
       id: true,
@@ -43,6 +48,13 @@ const notificationSelect = {
       id: true,
       content: true,
       createdAt: true,
+    },
+  },
+  charmGiftEvent: {
+    select: {
+      giftEmoji: true,
+      giftLabel: true,
+      totalCharmDelta: true,
     },
   },
   moment: {
@@ -75,6 +87,7 @@ export type NotificationViewModel = {
     id: string;
     nickname: string;
   } | null;
+  actorDisplayName: string | null;
   activity: {
     id: string;
     title: string;
@@ -83,6 +96,11 @@ export type NotificationViewModel = {
     id: string;
     content: string;
     createdAt: string;
+  } | null;
+  charmGiftEvent: {
+    giftEmoji: string;
+    giftLabel: string;
+    totalCharmDelta: number;
   } | null;
   moment: {
     id: string;
@@ -108,6 +126,7 @@ function mapNotification(
     friendRequestId,
     actorActivityRole,
     actor: notification.actor,
+    actorDisplayName: notification.actorDisplayName,
     activity: notification.activity
       ? {
           id: notification.activity.id,
@@ -121,6 +140,7 @@ function mapNotification(
           createdAt: notification.activityAnnouncement.createdAt.toISOString(),
         }
       : null,
+    charmGiftEvent: notification.charmGiftEvent,
     moment: notification.moment
       ? {
           id: notification.moment.id,
@@ -159,37 +179,6 @@ export async function getNotificationCenter(profileId: string) {
     getUnreadNotificationCount(profileId),
   ]);
 
-  const friendRequestActorIds = Array.from(
-    new Set(
-      notifications
-        .filter(
-          (notification) =>
-            notification.type === "FRIEND_REQUEST" && notification.actor?.id,
-        )
-        .map((notification) => notification.actor!.id),
-    ),
-  );
-
-  const pendingFriendRequests =
-    friendRequestActorIds.length > 0
-      ? await prisma.friendRequest.findMany({
-          where: {
-            receiverId: profileId,
-            requesterId: {
-              in: friendRequestActorIds,
-            },
-            status: "PENDING",
-          },
-          select: {
-            id: true,
-            requesterId: true,
-          },
-        })
-      : [];
-
-  const pendingFriendRequestIdByRequesterId = new Map(
-    pendingFriendRequests.map((request) => [request.requesterId, request.id]),
-  );
   const notificationActorActivityPairs = notifications
     .filter(
       (notification) => notification.actor?.id && notification.activity?.id,
@@ -242,10 +231,7 @@ export async function getNotificationCenter(profileId: string) {
 
       return mapNotification(
         notification,
-        notification.type === "FRIEND_REQUEST" && notification.actor?.id
-          ? (pendingFriendRequestIdByRequesterId.get(notification.actor.id) ??
-              null)
-          : null,
+        null,
         actorActivityRole,
       );
     }),

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { writeActivityListBackLoopGuard } from "@/features/activities/utils/activityBackLoopGuard";
+import { getDetailSourceForCurrentTarget } from "@/features/navigation/contextualDetailReturn";
 import { cn } from "@/lib/utils";
 
 type ActivityHistoryBackButtonProps = {
@@ -10,6 +12,25 @@ type ActivityHistoryBackButtonProps = {
   className?: string;
   fallbackHref: string;
 };
+
+const activityDetailReturnSourceStorageKey =
+  "friemi:activity-detail-return-source";
+
+function clearStoredActivityDetailReturnSource() {
+  try {
+    window.sessionStorage.removeItem(activityDetailReturnSourceStorageKey);
+  } catch {
+    // Ignore unavailable storage in embedded or private contexts.
+  }
+}
+
+function markActivityListBackLoopGuard() {
+  const sourceContext = getDetailSourceForCurrentTarget();
+
+  if (sourceContext?.sourceKey === "activity_list") {
+    writeActivityListBackLoopGuard(sourceContext.sourceHref);
+  }
+}
 
 export function ActivityHistoryBackButton({
   ariaLabel,
@@ -25,12 +46,15 @@ export function ActivityHistoryBackButton({
       className={cn(className)}
       type="button"
       onClick={() => {
+        markActivityListBackLoopGuard();
+        clearStoredActivityDetailReturnSource();
+
         if (window.history.length > 1) {
           router.back();
           return;
         }
 
-        router.push(fallbackHref);
+        router.replace(fallbackHref);
       }}
     >
       {children}

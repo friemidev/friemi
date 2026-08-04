@@ -12,7 +12,7 @@ import {
 } from "@/features/activities/components/MobileLobbyV23View";
 import {
   createEmptyActivityLobbyFeedPage,
-  getActivityLobby,
+  getActivityLobbyInitial,
   getActivityLobbyPreview,
   getLobbySwipePublicEventActivities,
 } from "@/features/activities/queries/getActivityLobby";
@@ -192,7 +192,7 @@ export default async function ActivityLobbyPage({
 
   const [lobby, swipeActivities] = await Promise.all([
     perf.measure("lobby.initialData", () =>
-      getActivityLobby(profile.id).catch((error: unknown) => {
+      getActivityLobbyInitial(profile.id).catch((error: unknown) => {
         console.error("Failed to load activity lobby", error);
 
         return {
@@ -246,16 +246,13 @@ export default async function ActivityLobbyPage({
           ...lobby.joinedActivities,
           ...lobby.createdActivities,
         ]}
-        friendActivities={[
-          ...lobby.friendJoinedActivities,
-          ...lobby.friendHostedActivities,
-        ]}
         initialCategoryFilter={initialCategoryFilter}
         initialFreeOnly={initialFreeOnly}
         isSignedIn
         locale={locale}
         mineActivities={[...lobby.createdActivities, ...lobby.joinedActivities]}
         swipeActivities={swipeActivities}
+        viewerProfileId={profile.id}
       />
       <PageContainer className="hidden space-y-6 py-5 sm:space-y-8 sm:py-8 md:block">
         <ActivityLobbyView

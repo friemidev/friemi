@@ -40,7 +40,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       {
         title: "我们收集的信息",
         body: [
-          "账号信息：邮箱、昵称、头像、第三方登录标识、Friemi 用户 ID、好友号。",
+          "账号信息：邮箱、昵称、头像、第三方登录标识、Friemi 用户 ID、个人码。",
           "联系方式：用户主动填写的联系邮箱、手机号、微信号等，用于报名联系、账号绑定和活动沟通。",
           "用户生成内容：用户发布或参与的活动、组局标题、描述、时间、地点、费用、封面、报名记录、公告、举报和消息内容。",
           "设备和技术信息：App 版本、平台、语言、时区、user agent、设备标识、推送 token 和最近活跃时间。iOS 推送仅在对应能力上线并获得授权后收集。",
@@ -53,7 +53,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
         body: [
           "用于创建和管理账号、识别登录用户、展示个人资料和维护账号安全。",
           "用于展示活动和组局、处理报名、管理参与者、发送活动公告、消息和通知。",
-          "用于好友、私信、报名审核、举报处理、反滥用、安全风控和客服支持。",
+          "用于关注关系、私信、报名审核、举报处理、反滥用、安全风控和客服支持。",
           "用于排查故障、分析产品使用情况、优化活动推荐、页面体验和移动端稳定性。",
         ],
       },
@@ -69,7 +69,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
         title: "权限和设备能力",
         body: [
           "当前 iOS 版本不主动申请相机、定位或相册权限。若未来上线扫码、附近活动、签到校验或原生图片选择能力，我们会在用户触发对应功能时再请求权限，并说明具体用途。",
-          "通知权限只会用于报名审核、好友请求、消息和活动更新等 Friemi 相关提醒。用户可以在系统设置中关闭通知。",
+          "通知权限只会用于报名审核、关注提醒、消息和活动更新等 Friemi 相关提醒。用户可以在系统设置中关闭通知。",
         ],
       },
       {
@@ -102,7 +102,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       {
         title: "Information we collect",
         body: [
-          "Account information such as email, nickname, avatar, third-party sign-in identifiers, Friemi user ID, and friend code.",
+          "Account information such as email, nickname, avatar, third-party sign-in identifiers, Friemi user ID, and Friemi ID.",
           "Contact information users provide, including contact email, phone number, or WeChat ID.",
           "User content such as activities, group plans, descriptions, times, locations, fees, cover images, signup records, announcements, reports, and messages.",
           "Device and technical data such as app version, platform, locale, timezone, user agent, device ID, push token, and last seen time when related mobile features are enabled.",
@@ -112,7 +112,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       {
         title: "How we use information",
         body: [
-          "To provide authentication, account management, profile display, activities, signups, messages, notifications, friends, reporting, moderation, security, support, troubleshooting, and product analytics.",
+          "To provide authentication, account management, profile display, activities, signups, messages, notifications, follows, reporting, moderation, security, support, troubleshooting, and product analytics.",
           "Friemi does not sell personal information and does not use user data for cross-app or cross-site advertising tracking.",
         ],
       },
@@ -145,7 +145,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       {
         title: "Informations collectees",
         body: [
-          "Informations de compte : e-mail, pseudo, avatar, identifiants de connexion tiers, identifiant Friemi et code ami.",
+          "Informations de compte : e-mail, pseudo, avatar, identifiants de connexion tiers et ID Friemi.",
           "Coordonnees fournies par l'utilisateur : e-mail de contact, telephone ou identifiant WeChat.",
           "Contenu utilisateur : activites, sorties, descriptions, horaires, lieux, frais, images, inscriptions, annonces, signalements et messages.",
           "Donnees techniques : version de l'app, plateforme, langue, fuseau horaire, user agent, identifiant d'appareil, token de notification et derniere activite lorsque ces fonctions sont activees.",
@@ -154,7 +154,7 @@ const privacyCopy: Record<string, PrivacyCopy> = {
       {
         title: "Utilisation des donnees",
         body: [
-          "Nous utilisons ces informations pour l'authentification, les profils, les activites, les inscriptions, les messages, les notifications, les amis, la moderation, la securite, le support, le diagnostic et l'amelioration du produit.",
+          "Nous utilisons ces informations pour l'authentification, les profils, les activites, les inscriptions, les messages, les notifications, les abonnements, la moderation, la securite, le support, le diagnostic et l'amelioration du produit.",
           "Friemi ne vend pas les informations personnelles et ne les utilise pas pour du suivi publicitaire entre apps ou sites.",
         ],
       },
@@ -192,7 +192,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
   const copy = privacyCopy[locale] ?? privacyCopy["zh-CN"];
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9]">
+    <main className="min-h-screen bg-white">
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <header className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] sm:p-8">
           <BrandLockup size="sm" />

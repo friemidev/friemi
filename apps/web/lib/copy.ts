@@ -31,31 +31,31 @@ export const localeMeta: Record<
 const copy = {
   "zh-CN": {
     nav: {
-      home: "首页",
+      home: "发现",
       activities: "活动",
-      lobby: "组队大厅",
-      lobbyShort: "组局",
-      hallShort: "大厅",
-      newActivity: "我要组局",
+      lobby: "聚吧",
+      lobbyShort: "聚吧",
+      hallShort: "发现",
+      newActivity: "聚聚",
       newActivityShort: "组局",
       messages: "消息",
       messagesShort: "消息",
-      footprints: "足迹",
-      footprintsShort: "足迹",
+      footprints: "世界",
+      footprintsShort: "世界",
       planet: "星球",
       planetShort: "星球",
       profile: "个人空间",
-      profileShort: "主页",
+      profileShort: "我的",
       signIn: "登录",
     },
     accountMenu: {
       fallbackName: "Friemi 用户",
       openMenu: "打开账号菜单",
       profile: "个人空间",
-      friends: "好友",
-      friendsDescription: "处理好友申请和好友列表",
+      friends: "关系",
+      friendsDescription: "查看关注和互关",
       messages: "消息",
-      messagesDescription: "查看好友私聊和活动前沟通",
+      messagesDescription: "查看聊天和活动前沟通",
       notifications: "通知中心",
       notificationsDescription: "查看报名、审核和活动变更",
       analyticsOps: "数据后台",
@@ -87,6 +87,12 @@ const copy = {
       placeholder: "搜索活动、组局或用户",
       mobileOpen: "打开全站搜索",
       submit: "搜索",
+      back: "返回",
+      recommendationsUsersTitle: "感兴趣用户",
+      recommendationsHangoutsTitle: "感兴趣聚吧",
+      recommendationsActivitiesTitle: "感兴趣活动",
+      recommendationsEmptyTitle: "暂无推荐",
+      recommendationsEmptyDescription: "稍后会展示更多可探索的内容。",
       emptyTitle: "输入关键词开始搜索",
       emptyDescription: "试试活动名称、地点、组局或用户。",
       noResultsTitle: "没有找到结果",
@@ -120,19 +126,19 @@ const copy = {
         "下面是命中部分关键词的活动与组局，适合继续逛逛。",
       publicEventsTitle: "活动",
       merchantsTitle: "商家",
-      usersTitle: "好友",
+      usersTitle: "用户",
       noActivityResults: "没有匹配的组局。",
       noMainResults: "没有匹配的活动或组局。",
       noPublicEventResults: "没有匹配的活动。",
       noMerchantResults: "没有匹配的商家。",
       noUserResults: "没有匹配的用户。",
       usersPreviewHint: (shown: number, total: number) =>
-        `先显示前 ${shown} 位好友结果，共 ${total} 位。`,
+        `先显示前 ${shown} 位用户结果，共 ${total} 位。`,
       expandUserResults: (shown: number, total: number) =>
-        `查看更多好友 ${shown}/${total}`,
-      collapseUserResults: "收起好友",
+        `查看更多用户 ${shown}/${total}`,
+      collapseUserResults: "收起用户",
       userResultsLimited: (shown: number, total: number) =>
-        `已加载 ${shown} 位好友结果，共 ${total} 位。可以换更具体的昵称或好友号继续缩小范围。`,
+        `已加载 ${shown} 位用户结果，共 ${total} 位。可以换更具体的昵称或个人码继续缩小范围。`,
       endedResultsToggleLabel: "已结束",
       showEndedResults: "显示已结束",
       hideEndedResults: "隐藏已结束",
@@ -143,13 +149,13 @@ const copy = {
       onlyEndedResultsTitle: "当前只找到已结束内容",
       onlyEndedResultsDescription: (count: number) =>
         `默认隐藏了 ${count} 个已结束的活动或组局。你可以打开历史结果继续查看。`,
-      friendCodeLabel: "好友号",
-      friendCodeMissing: "暂无好友号",
-      addFriend: "加好友",
+      friendCodeLabel: "个人码",
+      friendCodeMissing: "暂无个人码",
+      addFriend: "关注",
       addingFriend: "发送中",
       requestSent: "已发送",
-      alreadyFriends: "已是好友",
-      pendingFriendRequest: "已申请",
+      alreadyFriends: "互关",
+      pendingFriendRequest: "已关注",
       selfUser: "这是你",
       openUserProfile: (name: string) => `查看 ${name} 的主页`,
       merchantActivityCount: (count: number) => `${count} 个可展示活动`,
@@ -177,7 +183,7 @@ const copy = {
     },
     activities: {
       title: "发现活动",
-      description: "最近想去哪儿？在这里发现活动，和朋友、新搭子一起组队出发。",
+      description: "最近想去哪儿？在这里发现活动，和朋友、新搭子一起出发。",
       scopeTitle: "当前展示范围",
       scopeDescription:
         "默认优先展示进行中和即将开始的活动，已结束的会排在后面。",
@@ -186,7 +192,7 @@ const copy = {
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
       viewToggleLabel: "切换活动视图",
-      cardView: "卡片",
+      cardView: "全部",
       dateView: "按日期",
       agendaLongRunningTitle: "长期活动",
       agendaToday: "今天",
@@ -199,18 +205,17 @@ const copy = {
     },
     activityLobby: {
       eyebrow: "你的局，你的搭子，你的下一场",
-      title: "组队大厅",
-      description: "在这里发现活动，和朋友、新搭子一起组队出发",
-      emptyTitle: "你的组队大厅还空着",
+      title: "聚吧",
+      description: "在这里发现活动，和朋友、新搭子一起出发",
+      emptyTitle: "你的聚吧还空着",
       emptyDescription:
-        "公园？逛展？还是看电影？先组个局，去逛逛活动，再加几个好友吧。",
+        "公园、逛展、看电影，先发起一场聚吧，再关注几个感兴趣的人。",
       emptySectionTitle: "从这里开始吧",
       openTitle: "开放局",
-      openDescription: "所有登录用户都能看到的公开组局，适合找新搭子。",
+      openDescription: "所有登录用户都能看到的公开聚吧，适合找新搭子。",
       openEmptyDescription: "暂时没有开放局。可以先从活动详情页发起一个。",
       createdTitle: "我发起的",
-      createdDescription:
-        "公园？逛展？还是看电影？先来组个局，带上搭子一起出发吧！",
+      createdDescription: "公园、逛展、看电影，先聚起来，带上搭子一起出发。",
       createdEmptyDescription: "还没有你发起的局。想去哪儿，先把人约起来再说。",
       joinedTitle: "我参加的",
       joinedDescription: "wow~ 这些都是你参加的活动",
@@ -220,14 +225,14 @@ const copy = {
       favoriteDescription: "这些有趣的活动正等你参与呢",
       favoriteEmptyDescription:
         "还没收藏任何活动？先把让你心动的那些留在这里。",
-      friendHostedTitle: "好友发起的",
-      friendHostedDescription: "朋友们在等你加入哦～",
+      friendHostedTitle: "关注的人发起",
+      friendHostedDescription: "你关注的人发起的聚吧会显示在这里。",
       friendHostedEmptyDescription:
-        "先去加几个好友吧。等他们一组局，你就能第一时间看到。",
-      friendJoinedTitle: "好友参加的",
-      friendJoinedDescription: "朋友最近去哪儿玩了？说不定下一场就能一起出发。",
+        "关注几个感兴趣的人。他们发起聚吧时，这里会第一时间显示。",
+      friendJoinedTitle: "关注的人参加",
+      friendJoinedDescription: "你关注的人参加的聚吧会显示在这里。",
       friendJoinedEmptyDescription:
-        "朋友最近还没参加什么活动。先去发现页看看，有没有想一起去的。",
+        "你关注的人最近还没参加聚吧。先去发现页看看，有没有想一起去的。",
     },
     activityFilters: {
       title: "搜索和筛选",
@@ -251,8 +256,8 @@ const copy = {
       allCities: "全部城市",
       allDateRanges: "全部日期",
       allRelations: "全部关系",
-      relationFriendHosted: "好友发起",
-      relationFriendJoined: "好友参加",
+      relationFriendHosted: "关注的人发起",
+      relationFriendJoined: "关注的人参加",
       relationMine: "我发起的",
       allTypes: "全部形式",
       allTimeStates: "全部进度",
@@ -310,7 +315,7 @@ const copy = {
       price: "费用",
       approvalRequired: "报名后需发起人确认",
       approvalAuto: "报名后自动确认",
-      editActivity: "编辑组局",
+      editActivity: "编辑聚吧",
       locationMapTitle: "活动地点",
       hiddenAddressNotice: "报名后显示完整地址。",
       hiddenAddressApprovalNotice: "审核通过后显示完整地址。",
@@ -322,30 +327,30 @@ const copy = {
       openGoogleMaps: "打开 Google Maps",
     },
     activityFriendSignal: {
-      title: "好友也在",
-      cardSummary: (count: number) => `${count} 位好友已报名`,
+      title: "关注的人也在",
+      cardSummary: (count: number) => `${count} 位关注的人已报名`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} 位好友已报名`;
+          return `${count} 位关注的人已报名`;
         }
 
         if (count > names.length) {
-          return `${names.join("、")} 等 ${count} 位好友已报名`;
+          return `${names.join("、")} 等 ${count} 位关注的人已报名`;
         }
 
         return `${names.join("、")} 已报名`;
       },
       showMore: "查看更多",
-      showAllLabel: (count: number) => `查看全部 ${count} 位好友`,
+      showAllLabel: (count: number) => `查看全部 ${count} 位关注的人`,
       showLess: "收起",
     },
     activityShare: {
       title: "分享活动",
       activityTitle: "活动分享",
-      teamTitle: "组队分享",
-      description: "复制关键信息，或下载带二维码的宣传图。",
-      activityDescription: "复制活动信息，下载带二维码的宣传图。",
-      teamDescription: "复制组队邀请，下载带二维码的宣传图。",
+      teamTitle: "聚吧分享",
+      description: "分享活动，或下载带二维码的宣传图。",
+      activityDescription: "分享活动，下载带二维码的宣传图。",
+      teamDescription: "分享聚吧邀请，下载带二维码的宣传图。",
       expand: "展开分享工具",
       collapse: "收起分享工具",
       copyTitle: "复制标题",
@@ -354,9 +359,9 @@ const copy = {
       copyPrice: "复制费用",
       copyLink: "复制链接",
       systemShare: "分享",
-      systemShareHint: "打开系统分享面板，把链接发给朋友或群。",
+      systemShareHint: "打开系统分享面板，发给朋友或群。",
       wechatShareHint: "微信内请点击右上角 ···，选择发送给朋友或分享到群。",
-      shareUnavailable: "当前环境无法直接打开分享面板，可以复制链接后发送。",
+      shareUnavailable: "当前环境无法直接打开分享面板，可以下载宣传图后发送。",
       closeShareHelp: "关闭分享提示",
       copied: "已复制",
       copyFailed: "复制失败，请手动选择文本。",
@@ -473,7 +478,7 @@ const copy = {
     },
     notifications: {
       title: "通知中心",
-      description: "活动、好友和评论的最新提醒都在这里。",
+      description: "活动、关注和评论的最新提醒都在这里。",
       mobileDescription: "未读通知会优先显示。",
       unreadCount: (count: number) => `${count} 条未读`,
       actionRequiredCount: (count: number) => `${count} 条需要处理`,
@@ -484,11 +489,11 @@ const copy = {
         unread: "未读",
         read: "已读",
         clearTitle: "当前没有未读通知",
-        clearDescription: "新的报名、好友申请和评论会自动出现在这里。",
+        clearDescription: "新的报名、关注和评论会自动出现在这里。",
       },
       categoryLabels: {
         participation: "报名",
-        social: "好友",
+        social: "关注",
         comment: "评论",
         message: "私信",
         activity: "活动",
@@ -497,7 +502,7 @@ const copy = {
       actorLabel: "来自",
       activityLabel: "关联",
       emptyTitle: "暂无通知",
-      emptyDescription: "有新的报名、评论或好友消息时，会显示在这里。",
+      emptyDescription: "有新的报名、评论或关注提醒时，会显示在这里。",
       emptyAction: "去发现活动",
       openActivity: "查看活动",
       openComments: "查看评论",
@@ -518,7 +523,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "报名成功",
-          body: (activityTitle: string) => `你已成功报名「${activityTitle}」。`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName}已报名「${activityTitle}」。`
+              : `你已成功报名「${activityTitle}」。`,
         },
         PARTICIPATION_CANCELLED: {
           title: "有人取消报名",
@@ -552,10 +560,15 @@ const copy = {
               ? `${actorName}在「${activityTitle}」发布了群公告：${content}`
               : `${actorName}在「${activityTitle}」发布了群公告。`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "签到成功",
+          body: (activityTitle: string) =>
+            `你已成功签到「${activityTitle}」。`,
+        },
         FRIEND_REQUEST: {
-          title: "新的好友申请",
+          title: "新的关注",
           body: (_activityTitle: string, actorName = "有人") =>
-            `${actorName}想添加你为好友。`,
+            `${actorName}关注了你。`,
         },
         ACTIVITY_COMMENTED: {
           title: "活动有新评论",
@@ -587,6 +600,11 @@ const copy = {
           body: (_activityTitle: string, actorName = "有人") =>
             `${actorName}转发了你的足迹。`,
         },
+        CHARM_GIFT_RECEIVED: {
+          title: "收到礼物",
+          body: (giftText: string, actorName = "有人") =>
+            `${actorName}送了你 ${giftText}。`,
+        },
         DIRECT_MESSAGE: {
           title: "有新的私信",
           body: (activityTitle: string, actorName = "有人") =>
@@ -601,17 +619,17 @@ const copy = {
     },
     activityOwner: {
       title: "发起人操作",
-      cancel: "取消组局",
+      cancel: "取消聚吧",
       cancelling: "取消中...",
-      cancelDescription: "取消后这场组局会停止报名，并从可参与列表中隐藏。",
-      cancelConfirm: "确定要取消这个组局吗？取消后用户将不能继续报名。",
-      cancelConfirmTitle: "确认取消组局？",
+      cancelDescription: "取消后这场聚吧会停止报名，并从可参与列表中隐藏。",
+      cancelConfirm: "确定要取消这个聚吧吗？取消后用户将不能继续报名。",
+      cancelConfirmTitle: "确认取消聚吧？",
       cancelConfirmDescription:
-        "取消后，这场组局会停止报名。已报名的用户仍能看到状态变化。",
+        "取消后，这场聚吧会停止报名。已报名的用户仍能看到状态变化。",
       cancelContextLabel: "即将取消",
       cancelConfirmBack: "再想想",
       cancelConfirmSubmit: "确认取消",
-      cancelledHint: "组局已取消，用户无法继续报名。",
+      cancelledHint: "聚吧已取消，用户无法继续报名。",
       endedHint: "活动已结束，不能再取消。",
       refreshError: "请稍后再试。",
       permissionError: "只有活动发起人或管理人可以取消这个活动。",
@@ -619,7 +637,7 @@ const copy = {
       endedError: "活动已结束，不能再取消。",
       conflictError: "活动状态已更新，请稍后再试。",
       failedError: "取消活动失败，请稍后重试。",
-      cancelStateKept: "取消未生效，组局状态已保留。",
+      cancelStateKept: "取消未生效，聚吧状态已保留。",
     },
     approval: {
       title: "报名审核",
@@ -640,28 +658,30 @@ const copy = {
       failedError: "审核报名失败，请稍后重试。",
     },
     newActivity: {
-      title: "我要组局",
-      description: "填写组局信息，约好时间地点，发布后就可以邀请大家加入。",
+      title: "聚聚",
+      description: "填写聚吧信息，约好时间地点，发布后就可以邀请大家加入。",
     },
     editActivity: {
       title: "编辑活动",
       description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人或管理人可以编辑这个活动。",
-      lockedTitle: "活动不可编辑",
-      lockedDescription: "已结束或已取消的活动不能继续编辑。",
+      lockedCancelledTitle: "活动已取消，无法编辑",
+      lockedCancelledDescription: "这个活动已经取消，不能继续修改。",
+      lockedEndedTitle: "活动已结束，无法编辑",
+      lockedEndedDescription: "这个活动已经结束，不能继续修改。",
     },
     profile: {
       title: "个人空间",
       emailFallback: "未绑定邮箱",
-      friendCodeLabel: "好友号",
-      copyFriendCode: "复制好友号",
+      friendCodeLabel: "个人码",
+      copyFriendCode: "复制个人码",
       friendCodeCopied: "已复制",
       nicknameLabel: "昵称",
       nicknamePlaceholder: "输入你的昵称",
       nicknameSetupTitle: "先设置昵称",
       nicknameSetupDescription:
-        "别人只会看到这个昵称和好友号，不会显示你的 Google 姓名或邮箱。",
+        "别人只会看到这个昵称和个人码，不会显示你的 Google 姓名或邮箱。",
       saveNickname: "保存昵称",
       savingNickname: "保存中...",
       nicknameError: "昵称不能为空，最多 24 个字。",
@@ -674,7 +694,7 @@ const copy = {
       wechatDialogDescription:
         "微信号只用于把你曾经通过游客报名留下的记录关联回当前账号。",
       wechatPrivacyHint:
-        "微信号不会展示在活动详情、组队详情、参与人列表或公开页面中。留空保存可以取消绑定。",
+        "微信号不会展示在活动详情、聚吧详情、参与人列表或公开页面中。留空保存可以取消绑定。",
       saveWechat: "保存微信号",
       savingWechat: "保存中...",
       wechatSaved: "微信号已保存",
@@ -706,13 +726,13 @@ const copy = {
       contactBindingWechatTaken: "这个微信号已被其他账号绑定。",
       close: "关闭",
       cancel: "取消",
-      createdCount: "我的组局",
+      createdCount: "我的聚吧",
       participationCount: "参加活动",
       errorTitle: "个人空间加载失败",
       errorDescription: "部分内容暂时无法加载，请稍后再试。",
       createdTitle: "发起的活动",
       createdDescription: "",
-      createdEmptyTitle: "暂无组局",
+      createdEmptyTitle: "暂无聚吧",
       createdEmptyDescription: "有活动后会显示在这里。",
       participationTitle: "参加的活动",
       participationDescription: "",
@@ -722,7 +742,7 @@ const copy = {
       favoriteEmptyTitle: "暂无收藏活动",
       favoriteEmptyDescription: "收藏活动后会显示在这里。",
       hiddenCreated: (limit: number, count: number) =>
-        `当前显示最近 ${limit} 个组局，另有 ${count} 个更早的内容暂未展示。`,
+        `当前显示最近 ${limit} 个聚吧，另有 ${count} 个更早的内容暂未展示。`,
       hiddenParticipation: (limit: number, count: number) =>
         `当前显示最近 ${limit} 条参与记录，另有 ${count} 条更早的记录暂未展示。`,
       hiddenFavorite: (limit: number, count: number) =>
@@ -774,24 +794,25 @@ const copy = {
       failedError: "取消报名失败，请稍后重试。",
     },
     form: {
-      basicInfo: "组局信息",
+      basicInfo: "聚吧信息",
       activityContent: "这次怎么约",
       coverImage: "封面图片",
       coverDefault: "使用默认封面",
-      coverImageHint: "上传后会展示在组局卡片和详情页顶部。",
-      coverFileHint: "支持 JPG、PNG、WebP，最大 4MB。",
+      coverImageHint: "上传后会展示在聚吧卡片和详情页顶部。",
+      coverFileHint: "支持常见图片格式，最大 4MB。",
       coverUpload: "上传封面",
+      coverTapToUpload: "点击上传封面",
       coverDropHere: "松开即可上传",
       coverUploading: "上传中...",
       coverRemove: "移除",
       coverUploadFailed: "封面上传失败，请稍后重试。",
-      coverTypeError: "只支持 JPG、PNG 或 WebP 图片。",
+      coverTypeError: "请上传常见图片格式。",
       coverSizeError: "图片不能超过 4MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
       coverStorageConfigError: "图片上传暂不可用，请稍后再试。",
       linkImportTitle: "从链接导入",
       linkImportDescription:
-        "如果你已经有活动页面，可以先解析链接，再把识别到的信息套用到组局表单。",
+        "如果你已经有活动页面，可以先解析链接，再把识别到的信息套用到聚吧表单。",
       linkImportToggleLabel: "从活动网址导入",
       linkImportUrlLabel: "活动网址",
       linkImportPlaceholder: "粘贴活动页面链接，Google 分享链接也可以试试",
@@ -824,20 +845,20 @@ const copy = {
         FETCH_FAILED: "链接解析失败，请稍后重试或手动填写。",
         UNAUTHORIZED: "请登录后再解析链接。",
       },
-      title: "组局标题",
+      title: "聚吧标题",
       titlePlaceholder: "例如：周五下班后桌游局",
-      description: "组局说明",
+      description: "聚吧说明",
       descriptionPlaceholder: "说明这次想怎么约、适合谁、需要注意什么",
       itinerary: "集合安排",
       itineraryPlaceholder:
         "18:30 集合\n19:00 一起入场或开始\n21:30 结束后自由交流",
-      type: "组局形式",
+      type: "聚吧形式",
       typeHint: "选择本地局或旅行搭子，发布后会影响列表标签。",
-      category: "组局主题",
+      category: "聚吧主题",
       categoryHint: "优先选择平台预设主题；没有合适选项时选“其他”。",
       otherCategory: "其他主题",
       otherCategoryPlaceholder: "例如：读书会、语言交换、摄影约拍",
-      otherCategoryHint: "会保存到组局说明中，方便参与者理解内容。",
+      otherCategoryHint: "会保存到聚吧说明中，方便参与者理解内容。",
       timeLocation: "集合时间和地点",
       city: "城市",
       destination: "目的地",
@@ -867,9 +888,9 @@ const copy = {
       endAtHint: "可选；填写时必须晚于开始时间。",
       visibilityTitle: "谁可以看到这个局",
       visibilityPublic: "开放局",
-      visibilityPublicHint: "会出现在组队大厅，登录用户都可以看到并申请加入。",
+      visibilityPublicHint: "会出现在聚吧大厅，登录用户都可以看到并申请加入。",
       visibilityPrivate: "私人局",
-      visibilityPrivateHint: "只对你的好友可见，适合先和熟人约局。",
+      visibilityPrivateHint: "只对与你互关的人可见，适合先和熟人约局。",
       sectionVisibilityTitle: "谁可以看",
       sectionVisibilityMobileTitle: "谁可以看",
       sectionVisibilityDescription: "公开范围与权限",
@@ -885,9 +906,9 @@ const copy = {
       previousStep: "上一步",
       nextStep: "下一步",
       peoplePrice: "人数和费用",
-      capacityLimitToggle: "限制组局人数",
+      capacityLimitToggle: "限制聚吧人数",
       capacityLimitHint: "默认不限制人数；需要控制名额时再开启。",
-      capacity: "组局人数上限",
+      capacity: "聚吧人数上限",
       capacityPlaceholder: "例如：8",
       minParticipants: "最少成局人数",
       minParticipantsPlaceholder: "例如：4",
@@ -899,13 +920,13 @@ const copy = {
       ticketLabel: "按钮文案",
       ticketLabelPlaceholder: "立即抢票 / 立即预约",
       ticketHint:
-        "可选；填写后详情页会展示主要跳转按钮。组局报名仍在站内完成。",
+        "可选；填写后详情页会展示主要跳转按钮。聚吧报名仍在站内完成。",
       requiresApproval: "加入需要审核",
       requiresApprovalHint: "开启后，别人申请加入需要你审核。",
       copyTimeReminder:
-        "此为复制组局草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
+        "此为复制聚吧草稿，开始时间已清空，请重新选择；结束时间可留空，其余信息也请按新行程检查。",
       creating: "发布中...",
-      create: "发布组局",
+      create: "发布聚吧",
       saving: "保存中...",
       save: "保存修改",
       cancelEdit: "返回详情页",
@@ -970,17 +991,17 @@ const copy = {
   },
   en: {
     nav: {
-      home: "Home",
+      home: "Discover",
       activities: "Activities",
       lobby: "Lobby",
       lobbyShort: "Plans",
-      hallShort: "Hall",
+      hallShort: "Discover",
       newActivity: "Start a plan",
       newActivityShort: "Plan",
       messages: "Messages",
       messagesShort: "Chat",
-      footprints: "Trace",
-      footprintsShort: "Trace",
+      footprints: "World",
+      footprintsShort: "World",
       planet: "Planets",
       planetShort: "Planet",
       profile: "Profile",
@@ -991,10 +1012,10 @@ const copy = {
       fallbackName: "Friemi user",
       openMenu: "Open account menu",
       profile: "Profile",
-      friends: "Friends",
-      friendsDescription: "Requests and friend list",
+      friends: "Network",
+      friendsDescription: "Following and mutual follows",
       messages: "Messages",
-      messagesDescription: "Open friend chats and activity planning",
+      messagesDescription: "Open chats and activity planning",
       notifications: "Notifications",
       notificationsDescription: "Review joins, approvals, and activity changes",
       analyticsOps: "Data dashboard",
@@ -1023,12 +1044,18 @@ const copy = {
       title: "Search Friemi",
       description: "Find activity info, crews, friends, and merchants quickly.",
       inputLabel: "Search keyword",
-      placeholder: "Search activities, friend codes, nicknames, or merchants",
+      placeholder: "Search activities, Friemi IDs, nicknames, or merchants",
       mobileOpen: "Open site search",
       submit: "Search",
+      back: "Back",
+      recommendationsUsersTitle: "People you may like",
+      recommendationsHangoutsTitle: "Hangouts you may like",
+      recommendationsActivitiesTitle: "Activities you may like",
+      recommendationsEmptyTitle: "No recommendations yet",
+      recommendationsEmptyDescription: "More things to explore will appear soon.",
       emptyTitle: "Enter a keyword to search",
       emptyDescription:
-        "Try an activity name, place, friend code, nickname, or merchant name.",
+        "Try an activity name, place, Friemi ID, nickname, or merchant name.",
       noResultsTitle: "No results found",
       noResultsDescription: (query: string) => `No results matched "${query}".`,
       browseRecentActivities: "Browse recent activities",
@@ -1061,19 +1088,19 @@ const copy = {
         "These match part of your search and may still be worth checking.",
       publicEventsTitle: "Activity info",
       merchantsTitle: "Merchants",
-      usersTitle: "Friends",
+      usersTitle: "People",
       noActivityResults: "No matching crews.",
       noMainResults: "No matching activities or crews.",
       noPublicEventResults: "No matching activity info.",
       noMerchantResults: "No matching merchants.",
       noUserResults: "No matching users.",
       usersPreviewHint: (shown: number, total: number) =>
-        `Showing the first ${shown} friend results out of ${total}.`,
+        `Showing the first ${shown} people out of ${total}.`,
       expandUserResults: (shown: number, total: number) =>
-        `Show more friends ${shown}/${total}`,
-      collapseUserResults: "Show fewer friends",
+        `Show more people ${shown}/${total}`,
+      collapseUserResults: "Show fewer people",
       userResultsLimited: (shown: number, total: number) =>
-        `${shown} friend results loaded out of ${total}. Try a more specific nickname or friend code to narrow it down.`,
+        `${shown} people loaded out of ${total}. Try a more specific nickname or Friemi ID to narrow it down.`,
       endedResultsToggleLabel: "Ended",
       showEndedResults: "Show ended",
       hideEndedResults: "Hide ended",
@@ -1084,13 +1111,13 @@ const copy = {
       onlyEndedResultsTitle: "Only ended items were found",
       onlyEndedResultsDescription: (count: number) =>
         `${count} ended activit${count === 1 ? "y or crew was" : "ies or crews were"} hidden by default. Show history to keep browsing.`,
-      friendCodeLabel: "Friend code",
-      friendCodeMissing: "No friend code yet",
-      addFriend: "Add friend",
+      friendCodeLabel: "Friemi ID",
+      friendCodeMissing: "No Friemi ID yet",
+      addFriend: "Follow",
       addingFriend: "Sending",
       requestSent: "Sent",
-      alreadyFriends: "Friends",
-      pendingFriendRequest: "Pending",
+      alreadyFriends: "Mutual",
+      pendingFriendRequest: "Following",
       selfUser: "You",
       openUserProfile: (name: string) => `Open ${name}'s profile`,
       merchantActivityCount: (count: number) =>
@@ -1134,7 +1161,7 @@ const copy = {
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
       viewToggleLabel: "Switch activity view",
-      cardView: "Cards",
+      cardView: "All",
       dateView: "By date",
       agendaLongRunningTitle: "Long-running activities",
       agendaToday: "Today",
@@ -1152,7 +1179,7 @@ const copy = {
       description: "Keep up with the plans that matter most to you.",
       emptyTitle: "Your lobby is still empty",
       emptyDescription:
-        "Start a plan, browse activity info, or add a few friends.",
+        "Start a plan, browse activity info, or follow a few people.",
       emptySectionTitle: "Begin here",
       openTitle: "Open crews",
       openDescription:
@@ -1174,16 +1201,16 @@ const copy = {
         "Save crews you are interested in so they are easy to come back to later.",
       favoriteEmptyDescription:
         "Save a few crews you like and they will be waiting for you here.",
-      friendHostedTitle: "Hosted by friends",
+      friendHostedTitle: "Hosted by people you follow",
       friendHostedDescription:
-        "Add a few friends and the crews they host will start to appear here.",
+        "Plans started by people you follow will appear here.",
       friendHostedEmptyDescription:
-        "Add a few friends first, then you can quickly see the plans they start here.",
-      friendJoinedTitle: "Joined by friends",
+        "Follow a few people first. Plans they start will appear here.",
+      friendJoinedTitle: "Joined by people you follow",
       friendJoinedDescription:
-        "Crews your friends have joined will appear here so it is easier to join them.",
+        "Plans joined by people you follow will appear here.",
       friendJoinedEmptyDescription:
-        "Your friends have not joined any crews yet. Discover something fun and invite them along.",
+        "People you follow have not joined any plans yet. Discover something fun first.",
     },
     activityFilters: {
       title: "Search and filters",
@@ -1207,8 +1234,8 @@ const copy = {
       allCities: "All cities",
       allDateRanges: "All dates",
       allRelations: "All relationships",
-      relationFriendHosted: "Friend hosted",
-      relationFriendJoined: "Friend joined",
+      relationFriendHosted: "Followed host",
+      relationFriendJoined: "Followed joined",
       relationMine: "My plans",
       allTypes: "All formats",
       allTimeStates: "All timing",
@@ -1280,31 +1307,32 @@ const copy = {
       openGoogleMaps: "Open in Google Maps",
     },
     activityFriendSignal: {
-      title: "Friends joining",
+      title: "People you follow",
       cardSummary: (count: number) =>
-        `${count} friend${count === 1 ? "" : "s"} joined`,
+        `${count} ${count === 1 ? "person" : "people"} you follow joined`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} friend${count === 1 ? "" : "s"} joined`;
+          return `${count} ${count === 1 ? "person" : "people"} you follow joined`;
         }
 
         if (count > names.length) {
-          return `${names.join(", ")} and others joined (${count} friends)`;
+          return `${names.join(", ")} and others you follow joined (${count})`;
         }
 
         return `${names.join(", ")} joined`;
       },
       showMore: "More",
-      showAllLabel: (count: number) => `Show all ${count} friends`,
+      showAllLabel: (count: number) =>
+        `Show all ${count} ${count === 1 ? "person" : "people"}`,
       showLess: "Collapse",
     },
     activityShare: {
       title: "Share activity",
       activityTitle: "Activity sharing",
       teamTitle: "Crew sharing",
-      description: "Copy key details, or download a poster with a QR code.",
-      activityDescription: "Copy event details or download a QR poster.",
-      teamDescription: "Copy the crew invite or download a QR poster.",
+      description: "Share the activity or download a poster with a QR code.",
+      activityDescription: "Share the activity or download a QR poster.",
+      teamDescription: "Share the crew invite or download a QR poster.",
       expand: "Show sharing tools",
       collapse: "Hide sharing tools",
       copyTitle: "Copy title",
@@ -1313,11 +1341,11 @@ const copy = {
       copyPrice: "Copy cost",
       copyLink: "Copy link",
       systemShare: "Share",
-      systemShareHint: "Open the system share sheet and send this link.",
+      systemShareHint: "Open the system share sheet and send it.",
       wechatShareHint:
-        "In WeChat, use the top-right ··· menu to send this link.",
+        "In WeChat, use the top-right ··· menu to send it to friends or groups.",
       shareUnavailable:
-        "This browser cannot open the share sheet. Copy the link instead.",
+        "This browser cannot open the share sheet. Download the poster instead.",
       closeShareHelp: "Close sharing help",
       copied: "Copied",
       copyFailed: "Copy failed. Select the text manually.",
@@ -1438,7 +1466,7 @@ const copy = {
     },
     notifications: {
       title: "Notifications",
-      description: "Activity, friend, and comment updates appear here.",
+      description: "Activity, follow, and comment updates appear here.",
       mobileDescription: "Unread notifications appear first.",
       unreadCount: (count: number) => `${count} unread`,
       actionRequiredCount: (count: number) => `${count} need action`,
@@ -1450,11 +1478,11 @@ const copy = {
         read: "Read",
         clearTitle: "No unread notifications",
         clearDescription:
-          "New join requests, friend requests, and comments will appear here.",
+          "New join requests, follows, and comments will appear here.",
       },
       categoryLabels: {
         participation: "Joins",
-        social: "Friends",
+        social: "Follows",
         comment: "Comments",
         message: "Messages",
         activity: "Activity",
@@ -1464,7 +1492,7 @@ const copy = {
       activityLabel: "About",
       emptyTitle: "No notifications",
       emptyDescription:
-        "New joins, comments, and friend updates will appear here.",
+        "New joins, comments, and follow updates will appear here.",
       emptyAction: "Browse activities",
       openActivity: "Open activity",
       openComments: "Open comments",
@@ -1485,8 +1513,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "Join confirmed",
-          body: (activityTitle: string) =>
-            `You have joined "${activityTitle}".`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} joined "${activityTitle}".`
+              : `You have joined "${activityTitle}".`,
         },
         PARTICIPATION_CANCELLED: {
           title: "Someone left",
@@ -1524,10 +1554,15 @@ const copy = {
               ? `${actorName} posted an update in "${activityTitle}": ${content}`
               : `${actorName} posted an update in "${activityTitle}".`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "Check-in confirmed",
+          body: (activityTitle: string) =>
+            `Your check-in for "${activityTitle}" is confirmed.`,
+        },
         FRIEND_REQUEST: {
-          title: "New friend request",
+          title: "New follower",
           body: (_activityTitle: string, actorName = "Someone") =>
-            `${actorName} wants to add you as a friend.`,
+            `${actorName} started following you.`,
         },
         ACTIVITY_COMMENTED: {
           title: "New activity comment",
@@ -1558,6 +1593,11 @@ const copy = {
           title: "Moment reposted",
           body: (_activityTitle: string, actorName = "Someone") =>
             `${actorName} reposted your moment.`,
+        },
+        CHARM_GIFT_RECEIVED: {
+          title: "Gift received",
+          body: (giftText: string, actorName = "Someone") =>
+            `${actorName} sent you ${giftText}.`,
         },
         DIRECT_MESSAGE: {
           title: "New message",
@@ -1629,20 +1669,22 @@ const copy = {
       forbiddenTitle: "No edit access",
       forbiddenDescription:
         "Only the organizer or a manager can edit this plan.",
-      lockedTitle: "Plan cannot be edited",
-      lockedDescription: "Ended or cancelled plans can no longer be edited.",
+      lockedCancelledTitle: "This plan was cancelled",
+      lockedCancelledDescription: "Cancelled plans can no longer be edited.",
+      lockedEndedTitle: "This plan has ended",
+      lockedEndedDescription: "Ended plans can no longer be edited.",
     },
     profile: {
       title: "Profile",
       emailFallback: "No email connected",
-      friendCodeLabel: "Friend code",
-      copyFriendCode: "Copy friend code",
+      friendCodeLabel: "Friemi ID",
+      copyFriendCode: "Copy Friemi ID",
       friendCodeCopied: "Copied",
       nicknameLabel: "Nickname",
       nicknamePlaceholder: "Enter your nickname",
       nicknameSetupTitle: "Set your nickname",
       nicknameSetupDescription:
-        "Others will see this nickname and your friend code, not your Google name or email.",
+        "Others will see this nickname and your Friemi ID, not your Google name or email.",
       saveNickname: "Save nickname",
       savingNickname: "Saving...",
       nicknameError: "Nickname is required, up to 24 characters.",
@@ -1774,13 +1816,14 @@ const copy = {
       coverImage: "Cover image",
       coverDefault: "Use the default cover",
       coverImageHint: "Uploaded images appear on plan cards and detail pages.",
-      coverFileHint: "JPG, PNG, or WebP. Max 4MB.",
+      coverFileHint: "Common image formats. Max 4MB.",
       coverUpload: "Upload cover",
+      coverTapToUpload: "Tap to upload cover",
       coverDropHere: "Drop to upload",
       coverUploading: "Uploading...",
       coverRemove: "Remove",
       coverUploadFailed: "Cover upload failed. Please try again later.",
-      coverTypeError: "Only JPG, PNG, or WebP images are supported.",
+      coverTypeError: "Please upload a common image format.",
       coverSizeError: "Image must be 4MB or smaller.",
       coverInvalidContentError:
         "The image content is invalid. Please choose the original image file.",
@@ -1876,7 +1919,7 @@ const copy = {
         "Shown in the team lobby. Signed-in users can see it and request to join.",
       visibilityPrivate: "Private crew",
       visibilityPrivateHint:
-        "Only your friends can see it. Best for plans with people you know.",
+        "Only mutual follows can see it. Best for private plans.",
       sectionVisibilityTitle: "Visibility",
       sectionVisibilityMobileTitle: "Visibility",
       sectionVisibilityDescription: "Audience and access",
@@ -1979,17 +2022,17 @@ const copy = {
   },
   fr: {
     nav: {
-      home: "Accueil",
+      home: "Découvrir",
       activities: "Activités",
       lobby: "Hall d'équipe",
       lobbyShort: "Plans",
-      hallShort: "Hall",
+      hallShort: "Découvrir",
       newActivity: "Je lance un plan",
       newActivityShort: "Lancer",
       messages: "Messages",
       messagesShort: "Chat",
-      footprints: "Trace",
-      footprintsShort: "Trace",
+      footprints: "Monde",
+      footprintsShort: "Monde",
       planet: "Planètes",
       planetShort: "Planète",
       profile: "Profil",
@@ -2000,10 +2043,10 @@ const copy = {
       fallbackName: "Utilisateur Friemi",
       openMenu: "Ouvrir le menu du compte",
       profile: "Profil",
-      friends: "Amis",
-      friendsDescription: "Gérer demandes et liste d'amis",
+      friends: "Réseau",
+      friendsDescription: "Suivis et suivis mutuels",
       messages: "Messages",
-      messagesDescription: "Ouvrir les échanges avec vos amis",
+      messagesDescription: "Ouvrir les échanges et préparatifs",
       notifications: "Notifications",
       notificationsDescription:
         "Suivre inscriptions, validations et changements d'activité",
@@ -2033,14 +2076,21 @@ const copy = {
       eyebrow: "Recherche globale",
       title: "Rechercher dans Friemi",
       description:
-        "Trouvez vite une activité, un groupe, un ami ou un partenaire.",
+        "Trouvez vite une activité, un groupe, une personne ou un partenaire.",
       inputLabel: "Mot-clé de recherche",
-      placeholder: "Activités, code ami, pseudo ou partenaire",
+      placeholder: "Activités, ID Friemi, pseudo ou partenaire",
       mobileOpen: "Ouvrir la recherche globale",
       submit: "Rechercher",
+      back: "Retour",
+      recommendationsUsersTitle: "Personnes à découvrir",
+      recommendationsHangoutsTitle: "Groupes à découvrir",
+      recommendationsActivitiesTitle: "Sorties à découvrir",
+      recommendationsEmptyTitle: "Aucune suggestion",
+      recommendationsEmptyDescription:
+        "De nouvelles idées à explorer apparaîtront bientôt.",
       emptyTitle: "Saisissez un mot-clé",
       emptyDescription:
-        "Essayez une activité, un lieu, un code ami, un pseudo ou un partenaire.",
+        "Essayez une activité, un lieu, un ID Friemi, un pseudo ou un partenaire.",
       noResultsTitle: "Aucun résultat",
       noResultsDescription: (query: string) =>
         `Aucun résultat ne correspond à « ${query} ».`,
@@ -2074,19 +2124,19 @@ const copy = {
         "Ces résultats correspondent à une partie de votre recherche.",
       publicEventsTitle: "Activités",
       merchantsTitle: "Partenaires",
-      usersTitle: "Amis",
+      usersTitle: "Personnes",
       noActivityResults: "Aucun groupe correspondant.",
       noMainResults: "Aucune activité ou groupe correspondant.",
       noPublicEventResults: "Aucune activité correspondante.",
       noMerchantResults: "Aucun partenaire correspondant.",
       noUserResults: "Aucun utilisateur correspondant.",
       usersPreviewHint: (shown: number, total: number) =>
-        `Affichage des ${shown} premiers résultats amis sur ${total}.`,
+        `Affichage des ${shown} premières personnes sur ${total}.`,
       expandUserResults: (shown: number, total: number) =>
-        `Voir plus d'amis ${shown}/${total}`,
-      collapseUserResults: "Réduire les amis",
+        `Voir plus de personnes ${shown}/${total}`,
+      collapseUserResults: "Réduire les personnes",
       userResultsLimited: (shown: number, total: number) =>
-        `${shown} résultats amis chargés sur ${total}. Essayez un pseudo ou un code ami plus précis.`,
+        `${shown} personnes chargées sur ${total}. Essayez un pseudo ou un ID Friemi plus précis.`,
       endedResultsToggleLabel: "Terminées",
       showEndedResults: "Afficher les terminées",
       hideEndedResults: "Masquer les terminées",
@@ -2098,13 +2148,13 @@ const copy = {
       onlyEndedResultsTitle: "Seuls des contenus terminés ont été trouvés",
       onlyEndedResultsDescription: (count: number) =>
         `${count} activité${count > 1 ? "s" : ""} ou groupe${count > 1 ? "s" : ""} terminé${count > 1 ? "s ont" : " a"} été masqué${count > 1 ? "s" : ""} par défaut. Affichez l'historique pour continuer.`,
-      friendCodeLabel: "Code ami",
-      friendCodeMissing: "Aucun code ami",
-      addFriend: "Ajouter",
+      friendCodeLabel: "ID Friemi",
+      friendCodeMissing: "Aucun ID Friemi",
+      addFriend: "Suivre",
       addingFriend: "Envoi",
       requestSent: "Envoyé",
-      alreadyFriends: "Déjà ami",
-      pendingFriendRequest: "En attente",
+      alreadyFriends: "Mutuel",
+      pendingFriendRequest: "Suivi",
       selfUser: "C'est vous",
       openUserProfile: (name: string) => `Voir le profil de ${name}`,
       merchantActivityCount: (count: number) =>
@@ -2150,7 +2200,7 @@ const copy = {
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
       viewToggleLabel: "Changer de vue",
-      cardView: "Cartes",
+      cardView: "Tout",
       dateView: "Par date",
       agendaLongRunningTitle: "Sorties longues",
       agendaToday: "Aujourd'hui",
@@ -2163,12 +2213,12 @@ const copy = {
       agendaNextMonth: "Mois suivant",
     },
     activityLobby: {
-      eyebrow: "Vos plans, vos amis, votre prochaine sortie",
+      eyebrow: "Vos plans, vos suivis, votre prochaine sortie",
       title: "Hall d'équipe",
       description: "Retrouvez ici les plans qui comptent le plus pour vous.",
       emptyTitle: "Votre hall d'équipe est encore vide",
       emptyDescription:
-        "Lancez un plan, parcourez les infos activité ou ajoutez quelques amis.",
+        "Lancez un plan, parcourez les infos activité ou suivez quelques personnes.",
       emptySectionTitle: "Commencez par ici",
       openTitle: "Groupes publics",
       openDescription:
@@ -2190,16 +2240,16 @@ const copy = {
         "Enregistrez les groupes qui vous intéressent pour les retrouver facilement plus tard.",
       favoriteEmptyDescription:
         "Mettez quelques plans en favoris et ils vous attendront ici.",
-      friendHostedTitle: "Organisées par des amis",
+      friendHostedTitle: "Par vos suivis",
       friendHostedDescription:
-        "Ajoutez quelques amis et les groupes qu'ils lancent apparaîtront ici.",
+        "Les groupes lancés par les personnes que vous suivez apparaîtront ici.",
       friendHostedEmptyDescription:
-        "Ajoutez quelques amis et leurs plans apparaîtront ici dès qu'ils lancent quelque chose.",
-      friendJoinedTitle: "Rejointes par des amis",
+        "Suivez quelques personnes. Leurs prochains groupes apparaîtront ici.",
+      friendJoinedTitle: "Rejointes par vos suivis",
       friendJoinedDescription:
-        "Les groupes que vos amis ont rejoints apparaîtront ici pour faciliter les sorties ensemble.",
+        "Les groupes rejoints par les personnes que vous suivez apparaîtront ici.",
       friendJoinedEmptyDescription:
-        "Vos amis n'ont encore rejoint aucun plan. Trouvez quelque chose de sympa et proposez-leur d'y aller ensemble.",
+        "Les personnes que vous suivez n'ont encore rejoint aucun groupe.",
     },
     activityFilters: {
       title: "Recherche et filtres",
@@ -2223,8 +2273,8 @@ const copy = {
       allCities: "Toutes les villes",
       allDateRanges: "Toutes les dates",
       allRelations: "Toutes les relations",
-      relationFriendHosted: "Organisé par des amis",
-      relationFriendJoined: "Rejoint par des amis",
+      relationFriendHosted: "Par vos suivis",
+      relationFriendJoined: "Rejoint par vos suivis",
       relationMine: "Mes plans",
       allTypes: "Tous les formats",
       allTimeStates: "Tous les états",
@@ -2298,22 +2348,22 @@ const copy = {
       openGoogleMaps: "Ouvrir dans Google Maps",
     },
     activityFriendSignal: {
-      title: "Amis inscrits",
+      title: "Vos suivis inscrits",
       cardSummary: (count: number) =>
-        `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`,
+        `${count} suivi${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`,
       detailSummary: (names: string[], count: number) => {
         if (names.length === 0) {
-          return `${count} ami${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`;
+          return `${count} suivi${count > 1 ? "s" : ""} inscrit${count > 1 ? "s" : ""}`;
         }
 
         if (count > names.length) {
-          return `${names.join(", ")} et d'autres amis sont inscrits (${count})`;
+          return `${names.join(", ")} et d'autres suivis sont inscrits (${count})`;
         }
 
         return `${names.join(", ")} ${names.length > 1 ? "sont inscrits" : "est inscrit"}`;
       },
       showMore: "Plus",
-      showAllLabel: (count: number) => `Voir les ${count} amis`,
+      showAllLabel: (count: number) => `Voir les ${count} suivis`,
       showLess: "Réduire",
     },
     activityShare: {
@@ -2321,11 +2371,11 @@ const copy = {
       activityTitle: "Partage de l'activité",
       teamTitle: "Partage du groupe",
       description:
-        "Copiez les infos clés ou téléchargez une affiche avec QR code.",
+        "Partagez l'activité ou téléchargez une affiche avec QR code.",
       activityDescription:
-        "Copiez les infos de l'activité ou téléchargez une affiche QR.",
+        "Partagez l'activité ou téléchargez une affiche QR.",
       teamDescription:
-        "Copiez l'invitation du groupe ou téléchargez une affiche QR.",
+        "Partagez l'invitation du groupe ou téléchargez une affiche QR.",
       expand: "Afficher les outils de partage",
       collapse: "Masquer les outils de partage",
       copyTitle: "Copier le titre",
@@ -2335,11 +2385,11 @@ const copy = {
       copyLink: "Copier le lien",
       systemShare: "Partager",
       systemShareHint:
-        "Ouvrez le panneau de partage système pour envoyer ce lien.",
+        "Ouvrez le panneau de partage système pour l'envoyer.",
       wechatShareHint:
-        "Dans WeChat, menu ··· en haut à droite pour envoyer ce lien.",
+        "Dans WeChat, utilisez le menu ··· pour l'envoyer à vos amis ou groupes.",
       shareUnavailable:
-        "Ce navigateur ne peut pas ouvrir le partage système. Copiez plutôt le lien.",
+        "Ce navigateur ne peut pas ouvrir le partage système. Téléchargez plutôt l'affiche.",
       closeShareHelp: "Fermer l'aide au partage",
       copied: "Copié",
       copyFailed: "Échec de copie. Sélectionnez le texte manuellement.",
@@ -2464,7 +2514,7 @@ const copy = {
     notifications: {
       title: "Notifications",
       description:
-        "Les nouveautés d'activité, d'amis et de commentaires apparaissent ici.",
+        "Les nouveautés d'activité, de suivis et de commentaires apparaissent ici.",
       mobileDescription: "Les notifications non lues restent en premier.",
       unreadCount: (count: number) => `${count} non lues`,
       actionRequiredCount: (count: number) => `${count} à traiter`,
@@ -2476,11 +2526,11 @@ const copy = {
         read: "Lues",
         clearTitle: "Aucune notification non lue",
         clearDescription:
-          "Les nouvelles inscriptions, demandes d'amis et commentaires apparaîtront ici.",
+          "Les nouvelles inscriptions, suivis et commentaires apparaîtront ici.",
       },
       categoryLabels: {
         participation: "Inscriptions",
-        social: "Amis",
+        social: "Suivis",
         comment: "Commentaires",
         message: "Messages",
         activity: "Activité",
@@ -2490,7 +2540,7 @@ const copy = {
       activityLabel: "Sujet",
       emptyTitle: "Aucune notification",
       emptyDescription:
-        "Les inscriptions, commentaires et demandes d'amis apparaîtront ici.",
+        "Les inscriptions, commentaires et suivis apparaîtront ici.",
       emptyAction: "Voir les activités",
       openActivity: "Voir l'activité",
       openComments: "Voir les commentaires",
@@ -2511,8 +2561,10 @@ const copy = {
         },
         PARTICIPATION_CONFIRMED: {
           title: "Inscription confirmée",
-          body: (activityTitle: string) =>
-            `Vous êtes inscrit à « ${activityTitle} ».`,
+          body: (activityTitle: string, actorName?: string) =>
+            actorName
+              ? `${actorName} a rejoint « ${activityTitle} ».`
+              : `Vous êtes inscrit à « ${activityTitle} ».`,
         },
         PARTICIPATION_CANCELLED: {
           title: "Une personne s'est retirée",
@@ -2550,10 +2602,15 @@ const copy = {
               ? `${actorName} a publie une annonce pour ? ${activityTitle} ? : ${content}`
               : `${actorName} a publie une annonce pour ? ${activityTitle} ?.`,
         },
+        ACTIVITY_CHECK_IN: {
+          title: "Présence confirmée",
+          body: (activityTitle: string) =>
+            `Votre présence à « ${activityTitle} » est confirmée.`,
+        },
         FRIEND_REQUEST: {
-          title: "Nouvelle demande d'ami",
+          title: "Nouvel abonné",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
-            `${actorName} souhaite vous ajouter en ami.`,
+            `${actorName} vous suit.`,
         },
         ACTIVITY_COMMENTED: {
           title: "Nouveau commentaire",
@@ -2584,6 +2641,11 @@ const copy = {
           title: "Moment republié",
           body: (_activityTitle: string, actorName = "Quelqu'un") =>
             `${actorName} a republié votre moment.`,
+        },
+        CHARM_GIFT_RECEIVED: {
+          title: "Cadeau reçu",
+          body: (giftText: string, actorName = "Quelqu'un") =>
+            `${actorName} vous a envoyé ${giftText}.`,
         },
         DIRECT_MESSAGE: {
           title: "Nouveau message",
@@ -2658,21 +2720,24 @@ const copy = {
       forbiddenTitle: "Accès refusé",
       forbiddenDescription:
         "Seul l'organisateur ou un gestionnaire peut modifier ce plan.",
-      lockedTitle: "Plan non modifiable",
-      lockedDescription:
-        "Les plans terminés ou annulés ne peuvent plus être modifiés.",
+      lockedCancelledTitle: "Ce plan est annulé",
+      lockedCancelledDescription:
+        "Les plans annulés ne peuvent plus être modifiés.",
+      lockedEndedTitle: "Ce plan est terminé",
+      lockedEndedDescription:
+        "Les plans terminés ne peuvent plus être modifiés.",
     },
     profile: {
       title: "Profil",
       emailFallback: "Aucun e-mail connecté",
-      friendCodeLabel: "Code ami",
-      copyFriendCode: "Copier le code ami",
+      friendCodeLabel: "ID Friemi",
+      copyFriendCode: "Copier l'ID Friemi",
       friendCodeCopied: "Copié",
       nicknameLabel: "Pseudo",
       nicknamePlaceholder: "Saisissez votre pseudo",
       nicknameSetupTitle: "Choisissez un pseudo",
       nicknameSetupDescription:
-        "Les autres verront ce pseudo et votre code ami, pas votre nom Google ni votre e-mail.",
+        "Les autres verront ce pseudo et votre ID Friemi, pas votre nom Google ni votre e-mail.",
       saveNickname: "Enregistrer",
       savingNickname: "Enregistrement...",
       nicknameError: "Le pseudo est requis, 24 caractères maximum.",
@@ -2809,14 +2874,15 @@ const copy = {
       coverDefault: "Utiliser la couverture par défaut",
       coverImageHint:
         "L'image s'affiche sur les cartes de sortie et la page détail.",
-      coverFileHint: "JPG, PNG ou WebP. 4 Mo maximum.",
+      coverFileHint: "Formats d'image courants. 4 Mo maximum.",
       coverUpload: "Importer",
+      coverTapToUpload: "Touchez pour importer",
       coverDropHere: "Relâchez pour importer",
       coverUploading: "Import...",
       coverRemove: "Retirer",
       coverUploadFailed:
         "Échec de l'import de la couverture. Réessayez plus tard.",
-      coverTypeError: "Seules les images JPG, PNG ou WebP sont acceptées.",
+      coverTypeError: "Importez un format d'image courant.",
       coverSizeError: "L'image ne doit pas dépasser 4 Mo.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
@@ -2918,8 +2984,7 @@ const copy = {
       visibilityPublicHint:
         "Visible dans le hall d'équipe. Les utilisateurs connectés peuvent le voir et demander à rejoindre.",
       visibilityPrivate: "Groupe privé",
-      visibilityPrivateHint:
-        "Visible uniquement par vos amis. Pratique pour organiser avec des proches.",
+      visibilityPrivateHint: "Visible uniquement par vos abonnements mutuels.",
       sectionVisibilityTitle: "Visibilité",
       sectionVisibilityMobileTitle: "Visibilité",
       sectionVisibilityDescription: "Audience et accès",

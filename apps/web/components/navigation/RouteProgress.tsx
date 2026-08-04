@@ -60,8 +60,10 @@ function hasStandardMobileNavOffset(pathname: string) {
   const localizedRouteSegment = segments[1];
 
   if (
+    firstRouteSegment === "game-tools" ||
     firstRouteSegment === "sign-in" ||
     firstRouteSegment === "sign-up" ||
+    localizedRouteSegment === "game-tools" ||
     localizedRouteSegment === "sign-in" ||
     localizedRouteSegment === "sign-up"
   ) {
@@ -178,14 +180,14 @@ export function RouteProgress() {
       data-route-progress
       className={cn(
         "pointer-events-none fixed inset-x-0 top-0 z-[70] h-1",
-        "max-md:top-auto max-md:z-[45] max-md:h-[2px]",
+        "max-md:inset-x-4 max-md:top-auto max-md:z-[45] max-md:h-[2px] max-md:rounded-full",
         hasMobileNavOffset
           ? "max-md:bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area))]"
           : "max-md:bottom-[var(--app-bottom-safe-area)]",
       )}
     >
       <div
-        className="h-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.24)]"
+        className="h-full rounded-full bg-[#369758] shadow-[0_0_18px_rgba(54,151,88,0.42)] transition-[width,opacity] duration-200 ease-out max-md:shadow-[0_-1px_8px_rgba(54,151,88,0.18)]"
         style={{
           opacity: isActive ? (isFinishing ? 0.55 : 1) : 0,
           width: `${progress}%`,

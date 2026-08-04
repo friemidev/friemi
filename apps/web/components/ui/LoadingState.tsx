@@ -3,6 +3,23 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { cn } from "@/lib/utils";
 import { LocalizedBrandLoader } from "./LocalizedBrandLoader";
 
+export function RouteLoadingScreen({
+  className,
+}: {
+  className?: string;
+}) {
+  return (
+    <main
+      className={cn(
+        "route-loading-shell flex min-h-[calc(100dvh-6.25rem)] items-center justify-center bg-white px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(3rem+env(safe-area-inset-top))] md:min-h-[calc(100vh-4rem)] md:pb-10 md:pt-10",
+        className,
+      )}
+    >
+      <LocalizedBrandLoader size="sm" showLabel />
+    </main>
+  );
+}
+
 type ShimmerBlockProps = {
   className?: string;
   delay?: number;
