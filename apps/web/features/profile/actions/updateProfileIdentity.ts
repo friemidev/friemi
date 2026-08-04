@@ -24,6 +24,7 @@ export type UpdateProfileIdentityState = {
   avatarUrl?: string | null;
   bio?: string | null;
   formError?: string;
+  homeCity?: string | null;
   nickname?: string;
   success?: boolean;
 };
@@ -60,6 +61,7 @@ const updateProfileIdentitySchema = z.object({
       },
     ),
   bio: z.string().trim().max(160).optional(),
+  homeCity: z.string().trim().max(80).optional(),
   locale: z.string().min(1).default("zh-CN"),
   nickname: z.string().trim().min(1).max(24),
   returnTo: z.string().optional(),
@@ -107,6 +109,9 @@ export async function updateProfileIdentityAction(
       ? getString(formData, "avatarUrl")
       : undefined,
     bio: formData.has("bio") ? getString(formData, "bio") : undefined,
+    homeCity: formData.has("homeCity")
+      ? getString(formData, "homeCity")
+      : undefined,
     locale: fallbackLocale,
     nickname: getString(formData, "nickname"),
     returnTo: getString(formData, "returnTo"),
@@ -118,7 +123,8 @@ export async function updateProfileIdentityAction(
     };
   }
 
-  const { afterSave, avatarUrl, bio, locale, nickname, returnTo } = result.data;
+  const { afterSave, avatarUrl, bio, homeCity, locale, nickname, returnTo } =
+    result.data;
   const perf = createActionPerformanceTracker({
     action: "updateProfileIdentity",
   });
@@ -135,6 +141,7 @@ export async function updateProfileIdentityAction(
       data: {
         ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
         ...(bio !== undefined ? { bio: bio || null } : {}),
+        ...(homeCity !== undefined ? { homeCity: homeCity || null } : {}),
         nickname,
       },
     }),
@@ -148,6 +155,7 @@ export async function updateProfileIdentityAction(
     return {
       avatarUrl: avatarUrl !== undefined ? avatarUrl || null : undefined,
       bio: bio !== undefined ? bio || null : undefined,
+      homeCity: homeCity !== undefined ? homeCity || null : undefined,
       nickname,
       success: true,
     };

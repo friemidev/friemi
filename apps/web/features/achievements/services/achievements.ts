@@ -426,6 +426,44 @@ export async function getPublicAchievementWall(profileId: string) {
   });
 }
 
+export async function getUnlockedAchievementWall(profileId: string) {
+  const achievements = await prisma.userAchievement.findMany({
+    where: {
+      achievementKey: {
+        in: achievementCatalog.map((achievement) => achievement.key),
+      },
+      profileId,
+    },
+    select: {
+      achievementKey: true,
+      sourceId: true,
+      sourceType: true,
+      unlockedAt: true,
+    },
+  });
+  const achievementsByKey = new Map(
+    achievements.map((achievement) => [
+      achievement.achievementKey,
+      achievement,
+    ]),
+  );
+
+  return achievementCatalog.flatMap((definition) => {
+    const achievement = achievementsByKey.get(definition.key);
+
+    if (!achievement) {
+      return [];
+    }
+
+    return {
+      definition,
+      sourceId: achievement.sourceId,
+      sourceType: achievement.sourceType,
+      unlockedAt: achievement.unlockedAt.toISOString(),
+    } satisfies PublicAchievementWallItem;
+  });
+}
+
 export function resolvePublicAchievementWallItems({
   achievements,
   equippedKeys,

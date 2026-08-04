@@ -335,6 +335,10 @@ export const getMomentDetail = cache(
 
     const giftCountByMomentId = await getMomentGiftCountMap([moment.id]);
 
-    return mapMoment(moment, giftCountByMomentId.get(moment.id) ?? 0);
+    return mapMoment(
+      moment,
+      giftCountByMomentId.get(moment.id) ?? 0,
+      viewerProfileId,
+    );
   },
 );

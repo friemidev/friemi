@@ -7,14 +7,15 @@ import {
   CalendarDays,
   ChevronRight,
   Eye,
+  Gift,
   Heart,
-  MapPin,
   MessageCircle,
-  Repeat2,
   Search,
+  Ticket,
+  UserRoundPlus,
   UsersRound,
 } from "lucide-react";
-import { getCategoryLabel, getCopy, getStatusLabel } from "@/lib/copy";
+import { getCopy, getStatusLabel } from "@/lib/copy";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import type { ActivityCardViewModel } from "@/features/activities/types";
@@ -35,6 +36,7 @@ import type {
 import { CoCreatorIdentityBadge } from "./CoCreatorIdentityBadge";
 
 type HangoutsTab = "created" | "participation" | "favorite";
+type MomentsTab = "published" | "saved";
 type NetworkTab = "following" | "followers" | "mutual";
 type ProfileVisitSummaryViewModel = {
   todayViewCount: number;
@@ -45,7 +47,7 @@ type ProfileVisitSummaryViewModel = {
 function getProfileSubpageCopy(locale: string) {
   if (locale === "fr") {
     return {
-      findPeople: "Trouver",
+      findPeople: "Ajouter",
       created: "Créées",
       emptyCreated: "Aucune sortie créée.",
       emptyFavorite: "Aucune sortie sauvegardée.",
@@ -57,14 +59,18 @@ function getProfileSubpageCopy(locale: string) {
       following: "Suivis",
       friends: "Réseau",
       hangoutsTitle: "Mes sorties",
+      invite: "Code",
       joined: "Rejointes",
       joinedAt: "Rejoint",
       manage: "Gérer",
       momentFallback: "Moment",
       momentsTitle: "Mes moments",
+      momentsPublished: "Publiés",
+      momentsSaved: "Enregistrés",
       networkTitle: "Réseau",
       noBio: "Pas encore de bio.",
       emptyMoments: "Aucun moment publié.",
+      emptySavedMoments: "Aucun moment enregistré.",
       savedAt: "Sauvé",
       searchPeople: "Rechercher",
       todayVisitors: "Aujourd'hui",
@@ -85,7 +91,7 @@ function getProfileSubpageCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      findPeople: "Find",
+      findPeople: "Add follow",
       created: "Created",
       emptyCreated: "No created plans yet.",
       emptyFavorite: "No saved plans yet.",
@@ -97,14 +103,18 @@ function getProfileSubpageCopy(locale: string) {
       following: "Following",
       friends: "Network",
       hangoutsTitle: "My Plans",
+      invite: "Invite code",
       joined: "Joined",
       joinedAt: "Joined",
       manage: "Manage",
       momentFallback: "Moment",
       momentsTitle: "My Moments",
+      momentsPublished: "Posts",
+      momentsSaved: "Saved",
       networkTitle: "Network",
       noBio: "No bio yet.",
       emptyMoments: "No moments posted yet.",
+      emptySavedMoments: "No saved moments yet.",
       savedAt: "Saved",
       searchPeople: "Search people",
       todayVisitors: "Today",
@@ -124,7 +134,7 @@ function getProfileSubpageCopy(locale: string) {
   }
 
   return {
-    findPeople: "找人",
+    findPeople: "新关注",
     created: "我发起的",
     emptyCreated: "还没有发起聚吧。",
     emptyFavorite: "还没有收藏聚吧。",
@@ -136,14 +146,18 @@ function getProfileSubpageCopy(locale: string) {
     following: "我的关注",
     friends: "互相关注",
     hangoutsTitle: "我的聚吧",
+    invite: "邀请码",
     joined: "我参与的",
     joinedAt: "报名",
     manage: "管理",
     momentFallback: "晒晒",
     momentsTitle: "我的晒晒",
+    momentsPublished: "我的发布",
+    momentsSaved: "收藏",
     networkTitle: "关系网",
     noBio: "还没有填写简介。",
     emptyMoments: "还没有发布晒晒。",
+    emptySavedMoments: "还没有收藏晒晒。",
     savedAt: "收藏",
     searchPeople: "搜索用户",
     todayVisitors: "今日",
@@ -185,7 +199,7 @@ function SubpageShell({
         <h1 className="min-w-0 flex-1 text-center text-xl font-black text-[#111210]">
           {title}
         </h1>
-        <div className="flex h-10 w-10 items-center justify-center">
+        <div className="flex h-10 min-w-10 items-center justify-end">
           {right}
         </div>
       </header>
@@ -198,11 +212,50 @@ function SegmentTabs<T extends string>({
   active,
   items,
   onChange,
+  variant = "pill",
 }: {
   active: T;
   items: Array<{ key: T; label: string; count: number }>;
   onChange: (key: T) => void;
+  variant?: "pill" | "underline";
 }) {
+  if (variant === "underline") {
+    return (
+      <div className="mt-5 grid grid-cols-3 border-b border-[#E6DFC9]">
+        {items.map((item) => {
+          const selected = active === item.key;
+
+          return (
+            <button
+              key={item.key}
+              className={cn(
+                "relative inline-flex h-10 min-w-0 items-center justify-center gap-1 px-1 text-[13px] font-black transition active:scale-[0.98]",
+                selected ? "text-[#111210]" : "text-[#4F574F]",
+              )}
+              onClick={() => onChange(item.key)}
+              type="button"
+            >
+              <span className="truncate">{item.label}</span>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[10px] leading-5",
+                  selected
+                    ? "bg-[#EAF5E8] text-[#156240]"
+                    : "bg-[#F4F2EB] text-[#7A8276]",
+                )}
+              >
+                {item.count}
+              </span>
+              {selected ? (
+                <span className="absolute bottom-[-1px] left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-[#156240]" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 grid grid-cols-3 rounded-full bg-white/72 p-1 ring-1 ring-[#D6D5B2]">
       {items.map((item) => {
@@ -243,40 +296,6 @@ function compareIsoDate(left: string, right: string) {
   return new Date(right).getTime() - new Date(left).getTime();
 }
 
-function getMomentDateParts(value: string, locale: string) {
-  const date = new Date(value);
-
-  if (locale === "zh-CN") {
-    const parts = new Intl.DateTimeFormat("zh-CN", {
-      day: "numeric",
-      month: "numeric",
-      timeZone: "Europe/Paris",
-    }).formatToParts(date);
-    const month = parts.find((part) => part.type === "month")?.value ?? "";
-    const day = parts.find((part) => part.type === "day")?.value ?? "";
-
-    return {
-      day,
-      key: `${date.getFullYear()}-${month}-${day}`,
-      month: month ? `${month}月` : "",
-    };
-  }
-
-  const parts = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    timeZone: "Europe/Paris",
-  }).formatToParts(date);
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-
-  return {
-    day,
-    key: `${date.getFullYear()}-${month}-${day}`,
-    month,
-  };
-}
-
 function getMomentTime(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
@@ -285,69 +304,106 @@ function getMomentTime(value: string, locale: string) {
   }).format(new Date(value));
 }
 
+function MomentProfileTabs({
+  active,
+  copy,
+  onChange,
+}: {
+  active: MomentsTab;
+  copy: ReturnType<typeof getProfileSubpageCopy>;
+  onChange: (tab: MomentsTab) => void;
+}) {
+  const items: Array<{ key: MomentsTab; label: string }> = [
+    { key: "published", label: copy.momentsPublished },
+    { key: "saved", label: copy.momentsSaved },
+  ];
+
+  return (
+    <div className="mt-5 grid grid-cols-2 border-b border-[#E6DFC9] px-8">
+      {items.map((item) => {
+        const selected = active === item.key;
+
+        return (
+          <button
+            key={item.key}
+            className={cn(
+              "relative h-10 min-w-0 px-2 text-center text-[12px] font-black transition active:scale-[0.98]",
+              selected ? "text-[#111210]" : "text-[#6C746A]",
+            )}
+            onClick={() => onChange(item.key)}
+            type="button"
+          >
+            <span className="truncate">{item.label}</span>
+            {selected ? (
+              <span className="absolute bottom-[-1px] left-1/2 h-0.5 w-14 -translate-x-1/2 rounded-full bg-[#156240]" />
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MinimalEmptyPanel({ message }: { message: string }) {
+  return (
+    <div className="py-12 text-center text-sm font-bold text-[#7A8276]">
+      {message}
+    </div>
+  );
+}
+
 function ProfileMomentRow({
   locale,
   moment,
-  showDate,
 }: {
   locale: string;
   moment: ProfileMomentViewModel;
-  showDate: boolean;
 }) {
   const copy = getProfileSubpageCopy(locale);
-  const dateParts = getMomentDateParts(moment.createdAt, locale);
   const content = moment.content?.trim() || copy.momentFallback;
 
   return (
     <Link
       href={withLocale(locale, `/footprints/${moment.id}?from=profile-moments`)}
-      className="grid grid-cols-[3.1rem_minmax(0,1fr)] gap-3 border-b border-[#E3DCC5] py-4 last:border-b-0"
+      className="group block py-4 transition active:scale-[0.99]"
     >
-      <div className="pt-0.5 text-center">
-        {showDate ? (
-          <>
-            <p className="text-[24px] font-black leading-none text-[#111210]">
-              {dateParts.day}
-            </p>
-            <p className="mt-1 text-[11px] font-bold leading-4 text-[#7A8276]">
-              {dateParts.month}
-            </p>
-          </>
-        ) : null}
-      </div>
-
-      <article className="min-w-0">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <p className="min-w-0 flex-1 line-clamp-2 text-[15px] font-bold leading-6 text-[#111210]">
-            {content}
-          </p>
-          <span className="shrink-0 pt-1 text-[11px] font-bold leading-none text-[#8B907F]">
-            {getMomentTime(moment.createdAt, locale)}
-          </span>
-        </div>
-
+      <article className="min-w-0 border-b border-[#EEE7D5] pb-4">
         {moment.image ? (
           // Moment images are user uploaded assets.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={moment.image.url}
             alt=""
-            className="mt-2 aspect-square w-[8.25rem] rounded-2xl object-cover"
+            className="aspect-[1.92/1] w-full rounded-xl object-cover"
           />
         ) : null}
 
-        <div className="mt-2 flex items-center gap-4 text-[12px] font-black text-[#6C746A]">
-          <span className="inline-flex items-center gap-1">
-            <Heart className="h-4 w-4" />
-            {moment.likeCount}
+        <div
+          className={cn(
+            "flex min-w-0 items-start justify-between gap-3",
+            moment.image ? "mt-2.5" : "",
+          )}
+        >
+          <p className="min-w-0 flex-1 line-clamp-2 text-[13px] font-black leading-5 text-[#111210]">
+            {content}
+          </p>
+          <span className="shrink-0 pt-0.5 text-[11px] font-bold leading-none text-[#8B907F]">
+            {getMomentTime(moment.createdAt, locale)}
           </span>
-          <span className="inline-flex items-center gap-1">
+        </div>
+
+        <div className="mt-2.5 flex items-center gap-5 text-[12px] font-black text-[#6C746A]">
+          <span className="inline-flex items-center gap-1.5">
+            <Heart className="h-4 w-4 text-[#E7457A]" />
+            <span>{moment.likeCount}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
             <MessageCircle className="h-4 w-4" />
-            {moment.commentCount}
+            <span>{moment.commentCount}</span>
           </span>
-          <span className="inline-flex items-center gap-1">
-            <Repeat2 className="h-4 w-4" />
-            {moment.repostCount}
+          <span className="ml-auto inline-flex items-center gap-1.5">
+            <Gift className="h-4 w-4 text-[#C81E42]" />
+            <span>{moment.giftCount}</span>
           </span>
         </div>
       </article>
@@ -356,13 +412,16 @@ function ProfileMomentRow({
 }
 
 export function ProfileMomentsMobilePage({
+  likedMoments,
   locale,
   moments,
 }: {
+  likedMoments: ProfileMomentViewModel[];
   locale: string;
   moments: ProfileMomentViewModel[];
 }) {
   const copy = getProfileSubpageCopy(locale);
+  const [activeTab, setActiveTab] = useState<MomentsTab>("published");
   const sortedMoments = useMemo(
     () =>
       [...moments].sort((left, right) =>
@@ -370,34 +429,33 @@ export function ProfileMomentsMobilePage({
       ),
     [moments],
   );
+  const sortedLikedMoments = useMemo(
+    () =>
+      [...likedMoments].sort((left, right) =>
+        compareIsoDate(left.createdAt, right.createdAt),
+      ),
+    [likedMoments],
+  );
+  const visibleMoments =
+    activeTab === "published" ? sortedMoments : sortedLikedMoments;
+  const emptyMessage =
+    activeTab === "published" ? copy.emptyMoments : copy.emptySavedMoments;
 
   return (
     <SubpageShell title={copy.momentsTitle} locale={locale}>
-      <section className="mt-6 border-t border-[#E3DCC5]">
-        {sortedMoments.length > 0 ? (
-          sortedMoments.map((moment, index) => {
-            const dateParts = getMomentDateParts(moment.createdAt, locale);
-            const previousDateParts =
-              index > 0
-                ? getMomentDateParts(
-                    sortedMoments[index - 1].createdAt,
-                    locale,
-                  )
-                : null;
+      <MomentProfileTabs
+        active={activeTab}
+        copy={copy}
+        onChange={setActiveTab}
+      />
 
-            return (
-              <ProfileMomentRow
-                key={moment.id}
-                locale={locale}
-                moment={moment}
-                showDate={dateParts.key !== previousDateParts?.key}
-              />
-            );
-          })
+      <section className="mt-3">
+        {visibleMoments.length > 0 ? (
+          visibleMoments.map((moment) => (
+            <ProfileMomentRow key={moment.id} locale={locale} moment={moment} />
+          ))
         ) : (
-          <div className="pt-6">
-            <EmptyPanel message={copy.emptyMoments} />
-          </div>
+          <MinimalEmptyPanel message={emptyMessage} />
         )}
       </section>
     </SubpageShell>
@@ -424,18 +482,6 @@ function getParticipantText(activity: ActivityCardViewModel) {
     : `${activity.participantCount}`;
 }
 
-function getParticipationTone(status: ProfileParticipationViewModel["status"]) {
-  if (status === "PENDING") {
-    return "bg-[#FFF4DB] text-[#8A641A]";
-  }
-
-  if (status === "REJECTED" || status === "CANCELLED") {
-    return "bg-[#F1F2EC] text-[#6C746A]";
-  }
-
-  return "bg-[#DDF8E7] text-[#156240]";
-}
-
 function ActivityThumb({ activity }: { activity: ActivityCardViewModel }) {
   if (activity.coverImageUrl) {
     return (
@@ -459,92 +505,59 @@ function ActivityThumb({ activity }: { activity: ActivityCardViewModel }) {
 }
 
 function CompactHangoutRow({
-  actionLabel,
   activity,
-  footerLabel,
-  isOwn,
   locale,
   statusLabel,
-  statusTone,
 }: {
-  actionLabel: string;
   activity: ActivityCardViewModel;
-  footerLabel?: string;
-  isOwn?: boolean;
   locale: string;
   statusLabel?: string;
-  statusTone?: string;
 }) {
   const displayStatus = getActivityDisplayStatus(activity);
   const resolvedStatusLabel =
     statusLabel ?? getStatusLabel(displayStatus, locale);
-  const categoryLabel = getCategoryLabel(activity.category, locale);
+  const locationLabel = activity.city || activity.address;
 
   return (
     <Link
       href={getCompactActivityHref(locale, activity)}
-      className="group block overflow-hidden rounded-[1.15rem] bg-white/90 p-2.5 shadow-[0_12px_28px_rgba(21,98,64,0.05)] ring-1 ring-[#E4DCC7] transition active:scale-[0.99]"
+      className="group grid grid-cols-[4.75rem_minmax(0,1fr)_1rem] items-center gap-3 border-b border-[#EEE7D5] py-3.5 transition active:scale-[0.99]"
     >
-      <div className="flex gap-3">
-        <div className="relative h-[5.6rem] w-[6.25rem] shrink-0 overflow-hidden rounded-[1rem] bg-[#F5F2E7]">
-          <ActivityThumb activity={activity} />
-          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-black text-[#156240] shadow-sm">
-            {categoryLabel}
+      <div className="h-[4.75rem] w-[4.75rem] shrink-0 overflow-hidden rounded-[1rem] bg-[#F5F2E7]">
+        <ActivityThumb activity={activity} />
+      </div>
+
+      <div className="min-w-0">
+        <h2 className="line-clamp-2 text-[14.5px] font-black leading-[1.18] text-[#111210]">
+          {activity.title}
+        </h2>
+
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] font-bold text-[#4F574F]">
+          <UsersRound className="h-3.5 w-3.5 shrink-0 text-[#156240]" />
+          <span className="shrink-0">{getParticipantText(activity)}</span>
+          {locationLabel ? (
+            <>
+              <span className="text-[#A6A999]">·</span>
+              <span className="truncate">{locationLabel}</span>
+            </>
+          ) : null}
+        </div>
+
+        <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] font-bold text-[#4F574F]">
+          <span className="flex min-w-0 items-center gap-1">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#6AA179]" />
+            <span className="truncate">
+              {getActivityDateLabel(activity, locale)}
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-[#156240]">
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {resolvedStatusLabel}
           </span>
         </div>
-
-        <div className="min-w-0 flex-1 py-0.5">
-          <div className="flex items-start gap-2">
-            <h2 className="min-w-0 flex-1 line-clamp-2 text-[15px] font-black leading-[1.18] text-[#111210]">
-              {activity.title}
-            </h2>
-            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[#9AA18E]" />
-          </div>
-
-          {activity.description ? (
-            <p className="mt-1 line-clamp-1 text-xs font-semibold text-[#7A8276]">
-              {activity.description}
-            </p>
-          ) : null}
-
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {isOwn ? (
-              <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-black text-[#156240]">
-                {actionLabel}
-              </span>
-            ) : null}
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-black",
-                statusTone ?? "bg-[#F1F2EC] text-[#4F574F]",
-              )}
-            >
-              {resolvedStatusLabel}
-            </span>
-          </div>
-
-          <div className="mt-2 grid gap-1 text-[11px] font-bold text-[#4F574F]">
-            <span className="flex min-w-0 items-center gap-1">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#E98575]" />
-              <span className="truncate">
-                {getActivityDateLabel(activity, locale)}
-              </span>
-            </span>
-            <span className="flex min-w-0 items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6AA179]" />
-                <span className="truncate">
-                  {activity.city || activity.address}
-                </span>
-              </span>
-              <span className="inline-flex shrink-0 items-center gap-1 font-black text-[#156240]">
-                <UsersRound className="h-3.5 w-3.5" />
-                {getParticipantText(activity)}
-              </span>
-            </span>
-          </div>
-        </div>
       </div>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#A6A999] transition group-active:translate-x-0.5" />
     </Link>
   );
 }
@@ -556,18 +569,7 @@ function CreatedHangoutRow({
   activity: ActivityCardViewModel;
   locale: string;
 }) {
-  const copy = getProfileSubpageCopy(locale);
-
-  return (
-    <CompactHangoutRow
-      actionLabel={copy.manage}
-      activity={activity}
-      footerLabel={copy.manage}
-      isOwn
-      locale={locale}
-      statusTone="bg-[#EAF5E8] text-[#156240]"
-    />
-  );
+  return <CompactHangoutRow activity={activity} locale={locale} />;
 }
 
 function ParticipationHangoutRow({
@@ -577,17 +579,13 @@ function ParticipationHangoutRow({
   locale: string;
   participation: ProfileParticipationViewModel;
 }) {
-  const copy = getProfileSubpageCopy(locale);
   const t = getCopy(locale);
 
   return (
     <CompactHangoutRow
-      actionLabel={copy.view}
       activity={participation.activity}
-      footerLabel={copy.view}
       locale={locale}
       statusLabel={t.activityLabels.participationStatuses[participation.status]}
-      statusTone={getParticipationTone(participation.status)}
     />
   );
 }
@@ -599,17 +597,7 @@ function FavoriteHangoutRow({
   favorite: ProfileFavoriteActivityViewModel;
   locale: string;
 }) {
-  const copy = getProfileSubpageCopy(locale);
-
-  return (
-    <CompactHangoutRow
-      actionLabel={copy.view}
-      activity={favorite.activity}
-      footerLabel={copy.view}
-      locale={locale}
-      statusTone="bg-[#F5F0FF] text-[#5E4EA2]"
-    />
-  );
+  return <CompactHangoutRow activity={favorite.activity} locale={locale} />;
 }
 
 export function ProfileHangoutsMobilePage({
@@ -650,6 +638,7 @@ export function ProfileHangoutsMobilePage({
       <SegmentTabs<HangoutsTab>
         active={activeTab}
         onChange={setActiveTab}
+        variant="underline"
         items={[
           {
             key: "created",
@@ -669,7 +658,7 @@ export function ProfileHangoutsMobilePage({
         ]}
       />
 
-      <section className="mt-6 grid gap-4">
+      <section className="mt-4">
         {activeTab === "created" ? (
           createdActivities.length > 0 ? (
             createdActivities.map((activity) => (
@@ -934,14 +923,26 @@ export function ProfileNetworkMobilePage({
       title={copy.networkTitle}
       locale={locale}
       right={
-        <Link
-          aria-label={copy.findPeople}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2]"
-          href={withLocale(locale, "/search")}
-          title={copy.findPeople}
-        >
-          <Search className="h-5 w-5" />
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link
+            aria-label={copy.findPeople}
+            className="inline-flex h-9 max-w-[6rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-black text-[#E83F83] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
+            href={withLocale(locale, "/search")}
+            title={copy.findPeople}
+          >
+            <UserRoundPlus className="h-4 w-4 shrink-0" />
+            <span className="truncate">{copy.findPeople}</span>
+          </Link>
+          <Link
+            aria-label={copy.invite}
+            className="inline-flex h-9 max-w-[5.4rem] items-center justify-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-black text-[#156240] ring-1 ring-[#E9DCC9] transition active:scale-[0.98]"
+            href={withLocale(locale, "/profile/invite")}
+            title={copy.invite}
+          >
+            <Ticket className="h-4 w-4 shrink-0" />
+            <span className="truncate">{copy.invite}</span>
+          </Link>
+        </div>
       }
     >
       <div className="mt-8 border-b border-[#DED8BE] pb-4">

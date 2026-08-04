@@ -246,6 +246,7 @@ model UserProfile {
   normalizedWechatId      String?
   avatarUrl               String?
   bio                     String?
+  homeCity                String?                       @default("Paris")
   interests               String[]                      @default([])
   status                  UserProfileStatus             @default(ACTIVE)
   presenceStatus          UserPresenceStatus            @default(ONLINE)

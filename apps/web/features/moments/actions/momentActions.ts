@@ -122,6 +122,7 @@ function getMomentActionCopy(locale: string) {
 
 function revalidateMomentSurfaces(locale: string) {
   revalidatePath(withLocale(locale, "/footprints"));
+  revalidatePath(withLocale(locale, "/profile/moments"));
   revalidatePath(withLocale(locale, "/notifications"));
   revalidatePath(withLocale(locale, "/"), "layout");
 }

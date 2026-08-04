@@ -76,6 +76,7 @@ const publicProfileSelect = {
   friendCode: true,
   avatarUrl: true,
   bio: true,
+  homeCity: true,
   isCoCreator: true,
   presenceStatus: true,
   lastActiveAt: true,
@@ -215,6 +216,7 @@ export type ProfileMomentViewModel = {
   content: string | null;
   visibility: MomentVisibility;
   resharedMomentId: string | null;
+  giftCount: number;
   likeCount: number;
   commentCount: number;
   repostCount: number;
@@ -249,6 +251,7 @@ export type PublicProfileViewModel = {
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  homeCity: string | null;
   isCoCreator: boolean;
   isOnline: boolean;
   presenceDisplayStatus: UserPresenceDisplayStatus;
@@ -290,6 +293,7 @@ function mapPublicProfile(
     friendCode: string | null;
     avatarUrl: string | null;
     bio: string | null;
+    homeCity: string | null;
     isCoCreator: boolean;
     lastActiveAt: Date | null;
     presenceStatus: string | null;
@@ -315,6 +319,7 @@ function mapPublicProfile(
     friendCode: profile.friendCode,
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
+    homeCity: profile.homeCity ?? "Paris",
     isCoCreator: profile.isCoCreator,
     isOnline: canViewPresence && presence.isOnline,
     presenceDisplayStatus: canViewPresence ? presence.displayStatus : null,
@@ -367,6 +372,7 @@ function mapPublicEventFavorite(
 
 function mapProfileMoment(
   moment: Prisma.MomentGetPayload<{ select: typeof profileMomentSelect }>,
+  giftCount = 0,
 ): ProfileMomentViewModel {
   const image = moment.images[0] ?? null;
 
@@ -375,6 +381,7 @@ function mapProfileMoment(
     content: moment.content,
     visibility: moment.visibility,
     resharedMomentId: moment.resharedMomentId,
+    giftCount,
     likeCount: moment.likeCount,
     commentCount: moment.commentCount,
     repostCount: moment.repostCount,
@@ -388,6 +395,33 @@ function mapProfileMoment(
         }
       : null,
   };
+}
+
+async function getProfileMomentGiftCountMap(momentIds: string[]) {
+  if (momentIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.charmGiftEvent.groupBy({
+    by: ["sourceContextId"],
+    where: {
+      sourceContextId: {
+        in: momentIds,
+      },
+      sourceSurface: "MOMENT",
+    },
+    _sum: {
+      quantity: true,
+    },
+  });
+
+  return new Map(
+    groups.flatMap((group) =>
+      group.sourceContextId
+        ? [[group.sourceContextId, group._sum.quantity ?? 0]]
+        : [],
+    ),
+  );
 }
 
 function mapProfileCharmGift(
@@ -825,6 +859,9 @@ export async function getProfileDashboard(
       getActivityCardViewModel(favorite.activity),
     ),
   );
+  const momentGiftCountByMomentId = await getProfileMomentGiftCountMap(
+    moments.map((moment) => moment.id),
+  );
 
   const mergedFavorites = [
     ...favoriteActivityCards.map((activity, index) => ({
@@ -865,7 +902,9 @@ export async function getProfileDashboard(
     friends: followNetwork.mutual,
     followers: followNetwork.followers,
     following: followNetwork.following,
-    moments: moments.map(mapProfileMoment),
+    moments: moments.map((moment) =>
+      mapProfileMoment(moment, momentGiftCountByMomentId.get(moment.id) ?? 0),
+    ),
     recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),
@@ -974,6 +1013,9 @@ export async function getPublicProfileDashboard(
       getActivityCardViewModel(participation.activity),
     ),
   );
+  const momentGiftCountByMomentId = await getProfileMomentGiftCountMap(
+    moments.map((moment) => moment.id),
+  );
 
   return {
     charmScore: charmBalance?.score ?? 0,
@@ -997,7 +1039,9 @@ export async function getPublicProfileDashboard(
     friends: followNetwork.mutual,
     followers: followNetwork.followers,
     following: followNetwork.following,
-    moments: moments.map(mapProfileMoment),
+    moments: moments.map((moment) =>
+      mapProfileMoment(moment, momentGiftCountByMomentId.get(moment.id) ?? 0),
+    ),
     recentCharmGifts: recentCharmGifts.map(mapProfileCharmGift),
     viewerRelationship: relationship,
     werewolfStats: buildWerewolfStats(werewolfRecords),

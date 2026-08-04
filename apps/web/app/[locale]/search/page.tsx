@@ -1,7 +1,16 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Image from "next/image";
-import { ArrowRight, Clock3, MapPin, Search, Store } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  MapPin,
+  Search,
+  Store,
+  UsersRound,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@chill-club/ui";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -12,15 +21,25 @@ import { DetailSourceRestore } from "@/features/navigation/components/DetailSour
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { recordOperationLatency } from "@/features/analytics/latency";
 import { GlobalSearchForm } from "@/features/search/components/GlobalSearchForm";
+import { SearchBackButton } from "@/features/search/components/SearchBackButton";
 import { GlobalSearchUserResults } from "@/features/search/components/GlobalSearchUserResults";
 import { SearchActivityResultsFeed } from "@/features/search/components/SearchActivityResultsFeed";
 import { SearchHighlightedText } from "@/features/search/components/SearchHighlightedText";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
 import {
   getGlobalSearchMainActivityResults,
+  getGlobalSearchRecommendations,
   getGlobalSearchResults,
   type GlobalSearchMerchantViewModel,
+  type GlobalSearchRecommendations,
+  type GlobalSearchUserViewModel,
 } from "@/features/search/queries/getGlobalSearchResults";
+import type { ActivityCardViewModel } from "@/features/activities/types";
+import {
+  getActivityDateLabel,
+  getActivityLocationLabel,
+} from "@/features/activities/utils/activityDisplay";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
   getGlobalSearchHref,
   getSingleGlobalSearchParam,
@@ -29,7 +48,7 @@ import {
   type GlobalSearchParams,
 } from "@/features/search/utils/searchQuery";
 import { brand } from "@/lib/brand";
-import { getCopy } from "@/lib/copy";
+import { getCategoryLabel, getCopy } from "@/lib/copy";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -253,6 +272,286 @@ function MerchantResultCard({
   );
 }
 
+function getSearchRecommendationActivityHref(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
+  if (activity.type === "PUBLIC_EVENT") {
+    return withLocale(locale, `/public-events/${activity.publicEventId ?? activity.id}`);
+  }
+
+  return withLocale(locale, getActivityDetailPath(activity.id));
+}
+
+function SearchRecommendationSection({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[1.05rem] font-black tracking-normal text-[#111210]">
+        {title}
+      </h2>
+      <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SearchUserAvatar({ user }: { user: GlobalSearchUserViewModel }) {
+  const initial = user.nickname.trim().charAt(0).toUpperCase() || "F";
+
+  if (user.avatarUrl) {
+    return (
+      // User avatars may come from Clerk or storage; img keeps remote support.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={user.avatarUrl}
+        alt=""
+        className="h-14 w-14 rounded-full object-cover"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0A8D70] text-xl font-black text-white">
+      {initial}
+    </span>
+  );
+}
+
+function SearchRecommendedUsers({
+  locale,
+  users,
+}: {
+  locale: string;
+  users: GlobalSearchUserViewModel[];
+}) {
+  const t = getCopy(locale).globalSearch;
+
+  if (users.length === 0) {
+    return null;
+  }
+
+  return (
+    <SearchRecommendationSection title={t.recommendationsUsersTitle}>
+      <div className="flex w-max gap-4 pr-4">
+        {users.map((user) => (
+          <ContextualDetailLink
+            key={user.id}
+            href={withLocale(locale, `/profile/${user.id}`)}
+            detailSource={{
+              sourceKey: "search",
+              targetKey: `profile:${user.id}`,
+              targetKind: "profile",
+            }}
+            className="flex w-[4.4rem] shrink-0 flex-col items-center gap-2"
+            aria-label={t.openUserProfile(user.nickname)}
+          >
+            <SearchUserAvatar user={user} />
+            <span className="w-full truncate text-center text-xs font-bold text-[#111210]">
+              {user.nickname}
+            </span>
+          </ContextualDetailLink>
+        ))}
+      </div>
+    </SearchRecommendationSection>
+  );
+}
+
+function SearchRecommendationImage({
+  alt,
+  src,
+}: {
+  alt: string;
+  src: string | null;
+}) {
+  if (src) {
+    return (
+      // Cover URLs can come from external event feeds or storage.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt}
+        className="absolute inset-0 h-full w-full object-cover"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  return (
+    <span className="absolute inset-0 flex items-center justify-center bg-[#F6F7F2]">
+      <Image
+        src={brand.logoFullBackgroundPath}
+        alt=""
+        width={58}
+        height={58}
+        className="h-12 w-12 rounded-xl object-cover"
+      />
+    </span>
+  );
+}
+
+function SearchRecommendedActivityCard({
+  activity,
+  locale,
+  sourceKind,
+}: {
+  activity: ActivityCardViewModel;
+  locale: string;
+  sourceKind: "activity" | "hangout";
+}) {
+  const copy = getCopy(locale);
+  const isPublicEvent = activity.type === "PUBLIC_EVENT";
+  const href = getSearchRecommendationActivityHref(activity, locale);
+  const detailTargetKind = isPublicEvent ? "public_event" : "activity";
+  const participantLabel =
+    activity.capacity > 0
+      ? `${activity.participantCount}/${activity.capacity}`
+      : `${activity.participantCount}`;
+
+  return (
+    <ContextualDetailLink
+      href={href}
+      detailSource={{
+        sourceKey: "search",
+        targetKey: `${detailTargetKind}:${activity.publicEventId ?? activity.id}`,
+        targetKind: detailTargetKind,
+      }}
+      className="group w-[10.25rem] shrink-0 snap-start overflow-hidden rounded-[0.9rem] border border-[#E1DDC8] bg-white transition active:scale-[0.99]"
+      aria-label={activity.title}
+    >
+      <div className="relative h-[6.65rem] overflow-hidden bg-[#F6F7F2]">
+        <SearchRecommendationImage
+          src={activity.coverImageUrl}
+          alt={activity.title}
+        />
+        <span className="absolute left-2 top-2 max-w-[7.2rem] truncate rounded-full bg-white/92 px-2 py-0.5 text-[10px] font-black text-[#0A7652]">
+          {getCategoryLabel(activity.category, locale)}
+        </span>
+      </div>
+      <div className="min-h-[5.75rem] px-2.5 py-2.5">
+        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+          {activity.title}
+        </h3>
+        <p className="mt-2 flex min-w-0 items-center gap-1 text-[10px] font-bold text-[#111210]/62">
+          {sourceKind === "hangout" ? (
+            <>
+              <UsersRound className="h-3 w-3 shrink-0 text-[#0A7652]" />
+              <span className="truncate">
+                {participantLabel} {copy.common.people} · {activity.city}
+              </span>
+            </>
+          ) : (
+            <>
+              <CalendarDays className="h-3 w-3 shrink-0 text-[#0A7652]" />
+              <span className="truncate">
+                {getActivityDateLabel(activity, locale)}
+              </span>
+            </>
+          )}
+        </p>
+        <p className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-bold text-[#111210]/52">
+          <MapPin className="h-3 w-3 shrink-0 text-[#0A7652]" />
+          <span className="truncate">
+            {sourceKind === "hangout"
+              ? getActivityDateLabel(activity, locale)
+              : getActivityLocationLabel(activity)}
+          </span>
+        </p>
+      </div>
+    </ContextualDetailLink>
+  );
+}
+
+function SearchRecommendedActivities({
+  activities,
+  locale,
+  sourceKind,
+  title,
+}: {
+  activities: ActivityCardViewModel[];
+  locale: string;
+  sourceKind: "activity" | "hangout";
+  title: string;
+}) {
+  if (activities.length === 0) {
+    return null;
+  }
+
+  return (
+    <SearchRecommendationSection title={title}>
+      <div className="flex w-max snap-x snap-mandatory gap-3 pr-4">
+        {activities.map((activity) => (
+          <SearchRecommendedActivityCard
+            key={`${sourceKind}-${activity.publicEventId ?? activity.id}`}
+            activity={activity}
+            locale={locale}
+            sourceKind={sourceKind}
+          />
+        ))}
+      </div>
+    </SearchRecommendationSection>
+  );
+}
+
+function SearchRecommendationsView({
+  locale,
+  recommendations,
+}: {
+  locale: string;
+  recommendations: GlobalSearchRecommendations;
+}) {
+  const t = getCopy(locale).globalSearch;
+  const hasRecommendations =
+    recommendations.users.length > 0 ||
+    recommendations.hangouts.length > 0 ||
+    recommendations.activities.length > 0;
+
+  if (!hasRecommendations) {
+    return (
+      <div className="flex min-h-[18rem] flex-col items-center justify-center text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6F7F2] text-[#0A7652]">
+          <Search className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h2 className="mt-4 text-base font-black text-[#111210]">
+          {t.recommendationsEmptyTitle}
+        </h2>
+        <p className="mt-2 max-w-xs text-sm leading-6 text-zinc-500">
+          {t.recommendationsEmptyDescription}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-7">
+      <SearchRecommendedUsers users={recommendations.users} locale={locale} />
+      <SearchRecommendedActivities
+        activities={recommendations.hangouts}
+        locale={locale}
+        sourceKind="hangout"
+        title={t.recommendationsHangoutsTitle}
+      />
+      <SearchRecommendedActivities
+        activities={recommendations.activities}
+        locale={locale}
+        sourceKind="activity"
+        title={t.recommendationsActivitiesTitle}
+      />
+    </div>
+  );
+}
+
 export default async function SearchPage({
   params,
   searchParams,
@@ -279,17 +578,12 @@ export default async function SearchPage({
   const includeEnded = Boolean(query && rawIncludeEnded);
   const t = getCopy(locale).globalSearch;
   const analyticsLocale = normalizeAnalyticsLocale(locale);
-  const viewerProfile = query
-    ? await perf.measure("viewer.profile", () =>
-        getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
-          console.error(
-            "Failed to load viewer profile for global search",
-            error,
-          );
-          return null;
-        }),
-      )
-    : null;
+  const viewerProfile = await perf.measure("viewer.profile", () =>
+    getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
+      console.error("Failed to load viewer profile for global search", error);
+      return null;
+    }),
+  );
   const [searchResult, mainActivityResult] = query
     ? await Promise.all([
         perf.measure("search.results", () =>
@@ -320,6 +614,16 @@ export default async function SearchPage({
         { result: null, error: null },
         { result: null, error: null },
       ];
+  const recommendationResult = !query
+    ? await perf.measure("search.recommendations", () =>
+        getGlobalSearchRecommendations(viewerProfile?.id)
+          .then((result) => ({ result, error: null }))
+          .catch((error: unknown) => {
+            console.error("Failed to load global search recommendations", error);
+            return { result: null, error };
+          }),
+      )
+    : { result: null, error: null };
   const shouldLoadInitialRelatedResults =
     query &&
     mainActivityResult.result &&
@@ -422,23 +726,26 @@ export default async function SearchPage({
   }
 
   return (
-    <PageContainer className="space-y-6 py-5 sm:py-8" mobileSafeBottom>
+    <PageContainer
+      className="max-w-3xl space-y-6 bg-white py-4 sm:py-8"
+      mobileSafeBottom
+      mobileSafeTop
+    >
       <DetailSourceRestore sourceKey="search" />
-      <div className="space-y-4">
-        <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-sm font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
-            <Search className="h-4 w-4" aria-hidden="true" />
-            {t.eyebrow}
-          </p>
-          <h1 className="mt-3 text-2xl font-semibold tracking-normal text-ink sm:text-3xl">
-            {t.title}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-            {t.description}
-          </p>
-        </div>
-
-        <GlobalSearchForm locale={locale} defaultQuery={query} variant="page" />
+      <div className="flex items-center gap-3">
+        <SearchBackButton
+          ariaLabel={t.back}
+          fallbackHref={withLocale(locale, "/mobile-home")}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#D6D5B2] bg-white text-[#111210] transition active:scale-95"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </SearchBackButton>
+        <GlobalSearchForm
+          locale={locale}
+          defaultQuery={query}
+          variant="page"
+          className="min-w-0 flex-1"
+        />
       </div>
 
       {searchResult.error ? (
@@ -447,7 +754,17 @@ export default async function SearchPage({
           description={t.loadFailedDescription}
         />
       ) : !query ? (
-        <EmptyState title={t.emptyTitle} description={t.emptyDescription} />
+        recommendationResult.error ? (
+          <EmptyState
+            title={t.loadFailedTitle}
+            description={t.loadFailedDescription}
+          />
+        ) : recommendationResult.result ? (
+          <SearchRecommendationsView
+            locale={locale}
+            recommendations={recommendationResult.result}
+          />
+        ) : null
       ) : !hasResults && hiddenEndedMainCount > 0 ? (
         <SearchEndedOnlyEmptyState
           endedCount={hiddenEndedMainCount}

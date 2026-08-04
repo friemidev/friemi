@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Download,
-  ImageIcon,
-  Link as LinkIcon,
-  Share2,
-  X,
-} from "lucide-react";
+import { Download, ImageIcon, Share2, X } from "lucide-react";
 import QRCode from "qrcode";
 import { Button } from "@chill-club/ui";
 import type {
@@ -19,7 +13,6 @@ import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { brand } from "@/lib/brand";
 import { getCopy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-import { ActivityCopyButton } from "./ActivityCopyButton";
 import { WechatShareConfigurator } from "./WechatShareConfigurator";
 
 type ActivityShareToolsProps = {
@@ -632,7 +625,7 @@ export function ActivityShareTools({
   sharePath = null,
   shareKind = "activity",
 }: ActivityShareToolsProps) {
-  const t = getCopy(locale).activityShare;
+  const t = useMemo(() => getCopy(locale).activityShare, [locale]);
   const [activityUrl, setActivityUrl] = useState("");
   const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
@@ -641,6 +634,9 @@ export function ActivityShareTools({
   );
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
+  const [posterPreviewState, setPosterPreviewState] = useState<
+    "idle" | "loading" | "failed"
+  >("idle");
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "failed"
   >("idle");
@@ -686,6 +682,60 @@ export function ActivityShareTools({
     );
   }, [activityUrl, coverImageUrl, shareKind]);
 
+  useEffect(() => {
+    if (!activityUrl) {
+      setPosterPreviewUrl(null);
+      setPosterPreviewState("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setPosterPreviewState("loading");
+
+    generateActivityPosterDataUrl({
+      activityTitle,
+      activityUrl,
+      categoryLabel,
+      coverImageUrl,
+      dateLabel,
+      description,
+      locationLabel,
+      priceLabel,
+      t,
+    })
+      .then((posterDataUrl) => {
+        if (cancelled) {
+          return;
+        }
+
+        setPosterPreviewUrl(posterDataUrl);
+        setPosterPreviewState("idle");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Failed to generate activity poster preview", error);
+        setPosterPreviewUrl(null);
+        setPosterPreviewState("failed");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activityTitle,
+    activityUrl,
+    categoryLabel,
+    coverImageUrl,
+    dateLabel,
+    description,
+    locationLabel,
+    priceLabel,
+    t,
+  ]);
+
   async function handleSystemShare() {
     if (!activityUrl) {
       return;
@@ -716,25 +766,31 @@ export function ActivityShareTools({
     setDownloadState("downloading");
 
     try {
-      const posterDataUrl = await generateActivityPosterDataUrl({
-        activityTitle,
-        activityUrl,
-        categoryLabel,
-        coverImageUrl,
-        dateLabel,
-        description,
-        locationLabel,
-        priceLabel,
-        t,
-      });
-      setPosterPreviewUrl(posterDataUrl);
-      setPosterPreviewOpen(true);
+      const posterDataUrl =
+        posterPreviewUrl ??
+        (await generateActivityPosterDataUrl({
+          activityTitle,
+          activityUrl,
+          categoryLabel,
+          coverImageUrl,
+          dateLabel,
+          description,
+          locationLabel,
+          priceLabel,
+          t,
+        }));
+
+      if (!posterPreviewUrl) {
+        setPosterPreviewUrl(posterDataUrl);
+      }
 
       if (shareMode !== "wechat") {
         const link = document.createElement("a");
         link.download = posterFileName;
         link.href = posterDataUrl;
         link.click();
+      } else {
+        setPosterPreviewOpen(true);
       }
 
       trackClientAnalyticsEvent({
@@ -753,6 +809,7 @@ export function ActivityShareTools({
     } catch (error) {
       console.error("Failed to generate activity poster", error);
       setDownloadState("failed");
+      setPosterPreviewState("failed");
     }
   }
 
@@ -818,38 +875,27 @@ export function ActivityShareTools({
           )}
           <span className="min-w-0 truncate">{posterButtonLabel}</span>
         </Button>
-        {activityUrl ? (
-          <ActivityCopyButton
-            analyticsEvent={{
-              name: "link_copied",
-              entityId: analyticsEntityId,
-              entityType: analyticsEntityType,
-              sourceSurface: analyticsSourceSurface,
-            }}
-            className="col-span-2 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
-            failedLabel={t.copyFailed}
-            label={t.copyLink}
-            successLabel={t.copied}
-            value={activityUrl}
-          >
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </ActivityCopyButton>
-        ) : (
-          <button
-            className="col-span-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#D6D5B2]"
-            disabled
-            type="button"
-          >
-            <LinkIcon className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </button>
-        )}
       </div>
-      {downloadState === "failed" ? (
+      {downloadState === "failed" || posterPreviewState === "failed" ? (
         <p className="mt-2 text-xs leading-5 text-red-600">
           {t.downloadFailed}
         </p>
       ) : null}
+      <div className="mt-3 overflow-hidden rounded-[1rem] border border-[#D6D5B2] bg-white p-2">
+        {posterPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={t.posterPreviewAlt}
+            className="max-h-[52dvh] w-full rounded-[0.75rem] object-contain"
+            draggable={false}
+            src={posterPreviewUrl}
+          />
+        ) : (
+          <div className="flex min-h-[18rem] w-full items-center justify-center rounded-[0.75rem] bg-[#F7F7F0] text-sm font-semibold text-[#6C746A]">
+            {posterPreviewState === "failed" ? t.downloadFailed : t.downloading}
+          </div>
+        )}
+      </div>
       {shareHelpOpen ? (
         <div
           aria-label={t.systemShare}
@@ -889,23 +935,6 @@ export function ActivityShareTools({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            {activityUrl ? (
-              <ActivityCopyButton
-                analyticsEvent={{
-                  name: "link_copied",
-                  entityId: analyticsEntityId,
-                  entityType: analyticsEntityType,
-                  sourceSurface: analyticsSourceSurface,
-                }}
-                className="mt-4 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] hover:bg-[#FEFFF9]"
-                failedLabel={t.copyFailed}
-                label={t.copyLink}
-                successLabel={t.copied}
-                value={activityUrl}
-              >
-                <span className="min-w-0 truncate">{t.copyLink}</span>
-              </ActivityCopyButton>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -951,16 +980,6 @@ export function ActivityShareTools({
               />
             </div>
           </div>
-        </div>
-      ) : null}
-      {posterPreviewUrl && shareMode !== "wechat" ? (
-        <div className="relative mt-3 overflow-hidden rounded-md bg-white ring-1 ring-zinc-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt={t.posterPreviewAlt}
-            className="aspect-[4/5] w-full object-cover"
-            src={posterPreviewUrl}
-          />
         </div>
       ) : null}
     </div>

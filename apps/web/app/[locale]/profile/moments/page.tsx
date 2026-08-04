@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileMomentsMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
-import { getProfileMoments } from "@/features/profile/queries/getProfileMoments";
+import {
+  getProfileLikedMoments,
+  getProfileMoments,
+} from "@/features/profile/queries/getProfileMoments";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 
 type ProfileMomentsPageProps = {
@@ -23,15 +26,26 @@ export default async function ProfileMomentsPage({
 }: ProfileMomentsPageProps) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/moments");
-  const moments = await getProfileMoments(profile.id).catch((error: unknown) => {
-    console.error("Failed to load profile moments", error);
+  const [moments, likedMoments] = await Promise.all([
+    getProfileMoments(profile.id).catch((error: unknown) => {
+      console.error("Failed to load profile moments", error);
 
-    return [];
-  });
+      return [];
+    }),
+    getProfileLikedMoments(profile.id).catch((error: unknown) => {
+      console.error("Failed to load profile liked moments", error);
+
+      return [];
+    }),
+  ]);
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0">
-      <ProfileMomentsMobilePage locale={locale} moments={moments} />
+      <ProfileMomentsMobilePage
+        likedMoments={likedMoments}
+        locale={locale}
+        moments={moments}
+      />
     </PageContainer>
   );
 }
