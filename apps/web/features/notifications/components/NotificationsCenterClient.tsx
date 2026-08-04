@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bell,
   CalendarX2,
+  Check,
   CheckCheck,
   Clock3,
   ExternalLink,
@@ -26,9 +27,11 @@ import { useEffect, useState, useTransition } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   deleteNotificationClientAction,
+  deleteNotificationsClientAction,
   deleteReadNotificationsClientAction,
   markAllNotificationsReadClientAction,
   markNotificationReadClientAction,
+  markNotificationsReadClientAction,
   openNotificationActivityAction,
 } from "@/features/notifications/actions/markNotificationsRead";
 import { NotificationSwipeCard } from "@/features/notifications/components/NotificationSwipeCard";
@@ -40,9 +43,12 @@ import { useNotificationBadge } from "./NotificationBadgeProvider";
 
 type NotificationCategory = "activity" | "friends" | "gift" | "system";
 
-type NotificationStateFilter = "all" | "unread" | "read";
-type NotificationFilter = NotificationStateFilter | NotificationCategory;
-type NotificationBulkAction = "delete-read" | "mark-all-read";
+type NotificationFilter = "all" | NotificationCategory;
+type NotificationBulkAction =
+  | "delete-read"
+  | "delete-selected"
+  | "mark-all-read"
+  | "mark-selected-read";
 
 function getNotificationCategory(
   type: NotificationType | string,
@@ -246,8 +252,6 @@ function getNotificationFilterCopy(locale: string): {
     return {
       tabs: {
         all: "Tout",
-        unread: "Non lues",
-        read: "Lues",
         activity: "Activité",
         friends: "Suivis",
         gift: "Cadeaux",
@@ -260,8 +264,6 @@ function getNotificationFilterCopy(locale: string): {
     return {
       tabs: {
         all: "All",
-        unread: "Unread",
-        read: "Read",
         activity: "Activity",
         friends: "Follows",
         gift: "Gifts",
@@ -273,8 +275,6 @@ function getNotificationFilterCopy(locale: string): {
   return {
     tabs: {
       all: "全部",
-      unread: "未读",
-      read: "已读",
       activity: "活动",
       friends: "关注",
       gift: "礼物",
@@ -295,55 +295,148 @@ function getNotificationDeleteCopy(locale: string) {
   return { clearRead: "批量删除已读", delete: "删除" };
 }
 
+function getNotificationSelectionCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      cancel: "Annuler",
+      delete: "Supprimer",
+      markRead: "Marquer lues",
+      select: "Sélectionner",
+      selectAll: "Tout",
+      selectedCount: (count: number) => `${count} sélectionnée`,
+      selectedCountPlural: (count: number) => `${count} sélectionnées`,
+      unselectAll: "Vider",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      cancel: "Cancel",
+      delete: "Delete",
+      markRead: "Mark read",
+      select: "Select",
+      selectAll: "All",
+      selectedCount: (count: number) => `${count} selected`,
+      selectedCountPlural: (count: number) => `${count} selected`,
+      unselectAll: "Clear",
+    };
+  }
+
+  return {
+    cancel: "取消",
+    delete: "删除",
+    markRead: "标为已读",
+    select: "选择",
+    selectAll: "全选",
+    selectedCount: (count: number) => `已选 ${count}`,
+    selectedCountPlural: (count: number) => `已选 ${count}`,
+    unselectAll: "清空",
+  };
+}
+
 function getNotificationBulkConfirmCopy(
   locale: string,
   action: NotificationBulkAction,
   count: number,
 ) {
   if (locale === "fr") {
-    return action === "mark-all-read"
+    if (action === "mark-all-read") {
+      return {
+        body: `${count} notifications seront marquées comme lues.`,
+        cancel: "Annuler",
+        confirm: "Tout marquer",
+        title: "Tout marquer comme lu ?",
+      };
+    }
+
+    if (action === "mark-selected-read") {
+      return {
+        body: `${count} notifications sélectionnées seront marquées comme lues.`,
+        cancel: "Annuler",
+        confirm: "Marquer",
+        title: "Marquer comme lues ?",
+      };
+    }
+
+    return action === "delete-read"
       ? {
-          body: `${count} notifications seront marquees comme lues.`,
-          cancel: "Annuler",
-          confirm: "Tout marquer",
-          title: "Tout marquer comme lu ?",
-        }
-      : {
-          body: `${count} notifications lues seront supprimees. Cette action est definitive.`,
+          body: `${count} notifications lues seront supprimées. Cette action est définitive.`,
           cancel: "Annuler",
           confirm: "Supprimer",
           title: "Supprimer les lues ?",
+        }
+      : {
+          body: `${count} notifications sélectionnées seront supprimées. Cette action est définitive.`,
+          cancel: "Annuler",
+          confirm: "Supprimer",
+          title: "Supprimer la sélection ?",
         };
   }
 
   if (locale === "en") {
-    return action === "mark-all-read"
+    if (action === "mark-all-read") {
+      return {
+        body: `${count} unread notifications will be marked as read.`,
+        cancel: "Cancel",
+        confirm: "Mark read",
+        title: "Mark all as read?",
+      };
+    }
+
+    if (action === "mark-selected-read") {
+      return {
+        body: `${count} selected notifications will be marked as read.`,
+        cancel: "Cancel",
+        confirm: "Mark read",
+        title: "Mark selected as read?",
+      };
+    }
+
+    return action === "delete-read"
       ? {
-          body: `${count} unread notifications will be marked as read.`,
-          cancel: "Cancel",
-          confirm: "Mark read",
-          title: "Mark all as read?",
-        }
-      : {
           body: `${count} read notifications will be deleted. This cannot be undone.`,
           cancel: "Cancel",
           confirm: "Delete",
           title: "Delete read notifications?",
+        }
+      : {
+          body: `${count} selected notifications will be deleted. This cannot be undone.`,
+          cancel: "Cancel",
+          confirm: "Delete",
+          title: "Delete selected?",
         };
   }
 
-  return action === "mark-all-read"
+  if (action === "mark-all-read") {
+    return {
+      body: `将 ${count} 条未读通知标为已读。`,
+      cancel: "取消",
+      confirm: "全部已读",
+      title: "全部标为已读？",
+    };
+  }
+
+  if (action === "mark-selected-read") {
+    return {
+      body: `将 ${count} 条选中的通知标为已读。`,
+      cancel: "取消",
+      confirm: "标为已读",
+      title: "标记选中通知？",
+    };
+  }
+
+  return action === "delete-read"
     ? {
-        body: `将 ${count} 条未读通知标为已读。`,
-        cancel: "取消",
-        confirm: "全部已读",
-        title: "全部标为已读？",
-      }
-    : {
         body: `将删除 ${count} 条已读通知，删除后无法恢复。`,
         cancel: "取消",
         confirm: "确认删除",
         title: "删除已读通知？",
+      }
+    : {
+        body: `将删除 ${count} 条选中的通知，删除后无法恢复。`,
+        cancel: "取消",
+        confirm: "确认删除",
+        title: "删除选中通知？",
       };
 }
 
@@ -490,14 +583,20 @@ function NotificationCard({
   locale,
   notification,
   pending,
+  selected = false,
+  selectionMode = false,
   onDelete,
   onMarkRead,
+  onToggleSelected,
 }: {
   locale: string;
   notification: NotificationViewModel;
   pending: boolean;
+  selected?: boolean;
+  selectionMode?: boolean;
   onDelete: (notificationId: string) => void;
   onMarkRead: (notificationId: string) => void;
+  onToggleSelected?: (notificationId: string) => void;
 }) {
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
@@ -536,6 +635,7 @@ function NotificationCard({
         className={cn(
           "group relative overflow-hidden rounded-[1rem] border px-3 py-3 transition duration-150 ease-out hover:bg-white sm:px-4 sm:py-3.5",
           visual.cardClassName,
+          selected ? "border-[#156240] ring-1 ring-[#156240]/30" : null,
           pending ? "pointer-events-none opacity-70" : null,
         )}
       >
@@ -549,11 +649,48 @@ function NotificationCard({
         <div
           className="flex gap-3 pl-1"
           onClick={(event) => {
+            if (
+              selectionMode &&
+              !isNotificationInteractiveTarget(event.target)
+            ) {
+              onToggleSelected?.(notification.id);
+              return;
+            }
+
             if (isUnread && !isNotificationInteractiveTarget(event.target)) {
               onMarkRead(notification.id);
             }
           }}
         >
+          {selectionMode ? (
+            <button
+              aria-label={
+                selected
+                  ? locale === "en"
+                    ? "Unselect notification"
+                    : locale === "fr"
+                      ? "Retirer de la sélection"
+                      : "取消选择通知"
+                  : locale === "en"
+                    ? "Select notification"
+                    : locale === "fr"
+                      ? "Sélectionner la notification"
+                      : "选择通知"
+              }
+              className={cn(
+                "mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 transition active:scale-95",
+                selected
+                  ? "bg-[#156240] text-white ring-[#156240]"
+                  : "bg-white text-transparent ring-[#D6D5B2]",
+              )}
+              data-no-swipe
+              disabled={pending}
+              onClick={() => onToggleSelected?.(notification.id)}
+              type="button"
+            >
+              <Check className="h-4 w-4" strokeWidth={2.8} />
+            </button>
+          ) : null}
           <span
             className={cn(
               "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-paper/75",
@@ -585,50 +722,52 @@ function NotificationCard({
               </span>
             </div>
 
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              {hasAction ? (
-                <form action={openNotificationActivityAction}>
-                  <input name="locale" type="hidden" value={locale} />
-                  <input
-                    name="notificationId"
-                    type="hidden"
-                    value={notification.id}
-                  />
+            {!selectionMode ? (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {hasAction ? (
+                  <form action={openNotificationActivityAction}>
+                    <input name="locale" type="hidden" value={locale} />
+                    <input
+                      name="notificationId"
+                      type="hidden"
+                      value={notification.id}
+                    />
+                    <button
+                      className={cn(
+                        "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
+                        isUnread
+                          ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
+                          : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
+                      )}
+                      type="submit"
+                    >
+                      {getNotificationActionLabel(notification, locale)}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </button>
+                  </form>
+                ) : null}
+                {isUnread ? (
                   <button
-                    className={cn(
-                      "inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30",
-                      isUnread
-                        ? "bg-ink text-paper shadow-[0_10px_22px_rgba(29,29,27,0.12)] hover:bg-forest"
-                        : "bg-paper text-ink ring-1 ring-sand hover:bg-fog",
-                    )}
-                    type="submit"
+                    className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 text-xs font-semibold text-forest/70 ring-1 ring-sand transition hover:bg-fog hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                    disabled={pending}
+                    onClick={() => onMarkRead(notification.id)}
+                    type="button"
                   >
-                    {getNotificationActionLabel(notification, locale)}
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    {t.markOneRead}
                   </button>
-                </form>
-              ) : null}
-              {isUnread ? (
+                ) : null}
                 <button
-                  className="inline-flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-paper px-3 text-xs font-semibold text-forest/70 ring-1 ring-sand transition hover:bg-fog hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-meadow/30"
+                  className="hidden min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-rose/58 px-3 text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/78 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:inline-flex"
                   disabled={pending}
-                  onClick={() => onMarkRead(notification.id)}
+                  onClick={() => onDelete(notification.id)}
                   type="button"
                 >
-                  <CheckCheck className="h-3.5 w-3.5" />
-                  {t.markOneRead}
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleteCopy.delete}
                 </button>
-              ) : null}
-              <button
-                className="hidden min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-rose/58 px-3 text-xs font-semibold text-danger ring-1 ring-coral/30 transition hover:bg-rose/78 focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/35 sm:inline-flex"
-                disabled={pending}
-                onClick={() => onDelete(notification.id)}
-                type="button"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {deleteCopy.delete}
-              </button>
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </article>
@@ -715,19 +854,22 @@ export function NotificationsCenterClient({
   const t = getCopy(locale).notifications;
   const deleteCopy = getNotificationDeleteCopy(locale);
   const filterCopy = getNotificationFilterCopy(locale);
+  const selectionCopy = getNotificationSelectionCopy(locale);
   const { setUnreadNotificationCount } =
     useNotificationBadge(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("all");
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
   const [pendingBulkAction, setPendingBulkAction] =
     useState<NotificationBulkAction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [isPending, startTransition] = useTransition();
 
   const filters: NotificationFilter[] = [
     "all",
-    "unread",
-    "read",
     "activity",
     "friends",
     "gift",
@@ -740,16 +882,8 @@ export function NotificationsCenterClient({
     (notification) => notification.readAt !== null,
   );
   const unreadCount = unreadNotifications.length;
-  const pendingBulkActionCount =
-    pendingBulkAction === "mark-all-read"
-      ? unreadNotifications.length
-      : pendingBulkAction === "delete-read"
-        ? readNotifications.length
-        : 0;
   const filteredNotifications = notifications.filter((notification) => {
     if (activeFilter === "all") return true;
-    if (activeFilter === "unread") return notification.readAt === null;
-    if (activeFilter === "read") return notification.readAt !== null;
 
     return getNotificationCategory(notification.type) === activeFilter;
   });
@@ -762,12 +896,41 @@ export function NotificationsCenterClient({
 
     return Date.parse(b.createdAt) - Date.parse(a.createdAt);
   });
+  const visibleNotificationIds = visibleNotifications.map(
+    (notification) => notification.id,
+  );
+  const selectedNotifications = notifications.filter((notification) =>
+    selectedIds.has(notification.id),
+  );
+  const selectedUnreadNotifications = selectedNotifications.filter(
+    (notification) => notification.readAt === null,
+  );
+  const selectedCount = selectedNotifications.length;
+  const selectedUnreadCount = selectedUnreadNotifications.length;
+  const selectedAllVisible =
+    visibleNotificationIds.length > 0 &&
+    visibleNotificationIds.every((notificationId) =>
+      selectedIds.has(notificationId),
+    );
+  const selectedCountLabel =
+    selectedCount === 1
+      ? selectionCopy.selectedCount(selectedCount)
+      : selectionCopy.selectedCountPlural(selectedCount);
+  const pendingBulkActionCount =
+    pendingBulkAction === "mark-all-read"
+      ? unreadNotifications.length
+      : pendingBulkAction === "delete-read"
+        ? readNotifications.length
+        : pendingBulkAction === "mark-selected-read"
+          ? selectedUnreadCount
+          : pendingBulkAction === "delete-selected"
+            ? selectedCount
+            : 0;
   const filterCounts = filters.reduce<Record<NotificationFilter, number>>(
     (counts, filter) => {
       counts[filter] = notifications.filter((notification) => {
+        if (notification.readAt !== null) return false;
         if (filter === "all") return true;
-        if (filter === "unread") return notification.readAt === null;
-        if (filter === "read") return notification.readAt !== null;
 
         return getNotificationCategory(notification.type) === filter;
       }).length;
@@ -779,15 +942,33 @@ export function NotificationsCenterClient({
       all: 0,
       friends: 0,
       gift: 0,
-      read: 0,
       system: 0,
-      unread: 0,
     },
   );
 
   useEffect(() => {
     setUnreadNotificationCount(unreadCount);
   }, [setUnreadNotificationCount, unreadCount]);
+
+  useEffect(() => {
+    const activeIds = new Set(
+      notifications.map((notification) => notification.id),
+    );
+
+    setSelectedIds((currentIds) => {
+      const nextIds = new Set(
+        Array.from(currentIds).filter((notificationId) =>
+          activeIds.has(notificationId),
+        ),
+      );
+
+      return nextIds.size === currentIds.size ? currentIds : nextIds;
+    });
+
+    if (notifications.length === 0) {
+      setIsSelecting(false);
+    }
+  }, [notifications]);
 
   function runOptimisticMutation(
     nextNotifications: NotificationViewModel[],
@@ -869,6 +1050,81 @@ export function NotificationsCenterClient({
     );
   }
 
+  function handleToggleSelection(notificationId: string) {
+    setSelectedIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(notificationId)) {
+        nextIds.delete(notificationId);
+      } else {
+        nextIds.add(notificationId);
+      }
+
+      return nextIds;
+    });
+  }
+
+  function handleToggleVisibleSelection() {
+    setSelectedIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      for (const notificationId of visibleNotificationIds) {
+        if (selectedAllVisible) {
+          nextIds.delete(notificationId);
+        } else {
+          nextIds.add(notificationId);
+        }
+      }
+
+      return nextIds;
+    });
+  }
+
+  function handleCancelSelection() {
+    setIsSelecting(false);
+    setSelectedIds(new Set<string>());
+  }
+
+  function handleMarkSelectedRead() {
+    if (selectedUnreadNotifications.length === 0) {
+      return;
+    }
+
+    const selectedUnreadIds = selectedUnreadNotifications.map(
+      (notification) => notification.id,
+    );
+
+    setIsSelecting(false);
+    setSelectedIds(new Set<string>());
+    runOptimisticMutation(
+      notifications.map((notification) =>
+        selectedUnreadIds.includes(notification.id)
+          ? { ...notification, readAt: new Date().toISOString() }
+          : notification,
+      ),
+      () => markNotificationsReadClientAction(locale, selectedUnreadIds),
+    );
+  }
+
+  function handleDeleteSelected() {
+    if (selectedNotifications.length === 0) {
+      return;
+    }
+
+    const selectedNotificationIds = selectedNotifications.map(
+      (notification) => notification.id,
+    );
+
+    setIsSelecting(false);
+    setSelectedIds(new Set<string>());
+    runOptimisticMutation(
+      notifications.filter(
+        (notification) => !selectedNotificationIds.includes(notification.id),
+      ),
+      () => deleteNotificationsClientAction(locale, selectedNotificationIds),
+    );
+  }
+
   function handleConfirmBulkAction() {
     const action = pendingBulkAction;
 
@@ -883,7 +1139,17 @@ export function NotificationsCenterClient({
       return;
     }
 
-    handleDeleteRead();
+    if (action === "delete-read") {
+      handleDeleteRead();
+      return;
+    }
+
+    if (action === "mark-selected-read") {
+      handleMarkSelectedRead();
+      return;
+    }
+
+    handleDeleteSelected();
   }
 
   return (
@@ -893,24 +1159,47 @@ export function NotificationsCenterClient({
           <h1 className="min-w-0 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
             {t.title}
           </h1>
-          <button
-            aria-expanded={isActionMenuOpen}
-            aria-label={
-              locale === "en"
-                ? "Notification actions"
-                : locale === "fr"
-                  ? "Actions notification"
-                  : "通知操作"
-            }
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
-            onClick={() => setIsActionMenuOpen((current) => !current)}
-            type="button"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          {isSelecting ? (
+            <button
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
+              onClick={handleCancelSelection}
+              type="button"
+            >
+              {selectionCopy.cancel}
+            </button>
+          ) : (
+            <button
+              aria-expanded={isActionMenuOpen}
+              aria-label={
+                locale === "en"
+                  ? "Notification actions"
+                  : locale === "fr"
+                    ? "Actions notification"
+                    : "通知操作"
+              }
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
+              onClick={() => setIsActionMenuOpen((current) => !current)}
+              type="button"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          )}
 
-          {isActionMenuOpen ? (
+          {!isSelecting && isActionMenuOpen ? (
             <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-2 rounded-[1rem] border border-[#D6D5B2] bg-white p-2 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
+              <button
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={isPending || notifications.length === 0}
+                onClick={() => {
+                  setIsSelecting(true);
+                  setSelectedIds(new Set<string>());
+                  setIsActionMenuOpen(false);
+                }}
+                type="button"
+              >
+                <Check className="h-4 w-4" />
+                {selectionCopy.select}
+              </button>
               <button
                 className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || unreadCount === 0}
@@ -938,6 +1227,45 @@ export function NotificationsCenterClient({
             </div>
           ) : null}
         </div>
+
+        {isSelecting ? (
+          <div
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+            data-no-swipe
+          >
+            <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#156240] px-3 text-xs font-black text-white">
+              {selectedCountLabel}
+            </span>
+            <button
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              disabled={visibleNotificationIds.length === 0 || isPending}
+              onClick={handleToggleVisibleSelection}
+              type="button"
+            >
+              {selectedAllVisible
+                ? selectionCopy.unselectAll
+                : selectionCopy.selectAll}
+            </button>
+            <button
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              disabled={selectedUnreadCount === 0 || isPending}
+              onClick={() => setPendingBulkAction("mark-selected-read")}
+              type="button"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              {selectionCopy.markRead}
+            </button>
+            <button
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#B5301F] ring-1 ring-[#F09182]/50 transition active:scale-95 disabled:opacity-45"
+              disabled={selectedCount === 0 || isPending}
+              onClick={() => setPendingBulkAction("delete-selected")}
+              type="button"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {selectionCopy.delete}
+            </button>
+          </div>
+        ) : null}
 
         <nav
           aria-label={t.title}
@@ -995,7 +1323,10 @@ export function NotificationsCenterClient({
               notification={notification}
               onDelete={handleDelete}
               onMarkRead={handleMarkRead}
+              onToggleSelected={handleToggleSelection}
               pending={isPending}
+              selected={selectedIds.has(notification.id)}
+              selectionMode={isSelecting}
             />
           ))}
         </section>

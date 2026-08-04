@@ -39,6 +39,13 @@ export type PublicAchievementWallItem = {
   unlockedAt: string;
 };
 
+type PublicAchievementRecord = {
+  achievementKey: string;
+  sourceId: string | null;
+  sourceType: string | null;
+  unlockedAt: Date;
+};
+
 export class AchievementDomainError extends Error {
   code: "UNKNOWN_ACHIEVEMENT";
 
@@ -393,22 +400,17 @@ export async function getPublicAchievementWall(profileId: string) {
       : [],
   );
 
+  if (equippedKeys.length === 0) {
+    return [];
+  }
+
   const achievements = await prisma.userAchievement.findMany({
     where: {
       achievementKey: {
-        in:
-          equippedKeys.length > 0
-            ? equippedKeys
-            : achievementCatalog.map((achievement) => achievement.key),
+        in: equippedKeys,
       },
       profileId,
     },
-    orderBy:
-      equippedKeys.length > 0
-        ? undefined
-        : {
-            unlockedAt: "desc",
-          },
     select: {
       achievementKey: true,
       sourceId: true,
@@ -417,20 +419,33 @@ export async function getPublicAchievementWall(profileId: string) {
     },
     take: maxEquippedAchievementCount,
   });
+
+  return resolvePublicAchievementWallItems({
+    achievements,
+    equippedKeys,
+  });
+}
+
+export function resolvePublicAchievementWallItems({
+  achievements,
+  equippedKeys,
+}: {
+  achievements: PublicAchievementRecord[];
+  equippedKeys: AchievementKey[];
+}) {
   const achievementsByKey = new Map(
     achievements.map((achievement) => [
       achievement.achievementKey,
       achievement,
     ]),
   );
-  const orderedAchievements =
-    equippedKeys.length > 0
-      ? equippedKeys.flatMap((key) => {
-          const achievement = achievementsByKey.get(key);
+  const orderedAchievements = equippedKeys
+    .slice(0, maxEquippedAchievementCount)
+    .flatMap((key) => {
+      const achievement = achievementsByKey.get(key);
 
-          return achievement ? [achievement] : [];
-        })
-      : achievements;
+      return achievement ? [achievement] : [];
+    });
 
   return orderedAchievements.flatMap((achievement) => {
     if (!isAchievementKey(achievement.achievementKey)) {

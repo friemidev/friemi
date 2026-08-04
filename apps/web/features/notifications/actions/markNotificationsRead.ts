@@ -17,6 +17,17 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function getNotificationIdList(notificationIds: readonly string[]) {
+  return Array.from(
+    new Set(
+      notificationIds.filter(
+        (notificationId) =>
+          typeof notificationId === "string" && notificationId.length > 0,
+      ),
+    ),
+  ).slice(0, 100);
+}
+
 function trackNotificationOpened({
   locale,
   notificationId,
@@ -136,6 +147,33 @@ export async function deleteNotificationClientAction(
   return { ok: true as const };
 }
 
+export async function deleteNotificationsClientAction(
+  locale: string,
+  notificationIds: string[],
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+  const ids = getNotificationIdList(notificationIds);
+
+  if (ids.length > 0) {
+    await prisma.notification.deleteMany({
+      where: getVisibleNotificationWhere({
+        id: {
+          in: ids,
+        },
+        recipientId: profile.id,
+      }),
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
 export async function markNotificationReadClientAction(
   locale: string,
   notificationId: string,
@@ -150,6 +188,37 @@ export async function markNotificationReadClientAction(
     await prisma.notification.updateMany({
       where: getVisibleNotificationWhere({
         id: notificationId,
+        recipientId: profile.id,
+        readAt: null,
+      }),
+      data: {
+        readAt: new Date(),
+      },
+    });
+  }
+
+  revalidatePath(withLocale(normalizedLocale, "/notifications"));
+
+  return { ok: true as const };
+}
+
+export async function markNotificationsReadClientAction(
+  locale: string,
+  notificationIds: string[],
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    "/notifications",
+  );
+  const ids = getNotificationIdList(notificationIds);
+
+  if (ids.length > 0) {
+    await prisma.notification.updateMany({
+      where: getVisibleNotificationWhere({
+        id: {
+          in: ids,
+        },
         recipientId: profile.id,
         readAt: null,
       }),

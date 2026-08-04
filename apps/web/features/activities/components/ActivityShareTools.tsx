@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronDown,
   Download,
   ImageIcon,
   Link as LinkIcon,
-  QrCode,
   Share2,
   X,
 } from "lucide-react";
@@ -625,7 +623,6 @@ export function ActivityShareTools({
   analyticsEntityType,
   analyticsSourceSurface = "activity_detail",
   categoryLabel,
-  collapsible = true,
   coverImageUrl,
   dateLabel,
   description,
@@ -637,7 +634,6 @@ export function ActivityShareTools({
 }: ActivityShareToolsProps) {
   const t = getCopy(locale).activityShare;
   const [activityUrl, setActivityUrl] = useState("");
-  const [expanded, setExpanded] = useState(false);
   const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
   const [wechatShareImageUrl, setWechatShareImageUrl] = useState<string | null>(
@@ -648,9 +644,6 @@ export function ActivityShareTools({
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "failed"
   >("idle");
-  const [qrDownloadState, setQrDownloadState] = useState<
-    "idle" | "downloading" | "failed"
-  >("idle");
   const posterFileName = useMemo(
     () =>
       `${sanitizeFileName(activityTitle)}-${sanitizeFileName(dateLabel).slice(
@@ -658,10 +651,6 @@ export function ActivityShareTools({
         36,
       )}-next-fun-club.png`,
     [activityTitle, dateLabel],
-  );
-  const qrFileName = useMemo(
-    () => `${sanitizeFileName(activityTitle)}-next-fun-club-qr.png`,
-    [activityTitle],
   );
 
   useEffect(() => {
@@ -767,59 +756,19 @@ export function ActivityShareTools({
     }
   }
 
-  async function handleDownloadQrCode() {
-    if (!activityUrl) {
-      return;
-    }
-
-    setQrDownloadState("downloading");
-
-    try {
-      const qrDataUrl = await QRCode.toDataURL(activityUrl, {
-        color: {
-          dark: "#1D1D1B",
-          light: "#FEFFF9",
-        },
-        margin: 2,
-        width: 720,
-      });
-      const link = document.createElement("a");
-      link.download = qrFileName;
-      link.href = qrDataUrl;
-      link.click();
-      trackClientAnalyticsEvent({
-        name: "qr_code_shared",
-        entityId: analyticsEntityId,
-        entityType: analyticsEntityType,
-        sourceSurface: analyticsSourceSurface,
-        properties: {
-          share_mode: "qr_download",
-        },
-      });
-      setQrDownloadState("idle");
-    } catch (error) {
-      console.error("Failed to generate activity QR code", error);
-      setQrDownloadState("failed");
-    }
-  }
-
   const canDownload = Boolean(activityUrl) && downloadState !== "downloading";
-  const canDownloadQr =
-    Boolean(activityUrl) && qrDownloadState !== "downloading";
   const shareTitle = shareKind === "team" ? t.teamTitle : t.activityTitle;
   const shareDescription =
     shareKind === "team" ? t.teamDescription : t.activityDescription;
-  const usesSystemSharePrimary = shareMode !== "copy";
   const posterButtonLabel =
     downloadState === "downloading"
       ? t.downloading
       : shareMode === "wechat"
         ? t.savePoster
         : t.downloadPoster;
-  const showSecondaryActions = !collapsible || expanded;
 
   return (
-    <div className="rounded-[1.1rem] border border-[#8AB68E] bg-[#FEFFF9] p-3 shadow-sm">
+    <div className="rounded-[1.1rem] border border-[#8AB68E] bg-white p-3 shadow-sm">
       <WechatShareConfigurator
         description={description || shareDescription}
         enabled={shareKind === "team"}
@@ -829,7 +778,7 @@ export function ActivityShareTools({
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F4F7F0] text-[#156240] ring-1 ring-[#8AB68E]">
             <Share2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
@@ -839,60 +788,19 @@ export function ActivityShareTools({
             </p>
           </div>
         </div>
-        {collapsible ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-zinc-600 ring-1 ring-[#8AB68E] transition hover:bg-[#FEFFF9] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
-            onClick={() => setExpanded((value) => !value)}
-            title={expanded ? t.collapse : t.expand}
-          >
-            <ChevronDown
-              className={cn("h-4 w-4 transition", expanded && "rotate-180")}
-            />
-            <span className="sr-only">{expanded ? t.collapse : t.expand}</span>
-          </button>
-        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {usesSystemSharePrimary ? (
-          <Button
-            className="h-10 gap-2 rounded-full border-[#1D1D1B] bg-[#1D1D1B] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#1D1D1B]"
-            disabled={!activityUrl}
-            onClick={handleSystemShare}
-            type="button"
-            variant="secondary"
-          >
-            <Share2 className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">{t.systemShare}</span>
-          </Button>
-        ) : activityUrl ? (
-          <ActivityCopyButton
-            analyticsEvent={{
-              name: "link_copied",
-              entityId: analyticsEntityId,
-              entityType: analyticsEntityType,
-              sourceSurface: analyticsSourceSurface,
-            }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#8AB68E] hover:bg-[#FEFFF9]"
-            failedLabel={t.copyFailed}
-            label={t.copyLink}
-            successLabel={t.copied}
-            value={activityUrl}
-          >
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </ActivityCopyButton>
-        ) : (
-          <button
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#8AB68E]"
-            disabled
-            type="button"
-          >
-            <LinkIcon className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">{t.copyLink}</span>
-          </button>
-        )}
+        <Button
+          className="h-10 gap-2 rounded-full border-[#1D1D1B] bg-[#1D1D1B] px-3 text-sm font-semibold text-white shadow-none hover:bg-[#1D1D1B]"
+          disabled={!activityUrl}
+          onClick={handleSystemShare}
+          type="button"
+          variant="secondary"
+        >
+          <Share2 className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">{t.systemShare}</span>
+        </Button>
         <Button
           className={cn(
             "h-10 gap-2 rounded-full border-[#8AB68E] bg-white px-3 text-sm font-semibold text-[#156240] shadow-none hover:bg-[#FEFFF9]",
@@ -910,79 +818,36 @@ export function ActivityShareTools({
           )}
           <span className="min-w-0 truncate">{posterButtonLabel}</span>
         </Button>
-      </div>
-
-      {showSecondaryActions ? (
-        <div className="mt-2 grid gap-2 border-t border-[#D6D5B2] pt-2 sm:grid-cols-2 lg:grid-cols-1">
-          {usesSystemSharePrimary && activityUrl ? (
-            <ActivityCopyButton
-              analyticsEvent={{
-                name: "link_copied",
-                entityId: analyticsEntityId,
-                entityType: analyticsEntityType,
-                sourceSurface: analyticsSourceSurface,
-              }}
-              className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
-              failedLabel={t.copyFailed}
-              label={t.copyLink}
-              successLabel={t.copied}
-              value={activityUrl}
-            >
-              <span className="min-w-0 truncate">{t.copyLink}</span>
-            </ActivityCopyButton>
-          ) : null}
+        {activityUrl ? (
           <ActivityCopyButton
             analyticsEvent={{
-              name: "field_copied",
+              name: "link_copied",
               entityId: analyticsEntityId,
               entityType: analyticsEntityType,
               sourceSurface: analyticsSourceSurface,
-              properties: {
-                field_name: "title",
-              },
             }}
-            className="h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-ink ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
+            className="col-span-2 h-10 w-full justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] hover:bg-[#FEFFF9]"
             failedLabel={t.copyFailed}
-            label={t.copyTitle}
+            label={t.copyLink}
             successLabel={t.copied}
-            value={activityTitle}
+            value={activityUrl}
           >
-            <span className="min-w-0 truncate">{t.copyTitle}</span>
+            <span className="min-w-0 truncate">{t.copyLink}</span>
           </ActivityCopyButton>
-          <Button
-            className={cn(
-              "h-10 gap-2 rounded-full border-[#D6D5B2] bg-white px-3 text-sm font-medium text-ink shadow-none hover:bg-[#FEFFF9]",
-              !canDownloadQr && "opacity-70",
-            )}
-            disabled={!canDownloadQr}
-            onClick={handleDownloadQrCode}
+        ) : (
+          <button
+            className="col-span-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-zinc-400 ring-1 ring-[#D6D5B2]"
+            disabled
             type="button"
-            variant="secondary"
           >
-            <QrCode className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate">
-              {qrDownloadState === "downloading"
-                ? t.qrDownloading
-                : t.downloadQr}
-            </span>
-          </Button>
-        </div>
-      ) : null}
-
-      {showSecondaryActions && activityUrl ? (
-        <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-white/72 px-3 py-1.5 text-xs text-zinc-500 ring-1 ring-[#D6D5B2]">
-          <LinkIcon className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate">{getUrlHost(activityUrl)}</span>
-        </div>
-      ) : null}
+            <LinkIcon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">{t.copyLink}</span>
+          </button>
+        )}
+      </div>
       {downloadState === "failed" ? (
         <p className="mt-2 text-xs leading-5 text-red-600">
           {t.downloadFailed}
-        </p>
-      ) : null}
-      {qrDownloadState === "failed" ? (
-        <p className="mt-2 text-xs leading-5 text-red-600">
-          {t.qrDownloadFailed}
         </p>
       ) : null}
       {shareHelpOpen ? (
@@ -1096,15 +961,6 @@ export function ActivityShareTools({
             className="aspect-[4/5] w-full object-cover"
             src={posterPreviewUrl}
           />
-          <a
-            aria-label={t.downloadPoster}
-            className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink shadow-sm ring-1 ring-black/10 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss"
-            download={posterFileName}
-            href={posterPreviewUrl}
-            title={t.downloadPoster}
-          >
-            <Download className="h-4 w-4" />
-          </a>
         </div>
       ) : null}
     </div>

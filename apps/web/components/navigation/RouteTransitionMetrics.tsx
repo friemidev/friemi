@@ -7,6 +7,7 @@ import {
   saveActivityListEntryFromDocumentReferrer,
   saveActivityListEntryFromTransition,
 } from "@/features/navigation/activityListEntryReturn";
+import { saveAppRouteHistory } from "@/features/navigation/appRouteHistory";
 
 type PendingNavigation = {
   fromRoute: string;
@@ -107,6 +108,7 @@ export function RouteTransitionMetrics({ locale }: { locale: string }) {
     }
 
     previousRouteKeyRef.current = routeKey;
+    saveAppRouteHistory(routeKey);
   }, [locale, routeKey]);
 
   useEffect(() => {

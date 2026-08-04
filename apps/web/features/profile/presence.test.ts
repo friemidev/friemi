@@ -13,14 +13,14 @@ function minutesAgo(minutes: number) {
 }
 
 test("presence shows online only inside the active heartbeat window", () => {
-  assert.equal(
-    getUserPresenceState({
-      lastActiveAt: minutesAgo(4),
-      now,
-      status: "ONLINE",
-    }).isOnline,
-    true,
-  );
+  const onlinePresence = getUserPresenceState({
+    lastActiveAt: minutesAgo(4),
+    now,
+    status: "ONLINE",
+  });
+
+  assert.equal(onlinePresence.displayStatus, "ONLINE");
+  assert.equal(onlinePresence.isOnline, true);
   assert.equal(
     getUserPresenceState({
       lastActiveAt: new Date(now.getTime() - presenceOnlineWindowMs - 1),
@@ -31,17 +31,28 @@ test("presence shows online only inside the active heartbeat window", () => {
   );
 });
 
-test("presence hides the green dot for away and invisible statuses", () => {
-  for (const status of ["AWAY", "INVISIBLE"] satisfies UserPresenceStatusValue[]) {
-    const presence = getUserPresenceState({
-      lastActiveAt: minutesAgo(1),
-      now,
-      status,
-    });
+test("presence shows away as a visible yellow status", () => {
+  const presence = getUserPresenceState({
+    lastActiveAt: minutesAgo(1),
+    now,
+    status: "AWAY" satisfies UserPresenceStatusValue,
+  });
 
-    assert.equal(presence.status, status);
-    assert.equal(presence.isOnline, false);
-  }
+  assert.equal(presence.status, "AWAY");
+  assert.equal(presence.displayStatus, "AWAY");
+  assert.equal(presence.isOnline, false);
+});
+
+test("presence hides invisible status", () => {
+  const presence = getUserPresenceState({
+    lastActiveAt: minutesAgo(1),
+    now,
+    status: "INVISIBLE" satisfies UserPresenceStatusValue,
+  });
+
+  assert.equal(presence.status, "INVISIBLE");
+  assert.equal(presence.displayStatus, null);
+  assert.equal(presence.isOnline, false);
 });
 
 test("presence does not treat missing or future heartbeats as online", () => {

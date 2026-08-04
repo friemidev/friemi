@@ -2,12 +2,25 @@
 
 import { ChevronUp, ClipboardList, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 const RAISED_HAND_SIGNUP_ICON_SRC =
   "/brand/v2_1/team-detail-join-raised-hand.svg";
+const TeamDetailMobileCtaSheetCloseContext = createContext<
+  (() => void) | null
+>(null);
+
+export function useTeamDetailMobileCtaSheetClose() {
+  return useContext(TeamDetailMobileCtaSheetCloseContext);
+}
 
 function getTeamDetailMobileCtaCopy(
   locale: string,
@@ -16,26 +29,23 @@ function getTeamDetailMobileCtaCopy(
   if (locale === "fr") {
     return {
       close: "Fermer",
-      eyebrow: mode === "manage" ? "Gestion" : "Action",
       open: mode === "manage" ? "Gérer" : "Rejoindre",
-      title: mode === "manage" ? "Gérer ce plan" : "Rejoindre ce plan",
+      title: mode === "manage" ? "Gérer ce plan" : "Rejoindre",
     };
   }
 
   if (locale === "en") {
     return {
       close: "Close",
-      eyebrow: mode === "manage" ? "Manage" : "Action",
       open: mode === "manage" ? "Manage" : "Join",
-      title: mode === "manage" ? "Manage this plan" : "Join this plan",
+      title: mode === "manage" ? "Manage this plan" : "Join",
     };
   }
 
   return {
     close: "关闭",
-    eyebrow: mode === "manage" ? "管理" : "操作",
     open: mode === "manage" ? "管理" : "报名",
-    title: mode === "manage" ? "管理这个聚吧" : "报名这个聚吧",
+    title: mode === "manage" ? "管理这个聚吧" : "报名",
   };
 }
 
@@ -47,9 +57,7 @@ type TeamDetailMobileCtaSheetProps = {
   locale: string;
   mode?: TeamDetailMobileCtaMode;
   openLabel?: string;
-  participantLabel: string;
   placement?: "fixed" | "inline";
-  statusLabel: string;
 };
 
 export function TeamDetailMobileCtaSheet({
@@ -58,9 +66,7 @@ export function TeamDetailMobileCtaSheet({
   locale,
   mode = "join",
   openLabel,
-  participantLabel,
   placement = "fixed",
-  statusLabel,
 }: TeamDetailMobileCtaSheetProps) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -141,31 +147,17 @@ export function TeamDetailMobileCtaSheet({
       />
       <div
         className={cn(
-          "absolute inset-x-3 bottom-3 max-h-[min(78svh,40rem)] overflow-hidden rounded-[1.55rem] border border-coral/45 bg-paper text-left shadow-[0_-18px_55px_rgba(29,29,27,0.22)] ring-1 ring-white transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "absolute inset-x-3 bottom-3 max-h-[min(78svh,40rem)] overflow-hidden rounded-[1.55rem] border border-coral/35 bg-paper text-left shadow-[0_-18px_55px_rgba(29,29,27,0.18)] transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
         )}
       >
-        <div className="bg-[linear-gradient(135deg,#FFF5E6_0%,#FEFFF9_58%,#F1F2EC_100%)] px-4 pb-3 pt-3.5">
+        <div className="px-4 pb-2.5 pt-3.5">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-coral/40" />
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-forest">
-                {copy.eyebrow}
-              </p>
-              <h2 className="mt-2 text-base font-extrabold leading-tight text-ink">
-                {copy.title}
-              </h2>
-              <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-forest">
+              <h2 className="line-clamp-2 text-base font-extrabold leading-tight text-ink">
                 {activityTitle}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-forest">
-                <span className="rounded-full bg-white/88 px-2.5 py-1 ring-1 ring-sage/70">
-                  {statusLabel}
-                </span>
-                <span className="rounded-full bg-white/88 px-2.5 py-1 ring-1 ring-sage/70">
-                  {participantLabel}
-                </span>
-              </div>
+              </h2>
             </div>
             <button
               aria-label={copy.close}
@@ -177,9 +169,11 @@ export function TeamDetailMobileCtaSheet({
             </button>
           </div>
         </div>
-        <div className="max-h-[calc(min(78svh,40rem)-9rem)] overflow-y-auto px-4 pb-4 pt-3">
-          {children}
-        </div>
+        <TeamDetailMobileCtaSheetCloseContext.Provider value={closeSheet}>
+          <div className="max-h-[calc(min(78svh,40rem)-9rem)] overflow-y-auto px-4 pb-4 pt-3">
+            {children}
+          </div>
+        </TeamDetailMobileCtaSheetCloseContext.Provider>
       </div>
     </div>
   );

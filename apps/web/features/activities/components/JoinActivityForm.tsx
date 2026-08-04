@@ -19,6 +19,7 @@ import {
 } from "../actions/joinActivity";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 import { CancelParticipationForm } from "./CancelParticipationForm";
+import { useTeamDetailMobileCtaSheetClose } from "./TeamDetailMobileCtaSheet";
 
 type ViewerParticipationStatus =
   | "JOINED"
@@ -33,7 +34,9 @@ type JoinActivityFormProps = {
   activityTitle: string;
   accessToken?: string | null;
   compactUnauthenticated?: boolean;
+  closeOnSuccess?: boolean;
   formInstanceId?: string;
+  hideMessageHint?: boolean;
   locale: string;
   requiresApproval: boolean;
   isFull: boolean;
@@ -571,7 +574,9 @@ export function JoinActivityForm({
   activityId,
   activityTitle,
   accessToken = null,
+  closeOnSuccess = false,
   formInstanceId,
+  hideMessageHint = false,
   locale,
   requiresApproval,
   isFull,
@@ -591,6 +596,7 @@ export function JoinActivityForm({
   const [, startTransition] = useTransition();
   const router = useRouter();
   const t = getCopy(locale).join;
+  const closeMobileCtaSheet = useTeamDetailMobileCtaSheetClose();
 
   useEffect(() => {
     setEffectiveParticipationStatus(viewerParticipationStatus);
@@ -602,14 +608,37 @@ export function JoinActivityForm({
       return;
     }
 
+    if (closeOnSuccess) {
+      closeMobileCtaSheet?.();
+      startTransition(() => {
+        router.refresh();
+      });
+      return;
+    }
+
     setEffectiveParticipationStatus(state.participantStatus);
     startTransition(() => {
       router.refresh();
     });
-  }, [router, startTransition, state.participantStatus, state.success]);
+  }, [
+    closeMobileCtaSheet,
+    closeOnSuccess,
+    router,
+    startTransition,
+    state.participantStatus,
+    state.success,
+  ]);
 
   useEffect(() => {
     if (!guestState.success || !guestState.guestStatus) {
+      return;
+    }
+
+    if (closeOnSuccess) {
+      closeMobileCtaSheet?.();
+      startTransition(() => {
+        router.refresh();
+      });
       return;
     }
 
@@ -618,7 +647,14 @@ export function JoinActivityForm({
     startTransition(() => {
       router.refresh();
     });
-  }, [guestState.guestStatus, guestState.success, router, startTransition]);
+  }, [
+    closeMobileCtaSheet,
+    closeOnSuccess,
+    guestState.guestStatus,
+    guestState.success,
+    router,
+    startTransition,
+  ]);
 
   if (isClosed) {
     return (
@@ -729,9 +765,11 @@ export function JoinActivityForm({
           maxLength={300}
           placeholder={t.messagePlaceholder}
         />
-        <span className="text-xs font-normal text-zinc-500">
-          {requiresApproval ? t.messageHintApproval : t.messageHint}
-        </span>
+        {hideMessageHint ? null : (
+          <span className="text-xs font-normal text-zinc-500">
+            {requiresApproval ? t.messageHintApproval : t.messageHint}
+          </span>
+        )}
         {state.fieldErrors?.message?.[0] ? (
           <span className="text-xs font-medium text-red-600">
             {state.fieldErrors.message[0]}

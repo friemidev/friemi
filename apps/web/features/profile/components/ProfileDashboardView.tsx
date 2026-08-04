@@ -11,6 +11,7 @@ import {
   Crown,
   Gift,
   Info,
+  Lock,
   Medal,
   MoreHorizontal,
   Package,
@@ -72,6 +73,7 @@ import {
 import {
   getPresenceCopy,
   userPresenceStatuses,
+  type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
 import type {
@@ -192,7 +194,7 @@ function getMobileProfileCopy(locale: string) {
       copied: "Copié",
       created: "Sorties",
       editProfile: "Modifier",
-      friends: "Mutuels",
+      friends: "Réseau",
       giftWall: "Cadeaux",
       hangoutsTitle: "Mes sorties",
       invite: "Inviter",
@@ -254,7 +256,7 @@ function getMobileProfileCopy(locale: string) {
       copied: "Copied",
       created: "Plans",
       editProfile: "Edit",
-      friends: "Mutual",
+      friends: "Network",
       giftWall: "Gifts",
       hangoutsTitle: "My Plans",
       invite: "Invite",
@@ -314,7 +316,7 @@ function getMobileProfileCopy(locale: string) {
     copied: "已复制",
     created: "聚吧",
     editProfile: "编辑资料",
-    friends: "互关",
+    friends: "关系",
     giftWall: "礼物墙",
     hangoutsTitle: "我的聚吧",
     invite: "邀请",
@@ -387,17 +389,23 @@ function ProfileAvatar({
   initial,
   isOnline = false,
   name,
+  presenceDisplayStatus,
   size = "lg",
 }: {
   avatarUrl: string | null;
   initial: string;
   isOnline?: boolean;
   name: string;
+  presenceDisplayStatus?: UserPresenceDisplayStatus;
   size?: "sm" | "lg";
 }) {
   const sizeClass =
     size === "sm" ? "h-12 w-12 text-base" : "h-16 w-16 text-3xl";
   const dotClass = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+  const visiblePresenceStatus =
+    presenceDisplayStatus ?? (isOnline ? "ONLINE" : null);
+  const dotColorClass =
+    visiblePresenceStatus === "AWAY" ? "bg-[#F0B84D]" : "bg-[#2FBF62]";
 
   return (
     <span className="relative shrink-0">
@@ -426,12 +434,13 @@ function ProfileAvatar({
           <span className="relative">{initial}</span>
         </span>
       )}
-      {isOnline ? (
+      {visiblePresenceStatus ? (
         <span
           aria-hidden="true"
           className={cn(
             dotClass,
-            "absolute bottom-0 right-0 rounded-full bg-[#2FBF62] ring-2 ring-white",
+            dotColorClass,
+            "absolute bottom-0 right-0 rounded-full ring-2 ring-white",
           )}
         />
       ) : null}
@@ -528,7 +537,7 @@ function GuestProfilePlaceholder({
 
   return (
     <div className="mx-auto w-full max-w-7xl pb-8">
-      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5 md:hidden">
+      <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
           <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.title}
@@ -542,6 +551,7 @@ function GuestProfilePlaceholder({
               initial={profileInitial}
               isOnline={profile.isOnline}
               name={profile.nickname}
+              presenceDisplayStatus={profile.presenceDisplayStatus}
               size="sm"
             />
             <div className="min-w-0">
@@ -602,6 +612,7 @@ function GuestProfilePlaceholder({
                 initial={profileInitial}
                 isOnline={profile.isOnline}
                 name={profile.nickname}
+                presenceDisplayStatus={profile.presenceDisplayStatus}
               />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-moss">{copy.title}</p>
@@ -664,17 +675,23 @@ function ProfileFeatureLink({
   href,
   icon: Icon,
   label,
+  locked = false,
+  lockedLabel,
   status,
   tone = "green",
 }: {
   href: string;
   icon: LucideIcon;
   label: string;
+  locked?: boolean;
+  lockedLabel?: string;
   status?: string;
   tone?: "green" | "pink" | "blue" | "gold";
 }) {
   const toneClass =
-    tone === "pink"
+    locked
+      ? "bg-white text-[#8B907F] ring-[#D6D5B2]"
+      : tone === "pink"
       ? "bg-[radial-gradient(circle_at_30%_25%,#FFF5F7_0%,#FFE6EE_48%,#F7F2F4_100%)] text-[#E83F83] ring-[#F5C5D7]"
       : tone === "blue"
         ? "bg-[radial-gradient(circle_at_30%_25%,#EEF5FF_0%,#E6F0FF_48%,#F7F4EC_100%)] text-[#143376] ring-[#C8D9F5]"
@@ -682,11 +699,8 @@ function ProfileFeatureLink({
           ? "bg-[radial-gradient(circle_at_30%_25%,#FFF9E8_0%,#FFF1C9_48%,#F6F2E7_100%)] text-[#7D641C] ring-[#E8D59D]"
           : "bg-[radial-gradient(circle_at_30%_25%,#F3FAEF_0%,#E4F3DF_48%,#F7F3E9_100%)] text-[#156240] ring-[#BFD8B9]";
 
-  return (
-    <Link
-      href={href}
-      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
-    >
+  const content = (
+    <>
       <span
         className={cn(
           "relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] shadow-[0_10px_18px_rgba(21,98,64,0.08)] ring-1",
@@ -694,15 +708,46 @@ function ProfileFeatureLink({
         )}
       >
         <Icon className="h-[1.125rem] w-[1.125rem]" />
-        {status ? (
+        {locked ? (
+          <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#6C746A] ring-1 ring-[#D6D5B2]">
+            <Lock className="h-3 w-3" strokeWidth={2.4} />
+          </span>
+        ) : status ? (
           <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-[#FEFFF9] px-1.5 text-[9px] font-black leading-none text-[#156240] shadow-sm ring-1 ring-[#D6D5B2]">
             <span className="truncate">{status}</span>
           </span>
         ) : null}
       </span>
-      <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
+      <span
+        className={cn(
+          "max-w-full truncate text-[11px] font-bold",
+          locked ? "text-[#6C746A]" : "text-[#1D1D1B]",
+        )}
+      >
         {label}
       </span>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <button
+        type="button"
+        aria-disabled="true"
+        className="grid min-w-0 cursor-default justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center opacity-80"
+        title={lockedLabel ?? label}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="grid min-w-0 justify-items-center gap-1.5 rounded-2xl px-1 py-1.5 text-center transition active:scale-[0.98]"
+    >
+      {content}
     </Link>
   );
 }
@@ -1168,7 +1213,7 @@ function PublicMobileProfileHome({
   const copy = getMobileProfileCopy(locale);
 
   return (
-    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5">
+    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
       <header className="flex items-center justify-between gap-3">
         <button
           aria-label="Back"
@@ -1210,6 +1255,7 @@ function PublicMobileProfileHome({
             initial={profileInitial}
             isOnline={profile.isOnline}
             name={profile.nickname}
+            presenceDisplayStatus={profile.presenceDisplayStatus}
           />
           <div className="min-w-0 pt-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -1513,6 +1559,7 @@ function MobileProfileAvatarEditor({
   name,
   nickname,
   onSaved,
+  presenceDisplayStatus,
 }: {
   avatarUrl: string | null;
   bio: string | null;
@@ -1522,6 +1569,7 @@ function MobileProfileAvatarEditor({
   name: string;
   nickname: string;
   onSaved: (avatarUrl: string | null) => void;
+  presenceDisplayStatus?: UserPresenceDisplayStatus;
 }) {
   const copy = getMobileProfileAvatarEditorCopy(locale);
   const router = useRouter();
@@ -1563,6 +1611,7 @@ function MobileProfileAvatarEditor({
           initial={initial}
           isOnline={isOnline}
           name={name}
+          presenceDisplayStatus={presenceDisplayStatus}
           size="sm"
         />
       </button>
@@ -1767,7 +1816,7 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-[#FEFFF9] px-5 pb-28 pt-7">
+    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-white px-5 pb-28 pt-7">
       <section>
         <div>
           <div className="flex items-start gap-3">
@@ -1780,6 +1829,9 @@ function SelfMobileProfileHome({
               name={profile.nickname}
               nickname={profile.nickname}
               onSaved={setCurrentAvatarUrl}
+              presenceDisplayStatus={
+                presenceStatus === "INVISIBLE" ? null : presenceStatus
+              }
             />
 
             <div className="min-w-0 flex-1 pt-1">
@@ -1875,7 +1927,8 @@ function SelfMobileProfileHome({
           href={withLocale(locale, "/profile/bag")}
           icon={Package}
           label={copy.bag}
-          status="0"
+          locked
+          lockedLabel={copy.soon}
         />
         <ProfileFeatureLink
           href={withLocale(locale, "/profile/shop")}
@@ -2062,6 +2115,11 @@ export function ProfileDashboardView({
                     initial={profileInitial}
                     isOnline={currentPresenceStatus === "ONLINE"}
                     name={profile.nickname}
+                    presenceDisplayStatus={
+                      currentPresenceStatus === "INVISIBLE"
+                        ? null
+                        : currentPresenceStatus
+                    }
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-moss">
@@ -2150,6 +2208,7 @@ export function ProfileDashboardView({
                   initial={profileInitial}
                   isOnline={profile.isOnline}
                   name={profile.nickname}
+                  presenceDisplayStatus={profile.presenceDisplayStatus}
                 />
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">

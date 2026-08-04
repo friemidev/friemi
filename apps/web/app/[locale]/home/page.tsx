@@ -384,7 +384,7 @@ export default async function HomePage({
       <JsonLd data={createSiteStructuredData(locale)} />
       <HomeLuxuryMotion />
       <DetailSourceRestore sourceKey="home" />
-      <main className="overflow-hidden bg-[#FEFFF9] text-[#1D1D1B]">
+      <main className="overflow-hidden bg-white text-[#1D1D1B]">
         <MobileLuxuryHome
           activities={activitiesResult.activities}
           locale={locale}

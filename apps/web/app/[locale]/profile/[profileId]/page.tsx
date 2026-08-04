@@ -65,6 +65,7 @@ export default async function PublicProfilePage({
   const isSelf = viewerProfile?.id === profileId;
   const profile = await getPublicProfileById(profileId, {
     includePrivateFields: isSelf,
+    viewerProfileId: viewerProfile?.id ?? null,
   });
 
   if (!profile) {

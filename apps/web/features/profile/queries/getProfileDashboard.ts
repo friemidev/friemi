@@ -24,6 +24,7 @@ import {
 import { calculateTrustScore } from "@/features/trust/trustScore";
 import {
   getUserPresenceState,
+  type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
 
@@ -250,6 +251,7 @@ export type PublicProfileViewModel = {
   bio: string | null;
   isCoCreator: boolean;
   isOnline: boolean;
+  presenceDisplayStatus: UserPresenceDisplayStatus;
   presenceStatus: UserPresenceStatusValue;
 };
 
@@ -281,21 +283,27 @@ type ProfileFollowNetworkViewModel = {
   following: ProfileFollowUserViewModel[];
 };
 
-function mapPublicProfile(profile: {
-  id: string;
-  nickname: string;
-  friendCode: string | null;
-  avatarUrl: string | null;
-  bio: string | null;
-  isCoCreator: boolean;
-  lastActiveAt: Date | null;
-  presenceStatus: string | null;
-}): PublicProfileViewModel {
+function mapPublicProfile(
+  profile: {
+    id: string;
+    nickname: string;
+    friendCode: string | null;
+    avatarUrl: string | null;
+    bio: string | null;
+    isCoCreator: boolean;
+    lastActiveAt: Date | null;
+    presenceStatus: string | null;
+  },
+  options: {
+    canViewPresence?: boolean;
+  } = {},
+): PublicProfileViewModel {
   const hasPublicNickname = profile.nickname.trim().length > 0;
   const presence = getUserPresenceState({
     lastActiveAt: profile.lastActiveAt,
     status: profile.presenceStatus,
   });
+  const canViewPresence = options.canViewPresence ?? false;
 
   return {
     id: profile.id,
@@ -308,8 +316,9 @@ function mapPublicProfile(profile: {
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
     isCoCreator: profile.isCoCreator,
-    isOnline: presence.isOnline,
-    presenceStatus: presence.status,
+    isOnline: canViewPresence && presence.isOnline,
+    presenceDisplayStatus: canViewPresence ? presence.displayStatus : null,
+    presenceStatus: canViewPresence ? presence.status : "INVISIBLE",
   };
 }
 
@@ -999,10 +1008,9 @@ export async function getPublicProfileById(
   profileId: string,
   options: {
     includePrivateFields?: boolean;
+    viewerProfileId?: string | null;
   } = {},
 ): Promise<PublicProfileViewModel | null> {
-  void options;
-
   const profile = await prisma.userProfile.findFirst({
     where: {
       id: profileId,
@@ -1011,5 +1019,20 @@ export async function getPublicProfileById(
     select: publicProfileSelect,
   });
 
-  return profile ? mapPublicProfile(profile) : null;
+  if (!profile) {
+    return null;
+  }
+
+  const canViewPresence =
+    options.viewerProfileId === profileId ||
+    (options.viewerProfileId
+      ? (
+          await getFollowRelationState({
+            targetProfileId: profileId,
+            viewerProfileId: options.viewerProfileId,
+          })
+        ).isMutualFollow
+      : false);
+
+  return mapPublicProfile(profile, { canViewPresence });
 }

@@ -453,7 +453,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
   return (
     <>
       <HomeLuxuryMotion />
-      <main className="overflow-x-hidden bg-[#FEFFF9] text-[#1D1D1B]">
+      <main className="overflow-x-hidden bg-white text-[#1D1D1B]">
         <MobileHomeV23Experience
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
@@ -493,7 +493,7 @@ function MobileHomeV23Experience({
   const trendingActivities = swipeActivities.slice(2, 8);
 
   return (
-    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
+    <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pt-1">
           <Link
@@ -545,7 +545,7 @@ function MobileHomeV23Experience({
           </div>
         </section>
 
-        <section className="mt-4">
+        <section className="mt-5">
           <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
@@ -563,7 +563,6 @@ function MobileHomeV23Experience({
             <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
-                  href={withLocale(locale, item.href)}
                   image={item.image}
                   key={item.id}
                   title={item.title}
@@ -613,32 +612,29 @@ function MobileHomeV23Experience({
 }
 
 function MobileHomeV23NewsCard({
-  href,
   image,
   title,
 }: {
-  href: string;
   image: string;
   title: string;
 }) {
   return (
-    <IntentPrefetchLink
-      href={href}
-      prefetchOnVisible
-      className="group relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+    <article
+      className="relative h-[7.45rem] min-w-[17.8rem] snap-start overflow-hidden rounded-[1rem] bg-[#123D31]"
+      aria-label={title}
     >
       {/* Admin-managed images can be local paths or HTTPS URLs. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={image}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-active:scale-[1.03]"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
       <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-extrabold text-[#123D31] shadow-sm">
         {title}
       </span>
-    </IntentPrefetchLink>
+    </article>
   );
 }
 
@@ -761,7 +757,7 @@ function MobileHomeExperience({
   const mobile = getMobileHomeCopy(locale);
 
   return (
-    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-[#FEFFF9] px-3.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
+    <section className="mobile-home-viewport relative isolate flex min-h-[calc(100svh-10.85rem-env(safe-area-inset-bottom))] overflow-visible bg-white px-3.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-1.5 min-[390px]:px-4 min-[390px]:pt-2.5 md:min-h-[calc(100svh-4rem)] md:items-start md:px-6 md:pb-8 md:pt-[clamp(1.25rem,3.4svh,2.75rem)] lg:pb-10 lg:pt-[clamp(1.75rem,4.4svh,3.5rem)]">
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-11.35rem-env(safe-area-inset-bottom))] w-full max-w-md min-w-0 grid-cols-1 gap-1.5 min-[390px]:gap-2 md:min-h-0 md:max-w-6xl md:grid-cols-[minmax(0,1.02fr)_minmax(20rem,0.82fr)] md:items-start md:gap-x-8 md:gap-y-5 lg:max-w-7xl lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.78fr)] lg:gap-x-12 xl:gap-x-16">
         <div className="contents md:flex md:min-w-0 md:flex-col md:justify-start md:gap-5 lg:gap-7">
           <div
@@ -848,13 +844,13 @@ function MobileHomeExperience({
                     }
                   }
                 >
-                  <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-center justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
+                  <span className="mobile-home-category__art relative mx-auto flex aspect-square h-[var(--mobile-home-category-art-size)] max-h-full items-end justify-center rounded-[1.55rem] p-1 transition-transform duration-300 ease-out group-hover:scale-[1.04] group-active:scale-90">
                     <Image
                       src={getMobileHomeIllustrationSrc(category.image)}
                       alt=""
                       width={96}
                       height={96}
-                      className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
+                      className="relative z-10 h-full w-full object-contain object-bottom drop-shadow-[0_10px_16px_rgba(21,98,64,0.15)] transition duration-300 ease-out group-active:scale-95"
                     />
                   </span>
                   <span className="mobile-home-category__label">

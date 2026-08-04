@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   ensureCurrentUserProfile,
   getOptionalCurrentUserProfileSnapshot,
 } from "@/lib/auth";
 import { getActivityCopyValuesById } from "@/features/activities/queries/getActivityById";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { ActivityCreateCancelControl } from "@/features/activities/components/ActivityCreateCancelControl";
 import { NewActivityForm } from "@/features/activities/components/NewActivityForm";
 import { MobileNewActivityEntryView } from "@/features/activities/components/MobileNewActivityEntryView";
 import { getActivityList } from "@/features/activities/queries/getActivities";
@@ -21,6 +21,7 @@ type NewActivityPageProps = {
   searchParams: Promise<{
     copyActivityId?: string | string[];
     mode?: string | string[];
+    return?: string | string[];
   }>;
 };
 
@@ -61,11 +62,17 @@ export default async function NewActivityPage({
   const mode = Array.isArray(resolvedSearchParams.mode)
     ? resolvedSearchParams.mode[0]
     : resolvedSearchParams.mode;
+  const returnModeParam = Array.isArray(resolvedSearchParams.return)
+    ? resolvedSearchParams.return[0]
+    : resolvedSearchParams.return;
+  const cancelReturnMode = returnModeParam === "history" ? "history" : "path";
   const showForm = mode === "form" || Boolean(copyActivityId);
   const profile = await (copyActivityId
     ? ensureCurrentUserProfile(
         locale,
-        `/activities/new?copyActivityId=${encodeURIComponent(copyActivityId)}`,
+        `/activities/new?copyActivityId=${encodeURIComponent(copyActivityId)}${
+          cancelReturnMode === "history" ? "&return=history" : ""
+        }`,
       )
     : getOptionalCurrentUserProfileSnapshot());
   const initialValues =
@@ -105,12 +112,12 @@ export default async function NewActivityPage({
       mobileSafeTop
     >
       <div className="grid grid-cols-[minmax(3rem,max-content)_minmax(0,1fr)_minmax(3rem,max-content)] items-center gap-2 py-1">
-        <Link
+        <ActivityCreateCancelControl
           className="max-w-[5.5rem] justify-self-start truncate whitespace-nowrap text-sm font-semibold text-zinc-600 transition hover:text-[#156240]"
-          href={withLocale(locale, "/activities/new")}
-        >
-          {headerCopy.cancel}
-        </Link>
+          fallbackHref={withLocale(locale, "/activities/new")}
+          label={headerCopy.cancel}
+          returnMode={cancelReturnMode}
+        />
         <h1 className="truncate text-center text-lg font-semibold text-ink">
           {headerCopy.title}
         </h1>
@@ -136,7 +143,13 @@ export default async function NewActivityPage({
         initialValues={initialValues ?? undefined}
         signInHref={getSignInHref(
           locale,
-          showForm ? "/activities/new?mode=form" : "/activities/new",
+          copyActivityId
+            ? `/activities/new?copyActivityId=${encodeURIComponent(copyActivityId)}${
+                cancelReturnMode === "history" ? "&return=history" : ""
+              }`
+            : showForm
+              ? "/activities/new?mode=form"
+              : "/activities/new",
         )}
       />
     </PageContainer>

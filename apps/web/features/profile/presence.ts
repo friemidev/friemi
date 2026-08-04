@@ -7,6 +7,15 @@ export const userPresenceStatuses = [
 ] as const satisfies readonly UserPresenceStatus[];
 
 export type UserPresenceStatusValue = (typeof userPresenceStatuses)[number];
+export type UserPresenceDisplayStatus = Exclude<
+  UserPresenceStatusValue,
+  "INVISIBLE"
+> | null;
+export type UserPresenceState = {
+  displayStatus: UserPresenceDisplayStatus;
+  isOnline: boolean;
+  status: UserPresenceStatusValue;
+};
 
 export const presenceOnlineWindowMs = 5 * 60 * 1000;
 
@@ -28,7 +37,7 @@ export function getUserPresenceState({
   lastActiveAt: Date | string | null | undefined;
   now?: Date;
   status: string | null | undefined;
-}) {
+}): UserPresenceState {
   const normalizedStatus = normalizeUserPresenceStatus(status);
   const activeAt =
     lastActiveAt instanceof Date
@@ -43,6 +52,12 @@ export function getUserPresenceState({
 
   return {
     status: normalizedStatus,
+    displayStatus:
+      normalizedStatus === "AWAY"
+        ? "AWAY"
+        : normalizedStatus === "ONLINE" && isRecentlyActive
+          ? "ONLINE"
+          : null,
     isOnline: normalizedStatus === "ONLINE" && isRecentlyActive,
   };
 }

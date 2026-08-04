@@ -9,7 +9,7 @@
   --friemi-palette-rose: #deaab3;
   --friemi-palette-ice: #deebff;
   --friemi-palette-meadow: #369758;
-  --friemi-palette-paper: #fefff9;
+  --friemi-palette-paper: #ffffff;
   --friemi-palette-outline: #8e8383;
   --friemi-palette-sand: #d6d5b2;
   --friemi-palette-danger: #b5301f;
@@ -22,7 +22,7 @@
   --friemi-rose-rgb: 222 170 179;
   --friemi-ice-rgb: 222 235 255;
   --friemi-meadow-rgb: 54 151 88;
-  --friemi-paper-rgb: 254 255 249;
+  --friemi-paper-rgb: 255 255 255;
   --friemi-outline-rgb: 142 131 131;
   --friemi-sand-rgb: 214 213 178;
   --friemi-danger-rgb: 181 48 31;
@@ -197,6 +197,14 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: 0;
   }
 
+  .app-layout-shell:has(.mobile-v23-lobby-detail) {
+    padding-bottom: 0;
+  }
+
+  .app-layout-shell:has(.mobile-v23-admin-priority) {
+    padding-bottom: 0;
+  }
+
   .app-layout-shell:has(.werewolf-room-fullscreen) {
     padding-bottom: 0;
     overflow-x: hidden;
@@ -211,6 +219,9 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.mobile-v23-lobby-detail) > .app-header,
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-lobby-detail) [data-route-progress],
+  .app-layout-shell:has(.mobile-v23-admin-priority) > .app-header,
+  .app-layout-shell:has(.mobile-v23-admin-priority) [data-mobile-scroll-progress],
+  .app-layout-shell:has(.mobile-v23-admin-priority) [data-route-progress],
   .app-layout-shell:has(.mobile-v23-create) > .app-header,
   .app-layout-shell:has(.mobile-v23-create) [data-mobile-scroll-progress],
   .app-layout-shell:has(.mobile-v23-create) [data-route-progress],
@@ -218,6 +229,12 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
   .app-layout-shell:has(.werewolf-room-fullscreen) [data-mobile-scroll-progress],
   .app-layout-shell:has(.werewolf-room-fullscreen) [data-route-progress] {
     display: none;
+  }
+
+  html[data-friemi-activity-priority-editor-open="true"] .app-mobile-nav,
+  html[data-friemi-activity-priority-editor-open="true"] [data-mobile-scroll-progress],
+  html[data-friemi-activity-priority-editor-open="true"] [data-route-progress] {
+    display: none !important;
   }
 }
 

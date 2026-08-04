@@ -280,7 +280,7 @@ export function MessageThreadClient({
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF5E6_100%)] px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-4 sm:px-5">
         {activityContext ? (
           <ActivityContextCard
             activityContext={activityContext}

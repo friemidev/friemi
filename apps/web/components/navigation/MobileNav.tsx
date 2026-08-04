@@ -58,7 +58,7 @@ export function MobileNav({ locale }: MobileNavProps) {
         isPrimary: true,
       },
       {
-        href: "/footprints",
+        href: "/footprints?tab=moment",
         label: t.nav.footprintsShort,
         icon: MessageCircle,
       },
@@ -82,21 +82,23 @@ export function MobileNav({ locale }: MobileNavProps) {
   }
 
   function isItemActive(href: string) {
+    const baseHref = href.split("?")[0] ?? href;
+
     if (sectionOverride === "lobby") {
-      return href === "/lobby";
+      return baseHref === "/lobby";
     }
 
     if (sectionOverride === "activities") {
-      return href === "/activities/new";
+      return baseHref === "/activities/new";
     }
 
-    const localizedHref = withLocale(currentLocale, href);
+    const localizedHref = withLocale(currentLocale, baseHref);
 
-    if (href === "/") {
+    if (baseHref === "/") {
       return pathname === localizedHref;
     }
 
-    if (href === "/activities/new") {
+    if (baseHref === "/activities/new") {
       return (
         pathname === localizedHref || pathname.startsWith(`${localizedHref}/`)
       );
@@ -112,9 +114,10 @@ export function MobileNav({ locale }: MobileNavProps) {
       <div className="mx-auto grid h-[4.35rem] max-w-md grid-cols-5 gap-1 px-4 py-1.5">
         {items.map((item) => {
           const Icon = item.icon;
+          const baseHref = item.href.split("?")[0] ?? item.href;
           const active = isItemActive(item.href);
           const showUnreadBadge =
-            item.href === "/footprints" && unreadDirectMessageCount > 0;
+            baseHref === "/footprints" && unreadDirectMessageCount > 0;
 
           return (
             <IntentPrefetchLink

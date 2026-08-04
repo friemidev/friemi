@@ -41,6 +41,7 @@ import {
 } from "@/features/activities/actions/cancelParticipation";
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
+import { readPreviousAppRouteHref } from "@/features/navigation/appRouteHistory";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
@@ -321,6 +322,60 @@ function ActivityRoomManageBackButton({
       aria-label={label}
       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#111210]/72 ring-1 ring-[#E7E1CA] transition active:scale-95"
       onClick={() => {
+        if (window.history.length > 1) {
+          router.back();
+          return;
+        }
+
+        router.replace(fallbackHref);
+      }}
+      title={label}
+      type="button"
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </button>
+  );
+}
+
+function isActivityRoomManageHref(href: string | null, activityId: string) {
+  if (!href) {
+    return false;
+  }
+
+  try {
+    const url = new URL(href, "https://friemi.local");
+    const managePath = `/lobby/${activityId}/room/manage`;
+
+    return (
+      url.pathname === managePath || url.pathname.endsWith(managePath)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function ActivityRoomChatBackButton({
+  activityId,
+  fallbackHref,
+  label,
+}: {
+  activityId: string;
+  fallbackHref: string;
+  label: string;
+}) {
+  const router = useRouter();
+
+  return (
+    <button
+      aria-label={label}
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2] transition active:scale-95"
+      onClick={() => {
+        if (isActivityRoomManageHref(readPreviousAppRouteHref(), activityId)) {
+          router.replace(fallbackHref);
+          router.refresh();
+          return;
+        }
+
         if (window.history.length > 1) {
           router.back();
           return;
@@ -1672,23 +1727,16 @@ export function ActivityRoomChatPage({
   }
 
   return (
-    <section className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-[#FEFFF9] text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
+    <section className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
       {activity && policy.canView ? (
         <ActivityRoomChatAutoRefresh activityId={activity.id} />
       ) : null}
       <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <button
-          aria-label={copy.backToActivity}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2] transition active:scale-95"
-          onClick={() => {
-            router.replace(messagesHref);
-            router.refresh();
-          }}
-          title={copy.backToActivity}
-          type="button"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        <ActivityRoomChatBackButton
+          activityId={activity?.id ?? activityId}
+          fallbackHref={messagesHref}
+          label={copy.backToActivity}
+        />
         <div className="min-w-0 text-center">
           <p className="mx-auto flex max-w-full items-center justify-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#156240]">
             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
@@ -1715,7 +1763,7 @@ export function ActivityRoomChatPage({
         />
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#FEFFF9_0%,#FFF8EA_100%)] px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-4 sm:px-5">
         {policy.canView ? (
           messages.length > 0 ? (
             <div className="grid gap-3">
