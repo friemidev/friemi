@@ -65,6 +65,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et relations.",
       isCoCreator: false,
       isOnline: false,
+      presenceDisplayStatus: null,
       presenceStatus: "INVISIBLE",
     };
   }
@@ -78,6 +79,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
       bio: "Sign in when you want to keep your plans, traces, and follows together.",
       isCoCreator: false,
       isOnline: false,
+      presenceDisplayStatus: null,
       presenceStatus: "INVISIBLE",
     };
   }
@@ -90,6 +92,7 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     bio: "登录后可以同步你的聚吧、足迹和关注关系。",
     isCoCreator: false,
     isOnline: false,
+    presenceDisplayStatus: null,
     presenceStatus: "INVISIBLE",
   };
 }
@@ -138,6 +141,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         bio: profile.bio,
         isCoCreator: profile.isCoCreator,
         isOnline: profilePresence?.isOnline ?? false,
+        presenceDisplayStatus: profilePresence?.displayStatus ?? null,
         presenceStatus: profilePresence?.status ?? "ONLINE",
       }
     : getGuestProfile(locale);

@@ -1,7 +1,7 @@
 export function getProfileFollowCopy(locale: string) {
   if (locale === "fr") {
     return {
-      friendCount: "Mutuels",
+      friendCount: "Réseau",
       friendsTitle: "Mutuels",
       friendsDescription: "Les abonnements réciproques apparaissent ici.",
       friendsEmptyTitle: "Aucun mutuel",
@@ -34,7 +34,7 @@ export function getProfileFollowCopy(locale: string) {
 
   if (locale === "en") {
     return {
-      friendCount: "Mutual",
+      friendCount: "Network",
       friendsTitle: "Mutual",
       friendsDescription: "People who follow you back will appear here.",
       friendsEmptyTitle: "No mutual follows",
@@ -65,7 +65,7 @@ export function getProfileFollowCopy(locale: string) {
   }
 
   return {
-    friendCount: "互关",
+    friendCount: "关系",
     friendsTitle: "互相关注",
     friendsDescription: "互相关注的人会显示在这里。",
     friendsEmptyTitle: "还没有互关",

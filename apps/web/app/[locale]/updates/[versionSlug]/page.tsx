@@ -35,7 +35,7 @@ export default async function VersionUpdateDetailPage({
   }
 
   return (
-    <main className="relative isolate overflow-hidden bg-[#FEFFF9]">
+    <main className="relative isolate overflow-hidden bg-white">
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-12 lg:px-8">
         <Link
           href={withLocale(locale, "/updates")}

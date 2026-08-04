@@ -123,6 +123,7 @@ function MobileFriendChatRow({
         avatarUrl={friend.friend.avatarUrl}
         isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
+        presenceDisplayStatus={friend.friend.presenceDisplayStatus}
       />
       <span className="min-w-0">
         <span className="flex min-w-0 items-start gap-2">

@@ -99,6 +99,81 @@ type FootprintsMobilePageProps = {
   profile: FootprintsViewerProfile | null;
 };
 
+function getFootprintsTabFromSearch(search: string): FootprintsTab | null {
+  const tab = new URLSearchParams(search).get("tab");
+
+  if (tab === "message" || tab === "moment" || tab === "planet") {
+    return tab;
+  }
+
+  return null;
+}
+
+function getMomentScopeFromSearch(search: string): MomentFeedScope {
+  const scope = new URLSearchParams(search).get("scope");
+
+  if (scope === "mine") {
+    return "MINE";
+  }
+
+  if (scope === "mutual") {
+    return "MUTUAL";
+  }
+
+  if (scope === "following") {
+    return "FOLLOWING";
+  }
+
+  return "PUBLIC";
+}
+
+function getMomentScopeParam(scope: MomentFeedScope) {
+  if (scope === "MINE") {
+    return "mine";
+  }
+
+  if (scope === "MUTUAL") {
+    return "mutual";
+  }
+
+  if (scope === "FOLLOWING") {
+    return "following";
+  }
+
+  return null;
+}
+
+function getFootprintsTabPath(tab: FootprintsTab, scope: MomentFeedScope) {
+  const params = new URLSearchParams({ tab });
+  const scopeParam = tab === "moment" ? getMomentScopeParam(scope) : null;
+
+  if (scopeParam) {
+    params.set("scope", scopeParam);
+  }
+
+  return `/footprints?${params.toString()}`;
+}
+
+function updateFootprintsHistoryUrl(
+  locale: string,
+  tab: FootprintsTab,
+  scope: MomentFeedScope,
+  mode: "push" | "replace",
+) {
+  const nextUrl = withLocale(locale, getFootprintsTabPath(tab, scope));
+
+  if (window.location.pathname + window.location.search === nextUrl) {
+    return;
+  }
+
+  if (mode === "replace") {
+    window.history.replaceState(window.history.state, "", nextUrl);
+    return;
+  }
+
+  window.history.pushState(window.history.state, "", nextUrl);
+}
+
 type MomentCard = {
   author: string;
   time: string;
@@ -1903,7 +1978,7 @@ function MomentComposer({
         <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
           {copy.composer}
         </span>
-        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
           <Image
             src="/illustrations/ui/take-photo.png"
             alt=""
@@ -1926,7 +2001,7 @@ function MomentComposer({
         <span className="min-w-0 flex-1 text-sm font-semibold text-[#8E8383]">
           {copy.composer}
         </span>
-        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF2D7]">
+        <span className="inline-flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-transparent">
           <Image
             src="/illustrations/ui/take-photo.png"
             alt=""
@@ -2433,6 +2508,7 @@ function FootprintsMessageRow({
         avatarUrl={friend.friend.avatarUrl}
         isOnline={friend.friend.isOnline}
         name={friend.friend.nickname}
+        presenceDisplayStatus={friend.friend.presenceDisplayStatus}
       />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-start gap-2">
@@ -2546,7 +2622,10 @@ export function FootprintsMobilePage({
   const [feedScope, setFeedScope] = useState<MomentFeedScope>(
     isAuthenticated ? initialMomentScope : "PUBLIC",
   );
-  const signInHref = getSignInHref(locale, "/footprints");
+  const signInHref = getSignInHref(
+    locale,
+    getFootprintsTabPath(activeTab, feedScope),
+  );
   const initialUnreadMessageCount = useMemo(
     () =>
       messageFriends.reduce(
@@ -2628,6 +2707,44 @@ export function FootprintsMobilePage({
   }, [feedScope, profile]);
 
   useEffect(() => {
+    const readUrlState = () => {
+      const nextTab = getFootprintsTabFromSearch(window.location.search);
+      const nextScope = getMomentScopeFromSearch(window.location.search);
+
+      setActiveTab(nextTab ?? "moment");
+      setFeedScope(profile ? nextScope : "PUBLIC");
+    };
+
+    if (!getFootprintsTabFromSearch(window.location.search)) {
+      updateFootprintsHistoryUrl(
+        locale,
+        initialTab,
+        profile ? initialMomentScope : "PUBLIC",
+        "replace",
+      );
+    }
+
+    window.addEventListener("popstate", readUrlState);
+
+    return () => {
+      window.removeEventListener("popstate", readUrlState);
+    };
+  }, [initialMomentScope, initialTab, locale, profile]);
+
+  function handleTopTabChange(nextTab: FootprintsTab) {
+    setActiveTab(nextTab);
+    updateFootprintsHistoryUrl(locale, nextTab, feedScope, "push");
+  }
+
+  function handleFeedScopeChange(nextScope: MomentFeedScope) {
+    setFeedScope(nextScope);
+
+    if (activeTab === "moment") {
+      updateFootprintsHistoryUrl(locale, "moment", nextScope, "replace");
+    }
+  }
+
+  useEffect(() => {
     lastRosterRefreshUnreadCountRef.current = initialUnreadMessageCount;
   }, [initialUnreadMessageCount]);
 
@@ -2663,8 +2780,8 @@ export function FootprintsMobilePage({
       <DirectMessageUnreadCountHydrator
         unreadCount={initialUnreadMessageCount}
       />
-      <main className="min-h-screen bg-[#FEFFF9] pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
-        <div className="mx-auto min-h-screen max-w-md bg-[#FEFFF9] px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
+      <main className="min-h-screen bg-white pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
+        <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
           <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-1">
             <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
               {copy.title}
@@ -2681,7 +2798,7 @@ export function FootprintsMobilePage({
                       "relative min-w-0 px-1 pb-3 text-[13px] font-black tracking-normal transition",
                       active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                     )}
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => handleTopTabChange(tab.key)}
                   >
                     <span className="relative mx-auto inline-flex max-w-full items-center justify-center">
                       <span className="block truncate whitespace-nowrap">
@@ -2723,7 +2840,7 @@ export function FootprintsMobilePage({
                         ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
                         : "text-[#156240]/62",
                     )}
-                    onClick={() => setFeedScope(tab.key)}
+                    onClick={() => handleFeedScopeChange(tab.key)}
                   >
                     {tab.label}
                   </button>

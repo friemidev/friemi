@@ -57,7 +57,7 @@ export function AndroidAuthCompleteRedirect({
           };
 
   return (
-    <main className="flex min-h-[100svh] items-center justify-center bg-[#FEFFF9] px-5 py-8">
+    <main className="flex min-h-[100svh] items-center justify-center bg-white px-5 py-8">
       <section className="w-full max-w-sm rounded-[2rem] border border-[#D6D5B2] bg-white/85 p-6 text-center shadow-[0_24px_70px_rgba(21,98,64,0.14)]">
         <BrandLoader label={copy.title} size="sm" />
         <h1 className="mt-5 text-xl font-black text-[#0B2B66]">

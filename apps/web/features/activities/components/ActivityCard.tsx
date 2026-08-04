@@ -44,6 +44,7 @@ import { MobileLobbyActionSheet } from "./MobileLobbyActionSheet";
 type ActivityCardProps = {
   activity: ActivityCardViewModel;
   actionContext?: "default" | "lobby" | "profile";
+  activityListPreview?: boolean;
   favoriteRedirectPath?: string;
   isAuthenticated?: boolean;
   isOwnActivity?: boolean;
@@ -223,6 +224,107 @@ function getCountdownLabel(activity: ActivityCardViewModel, locale: string) {
   if (daysUntilStart === 1) return "明天开始";
 
   return `还有 ${daysUntilStart} 天开始`;
+}
+
+function getRelativeTimingCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      ended: "Terminé",
+      live: "En cours",
+      startsInHours: (hours: number) => `Dans ${hours} h`,
+      startsInDays: (days: number) => `Dans ${days} j`,
+      startsSoon: "Dans <1 h",
+      startsToday: "Aujourd'hui",
+      endsInHours: (hours: number) => `Encore ${hours} h`,
+      endsInDays: (days: number) => `Encore ${days} j`,
+      endsSoon: "Encore <1 h",
+      endsToday: "Finit aujourd'hui",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      ended: "Ended",
+      live: "Live",
+      startsInHours: (hours: number) => `In ${hours}h`,
+      startsInDays: (days: number) => `In ${days}d`,
+      startsSoon: "In <1h",
+      startsToday: "Today",
+      endsInHours: (hours: number) => `${hours}h left`,
+      endsInDays: (days: number) => `${days}d left`,
+      endsSoon: "<1h left",
+      endsToday: "Ends today",
+    };
+  }
+
+  return {
+    ended: "已结束",
+    live: "进行中",
+    startsInHours: (hours: number) => `${hours} 小时后开始`,
+    startsInDays: (days: number) => `${days} 天后开始`,
+    startsSoon: "不到 1 小时开始",
+    startsToday: "今天开始",
+    endsInHours: (hours: number) => `${hours} 小时后结束`,
+    endsInDays: (days: number) => `${days} 天后结束`,
+    endsSoon: "不到 1 小时结束",
+    endsToday: "今天结束",
+  };
+}
+
+function getActivityRelativeTimingLabel(
+  activity: ActivityCardViewModel,
+  locale: string,
+) {
+  const copy = getRelativeTimingCopy(locale);
+  const currentTimeState = getActivityTimeState(activity);
+  const now =
+    activity.type === "PUBLIC_EVENT" ? new Date() : getActivityFloatingNow();
+  const hourMs = 60 * 60 * 1000;
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  function getRelativeLabel(
+    targetAt: string,
+    mode: "starts" | "ends",
+    fallback: string,
+  ) {
+    const diffMs = new Date(targetAt).getTime() - now.getTime();
+
+    if (diffMs <= 0) {
+      return fallback;
+    }
+
+    if (diffMs < hourMs) {
+      return mode === "starts" ? copy.startsSoon : copy.endsSoon;
+    }
+
+    const hours = Math.ceil(diffMs / hourMs);
+
+    if (hours < 24) {
+      return mode === "starts"
+        ? copy.startsInHours(hours)
+        : copy.endsInHours(hours);
+    }
+
+    const days = Math.ceil(diffMs / dayMs);
+
+    if (days === 1) {
+      return mode === "starts" ? copy.startsToday : copy.endsToday;
+    }
+
+    return mode === "starts" ? copy.startsInDays(days) : copy.endsInDays(days);
+  }
+
+  if (currentTimeState === "UPCOMING") {
+    return getRelativeLabel(activity.startAt, "starts", copy.startsToday);
+  }
+
+  if (currentTimeState === "ONGOING") {
+    return activity.endAt
+      ? getRelativeLabel(activity.endAt, "ends", copy.live)
+      : copy.live;
+  }
+
+  return copy.ended;
 }
 
 const avatarTones = [
@@ -527,6 +629,7 @@ function LobbySplitActionButton({
 export function ActivityCard({
   activity,
   actionContext = "default",
+  activityListPreview = false,
   favoriteRedirectPath = "/activities",
   isAuthenticated = false,
   isOwnActivity = false,
@@ -657,6 +760,9 @@ export function ActivityCard({
     isActivityInfo && timeState === "UPCOMING" && !isInactiveCard
       ? getCountdownLabel(activity, locale)
       : null;
+  const relativeTimingLabel = activityListPreview
+    ? getActivityRelativeTimingLabel(activity, locale)
+    : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
   const actionEventName: AnalyticsEventName =
     canCreateTeam && !isOwnActivity
@@ -716,6 +822,8 @@ export function ActivityCard({
     ) : null;
   const mobileDenseClass = (className: string) =>
     mobileDense ? className : null;
+  const activityListPreviewClass = (className: string) =>
+    activityListPreview ? className : null;
   const actionToneClassName =
     resolvedActionConfig.tone === "muted"
       ? "bg-fog text-ink/60 hover:bg-fog"
@@ -751,6 +859,9 @@ export function ActivityCard({
         !isInactiveCard && isTeamCard
           ? "hover:border-coral hover:ring-rose"
           : null,
+        activityListPreviewClass(
+          "max-[639px]:aspect-square max-[639px]:overflow-hidden max-[639px]:rounded-[1rem] max-[639px]:border max-[639px]:border-[#DDE1D8] max-[639px]:bg-white max-[639px]:shadow-none max-[639px]:ring-0 max-[639px]:hover:translate-y-0 max-[639px]:active:scale-[0.985]",
+        ),
       )}
     >
       {showFavoriteButton &&
@@ -761,6 +872,7 @@ export function ActivityCard({
           className={cn(
             "absolute right-3 top-4 z-20 sm:top-5",
             mobileDenseClass("max-[639px]:right-2.5 max-[639px]:top-3"),
+            activityListPreviewClass("max-[639px]:right-2 max-[639px]:top-2"),
           )}
         >
           <PublicEventFavoriteButton
@@ -788,6 +900,7 @@ export function ActivityCard({
           className={cn(
             "absolute right-3 top-4 z-20 sm:top-5",
             mobileDenseClass("max-[639px]:right-2.5 max-[639px]:top-3"),
+            activityListPreviewClass("max-[639px]:right-2 max-[639px]:top-2"),
           )}
         >
           <ActivityFavoriteButton
@@ -826,6 +939,9 @@ export function ActivityCard({
             "relative mx-2.5 mt-2.5 flex h-28 items-end justify-between gap-2 overflow-hidden rounded-[1rem] p-3 sm:mx-3.5 sm:mt-3.5 sm:h-40 sm:rounded-[1.25rem] sm:p-4",
             mobileDenseClass(
               "max-[639px]:mx-2 max-[639px]:mt-2 max-[639px]:h-[6.6rem] max-[639px]:rounded-[0.9rem] max-[639px]:p-2.5",
+            ),
+            activityListPreviewClass(
+              "max-[639px]:mx-0 max-[639px]:mt-0 max-[639px]:h-[56%] max-[639px]:rounded-b-none max-[639px]:rounded-t-[1rem] max-[639px]:p-2",
             ),
             coverTones[activity.coverTone],
             isInactiveCard ? "grayscale" : null,
@@ -950,6 +1066,9 @@ export function ActivityCard({
             mobileDenseClass(
               "max-[639px]:flex max-[639px]:h-[3.7rem] max-[639px]:items-start max-[639px]:overflow-hidden max-[639px]:p-3 max-[639px]:pb-1.5",
             ),
+            activityListPreviewClass(
+              "max-[639px]:h-auto max-[639px]:min-h-0 max-[639px]:p-2.5 max-[639px]:pb-0",
+            ),
           )}
         >
           <CardTitle
@@ -957,6 +1076,9 @@ export function ActivityCard({
               "line-clamp-2 text-base font-extrabold leading-snug tracking-normal sm:text-[1.08rem]",
               mobileDenseClass(
                 "max-[639px]:text-[0.86rem] max-[639px]:leading-snug",
+              ),
+              activityListPreviewClass(
+                "max-[639px]:text-[12px] max-[639px]:leading-[0.95rem]",
               ),
               isInactiveCard ? "text-zinc-600" : null,
               !isInactiveCard && isTeamCard ? "text-ink" : null,
@@ -973,14 +1095,24 @@ export function ActivityCard({
             mobileDenseClass(
               "max-[639px]:min-h-[4.75rem] max-[639px]:space-y-0 max-[639px]:p-3 max-[639px]:pt-0",
             ),
+            activityListPreviewClass(
+              "max-[639px]:min-h-0 max-[639px]:justify-end max-[639px]:p-2.5 max-[639px]:pt-1",
+            ),
           )}
         >
+          {relativeTimingLabel ? (
+            <p className="hidden min-w-0 items-center gap-1 text-[10.5px] font-semibold leading-none text-[#111210]/62 max-[639px]:flex">
+              <Clock3 className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{relativeTimingLabel}</span>
+            </p>
+          ) : null}
           <div
             className={cn(
               "grid gap-2 text-sm font-medium text-forest/75",
               mobileDenseClass(
                 "max-[639px]:gap-1.5 max-[639px]:text-[0.72rem]",
               ),
+              activityListPreviewClass("max-[639px]:hidden"),
               isInactiveCard ? "text-zinc-500" : null,
             )}
           >

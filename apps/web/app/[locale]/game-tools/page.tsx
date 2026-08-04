@@ -117,7 +117,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
 
   return (
     <>
-      <main className="mobile-v23-game-tools app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.2rem] bg-[#FEFFF9] text-[#111210] md:hidden">
+      <main className="mobile-v23-game-tools app-mobile-page-shell [--app-mobile-page-top-gap:1.55rem] [--app-mobile-page-bottom-gap:1.2rem] bg-white text-[#111210] md:hidden">
         <div className="mx-auto w-full max-w-[430px] px-5">
           <header className="space-y-6">
             <GameToolBackButton

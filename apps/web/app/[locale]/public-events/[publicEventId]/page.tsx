@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import {
@@ -16,6 +15,7 @@ import { ActivityPriorityAdminMenu } from "@/components/admin/ActivityPriorityMa
 import { AnalyticsExternalLink } from "@/features/analytics/components/AnalyticsExternalLink";
 import { AnalyticsLink } from "@/features/analytics/components/AnalyticsLink";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
+import { ActivityHistoryBackButton } from "@/features/activities/components/ActivityHistoryBackButton";
 import { ActivityRichDescription } from "@/features/activities/components/ActivityRichDescription";
 import { normalizeAnalyticsLocale } from "@/features/analytics/events";
 import { queueAnalyticsEvent } from "@/features/analytics/server";
@@ -88,14 +88,13 @@ function PublicEventDetailHeader({
 }) {
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 md:hidden">
-      <Link
-        aria-label={title}
+      <ActivityHistoryBackButton
+        ariaLabel={title}
         className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111210]/70 ring-1 ring-[#E7E1CA] transition active:scale-95"
-        href={backHref}
-        prefetch
+        fallbackHref={backHref}
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
-      </Link>
+      </ActivityHistoryBackButton>
       <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
         {title}
       </p>

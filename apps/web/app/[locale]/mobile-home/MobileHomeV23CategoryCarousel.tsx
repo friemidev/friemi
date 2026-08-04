@@ -66,7 +66,7 @@ export function MobileHomeV23CategoryCarousel({
   }, []);
 
   return (
-    <div className="-mx-5 mt-2 overflow-hidden bg-white">
+    <div className="-mx-5 mt-2.5 overflow-hidden bg-white">
       <div
         className="flex snap-x snap-mandatory overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={updateActivePage}
@@ -87,14 +87,16 @@ export function MobileHomeV23CategoryCarousel({
                 className="group flex h-[5.85rem] min-w-0 flex-col items-center justify-end overflow-hidden rounded-[0.9rem] bg-white"
                 aria-label={item.label}
               >
-                <Image
-                  src={`/illustrations/png/${item.image}`}
-                  alt=""
-                  width={150}
-                  height={120}
-                  className="h-[4.55rem] w-full object-contain transition duration-300 group-active:scale-95"
-                />
-                <span className="-mt-0.5 max-w-full truncate px-1 text-[10px] font-extrabold text-[#123D31]">
+                <span className="flex h-[4.55rem] w-full items-end justify-center">
+                  <Image
+                    src={`/illustrations/png/${item.image}`}
+                    alt=""
+                    width={150}
+                    height={120}
+                    className="h-full w-full object-contain object-bottom transition duration-300 group-active:scale-95"
+                  />
+                </span>
+                <span className="mt-1 max-w-full truncate px-1 text-[10px] font-extrabold text-[#123D31]">
                   {item.label}
                 </span>
               </Link>

@@ -683,7 +683,7 @@ export function ProfilePrivatePageShell({
   };
 
   return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] mx-auto min-h-dvh w-full max-w-xl bg-[#FEFFF9] px-5 text-[#111210] md:min-h-[70vh] md:rounded-[1.5rem] md:border md:border-[#E4DCC7] md:shadow-[0_18px_60px_rgba(21,98,64,0.08)]">
+    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] mx-auto min-h-dvh w-full max-w-xl bg-white px-5 text-[#111210] md:min-h-[70vh] md:rounded-[1.5rem] md:border md:border-[#E4DCC7] md:shadow-[0_18px_60px_rgba(21,98,64,0.08)]">
       <header className="flex items-center justify-between gap-3">
         {backMode === "history" ? (
           <button
@@ -2575,7 +2575,7 @@ export function ProfileGiftWallPageView({
 
 export function ProfileSubpageLoadingView() {
   return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] mx-auto min-h-dvh w-full max-w-xl bg-[#FEFFF9] px-5 text-[#111210] md:min-h-[70vh] md:rounded-[1.5rem] md:border md:border-[#E4DCC7]">
+    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] mx-auto min-h-dvh w-full max-w-xl bg-white px-5 text-[#111210] md:min-h-[70vh] md:rounded-[1.5rem] md:border md:border-[#E4DCC7]">
       <header className="flex items-center justify-between gap-3">
         <div className="h-10 w-10 rounded-full bg-white ring-1 ring-[#E3DCC5]" />
         <div className="h-6 w-24 rounded-full bg-[#F1F2EC]" />

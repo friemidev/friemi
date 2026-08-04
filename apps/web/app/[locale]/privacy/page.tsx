@@ -192,7 +192,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
   const copy = privacyCopy[locale] ?? privacyCopy["zh-CN"];
 
   return (
-    <main className="min-h-screen bg-[#FEFFF9]">
+    <main className="min-h-screen bg-white">
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <header className="rounded-3xl border border-[#D6D5B2] bg-white/85 p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] sm:p-8">
           <BrandLockup size="sm" />

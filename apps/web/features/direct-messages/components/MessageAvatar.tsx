@@ -1,7 +1,10 @@
+import type { UserPresenceDisplayStatus } from "@/features/profile/presence";
+
 type MessageAvatarProps = {
   avatarUrl: string | null;
   isOnline?: boolean;
   name: string;
+  presenceDisplayStatus?: UserPresenceDisplayStatus;
   size?: "sm" | "md";
 };
 
@@ -9,12 +12,17 @@ export function MessageAvatar({
   avatarUrl,
   isOnline = false,
   name,
+  presenceDisplayStatus,
   size = "md",
 }: MessageAvatarProps) {
   const initial = name.trim().charAt(0).toUpperCase() || "N";
   const sizeClass =
     size === "sm" ? "h-9 w-9 text-sm" : "h-11 w-11 text-base";
   const dotClass = size === "sm" ? "h-2.5 w-2.5" : "h-3 w-3";
+  const visiblePresenceStatus =
+    presenceDisplayStatus ?? (isOnline ? "ONLINE" : null);
+  const dotColorClass =
+    visiblePresenceStatus === "AWAY" ? "bg-[#F0B84D]" : "bg-[#2FBF62]";
 
   return (
     <span
@@ -33,10 +41,10 @@ export function MessageAvatar({
           initial
         )}
       </span>
-      {isOnline ? (
+      {visiblePresenceStatus ? (
         <span
           aria-hidden="true"
-          className={`${dotClass} absolute bottom-0 right-0 rounded-full bg-[#2FBF62] ring-2 ring-white`}
+          className={`${dotClass} ${dotColorClass} absolute bottom-0 right-0 rounded-full ring-2 ring-white`}
         />
       ) : null}
     </span>

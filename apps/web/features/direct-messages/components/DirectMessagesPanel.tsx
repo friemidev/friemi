@@ -143,6 +143,7 @@ function ConversationListItem({
           avatarUrl={conversation.peer.avatarUrl}
           isOnline={conversation.peer.isOnline}
           name={conversation.peer.nickname}
+          presenceDisplayStatus={conversation.peer.presenceDisplayStatus}
         />
         <span className="min-w-0">
           <span className="flex min-w-0 items-start gap-2">

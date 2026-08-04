@@ -7,6 +7,7 @@ import {
 } from "@/features/friends/queries/getFriendNearestActivitySignals";
 import {
   getFollowRelationshipBuckets,
+  getFollowRelationState,
   getMutualFollowProfileIds,
 } from "@/features/follow/queries/followRelations";
 import { buildPrivateActivityShareAccessWhere } from "@/features/activities/utils/activityShareAccess";
@@ -20,6 +21,7 @@ import {
 } from "../utils/conversation";
 import {
   getUserPresenceState,
+  type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "@/features/profile/presence";
 
@@ -107,6 +109,7 @@ export type DirectMessageUserViewModel = {
   avatarUrl: string | null;
   bio: string | null;
   isOnline: boolean;
+  presenceDisplayStatus: UserPresenceDisplayStatus;
   presenceStatus: UserPresenceStatusValue;
 };
 
@@ -177,20 +180,26 @@ export type DirectConversationActivityContextViewModel = {
   locationLabel: string;
 };
 
-function mapUserProfile(user: {
-  id: string;
-  nickname: string;
-  friendCode: string | null;
-  avatarUrl: string | null;
-  bio: string | null;
-  lastActiveAt: Date | null;
-  presenceStatus: string | null;
-}): DirectMessageUserViewModel {
+function mapUserProfile(
+  user: {
+    id: string;
+    nickname: string;
+    friendCode: string | null;
+    avatarUrl: string | null;
+    bio: string | null;
+    lastActiveAt: Date | null;
+    presenceStatus: string | null;
+  },
+  options: {
+    canViewPresence?: boolean;
+  } = {},
+): DirectMessageUserViewModel {
   const hasPublicNickname = user.nickname.trim().length > 0;
   const presence = getUserPresenceState({
     lastActiveAt: user.lastActiveAt,
     status: user.presenceStatus,
   });
+  const canViewPresence = options.canViewPresence ?? false;
 
   return {
     id: user.id,
@@ -202,8 +211,9 @@ function mapUserProfile(user: {
     friendCode: user.friendCode,
     avatarUrl: hasPublicNickname ? user.avatarUrl : null,
     bio: user.bio,
-    isOnline: presence.isOnline,
-    presenceStatus: presence.status,
+    isOnline: canViewPresence && presence.isOnline,
+    presenceDisplayStatus: canViewPresence ? presence.displayStatus : null,
+    presenceStatus: canViewPresence ? presence.status : "INVISIBLE",
   };
 }
 
@@ -213,12 +223,13 @@ function mapPeer(
     "userA" | "userAId" | "userB" | "userBId"
   >,
   currentUserProfileId: string,
+  canViewPresence: boolean,
 ): DirectMessageUserViewModel {
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
   const peer =
     peerId === conversation.userAId ? conversation.userA : conversation.userB;
 
-  return mapUserProfile(peer);
+  return mapUserProfile(peer, { canViewPresence });
 }
 
 function mapLastMessage(
@@ -245,10 +256,11 @@ function mapConversationListItem(
   currentUserProfileId: string,
   recentActivities: DirectConversationActivitySignalViewModel[] = [],
   unreadCount = 0,
+  canViewPeerPresence = false,
 ): DirectConversationListItemViewModel {
   return {
     id: conversation.id,
-    peer: mapPeer(conversation, currentUserProfileId),
+    peer: mapPeer(conversation, currentUserProfileId, canViewPeerPresence),
     lastMessage: mapLastMessage(conversation),
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
@@ -261,6 +273,7 @@ function mapConversationThread(
   conversation: ConversationThreadResult,
   currentUserProfileId: string,
   sendPolicy: DirectMessageSendPolicy,
+  canViewPeerPresence: boolean,
 ): DirectConversationThreadViewModel {
   const currentUser =
     currentUserProfileId === conversation.userAId
@@ -268,9 +281,15 @@ function mapConversationThread(
       : conversation.userB;
 
   return {
-    ...mapConversationListItem(conversation, currentUserProfileId),
+    ...mapConversationListItem(
+      conversation,
+      currentUserProfileId,
+      [],
+      0,
+      canViewPeerPresence,
+    ),
     canSend: sendPolicy.canSend,
-    currentUser: mapUserProfile(currentUser),
+    currentUser: mapUserProfile(currentUser, { canViewPresence: true }),
     messages: [...conversation.messages].reverse().map((message) => ({
       id: message.id,
       senderId: message.senderId,
@@ -413,9 +432,11 @@ export async function getDirectConversations(currentUserProfileId: string) {
     string,
     DirectConversationActivitySignalViewModel[]
   >();
+  let visiblePresencePeerIds = new Set<string>();
 
   try {
     const friendPeerIds = await getFriendPeerIds(currentUserProfileId, peerIds);
+    visiblePresencePeerIds = friendPeerIds;
     activitiesByFriendId = await getFriendNearestActivitySignals({
       friendIds: [...friendPeerIds],
       limitPerFriend: friendActivitySignalLimitPerFriend,
@@ -433,6 +454,9 @@ export async function getDirectConversations(currentUserProfileId: string) {
         getConversationPeerId(conversation, currentUserProfileId),
       ) ?? [],
       unreadCountByConversationId.get(conversation.id) ?? 0,
+      visiblePresencePeerIds.has(
+        getConversationPeerId(conversation, currentUserProfileId),
+      ),
     ),
   );
 }
@@ -536,7 +560,9 @@ export async function getDirectMessageFriendRoster(
             : "none";
     const isMutualFollow = relationshipKind === "mutual";
     const conversation = conversationsByFriendId.get(profile.id);
-    const friend = mapUserProfile(profile);
+    const friend = mapUserProfile(profile, {
+      canViewPresence: isMutualFollow,
+    });
 
     return {
       friendshipId: null,
@@ -637,12 +663,20 @@ export async function getDirectConversationThread(
   }
 
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
-  const sendPolicy = await getDirectMessageSendPolicy(
-    currentUserProfileId,
-    peerId,
-  );
+  const [sendPolicy, relation] = await Promise.all([
+    getDirectMessageSendPolicy(currentUserProfileId, peerId),
+    getFollowRelationState({
+      targetProfileId: peerId,
+      viewerProfileId: currentUserProfileId,
+    }),
+  ]);
 
-  return mapConversationThread(conversation, currentUserProfileId, sendPolicy);
+  return mapConversationThread(
+    conversation,
+    currentUserProfileId,
+    sendPolicy,
+    relation.isMutualFollow,
+  );
 }
 
 export async function getDirectConversationActivityContext({

@@ -55,7 +55,7 @@ function getProfileSubpageCopy(locale: string) {
       favorite: "Favoris",
       followers: "Me suivent",
       following: "Suivis",
-      friends: "Mutuels",
+      friends: "Réseau",
       hangoutsTitle: "Mes sorties",
       joined: "Rejointes",
       joinedAt: "Rejoint",
@@ -95,7 +95,7 @@ function getProfileSubpageCopy(locale: string) {
       favorite: "Saved",
       followers: "Followers",
       following: "Following",
-      friends: "Mutual",
+      friends: "Network",
       hangoutsTitle: "My Plans",
       joined: "Joined",
       joinedAt: "Joined",
@@ -174,7 +174,7 @@ function SubpageShell({
   locale: string;
 }) {
   return (
-    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-[#FEFFF9] px-5">
+    <main className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
       <header className="flex items-center justify-between gap-3">
         <Link
           href={withLocale(locale, "/profile")}

@@ -548,7 +548,7 @@ function ActivityPlayAgainLink({
       )}
       href={withLocale(
         locale,
-        `/activities/new?copyActivityId=${encodeURIComponent(activityId)}`,
+        `/activities/new?copyActivityId=${encodeURIComponent(activityId)}&return=history`,
       )}
     >
       <Repeat2 className="h-3.5 w-3.5" />
@@ -615,12 +615,14 @@ function ApprovalModeNotice({
   locale,
   pendingCount = 0,
   requiresApproval,
+  variant = "card",
 }: {
   className?: string;
   isOrganizer: boolean;
   locale: string;
   pendingCount?: number;
   requiresApproval: boolean;
+  variant?: "card" | "inline";
 }) {
   const copy = getApprovalModeNoticeCopy(locale);
   const hasPendingRequests =
@@ -644,6 +646,44 @@ function ApprovalModeNotice({
     : requiresApproval
       ? copy.requiredDescription
       : copy.autoDescription;
+
+  if (variant === "inline") {
+    return (
+      <div className={cn("flex items-start gap-2.5 text-left", className)}>
+        <span
+          className={cn(
+            "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+            requiresApproval
+              ? "bg-[#FFF5E6] text-coral"
+              : "bg-[#F1F7F1] text-[#156240]",
+          )}
+        >
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "text-sm font-extrabold leading-5",
+              requiresApproval ? "text-[#8A3B21]" : "text-[#156240]",
+            )}
+          >
+            {title}
+          </p>
+          <p className="mt-0.5 text-xs font-medium leading-5 text-zinc-500">
+            {description}
+          </p>
+        </div>
+        {hasPendingRequests ? (
+          <Link
+            href="#participation-approval"
+            className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
+          >
+            {copy.reviewAction}
+          </Link>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1801,7 +1841,7 @@ export async function ActivityDetailPageContent({
     ) : null;
 
   return (
-    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:1.1rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 max-md:py-0 md:space-y-6 md:py-8">
+    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)] md:space-y-6 md:py-8">
       <MobileNavSectionOverride section="lobby" />
       <DetailSourceRestore sourceKey="activity_detail" />
       <ClaimAutoCreatedActivityCelebration
@@ -1811,7 +1851,6 @@ export async function ActivityDetailPageContent({
       />
       <ActivityLayerHeader
         backHref={withLocale(locale, "/lobby")}
-        returnMode="path"
         title={mobileDetailTitle}
       />
       <DetailSourceReturnLink
@@ -2046,22 +2085,23 @@ export async function ActivityDetailPageContent({
               activityTitle={activity.title}
               locale={locale}
               openLabel={mobileJoinCtaOpenLabel}
-              participantLabel={activityParticipantLabel}
               placement="inline"
-              statusLabel={getActivitySeatLabel(activity, locale)}
             >
               <div className="grid gap-3">
                 <ApprovalModeNotice
                   isOrganizer={false}
                   locale={locale}
                   requiresApproval={activity.requiresApproval}
+                  variant="inline"
                 />
                 <JoinActivityForm
                   activityId={activity.id}
                   activityTitle={activity.title}
                   accessToken={accessToken ?? null}
+                  closeOnSuccess
                   compactUnauthenticated
                   formInstanceId="mobile"
+                  hideMessageHint
                   locale={locale}
                   requiresApproval={activity.requiresApproval}
                   isFull={isFull}
@@ -2088,7 +2128,7 @@ export async function ActivityDetailPageContent({
         </div>
       </div>
 
-      <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[minmax(0,1fr)_320px]">
         <article className="min-w-0 space-y-6 lg:order-1">
           {protectedLocationNotice ? (
             <ProtectedDetailNotice

@@ -186,7 +186,7 @@ const copy = {
       emptyFilteredTitle: "没有匹配活动",
       emptyFilteredDescription: "请放宽关键词、主题、城市或状态条件后再试。",
       viewToggleLabel: "切换活动视图",
-      cardView: "卡片",
+      cardView: "全部",
       dateView: "按日期",
       agendaLongRunningTitle: "长期活动",
       agendaToday: "今天",
@@ -660,8 +660,10 @@ const copy = {
       description: "修改活动，保存后回到详情页。",
       forbiddenTitle: "无权编辑",
       forbiddenDescription: "只有活动发起人或管理人可以编辑这个活动。",
-      lockedTitle: "活动不可编辑",
-      lockedDescription: "已结束或已取消的活动不能继续编辑。",
+      lockedCancelledTitle: "活动已取消，无法编辑",
+      lockedCancelledDescription: "这个活动已经取消，不能继续修改。",
+      lockedEndedTitle: "活动已结束，无法编辑",
+      lockedEndedDescription: "这个活动已经结束，不能继续修改。",
     },
     profile: {
       title: "个人空间",
@@ -1147,7 +1149,7 @@ const copy = {
       emptyFilteredDescription:
         "Try a broader keyword, topic, city, or status filter.",
       viewToggleLabel: "Switch activity view",
-      cardView: "Cards",
+      cardView: "All",
       dateView: "By date",
       agendaLongRunningTitle: "Long-running activities",
       agendaToday: "Today",
@@ -1655,8 +1657,10 @@ const copy = {
       forbiddenTitle: "No edit access",
       forbiddenDescription:
         "Only the organizer or a manager can edit this plan.",
-      lockedTitle: "Plan cannot be edited",
-      lockedDescription: "Ended or cancelled plans can no longer be edited.",
+      lockedCancelledTitle: "This plan was cancelled",
+      lockedCancelledDescription: "Cancelled plans can no longer be edited.",
+      lockedEndedTitle: "This plan has ended",
+      lockedEndedDescription: "Ended plans can no longer be edited.",
     },
     profile: {
       title: "Profile",
@@ -2177,7 +2181,7 @@ const copy = {
       emptyFilteredDescription:
         "Essayez un mot-clé, un thème, une ville ou un statut plus large.",
       viewToggleLabel: "Changer de vue",
-      cardView: "Cartes",
+      cardView: "Tout",
       dateView: "Par date",
       agendaLongRunningTitle: "Sorties longues",
       agendaToday: "Aujourd'hui",
@@ -2697,9 +2701,12 @@ const copy = {
       forbiddenTitle: "Accès refusé",
       forbiddenDescription:
         "Seul l'organisateur ou un gestionnaire peut modifier ce plan.",
-      lockedTitle: "Plan non modifiable",
-      lockedDescription:
-        "Les plans terminés ou annulés ne peuvent plus être modifiés.",
+      lockedCancelledTitle: "Ce plan est annulé",
+      lockedCancelledDescription:
+        "Les plans annulés ne peuvent plus être modifiés.",
+      lockedEndedTitle: "Ce plan est terminé",
+      lockedEndedDescription:
+        "Les plans terminés ne peuvent plus être modifiés.",
     },
     profile: {
       title: "Profil",

@@ -146,6 +146,7 @@ function MessageBubbleAvatar({
         avatarUrl={user.avatarUrl}
         isOnline={user.isOnline}
         name={user.nickname}
+        presenceDisplayStatus={user.presenceDisplayStatus}
         size="sm"
       />
     </ContextualDetailLink>

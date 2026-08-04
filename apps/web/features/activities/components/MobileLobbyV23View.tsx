@@ -567,8 +567,8 @@ function MobileLobbyV23CategoryRail({
         type="button"
         onClick={onClose}
       />
-      <aside className="mobile-lobby-category-drawer__panel absolute inset-y-0 right-0 flex w-[min(84vw,22rem)] flex-col overflow-hidden border-l border-[#D6D5B2] bg-[#FEFFF9] pb-[calc(1.1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[-26px_0_48px_rgba(17,18,16,0.16)]">
-        <div className="flex items-center justify-between gap-3 px-4">
+      <aside className="mobile-lobby-category-drawer__panel absolute inset-y-0 right-0 flex w-[min(68vw,15.75rem)] flex-col overflow-hidden border-l border-[#D6D5B2] bg-white pb-[calc(1.1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[-18px_0_34px_rgba(17,18,16,0.12)]">
+        <div className="flex items-center justify-between gap-3 px-3.5">
           <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#096B45]/62">
               Friemi
@@ -590,8 +590,8 @@ function MobileLobbyV23CategoryRail({
           </button>
         </div>
 
-        <div className="mt-5 flex-1 overflow-y-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex flex-col gap-3">
+        <div className="mt-4 flex-1 overflow-y-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-col gap-2">
             {options.map(({ Icon, id, image, label }, index) => {
               const active = id === activeCategory;
               const isAll = id === "all";
@@ -601,10 +601,13 @@ function MobileLobbyV23CategoryRail({
                   key={id}
                   aria-pressed={active}
                   className={cn(
-                    "mobile-lobby-category-drawer__item group relative flex min-h-[5.75rem] items-center gap-3 overflow-hidden rounded-[1.35rem] border p-2.5 text-left transition active:scale-[0.97]",
+                    "mobile-lobby-category-drawer__item group relative flex items-center overflow-hidden rounded-[1rem] text-left transition active:scale-[0.98]",
+                    isAll
+                      ? "min-h-[3.05rem] gap-2 px-3 py-1.5"
+                      : "min-h-[5.75rem] gap-2 px-1 py-1.5",
                     active
-                      ? "border-[#096B45] bg-[#096B45] text-white shadow-[0_18px_36px_rgba(9,107,69,0.22)]"
-                      : "border-[#E4DFC9] bg-white text-[#111210] shadow-[0_14px_28px_rgba(17,18,16,0.055)]",
+                      ? "bg-[#096B45] text-white"
+                      : "bg-transparent text-[#111210] hover:bg-[#F7F4EA]",
                   )}
                   style={
                     {
@@ -618,21 +621,26 @@ function MobileLobbyV23CategoryRail({
                     className={cn(
                       "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300",
                       active
-                        ? "bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.22),transparent_38%)] opacity-100"
+                        ? "bg-[radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.18),transparent_38%)] opacity-100"
                         : "group-active:opacity-100 group-active:bg-[#F8F2E4]",
                     )}
                   />
                   <span
                     className={cn(
-                      "relative flex shrink-0 items-center justify-center overflow-hidden rounded-[1.1rem]",
-                      isAll ? "h-14 w-14" : "h-[4.35rem] w-[5.5rem]",
-                      active ? "bg-white/16" : "bg-[#F7F4EA]",
+                      "relative flex shrink-0 items-end justify-center overflow-hidden rounded-[0.9rem]",
+                      isAll
+                        ? "h-10 w-10 items-center"
+                        : "h-[5.15rem] w-[5.85rem]",
+                      active ? "bg-white/14" : "bg-[#F7F4EA]",
                     )}
                   >
                     {image ? (
                       <Image
                         alt=""
-                        className="h-full w-full object-contain p-1.5 transition duration-300 group-active:scale-95"
+                        className={cn(
+                          "h-full w-full object-contain object-bottom p-0 transition duration-300 group-active:scale-95",
+                          !isAll && "scale-[1.14]",
+                        )}
                         height={124}
                         src={`/illustrations/png/${image}`}
                         width={148}
@@ -647,25 +655,29 @@ function MobileLobbyV23CategoryRail({
                       />
                     )}
                   </span>
-                  <span className="relative flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <span
+                    className={cn(
+                      "relative inline-flex min-w-0 items-center gap-2",
+                      !isAll && "flex-1 justify-between",
+                    )}
+                  >
                     <span
                       className={cn(
-                        "min-w-0 truncate text-[16px] font-black leading-tight",
-                        isAll && "text-[18px]",
+                        "min-w-0 truncate text-[15px] font-black leading-tight",
+                        isAll && "text-[15px]",
                       )}
                     >
                       {label}
                     </span>
-                    <ChevronRight
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        active ? "text-white/82" : "text-[#096B45]/70",
-                      )}
-                    />
+                    {isAll ? null : (
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          active ? "text-white/82" : "text-[#096B45]/70",
+                        )}
+                      />
+                    )}
                   </span>
-                  {active ? (
-                    <span className="absolute bottom-3 right-11 h-1 w-8 rounded-full bg-white/86" />
-                  ) : null}
                 </button>
               );
             })}
@@ -951,7 +963,7 @@ export function MobileLobbyV23View({
     friendActivitiesFailed;
 
   return (
-    <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-[#FEFFF9] text-[#111210] md:hidden">
+    <section className="mobile-v23-lobby app-mobile-page-shell [--app-mobile-page-top-gap:2.85rem] [--app-mobile-page-bottom-gap:1.1rem] bg-white text-[#111210] md:hidden">
       <MobileLobbyV23CategoryRail
         activeCategory={activeCategory}
         isOpen={categoryRailOpen}
