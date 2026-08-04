@@ -511,7 +511,7 @@ function ProfileAvatar({
 }
 
 const momentActionButtonClassName =
-  "inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-sm font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
+  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
 
 function MomentActionBar({
   className,
@@ -546,7 +546,7 @@ function MomentActionBar({
   return (
     <div
       className={cn(
-        "grid grid-cols-3 items-center gap-1 text-[#51594F]",
+        "flex items-center justify-between gap-3 text-[#51594F]",
         className,
       )}
     >
@@ -832,14 +832,17 @@ export function FeedCard({
           ) : null}
 
           {moment.images.length > 0 ? (
-            <MomentImageGrid
-              images={moment.images}
-              onImageClick={setPreviewIndex}
-            />
+            <div className="pl-[3.25rem]">
+              <MomentImageGrid
+                images={moment.images}
+                onImageClick={setPreviewIndex}
+                variant="feed"
+              />
+            </div>
           ) : null}
 
           {hasImages && moment.content ? (
-            <p className="mt-3 whitespace-pre-wrap px-1 text-[14px] font-semibold leading-6 text-[#1D1D1B]">
+            <p className="mt-3 whitespace-pre-wrap pl-[3.25rem] pr-1 text-[14px] font-semibold leading-6 text-[#1D1D1B]">
               {moment.content}
             </p>
           ) : null}
@@ -847,9 +850,9 @@ export function FeedCard({
 
         <MomentActionBar
           className={cn(
-            "py-2",
+            "py-0.5",
             hasImages
-              ? "mt-2 border-y border-[#E8E4D4]"
+              ? "ml-[3.25rem] mt-2 max-w-[15rem]"
               : "mx-4 mt-3 border-y border-[#E8E4D4]",
           )}
           copy={copy}
@@ -866,7 +869,9 @@ export function FeedCard({
             type="button"
             className={cn(
               "mb-3 block rounded-2xl bg-[#F7F7F0] px-3 py-2 text-left transition hover:bg-[#F1F2EC]",
-              hasImages ? "w-full" : "mx-4 w-[calc(100%-2rem)]",
+              hasImages
+                ? "ml-[3.25rem] w-[calc(100%-3.25rem)]"
+                : "mx-4 w-[calc(100%-2rem)]",
             )}
             onClick={() => setCommentsOpen(true)}
           >
@@ -989,6 +994,7 @@ export function MomentDetailContent({
             <MomentImageGrid
               images={moment.images}
               onImageClick={setPreviewIndex}
+              variant="detail"
             />
           </div>
         ) : null}
@@ -1397,9 +1403,11 @@ function MomentCommentSheet({
 function MomentImageGrid({
   images,
   onImageClick,
+  variant = "feed",
 }: {
   images: MomentFeedItemViewModel["images"];
   onImageClick: (index: number) => void;
+  variant?: "detail" | "feed";
 }) {
   if (images.length === 0) {
     return null;
@@ -1407,37 +1415,63 @@ function MomentImageGrid({
 
   if (images.length === 1) {
     const [image] = images;
+    const width = image.width ?? 1;
+    const height = image.height ?? 1;
+    const isWide = width / height >= 1.18;
+    const isTall = height / width >= 1.18;
 
     return (
-      <div>
+      <div
+        className={cn(
+          variant === "feed"
+            ? isWide
+              ? "w-[min(14.5rem,72vw)]"
+              : isTall
+                ? "w-[min(10.8rem,54vw)]"
+                : "w-[min(12.5rem,62vw)]"
+            : "w-full",
+        )}
+      >
         <MomentImageFrame
           imageUrl={image.url}
-          ratio="aspect-square"
+          ratio={
+            isWide
+              ? "aspect-[4/3]"
+              : isTall
+                ? "aspect-[3/4]"
+                : "aspect-square"
+          }
           onClick={() => onImageClick(0)}
         />
       </div>
     );
   }
 
-  const visibleImages = images.slice(0, 4);
+  const visibleImages = images.slice(0, 9);
+  const useTwoColumns = images.length === 2 || images.length === 4;
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div
+      className={cn(
+        "grid gap-1.5",
+        useTwoColumns
+          ? "w-[min(11.75rem,58vw)] grid-cols-2"
+          : "w-[min(15rem,74vw)] grid-cols-3",
+        variant === "detail" && "w-full",
+      )}
+    >
       {visibleImages.map((image, index) => (
         <MomentImageFrame
           key={image.id}
           imageUrl={image.url}
           moreCount={
-            images.length > visibleImages.length && index === 3
+            images.length > visibleImages.length &&
+            index === visibleImages.length - 1
               ? images.length - visibleImages.length
               : 0
           }
           onClick={() => onImageClick(index)}
-          ratio={
-            images.length === 3 && index === 0
-              ? "col-span-2 aspect-[4/3]"
-              : "aspect-square"
-          }
+          ratio="aspect-square"
         />
       ))}
     </div>
@@ -2782,11 +2816,11 @@ export function FootprintsMobilePage({
       />
       <main className="min-h-screen bg-white pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
         <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
-          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-1">
+          <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5">
             <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
               {copy.title}
             </h1>
-            <nav className="grid min-w-0 translate-y-1 grid-cols-3 text-center">
+            <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center">
               {tabs.map((tab) => {
                 const active = activeTab === tab.key;
 
@@ -2829,16 +2863,16 @@ export function FootprintsMobilePage({
                 <MomentComposer copy={copy} locale={locale} profile={profile} />
               </div>
 
-              <div className="inline-flex h-7 rounded-full bg-[#F7F7F0] p-0.5 text-[11px] font-black text-[#156240]">
+              <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-black text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {feedScopeTabs.map((tab) => (
                   <button
                     key={tab.key}
                     type="button"
                     className={cn(
-                      "rounded-full px-2.5 transition",
+                      "h-7 shrink-0 rounded-full px-3.5 transition",
                       feedScope === tab.key
-                        ? "bg-white shadow-[0_6px_16px_rgba(21,98,64,0.08)]"
-                        : "text-[#156240]/62",
+                        ? "bg-[#156240] text-white"
+                        : "bg-[#F7F8F4] text-[#156240]",
                     )}
                     onClick={() => handleFeedScopeChange(tab.key)}
                   >
