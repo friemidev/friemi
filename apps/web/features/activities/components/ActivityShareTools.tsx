@@ -85,6 +85,21 @@ function isWechatWebView(userAgent: string) {
   return /MicroMessenger/i.test(userAgent);
 }
 
+function shouldUsePosterPreviewSave(userAgent: string) {
+  if (isWechatWebView(userAgent)) {
+    return true;
+  }
+
+  const isTouchMac =
+    /Macintosh/i.test(userAgent) &&
+    typeof navigator !== "undefined" &&
+    navigator.maxTouchPoints > 1;
+  const isIOS = /iPad|iPhone|iPod/i.test(userAgent) || isTouchMac;
+  const isMobile = /Android|Mobile/i.test(userAgent);
+
+  return isIOS || isMobile;
+}
+
 async function generateActivityPosterDataUrl({
   activityTitle,
   activityUrl,
@@ -456,7 +471,7 @@ export function ActivityPosterDownloadButton({
 }: ActivityPosterDownloadButtonProps) {
   const t = getCopy(locale).activityShare;
   const [activityUrl, setActivityUrl] = useState("");
-  const [shareMode, setShareMode] = useState<WebShareMode>("copy");
+  const [preferPosterPreviewSave, setPreferPosterPreviewSave] = useState(false);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [posterPreviewOpen, setPosterPreviewOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<
@@ -480,9 +495,8 @@ export function ActivityPosterDownloadButton({
   }, [sharePath]);
 
   useEffect(() => {
-    if (isWechatWebView(navigator.userAgent)) {
-      setShareMode("wechat");
-    }
+    const userAgent = navigator.userAgent;
+    setPreferPosterPreviewSave(shouldUsePosterPreviewSave(userAgent));
   }, []);
 
   async function handleDownloadPoster() {
@@ -505,7 +519,7 @@ export function ActivityPosterDownloadButton({
         t,
       });
 
-      if (shareMode === "wechat") {
+      if (preferPosterPreviewSave) {
         setPosterPreviewUrl(posterDataUrl);
         setPosterPreviewOpen(true);
       } else {
@@ -523,8 +537,9 @@ export function ActivityPosterDownloadButton({
         properties: {
           has_cover_image: Boolean(coverImageUrl),
           has_qr_code: true,
-          share_mode:
-            shareMode === "wechat" ? "wechat_long_press" : "poster_download",
+          share_mode: preferPosterPreviewSave
+            ? "mobile_long_press"
+            : "poster_download",
         },
       });
       setDownloadState("idle");
@@ -537,7 +552,7 @@ export function ActivityPosterDownloadButton({
   const buttonLabel =
     downloadState === "downloading"
       ? t.downloading
-      : shareMode === "wechat"
+      : preferPosterPreviewSave
         ? t.savePoster
         : t.downloadPoster;
 
@@ -555,7 +570,7 @@ export function ActivityPosterDownloadButton({
         type="button"
         variant="secondary"
       >
-        {shareMode === "wechat" ? (
+        {preferPosterPreviewSave ? (
           <ImageIcon className="h-4 w-4 shrink-0" />
         ) : (
           <Download className="h-4 w-4 shrink-0" />
@@ -629,6 +644,7 @@ export function ActivityShareTools({
   const [activityUrl, setActivityUrl] = useState("");
   const [shareHelpOpen, setShareHelpOpen] = useState(false);
   const [shareMode, setShareMode] = useState<WebShareMode>("copy");
+  const [preferPosterPreviewSave, setPreferPosterPreviewSave] = useState(false);
   const [wechatShareImageUrl, setWechatShareImageUrl] = useState<string | null>(
     null,
   );
@@ -658,7 +674,10 @@ export function ActivityShareTools({
   }, [sharePath]);
 
   useEffect(() => {
-    if (isWechatWebView(navigator.userAgent)) {
+    const userAgent = navigator.userAgent;
+    setPreferPosterPreviewSave(shouldUsePosterPreviewSave(userAgent));
+
+    if (isWechatWebView(userAgent)) {
       setShareMode("wechat");
       return;
     }
@@ -784,13 +803,13 @@ export function ActivityShareTools({
         setPosterPreviewUrl(posterDataUrl);
       }
 
-      if (shareMode !== "wechat") {
+      if (preferPosterPreviewSave) {
+        setPosterPreviewOpen(true);
+      } else {
         const link = document.createElement("a");
         link.download = posterFileName;
         link.href = posterDataUrl;
         link.click();
-      } else {
-        setPosterPreviewOpen(true);
       }
 
       trackClientAnalyticsEvent({
@@ -801,8 +820,9 @@ export function ActivityShareTools({
         properties: {
           has_cover_image: Boolean(coverImageUrl),
           has_qr_code: true,
-          share_mode:
-            shareMode === "wechat" ? "wechat_long_press" : "poster_download",
+          share_mode: preferPosterPreviewSave
+            ? "mobile_long_press"
+            : "poster_download",
         },
       });
       setDownloadState("idle");
@@ -820,7 +840,7 @@ export function ActivityShareTools({
   const posterButtonLabel =
     downloadState === "downloading"
       ? t.downloading
-      : shareMode === "wechat"
+      : preferPosterPreviewSave
         ? t.savePoster
         : t.downloadPoster;
 
@@ -868,7 +888,7 @@ export function ActivityShareTools({
           type="button"
           variant="secondary"
         >
-          {shareMode === "wechat" ? (
+          {preferPosterPreviewSave ? (
             <ImageIcon className="h-4 w-4 shrink-0" />
           ) : (
             <Download className="h-4 w-4 shrink-0" />
@@ -938,7 +958,7 @@ export function ActivityShareTools({
           </div>
         </div>
       ) : null}
-      {posterPreviewUrl && shareMode === "wechat" && posterPreviewOpen ? (
+      {posterPreviewUrl && posterPreviewOpen ? (
         <div
           aria-label={t.posterPreviewTitle}
           aria-modal="true"

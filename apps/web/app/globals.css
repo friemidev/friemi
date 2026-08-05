@@ -39,7 +39,7 @@
   --app-top-safe-area: env(safe-area-inset-top);
   --app-bottom-safe-area: env(safe-area-inset-bottom);
   --app-mobile-header-height: calc(3.5rem + var(--app-top-safe-area));
-  --app-mobile-nav-height: 4.35rem;
+  --app-mobile-nav-height: 3.75rem;
 }
 
 * {
@@ -165,7 +165,7 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
 
 @media (max-width: 767px) {
   html[data-friemi-android-app="true"] .app-layout-shell {
-    padding-bottom: calc(6rem + var(--app-bottom-safe-area));
+    padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area));
   }
 
   .app-mobile-page-shell {
