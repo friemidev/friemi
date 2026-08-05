@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileInvitePageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { getReferralStats } from "@/features/referrals/queries/getReferralDashboard";
@@ -12,13 +11,6 @@ type ProfileInvitePageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 const emptyReferralStats = {
   boundReferral: null,
   firstParticipationCount: 0,

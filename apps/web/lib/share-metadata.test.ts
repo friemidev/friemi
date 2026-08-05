@@ -60,6 +60,10 @@ test("buildPageShareMetadata creates rich metadata for public entry pages", () =
   );
   assert.equal(metadata.openGraph?.url, "https://www.friemi.com/en/home");
   assert.equal(metadata.openGraph?.siteName, "Friemi");
+  assert.deepEqual(metadata.robots, {
+    follow: true,
+    index: true,
+  });
   assert.deepEqual(metadata.alternates?.languages, {
     en: "https://www.friemi.com/en/home",
     fr: "https://www.friemi.com/fr/home",
@@ -88,6 +92,10 @@ test("buildTeamShareMetadata skips hreflang alternates for private token URLs", 
     metadata.alternates?.canonical,
     "https://friemi.example/zh-CN/activities/activity_1?access=private",
   );
+  assert.deepEqual(metadata.robots, {
+    follow: true,
+    index: true,
+  });
   assert.equal(metadata.alternates?.languages, undefined);
 });
 

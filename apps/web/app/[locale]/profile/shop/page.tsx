@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { getProfileShopGiftCatalog } from "@/features/charm/queries/getProfileShop";
 import { getProfileShopGiftRecipients } from "@/features/charm/queries/getProfileShopGiftRecipients";
@@ -12,13 +11,6 @@ type ProfileShopPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 export default async function ProfileShopPage({
   params,
 }: ProfileShopPageProps) {

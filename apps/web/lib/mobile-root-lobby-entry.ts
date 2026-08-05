@@ -110,3 +110,23 @@ export function getMobileRootLobbyRedirectPath({
 
   return `/${locale}/lobby${normalizeSearch(search)}`;
 }
+
+export function getRootHomeRedirectPath({
+  acceptLanguage,
+  localeCookie,
+  pathname,
+  search,
+}: {
+  acceptLanguage?: string | null;
+  localeCookie?: string | null;
+  pathname: string;
+  search?: string | null;
+}) {
+  if (pathname !== "/") {
+    return null;
+  }
+
+  const locale = resolveRootEntryLocale({ acceptLanguage, localeCookie });
+
+  return `/${locale}/home${normalizeSearch(search)}`;
+}

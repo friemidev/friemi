@@ -193,6 +193,19 @@ html[data-friemi-android-app="true"] .app-layout-shell > nav {
     padding-bottom: calc(var(--app-mobile-nav-height) + var(--app-bottom-safe-area) + var(--app-mobile-page-bottom-gap, 1rem)) !important;
   }
 
+  .mobile-chat-viewport {
+    height: var(--friemi-chat-visual-height, 100dvh) !important;
+    max-height: var(--friemi-chat-visual-height, 100dvh) !important;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  html:has(.mobile-chat-viewport),
+  body:has(.mobile-chat-viewport) {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
   .app-layout-shell:has(.mobile-v23-home) {
     padding-bottom: 0;
   }

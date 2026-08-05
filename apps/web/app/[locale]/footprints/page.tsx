@@ -7,6 +7,12 @@ import { canCreatePlanet } from "@/features/planets/queries/planetCreationEligib
 import { getPlanetSquare } from "@/features/planets/queries/planetQueries";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
+import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  getGeneralPageShareDescription,
+  getCanonicalMetadataBaseUrl,
+} from "@/lib/share-metadata";
 
 type FootprintsPageProps = {
   params: Promise<{
@@ -27,9 +33,12 @@ export async function generateMetadata({
   const title =
     locale === "zh-CN" ? "世界" : locale === "fr" ? "Monde" : "World";
 
-  return {
-    title: `${title} | Friemi`,
-  };
+  return buildPageShareMetadata({
+    baseUrl: getCanonicalMetadataBaseUrl(),
+    description: getGeneralPageShareDescription(locale),
+    path: withLocale(locale, "/footprints"),
+    title: `${title} · Friemi`,
+  });
 }
 
 export default async function FootprintsPage({

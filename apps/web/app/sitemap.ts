@@ -12,6 +12,8 @@ const staticLocalePaths = [
   "/home",
   "/activities",
   "/lobby",
+  "/footprints",
+  "/planets",
   "/co-creators",
   "/game-tools",
   "/game-tools/werewolf",

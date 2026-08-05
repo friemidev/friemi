@@ -1,4 +1,4 @@
-import { isHotlinkProtectedCoverUrl } from "@/lib/activity-cover-shared";
+import { isHotlinkProtectedCoverUrl } from "./activity-cover-shared";
 
 export function getActivityCoverDisplayUrl(imageUrl: string) {
   if (!imageUrl) {

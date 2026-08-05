@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileAchievementsPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { syncProfileAchievements } from "@/features/achievements/services/achievements";
@@ -11,13 +10,6 @@ type ProfileAchievementsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 export default async function ProfileAchievementsPage({
   params,
 }: ProfileAchievementsPageProps) {

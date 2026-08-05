@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getMobileRootLobbyRedirectPath,
+  getRootHomeRedirectPath,
   isMobileUserAgent,
   resolveRootEntryLocale,
 } from "./mobile-root-lobby-entry";
@@ -91,6 +92,35 @@ test("getMobileRootLobbyRedirectPath redirects only mobile root requests", () =>
     getMobileRootLobbyRedirectPath({
       pathname: "/",
       userAgent: "Mozilla/5.0 (X11; Linux x86_64) Chrome/125",
+    }),
+    null,
+  );
+});
+
+test("getRootHomeRedirectPath redirects root requests directly to localized home", () => {
+  assert.equal(
+    getRootHomeRedirectPath({
+      acceptLanguage: "fr-FR,fr;q=0.9",
+      localeCookie: null,
+      pathname: "/",
+      search: "?utm_source=google",
+    }),
+    "/fr/home?utm_source=google",
+  );
+
+  assert.equal(
+    getRootHomeRedirectPath({
+      acceptLanguage: "zh-CN,zh;q=0.9",
+      localeCookie: "en",
+      pathname: "/",
+      search: "",
+    }),
+    "/en/home",
+  );
+
+  assert.equal(
+    getRootHomeRedirectPath({
+      pathname: "/zh-CN/home",
     }),
     null,
   );

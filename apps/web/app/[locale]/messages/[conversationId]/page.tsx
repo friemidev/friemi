@@ -151,7 +151,7 @@ export default async function MessageThreadPage({
   );
 
   return (
-    <PageContainer className="max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+    <PageContainer className="mobile-chat-viewport max-md:fixed max-md:inset-0 max-md:z-50 max-md:max-w-none max-md:overflow-hidden max-md:px-0 max-md:pb-0 max-md:pt-0 md:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
       <DirectMessageUnreadCountHydrator unreadCount={unreadMessageCount} />
       <div className="flex h-full min-h-0 flex-col gap-3 md:grid md:gap-4">
         <MessageThread
