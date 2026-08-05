@@ -29,13 +29,9 @@ export async function getActivityCheckInRoster(
       select: {
         organizerId: true,
         coManagers: {
-          where: {
-            managerProfileId,
-          },
           select: {
-            id: true,
+            managerProfileId: true,
           },
-          take: 1,
         },
       },
     });
@@ -43,14 +39,24 @@ export async function getActivityCheckInRoster(
     if (
       !activity ||
       (activity.organizerId !== managerProfileId &&
-        activity.coManagers.length === 0)
+        !activity.coManagers.some(
+          (coManager) => coManager.managerProfileId === managerProfileId,
+        ))
     ) {
       return [];
     }
 
+    const exemptProfileIds = [
+      activity.organizerId,
+      ...activity.coManagers.map((coManager) => coManager.managerProfileId),
+    ];
+
     const participants = await prisma.activityParticipant.findMany({
       where: {
         activityId,
+        userProfileId: {
+          notIn: exemptProfileIds,
+        },
         status: {
           in: ["JOINED", "APPROVED"],
         },

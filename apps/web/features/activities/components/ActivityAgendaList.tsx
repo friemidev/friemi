@@ -174,6 +174,8 @@ function ActivityAgendaRow({
   const locationLabel = getActivityLocationLabel(activity);
   const statusLabel = getStatusLabel(displayStatus, locale);
   const categoryLabel = getCategoryLabel(activity.category, locale);
+  const isInactive =
+    displayStatus === "ENDED" || displayStatus === "CANCELLED";
 
   return (
     <AnalyticsLink
@@ -182,7 +184,12 @@ function ActivityAgendaRow({
         dateLabel,
         activity.city,
       )}
-      className="group grid min-h-[6.5rem] grid-cols-[5.75rem_minmax(0,1fr)_auto] gap-3 rounded-[1rem] border border-[#D6D5B2] bg-white/88 p-2.5 shadow-[0_8px_20px_rgba(29,29,27,0.05)] transition hover:-translate-y-0.5 hover:border-[#D6D5B2] hover:bg-white hover:shadow-[0_12px_26px_rgba(29,29,27,0.08)] sm:min-h-[7rem] sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-3"
+      className={cn(
+        "group grid min-h-[6.5rem] grid-cols-[5.75rem_minmax(0,1fr)_auto] gap-3 rounded-[1rem] border p-2.5 transition sm:min-h-[7rem] sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-3",
+        isInactive
+          ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none hover:border-zinc-200 hover:bg-zinc-50"
+          : "border-[#D6D5B2] bg-white/88 shadow-[0_8px_20px_rgba(29,29,27,0.05)] hover:-translate-y-0.5 hover:border-[#D6D5B2] hover:bg-white hover:shadow-[0_12px_26px_rgba(29,29,27,0.08)]",
+      )}
       detailSource={{
         sourceKey: "activity_list",
         targetKey: detailSourceTargetKey,
@@ -207,29 +214,62 @@ function ActivityAgendaRow({
         className={cn(
           "relative block h-full min-h-[5.25rem] overflow-hidden rounded-[0.8rem]",
           coverTones[activity.coverTone],
+          isInactive ? "bg-zinc-200 grayscale opacity-75" : null,
         )}
       >
         <ActivityCoverImage
           alt=""
-          overlayClassName="bg-gradient-to-t from-black/42 via-black/8 to-transparent"
+          overlayClassName={cn(
+            "bg-gradient-to-t to-transparent",
+            isInactive
+              ? "from-zinc-900/46 via-zinc-800/8"
+              : "from-black/42 via-black/8",
+          )}
           src={activity.coverImageUrl}
         />
-        <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-[#156240] shadow-sm">
+        <span
+          className={cn(
+            "absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold shadow-sm",
+            isInactive ? "text-zinc-600" : "text-[#156240]",
+          )}
+        >
           {categoryLabel}
         </span>
       </span>
 
       <span className="min-w-0 self-center">
-        <span className="line-clamp-2 text-base font-semibold leading-6 text-ink group-hover:text-[#156240] sm:text-lg sm:leading-7">
+        <span
+          className={cn(
+            "line-clamp-2 text-base font-semibold leading-6 sm:text-lg sm:leading-7",
+            isInactive
+              ? "text-zinc-600"
+              : "text-ink group-hover:text-[#156240]",
+          )}
+        >
           {activity.title}
         </span>
-        <span className="mt-2 grid gap-1.5 text-sm leading-5 text-zinc-600">
+        <span
+          className={cn(
+            "mt-2 grid gap-1.5 text-sm leading-5",
+            isInactive ? "text-zinc-500" : "text-zinc-600",
+          )}
+        >
           <span className="inline-flex min-w-0 items-center gap-1.5">
-            <Clock3 className="h-4 w-4 shrink-0 text-[#156240]" />
+            <Clock3
+              className={cn(
+                "h-4 w-4 shrink-0",
+                isInactive ? "text-zinc-400" : "text-[#156240]",
+              )}
+            />
             <span className="truncate">{dateLabel}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-1.5">
-            <MapPin className="h-4 w-4 shrink-0 text-[#156240]" />
+            <MapPin
+              className={cn(
+                "h-4 w-4 shrink-0",
+                isInactive ? "text-zinc-400" : "text-[#156240]",
+              )}
+            />
             <span className="truncate">{locationLabel}</span>
           </span>
         </span>
@@ -239,14 +279,19 @@ function ActivityAgendaRow({
         <span
           className={cn(
             "inline-flex min-h-6 max-w-[5.5rem] items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-[1.15]",
-            displayStatus === "ENDED" || displayStatus === "CANCELLED"
+            isInactive
               ? "bg-zinc-100 text-zinc-500"
               : "bg-[#DEEBFF] text-[#156240] ring-1 ring-[#DEEBFF]",
           )}
         >
           <span className="truncate">{statusLabel}</span>
         </span>
-        <ChevronRight className="h-5 w-5 text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
+        <ChevronRight
+          className={cn(
+            "h-5 w-5 text-zinc-400 transition",
+            isInactive ? null : "group-hover:translate-x-0.5 group-hover:text-[#156240]",
+          )}
+        />
       </span>
     </AnalyticsLink>
   );

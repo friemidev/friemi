@@ -245,6 +245,11 @@ export async function syncActivitySocialRewards({
       },
       id: true,
       organizerId: true,
+      coManagers: {
+        select: {
+          managerProfileId: true,
+        },
+      },
       participants: {
         where: {
           status: {
@@ -275,7 +280,26 @@ export async function syncActivitySocialRewards({
     };
   }
 
-  const rewardActivity: RewardActivitySnapshot = activity;
+  const operatorProfileIds = new Set([
+    activity.organizerId,
+    ...activity.coManagers.map((coManager) => coManager.managerProfileId),
+  ]);
+  const rewardActivity: RewardActivitySnapshot = {
+    endAt: activity.endAt,
+    guestParticipants: activity.guestParticipants.filter(
+      (guestParticipant) =>
+        !guestParticipant.linkedUserProfileId ||
+        !operatorProfileIds.has(guestParticipant.linkedUserProfileId),
+    ),
+    id: activity.id,
+    organizerId: activity.organizerId,
+    participants: activity.participants.filter(
+      (participant) => !operatorProfileIds.has(participant.userProfileId),
+    ),
+    startAt: activity.startAt,
+    status: activity.status,
+    type: activity.type,
+  };
   const realParticipantProfileIds = getRealParticipationProfileIds(
     rewardActivity,
     now,

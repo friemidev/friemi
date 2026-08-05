@@ -232,12 +232,30 @@ export async function syncActivityNoShowTrustScoreEvents({
     },
     select: {
       activityId: true,
+      activity: {
+        select: {
+          coManagers: {
+            select: {
+              managerProfileId: true,
+            },
+          },
+          organizerId: true,
+        },
+      },
       userProfileId: true,
     },
   });
+  const participantCheckInRequiredParticipations = participations.filter(
+    (participation) =>
+      participation.activity.organizerId !== participation.userProfileId &&
+      !participation.activity.coManagers.some(
+        (coManager) =>
+          coManager.managerProfileId === participation.userProfileId,
+      ),
+  );
 
   await Promise.all(
-    participations.map((participation) =>
+    participantCheckInRequiredParticipations.map((participation) =>
       applyStandardTrustScoreEvent(prisma, {
         activityId: participation.activityId,
         note: "Approved hangout participant did not check in after the event",
@@ -247,7 +265,7 @@ export async function syncActivityNoShowTrustScoreEvents({
     ),
   );
 
-  return { appliedCount: participations.length };
+  return { appliedCount: participantCheckInRequiredParticipations.length };
 }
 
 export async function syncCleanHalfYearTrustScoreEvents({

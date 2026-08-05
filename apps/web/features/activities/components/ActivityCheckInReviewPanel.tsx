@@ -31,9 +31,12 @@ function getCopy(locale: string) {
     return {
       cancel: "Fermer",
       confirm: "Confirmer les pointages",
-      empty: "Aucun participant.",
+      confirmed: "Confirme",
+      empty: "Aucun participant a pointer.",
+      needsReview: "A confirmer",
       open: "Pointages",
       pending: "Confirmation...",
+      pendingRequests: "A confirmer",
       remove: "Marquer absent",
       selected: "Present",
       title: "Pointages",
@@ -45,9 +48,12 @@ function getCopy(locale: string) {
     return {
       cancel: "Close",
       confirm: "Confirm check-ins",
-      empty: "No participants.",
+      confirmed: "Confirmed",
+      empty: "No participants need check-in.",
+      needsReview: "Waiting",
       open: "Check-ins",
       pending: "Confirming...",
+      pendingRequests: "Waiting",
       remove: "Mark absent",
       selected: "Present",
       title: "Check-ins",
@@ -58,9 +64,12 @@ function getCopy(locale: string) {
   return {
     cancel: "关闭",
     confirm: "签到确认",
-    empty: "暂无报名用户。",
+    confirmed: "已确认",
+    empty: "暂无需要签到的参与者。",
+    needsReview: "待确认",
     open: "签到管理",
     pending: "确认中...",
+    pendingRequests: "待确认",
     remove: "取消签到",
     selected: "已到场",
     title: "签到管理",
@@ -110,7 +119,7 @@ function ActivityCheckInRosterForm({
   activityId: string;
   className?: string;
   locale: string;
-  onConfirmed: () => void;
+  onConfirmed: (confirmedIds: string[]) => void;
   participants: ActivityCheckInParticipantViewModel[];
   selectedIds: string[];
 }) {
@@ -120,17 +129,19 @@ function ActivityCheckInRosterForm({
   );
   const [, startTransition] = useTransition();
   const router = useRouter();
+  const handledStateRef = useRef<ReviewActivityCheckInState | null>(null);
 
   useEffect(() => {
-    if (!state.success) {
+    if (!state.success || handledStateRef.current === state) {
       return;
     }
 
-    onConfirmed();
+    handledStateRef.current = state;
+    onConfirmed(selectedIds);
     startTransition(() => {
       router.refresh();
     });
-  }, [onConfirmed, router, startTransition, state.success]);
+  }, [onConfirmed, router, selectedIds, startTransition, state]);
 
   return (
     <form action={formAction} className={className ?? "grid gap-3"} noValidate>
@@ -170,17 +181,64 @@ export function ActivityCheckInReviewPanel({
     [participants],
   );
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [reviewedSelectedIds, setReviewedSelectedIds] = useState<
+    string[] | null
+  >(null);
   const [focusedParticipantId, setFocusedParticipantId] = useState<
     string | null
   >(null);
   const actionPopoverRef = useRef<HTMLDivElement>(null);
+  const initialConfirmedIds = useMemo(
+    () =>
+      participants
+        .filter((participant) => participant.checkedInAt)
+        .map((participant) => participant.id),
+    [participants],
+  );
+  const participantIds = useMemo(
+    () => participants.map((participant) => participant.id),
+    [participants],
+  );
+  const confirmedIdSet = useMemo(
+    () => new Set(reviewedSelectedIds ?? initialConfirmedIds),
+    [initialConfirmedIds, reviewedSelectedIds],
+  );
+  const pendingRequestIds = useMemo(() => {
+    if (reviewedSelectedIds) {
+      return [];
+    }
+
+    return participants
+      .filter(
+        (participant) =>
+          participant.checkInRequestedAt && !confirmedIdSet.has(participant.id),
+      )
+      .map((participant) => participant.id);
+  }, [confirmedIdSet, participants, reviewedSelectedIds]);
+  const pendingRequestIdSet = useMemo(
+    () => new Set(pendingRequestIds),
+    [pendingRequestIds],
+  );
+  const confirmedCount = participants.filter((participant) =>
+    confirmedIdSet.has(participant.id),
+  ).length;
+  const pendingRequestCount = pendingRequestIds.length;
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedIds(initialSelectedIds);
+      setReviewedSelectedIds(null);
       setFocusedParticipantId(null);
     }
   }, [initialSelectedIds, isOpen]);
+
+  useEffect(() => {
+    setReviewedSelectedIds((current) =>
+      current
+        ? current.filter((participantId) => participantIds.includes(participantId))
+        : current,
+    );
+  }, [participantIds]);
 
   function toggleParticipant(id: string) {
     setSelectedIds((current) =>
@@ -219,13 +277,18 @@ export function ActivityCheckInReviewPanel({
   return (
     <>
       <Button
-        className="min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] shadow-none hover:bg-[#F1F2EC]"
+        className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] shadow-none hover:bg-[#F1F2EC]"
         onClick={() => setIsOpen(true)}
         type="button"
         variant="secondary"
       >
         <CheckCircle2 className="mr-2 h-4 w-4" />
         {copy.open}
+        {pendingRequestCount > 0 ? (
+          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-black leading-none text-white ring-2 ring-white">
+            {pendingRequestCount}
+          </span>
+        ) : null}
       </Button>
 
       {isOpen ? (
@@ -256,13 +319,21 @@ export function ActivityCheckInReviewPanel({
 
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
               <span className="text-sm font-black text-[#156240]">
-                {selectedIds.length}/{participants.length} 人
+                {copy.confirmed} {confirmedCount}/{participants.length} 人
               </span>
+              {pendingRequestCount > 0 ? (
+                <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-black text-[#E7457A]">
+                  {copy.pendingRequests} {pendingRequestCount}
+                </span>
+              ) : null}
               <ActivityCheckInRosterForm
                 activityId={activityId}
                 className="grid justify-items-end gap-1"
                 locale={locale}
-                onConfirmed={() => setIsOpen(false)}
+                onConfirmed={(confirmedIds) => {
+                  setReviewedSelectedIds(confirmedIds);
+                  setFocusedParticipantId(null);
+                }}
                 participants={participants}
                 selectedIds={selectedIds}
               />
@@ -277,6 +348,8 @@ export function ActivityCheckInReviewPanel({
                 {participants.map((participant) => {
                   const selected = selectedIds.includes(participant.id);
                   const focused = focusedParticipantId === participant.id;
+                  const confirmed = confirmedIdSet.has(participant.id);
+                  const needsReview = pendingRequestIdSet.has(participant.id);
 
                   return (
                     <div className="relative grid min-w-0 justify-items-center" key={participant.id}>
@@ -291,10 +364,14 @@ export function ActivityCheckInReviewPanel({
                       >
                         <span
                           className={
-                            selected
+                            confirmed
                               ? focused
                                 ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-black text-white ring-4 ring-[#8AB68E]"
                                 : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-black text-white ring-2 ring-[#8AB68E]"
+                              : needsReview
+                                ? focused
+                                  ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-black text-[#111210] ring-4 ring-[#F2B1A7]"
+                                  : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-black text-[#111210] ring-2 ring-[#F2B1A7]"
                               : focused
                                 ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-black text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
                                 : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-black text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
@@ -310,15 +387,28 @@ export function ActivityCheckInReviewPanel({
                           ) : (
                             getInitial(participant.user.nickname)
                           )}
-                          {selected ? (
+                          {confirmed ? (
                             <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#8AB68E]">
                               <CheckCircle2 className="h-3 w-3" />
                             </span>
+                          ) : needsReview ? (
+                            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#E7457A] ring-2 ring-white" />
                           ) : null}
                         </span>
                         <span className="mt-1 max-w-full truncate text-[10px] font-bold leading-none text-[#111210]/70">
                           {participant.user.nickname}
                         </span>
+                        {confirmed || needsReview ? (
+                          <span
+                            className={
+                              confirmed
+                                ? "mt-0.5 text-[9px] font-black leading-none text-[#156240]"
+                                : "mt-0.5 text-[9px] font-black leading-none text-[#E7457A]"
+                            }
+                          >
+                            {confirmed ? copy.confirmed : copy.needsReview}
+                          </span>
+                        ) : null}
                       </button>
 
                       {focused ? (

@@ -48,9 +48,11 @@ function getGiftDialogCopy(locale: string) {
     return {
       cancel: "Annuler",
       close: "Fermer",
+      currency: "Friemi Coins",
       send: "Envoyer",
       sendGift: "Cadeau",
       sending: "Envoi...",
+      testMode: "Ce cadeau debite votre solde Friemi Coins.",
       title: "Offrir",
       to: "Pour",
     };
@@ -60,9 +62,11 @@ function getGiftDialogCopy(locale: string) {
     return {
       cancel: "Cancel",
       close: "Close",
+      currency: "Friemi Coins",
       send: "Send",
       sendGift: "Gift",
       sending: "Sending...",
+      testMode: "This gift deducts Friemi coins from your balance.",
       title: "Send gift",
       to: "To",
     };
@@ -71,9 +75,11 @@ function getGiftDialogCopy(locale: string) {
   return {
     cancel: "取消",
     close: "关闭",
+    currency: "Friemi 币",
     send: "送出",
     sendGift: "送礼",
     sending: "送出中...",
+    testMode: "送礼会扣除 Friemi 币。",
     title: "送礼物",
     to: "送给",
   };
@@ -226,6 +232,9 @@ export function CharmGiftDialog({
                     <p className="mt-1 truncate text-xs font-bold text-[#7A8276]">
                       {copy.to} {recipientName}
                     </p>
+                    <p className="mt-2 text-[11px] font-semibold leading-4 text-[#7A8276]">
+                      {copy.testMode}
+                    </p>
                   </div>
                   <button
                     aria-label={copy.close}
@@ -290,8 +299,11 @@ export function CharmGiftDialog({
                           <span className="max-w-full truncate text-[11px] font-black text-[#1D1D1B]">
                             {getCharmGiftLabel(gift, locale)}
                           </span>
-                          <span className="text-[10px] font-bold text-[#7A8276]">
-                            +{gift.charmValue}
+                          <span className="grid gap-0.5 text-[10px] font-bold text-[#7A8276]">
+                            <span className="max-w-full truncate">
+                              {gift.coinCost ?? "-"} {copy.currency}
+                            </span>
+                            <span>+{gift.charmValue}</span>
                           </span>
                         </button>
                       );

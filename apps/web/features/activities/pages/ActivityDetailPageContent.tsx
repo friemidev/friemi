@@ -1474,8 +1474,9 @@ export async function ActivityDetailPageContent({
     viewerParticipation?.status === "APPROVED" ||
     viewerParticipation?.status === "PENDING";
   const canCheckInViewerParticipation =
-    viewerParticipation?.status === "JOINED" ||
-    viewerParticipation?.status === "APPROVED";
+    !isTeamOperator &&
+    (viewerParticipation?.status === "JOINED" ||
+      viewerParticipation?.status === "APPROVED");
   const hasRoomRelevantParticipation =
     viewerParticipation?.status === "JOINED" ||
     viewerParticipation?.status === "APPROVED" ||

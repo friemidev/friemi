@@ -7,7 +7,7 @@ import { getSignInHref } from "./auth-redirect";
 import { hasClerkKeys } from "./clerk";
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
-import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
+import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 import { referralCookieName } from "@/features/referrals/referralCode";
 import { consumeReferralCodeOnProfileCreate } from "@/features/referrals/services/referrals";
@@ -47,9 +47,9 @@ async function finalizeUserProfile<
 
 async function grantWelcomeCheckForNewProfile(profileId: string) {
   try {
-    await grantWelcomeFriemiCheck(profileId);
+    await grantStarterFriemiWallet(profileId);
   } catch (error) {
-    console.error("Failed to grant welcome Friemi check", error);
+    console.error("Failed to grant starter Friemi wallet", error);
   }
 }
 
