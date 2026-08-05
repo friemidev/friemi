@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ActivityRoomChatPage } from "@/features/activity-room-chat/components/ActivityRoomChatPage";
 import {
@@ -19,13 +18,6 @@ type ActivityRoomPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 const guestPolicy = {
   canSend: false,
   canView: false,

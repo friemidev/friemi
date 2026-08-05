@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import {
   ArrowLeft,
@@ -28,6 +28,8 @@ import {
   ActivityShareTools,
 } from "@/features/activities/components/ActivityShareTools";
 import { getCategoryLabel } from "@/lib/copy";
+import { getActivityShareMetadataById } from "@/features/activities/queries/getActivityById";
+import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
 import { withLocale } from "@/lib/routes";
@@ -102,34 +104,6 @@ function PublicEventDetailHeader({
   );
 }
 
-function withArchiveNoIndex(metadata: Metadata): Metadata {
-  return {
-    ...metadata,
-    robots: {
-      follow: true,
-      index: false,
-    },
-  };
-}
-
-function isIndexablePublicEventDate({
-  endAt,
-  startAt,
-  status,
-}: {
-  endAt: string | null;
-  startAt: string;
-  status: string;
-}) {
-  if (status !== "SCHEDULED") {
-    return false;
-  }
-
-  const effectiveEndAt = new Date(endAt ?? startAt).getTime();
-
-  return Number.isFinite(effectiveEndAt) && effectiveEndAt >= Date.now();
-}
-
 export async function generateMetadata({
   params,
 }: PublicEventDetailPageProps): Promise<Metadata> {
@@ -160,9 +134,7 @@ export async function generateMetadata({
     title: publicEvent.title,
   });
 
-  return isIndexablePublicEventDate(publicEvent)
-    ? metadata
-    : withArchiveNoIndex(metadata);
+  return metadata;
 }
 
 export default async function PublicEventDetailPage({
@@ -187,6 +159,18 @@ export default async function PublicEventDetailPage({
   );
 
   if (!publicEvent) {
+    const activity = await perf.measure("publicEvent.activityFallback", () =>
+      getActivityShareMetadataById(publicEventId),
+    );
+
+    if (activity?.publicEventId) {
+      redirect(withLocale(locale, `/public-events/${activity.publicEventId}`));
+    }
+
+    if (activity) {
+      redirect(withLocale(locale, getActivityDetailPath(activity.id)));
+    }
+
     notFound();
   }
 

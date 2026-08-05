@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileHangoutsMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -17,13 +16,6 @@ type ProfileHangoutsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 function getEmptyProfileDashboard(): ProfileDashboardViewModel {
   return {
     charmScore: 0,
