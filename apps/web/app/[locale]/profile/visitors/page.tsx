@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileVisitorsPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import {
@@ -14,13 +13,6 @@ type ProfileVisitorsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 const emptyVisitSummary = {
   todayViewCount: 0,
   totalViewCount: 0,

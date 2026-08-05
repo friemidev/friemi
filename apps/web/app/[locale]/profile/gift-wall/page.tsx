@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { getProfileGiftWall } from "@/features/charm/queries/getProfileGiftWall";
 import { ProfileGiftWallPageView } from "@/features/profile/components/ProfilePrivateSubpages";
@@ -11,13 +10,6 @@ type ProfileGiftWallPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 const emptyGiftWall = {
   lastGiftAt: null,
   senderCount: 0,

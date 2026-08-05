@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   CalendarDays,
@@ -10,6 +11,10 @@ import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdatesDescending } from "@/features/updates/versionUpdates";
 import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  getCanonicalMetadataBaseUrl,
+} from "@/lib/share-metadata";
 
 type UpdatesPageProps = {
   params: Promise<{
@@ -19,6 +24,31 @@ type UpdatesPageProps = {
 
 function formatDate(value: string) {
   return value.replaceAll("-", ".");
+}
+
+export async function generateMetadata({
+  params,
+}: UpdatesPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const title =
+    locale === "en"
+      ? "Updates"
+      : locale === "fr"
+        ? "Nouveautés"
+        : "更新公告";
+  const description =
+    locale === "en"
+      ? "See the latest Friemi product updates and experience improvements."
+      : locale === "fr"
+        ? "Consultez les dernières nouveautés et améliorations de Friemi."
+        : "查看 Friemi 最新上线功能、体验变化和产品更新。";
+
+  return buildPageShareMetadata({
+    baseUrl: getCanonicalMetadataBaseUrl(),
+    description,
+    path: withLocale(locale, "/updates"),
+    title: `${title} · ${brand.name}`,
+  });
 }
 
 export default async function UpdatesPage({ params }: UpdatesPageProps) {

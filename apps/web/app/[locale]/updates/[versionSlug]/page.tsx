@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -9,7 +10,12 @@ import {
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { getVersionUpdateBySlug } from "@/features/updates/versionUpdates";
+import { brand } from "@/lib/brand";
 import { withLocale } from "@/lib/routes";
+import {
+  buildPageShareMetadata,
+  getCanonicalMetadataBaseUrl,
+} from "@/lib/share-metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +28,26 @@ type VersionUpdateDetailPageProps = {
 
 function formatDate(value: string) {
   return value.replaceAll("-", ".");
+}
+
+export async function generateMetadata({
+  params,
+}: VersionUpdateDetailPageProps): Promise<Metadata> {
+  const { locale, versionSlug } = await params;
+  const update = getVersionUpdateBySlug(versionSlug);
+
+  if (!update) {
+    return {
+      title: brand.name,
+    };
+  }
+
+  return buildPageShareMetadata({
+    baseUrl: getCanonicalMetadataBaseUrl(),
+    description: update.description,
+    path: withLocale(locale, `/updates/${versionSlug}`),
+    title: `${update.version} · ${update.title} · ${brand.name}`,
+  });
 }
 
 export default async function VersionUpdateDetailPage({

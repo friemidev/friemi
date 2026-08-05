@@ -457,6 +457,10 @@ export function buildDetailShareMetadata({
       type: "website",
       url: canonicalUrl,
     },
+    robots: {
+      follow: true,
+      index: true,
+    },
     title: metadataTitle,
     twitter: {
       card: "summary_large_image",
@@ -532,6 +536,10 @@ export function buildTeamShareMetadata({
       title: metadataTitle,
       type: "website",
       url: canonicalUrl,
+    },
+    robots: {
+      follow: true,
+      index: true,
     },
     title: metadataTitle,
     twitter: {

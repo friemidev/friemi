@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { blindBoxFragmentExchangeCount } from "@/features/charm/charm";
 import { getProfileBag } from "@/features/charm/queries/getProfileBag";
@@ -12,13 +11,6 @@ type ProfileBagPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
   const { locale } = await params;
   const profile = await ensureCurrentUserProfile(locale, "/profile/bag");

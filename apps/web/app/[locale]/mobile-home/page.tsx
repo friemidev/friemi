@@ -410,10 +410,6 @@ export async function generateMetadata({
       path: withLocale(locale, "/home"),
       title: `${brand.name} · ${mobile.featureBadge}`,
     }),
-    robots: {
-      follow: true,
-      index: false,
-    },
   };
 }
 

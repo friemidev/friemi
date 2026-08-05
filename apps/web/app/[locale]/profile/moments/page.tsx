@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { ProfileMomentsMobilePage } from "@/features/profile/components/ProfileMobileSubpages";
 import {
@@ -14,13 +13,6 @@ type ProfileMomentsPageProps = {
 };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
-
 export default async function ProfileMomentsPage({
   params,
 }: ProfileMomentsPageProps) {

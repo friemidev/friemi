@@ -6,6 +6,7 @@ import { getRequestRedirectTarget, getSignInHref } from "./lib/auth-redirect";
 import { hasClerkKeys } from "./lib/clerk";
 import {
   getMobileRootLobbyRedirectPath,
+  getRootHomeRedirectPath,
   localeCookieName,
 } from "./lib/mobile-root-lobby-entry";
 import {
@@ -169,6 +170,20 @@ export default clerkMiddleware(async (auth, request) => {
     return withReferralCookie(
       request,
       NextResponse.redirect(new URL(mobileRootLobbyPath, request.url)),
+    );
+  }
+
+  const rootHomePath = getRootHomeRedirectPath({
+    acceptLanguage: request.headers.get("accept-language"),
+    localeCookie: request.cookies.get(localeCookieName)?.value,
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+  });
+
+  if (rootHomePath) {
+    return withReferralCookie(
+      request,
+      NextResponse.redirect(new URL(rootHomePath, request.url)),
     );
   }
 

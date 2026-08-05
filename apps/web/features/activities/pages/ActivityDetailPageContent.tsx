@@ -744,44 +744,6 @@ function ProtectedDetailNotice({
 
 export const dynamic = "force-dynamic";
 
-function withPrivateNoIndex(metadata: Metadata): Metadata {
-  return {
-    ...metadata,
-    robots: {
-      follow: false,
-      index: false,
-    },
-  };
-}
-
-function withArchiveNoIndex(metadata: Metadata): Metadata {
-  return {
-    ...metadata,
-    robots: {
-      follow: true,
-      index: false,
-    },
-  };
-}
-
-function isIndexableActivityDate({
-  endAt,
-  startAt,
-  status,
-}: {
-  endAt: string | null;
-  startAt: string;
-  status: string;
-}) {
-  if (status === "ENDED" || status === "CANCELLED") {
-    return false;
-  }
-
-  const effectiveEndAt = new Date(endAt ?? startAt).getTime();
-
-  return Number.isFinite(effectiveEndAt) && effectiveEndAt >= Date.now();
-}
-
 export async function generateActivityDetailMetadata(
   { params, searchParams }: ActivityDetailPageProps,
   routeKind: ActivityDetailRouteKind = "legacy",
@@ -853,11 +815,7 @@ export async function generateActivityDetailMetadata(
       title: activity.title,
     });
 
-    return activity.visibility === "PRIVATE"
-      ? withPrivateNoIndex(metadata)
-      : isIndexableActivityDate(activity)
-        ? metadata
-        : withArchiveNoIndex(metadata);
+    return metadata;
   }
 
   const metadata = buildDetailShareMetadata({
@@ -870,11 +828,7 @@ export async function generateActivityDetailMetadata(
     title: activity.title,
   });
 
-  return activity.visibility === "PRIVATE"
-    ? withPrivateNoIndex(metadata)
-    : isIndexableActivityDate(activity)
-      ? metadata
-      : withArchiveNoIndex(metadata);
+  return metadata;
 }
 
 export async function generateLobbyActivityDetailMetadata(
