@@ -17,7 +17,7 @@ val friemiBaseUrl = providers
 val friemiVersionCode = providers
     .gradleProperty("friemiVersionCode")
     .map { it.toInt() }
-    .orElse(4)
+    .orElse(5)
     .get()
 val friemiVersionName = providers
     .gradleProperty("friemiVersionName")

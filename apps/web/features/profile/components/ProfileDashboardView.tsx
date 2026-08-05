@@ -2621,7 +2621,7 @@ function SelfMobileProfileHome({
   };
 
   return (
-    <div className="min-h-[calc(100dvh-var(--mobile-nav-height,5rem))] bg-white px-5 pb-28 pt-9">
+    <div className="app-mobile-page-shell [--app-mobile-page-top-gap:2.35rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
       <section>
         <div>
           <div className="flex items-start gap-4">
