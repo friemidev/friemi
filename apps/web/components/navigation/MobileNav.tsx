@@ -111,7 +111,7 @@ export function MobileNav({ locale }: MobileNavProps) {
 
   return (
     <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#E9E9E4] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="mx-auto grid h-[4.35rem] max-w-md grid-cols-5 gap-1 px-4 py-1.5">
+      <div className="mx-auto grid h-[var(--app-mobile-nav-height)] max-w-md grid-cols-5 gap-1 px-4 py-1">
         {items.map((item) => {
           const Icon = item.icon;
           const baseHref = item.href.split("?")[0] ?? item.href;
@@ -128,11 +128,11 @@ export function MobileNav({ locale }: MobileNavProps) {
               aria-current={active ? "page" : undefined}
               title={item.label}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-end gap-0.5 rounded-[0.9rem] px-1 pb-0.5 pt-0.5 text-[11px] font-semibold leading-[1.15] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                "relative flex min-w-0 flex-col items-center justify-end gap-0 rounded-[0.85rem] px-1 pb-0.5 pt-0 text-[10px] font-semibold leading-[1.05] transition duration-200 ease-out active:scale-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                 item.isPrimary
                   ? active
-                    ? "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
-                    : "h-12 w-12 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
+                    ? "h-10 w-10 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
+                    : "h-10 w-10 self-center justify-center justify-self-center rounded-full bg-[#156240] p-0 text-white"
                   : active
                     ? "-translate-y-0.5 text-forest"
                     : "text-[#1D1D1B]/72",
@@ -151,11 +151,11 @@ export function MobileNav({ locale }: MobileNavProps) {
               />
               <span
                 className={cn(
-                  "relative inline-flex h-7 w-7 items-center justify-center rounded-full transition duration-200",
+                  "relative inline-flex h-6 w-6 items-center justify-center rounded-full transition duration-200",
                   item.isPrimary
                     ? active
-                      ? "h-10 w-10 text-white"
-                      : "h-10 w-10 text-white"
+                      ? "h-8 w-8 text-white"
+                      : "h-8 w-8 text-white"
                     : active
                       ? "text-forest"
                       : "text-[#1D1D1B]/64",
@@ -164,7 +164,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 <Icon
                   className={cn(
                     "shrink-0",
-                    item.isPrimary ? "h-5 w-5" : "h-[18px] w-[18px]",
+                    item.isPrimary ? "h-[18px] w-[18px]" : "h-[17px] w-[17px]",
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />

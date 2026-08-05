@@ -762,24 +762,14 @@ export function FeedCard({
   return (
     <>
       <article
-        className={cn(
-          "cursor-pointer overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
-          hasImages
-            ? "bg-transparent pb-5"
-            : "rounded-[1.35rem] border border-[#E3DCC5] bg-white shadow-[0_12px_34px_rgba(21,98,64,0.08)]",
-        )}
+        className="cursor-pointer overflow-visible bg-transparent pb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30"
         role="link"
         tabIndex={0}
         onClick={handleCardClick}
         onKeyDown={handleDetailKeyDown}
       >
         <div>
-          <div
-            className={cn(
-              "flex items-start gap-3",
-              hasImages ? "px-0 pb-2 pt-1" : "px-4 pb-2 pt-4",
-            )}
-          >
+          <div className="flex items-start gap-3 px-0 pb-2 pt-1">
             <Link
               href={withLocale(locale, `/profile/${moment.author.id}`)}
               className="shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/35"
@@ -849,12 +839,7 @@ export function FeedCard({
         </div>
 
         <MomentActionBar
-          className={cn(
-            "py-0.5",
-            hasImages
-              ? "ml-[3.25rem] mt-2 max-w-[15rem]"
-              : "mx-4 mt-3 border-y border-[#E8E4D4]",
-          )}
+          className="ml-[3.25rem] mt-2 max-w-[15rem] py-0.5"
           copy={copy}
           isAuthenticated={isAuthenticated}
           isOwnMoment={isOwnMoment}
@@ -867,12 +852,7 @@ export function FeedCard({
         {moment.recentComments.length > 0 ? (
           <button
             type="button"
-            className={cn(
-              "mb-3 block rounded-2xl bg-[#F7F7F0] px-3 py-2 text-left transition hover:bg-[#F1F2EC]",
-              hasImages
-                ? "ml-[3.25rem] w-[calc(100%-3.25rem)]"
-                : "mx-4 w-[calc(100%-2rem)]",
-            )}
+            className="mb-3 ml-[3.25rem] block w-[calc(100%-3.25rem)] rounded-2xl bg-[#F7F7F0] px-3 py-2 text-left transition hover:bg-[#F1F2EC]"
             onClick={() => setCommentsOpen(true)}
           >
             {moment.recentComments.slice(0, 2).map((comment) => (
