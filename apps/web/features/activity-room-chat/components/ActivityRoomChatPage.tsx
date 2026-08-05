@@ -42,6 +42,10 @@ import {
 import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { readPreviousAppRouteHref } from "@/features/navigation/appRouteHistory";
+import {
+  keepMobileChatPageAnchored,
+  useMobileChatViewportGuard,
+} from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import { withLocale } from "@/lib/routes";
 import {
@@ -1612,6 +1616,7 @@ function RoomComposer({
       className="relative z-20 shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3"
       data-activity-room-composer
       noValidate
+      onFocusCapture={keepMobileChatPageAnchored}
       onSubmit={handleSubmit}
     >
       <div className="flex items-end gap-2">
@@ -1688,6 +1693,8 @@ export function ActivityRoomChatPage({
     setMessages(initialMessages);
   }, [initialMessages]);
 
+  useMobileChatViewportGuard();
+
   function handleSent(message: ActivityRoomMessageViewModel) {
     setMessages((current) => [...current, message]);
     router.refresh();
@@ -1727,11 +1734,11 @@ export function ActivityRoomChatPage({
   }
 
   return (
-    <section className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
+    <section className="mobile-chat-viewport mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] shadow-[0_18px_48px_rgba(21,98,64,0.08)] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2] md:ring-1 md:ring-white/70">
       {activity && policy.canView ? (
         <ActivityRoomChatAutoRefresh activityId={activity.id} />
       ) : null}
-      <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <header className="grid min-w-0 shrink-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 border-b border-[#D6D5B2] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
         <ActivityRoomChatBackButton
           activityId={activity?.id ?? activityId}
           fallbackHref={messagesHref}
@@ -1763,7 +1770,7 @@ export function ActivityRoomChatPage({
         />
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
         {policy.canView ? (
           messages.length > 0 ? (
             <div className="grid gap-3">

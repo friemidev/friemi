@@ -18,6 +18,7 @@ import {
   formatChatDateSeparator,
   getChatDateKey,
 } from "@/lib/chatDateSeparators";
+import { useMobileChatViewportGuard } from "@/lib/mobile-chat-viewport";
 import {
   sendDirectMessageAction,
   type DirectMessageActionState,
@@ -115,6 +116,8 @@ export function MessageThreadClient({
     locale,
     localRemainingNonFriendMessages,
   );
+
+  useMobileChatViewportGuard();
 
   useEffect(() => {
     setMessages((currentMessages) => {
@@ -280,7 +283,7 @@ export function MessageThreadClient({
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-4 sm:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-3 py-4 sm:px-5">
         {activityContext ? (
           <ActivityContextCard
             activityContext={activityContext}

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Button, Textarea } from "@chill-club/ui";
+import { keepMobileChatPageAnchored } from "@/lib/mobile-chat-viewport";
 import { cn } from "@/lib/utils";
 import {
   sendDirectMessageAction,
@@ -341,6 +342,7 @@ export function MessageComposer({
       className="relative z-20 shrink-0 border-t border-sand bg-white/92 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:rounded-b-[1.45rem] md:pb-3"
       data-message-composer
       noValidate
+      onFocusCapture={keepMobileChatPageAnchored}
       onSubmit={handleSubmit}
     >
       <input name="locale" type="hidden" value={locale} />

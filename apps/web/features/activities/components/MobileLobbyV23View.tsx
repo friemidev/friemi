@@ -604,7 +604,7 @@ function MobileLobbyV23CategoryRail({
                     "mobile-lobby-category-drawer__item group relative flex items-center overflow-hidden rounded-[1rem] text-left transition active:scale-[0.98]",
                     isAll
                       ? "min-h-[3.05rem] gap-2 px-3 py-1.5"
-                      : "min-h-[5.75rem] gap-2 px-1 py-1.5",
+                      : "min-h-[4.7rem] gap-4 px-1 py-1",
                     active
                       ? "bg-[#096B45] text-white"
                       : "bg-transparent text-[#111210] hover:bg-[#F7F4EA]",
@@ -627,10 +627,10 @@ function MobileLobbyV23CategoryRail({
                   />
                   <span
                     className={cn(
-                      "relative flex shrink-0 items-end justify-center overflow-hidden rounded-[0.9rem]",
+                      "relative flex shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem]",
                       isAll
                         ? "h-10 w-10 items-center"
-                        : "h-[5.15rem] w-[5.85rem]",
+                        : "h-[4.15rem] w-[5.35rem]",
                       active ? "bg-white/14" : "bg-[#F7F4EA]",
                     )}
                   >
@@ -638,8 +638,8 @@ function MobileLobbyV23CategoryRail({
                       <Image
                         alt=""
                         className={cn(
-                          "h-full w-full object-contain object-bottom p-0 transition duration-300 group-active:scale-95",
-                          !isAll && "scale-[1.14]",
+                          "h-full w-full object-contain object-center p-0 transition duration-300 group-active:scale-95",
+                          !isAll && "scale-[1.1]",
                         )}
                         height={124}
                         src={`/illustrations/png/${image}`}
