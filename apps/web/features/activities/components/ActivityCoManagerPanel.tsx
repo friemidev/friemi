@@ -37,8 +37,8 @@ function getCopy(locale: string): Copy {
     return {
       add: "Ajouter",
       addDisabledFull: "Limite atteinte",
-      addEmpty: "Aucune personne en suivi mutuel à ajouter.",
-      availableHint: "Les gestionnaires doivent être en suivi mutuel avec vous.",
+      addEmpty: "Aucun participant à ajouter.",
+      availableHint: "Choisissez parmi les participants validés.",
       current: "Gestionnaires",
       managerRole: "Gestionnaire",
       organizerOnly: "Seul l'organisateur peut modifier cette liste.",
@@ -54,8 +54,8 @@ function getCopy(locale: string): Copy {
     return {
       add: "Add",
       addDisabledFull: "Limit reached",
-      addEmpty: "No mutual follows available to add.",
-      availableHint: "Managers must be mutual follows.",
+      addEmpty: "No participants available to add.",
+      availableHint: "Choose from confirmed participants.",
       current: "Managers",
       managerRole: "Manager",
       organizerOnly: "Only the organizer can edit this list.",
@@ -70,8 +70,8 @@ function getCopy(locale: string): Copy {
   return {
     add: "添加",
     addDisabledFull: "已达上限",
-    addEmpty: "暂无可添加的互关用户。",
-    availableHint: "管理人必须与你互关。",
+    addEmpty: "暂无可添加的参局人。",
+    availableHint: "从已参局的人中选择。",
     current: "当前管理人",
     managerRole: "管理人",
     organizerOnly: "只有发起人可以调整管理人。",
@@ -175,30 +175,30 @@ export function ActivityCoManagerPanel({
   locale,
 }: ActivityCoManagerPanelProps) {
   const copy = getCopy(locale);
-  const [friendSearch, setFriendSearch] = useState("");
+  const [participantSearch, setParticipantSearch] = useState("");
   const [state, formAction] = useActionState(
     addActivityCoManagerAction,
     initialState,
   );
   const isFull = dashboard.coManagers.length >= dashboard.maxManagers;
-  const filteredFriends = useMemo(() => {
-    const query = friendSearch.trim().toLocaleLowerCase();
+  const filteredParticipants = useMemo(() => {
+    const query = participantSearch.trim().toLocaleLowerCase();
 
     if (!query) {
-      return dashboard.availableFriends;
+      return dashboard.availableParticipants;
     }
 
-    return dashboard.availableFriends.filter((friend) => {
-      const nickname = friend.nickname.toLocaleLowerCase();
-      const friendCode = friend.friendCode ?? "";
+    return dashboard.availableParticipants.filter((participant) => {
+      const nickname = participant.nickname.toLocaleLowerCase();
+      const friendCode = participant.friendCode ?? "";
 
       return nickname.includes(query) || friendCode.includes(query);
     });
-  }, [dashboard.availableFriends, friendSearch]);
+  }, [dashboard.availableParticipants, participantSearch]);
 
   useEffect(() => {
     if (state.successMessage) {
-      setFriendSearch("");
+      setParticipantSearch("");
     }
   }, [state.successMessage]);
 
@@ -264,10 +264,10 @@ export function ActivityCoManagerPanel({
             <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
             <input
               className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-[#8B907F]"
-              onChange={(event) => setFriendSearch(event.target.value)}
+              onChange={(event) => setParticipantSearch(event.target.value)}
               placeholder={copy.searchPlaceholder}
               type="search"
-              value={friendSearch}
+              value={participantSearch}
             />
           </label>
 
@@ -275,30 +275,34 @@ export function ActivityCoManagerPanel({
             <p className="text-xs font-semibold leading-5 text-[#B5301F]">
               {copy.addDisabledFull}
             </p>
-          ) : filteredFriends.length > 0 ? (
+          ) : filteredParticipants.length > 0 ? (
             <div className="grid max-h-56 gap-2 overflow-y-auto pr-1">
-              {filteredFriends.map((friend) => (
-                <form action={formAction} key={friend.id} noValidate>
+              {filteredParticipants.map((participant) => (
+                <form action={formAction} key={participant.id} noValidate>
                   <input
                     name="activityId"
                     type="hidden"
                     value={dashboard.activityId}
                   />
                   <input name="locale" type="hidden" value={locale} />
-                  <input name="managerProfileId" type="hidden" value={friend.id} />
+                  <input
+                    name="managerProfileId"
+                    type="hidden"
+                    value={participant.id}
+                  />
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#E7E2D6] bg-white px-3 py-2">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <Avatar
-                        avatarUrl={friend.avatarUrl}
-                        nickname={friend.nickname}
+                        avatarUrl={participant.avatarUrl}
+                        nickname={participant.nickname}
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black text-[#111210]">
-                          {friend.nickname}
+                          {participant.nickname}
                         </p>
-                        {friend.friendCode ? (
+                        {participant.friendCode ? (
                           <p className="text-xs font-semibold text-[#6C746A]">
-                            {friend.friendCode}
+                            {participant.friendCode}
                           </p>
                         ) : null}
                       </div>
@@ -310,7 +314,7 @@ export function ActivityCoManagerPanel({
             </div>
           ) : (
             <p className="text-xs font-semibold leading-5 text-[#6C746A]">
-              {dashboard.availableFriends.length === 0
+              {dashboard.availableParticipants.length === 0
                 ? copy.addEmpty
                 : copy.searchEmpty}
             </p>

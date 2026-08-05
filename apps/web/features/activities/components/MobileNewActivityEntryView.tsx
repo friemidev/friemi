@@ -221,24 +221,54 @@ function MobileActivityPreviewCard({
   locale: string;
   statusLabel: string;
 }) {
+  const isInactive = getActivityTimeState(activity) === "ENDED";
+
   return (
     <Link
-      className="group flex aspect-square min-w-0 flex-col overflow-hidden rounded-[1rem] border border-[#D6D5B2]/78 bg-white shadow-[0_10px_22px_rgba(29,29,27,0.07)] transition active:scale-[0.985]"
+      className={cn(
+        "group flex aspect-square min-w-0 flex-col overflow-hidden rounded-[1rem] border transition active:scale-[0.985]",
+        isInactive
+          ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none"
+          : "border-[#D6D5B2]/78 bg-white shadow-[0_10px_22px_rgba(29,29,27,0.07)]",
+      )}
       href={getPreviewActivityHref(activity, locale)}
     >
-      <div className="relative h-[56%] shrink-0 overflow-hidden bg-[#F1F2EC]">
+      <div
+        className={cn(
+          "relative h-[56%] shrink-0 overflow-hidden bg-[#F1F2EC]",
+          isInactive ? "bg-zinc-200 grayscale opacity-75" : null,
+        )}
+      >
         <ActivityCoverImage
           alt={activity.title}
-          overlayClassName="bg-gradient-to-t from-black/34 via-black/4 to-transparent"
+          overlayClassName={cn(
+            "bg-gradient-to-t to-transparent",
+            isInactive ? "from-zinc-900/38 via-zinc-800/5" : "from-black/34 via-black/4",
+          )}
           src={activity.coverImageUrl}
         />
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-between px-2.5 py-2">
-        <h3 className="line-clamp-2 overflow-hidden text-[12px] font-extrabold leading-[0.95rem] text-[#111210]">
+        <h3
+          className={cn(
+            "line-clamp-2 overflow-hidden text-[12px] font-extrabold leading-[0.95rem]",
+            isInactive ? "text-zinc-600" : "text-[#111210]",
+          )}
+        >
           {activity.title}
         </h3>
-        <p className="mt-1 flex min-w-0 items-center gap-1 text-[10.5px] font-semibold text-[#111210]/62">
-          <Clock3 className="h-3.5 w-3.5 shrink-0" />
+        <p
+          className={cn(
+            "mt-1 flex min-w-0 items-center gap-1 text-[10.5px] font-semibold",
+            isInactive ? "text-zinc-500" : "text-[#111210]/62",
+          )}
+        >
+          <Clock3
+            className={cn(
+              "h-3.5 w-3.5 shrink-0",
+              isInactive ? "text-zinc-400" : null,
+            )}
+          />
           <span className="truncate">{statusLabel}</span>
         </p>
       </div>

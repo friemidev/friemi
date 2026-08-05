@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
+  Coins,
   Copy,
   Eye,
   Gift,
@@ -44,6 +45,10 @@ import {
   type SendCharmGiftState,
 } from "@/features/charm/actions/sendCharmGift";
 import {
+  friemiCoinRate,
+  friemiCoinRechargePlans,
+} from "@/features/charm/charm";
+import {
   toggleEquippedAchievementAction,
   type ToggleEquippedAchievementState,
 } from "@/features/achievements/actions/equippedAchievementActions";
@@ -53,6 +58,10 @@ import {
   type RedeemBlindBoxCheckState,
 } from "@/features/charm/actions/redeemBlindBoxCheck";
 import {
+  redeemFriemiCheckToCoinsAction,
+  type RedeemFriemiCheckToCoinsState,
+} from "@/features/charm/actions/redeemFriemiCheckToCoins";
+import {
   bindReferralCodeAction,
   type ReferralActionState,
 } from "@/features/referrals/actions/referralActions";
@@ -61,6 +70,7 @@ import type {
   ProfileBagCheckItem,
   ProfileBagViewModel,
 } from "@/features/charm/queries/getProfileBag";
+import type { FriemiCoinBalanceViewModel } from "@/features/charm/queries/getFriemiCoinBalance";
 import type { ProfileGiftWallViewModel } from "@/features/charm/queries/getProfileGiftWall";
 import type { ProfileShopGiftItem } from "@/features/charm/queries/getProfileShop";
 import type { ProfileShopGiftRecipient } from "@/features/charm/queries/getProfileShopGiftRecipients";
@@ -149,6 +159,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
         available: "Disponibles",
         blindBox: "Mystère",
         checkList: "Objets",
+        checkCoinValue: "À échanger",
+        coinBalance: "Friemi Coins",
+        coinEarned: "Reçus",
+        coinSpent: "Utilisés",
         emptyChecks: "Aucun objet pour le moment",
         emptyDescription:
           "Les objets que vous obtenez apparaîtront ici.",
@@ -158,6 +172,9 @@ function getProfilePrivateSubpageCopy(locale: string) {
         expired: "Expiré",
         expires: "Expire",
         fragment: "Fragments",
+        redeemCheck: "Convertir",
+        redeemedCheck: "Ajouté",
+        redeemingCheck: "Conversion...",
         redeemed: "Utilisé",
         redeemedBoxes: "Échangés",
         statusAvailable: "Disponible",
@@ -199,16 +216,31 @@ function getProfilePrivateSubpageCopy(locale: string) {
       loading: "Chargement",
       shop: {
         available: "Ouvert",
+        baseFc: "Base",
+        bonus: "Bonus",
         chooseFriend: "Choisir une personne",
         charm: "Charm",
         close: "Fermer",
+        coinDescription:
+          "Friemi Coins sert uniquement aux cadeaux. Pas de retrait ni de transfert.",
+        coinTitle: "Friemi Coins",
+        disabled: "Fermé",
         emptyDescription:
           "Les cadeaux disponibles apparaîtront ici.",
         emptyTitle: "Boutique en préparation",
+        fc: "Friemi Coins",
         giftCatalog: "Cadeaux",
+        giftModeNotice: "Chaque cadeau debite votre solde Friemi Coins.",
         noFriends: "Suivez quelqu'un pour offrir un cadeau.",
+        negativeCatalog: "Cadeaux négatifs",
+        negativeNotice: "Fermé pour le moment.",
+        price: "Prix",
         recharge: "Recharger",
+        rechargeContact: "Pour recharger, contactez l'equipe Friemi officielle.",
+        rechargeNote: "Recharge bientôt disponible.",
         rechargeSoon: "Bientôt disponible",
+        rechargeTitle: "Recharge",
+        recommended: "Conseillé",
         seasonalLocked: "Événement",
         send: "Envoyer",
         sendEntry: "Offrir",
@@ -216,6 +248,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         sent: "Cadeau envoyé",
         subtitle: "Uniquement des cadeaux Friemi.",
         title: "Boutique",
+        totalFc: "Total",
       },
       giftWall: {
         charm: "Aura",
@@ -292,6 +325,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
         available: "Available",
         blindBox: "Blind box",
         checkList: "Items",
+        checkCoinValue: "Redeemable",
+        coinBalance: "Friemi Coins",
+        coinEarned: "Earned",
+        coinSpent: "Used",
         emptyChecks: "No items yet",
         emptyDescription: "Items you collect will appear here.",
         emptyTitle: "Your bag is empty",
@@ -300,6 +337,9 @@ function getProfilePrivateSubpageCopy(locale: string) {
         expired: "Expired",
         expires: "Expires",
         fragment: "Fragments",
+        redeemCheck: "Redeem",
+        redeemedCheck: "Added",
+        redeemingCheck: "Redeeming...",
         redeemed: "Used",
         redeemedBoxes: "Redeemed",
         statusAvailable: "Available",
@@ -340,16 +380,31 @@ function getProfilePrivateSubpageCopy(locale: string) {
       loading: "Loading",
       shop: {
         available: "Open",
+        baseFc: "Base",
+        bonus: "Bonus",
         chooseFriend: "Choose a person",
         charm: "Charm",
         close: "Close",
+        coinDescription:
+          "Friemi Coins are for Friemi gifts only. They cannot be withdrawn or transferred.",
+        coinTitle: "Friemi Coins",
+        disabled: "Closed",
         emptyDescription:
           "Available gifts will appear here.",
         emptyTitle: "Shop is preparing",
+        fc: "Friemi Coins",
         giftCatalog: "Gifts",
+        giftModeNotice: "Each gift deducts Friemi coins from your balance.",
         noFriends: "Follow someone to send a gift.",
+        negativeCatalog: "Negative gifts",
+        negativeNotice: "Closed for now.",
+        price: "Price",
         recharge: "Top up",
+        rechargeContact: "To top up, contact the official Friemi team.",
+        rechargeNote: "Top-up is coming soon.",
         rechargeSoon: "Coming soon",
+        rechargeTitle: "Top-up",
+        recommended: "Recommended",
         seasonalLocked: "Event",
         send: "Send",
         sendEntry: "Send gift",
@@ -357,6 +412,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
         sent: "Gift sent",
         subtitle: "Friemi gifts only.",
         title: "Shop",
+        totalFc: "Total",
       },
       giftWall: {
         charm: "Charm",
@@ -431,6 +487,10 @@ function getProfilePrivateSubpageCopy(locale: string) {
       available: "可用",
       blindBox: "盲盒",
       checkList: "物品",
+      checkCoinValue: "可兑换",
+      coinBalance: "Friemi 币",
+      coinEarned: "累计获得",
+      coinSpent: "已使用",
       emptyChecks: "暂时没有物品",
       emptyDescription: "你获得的物品会出现在这里。",
       emptyTitle: "背包暂时为空",
@@ -439,6 +499,9 @@ function getProfilePrivateSubpageCopy(locale: string) {
       expired: "已过期",
       expires: "过期",
       fragment: "碎片",
+      redeemCheck: "兑换",
+      redeemedCheck: "已到账",
+      redeemingCheck: "兑换中...",
       redeemed: "已使用",
       redeemedBoxes: "已兑换",
       statusAvailable: "可用",
@@ -479,15 +542,29 @@ function getProfilePrivateSubpageCopy(locale: string) {
     loading: "加载中",
     shop: {
       available: "可送",
+      baseFc: "基础",
+      bonus: "赠送",
       chooseFriend: "选择对象",
       charm: "魅力",
       close: "关闭",
+      coinDescription: "Friemi 币只用于站内送礼，暂不可提现或转赠。",
+      coinTitle: "Friemi 币",
+      disabled: "未开放",
       emptyDescription: "可送礼物会显示在这里。",
       emptyTitle: "商城准备中",
+      fc: "Friemi 币",
       giftCatalog: "礼物",
+      giftModeNotice: "送礼会扣除 Friemi 币。",
       noFriends: "关注用户后可以送礼。",
+      negativeCatalog: "负向礼物",
+      negativeNotice: "暂未开放，请理性使用。",
+      price: "价格",
       recharge: "充值",
+      rechargeContact: "充值请联系 Friemi 官方。",
+      rechargeNote: "充值暂未开放。",
       rechargeSoon: "敬请期待",
+      rechargeTitle: "充值",
+      recommended: "推荐",
       seasonalLocked: "节日开放",
       send: "送出",
       sendEntry: "去送礼",
@@ -495,6 +572,7 @@ function getProfilePrivateSubpageCopy(locale: string) {
       sent: "礼物已送出",
       subtitle: "只提供 Friemi 礼物。",
       title: "商城",
+      totalFc: "总额",
     },
     giftWall: {
       charm: "魅力",
@@ -1085,6 +1163,7 @@ function RedeemBlindBoxSubmitButton({
 }
 
 const initialRedeemState: RedeemBlindBoxCheckState = {};
+const initialRedeemCheckState: RedeemFriemiCheckToCoinsState = {};
 
 function RedeemBlindBoxForm({
   canRedeem,
@@ -1120,6 +1199,73 @@ function RedeemBlindBoxForm({
   );
 }
 
+function RedeemFriemiCheckSubmitButton({
+  disabled,
+  label,
+  pendingLabel,
+}: {
+  disabled: boolean;
+  label: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      aria-busy={pending}
+      disabled={disabled || pending}
+      className="inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition active:scale-95 disabled:bg-[#C8CBB7]"
+    >
+      {pending ? (
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Ticket className="h-3.5 w-3.5" />
+      )}
+      <span className="truncate">{pending ? pendingLabel : label}</span>
+    </button>
+  );
+}
+
+function RedeemFriemiCheckForm({
+  check,
+  locale,
+}: {
+  check: ProfileBagCheckItem;
+  locale: string;
+}) {
+  const copy = getProfilePrivateSubpageCopy(locale);
+  const [state, formAction] = useActionState(
+    redeemFriemiCheckToCoinsAction,
+    initialRedeemCheckState,
+  );
+  const router = useRouter();
+  const formError = state.checkId === check.id ? state.formError : null;
+
+  useEffect(() => {
+    if (!state.ok || state.checkId !== check.id) {
+      return;
+    }
+
+    router.refresh();
+  }, [check.id, router, state.checkId, state.ok]);
+
+  return (
+    <form action={formAction} className="mt-3 grid gap-2">
+      <input name="checkId" type="hidden" value={check.id} />
+      <input name="locale" type="hidden" value={locale} />
+      <RedeemFriemiCheckSubmitButton
+        disabled={!check.canRedeemToCoins}
+        label={copy.bag.redeemCheck}
+        pendingLabel={copy.bag.redeemingCheck}
+      />
+      {formError ? (
+        <p className="text-xs font-bold text-[#9A2135]">{formError}</p>
+      ) : null}
+    </form>
+  );
+}
+
 function GiftAvailabilityBadge({
   gift,
   locale,
@@ -1128,18 +1274,25 @@ function GiftAvailabilityBadge({
   locale: string;
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
+  const disabled = gift.availability === "disabled";
   const locked = gift.availability === "seasonal_locked";
 
   return (
     <span
       className={cn(
         "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
-        locked
+        disabled
+          ? "bg-[#F3F1EB] text-[#7A8276] ring-[#DFDAC5]"
+          : locked
           ? "bg-[#F1F2EC] text-[#6C746A] ring-[#DFDAC5]"
           : "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]",
       )}
     >
-      {locked ? copy.shop.seasonalLocked : copy.shop.available}
+      {disabled
+        ? copy.shop.disabled
+        : locked
+          ? copy.shop.seasonalLocked
+          : copy.shop.available}
     </span>
   );
 }
@@ -2083,6 +2236,40 @@ export function ProfileBagPageView({
         />
       ) : null}
 
+      <section className="mt-6 rounded-[1.25rem] bg-white p-4 ring-1 ring-[#D6D5B2]">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+              {copy.bag.coinBalance}
+            </p>
+            <p className="mt-2 text-3xl font-black leading-none text-[#111210]">
+              {bag.coinBalance.balance}
+            </p>
+          </div>
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+            F
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#EFEAD7] pt-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-[#7A8276]">
+              {copy.bag.coinEarned}
+            </p>
+            <p className="mt-1 truncate text-sm font-black text-[#156240]">
+              {bag.coinBalance.earnedTotal}
+            </p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-[#7A8276]">
+              {copy.bag.coinSpent}
+            </p>
+            <p className="mt-1 truncate text-sm font-black text-[#111210]">
+              {bag.coinBalance.spentTotal}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="mt-6">
         <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
           {copy.bag.checkList}
@@ -2170,10 +2357,19 @@ export function ProfileBagPageView({
                   <p className="line-clamp-2 text-sm font-black leading-5 text-[#111210]">
                     {getCheckTypeCopy(check.type, locale)}
                   </p>
+                  {check.coinValue > 0 ? (
+                    <p className="mt-1 text-xs font-black text-[#156240]">
+                      {copy.bag.checkCoinValue} {check.coinValue}{" "}
+                      {copy.bag.coinBalance}
+                    </p>
+                  ) : null}
                   <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
                     {getCheckDateCopy(check, locale)}
                   </p>
                 </div>
+                {check.canRedeemToCoins ? (
+                  <RedeemFriemiCheckForm check={check} locale={locale} />
+                ) : null}
               </article>
             );
           })}
@@ -2184,17 +2380,22 @@ export function ProfileBagPageView({
 }
 
 export function ProfileShopPageView({
+  coinBalance,
   giftRecipients,
   gifts,
   locale,
+  negativeGifts,
 }: {
+  coinBalance: FriemiCoinBalanceViewModel;
   giftRecipients: ProfileShopGiftRecipient[];
   gifts: ProfileShopGiftItem[];
   locale: string;
+  negativeGifts: ProfileShopGiftItem[];
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
   const [dialogGiftId, setDialogGiftId] = useState<string | null>(null);
   const [dialogAttemptId, setDialogAttemptId] = useState("");
+  const [rechargeOpen, setRechargeOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const dialogGift = gifts.find((gift) => gift.id === dialogGiftId) ?? null;
@@ -2235,7 +2436,7 @@ export function ProfileShopPageView({
         <button
           aria-label={copy.shop.recharge}
           className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-black text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
-          onClick={() => showToast(copy.shop.rechargeSoon)}
+          onClick={() => setRechargeOpen(true)}
           type="button"
         >
           <WalletCards className="h-3.5 w-3.5 shrink-0" />
@@ -2249,10 +2450,37 @@ export function ProfileShopPageView({
       title={copy.shop.title}
       tone="gold"
     >
+      <section className="mt-5">
+        <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-white px-4 py-3 ring-1 ring-[#E3DCC5]">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
+              <Coins className="h-6 w-6" />
+              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-black leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
+                FC
+              </span>
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-black text-[#7A8276]">
+                {copy.shop.coinTitle}
+              </p>
+              <p className="mt-0.5 text-2xl font-black leading-none text-[#111210]">
+                {coinBalance.balance}
+              </p>
+            </div>
+          </div>
+          <p className="max-w-[9.25rem] text-right text-[11px] font-semibold leading-4 text-[#7A8276]">
+            {copy.shop.coinDescription}
+          </p>
+        </div>
+      </section>
+
       <section className="mt-7">
         <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
           {copy.shop.giftCatalog}
         </h2>
+        <p className="mt-2 px-1 text-xs font-semibold text-[#7A8276]">
+          {copy.shop.giftModeNotice}
+        </p>
         {gifts.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-3">
             {gifts.map((gift) => {
@@ -2276,9 +2504,13 @@ export function ProfileShopPageView({
                     <span className="block truncate text-sm font-black text-[#111210]">
                       {gift.label}
                     </span>
-                    <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-[#6C746A]">
-                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#A57AEB]" />
-                      +{gift.charmValue}
+                    <span className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] font-black">
+                      <span className="truncate rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
+                        {gift.coinCost ?? "-"} {copy.shop.fc}
+                      </span>
+                      <span className="truncate rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
+                        +{gift.charmValue}
+                      </span>
                     </span>
                   </span>
                   {locked ? null : (
@@ -2304,6 +2536,115 @@ export function ProfileShopPageView({
           />
         )}
       </section>
+
+      {negativeGifts.length > 0 ? (
+        <section className="mt-8">
+          <div className="flex items-end justify-between gap-3 px-1">
+            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+              {copy.shop.negativeCatalog}
+            </h2>
+            <span className="text-xs font-bold text-[#9A2135]">
+              {copy.shop.negativeNotice}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {negativeGifts.map((gift) => (
+              <article
+                className="grid min-h-[6.4rem] justify-items-center rounded-[1rem] bg-[#F8F7F2] p-2.5 text-center ring-1 ring-[#E3DCC5]"
+                key={gift.id}
+              >
+                <span className="text-2xl leading-none">{gift.emoji}</span>
+                <span className="max-w-full truncate text-xs font-black text-[#111210]">
+                  {gift.label}
+                </span>
+                <span className="text-[11px] font-black text-[#9A2135]">
+                  {gift.charmValue}
+                </span>
+                <span className="text-[10px] font-bold text-[#7A8276]">
+                  {gift.coinCost} {copy.shop.fc}
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {rechargeOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-end bg-[#111210]/45 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] md:items-center md:justify-center"
+          onClick={() => setRechargeOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-modal="true"
+            className="w-full max-w-md rounded-[1.35rem] bg-white p-4 shadow-[0_20px_62px_rgba(17,18,16,0.22)] ring-1 ring-[#D6D5B2]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7D641C]">
+                  {copy.shop.rechargeTitle}
+                </p>
+                <h2 className="mt-1 text-xl font-black text-[#111210]">
+                  {copy.shop.fc}
+                </h2>
+              </div>
+              <button
+                aria-label={copy.shop.close}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F8F7F2] text-[#111210]/70 transition active:scale-95"
+                onClick={() => setRechargeOpen(false)}
+                type="button"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-[1rem] bg-[#F8F7F2] px-4 py-3">
+              <p className="text-sm font-black leading-6 text-[#156240]">
+                {copy.shop.rechargeContact}
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-[#7A8276]">
+                {friemiCoinRate.baseCoins} = €{friemiCoinRate.basePriceEur} ·
+                1 ≈ €{friemiCoinRate.approxUnitPriceEur}
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
+              {friemiCoinRechargePlans.map((plan) => (
+                <article
+                  className={cn(
+                    "min-w-0 rounded-[1rem] bg-white p-3 text-left ring-1",
+                    plan.recommended
+                      ? "ring-[#83B779]"
+                      : "ring-[#E3DCC5]",
+                  )}
+                  key={plan.priceEur}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-black text-[#111210]">
+                      €{plan.priceEur}
+                    </span>
+                    {plan.recommended ? (
+                      <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-black text-[#156240]">
+                        {copy.shop.recommended}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-2 block text-xs font-black text-[#156240]">
+                    {plan.totalCoins} {copy.shop.fc}
+                  </span>
+                  <span className="mt-1 block text-[11px] font-semibold text-[#7A8276]">
+                    {copy.shop.baseFc} {plan.baseCoins}
+                    {plan.bonusCoins > 0
+                      ? ` · ${copy.shop.bonus} +${plan.bonusCoins}`
+                      : ""}
+                  </span>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
       <ShopGiftRecipientDialog
         attemptId={dialogAttemptId}
         gift={dialogGift}

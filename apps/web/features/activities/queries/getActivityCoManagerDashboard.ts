@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { getMutualFollowProfileIds } from "@/features/follow/queries/followRelations";
 import {
   getActivityManagementRole,
   maxActivityCoManagers,
@@ -25,7 +24,7 @@ export type ActivityCoManagerDashboardViewModel = {
   canEditManagers: boolean;
   maxManagers: number;
   coManagers: ActivityCoManagerViewModel[];
-  availableFriends: ActivityCoManagerUserViewModel[];
+  availableParticipants: ActivityCoManagerUserViewModel[];
 };
 
 function getPublicUserName(user: {
@@ -80,6 +79,27 @@ export async function getActivityCoManagerDashboard(
           },
         },
       },
+      participants: {
+        where: {
+          status: {
+            in: ["JOINED", "APPROVED"],
+          },
+          userProfile: {
+            status: "ACTIVE",
+          },
+        },
+        orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
+        select: {
+          userProfile: {
+            select: {
+              id: true,
+              nickname: true,
+              friendCode: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -102,36 +122,16 @@ export async function getActivityCoManagerDashboard(
     coManagers.map((coManager) => coManager.user.id),
   );
   const canEditManagers = role === "ORGANIZER";
-  let availableFriends: ActivityCoManagerUserViewModel[] = [];
+  let availableParticipants: ActivityCoManagerUserViewModel[] = [];
 
   if (canEditManagers) {
-    const mutualFollowIds = await getMutualFollowProfileIds(viewerProfileId);
-
-    if (mutualFollowIds.length > 0) {
-      const mutualFollows = await prisma.userProfile.findMany({
-        where: {
-          id: {
-            in: mutualFollowIds,
-          },
-          status: "ACTIVE",
-        },
-        orderBy: [{ nickname: "asc" }, { id: "asc" }],
-        select: {
-          id: true,
-          nickname: true,
-          friendCode: true,
-          avatarUrl: true,
-        },
-      });
-
-      availableFriends = mutualFollows
-        .filter(
-          (profile) =>
-            profile.id !== activity.organizerId &&
-            !coManagerIds.has(profile.id),
-        )
-        .map(mapUser);
-    }
+    availableParticipants = activity.participants
+      .map((participant) => participant.userProfile)
+      .filter(
+        (profile) =>
+          profile.id !== activity.organizerId && !coManagerIds.has(profile.id),
+      )
+      .map(mapUser);
   }
 
   return {
@@ -140,6 +140,6 @@ export async function getActivityCoManagerDashboard(
     canEditManagers,
     maxManagers: maxActivityCoManagers,
     coManagers,
-    availableFriends,
+    availableParticipants,
   };
 }

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  CheckCircle2,
   ChevronRight,
   ExternalLink,
   LoaderCircle,
@@ -438,6 +439,9 @@ function RoomInfoAvatar({
   member: ActivityRoomMemberPreviewViewModel;
   muted?: boolean;
 }) {
+  const isCheckedIn = Boolean(member.checkedInAt);
+  const isCheckInPending = Boolean(member.checkInRequestedAt && !member.checkedInAt);
+
   return (
     <div
       className={cn(
@@ -445,11 +449,20 @@ function RoomInfoAvatar({
         muted && "opacity-45",
       )}
     >
-      <RoomInfoAvatarVisual
-        avatarUrl={member.avatarUrl}
-        name={member.nickname}
-        role={member.role}
-      />
+      <span className="relative">
+        <RoomInfoAvatarVisual
+          avatarUrl={member.avatarUrl}
+          name={member.nickname}
+          role={member.role}
+        />
+        {isCheckedIn ? (
+          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#156240] text-white ring-2 ring-white">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </span>
+        ) : isCheckInPending ? (
+          <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#E7457A] ring-2 ring-white" />
+        ) : null}
+      </span>
       <span className="line-clamp-2 min-h-[2rem] max-w-full break-words text-center text-[11px] font-semibold leading-4 text-[#6C746A]">
         {member.nickname}
       </span>
@@ -1241,6 +1254,8 @@ export function ActivityRoomManagePage({
           {
             id: viewer.id,
             avatarUrl: viewer.avatarUrl,
+            checkInRequestedAt: null,
+            checkedInAt: null,
             nickname: viewer.nickname,
             role: "PARTICIPANT" as const,
             status: null,

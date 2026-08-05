@@ -118,6 +118,14 @@ enum FriemiCheckStatus {
   EXPIRED
 }
 
+enum FriemiCoinTransactionType {
+  CHECK_REDEEMED
+  RECHARGE
+  GIFT_SENT
+  GIFT_REFUNDED
+  MANUAL_ADJUSTMENT
+}
+
 enum BlindBoxFragmentEventType {
   SUCCESSFUL_ACTIVITY
   MANUAL_ADJUSTMENT
@@ -298,6 +306,8 @@ model UserProfile {
   sentCharmGiftEvents     CharmGiftEvent[]              @relation("CharmGiftSender")
   receivedCharmGiftEvents CharmGiftEvent[]              @relation("CharmGiftRecipient")
   friemiChecks            FriemiCheck[]
+  friemiCoinBalance       UserFriemiCoinBalance?
+  friemiCoinTransactions  FriemiCoinTransaction[]
   blindBoxFragmentBalance UserBlindBoxFragmentBalance?
   blindBoxFragmentEvents  BlindBoxFragmentEvent[]
   hostedGameToolRooms     GameToolRoom[]                @relation("GameToolRoomHost")
@@ -858,20 +868,50 @@ model CharmGiftEvent {
 }
 
 model FriemiCheck {
-  id         String            @id @default(cuid())
-  profileId  String
-  profile    UserProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  type       FriemiCheckType
-  status     FriemiCheckStatus @default(AVAILABLE)
-  sourceKey  String?
-  note       String?
-  redeemedAt DateTime?
-  expiresAt  DateTime?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id              String                 @id @default(cuid())
+  profileId       String
+  profile         UserProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type            FriemiCheckType
+  status          FriemiCheckStatus      @default(AVAILABLE)
+  coinValue       Int?
+  sourceKey       String?
+  note            String?
+  redeemedAt      DateTime?
+  expiresAt       DateTime?
+  coinTransaction FriemiCoinTransaction?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@unique([profileId, sourceKey])
   @@index([profileId, status, createdAt])
+}
+
+model UserFriemiCoinBalance {
+  profileId         String      @id
+  profile           UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  balance           Int         @default(0)
+  earnedTotal       Int         @default(0)
+  spentTotal        Int         @default(0)
+  lastTransactionAt DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model FriemiCoinTransaction {
+  id           String                    @id @default(cuid())
+  profileId    String
+  profile      UserProfile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type         FriemiCoinTransactionType
+  amount       Int
+  balanceAfter Int
+  checkId      String?                   @unique
+  check        FriemiCheck?              @relation(fields: [checkId], references: [id], onDelete: SetNull)
+  sourceKey    String?
+  note         String?
+  createdAt    DateTime                  @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([type, createdAt])
 }
 
 model UserBlindBoxFragmentBalance {

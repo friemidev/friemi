@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { createNotifications } from "@/features/notifications/utils/createNotification";
 import { ensureCurrentUserProfileSnapshot } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getActivityDetailPath } from "../utils/activityRoutes";
@@ -35,6 +36,7 @@ function getCopy(locale: string) {
         "Le pointage est en cours d'installation. Reessayez apres la mise a jour.",
       forbidden: "Seuls les participants approuves peuvent pointer.",
       invalid: "Ce groupe est introuvable.",
+      operator: "Les organisateurs n'ont pas besoin de pointer.",
       window: "Le pointage ouvre 6 h avant le debut et ferme 24 h apres la fin.",
     };
   }
@@ -47,6 +49,7 @@ function getCopy(locale: string) {
       setup: "Check-in is still being set up. Try again after the database update.",
       forbidden: "Only approved participants can check in.",
       invalid: "This plan was not found.",
+      operator: "Organizers do not need to check in.",
       window: "Check-in opens 6 hours before start and closes 24 hours after the end.",
     };
   }
@@ -58,6 +61,7 @@ function getCopy(locale: string) {
     setup: "签到功能正在同步数据库，请更新数据库后再试。",
     forbidden: "只有已通过的参与者可以签到。",
     invalid: "没有找到这个聚吧。",
+    operator: "聚吧管理人员无需签到。",
     window: "签到会在开始前 6 小时开放，并在结束后 24 小时关闭。",
   };
 }
@@ -93,6 +97,36 @@ export async function checkInActivityAction(
 
   try {
     const checkInResult = await prisma.$transaction(async (tx) => {
+      const activity = await tx.activity.findUnique({
+        where: {
+          id: result.data.activityId,
+        },
+        select: {
+          coManagers: {
+            select: {
+              managerProfileId: true,
+            },
+          },
+          endAt: true,
+          organizerId: true,
+          startAt: true,
+          status: true,
+        },
+      });
+
+      if (!activity) {
+        return { ok: false as const, reason: "invalid" as const };
+      }
+
+      if (
+        activity.organizerId === profile.id ||
+        activity.coManagers.some(
+          (coManager) => coManager.managerProfileId === profile.id,
+        )
+      ) {
+        return { ok: false as const, reason: "operator" as const };
+      }
+
       const participation = await tx.activityParticipant.findFirst({
         where: {
           activityId: result.data.activityId,
@@ -103,14 +137,6 @@ export async function checkInActivityAction(
           checkInRequestedAt: true,
           checkedInAt: true,
           status: true,
-          activity: {
-            select: {
-              endAt: true,
-              id: true,
-              startAt: true,
-              status: true,
-            },
-          },
         },
       });
 
@@ -130,15 +156,14 @@ export async function checkInActivityAction(
         return { ok: false as const, reason: "forbidden" as const };
       }
 
-      if (participation.activity.status === "CANCELLED") {
+      if (activity.status === "CANCELLED") {
         return { ok: false as const, reason: "closed" as const };
       }
 
       const checkInOpenAt = new Date(
-        participation.activity.startAt.getTime() - checkInWindowBeforeMs,
+        activity.startAt.getTime() - checkInWindowBeforeMs,
       );
-      const activityEndAt =
-        participation.activity.endAt ?? participation.activity.startAt;
+      const activityEndAt = activity.endAt ?? activity.startAt;
       const checkInCloseAt = new Date(
         activityEndAt.getTime() + checkInWindowAfterMs,
       );
@@ -158,6 +183,23 @@ export async function checkInActivityAction(
         },
       });
 
+      const managerIds = Array.from(
+        new Set([
+          activity.organizerId,
+          ...activity.coManagers.map((coManager) => coManager.managerProfileId),
+        ]),
+      ).filter((recipientId) => recipientId !== profile.id);
+
+      await createNotifications(
+        tx,
+        managerIds.map((recipientId) => ({
+          actorId: profile.id,
+          activityId: result.data.activityId,
+          recipientId,
+          type: "ACTIVITY_CHECK_IN" as const,
+        })),
+      );
+
       return {
         checkInRequestedAt: now,
         ok: true as const,
@@ -169,6 +211,10 @@ export async function checkInActivityAction(
         formError:
           checkInResult.reason === "window"
             ? copy.window
+            : checkInResult.reason === "operator"
+              ? copy.operator
+              : checkInResult.reason === "invalid"
+                ? copy.invalid
             : checkInResult.reason === "closed"
               ? copy.closed
               : copy.forbidden,

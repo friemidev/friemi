@@ -25,7 +25,7 @@ import type {
 } from "@/features/navigation/contextualDetailReturn";
 import { PublicEventFavoriteButton } from "@/features/favorites/components/PublicEventFavoriteButton";
 import { ActivityFavoriteButton } from "@/features/favorites/components/ActivityFavoriteButton";
-import { getCategoryLabel, getCopy } from "@/lib/copy";
+import { getCategoryLabel, getCopy, getStatusLabel } from "@/lib/copy";
 import { getAvatarInitial, sanitizeDisplayText } from "@/lib/display-text";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -842,18 +842,21 @@ export function ActivityCard({
     tone: resolvedActionConfig.tone,
   });
   const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
+  const shouldShowInactiveCardState = isInactiveCard;
 
   return (
     <Card
       data-detail-source-target={detailSourceTargetKey}
       className={cn(
         "group/card relative flex h-full flex-col overflow-visible rounded-[1.15rem] transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 sm:rounded-[1.55rem]",
-        isInactiveCard
-          ? "border-outline/30 bg-fog/90 text-ink/55 shadow-[0_10px_28px_rgba(29,29,27,0.07)] saturate-0"
+        shouldShowInactiveCardState
+          ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none ring-1 ring-zinc-100 saturate-0 hover:translate-y-0 hover:shadow-none"
           : isTeamCard
             ? "border-rose bg-cream shadow-[0_12px_34px_rgba(240,145,130,0.11)] ring-1 ring-rose hover:shadow-[0_18px_46px_rgba(240,145,130,0.18)] max-[639px]:shadow-[0_16px_36px_rgba(240,145,130,0.13)]"
             : "border-sage bg-paper shadow-[0_10px_30px_rgba(21,98,64,0.08)] ring-1 ring-fog hover:shadow-[0_18px_44px_rgba(21,98,64,0.13)] max-[639px]:shadow-[0_16px_36px_rgba(21,98,64,0.1)]",
-        isTeamCard
+        shouldShowInactiveCardState
+          ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-zinc-300 sm:before:block"
+          : isTeamCard
           ? "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-coral sm:before:block"
           : "before:absolute before:left-5 before:right-5 before:-top-px before:z-10 before:hidden before:h-1 before:rounded-full before:bg-event-accent sm:before:block",
         !isInactiveCard && isTeamCard
@@ -862,6 +865,9 @@ export function ActivityCard({
         activityListPreviewClass(
           "max-[639px]:aspect-square max-[639px]:overflow-hidden max-[639px]:rounded-[1rem] max-[639px]:border max-[639px]:border-[#DDE1D8] max-[639px]:bg-white max-[639px]:shadow-none max-[639px]:ring-0 max-[639px]:hover:translate-y-0 max-[639px]:active:scale-[0.985]",
         ),
+        shouldShowInactiveCardState
+          ? "max-[639px]:border-zinc-200 max-[639px]:bg-zinc-50"
+          : null,
       )}
     >
       {showFavoriteButton &&
@@ -944,13 +950,17 @@ export function ActivityCard({
               "max-[639px]:mx-0 max-[639px]:mt-0 max-[639px]:h-[56%] max-[639px]:rounded-b-none max-[639px]:rounded-t-[1rem] max-[639px]:p-2",
             ),
             coverTones[activity.coverTone],
-            isInactiveCard ? "grayscale" : null,
+            shouldShowInactiveCardState
+              ? "bg-zinc-200 grayscale opacity-75"
+              : null,
           )}
         >
           <ActivityCoverImage
             src={activity.coverImageUrl}
             overlayClassName={cn(
-              isTeamCard
+              shouldShowInactiveCardState
+                ? "bg-gradient-to-t from-zinc-900/52 via-zinc-800/16 to-zinc-700/10"
+                : isTeamCard
                 ? "bg-gradient-to-t from-black/62 via-black/20 to-ink/12"
                 : "bg-gradient-to-t from-black/46 via-black/10 to-transparent",
             )}
@@ -971,18 +981,30 @@ export function ActivityCard({
                 isTeamCard
                   ? "border-rose bg-cream text-ink"
                   : "border-sage bg-ice text-forest",
+                shouldShowInactiveCardState
+                  ? "border-zinc-200 bg-white/90 text-zinc-600"
+                  : null,
               )}
             >
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.8)]",
-                  isTeamCard ? "bg-meadow" : "bg-sage",
+                  shouldShowInactiveCardState
+                    ? "bg-zinc-400"
+                    : isTeamCard
+                      ? "bg-meadow"
+                      : "bg-sage",
                 )}
                 aria-hidden="true"
               />
               <span className="min-w-0 truncate">
                 {getCardKindLabel(isActivityInfo, locale)}
               </span>
+            </span>
+          ) : null}
+          {shouldShowInactiveCardState ? (
+            <span className="absolute right-3 top-3 z-10 rounded-full bg-zinc-900/72 px-2.5 py-1 text-[11px] font-bold leading-none text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] ring-1 ring-white/40 sm:right-4 sm:top-4">
+              {getStatusLabel(displayStatus, locale)}
             </span>
           ) : null}
           {isOwnActivity ? (
@@ -1080,7 +1102,7 @@ export function ActivityCard({
               activityListPreviewClass(
                 "max-[639px]:text-[12px] max-[639px]:leading-[0.95rem]",
               ),
-              isInactiveCard ? "text-zinc-600" : null,
+              shouldShowInactiveCardState ? "text-zinc-600" : null,
               !isInactiveCard && isTeamCard ? "text-ink" : null,
               !isInactiveCard && !isTeamCard ? "text-ink" : null,
             )}
@@ -1113,7 +1135,7 @@ export function ActivityCard({
                 "max-[639px]:gap-1.5 max-[639px]:text-[0.72rem]",
               ),
               activityListPreviewClass("max-[639px]:hidden"),
-              isInactiveCard ? "text-zinc-500" : null,
+              shouldShowInactiveCardState ? "text-zinc-500" : null,
             )}
           >
             {countdownLabel ? (

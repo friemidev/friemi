@@ -1,6 +1,10 @@
 import { PageContainer } from "@/components/layout/PageContainer";
-import { getProfileShopGiftCatalog } from "@/features/charm/queries/getProfileShop";
+import {
+  getProfileShopGiftCatalog,
+  getProfileShopNegativeGiftCatalog,
+} from "@/features/charm/queries/getProfileShop";
 import { getProfileShopGiftRecipients } from "@/features/charm/queries/getProfileShopGiftRecipients";
+import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
 import { ProfileShopPageView } from "@/features/profile/components/ProfilePrivateSubpages";
 import { ensureCurrentUserProfile } from "@/lib/auth";
 
@@ -18,14 +22,20 @@ export default async function ProfileShopPage({
 
   const profile = await ensureCurrentUserProfile(locale, "/profile/shop");
   const gifts = getProfileShopGiftCatalog(locale);
-  const giftRecipients = await getProfileShopGiftRecipients(profile.id);
+  const negativeGifts = getProfileShopNegativeGiftCatalog(locale);
+  const [coinBalance, giftRecipients] = await Promise.all([
+    getFriemiCoinBalance(profile.id),
+    getProfileShopGiftRecipients(profile.id),
+  ]);
 
   return (
     <PageContainer className="max-md:px-0 max-md:py-0 md:py-8">
       <ProfileShopPageView
+        coinBalance={coinBalance}
         giftRecipients={giftRecipients}
         gifts={gifts}
         locale={locale}
+        negativeGifts={negativeGifts}
       />
     </PageContainer>
   );

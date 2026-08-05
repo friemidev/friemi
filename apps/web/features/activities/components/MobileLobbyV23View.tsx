@@ -28,7 +28,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import type { ActivityCardViewModel } from "@/features/activities/types";
-import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
+import {
+  getActivityDateLabel,
+  getActivityDisplayStatus,
+} from "@/features/activities/utils/activityDisplay";
 import { activityCategoryOptions } from "@/features/activities/utils/activityFilters";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { activityCategoryIllustrationImages } from "@/features/activities/utils/activityCategoryVisuals";
@@ -75,6 +78,7 @@ type MobileLobbyV23Copy = {
   loadFailedTitle: string;
   mineEmptyTitle: string;
   mineEmptyDescription: string;
+  endedLabel: string;
   hostedBadge: string;
   participants: string;
   retryLabel: string;
@@ -226,6 +230,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
       friendGoing: (count) => `${count} suivi${count > 1 ? "s" : ""}`,
       loadingLabel: "Chargement...",
       loadFailedTitle: "Chargement impossible",
+      endedLabel: "Terminé",
       mineEmptyTitle: "Aucune de vos sorties",
       mineEmptyDescription:
         "Connectez-vous pour voir les sorties que vous organisez ou rejoignez.",
@@ -254,6 +259,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
         `${count} ${count === 1 ? "followed person" : "followed people"}`,
       loadingLabel: "Loading...",
       loadFailedTitle: "Could not load",
+      endedLabel: "Ended",
       mineEmptyTitle: "No personal plans yet",
       mineEmptyDescription: "Sign in to see plans you're hosting or joining.",
       hostedBadge: "Host",
@@ -278,6 +284,7 @@ function getMobileLobbyV23Copy(locale: string): MobileLobbyV23Copy {
     friendGoing: (count) => `${count} 位关注的人`,
     loadingLabel: "加载中...",
     loadFailedTitle: "加载失败",
+    endedLabel: "已结束",
     mineEmptyTitle: "暂无我的聚吧",
     mineEmptyDescription: "登录后可以看到你发起和参加的聚吧。",
     hostedBadge: "我发起的",
@@ -704,26 +711,55 @@ function MobileLobbyV23ActivityRow({
       ? `${activity.participantCount} / ${activity.capacity}`
       : `${activity.participantCount}`;
   const friendCount = activity.friendSignal?.count ?? 0;
+  const displayStatus = getActivityDisplayStatus(activity);
+  const isInactiveActivity =
+    displayStatus === "ENDED" || displayStatus === "CANCELLED";
 
   return (
     <Link
-      className="group grid grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] bg-white px-2.5 py-2.5 transition active:scale-[0.985]"
+      className={cn(
+        "group grid grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
+        isInactiveActivity ? "bg-zinc-50 text-zinc-500" : "bg-white",
+      )}
       href={getActivityHref(activity, locale)}
     >
-      <div className="relative aspect-square overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]">
+      <div
+        className={cn(
+          "relative aspect-square overflow-hidden rounded-[0.95rem] bg-[#F1F2EC] shadow-[0_10px_22px_rgba(17,18,16,0.075)]",
+          isInactiveActivity ? "bg-zinc-200 shadow-none grayscale" : null,
+        )}
+      >
         <ActivityCoverImage
           alt={activity.title}
-          overlayClassName="bg-gradient-to-t from-black/10 to-transparent"
+          overlayClassName={cn(
+            "bg-gradient-to-t to-transparent",
+            isInactiveActivity ? "from-zinc-900/24" : "from-black/10",
+          )}
           src={activity.coverImageUrl}
         />
       </div>
 
       <div className="flex min-w-0 flex-col justify-center py-0.5 pr-0.5">
-        <h2 className="line-clamp-2 text-[15px] font-bold leading-[1.18] tracking-normal text-[#111210]">
+        <h2
+          className={cn(
+            "line-clamp-2 text-[15px] font-bold leading-[1.18] tracking-normal",
+            isInactiveActivity ? "text-zinc-600" : "text-[#111210]",
+          )}
+        >
           {activity.title}
         </h2>
-        <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-[#111210]/58">
-          <UsersRound className="h-3.5 w-3.5 shrink-0" />
+        <p
+          className={cn(
+            "mt-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold",
+            isInactiveActivity ? "text-zinc-500" : "text-[#111210]/58",
+          )}
+        >
+          <UsersRound
+            className={cn(
+              "h-3.5 w-3.5 shrink-0",
+              isInactiveActivity ? "text-zinc-400" : null,
+            )}
+          />
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="min-w-0 truncate">
               {participantText} · {activity.city || copy.participants}
@@ -735,8 +771,18 @@ function MobileLobbyV23ActivityRow({
             ) : null}
           </span>
         </p>
-        <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-[#111210]/54">
-          <Clock3 className="h-3.5 w-3.5 shrink-0" />
+        <p
+          className={cn(
+            "mt-3 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold",
+            isInactiveActivity ? "text-zinc-500" : "text-[#111210]/54",
+          )}
+        >
+          <Clock3
+            className={cn(
+              "h-3.5 w-3.5 shrink-0",
+              isInactiveActivity ? "text-zinc-400" : null,
+            )}
+          />
           <span className="truncate">
             {getMobileLobbyDateLabel(activity, locale)}
           </span>
@@ -744,8 +790,17 @@ function MobileLobbyV23ActivityRow({
       </div>
 
       <div className="flex h-full flex-col items-end justify-between py-1">
-        <ChevronRight className="mt-0.5 h-4 w-4 text-[#111210]/70 transition group-active:translate-x-0.5" />
-        {friendCount > 0 ? (
+        <ChevronRight
+          className={cn(
+            "mt-0.5 h-4 w-4 transition group-active:translate-x-0.5",
+            isInactiveActivity ? "text-zinc-400" : "text-[#111210]/70",
+          )}
+        />
+        {isInactiveActivity ? (
+          <span className="max-w-[5.9rem] truncate rounded-full bg-zinc-200 px-2 py-1 text-[10px] font-extrabold leading-none text-zinc-600">
+            {copy.endedLabel}
+          </span>
+        ) : friendCount > 0 ? (
           <span className="max-w-[5.9rem] truncate rounded-full bg-[#EAF7EA] px-2 py-1 text-[10px] font-extrabold leading-none text-[#138456]">
             {copy.friendGoing(friendCount)}
           </span>

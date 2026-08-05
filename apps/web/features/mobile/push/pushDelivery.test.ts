@@ -86,6 +86,22 @@ test("getNotificationCopy includes check-in success copy", () => {
   );
 });
 
+test("getNotificationCopy includes check-in request copy", () => {
+  assert.deepEqual(
+    getNotificationCopy({
+      activityTitle: "来吧",
+      actorActivityRole: null,
+      actorName: "hoting",
+      locale: "zh-CN",
+      type: "ACTIVITY_CHECK_IN",
+    }),
+    {
+      body: "hoting 提交了签到",
+      title: "Friemi",
+    },
+  );
+});
+
 test("getNotificationCopy includes received gift detail", () => {
   assert.deepEqual(
     getNotificationCopy({

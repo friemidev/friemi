@@ -11,6 +11,7 @@ type CreateNotificationInput = {
   activityAnnouncementId?: string | null;
   charmGiftEventId?: string | null;
   dedupe?: boolean;
+  dedupeIncludingRead?: boolean;
   momentCommentId?: string | null;
   momentId?: string | null;
   recipientId: string;
@@ -39,17 +40,17 @@ export async function createNotification(
   const shouldDedupe = input.dedupe ?? true;
 
   if (shouldDedupe) {
-    const existingUnread = await tx.notification.findFirst({
+    const existingNotification = await tx.notification.findFirst({
       where: {
         ...identity,
-        readAt: null,
+        ...(input.dedupeIncludingRead ? {} : { readAt: null }),
       },
       select: {
         id: true,
       },
     });
 
-    if (existingUnread) {
+    if (existingNotification) {
       return null;
     }
   }

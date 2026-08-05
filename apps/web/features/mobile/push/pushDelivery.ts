@@ -65,6 +65,7 @@ function truncateMessagePreview(body: string) {
 
 export function getNotificationCopy(input: {
   activityTitle: string | null;
+  actorActivityRole?: "ORGANIZER" | "CO_MANAGER" | null;
   actorName: string | null;
   giftText?: string | null;
   locale: PushCopyLocale;
@@ -86,6 +87,10 @@ export function getNotificationCopy(input: {
       : input.locale === "en"
         ? "Someone"
         : "Quelqu'un");
+  const isCheckInRequest =
+    input.type === "ACTIVITY_CHECK_IN" &&
+    hasActorName &&
+    input.actorActivityRole === null;
 
   const copy: Record<
     PushCopyLocale,
@@ -93,7 +98,9 @@ export function getNotificationCopy(input: {
   > = {
     "zh-CN": {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} 有新公告`,
-      ACTIVITY_CHECK_IN: `${activityTitle} 签到成功`,
+      ACTIVITY_CHECK_IN: isCheckInRequest
+        ? `${actorName} 提交了签到`
+        : `${activityTitle} 签到成功`,
       ACTIVITY_CANCELLED: `${activityTitle} 已取消`,
       ACTIVITY_COMMENTED: `${actorName} 评论了 ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} 有更新`,
@@ -116,7 +123,9 @@ export function getNotificationCopy(input: {
     },
     en: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} has a new announcement`,
-      ACTIVITY_CHECK_IN: `Check-in confirmed for ${activityTitle}`,
+      ACTIVITY_CHECK_IN: isCheckInRequest
+        ? `${actorName} checked in`
+        : `Check-in confirmed for ${activityTitle}`,
       ACTIVITY_CANCELLED: `${activityTitle} was cancelled`,
       ACTIVITY_COMMENTED: `${actorName} commented on ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} was updated`,
@@ -139,7 +148,9 @@ export function getNotificationCopy(input: {
     },
     fr: {
       ACTIVITY_ANNOUNCEMENT: `${activityTitle} a une nouvelle annonce`,
-      ACTIVITY_CHECK_IN: `Pointage confirmé pour ${activityTitle}`,
+      ACTIVITY_CHECK_IN: isCheckInRequest
+        ? `${actorName} a envoye son pointage`
+        : `Pointage confirmé pour ${activityTitle}`,
       ACTIVITY_CANCELLED: `${activityTitle} a été annulée`,
       ACTIVITY_COMMENTED: `${actorName} a commenté ${activityTitle}`,
       ACTIVITY_UPDATED: `${activityTitle} a été mise à jour`,

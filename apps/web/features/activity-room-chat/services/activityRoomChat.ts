@@ -134,6 +134,8 @@ export type ActivityRoomInviteCandidateViewModel = {
 export type ActivityRoomMemberPreviewViewModel = {
   id: string;
   avatarUrl: string | null;
+  checkInRequestedAt: string | null;
+  checkedInAt: string | null;
   nickname: string;
   role: "ORGANIZER" | "PARTICIPANT";
   status: ParticipantStatus | null;
@@ -830,6 +832,8 @@ export async function getActivityRoomManagementData({
           joinedAt: "asc",
         },
         select: {
+          checkInRequestedAt: true,
+          checkedInAt: true,
           id: true,
           status: true,
           userProfile: {
@@ -884,6 +888,8 @@ export async function getActivityRoomManagementData({
     {
       id: activity.organizer.id,
       avatarUrl: activity.organizer.avatarUrl,
+      checkInRequestedAt: null,
+      checkedInAt: null,
       nickname: activity.organizer.nickname,
       role: "ORGANIZER",
       status: null,
@@ -895,6 +901,9 @@ export async function getActivityRoomManagementData({
       .map((participant) => ({
         id: participant.userProfile.id,
         avatarUrl: participant.userProfile.avatarUrl,
+        checkInRequestedAt:
+          participant.checkInRequestedAt?.toISOString() ?? null,
+        checkedInAt: participant.checkedInAt?.toISOString() ?? null,
         nickname: participant.userProfile.nickname,
         role: "PARTICIPANT" as const,
         status: participant.status,

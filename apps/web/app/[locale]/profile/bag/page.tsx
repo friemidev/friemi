@@ -27,6 +27,11 @@ export default async function ProfileBagPage({ params }: ProfileBagPageProps) {
           availableCheckCount: 0,
           blindBoxCheckCount: 0,
           checks: [],
+          coinBalance: {
+            balance: 0,
+            earnedTotal: 0,
+            spentTotal: 0,
+          },
           fragmentBalance: {
             canRedeem: false,
             current: 0,
