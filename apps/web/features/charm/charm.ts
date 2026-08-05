@@ -48,8 +48,87 @@ export type CharmProgress = {
 };
 
 export const newUserFriemiCheckSourceKey = "welcome";
+export const initialFriemiCoinBalanceAmount = 100;
+export const initialFriemiCoinBalanceSourceKey =
+  "initial-friemi-coin-balance";
 export const blindBoxFragmentExchangeCount = 10;
 export const successfulActivityFragmentReward = 1;
+export const welcomeFriemiCheckCoinValue = 500;
+export const blindBoxFriemiCheckCoinValue = 0;
+
+export type FriemiCoinRechargePlan = {
+  priceEur: string;
+  baseCoins: number;
+  bonusCoins: number;
+  totalCoins: number;
+  recommended: boolean;
+};
+
+export const friemiCoinRate = {
+  baseCoins: 100,
+  basePriceEur: "1.49",
+  approxUnitPriceEur: "0.015",
+} as const;
+
+export function getFriemiCheckCoinValue(
+  type: "WELCOME" | "BLIND_BOX",
+  coinValue?: number | null,
+) {
+  if (Number.isFinite(coinValue) && (coinValue ?? 0) > 0) {
+    return Math.floor(coinValue ?? 0);
+  }
+
+  if (type === "WELCOME") {
+    return welcomeFriemiCheckCoinValue;
+  }
+
+  return blindBoxFriemiCheckCoinValue;
+}
+
+export const friemiCoinRechargePlans = [
+  {
+    priceEur: "1.49",
+    baseCoins: 100,
+    bonusCoins: 0,
+    totalCoins: 100,
+    recommended: false,
+  },
+  {
+    priceEur: "4.99",
+    baseCoins: 350,
+    bonusCoins: 50,
+    totalCoins: 400,
+    recommended: false,
+  },
+  {
+    priceEur: "9.99",
+    baseCoins: 700,
+    bonusCoins: 100,
+    totalCoins: 800,
+    recommended: true,
+  },
+  {
+    priceEur: "19.99",
+    baseCoins: 1500,
+    bonusCoins: 200,
+    totalCoins: 1700,
+    recommended: false,
+  },
+  {
+    priceEur: "49.99",
+    baseCoins: 4000,
+    bonusCoins: 600,
+    totalCoins: 4600,
+    recommended: false,
+  },
+  {
+    priceEur: "99.99",
+    baseCoins: 9000,
+    bonusCoins: 1500,
+    totalCoins: 10500,
+    recommended: false,
+  },
+] as const satisfies readonly FriemiCoinRechargePlan[];
 
 export const charmGiftCatalog = [
   {
@@ -58,7 +137,7 @@ export const charmGiftCatalog = [
     labels: { zh: "玫瑰", en: "Rose", fr: "Rose" },
     charmValue: 5,
     referenceRmb: 50,
-    coinCost: null,
+    coinCost: 5,
     category: "classic",
     availability: "standard",
     launchEnabled: true,
@@ -67,9 +146,9 @@ export const charmGiftCatalog = [
     id: "bouquet",
     emoji: "💐",
     labels: { zh: "花束", en: "Bouquet", fr: "Bouquet" },
-    charmValue: 10,
+    charmValue: 12,
     referenceRmb: 100,
-    coinCost: null,
+    coinCost: 10,
     category: "classic",
     availability: "standard",
     launchEnabled: true,
@@ -78,9 +157,9 @@ export const charmGiftCatalog = [
     id: "heart",
     emoji: "❤️",
     labels: { zh: "爱心", en: "Heart", fr: "Coeur" },
-    charmValue: 30,
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "classic",
     availability: "standard",
     launchEnabled: true,
@@ -89,9 +168,9 @@ export const charmGiftCatalog = [
     id: "diamond",
     emoji: "💎",
     labels: { zh: "钻石", en: "Diamond", fr: "Diamant" },
-    charmValue: 100,
+    charmValue: 180,
     referenceRmb: 1000,
-    coinCost: null,
+    coinCost: 100,
     category: "classic",
     availability: "standard",
     launchEnabled: true,
@@ -100,9 +179,9 @@ export const charmGiftCatalog = [
     id: "meal",
     emoji: "🧋",
     labels: { zh: "干饭", en: "Meal", fr: "Repas" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -111,9 +190,9 @@ export const charmGiftCatalog = [
     id: "board_game",
     emoji: "👑",
     labels: { zh: "桌游", en: "Board game", fr: "Jeu de societe" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -121,10 +200,10 @@ export const charmGiftCatalog = [
   {
     id: "werewolf_crystal",
     emoji: "🔮",
-    labels: { zh: "狼人杀", en: "Werewolf crystal", fr: "Loup-garou" },
-    charmValue: 30,
+    labels: { zh: "水晶球", en: "Crystal ball", fr: "Boule de cristal" },
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -132,10 +211,10 @@ export const charmGiftCatalog = [
   {
     id: "werewolf",
     emoji: "🐺",
-    labels: { zh: "狼人杀", en: "Werewolf", fr: "Loup-garou" },
-    charmValue: 30,
+    labels: { zh: "银色子弹", en: "Silver bullet", fr: "Balle d'argent" },
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -144,9 +223,9 @@ export const charmGiftCatalog = [
     id: "movie",
     emoji: "🍿",
     labels: { zh: "观影", en: "Movie", fr: "Cinema" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -155,9 +234,9 @@ export const charmGiftCatalog = [
     id: "music",
     emoji: "🎙️",
     labels: { zh: "音乐", en: "Music", fr: "Musique" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -166,9 +245,9 @@ export const charmGiftCatalog = [
     id: "growth",
     emoji: "📖",
     labels: { zh: "进步", en: "Growth", fr: "Progression" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -177,9 +256,9 @@ export const charmGiftCatalog = [
     id: "art",
     emoji: "🎨",
     labels: { zh: "艺术", en: "Art", fr: "Art" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -188,9 +267,9 @@ export const charmGiftCatalog = [
     id: "travel",
     emoji: "📷",
     labels: { zh: "旅行", en: "Travel", fr: "Voyage" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -199,9 +278,9 @@ export const charmGiftCatalog = [
     id: "sports",
     emoji: "🏅",
     labels: { zh: "运动", en: "Sports", fr: "Sport" },
-    charmValue: 20,
+    charmValue: 25,
     referenceRmb: 200,
-    coinCost: null,
+    coinCost: 20,
     category: "activity",
     availability: "standard",
     launchEnabled: true,
@@ -210,9 +289,9 @@ export const charmGiftCatalog = [
     id: "birthday_cake",
     emoji: "🎂",
     labels: { zh: "生日蛋糕", en: "Birthday cake", fr: "Gateau" },
-    charmValue: 50,
+    charmValue: 70,
     referenceRmb: 500,
-    coinCost: null,
+    coinCost: 50,
     category: "classic",
     availability: "standard",
     launchEnabled: true,
@@ -221,9 +300,9 @@ export const charmGiftCatalog = [
     id: "halloween",
     emoji: "🎃",
     labels: { zh: "万圣节", en: "Halloween", fr: "Halloween" },
-    charmValue: 30,
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "seasonal",
     availability: "seasonal",
     launchEnabled: true,
@@ -232,9 +311,9 @@ export const charmGiftCatalog = [
     id: "christmas",
     emoji: "🎄",
     labels: { zh: "圣诞", en: "Christmas", fr: "Noel" },
-    charmValue: 30,
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "seasonal",
     availability: "seasonal",
     launchEnabled: true,
@@ -243,9 +322,9 @@ export const charmGiftCatalog = [
     id: "spring_festival",
     emoji: "🧧",
     labels: { zh: "春节", en: "Spring Festival", fr: "Nouvel An lunaire" },
-    charmValue: 30,
+    charmValue: 40,
     referenceRmb: 300,
-    coinCost: null,
+    coinCost: 30,
     category: "seasonal",
     availability: "seasonal",
     launchEnabled: true,
@@ -254,9 +333,9 @@ export const charmGiftCatalog = [
     id: "fireworks",
     emoji: "🎆",
     labels: { zh: "烟花", en: "Fireworks", fr: "Feu d'artifice" },
-    charmValue: 50,
+    charmValue: 70,
     referenceRmb: 500,
-    coinCost: null,
+    coinCost: 50,
     category: "seasonal",
     availability: "seasonal",
     launchEnabled: true,
@@ -267,7 +346,7 @@ export const charmGiftCatalog = [
     labels: { zh: "鸡蛋", en: "Egg", fr: "Oeuf" },
     charmValue: -5,
     referenceRmb: -50,
-    coinCost: null,
+    coinCost: 5,
     category: "negative",
     availability: "disabled",
     launchEnabled: false,
@@ -278,7 +357,7 @@ export const charmGiftCatalog = [
     labels: { zh: "炸弹", en: "Bomb", fr: "Bombe" },
     charmValue: -20,
     referenceRmb: -200,
-    coinCost: null,
+    coinCost: 20,
     category: "negative",
     availability: "disabled",
     launchEnabled: false,
@@ -289,7 +368,7 @@ export const charmGiftCatalog = [
     labels: { zh: "警车", en: "Police car", fr: "Police" },
     charmValue: -100,
     referenceRmb: -1000,
-    coinCost: null,
+    coinCost: 100,
     category: "negative",
     availability: "disabled",
     launchEnabled: false,

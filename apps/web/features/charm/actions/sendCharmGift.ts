@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getCharmGiftDefinition } from "@/features/charm/charm";
 import {
   CharmGiftUnavailableError,
+  InsufficientFriemiCoinBalanceError,
   recordReceivedCharmGift,
 } from "@/features/charm/services/charmRewards";
 import { ensureCurrentUserProfile } from "@/lib/auth";
@@ -41,6 +42,7 @@ function getSendGiftCopy(locale: string) {
     return {
       cannotGiftSelf: "Vous ne pouvez pas vous offrir un cadeau.",
       failed: "Le cadeau n'a pas pu être envoyé.",
+      insufficientCoins: "Solde Friemi insuffisant.",
       invalidRequest: "Demande invalide.",
       targetUnavailable: "Ce profil n'est pas disponible.",
       unavailableGift: "Ce cadeau n'est pas disponible.",
@@ -51,6 +53,7 @@ function getSendGiftCopy(locale: string) {
     return {
       cannotGiftSelf: "You cannot send a gift to yourself.",
       failed: "Could not send the gift.",
+      insufficientCoins: "Not enough Friemi coins.",
       invalidRequest: "Invalid request.",
       targetUnavailable: "This profile is unavailable.",
       unavailableGift: "This gift is unavailable.",
@@ -60,6 +63,7 @@ function getSendGiftCopy(locale: string) {
   return {
     cannotGiftSelf: "不能给自己送礼物。",
     failed: "礼物没有送出。",
+    insufficientCoins: "Friemi 币不足。",
     invalidRequest: "请求无效。",
     targetUnavailable: "这个用户暂不可用。",
     unavailableGift: "这个礼物暂不可用。",
@@ -156,6 +160,13 @@ export async function sendCharmGiftAction(
       return {
         attemptId,
         formError: copy.unavailableGift,
+      };
+    }
+
+    if (error instanceof InsufficientFriemiCoinBalanceError) {
+      return {
+        attemptId,
+        formError: copy.insufficientCoins,
       };
     }
 

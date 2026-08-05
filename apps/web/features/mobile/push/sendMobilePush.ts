@@ -252,6 +252,12 @@ export async function sendMobilePushForNotification(notificationId: string) {
     select: {
       activity: {
         select: {
+          coManagers: {
+            select: {
+              managerProfileId: true,
+            },
+          },
+          organizerId: true,
           title: true,
         },
       },
@@ -328,6 +334,17 @@ export async function sendMobilePushForNotification(notificationId: string) {
     return { ok: true, sentCount: 0 };
   }
 
+  const actorActivityRole =
+    notification.actorId && notification.activity
+      ? notification.activity.organizerId === notification.actorId
+        ? "ORGANIZER"
+        : notification.activity.coManagers.some(
+              (coManager) =>
+                coManager.managerProfileId === notification.actorId,
+            )
+          ? "CO_MANAGER"
+          : null
+      : undefined;
   const accessToken = config ? await getFirebaseAccessToken(config) : null;
   const badgeCount = await getUnreadNotificationCount(notification.recipientId);
   let sentCount = 0;
@@ -336,6 +353,7 @@ export async function sendMobilePushForNotification(notificationId: string) {
     const locale = normalizePushLocale(device.locale);
     const copy = getNotificationCopy({
       activityTitle: notification.activity?.title ?? null,
+      actorActivityRole,
       actorName:
         notification.actor?.nickname ?? notification.actorDisplayName ?? null,
       giftText: notification.charmGiftEvent

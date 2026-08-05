@@ -80,13 +80,13 @@ function getCopy(locale: string) {
   };
 }
 
-async function ensureCanManageActivityCheckIns({
+async function getActivityCheckInManagementScope({
   activityId,
   managerProfileId,
 }: {
   activityId: string;
   managerProfileId: string;
-}) {
+}): Promise<{ canManage: boolean; exemptProfileIds: string[] }> {
   const activity = await prisma.activity.findUnique({
     where: {
       id: activityId,
@@ -94,22 +94,38 @@ async function ensureCanManageActivityCheckIns({
     select: {
       organizerId: true,
       coManagers: {
-        where: {
-          managerProfileId,
-        },
         select: {
-          id: true,
+          managerProfileId: true,
         },
-        take: 1,
       },
     },
   });
 
-  return Boolean(
-    activity &&
-      (activity.organizerId === managerProfileId ||
-        activity.coManagers.length > 0),
-  );
+  if (!activity) {
+    return {
+      canManage: false,
+      exemptProfileIds: [],
+    };
+  }
+
+  const exemptProfileIds = [
+    activity.organizerId,
+    ...activity.coManagers.map((coManager) => coManager.managerProfileId),
+  ];
+
+  return {
+    canManage:
+      activity.organizerId === managerProfileId ||
+      exemptProfileIds.includes(managerProfileId),
+    exemptProfileIds,
+  };
+}
+
+function isCheckInExemptProfile(
+  userProfileId: string,
+  exemptProfileIds: string[],
+) {
+  return exemptProfileIds.includes(userProfileId);
 }
 
 export async function reviewActivityCheckInAction(
@@ -157,13 +173,9 @@ export async function reviewActivityCheckInAction(
             select: {
               organizerId: true,
               coManagers: {
-                where: {
-                  managerProfileId: profile.id,
-                },
                 select: {
-                  id: true,
+                  managerProfileId: true,
                 },
-                take: 1,
               },
             },
           },
@@ -179,10 +191,25 @@ export async function reviewActivityCheckInAction(
 
       const canManage =
         participation.activity.organizerId === profile.id ||
-        participation.activity.coManagers.length > 0;
+        participation.activity.coManagers.some(
+          (coManager) => coManager.managerProfileId === profile.id,
+        );
 
       if (!canManage) {
         return { ok: false as const, reason: "forbidden" as const };
+      }
+
+      const exemptProfileIds = [
+        participation.activity.organizerId,
+        ...participation.activity.coManagers.map(
+          (coManager) => coManager.managerProfileId,
+        ),
+      ];
+
+      if (
+        isCheckInExemptProfile(participation.userProfileId, exemptProfileIds)
+      ) {
+        return { ok: false as const, reason: "missing" as const };
       }
 
       if (!["JOINED", "APPROVED"].includes(participation.status)) {
@@ -193,6 +220,8 @@ export async function reviewActivityCheckInAction(
         if (!participation.checkInRequestedAt && !participation.checkedInAt) {
           return { ok: false as const, reason: "missing" as const };
         }
+
+        const wasAlreadyCheckedIn = Boolean(participation.checkedInAt);
 
         await tx.activityParticipant.update({
           where: {
@@ -217,10 +246,10 @@ export async function reviewActivityCheckInAction(
           type: "NO_SHOW",
         });
 
-        if (participation.userProfileId !== profile.id) {
+        if (!wasAlreadyCheckedIn && participation.userProfileId !== profile.id) {
           await createNotification(tx, {
-            actorId: profile.id,
             activityId: result.data.activityId,
+            dedupeIncludingRead: true,
             recipientId: participation.userProfileId,
             type: "ACTIVITY_CHECK_IN",
           });
@@ -300,12 +329,12 @@ export async function confirmAllPendingActivityCheckInsAction(
   }
 
   try {
-    const canManage = await ensureCanManageActivityCheckIns({
+    const managementScope = await getActivityCheckInManagementScope({
       activityId: result.data.activityId,
       managerProfileId: profile.id,
     });
 
-    if (!canManage) {
+    if (!managementScope.canManage) {
       return { formError: copy.forbidden };
     }
 
@@ -318,11 +347,15 @@ export async function confirmAllPendingActivityCheckInsAction(
             not: null,
           },
           checkedInAt: null,
+          userProfileId: {
+            notIn: managementScope.exemptProfileIds,
+          },
           status: {
             in: ["JOINED", "APPROVED"],
           },
         },
         select: {
+          checkedInAt: true,
           id: true,
           userProfileId: true,
         },
@@ -366,8 +399,8 @@ export async function confirmAllPendingActivityCheckInsAction(
         pendingParticipants
           .filter((participant) => participant.userProfileId !== profile.id)
           .map((participant) => ({
-            actorId: profile.id,
             activityId: result.data.activityId,
+            dedupeIncludingRead: true,
             recipientId: participant.userProfileId,
             type: "ACTIVITY_CHECK_IN",
           })),
@@ -425,12 +458,12 @@ export async function confirmSelectedActivityCheckInsAction(
   }
 
   try {
-    const canManage = await ensureCanManageActivityCheckIns({
+    const managementScope = await getActivityCheckInManagementScope({
       activityId: result.data.activityId,
       managerProfileId: profile.id,
     });
 
-    if (!canManage) {
+    if (!managementScope.canManage) {
       return { formError: copy.forbidden };
     }
 
@@ -440,11 +473,15 @@ export async function confirmSelectedActivityCheckInsAction(
       const participants = await tx.activityParticipant.findMany({
         where: {
           activityId: result.data.activityId,
+          userProfileId: {
+            notIn: managementScope.exemptProfileIds,
+          },
           status: {
             in: ["JOINED", "APPROVED"],
           },
         },
         select: {
+          checkedInAt: true,
           id: true,
           userProfileId: true,
         },
@@ -452,6 +489,9 @@ export async function confirmSelectedActivityCheckInsAction(
       const participantIds = participants.map((participant) => participant.id);
       const selectedParticipants = participants.filter((participant) =>
         selectedIds.includes(participant.id),
+      );
+      const newlyConfirmedParticipants = selectedParticipants.filter(
+        (participant) => !participant.checkedInAt,
       );
       const cancelledParticipants = participants.filter(
         (participant) => !selectedIds.includes(participant.id),
@@ -490,11 +530,11 @@ export async function confirmSelectedActivityCheckInsAction(
 
         await createNotifications(
           tx,
-          selectedParticipants
+          newlyConfirmedParticipants
             .filter((participant) => participant.userProfileId !== profile.id)
             .map((participant) => ({
-              actorId: profile.id,
               activityId: result.data.activityId,
+              dedupeIncludingRead: true,
               recipientId: participant.userProfileId,
               type: "ACTIVITY_CHECK_IN",
             })),

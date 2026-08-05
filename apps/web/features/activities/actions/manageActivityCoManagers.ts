@@ -7,10 +7,7 @@ import { ensureCurrentUserProfile } from "@/lib/auth";
 import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/findFriendRequestTarget";
 import { prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
-import {
-  areProfilesMutualFollows,
-  maxActivityCoManagers,
-} from "../utils/activityManagement";
+import { maxActivityCoManagers } from "../utils/activityManagement";
 import { getActivityDetailPath } from "../utils/activityRoutes";
 
 const coManagerActionSchema = z.object({
@@ -42,7 +39,7 @@ type Copy = {
   addSuccess: string;
   friendCodeInvalid: string;
   friendCodeNotFound: string;
-  friendshipRequired: string;
+  participantRequired: string;
   limitReached: string;
   missing: string;
   noPermission: string;
@@ -60,8 +57,7 @@ function getCopy(locale: string): Copy {
       addSuccess: "Gestionnaire ajouté.",
       friendCodeInvalid: "Entrez un ID Friemi à 6 chiffres.",
       friendCodeNotFound: "Aucun profil actif trouvé avec cet ID.",
-      friendshipRequired:
-        "Vous pouvez choisir une personne qui vous suit aussi.",
+      participantRequired: "Choisissez une personne déjà inscrite.",
       limitReached: "Chaque plan peut avoir au maximum 3 gestionnaires.",
       missing: "Ce plan n'existe plus.",
       noPermission: "Seul l'organisateur peut modifier les gestionnaires.",
@@ -80,7 +76,7 @@ function getCopy(locale: string): Copy {
       addSuccess: "Manager added.",
       friendCodeInvalid: "Enter a 6-digit Friemi ID.",
       friendCodeNotFound: "No active profile found with that ID.",
-      friendshipRequired: "You can only choose someone who follows you back.",
+      participantRequired: "Choose someone already in this plan.",
       limitReached: "Each plan can have up to 3 managers.",
       missing: "This plan no longer exists.",
       noPermission: "Only the organizer can edit managers.",
@@ -97,7 +93,7 @@ function getCopy(locale: string): Copy {
     addSuccess: "管理人已添加。",
     friendCodeInvalid: "请输入 6 位个人码。",
     friendCodeNotFound: "没有找到这个个人码对应的活跃用户。",
-    friendshipRequired: "只能选择与你互关的人作为管理人。",
+    participantRequired: "只能选择已参局的人作为管理人。",
     limitReached: "每个聚吧最多只能设置 3 位管理人。",
     missing: "聚吧不存在或已更新。",
     noPermission: "只有发起人可以修改管理人。",
@@ -181,6 +177,16 @@ export async function addActivityCoManagerAction(
                 managerProfileId: true,
               },
             },
+            participants: {
+              where: {
+                status: {
+                  in: ["JOINED", "APPROVED"],
+                },
+              },
+              select: {
+                userProfileId: true,
+              },
+            },
           },
         });
 
@@ -242,16 +248,14 @@ export async function addActivityCoManagerAction(
           };
         }
 
-        const isMutualFollow = await areProfilesMutualFollows(
-          profile.id,
-          manager.id,
-          tx,
+        const isParticipant = activity.participants.some(
+          (participant) => participant.userProfileId === manager.id,
         );
 
-        if (!isMutualFollow) {
+        if (!isParticipant) {
           return {
             ok: false,
-            error: copy.friendshipRequired,
+            error: copy.participantRequired,
           };
         }
 

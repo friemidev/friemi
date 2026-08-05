@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { ensureUserProfileFriendCode } from "./user-profile-identity";
-import { grantWelcomeFriemiCheck } from "@/features/charm/services/charmRewards";
+import { grantStarterFriemiWallet } from "@/features/charm/services/charmRewards";
 import { linkGuestParticipationsForProfile } from "@/features/guest-participants/services/linkGuestParticipations";
 
 type ClerkEmailAddressLike = {
@@ -87,9 +87,9 @@ function getDisplayName(user: ClerkUserLike) {
 
 async function grantWelcomeCheckForNewProfile(profileId: string) {
   try {
-    await grantWelcomeFriemiCheck(profileId);
+    await grantStarterFriemiWallet(profileId);
   } catch (error) {
-    console.error("Failed to grant welcome Friemi check", error);
+    console.error("Failed to grant starter Friemi wallet", error);
   }
 }
 

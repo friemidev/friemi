@@ -134,12 +134,35 @@ function getNotificationText(
     return { title: copy.title, body: copy.body(activityTitle, actorName) };
   }
 
+  if (notification.type === "ACTIVITY_CHECK_IN") {
+    const isCheckInRequest = Boolean(actorName) && !notification.actorActivityRole;
+
+    if (isCheckInRequest) {
+      return locale === "fr"
+        ? {
+            title: "Pointage a confirmer",
+            body: `${actorName} a envoye son pointage pour « ${activityTitle} ».`,
+          }
+        : locale === "en"
+          ? {
+              title: "Check-in waiting",
+              body: `${actorName} checked in for "${activityTitle}".`,
+            }
+          : {
+              title: "签到待确认",
+              body: `${actorName}已提交「${activityTitle}」的签到。`,
+            };
+    }
+
+    const copy = t.types.ACTIVITY_CHECK_IN;
+    return { title: copy.title, body: copy.body(activityTitle) };
+  }
+
   if (
     notification.type === "PARTICIPATION_PENDING" ||
     notification.type === "PARTICIPATION_CONFIRMED" ||
     notification.type === "PARTICIPATION_CANCELLED" ||
     notification.type === "PARTICIPATION_APPROVED" ||
-    notification.type === "ACTIVITY_CHECK_IN" ||
     notification.type === "ACTIVITY_COMMENTED" ||
     notification.type === "COMMENT_REPLY" ||
     notification.type === "DIRECT_MESSAGE" ||

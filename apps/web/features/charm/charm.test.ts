@@ -7,40 +7,50 @@ import {
   charmGiftCatalog,
   getActiveCharmGifts,
   getCharmGiftDefinition,
+  getFriemiCheckCoinValue,
   getCharmLevel,
   getCharmLevelDescription,
   getCharmLevelLabel,
   getCharmProgress,
+  initialFriemiCoinBalanceAmount,
   normalizeGiftQuantity,
   successfulActivityFragmentReward,
 } from "./charm";
 
 test("active charm gifts match the launch gift catalog values", () => {
   assert.equal(getCharmGiftDefinition("rose")?.charmValue, 5);
-  assert.equal(getCharmGiftDefinition("bouquet")?.charmValue, 10);
-  assert.equal(getCharmGiftDefinition("heart")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("diamond")?.charmValue, 100);
-  assert.equal(getCharmGiftDefinition("meal")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("board_game")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("werewolf_crystal")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("werewolf")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("movie")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("music")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("growth")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("art")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("travel")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("sports")?.charmValue, 20);
-  assert.equal(getCharmGiftDefinition("birthday_cake")?.charmValue, 50);
-  assert.equal(getCharmGiftDefinition("halloween")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("christmas")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("spring_festival")?.charmValue, 30);
-  assert.equal(getCharmGiftDefinition("fireworks")?.charmValue, 50);
+  assert.equal(getCharmGiftDefinition("rose")?.coinCost, 5);
+  assert.equal(getCharmGiftDefinition("bouquet")?.charmValue, 12);
+  assert.equal(getCharmGiftDefinition("bouquet")?.coinCost, 10);
+  assert.equal(getCharmGiftDefinition("heart")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("heart")?.coinCost, 30);
+  assert.equal(getCharmGiftDefinition("diamond")?.charmValue, 180);
+  assert.equal(getCharmGiftDefinition("diamond")?.coinCost, 100);
+  assert.equal(getCharmGiftDefinition("meal")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("board_game")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("werewolf_crystal")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("werewolf")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("movie")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("music")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("growth")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("art")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("travel")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("sports")?.charmValue, 25);
+  assert.equal(getCharmGiftDefinition("birthday_cake")?.charmValue, 70);
+  assert.equal(getCharmGiftDefinition("birthday_cake")?.coinCost, 50);
+  assert.equal(getCharmGiftDefinition("halloween")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("christmas")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("spring_festival")?.charmValue, 40);
+  assert.equal(getCharmGiftDefinition("fireworks")?.charmValue, 70);
 });
 
 test("negative gifts stay in the catalog but are disabled for launch", () => {
   assert.equal(getCharmGiftDefinition("egg")?.launchEnabled, false);
+  assert.equal(getCharmGiftDefinition("egg")?.coinCost, 5);
   assert.equal(getCharmGiftDefinition("bomb")?.launchEnabled, false);
+  assert.equal(getCharmGiftDefinition("bomb")?.coinCost, 20);
   assert.equal(getCharmGiftDefinition("police_car")?.launchEnabled, false);
+  assert.equal(getCharmGiftDefinition("police_car")?.coinCost, 100);
   assert.ok(
     !getActiveCharmGifts().some((gift) => gift.category === "negative"),
   );
@@ -71,7 +81,7 @@ test("charm calculation only uses received gifts", () => {
       { giftId: "diamond" },
       { giftId: "birthday_cake" },
     ]),
-    160,
+    260,
   );
 });
 
@@ -108,6 +118,13 @@ test("blind box fragment constants match the MVP rule", () => {
   assert.equal(successfulActivityFragmentReward, 1);
   assert.equal(blindBoxFragmentExchangeCount, 10);
   assert.ok(charmGiftCatalog.length >= 19);
+});
+
+test("welcome Friemi check redeems to Friemi coins", () => {
+  assert.equal(initialFriemiCoinBalanceAmount, 100);
+  assert.equal(getFriemiCheckCoinValue("WELCOME"), 500);
+  assert.equal(getFriemiCheckCoinValue("WELCOME", 300), 300);
+  assert.equal(getFriemiCheckCoinValue("BLIND_BOX"), 0);
 });
 
 test("blind box fragment redemption requires ten fragments", () => {
