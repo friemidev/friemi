@@ -1286,6 +1286,16 @@ function getTimelineDateParts(value: string, locale: string) {
   };
 }
 
+function truncateProfileDisplayName(value: string, maxLength = 15) {
+  const characters = Array.from(value.trim());
+
+  if (characters.length <= maxLength) {
+    return value;
+  }
+
+  return `${characters.slice(0, maxLength).join("")}...`;
+}
+
 function PublicMobileProfileActions({
   isAuthenticated,
   locale,
@@ -1720,6 +1730,7 @@ function PublicMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
+  const displayNickname = truncateProfileDisplayName(profile.nickname);
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
@@ -1758,25 +1769,43 @@ function PublicMobileProfileHome({
       </header>
 
       <section className="mt-6">
-        <div className="grid grid-cols-[4.25rem_minmax(0,1fr)_auto] items-start gap-3">
+        <div className="grid grid-cols-[3.25rem_minmax(0,1fr)] items-start gap-2.5">
           <ProfileAvatar
             avatarUrl={profile.avatarUrl}
             initial={profileInitial}
             isOnline={profile.isOnline}
             name={profile.nickname}
             presenceDisplayStatus={profile.presenceDisplayStatus}
+            size="sm"
           />
-          <div className="min-w-0 pt-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-lg font-black leading-tight text-[#111210]">
-                {profile.nickname}
-              </h1>
+          <div className="min-w-0 pt-0.5">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center">
+                  <h1
+                    className="min-w-0 max-w-full truncate text-lg font-black leading-tight text-[#111210]"
+                    title={profile.nickname}
+                  >
+                    {displayNickname}
+                  </h1>
+                </div>
+              </div>
+              <div className="shrink-0 pt-0.5">
+                <PublicMobileProfileActions
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  profileId={profile.id}
+                  relationship={dashboard.viewerRelationship}
+                />
+              </div>
+            </div>
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
               ) : null}
               <TrustScoreBadge locale={locale} score={dashboard.trustScore} />
               <ProfileAchievementBadgeStrip
-                className="min-w-0 shrink-0"
+                className="min-w-0"
                 items={publicAchievements}
                 limit={3}
                 locale={locale}
@@ -1787,14 +1816,6 @@ function PublicMobileProfileHome({
                 @{profile.friendCode}
               </p>
             ) : null}
-          </div>
-          <div className="grid justify-items-end gap-2 pt-1">
-            <PublicMobileProfileActions
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              profileId={profile.id}
-              relationship={dashboard.viewerRelationship}
-            />
           </div>
         </div>
 
@@ -2377,7 +2398,7 @@ function MobileProfileAvatarEditor({
           isOnline={isOnline}
           name={name}
           presenceDisplayStatus={presenceDisplayStatus}
-          size="xl"
+          size="lg"
         />
       </button>
 
