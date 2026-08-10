@@ -479,6 +479,7 @@ export default async function ActivitiesPage({
                     }
                     locale={locale}
                     mobileDense
+                    mobileDetailSheet
                     showFavoriteButton
                     showPrimaryAction={false}
                     sourceSurface="activity_list"

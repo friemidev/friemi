@@ -6,9 +6,10 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFormStatus } from "react-dom";
-import { Gift, Sparkles, X } from "lucide-react";
+import { AlertCircle, Coins, Gift, Sparkles, X } from "lucide-react";
 import { getActiveCharmGifts, getCharmGiftLabel } from "@/features/charm/charm";
 import {
+  getViewerFriemiCoinBalanceClientAction,
   sendCharmGiftAction,
   type SendCharmGiftState,
 } from "@/features/charm/actions/sendCharmGift";
@@ -46,9 +47,14 @@ function createGiftAttemptId() {
 function getGiftDialogCopy(locale: string) {
   if (locale === "fr") {
     return {
+      balanceLabel: "Solde",
+      balanceLoading: "Chargement...",
       cancel: "Annuler",
+      charmUnit: "charme",
       close: "Fermer",
       currency: "Friemi Coins",
+      failureTitle: "Cadeau non envoyé",
+      requiredLabel: "Requis",
       send: "Envoyer",
       sendGift: "Cadeau",
       sending: "Envoi...",
@@ -60,9 +66,14 @@ function getGiftDialogCopy(locale: string) {
 
   if (locale === "en") {
     return {
+      balanceLabel: "Balance",
+      balanceLoading: "Loading...",
       cancel: "Cancel",
+      charmUnit: "charm",
       close: "Close",
       currency: "Friemi Coins",
+      failureTitle: "Gift not sent",
+      requiredLabel: "Required",
       send: "Send",
       sendGift: "Gift",
       sending: "Sending...",
@@ -73,9 +84,14 @@ function getGiftDialogCopy(locale: string) {
   }
 
   return {
+    balanceLabel: "余额",
+    balanceLoading: "加载中...",
     cancel: "取消",
+    charmUnit: "魅力值",
     close: "关闭",
     currency: "Friemi 币",
+    failureTitle: "礼物没有送出",
+    requiredLabel: "需要",
     send: "送出",
     sendGift: "送礼",
     sending: "送出中...",
@@ -122,6 +138,8 @@ export function CharmGiftDialog({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [attemptId, setAttemptId] = useState("");
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [selectedGiftId, setSelectedGiftId] = useState(gifts[0]?.id ?? "");
   const [state, formAction] = useActionState(
     sendCharmGiftAction,
@@ -130,6 +148,11 @@ export function CharmGiftDialog({
   const router = useRouter();
   const giftRedirectPath = redirectPath ?? `/profile/${recipientProfileId}`;
   const formError = state.attemptId === attemptId ? state.formError : undefined;
+  const stateBalance =
+    state.attemptId === attemptId && typeof state.balance === "number"
+      ? state.balance
+      : null;
+  const visibleCoinBalance = stateBalance ?? coinBalance;
   const triggerLabel = triggerAriaLabel ?? copy.sendGift;
   const triggerInner = triggerContent ?? (
     <>
@@ -143,14 +166,64 @@ export function CharmGiftDialog({
   }, []);
 
   useEffect(() => {
+    if (!open || !isAuthenticated) {
+      return;
+    }
+
+    let cancelled = false;
+    setBalanceLoading(true);
+
+    getViewerFriemiCoinBalanceClientAction(locale, giftRedirectPath)
+      .then((result) => {
+        if (!cancelled && result.ok) {
+          setCoinBalance(result.balance);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCoinBalance(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBalanceLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [giftRedirectPath, isAuthenticated, locale, open]);
+
+  useEffect(() => {
     if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
       return;
     }
 
+    if (typeof state.balance === "number") {
+      setCoinBalance(state.balance);
+    }
     setOpen(false);
     setAttemptId("");
     router.refresh();
-  }, [attemptId, router, state.attemptId, state.eventId, state.ok]);
+  }, [
+    attemptId,
+    router,
+    state.attemptId,
+    state.balance,
+    state.eventId,
+    state.ok,
+  ]);
+
+  useEffect(() => {
+    if (
+      state.attemptId === attemptId &&
+      state.formError &&
+      typeof state.balance === "number"
+    ) {
+      setCoinBalance(state.balance);
+    }
+  }, [attemptId, state.attemptId, state.balance, state.formError]);
 
   useEffect(() => {
     if (!open) {
@@ -235,6 +308,15 @@ export function CharmGiftDialog({
                     <p className="mt-2 text-[11px] font-semibold leading-4 text-[#7A8276]">
                       {copy.testMode}
                     </p>
+                    <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-[#D8E4C9]">
+                      <Coins className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">
+                        {copy.balanceLabel}:{" "}
+                        {balanceLoading && visibleCoinBalance === null
+                          ? copy.balanceLoading
+                          : `${visibleCoinBalance ?? "-"} ${copy.currency}`}
+                      </span>
+                    </p>
                   </div>
                   <button
                     aria-label={copy.close}
@@ -303,7 +385,9 @@ export function CharmGiftDialog({
                             <span className="max-w-full truncate">
                               {gift.coinCost ?? "-"} {copy.currency}
                             </span>
-                            <span>+{gift.charmValue}</span>
+                            <span>
+                              +{gift.charmValue} {copy.charmUnit}
+                            </span>
                           </span>
                         </button>
                       );
@@ -311,9 +395,22 @@ export function CharmGiftDialog({
                   </div>
 
                   {formError ? (
-                    <p className="text-xs font-bold text-[#9A2135]">
-                      {formError}
-                    </p>
+                    <div
+                      className="flex items-start gap-2 rounded-[1rem] bg-[#FFF0F3] px-3 py-2.5 text-[#9A2135] ring-1 ring-[#F5C5D7]"
+                      role="alert"
+                    >
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div className="min-w-0 text-xs font-bold leading-5">
+                        <p className="font-black">{copy.failureTitle}</p>
+                        <p>{formError}</p>
+                        {typeof state.required === "number" ? (
+                          <p className="mt-0.5 text-[#9A2135]/78">
+                            {copy.requiredLabel}: {state.required}{" "}
+                            {copy.currency}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
 
                   <div className="flex items-center justify-end gap-2">

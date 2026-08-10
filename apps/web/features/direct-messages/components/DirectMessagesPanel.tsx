@@ -123,6 +123,9 @@ function ConversationListItem({
     ? `${isMine ? t.youPrefix : ""}${lastMessage.body.trim() || t.imageMessage}`
     : t.lastMessageEmpty;
   const time = lastMessage?.createdAt ?? conversation.createdAt;
+  const showPublicNickname =
+    Boolean(conversation.peer.remarkName) &&
+    conversation.peer.publicNickname !== conversation.peer.nickname;
 
   return (
     <article
@@ -169,6 +172,11 @@ function ConversationListItem({
               </span>
             ) : null}
           </span>
+          {showPublicNickname ? (
+            <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+              {conversation.peer.publicNickname}
+            </span>
+          ) : null}
           <span
             className={cn(
               "mt-1 block truncate text-xs leading-5",
@@ -344,9 +352,17 @@ export function MessageThread({
             <ArrowLeft className="h-5 w-5" />
           </MessageThreadBackButton>
         </div>
-        <h1 className="min-w-0 truncate text-center text-lg font-semibold text-ink">
-          {conversation.peer.nickname}
-        </h1>
+        <div className="min-w-0 text-center">
+          <h1 className="truncate text-lg font-semibold leading-tight text-ink">
+            {conversation.peer.nickname}
+          </h1>
+          {conversation.peer.remarkName &&
+          conversation.peer.publicNickname !== conversation.peer.nickname ? (
+            <p className="mt-0.5 truncate text-[11px] font-semibold leading-none text-[#6C746A]">
+              {conversation.peer.publicNickname}
+            </p>
+          ) : null}
+        </div>
         <details className="group relative justify-self-end">
           <summary
             aria-label={t.viewProfile}

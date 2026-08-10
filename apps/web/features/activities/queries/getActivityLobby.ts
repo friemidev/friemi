@@ -20,6 +20,10 @@ import {
   getLegacyPublicActivityInfoWhere,
   getVisibleActivityWhere,
 } from "./getActivities";
+import {
+  getActivityFloatingNow,
+  getActivityTimeState,
+} from "../utils/activityDisplay";
 import { applyOrganizerParticipationDefaults } from "./applyOrganizerParticipationDefaults";
 import { buildPrivateActivityFriendAccessWhere } from "../utils/activityShareAccess";
 import type { Prisma } from "@prisma/client";
@@ -32,6 +36,8 @@ const activityLobbySwipeLimit = 24;
 const activityLobbySwipeExcludeLimit = 160;
 const activityLobbySwipePublicEventRatio = 3;
 const activityLobbySwipeTeamRatio = 1;
+const mobileHomeTrendingTeamLimit = 8;
+const mobileHomeTrendingTeamCandidateLimit = 48;
 const visibleLobbyParticipationStatuses = [
   "JOINED",
   "APPROVED",
@@ -528,13 +534,7 @@ function getLobbyActivityKey(activity: ActivityCardViewModel) {
 }
 
 function isEndedLobbyActivity(activity: ActivityCardViewModel) {
-  if (activity.status === "ENDED" || activity.status === "CANCELLED") {
-    return true;
-  }
-
-  const endBoundary = activity.endAt ?? activity.startAt;
-
-  return new Date(endBoundary).getTime() < Date.now();
+  return getActivityTimeState(activity) === "ENDED";
 }
 
 function compareLobbyActivityTime(
@@ -556,7 +556,160 @@ function compareLobbyActivityTime(
     : leftTime - rightTime || left.id.localeCompare(right.id);
 }
 
-function getArchivedLobbyActivityWhere(now: Date): Prisma.ActivityWhereInput {
+function getMobileHomeTrendingFreshnessScore(
+  activity: ActivityCardViewModel,
+  now: Date,
+) {
+  const timeState = getActivityTimeState(activity, now);
+
+  if (timeState === "ENDED") {
+    return -1000;
+  }
+
+  if (timeState === "ONGOING") {
+    return 28;
+  }
+
+  const hoursUntilStart =
+    (new Date(activity.startAt).getTime() - now.getTime()) / (60 * 60 * 1000);
+
+  if (hoursUntilStart <= 24) {
+    return 22;
+  }
+
+  if (hoursUntilStart <= 72) {
+    return 14;
+  }
+
+  if (hoursUntilStart <= 168) {
+    return 8;
+  }
+
+  return 2;
+}
+
+export function getMobileHomeTrendingTeamScore(
+  activity: ActivityCardViewModel,
+  now = getActivityFloatingNow(),
+) {
+  return (
+    activity.participantCount * 120 +
+    activity.favoriteCount * 24 +
+    (activity.friendSignal?.count ?? 0) * 40 +
+    getMobileHomeTrendingFreshnessScore(activity, now)
+  );
+}
+
+export function sortMobileHomeTrendingTeamActivities(
+  activities: ActivityCardViewModel[],
+  now = getActivityFloatingNow(),
+) {
+  return activities
+    .filter(isJoinableTeamCard)
+    .sort((left, right) => {
+      const scoreDiff =
+        getMobileHomeTrendingTeamScore(right, now) -
+        getMobileHomeTrendingTeamScore(left, now);
+
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+
+      return compareLobbyActivityTime(left, right);
+    });
+}
+
+function getMobileHomeTrendingTeamLimit(limit?: number) {
+  return Math.min(
+    Math.max(Math.floor(limit ?? mobileHomeTrendingTeamLimit), 1),
+    mobileHomeTrendingTeamLimit,
+  );
+}
+
+export async function getMobileHomeTrendingTeamActivities(
+  viewerProfileId?: string | null,
+  options: { limit?: number } = {},
+) {
+  const limit = getMobileHomeTrendingTeamLimit(options.limit);
+
+  if (!viewerProfileId) {
+    return getCachedAnonymousMobileHomeTrendingTeamActivities(limit);
+  }
+
+  return getMobileHomeTrendingTeamActivitiesUncached(viewerProfileId, {
+    limit,
+  });
+}
+
+async function getMobileHomeTrendingTeamActivitiesUncached(
+  viewerProfileId?: string | null,
+  options: { limit?: number } = {},
+) {
+  const now = getActivityFloatingNow();
+  const limit = getMobileHomeTrendingTeamLimit(options.limit);
+  const activityRows = await prisma.activity.findMany({
+    where: {
+      AND: [
+        getVisibleActivityWhere({
+          includeEnded: false,
+          includePast: false,
+          visibility: null,
+          now,
+        }),
+        { visibility: "PUBLIC" },
+        strictTeamCardWhere,
+      ],
+    },
+    orderBy: [
+      {
+        participants: {
+          _count: "desc",
+        },
+      },
+      {
+        favorites: {
+          _count: "desc",
+        },
+      },
+      { startAt: "asc" },
+      { id: "asc" },
+    ],
+    take: mobileHomeTrendingTeamCandidateLimit,
+    select: activityCardSelect,
+  });
+  const teamCards = activityRows.map(getActivityCardViewModel);
+  const decoratedTeamCards = viewerProfileId
+    ? await decorateLobbyActivities(
+        teamCards,
+        viewerProfileId,
+        await getViewerFollowedProfileIds(viewerProfileId),
+      )
+    : await applyOrganizerParticipationDefaults(teamCards);
+
+  return sortMobileHomeTrendingTeamActivities(decoratedTeamCards, now).slice(
+    0,
+    limit,
+  );
+}
+
+const getCachedAnonymousMobileHomeTrendingTeamActivities = unstable_cache(
+  async (limit: number) =>
+    getMobileHomeTrendingTeamActivitiesUncached(null, { limit }),
+  ["anonymous-mobile-home-trending-team-activities-v1"],
+  { revalidate: 60, tags: [OPEN_LOBBY_ACTIVITIES_TAG] },
+);
+
+function getActivityFloatingDayStart(now = getActivityFloatingNow()) {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+}
+
+function getArchivedLobbyActivityWhere(
+  now = getActivityFloatingNow(),
+): Prisma.ActivityWhereInput {
+  const todayStart = getActivityFloatingDayStart(now);
+
   return {
     OR: [
       {
@@ -574,7 +727,7 @@ function getArchivedLobbyActivityWhere(now: Date): Prisma.ActivityWhereInput {
           },
           {
             startAt: {
-              lt: now,
+              lt: todayStart,
             },
           },
         ],
@@ -661,18 +814,18 @@ async function getLobbyQueryContext(
   mutualFollowIds: string[],
   followedProfileIds: string[] = mutualFollowIds,
 ): Promise<ActivityLobbyQueryContext> {
-  const now = new Date();
+  const activityNow = getActivityFloatingNow();
   const visibleWhere = getVisibleActivityWhere({
     includeEnded: true,
     includePast: true,
     visibility: null,
-    now,
+    now: activityNow,
   });
   const activeVisibleWhere = getVisibleActivityWhere({
     includeEnded: false,
     includePast: false,
     visibility: null,
-    now,
+    now: activityNow,
   });
   const teamCardWhere = strictTeamCardWhere;
   const ownTeamCardWhere = baseTeamCardWhere;
@@ -714,7 +867,7 @@ async function getLobbyQueryContext(
   });
   const accessibleWhere = getAccessibleWhere(visibleWhere);
   const accessibleActiveWhere = getAccessibleWhere(activeVisibleWhere);
-  const archivedWhere = getArchivedLobbyActivityWhere(now);
+  const archivedWhere = getArchivedLobbyActivityWhere(activityNow);
 
   return {
     accessibleActiveWhere,
@@ -1256,7 +1409,7 @@ export async function getActivityLobby(
 }
 
 async function getActivityLobbyPreviewUncached(category?: ActivityCategory) {
-  const now = new Date();
+  const now = getActivityFloatingNow();
   const categoryWhere: Prisma.ActivityWhereInput = category ? { category } : {};
   const publicTeamWhere: Prisma.ActivityWhereInput = {
     AND: [

@@ -6,6 +6,7 @@ import {
   useActionState,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -42,6 +43,8 @@ import { WerewolfQrCode } from "@/features/game-tools/components/WerewolfQrCode"
 import {
   defaultWerewolfAtmosphere,
   getWerewolfAtmosphereById,
+  getWerewolfRoleCardImage,
+  getWerewolfSeatBackImage,
   werewolfAtmospheres,
   werewolfUiAssets,
   type WerewolfAtmosphereId,
@@ -131,6 +134,14 @@ type WerewolfRoomView = WerewolfRoomOverviewProps["room"];
 const LOCAL_MUTATION_SYNC_GUARD_MS = 1800;
 const WEREWOLF_ROOM_BROADCAST_CHANNEL = "friemi:werewolf-room-sync";
 const WEREWOLF_ATMOSPHERE_STORAGE_KEY = "friemi:werewolf:atmosphere";
+const coreWerewolfRoleKeys = [
+  "hunter",
+  "idiot",
+  "seer",
+  "villager",
+  "werewolf",
+  "witch",
+] as const;
 
 type WerewolfRoomSyncPayload = {
   room?: WerewolfRoomView;
@@ -178,6 +189,32 @@ function getWerewolfSyncIntervalMs(status: string) {
   }
 
   return baseIntervalMs;
+}
+
+function getWerewolfRoomPreloadAssets({
+  atmosphereSrc,
+  locale,
+}: {
+  atmosphereSrc: string;
+  locale: string;
+}) {
+  return Array.from(
+    new Set([
+      atmosphereSrc,
+      "/game-tools/werewolf/werewolf.jpeg",
+      werewolfUiAssets.seatJudge,
+      werewolfUiAssets.seatPlayerDead,
+      werewolfUiAssets.seatPlayerEmpty,
+      werewolfUiAssets.seatPlayerOccupied,
+      werewolfUiAssets.seatPlayerReady,
+      ...Array.from({ length: 12 }, (_, index) =>
+        getWerewolfSeatBackImage(index + 1),
+      ),
+      ...coreWerewolfRoleKeys
+        .map((roleKey) => getWerewolfRoleCardImage(roleKey, locale))
+        .filter((asset): asset is string => Boolean(asset)),
+    ]),
+  );
 }
 
 function WerewolfAvatar({
@@ -679,14 +716,23 @@ export function WerewolfRoomOverview({
     `/game-tools/werewolf/rooms/${room.id}/screen`,
   );
   const isLobby = room.status === "LOBBY";
-  const playerSeats = room.seats.filter((seat) => seat.isPlayerSeat);
-  const leftTableSeats = playerSeats.filter(
-    (seat) => seat.seatNumber % 2 === 1,
+  const playerSeats = useMemo(
+    () => room.seats.filter((seat) => seat.isPlayerSeat),
+    [room.seats],
   );
-  const rightTableSeats = playerSeats.filter(
-    (seat) => seat.seatNumber % 2 === 0,
+  const leftTableSeats = useMemo(
+    () => playerSeats.filter((seat) => seat.seatNumber % 2 === 1),
+    [playerSeats],
+  );
+  const rightTableSeats = useMemo(
+    () => playerSeats.filter((seat) => seat.seatNumber % 2 === 0),
+    [playerSeats],
   );
   const judgeSeat = room.seats.find((seat) => seat.isJudgeSeat);
+  const isDenseTable = playerSeats.length >= 9;
+  const tableCanvasMinHeightClass = isDenseTable
+    ? "min-h-[28rem]"
+    : "min-h-[25rem]";
   const allSeatsReady =
     room.seats.length === room.variant.totalSeats &&
     room.seats.every((seat) => seat.isClaimed && Boolean(seat.readyAt));
@@ -721,6 +767,30 @@ export function WerewolfRoomOverview({
       // Local preference storage can be unavailable in private browsing.
     }
   }, [atmospherePreferenceReady, selectedAtmosphereId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const preloadedImages = getWerewolfRoomPreloadAssets({
+      atmosphereSrc: selectedAtmosphere.src,
+      locale,
+    }).map((assetSrc) => {
+      const image = new window.Image();
+      image.decoding = "async";
+      image.src = assetSrc;
+
+      return image;
+    });
+
+    return () => {
+      preloadedImages.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
+    };
+  }, [locale, selectedAtmosphere.src]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -962,7 +1032,9 @@ export function WerewolfRoomOverview({
       return;
     }
 
-    const intervalMs = getWerewolfSyncIntervalMs(room.status);
+    const intervalMs =
+      getWerewolfSyncIntervalMs(room.status) +
+      Math.floor(Math.random() * 900);
     const interval = window.setInterval(() => {
       if (!document.hidden) {
         void pollRoomSync();
@@ -1281,18 +1353,24 @@ export function WerewolfRoomOverview({
           ? werewolfUiAssets.seatPlayerReady
           : werewolfUiAssets.seatPlayerOccupied
       : werewolfUiAssets.seatPlayerEmpty;
-    const nodeClass = `relative z-20 mx-auto flex min-h-[5.4rem] w-full max-w-[5.25rem] flex-col items-center justify-start text-center transition ${
+    const nodeClass = `relative z-20 mx-auto flex w-full flex-col items-center justify-start text-center transition ${
+      isDenseTable ? "min-h-[4.45rem] max-w-[4.45rem]" : "min-h-[5.4rem] max-w-[5.25rem]"
+    } ${
       isCurrentSeat ? "scale-[1.03]" : ""
     }`;
-    const tokenClass = `relative grid h-[3.85rem] w-[3.85rem] place-items-center rounded-full transition ${
+    const tokenClass = `relative grid place-items-center rounded-full transition ${
+      isDenseTable ? "h-[3.15rem] w-[3.15rem]" : "h-[3.85rem] w-[3.85rem]"
+    } ${
       seat.isDead ? "grayscale opacity-55" : ""
     } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
     const seatNumberClass = `absolute -left-0.5 -top-0.5 z-20 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black ring-1 ${
       isCurrentSeat
-        ? "bg-[#F8DDA8] text-[#153B31] ring-white/70"
-        : "bg-[#FFF8DC]/96 text-[#153B31] ring-white/55"
+        ? "bg-[#F8DDA8]/28 text-[#FFF8DC] ring-[#FFF8DC]/70 shadow-[0_0_12px_rgba(248,221,168,0.38)]"
+        : "bg-white/18 text-[#FFF8DC] ring-white/38"
     }`;
-    const seatNameClass = `mt-1 block max-w-full truncate px-1 text-[10.5px] font-black leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
+    const seatNameClass = `mt-1 block max-w-full truncate px-1 font-black leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
+      isDenseTable ? "text-[9.5px]" : "text-[10.5px]"
+    } ${
       seat.isDead
         ? "text-white/42"
         : isCurrentSeat
@@ -1301,8 +1379,18 @@ export function WerewolfRoomOverview({
     }`;
     const readyBadge =
       isLobby && seat.isClaimed && seat.readyAt ? (
-        <span className="mt-0.5 inline-flex h-4 items-center justify-center rounded-full bg-[#38A96D] px-1.5 text-[9px] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)]">
+        <span
+          className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
+            isDenseTable ? "h-3.5 px-1 text-[8px]" : "h-4 px-1.5 text-[9px]"
+          }`}
+        >
           {t.ready}
+        </span>
+      ) : null;
+    const judgeRoleBadge =
+      judgeIsViewer && !isLobby && seat.isPlayerSeat ? (
+        <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#F8DDA8]/92 px-1.5 py-0.5 text-[9px] font-black leading-tight text-[#153B31]">
+          {seat.roleLabel ?? "-"}
         </span>
       ) : null;
 
@@ -1339,7 +1427,11 @@ export function WerewolfRoomOverview({
                 draggable={false}
                 src={seatImage}
               />
-              <Plus className="relative h-4 w-4 text-[#F8DDA8] transition group-hover:scale-110" />
+              <Plus
+                className={`relative text-[#F8DDA8] transition group-hover:scale-110 ${
+                  isDenseTable ? "h-3.5 w-3.5" : "h-4 w-4"
+                }`}
+              />
             </span>
             <span className={seatNameClass}>{emptySeatActionLabel}</span>
           </button>
@@ -1361,10 +1453,16 @@ export function WerewolfRoomOverview({
           {seat.isClaimed ? (
             renderClaimedSeatAvatar(
               seat,
-              "relative h-12 w-12 border border-[#F8DDA8]/34 text-sm",
+              isDenseTable
+                ? "relative h-9 w-9 border border-[#F8DDA8]/34 text-xs"
+                : "relative h-12 w-12 border border-[#F8DDA8]/34 text-sm",
             )
           ) : (
-            <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#102F29] text-xs font-black text-[#F8DDA8] shadow-sm">
+            <span
+              className={`relative grid place-items-center rounded-full bg-[#102F29] font-black text-[#F8DDA8] shadow-sm ${
+                isDenseTable ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-xs"
+              }`}
+            >
               {seat.seatNumber}
             </span>
           )}
@@ -1372,19 +1470,20 @@ export function WerewolfRoomOverview({
         <span className={seatNameClass}>
           {seat.isClaimed ? seat.displayName : t.empty}
         </span>
+        {judgeRoleBadge}
         {readyBadge}
       </div>
     );
   };
 
   return (
-    <div className="h-full w-full overflow-hidden bg-[#062A24]">
-      <section className="h-full min-h-[32rem] md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
-        <div className="relative flex h-full flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
+    <div className="h-[100dvh] min-h-[100svh] w-full overflow-hidden bg-[#062A24] md:h-full md:min-h-[32rem]">
+      <section className="h-full min-h-0 md:mx-auto md:h-[calc(100svh-1.5rem)] md:max-w-[28rem]">
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#062A24] px-3 pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] pt-[calc(var(--app-top-safe-area)+0.75rem)] text-white md:rounded-[1.4rem] md:p-2.5">
           <img
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover brightness-[0.72] contrast-[1.05] saturate-[0.9]"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_62%] brightness-[0.72] contrast-[1.05] saturate-[0.9]"
             draggable={false}
             key={selectedAtmosphere.id}
             src={selectedAtmosphere.src}
@@ -1552,19 +1651,31 @@ export function WerewolfRoomOverview({
             </div>
           ) : null}
 
-          <div className="relative z-10 mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="relative z-10 mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_24%,rgba(248,221,168,0.42)_0_1px,transparent_2px),radial-gradient(circle_at_72%_16%,rgba(248,221,168,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_82%_72%,rgba(248,221,168,0.22)_0_1px,transparent_2px)]" />
             <div className="pointer-events-none absolute right-5 top-20 h-20 w-20 rounded-full bg-[#D8A84E]/8 blur-2xl" />
 
-            <div className="relative flex min-h-0 flex-1 flex-col px-2 py-2">
+            <div
+              className={`relative flex ${tableCanvasMinHeightClass} flex-1 flex-col px-2 py-2`}
+            >
               {judgeSeat ? (
-                <div className="relative z-30 mx-auto flex w-full max-w-[5.2rem] flex-col items-center text-center">
-                  <span className="mb-0.5 px-2 text-[11px] font-black text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)]">
+                <div
+                  className={`relative z-30 mx-auto flex w-full flex-col items-center text-center ${
+                    isDenseTable ? "max-w-[4.65rem]" : "max-w-[5.2rem]"
+                  }`}
+                >
+                  <span
+                    className={`mb-0.5 px-2 font-black text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)] ${
+                      isDenseTable ? "text-[10px]" : "text-[11px]"
+                    }`}
+                  >
                     {t.judge}
                   </span>
                   {judgeSeat.isClaimed ? (
                     <div
-                      className={`relative grid h-14 w-14 place-items-center drop-shadow-[0_0_12px_rgba(240,195,106,0.42)] ${
+                      className={`relative grid place-items-center drop-shadow-[0_0_12px_rgba(240,195,106,0.42)] ${
+                        isDenseTable ? "h-12 w-12" : "h-14 w-14"
+                      } ${
                         judgeSeat.isDead ? "grayscale opacity-55" : ""
                       }`}
                     >
@@ -1577,7 +1688,9 @@ export function WerewolfRoomOverview({
                       />
                       {renderClaimedSeatAvatar(
                         judgeSeat,
-                        "relative h-11 w-11 border border-[#F8DDA8]/34 text-xs",
+                        isDenseTable
+                          ? "relative h-9 w-9 border border-[#F8DDA8]/34 text-[10px]"
+                          : "relative h-11 w-11 border border-[#F8DDA8]/34 text-xs",
                       )}
                     </div>
                   ) : isLobby && canChooseSeat ? (
@@ -1605,7 +1718,9 @@ export function WerewolfRoomOverview({
                       />
                       <input name="responseMode" type="hidden" value="inline" />
                       <button
-                        className="relative grid h-14 w-14 place-items-center transition hover:scale-105"
+                        className={`relative grid place-items-center transition hover:scale-105 ${
+                          isDenseTable ? "h-12 w-12" : "h-14 w-14"
+                        }`}
                         type="submit"
                       >
                         <img
@@ -1619,7 +1734,11 @@ export function WerewolfRoomOverview({
                       </button>
                     </form>
                   ) : (
-                    <span className="relative grid h-14 w-14 place-items-center">
+                    <span
+                      className={`relative grid place-items-center ${
+                        isDenseTable ? "h-12 w-12" : "h-14 w-14"
+                      }`}
+                    >
                       <img
                         alt=""
                         aria-hidden="true"
@@ -1632,24 +1751,48 @@ export function WerewolfRoomOverview({
                       </span>
                     </span>
                   )}
-                  <span className="mt-1 block max-w-[5.2rem] truncate px-1 text-[10.5px] font-black leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)]">
+                  <span
+                    className={`mt-1 block truncate px-1 font-black leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
+                      isDenseTable
+                        ? "max-w-[4.65rem] text-[9.5px]"
+                        : "max-w-[5.2rem] text-[10.5px]"
+                    }`}
+                  >
                     {judgeSeat.isClaimed ? judgeSeat.displayName : t.empty}
                   </span>
                   {isLobby && judgeSeat.isClaimed && judgeSeat.readyAt ? (
-                    <span className="mt-0.5 inline-flex h-4 items-center justify-center rounded-full bg-[#38A96D] px-1.5 text-[9px] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)]">
+                    <span
+                      className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
+                        isDenseTable
+                          ? "h-3.5 px-1 text-[8px]"
+                          : "h-4 px-1.5 text-[9px]"
+                      }`}
+                    >
                       {t.ready}
                     </span>
                   ) : null}
                 </div>
               ) : null}
 
-              <div className="relative z-20 mt-2 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1">
-                <div className="grid content-start gap-2.5 px-0.5 py-2">
+              <div
+                className={`relative z-20 grid min-h-0 flex-1 ${
+                  isDenseTable
+                    ? "mt-1 grid-cols-[minmax(0,1fr)_minmax(6.25rem,7rem)_minmax(0,1fr)] gap-0.5"
+                    : "mt-2 grid-cols-[minmax(0,1fr)_minmax(7.55rem,8.4rem)_minmax(0,1fr)] gap-1"
+                }`}
+              >
+                <div
+                  className={`grid content-start px-0.5 ${
+                    isDenseTable ? "gap-1.5 py-1" : "gap-2.5 py-2"
+                  }`}
+                >
                   {leftTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
 
                 <div
-                  className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden px-3 py-3"
+                  className={`relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden ${
+                    isDenseTable ? "px-2 py-2" : "px-3 py-3"
+                  }`}
                 >
                   <div className="pointer-events-none absolute inset-x-6 bottom-9 top-9 rounded-full border border-white/38 bg-[#031F1B]/12" />
                   <div className="pointer-events-none absolute left-1/2 top-12 h-[calc(100%-6rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-white/18 to-transparent" />
@@ -1680,7 +1823,11 @@ export function WerewolfRoomOverview({
                   </div>
                 </div>
 
-                <div className="grid content-start gap-2.5 px-0.5 py-2">
+                <div
+                  className={`grid content-start px-0.5 ${
+                    isDenseTable ? "gap-1.5 py-1" : "gap-2.5 py-2"
+                  }`}
+                >
                   {rightTableSeats.map((seat) => renderSeatNode(seat))}
                 </div>
               </div>

@@ -10,6 +10,7 @@ import {
   isLowTrustScore,
 } from "@/features/trust/trustScore";
 import { getTrustScore } from "@/features/trust/trustScoreEvents";
+import { createNotification } from "@/features/notifications/utils/createNotification";
 import {
   getConversationPair,
   getConversationPeerId,
@@ -364,6 +365,30 @@ async function countCurrentUserNonFriendMessages(
       conversationId,
       senderId: currentUserProfileId,
     },
+  });
+}
+
+async function createDirectMessageNotification({
+  activityId,
+  db,
+  recipientId,
+  senderId,
+}: {
+  activityId?: string | null;
+  db: DbClient;
+  recipientId: string;
+  senderId: string;
+}) {
+  if (recipientId === senderId) {
+    return;
+  }
+
+  await createNotification(db, {
+    actorId: senderId,
+    activityId: activityId ?? null,
+    dedupe: false,
+    recipientId,
+    type: "DIRECT_MESSAGE",
   });
 }
 
@@ -825,12 +850,21 @@ export async function sendDirectMessage({
       select: directConversationMessageSendSelect,
     });
     const updateConversationMs = Date.now() - updateConversationStartedAt;
+    const notificationStartedAt = Date.now();
+    await createDirectMessageNotification({
+      activityId,
+      db: tx,
+      recipientId: peerProfileId,
+      senderId: currentUserProfileId,
+    });
+    const notificationMs = Date.now() - notificationStartedAt;
 
     logDirectMessageServiceTiming("sendDirectMessage", {
       findConversationMs,
       accessMs,
       createMessageMs,
       updateConversationMs,
+      notificationMs,
       totalMs: Date.now() - transactionStartedAt,
       conversationId: updatedConversation.id,
       imageCount: payload.imageUrls.length,
@@ -898,12 +932,20 @@ export async function sendDirectMessageToFriend({
       select: directConversationMessageSendSelect,
     });
     const updateConversationMs = Date.now() - updateConversationStartedAt;
+    const notificationStartedAt = Date.now();
+    await createDirectMessageNotification({
+      db: tx,
+      recipientId: friendProfileId,
+      senderId: currentUserProfileId,
+    });
+    const notificationMs = Date.now() - notificationStartedAt;
 
     logDirectMessageServiceTiming("sendDirectMessageToFriend", {
       accessMs,
       upsertConversationMs,
       createMessageMs,
       updateConversationMs,
+      notificationMs,
       totalMs: Date.now() - transactionStartedAt,
       conversationId: updatedConversation.id,
       imageCount: payload.imageUrls.length,

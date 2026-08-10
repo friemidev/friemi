@@ -47,6 +47,7 @@ const requiredFields = [
   ["Activity", "roomReadStates"],
   ["UserProfile", "activityRoomReadStates"],
   ["ActivityRoomReadState", "lastReadAt"],
+  ["UserProfile", "homeCity"],
   ["UserProfile", "presenceStatus"],
   ["UserProfile", "lastActiveAt"],
   ["UserProfile", "achievements"],

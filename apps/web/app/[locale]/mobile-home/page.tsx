@@ -13,8 +13,12 @@ import {
 import { BrandLockup } from "@/components/brand/BrandLockup";
 import { IntentPrefetchLink } from "@/components/navigation/IntentPrefetchLink";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
 import { LazyLobbySwipeDiscovery } from "@/features/activities/components/ActivityLobbyView";
-import { getLobbySwipePublicEventActivities } from "@/features/activities/queries/getActivityLobby";
+import {
+  getLobbySwipePublicEventActivities,
+  getMobileHomeTrendingTeamActivities,
+} from "@/features/activities/queries/getActivityLobby";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import { getActivityDateLabel } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
@@ -84,6 +88,7 @@ type MobileHomeExperienceProps = {
 
 type MobileHomeV23ExperienceProps = MobileHomeExperienceProps & {
   topNewsItems: MobileHomeTopNewsItem[];
+  trendingActivities: ActivityCardViewModel[];
   viewerName: string | null;
 };
 
@@ -419,31 +424,45 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
     locale,
     route: "/mobile-home",
   });
-  const [activitiesResult, viewerProfile, topNewsItems] = await perf.measure(
-    "mobileHome.bootstrap",
-    () =>
-      Promise.all([
-        getLobbySwipePublicEventActivities(null, { limit: 8 })
-          .then((swipeActivities) => ({
-            error: null,
-            swipeActivities,
-          }))
-          .catch((error: unknown) => {
-            console.error("Failed to load mobile home activities", error);
-            return { error, swipeActivities: [] };
-          }),
-        getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
-          console.error("Failed to load mobile home viewer profile", error);
-          return null;
+  const [
+    activitiesResult,
+    trendingActivitiesResult,
+    viewerProfile,
+    topNewsItems,
+  ] = await perf.measure("mobileHome.bootstrap", () =>
+    Promise.all([
+      getLobbySwipePublicEventActivities(null, { limit: 8 })
+        .then((swipeActivities) => ({
+          error: null,
+          swipeActivities,
+        }))
+        .catch((error: unknown) => {
+          console.error("Failed to load mobile home activities", error);
+          return { error, swipeActivities: [] };
         }),
-        getMobileHomeTopNewsItems(locale),
-      ]),
+      getMobileHomeTrendingTeamActivities(null, { limit: 8 })
+        .then((trendingActivities) => ({
+          error: null,
+          trendingActivities,
+        }))
+        .catch((error: unknown) => {
+          console.error("Failed to load mobile home trending teams", error);
+          return { error, trendingActivities: [] };
+        }),
+      getOptionalCurrentUserProfileSnapshot().catch((error: unknown) => {
+        console.error("Failed to load mobile home viewer profile", error);
+        return null;
+      }),
+      getMobileHomeTopNewsItems(locale),
+    ]),
   );
 
   perf.finish({
     hasActivityError: Boolean(activitiesResult.error),
+    hasTrendingError: Boolean(trendingActivitiesResult.error),
     hasViewer: Boolean(viewerProfile),
     swipeCount: activitiesResult.swipeActivities.length,
+    trendingCount: trendingActivitiesResult.trendingActivities.length,
   });
 
   return (
@@ -454,6 +473,7 @@ export default async function MobileHomePage({ params }: MobileHomePageProps) {
           locale={locale}
           swipeActivities={activitiesResult.swipeActivities}
           topNewsItems={topNewsItems}
+          trendingActivities={trendingActivitiesResult.trendingActivities}
           viewerName={viewerProfile?.nickname ?? null}
         />
         <div className="hidden md:block">
@@ -480,18 +500,18 @@ function getMobileHomeActivityHref(
 
 function MobileHomeV23Experience({
   locale,
-  swipeActivities,
   topNewsItems,
+  trendingActivities,
   viewerName,
 }: MobileHomeV23ExperienceProps) {
   const copy = getMobileHomeV23Copy(locale, viewerName);
   const categories = getMobileHomeCopy(locale).categories;
-  const trendingActivities = swipeActivities.slice(2, 8);
+  const displayTrendingActivities = trendingActivities.slice(0, 5);
 
   return (
     <section className="mobile-v23-home app-mobile-page-shell [--app-mobile-page-top-gap:0.55rem] [--app-mobile-page-bottom-gap:1rem] bg-white text-[#111210] md:hidden">
-      <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
-        <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pt-1">
+      <div className="mx-auto flex w-full max-w-[430px] flex-col pl-5 pr-0">
+        <header className="flex min-h-[4.65rem] items-start justify-between gap-4 pr-5 pt-1">
           <Link
             href={withLocale(locale, "/home?view=desktop")}
             className="mt-1.5 inline-flex shrink-0"
@@ -506,7 +526,7 @@ function MobileHomeV23Experience({
           </div>
         </header>
 
-        <section>
+        <section className="pr-5">
           <h1 className="text-[23px] font-black leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
@@ -541,7 +561,7 @@ function MobileHomeV23Experience({
           </div>
         </section>
 
-        <section className="mt-5">
+        <section className="mt-5 pr-5">
           <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
@@ -556,7 +576,7 @@ function MobileHomeV23Experience({
             <h2 className="text-[17px] font-black tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
-            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {topNewsItems.map((item) => (
                 <MobileHomeV23NewsCard
                   image={item.image}
@@ -569,7 +589,7 @@ function MobileHomeV23Experience({
         ) : null}
 
         <section className="mt-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 pr-5">
             <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
               {copy.trendingTitle}
             </h2>
@@ -581,18 +601,16 @@ function MobileHomeV23Experience({
             </Link>
           </div>
 
-          <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {trendingActivities.length > 0
-              ? trendingActivities
-                  .slice(0, 5)
-                  .map((activity) => (
-                    <MobileHomeV23ActivityCard
-                      activity={activity}
-                      key={`${activity.type}:${activity.id}`}
-                      locale={locale}
-                      participantsLabel={copy.participantsLabel}
-                    />
-                  ))
+          <div className="mt-2.5 flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {displayTrendingActivities.length > 0
+              ? displayTrendingActivities.map((activity) => (
+                  <MobileHomeV23ActivityCard
+                    activity={activity}
+                    key={`${activity.type}:${activity.id}`}
+                    locale={locale}
+                    participantsLabel={copy.participantsLabel}
+                  />
+                ))
               : copy.fallbackCards.map((card) => (
                   <MobileHomeV23FallbackCard
                     card={card}
@@ -662,9 +680,9 @@ function MobileHomeV23ActivityCard({
       : `${activity.participantCount}`;
 
   return (
-    <IntentPrefetchLink
+    <MobileActivityDetailSheetLink
       href={getMobileHomeActivityHref(activity, locale)}
-      prefetchOnVisible
+      label={activity.title}
       className="group w-[9.35rem] shrink-0 snap-start overflow-hidden rounded-[0.72rem] border border-[#D7D5C8] bg-white shadow-[0_12px_24px_rgba(23,36,28,0.06)]"
     >
       <div className="relative h-[5.15rem] overflow-hidden bg-[#F1F2EC]">
@@ -694,7 +712,7 @@ function MobileHomeV23ActivityCard({
           </span>
         </p>
       </div>
-    </IntentPrefetchLink>
+    </MobileActivityDetailSheetLink>
   );
 }
 

@@ -148,6 +148,9 @@ function DesktopFriendRosterRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const showPublicNickname =
+    Boolean(friend.friend.remarkName) &&
+    friend.friend.publicNickname !== friend.friend.nickname;
   const conversationHref = friend.conversationId
     ? getConversationHref({
         activityContextQuery,
@@ -187,6 +190,11 @@ function DesktopFriendRosterRow({
             </span>
           ) : null}
         </span>
+        {showPublicNickname ? (
+          <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+            {friend.friend.publicNickname}
+          </span>
+        ) : null}
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",

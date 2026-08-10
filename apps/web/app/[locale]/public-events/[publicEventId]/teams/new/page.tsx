@@ -7,6 +7,7 @@ import {
   formatParisDateTimeInput,
   type ActivityFormValues,
 } from "@/features/activities/actions/activityActionUtils";
+import { getActivityEndBoundary } from "@/features/activities/utils/activityDisplay";
 import { getPublicEventCopy } from "@/features/public-events/copy";
 import {
   getEventDateLabel,
@@ -133,7 +134,11 @@ export default async function NewPublicEventTeamPage({
     notFound();
   }
 
-  const eventEndBoundary = new Date(publicEvent.endAt ?? publicEvent.startAt);
+  const eventEndBoundary = getActivityEndBoundary({
+    endAt: publicEvent.endAt,
+    startAt: publicEvent.startAt,
+    type: "PUBLIC_EVENT",
+  });
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
   const canCreateTeam = !isCancelled && !isEnded;

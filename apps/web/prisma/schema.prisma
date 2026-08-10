@@ -281,6 +281,8 @@ model UserProfile {
   favoriteActivities      ActivityFavorite[]
   following               UserFollow[]                  @relation("UserFollowing")
   followers               UserFollow[]                  @relation("UserFollowers")
+  profileRemarksOwned     UserProfileRemark[]           @relation("UserProfileRemarkOwner")
+  profileRemarksReceived  UserProfileRemark[]           @relation("UserProfileRemarkTarget")
   sentFriendRequests      FriendRequest[]               @relation("FriendRequestRequester")
   receivedFriendRequests  FriendRequest[]               @relation("FriendRequestReceiver")
   friendshipsAsUserA      Friendship[]                  @relation("FriendshipUserA")
@@ -1193,6 +1195,20 @@ model UserFollow {
 
   @@unique([followerId, followingId])
   @@index([followingId])
+}
+
+model UserProfileRemark {
+  id         String      @id @default(cuid())
+  ownerId    String
+  targetId   String
+  remarkName String      @db.VarChar(32)
+  owner      UserProfile @relation("UserProfileRemarkOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  target     UserProfile @relation("UserProfileRemarkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([ownerId, targetId])
+  @@index([targetId])
 }
 
 model FriendRequest {

@@ -11,6 +11,7 @@ import {
   type DirectMessageActionState,
 } from "../actions/directMessageActions";
 import { getDirectMessagesCopy } from "../copy";
+import { saveMessageThreadReturnHref } from "../utils/messageThreadReturn";
 
 type StartDirectConversationButtonProps = {
   buttonClassName?: string;
@@ -89,7 +90,11 @@ export function StartDirectConversationButton({
   }, [locale, router, state.conversationId, state.ok]);
 
   return (
-    <form action={action} className={cn("grid min-w-0 gap-1.5", className)}>
+    <form
+      action={action}
+      className={cn("grid min-w-0 gap-1.5", className)}
+      onSubmit={() => saveMessageThreadReturnHref()}
+    >
       <input name="locale" type="hidden" value={locale} />
       <input name="friendProfileId" type="hidden" value={peerProfileId} />
       <input name="redirectPath" type="hidden" value={redirectPath} />

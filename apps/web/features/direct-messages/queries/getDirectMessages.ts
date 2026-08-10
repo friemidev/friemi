@@ -24,6 +24,11 @@ import {
   type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "@/features/profile/presence";
+import {
+  getProfileRemarkMap,
+  getProfileRemarkName,
+  resolveRemarkedProfileName,
+} from "@/features/profile/services/profileRemarks";
 
 const friendActivitySignalLimitPerFriend = 4;
 
@@ -105,6 +110,8 @@ export type DirectMessageRelationshipKind =
 export type DirectMessageUserViewModel = {
   id: string;
   nickname: string;
+  publicNickname: string;
+  remarkName: string | null;
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
@@ -192,9 +199,16 @@ function mapUserProfile(
   },
   options: {
     canViewPresence?: boolean;
+    remarkName?: string | null;
   } = {},
 ): DirectMessageUserViewModel {
   const hasPublicNickname = user.nickname.trim().length > 0;
+  const publicNickname = hasPublicNickname
+    ? user.nickname
+    : user.friendCode
+      ? `NF ${user.friendCode}`
+      : "NF";
+  const remarkName = options.remarkName?.trim() || null;
   const presence = getUserPresenceState({
     lastActiveAt: user.lastActiveAt,
     status: user.presenceStatus,
@@ -203,11 +217,12 @@ function mapUserProfile(
 
   return {
     id: user.id,
-    nickname: hasPublicNickname
-      ? user.nickname
-      : user.friendCode
-        ? `NF ${user.friendCode}`
-        : "NF",
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName,
+    }),
+    publicNickname,
+    remarkName,
     friendCode: user.friendCode,
     avatarUrl: hasPublicNickname ? user.avatarUrl : null,
     bio: user.bio,
@@ -224,12 +239,13 @@ function mapPeer(
   >,
   currentUserProfileId: string,
   canViewPresence: boolean,
+  remarkName?: string | null,
 ): DirectMessageUserViewModel {
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
   const peer =
     peerId === conversation.userAId ? conversation.userA : conversation.userB;
 
-  return mapUserProfile(peer, { canViewPresence });
+  return mapUserProfile(peer, { canViewPresence, remarkName });
 }
 
 function mapLastMessage(
@@ -257,10 +273,16 @@ function mapConversationListItem(
   recentActivities: DirectConversationActivitySignalViewModel[] = [],
   unreadCount = 0,
   canViewPeerPresence = false,
+  peerRemarkName?: string | null,
 ): DirectConversationListItemViewModel {
   return {
     id: conversation.id,
-    peer: mapPeer(conversation, currentUserProfileId, canViewPeerPresence),
+    peer: mapPeer(
+      conversation,
+      currentUserProfileId,
+      canViewPeerPresence,
+      peerRemarkName,
+    ),
     lastMessage: mapLastMessage(conversation),
     lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
     createdAt: conversation.createdAt.toISOString(),
@@ -274,6 +296,7 @@ function mapConversationThread(
   currentUserProfileId: string,
   sendPolicy: DirectMessageSendPolicy,
   canViewPeerPresence: boolean,
+  peerRemarkName?: string | null,
 ): DirectConversationThreadViewModel {
   const currentUser =
     currentUserProfileId === conversation.userAId
@@ -287,6 +310,7 @@ function mapConversationThread(
       [],
       0,
       canViewPeerPresence,
+      peerRemarkName,
     ),
     canSend: sendPolicy.canSend,
     currentUser: mapUserProfile(currentUser, { canViewPresence: true }),
@@ -433,10 +457,18 @@ export async function getDirectConversations(currentUserProfileId: string) {
     DirectConversationActivitySignalViewModel[]
   >();
   let visiblePresencePeerIds = new Set<string>();
+  let remarkByPeerId = new Map<string, string>();
 
   try {
-    const friendPeerIds = await getFriendPeerIds(currentUserProfileId, peerIds);
+    const [friendPeerIds, profileRemarkMap] = await Promise.all([
+      getFriendPeerIds(currentUserProfileId, peerIds),
+      getProfileRemarkMap({
+        ownerProfileId: currentUserProfileId,
+        targetProfileIds: peerIds,
+      }),
+    ]);
     visiblePresencePeerIds = friendPeerIds;
+    remarkByPeerId = profileRemarkMap;
     activitiesByFriendId = await getFriendNearestActivitySignals({
       friendIds: [...friendPeerIds],
       limitPerFriend: friendActivitySignalLimitPerFriend,
@@ -455,6 +487,9 @@ export async function getDirectConversations(currentUserProfileId: string) {
       ) ?? [],
       unreadCountByConversationId.get(conversation.id) ?? 0,
       visiblePresencePeerIds.has(
+        getConversationPeerId(conversation, currentUserProfileId),
+      ),
+      remarkByPeerId.get(
         getConversationPeerId(conversation, currentUserProfileId),
       ),
     ),
@@ -508,7 +543,7 @@ export async function getDirectMessageFriendRoster(
   const rosterProfileIds = [
     ...new Set([...conversationPeerIds, ...relationshipProfileIds]),
   ].filter((profileId) => profileId !== currentUserProfileId);
-  const [profiles, activitiesByFriendId] = await Promise.all([
+  const [profiles, activitiesByFriendId, remarkByProfileId] = await Promise.all([
     rosterProfileIds.length > 0
       ? prisma.userProfile.findMany({
           where: {
@@ -534,6 +569,10 @@ export async function getDirectMessageFriendRoster(
       console.error("Failed to load mobile follow activity signals", error);
 
       return new Map<string, DirectConversationActivitySignalViewModel[]>();
+    }),
+    getProfileRemarkMap({
+      ownerProfileId: currentUserProfileId,
+      targetProfileIds: rosterProfileIds,
     }),
   ]);
   const unreadCountByConversationId = await getUnreadDirectMessageCountMap(
@@ -562,6 +601,7 @@ export async function getDirectMessageFriendRoster(
     const conversation = conversationsByFriendId.get(profile.id);
     const friend = mapUserProfile(profile, {
       canViewPresence: isMutualFollow,
+      remarkName: remarkByProfileId.get(profile.id),
     });
 
     return {
@@ -663,11 +703,15 @@ export async function getDirectConversationThread(
   }
 
   const peerId = getConversationPeerId(conversation, currentUserProfileId);
-  const [sendPolicy, relation] = await Promise.all([
+  const [sendPolicy, relation, remarkName] = await Promise.all([
     getDirectMessageSendPolicy(currentUserProfileId, peerId),
     getFollowRelationState({
       targetProfileId: peerId,
       viewerProfileId: currentUserProfileId,
+    }),
+    getProfileRemarkName({
+      ownerProfileId: currentUserProfileId,
+      targetProfileId: peerId,
     }),
   ]);
 
@@ -676,6 +720,7 @@ export async function getDirectConversationThread(
     currentUserProfileId,
     sendPolicy,
     relation.isMutualFollow,
+    remarkName,
   );
 }
 

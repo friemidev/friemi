@@ -193,7 +193,7 @@ export default async function WerewolfSeatPage({
         />
         <AvalonLiveRefresh
           enabled={seat.room.status !== "FINISHED"}
-          intervalMs={3500}
+          intervalMs={6000}
           locale={locale}
           showIndicator={!showPlayerFullScreenCard}
         />

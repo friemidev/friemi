@@ -106,9 +106,9 @@ export function HomeFooter({ locale }: HomeFooterProps) {
               {t.versionLabel}{" "}
               <Link
                 className="inline-flex whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white transition hover:bg-white hover:text-ink"
-                href={withLocale(locale, "/updates/v2_6")}
+                href={withLocale(locale, "/updates/v2_7")}
               >
-                v2.6
+                v2.7
               </Link>
             </p>
             <p className="inline-flex items-center gap-2 text-xs text-white/45 md:justify-end">

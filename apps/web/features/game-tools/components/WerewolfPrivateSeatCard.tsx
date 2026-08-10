@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 import {
   ArrowLeft,
@@ -390,6 +397,38 @@ function getPrivateRoleIcon(payload: WerewolfPrivatePayload | null) {
   return UsersRound;
 }
 
+function SafeWerewolfImage({
+  alt,
+  className,
+  fallback,
+  src,
+}: {
+  alt: string;
+  className: string;
+  fallback: ReactNode;
+  src: string | null | undefined;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <img
+      alt={alt}
+      className={className}
+      draggable={false}
+      onError={() => setFailed(true)}
+      src={src}
+    />
+  );
+}
+
 export function WerewolfPrivateSeatCard({
   allReady,
   isDead,
@@ -403,7 +442,6 @@ export function WerewolfPrivateSeatCard({
   roomHref,
   roomState,
   roomStatus,
-  roomUpdatedAt,
   seatDisplayName,
   seatNumber,
   seats,
@@ -460,6 +498,35 @@ export function WerewolfPrivateSeatCard({
     [seats],
   );
   const RoleIcon = getPrivateRoleIcon(payload);
+  const renderRoleFallback = (size: "compact" | "large") => (
+    <div
+      className={`grid h-full place-items-center text-center ${
+        size === "large" ? "p-5" : "p-3"
+      }`}
+    >
+      <div>
+        <RoleIcon
+          className={`mx-auto mb-4 text-white/86 ${
+            size === "large" ? "h-16 w-16" : "h-12 w-12"
+          }`}
+        />
+        <p
+          className={`font-black ${
+            size === "large" ? "text-3xl" : "text-2xl"
+          }`}
+        >
+          {payload?.roleLabel ?? t.roleHidden}
+        </p>
+        <p
+          className={`mt-2 font-bold text-white/72 ${
+            size === "large" ? "text-sm" : "text-xs"
+          }`}
+        >
+          {payload?.alignmentLabel ?? variantLabel}
+        </p>
+      </div>
+    </div>
+  );
   const showInGamePlayerCard =
     !isJudgeSeat && roomStatus === "IN_PROGRESS" && Boolean(payload);
 
@@ -491,29 +558,11 @@ export function WerewolfPrivateSeatCard({
       return;
     }
 
-    const storageKey = `friemi:werewolf:death-intro:${privateToken}:${roomUpdatedAt}:${roomState.deadSeatNumbers.join("-")}`;
-
-    if (window.sessionStorage.getItem(storageKey)) {
-      return;
-    }
-
-    window.sessionStorage.setItem(storageKey, "1");
-    window.navigator.vibrate?.([80, 40, 80]);
+    window.navigator.vibrate?.(80);
     setRevealed(false);
     setShowRevealConfirm(false);
-    setShowDeathIntro(true);
-    const timer = window.setTimeout(() => {
-      setShowDeathIntro(false);
-    }, 2000);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    isDead,
-    isJudgeSeat,
-    privateToken,
-    roomState.deadSeatNumbers,
-    roomUpdatedAt,
-  ]);
+    setShowDeathIntro(false);
+  }, [isDead, isJudgeSeat]);
 
   function handleRevealToggle() {
     if (isDead) {
@@ -888,26 +937,12 @@ export function WerewolfPrivateSeatCard({
                       revealed ? "opacity-100" : "opacity-0 md:opacity-100"
                     }`}
                   >
-                    {roleCardImage ? (
-                      <img
-                        alt={payload.roleLabel}
-                        className="werewolf-live-card-image h-full w-full object-cover"
-                        draggable={false}
-                        src={roleCardImage}
-                      />
-                    ) : (
-                      <div className="grid h-full place-items-center p-5 text-center">
-                        <div>
-                          <RoleIcon className="mx-auto mb-4 h-16 w-16 text-white/86" />
-                          <p className="text-3xl font-black">
-                            {payload.roleLabel}
-                          </p>
-                          <p className="mt-2 text-sm font-bold text-white/72">
-                            {payload.alignmentLabel}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                    <SafeWerewolfImage
+                      alt={payload.roleLabel}
+                      className="werewolf-live-card-image h-full w-full object-cover"
+                      fallback={renderRoleFallback("large")}
+                      src={roleCardImage}
+                    />
                     <div className="werewolf-live-card-bottom-fade absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/86 to-transparent px-4 pb-5 pt-16 text-center">
                       <p className="hidden items-center gap-1.5 rounded-full bg-white/16 px-3 py-1.5 text-xs font-black text-white backdrop-blur md:inline-flex">
                         <TimerReset className="h-4 w-4" />
@@ -1248,26 +1283,12 @@ export function WerewolfPrivateSeatCard({
                           aria-live="polite"
                           className={`absolute inset-0 overflow-hidden rounded-[1rem] border border-[#D9C7B4] bg-gradient-to-br ${getRoleTone(payload)} text-white shadow-[0_22px_48px_rgba(30,23,24,0.22)] [backface-visibility:hidden] [transform:rotateY(180deg)]`}
                         >
-                          {roleCardImage ? (
-                            <img
-                              alt={payload.roleLabel}
-                              className="h-full w-full object-cover"
-                              draggable={false}
-                              src={roleCardImage}
-                            />
-                          ) : (
-                            <div className="grid h-full place-items-center p-3 text-center">
-                              <div>
-                                <RoleIcon className="mx-auto mb-4 h-12 w-12 text-white/86" />
-                                <p className="text-2xl font-black">
-                                  {payload.roleLabel}
-                                </p>
-                                <p className="mt-2 text-xs font-bold text-white/72">
-                                  {payload.alignmentLabel}
-                                </p>
-                              </div>
-                            </div>
-                          )}
+                          <SafeWerewolfImage
+                            alt={payload.roleLabel}
+                            className="h-full w-full object-cover"
+                            fallback={renderRoleFallback("compact")}
+                            src={roleCardImage}
+                          />
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1E1718]/84 to-transparent px-3 pb-3 pt-10">
                             <p className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur">
                               <TimerReset className="h-3.5 w-3.5" />
@@ -1394,18 +1415,16 @@ export function WerewolfPrivateSeatCard({
                             seat.isDead ? "grayscale" : ""
                           }`}
                         >
-                          {roleCard ? (
-                            <img
-                              alt={seat.roleLabel ?? ""}
-                              className="h-full w-full object-cover"
-                              draggable={false}
-                              src={roleCard}
-                            />
-                          ) : (
-                            <div className="grid h-full place-items-center bg-[#1E1718] text-xs font-black text-white">
-                              {seat.seatNumber}
-                            </div>
-                          )}
+                          <SafeWerewolfImage
+                            alt={seat.roleLabel ?? ""}
+                            className="h-full w-full object-cover"
+                            fallback={
+                              <div className="grid h-full place-items-center bg-[#1E1718] px-1 text-center text-xs font-black text-white">
+                                {seat.roleLabel ?? seat.seatNumber}
+                              </div>
+                            }
+                            src={roleCard}
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">

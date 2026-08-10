@@ -8,6 +8,7 @@ import {
   getGameToolRoomPath,
 } from "@/features/game-tools/gameToolRooms";
 import { getWerewolfRoomByCode } from "@/features/game-tools/queries/getWerewolfRoom";
+import { getWerewolfRoomCodeFromScan } from "@/features/scan/globalQrScanner";
 import { getOptionalCurrentUserProfile } from "@/lib/auth";
 import { withLocale } from "@/lib/routes";
 
@@ -67,18 +68,21 @@ export default async function WerewolfJoinPage({
 }: WerewolfJoinPageProps) {
   const { code, locale } = await params;
   const t = getCopy(locale);
+  const normalizedCode = getWerewolfRoomCodeFromScan(code);
   const viewerProfile = await getOptionalCurrentUserProfile();
-  const room = await getWerewolfRoomByCode({
-    code,
-    locale,
-    viewerProfile,
-  });
+  const room = normalizedCode
+    ? await getWerewolfRoomByCode({
+        code: normalizedCode,
+        locale,
+        viewerProfile,
+      })
+    : null;
 
   if (!room) {
     return (
       <JoinStatusPage
         body={t.notFoundBody}
-        code={code}
+        code={normalizedCode || code}
         cta={t.cta}
         ctaHref={withLocale(locale, "/game-tools/werewolf")}
         label={t.codeLabel}

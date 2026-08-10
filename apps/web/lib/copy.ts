@@ -631,6 +631,17 @@ const copy = {
       cancelConfirmSubmit: "确认取消",
       cancelledHint: "聚吧已取消，用户无法继续报名。",
       endedHint: "活动已结束，不能再取消。",
+      delete: "删除聚吧",
+      deleting: "删除中...",
+      deleteConfirmTitle: "确认删除聚吧？",
+      deleteConfirmDescription:
+        "删除后，聚吧、群聊、报名、公告和评论会被移除，无法恢复。",
+      deleteContextLabel: "即将删除",
+      deleteConfirmSubmit: "确认删除",
+      deletePermissionError: "只有聚吧创建人可以删除这个聚吧。",
+      deleteStatusError: "公开活动信息不能在这里删除。",
+      deleteFailedError: "删除聚吧失败，请稍后重试。",
+      deleteStateKept: "删除未生效，聚吧已保留。",
       refreshError: "请稍后再试。",
       permissionError: "只有活动发起人或管理人可以取消这个活动。",
       statusError: "当前活动状态不能取消。",
@@ -799,7 +810,8 @@ const copy = {
       coverImage: "封面图片",
       coverDefault: "使用默认封面",
       coverImageHint: "上传后会展示在聚吧卡片和详情页顶部。",
-      coverFileHint: "支持常见图片格式，最大 4MB。",
+      coverFileHint:
+        "支持 JPG、PNG、WebP、GIF、AVIF、HEIC 等图片，普通图片最大 10MB，GIF 最大 20MB。",
       coverUpload: "上传封面",
       coverTapToUpload: "点击上传封面",
       coverDropHere: "松开即可上传",
@@ -807,7 +819,7 @@ const copy = {
       coverRemove: "移除",
       coverUploadFailed: "封面上传失败，请稍后重试。",
       coverTypeError: "请上传常见图片格式。",
-      coverSizeError: "图片不能超过 4MB。",
+      coverSizeError: "普通图片不能超过 10MB，GIF 不能超过 20MB。",
       coverInvalidContentError: "图片内容无效，请重新选择原始图片。",
       coverStorageConfigError: "图片上传暂不可用，请稍后再试。",
       linkImportTitle: "从链接导入",
@@ -1626,6 +1638,17 @@ const copy = {
       cancelConfirmSubmit: "Cancel crew",
       cancelledHint: "This crew is cancelled. Users can no longer join.",
       endedHint: "This activity has ended and can no longer be cancelled.",
+      delete: "Delete crew",
+      deleting: "Deleting...",
+      deleteConfirmTitle: "Delete this crew?",
+      deleteConfirmDescription:
+        "This removes the crew, group chat, signups, announcements, and comments. It cannot be undone.",
+      deleteContextLabel: "Crew to delete",
+      deleteConfirmSubmit: "Delete crew",
+      deletePermissionError: "Only the crew creator can delete this crew.",
+      deleteStatusError: "Public event info cannot be deleted here.",
+      deleteFailedError: "Failed to delete the crew. Try again later.",
+      deleteStateKept: "Deletion did not go through. The crew is unchanged.",
       refreshError: "Try again later.",
       permissionError:
         "Only the organizer or a manager can cancel this activity.",
@@ -1816,7 +1839,8 @@ const copy = {
       coverImage: "Cover image",
       coverDefault: "Use the default cover",
       coverImageHint: "Uploaded images appear on plan cards and detail pages.",
-      coverFileHint: "Common image formats. Max 4MB.",
+      coverFileHint:
+        "JPG, PNG, WebP, GIF, AVIF, HEIC and more. Regular images max 10 MB, GIF max 20 MB.",
       coverUpload: "Upload cover",
       coverTapToUpload: "Tap to upload cover",
       coverDropHere: "Drop to upload",
@@ -1824,7 +1848,7 @@ const copy = {
       coverRemove: "Remove",
       coverUploadFailed: "Cover upload failed. Please try again later.",
       coverTypeError: "Please upload a common image format.",
-      coverSizeError: "Image must be 4MB or smaller.",
+      coverSizeError: "Regular images must be 10 MB or smaller; GIF must be 20 MB or smaller.",
       coverInvalidContentError:
         "The image content is invalid. Please choose the original image file.",
       coverStorageConfigError:
@@ -2676,6 +2700,20 @@ const copy = {
       cancelledHint:
         "Cette équipe est annulée. Les utilisateurs ne peuvent plus la rejoindre.",
       endedHint: "Cette activité est terminée et ne peut plus être annulée.",
+      delete: "Supprimer l'équipe",
+      deleting: "Suppression...",
+      deleteConfirmTitle: "Supprimer cette équipe ?",
+      deleteConfirmDescription:
+        "Cela supprime l'équipe, le chat, les inscriptions, les annonces et les commentaires. Cette action est irreversible.",
+      deleteContextLabel: "Équipe à supprimer",
+      deleteConfirmSubmit: "Supprimer",
+      deletePermissionError:
+        "Seul le créateur de l'équipe peut supprimer cette équipe.",
+      deleteStatusError:
+        "Les informations d'un événement public ne peuvent pas être supprimées ici.",
+      deleteFailedError: "Échec de la suppression. Réessayez plus tard.",
+      deleteStateKept:
+        "La suppression n'a pas été appliquée. L'équipe reste inchangée.",
       refreshError: "Réessayez plus tard.",
       permissionError:
         "Seul l'organisateur ou un gestionnaire peut annuler cette activité.",
@@ -2874,7 +2912,8 @@ const copy = {
       coverDefault: "Utiliser la couverture par défaut",
       coverImageHint:
         "L'image s'affiche sur les cartes de sortie et la page détail.",
-      coverFileHint: "Formats d'image courants. 4 Mo maximum.",
+      coverFileHint:
+        "JPG, PNG, WebP, GIF, AVIF, HEIC, etc. 10 Mo max, GIF 20 Mo.",
       coverUpload: "Importer",
       coverTapToUpload: "Touchez pour importer",
       coverDropHere: "Relâchez pour importer",
@@ -2883,7 +2922,8 @@ const copy = {
       coverUploadFailed:
         "Échec de l'import de la couverture. Réessayez plus tard.",
       coverTypeError: "Importez un format d'image courant.",
-      coverSizeError: "L'image ne doit pas dépasser 4 Mo.",
+      coverSizeError:
+        "Les images doivent faire 10 Mo max ; les GIF 20 Mo max.",
       coverInvalidContentError:
         "Le contenu de l'image est invalide. Choisissez le fichier original.",
       coverStorageConfigError:

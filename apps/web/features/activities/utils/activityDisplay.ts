@@ -13,9 +13,71 @@ import type { ActivityCardViewModel, ActivityDetailViewModel } from "../types";
 export type ActivityDisplayTimeState = "UPCOMING" | "ONGOING" | "ENDED";
 
 const activityReferenceTimeZone = "Europe/Paris";
+const floatingActivityTimeZone = "UTC";
+
+type ActivityTimeBoundaryInput = {
+  endAt?: Date | string | null;
+  startAt: Date | string;
+  type: ActivityCardViewModel["type"];
+};
 
 function getDatePart(parts: Intl.DateTimeFormatPart[], type: string) {
   return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
+  const offsetName = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(date)
+    .find((part) => part.type === "timeZoneName")?.value;
+  const match = offsetName?.match(
+    /^GMT(?:(?<sign>[+-])(?<hours>\d{1,2})(?::(?<minutes>\d{2}))?)?$/,
+  );
+
+  if (!match?.groups?.sign) {
+    return 0;
+  }
+
+  const sign = match.groups.sign === "+" ? 1 : -1;
+  const hours = Number(match.groups.hours ?? 0);
+  const minutes = Number(match.groups.minutes ?? 0);
+
+  return sign * (hours * 60 + minutes);
+}
+
+function getTimeZoneDateParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  return {
+    day: Number(getDatePart(parts, "day")),
+    month: Number(getDatePart(parts, "month")),
+    year: Number(getDatePart(parts, "year")),
+  };
+}
+
+function createDateInTimeZone(
+  timeZone: string,
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+  millisecond = 0,
+) {
+  const utcGuess = new Date(
+    Date.UTC(year, monthIndex, day, hour, minute, second, millisecond),
+  );
+  const offsetMinutes = getTimeZoneOffsetMinutes(utcGuess, timeZone);
+
+  return new Date(utcGuess.getTime() - offsetMinutes * 60_000);
 }
 
 export function getActivityFloatingNow(reference = new Date()) {
@@ -42,8 +104,42 @@ export function getActivityFloatingNow(reference = new Date()) {
   );
 }
 
-function usesFloatingActivityTime(activity: ActivityCardViewModel) {
+function usesFloatingActivityTime(activity: Pick<ActivityCardViewModel, "type">) {
   return activity.type !== "PUBLIC_EVENT";
+}
+
+function getActivityComparisonNow(
+  activity: Pick<ActivityCardViewModel, "type">,
+  reference = new Date(),
+) {
+  return usesFloatingActivityTime(activity)
+    ? getActivityFloatingNow(reference)
+    : reference;
+}
+
+export function getActivityEndBoundary(
+  activity: ActivityTimeBoundaryInput,
+) {
+  if (activity.endAt) {
+    return new Date(activity.endAt);
+  }
+
+  const startAt = new Date(activity.startAt);
+  const timeZone = usesFloatingActivityTime(activity)
+    ? floatingActivityTimeZone
+    : activityReferenceTimeZone;
+  const { year, month, day } = getTimeZoneDateParts(startAt, timeZone);
+
+  return createDateInTimeZone(
+    timeZone,
+    year,
+    month - 1,
+    day,
+    23,
+    59,
+    59,
+    999,
+  );
 }
 
 export function getActivityLocationLabel(activity: ActivityCardViewModel) {
@@ -54,9 +150,9 @@ export function getActivityLocationLabel(activity: ActivityCardViewModel) {
 
 export function getActivityTimeState(
   activity: ActivityCardViewModel,
-  now = getActivityFloatingNow(),
+  reference = new Date(),
 ): ActivityDisplayTimeState {
-  const comparisonNow = usesFloatingActivityTime(activity) ? now : new Date();
+  const comparisonNow = getActivityComparisonNow(activity, reference);
 
   if (activity.status === "ENDED" || activity.status === "CANCELLED") {
     return "ENDED";
@@ -68,7 +164,7 @@ export function getActivityTimeState(
     return "UPCOMING";
   }
 
-  if (activity.endAt && new Date(activity.endAt) > comparisonNow) {
+  if (getActivityEndBoundary(activity) > comparisonNow) {
     return "ONGOING";
   }
 
@@ -77,6 +173,7 @@ export function getActivityTimeState(
 
 export function getActivityDisplayStatus(
   activity: ActivityCardViewModel,
+  reference = new Date(),
 ): ActivityStatus {
   if (activity.status === "CANCELLED") {
     return "CANCELLED";
@@ -86,11 +183,8 @@ export function getActivityDisplayStatus(
     return "ENDED";
   }
 
-  const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
-
-  const comparisonNow = usesFloatingActivityTime(activity)
-    ? getActivityFloatingNow()
-    : new Date();
+  const activityEndBoundary = getActivityEndBoundary(activity);
+  const comparisonNow = getActivityComparisonNow(activity, reference);
 
   if (activityEndBoundary <= comparisonNow) {
     return "ENDED";

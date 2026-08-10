@@ -31,16 +31,24 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@chill-club/ui";
+import { MobileBottomSheet } from "@/components/ui/MobileBottomSheet";
 import { ActivityAnnouncementComposer } from "@/features/activities/components/ActivityAnnouncementComposer";
 import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCoManagerPanel } from "@/features/activities/components/ActivityCoManagerPanel";
-import { CancelActivityForm } from "@/features/activities/components/CancelActivityForm";
+import {
+  CancelActivityForm,
+  DeleteActivityForm,
+} from "@/features/activities/components/CancelActivityForm";
+import {
+  deleteActivityAnnouncementAction,
+  type DeleteActivityAnnouncementState,
+} from "@/features/activities/actions/sendActivityAnnouncement";
 import {
   cancelParticipationAction,
   type CancelParticipationState,
 } from "@/features/activities/actions/cancelParticipation";
-import { ActivityParticipantContactDialog } from "@/features/direct-messages/components/ActivityParticipantContactDialog";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { readPreviousAppRouteHref } from "@/features/navigation/appRouteHistory";
 import {
@@ -86,6 +94,7 @@ type ActivityRoomChatPageProps = {
   activity: ActivityRoomChatActivityViewModel | null;
   activityId: string;
   locale: string;
+  management?: ActivityRoomManagementViewModel | null;
   messages: ActivityRoomMessageViewModel[];
   policy: ActivityRoomChatPolicy;
   signInHref: string;
@@ -97,7 +106,9 @@ type ActivityRoomManagePageProps = {
   activityId: string;
   locale: string;
   management?: ActivityRoomManagementViewModel | null;
+  onClose?: () => void;
   policy: ActivityRoomChatPolicy;
+  presentation?: "page" | "sheet";
   signInHref: string;
   viewer: ActivityRoomViewer | null;
 };
@@ -106,6 +117,7 @@ const initialActionState: ActivityRoomChatActionState = {};
 const initialLeaveState: CancelParticipationState = {};
 const initialInviteActionState: ActivityRoomInviteActionState = {};
 const initialMemberActionState: ActivityRoomMemberActionState = {};
+const initialAnnouncementDeleteState: DeleteActivityAnnouncementState = {};
 
 function getAvatarInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || "F";
@@ -293,32 +305,35 @@ function ActivityRoomChatAutoRefresh({
 }
 
 function ActivityRoomManagementMenu({
-  activityId,
   locale,
+  onOpen,
 }: {
-  activityId: string;
   locale: string;
+  onOpen: () => void;
 }) {
   const copy = getRoomManagementCopy(locale);
 
   return (
-    <Link
+    <button
       aria-label={copy.label}
       className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
-      href={withLocale(locale, `/lobby/${activityId}/room/manage`)}
+      onClick={onOpen}
       title={copy.label}
+      type="button"
     >
       <MoreHorizontal className="h-4 w-4" />
-    </Link>
+    </button>
   );
 }
 
 function ActivityRoomManageBackButton({
   fallbackHref,
   label,
+  onClose,
 }: {
   fallbackHref: string;
   label: string;
+  onClose?: () => void;
 }) {
   const router = useRouter();
 
@@ -327,12 +342,13 @@ function ActivityRoomManageBackButton({
       aria-label={label}
       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#111210]/72 ring-1 ring-[#E7E1CA] transition active:scale-95"
       onClick={() => {
-        if (window.history.length > 1) {
-          router.back();
+        if (onClose) {
+          onClose();
           return;
         }
 
         router.replace(fallbackHref);
+        router.refresh();
       }}
       title={label}
       type="button"
@@ -1060,12 +1076,95 @@ function ChatDateSeparator({
   );
 }
 
+function getAnnouncementDeleteConfirmCopy(locale: string) {
+  if (locale === "fr") {
+    return "Supprimer cette annonce ?";
+  }
+
+  if (locale === "en") {
+    return "Delete this announcement?";
+  }
+
+  return "确认删除这条群公告？";
+}
+
+function DeleteActivityAnnouncementSubmitButton({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const copy = getActivityRoomChatCopy(locale).announcements;
+
+  return (
+    <button
+      aria-busy={pending}
+      className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-red-100 bg-white px-2.5 text-[11px] font-black text-red-700 transition active:scale-95 disabled:opacity-60"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? (
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      ) : (
+        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+      <span>{pending ? copy.deleting : copy.delete}</span>
+    </button>
+  );
+}
+
+function DeleteActivityAnnouncementForm({
+  activityId,
+  announcementId,
+  locale,
+}: {
+  activityId: string;
+  announcementId: string;
+  locale: string;
+}) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(
+    deleteActivityAnnouncementAction,
+    initialAnnouncementDeleteState,
+  );
+  const copy = getActivityRoomChatCopy(locale).announcements;
+
+  useEffect(() => {
+    if (state.ok) {
+      router.refresh();
+    }
+  }, [router, state.ok]);
+
+  return (
+    <form
+      action={formAction}
+      className="grid shrink-0 gap-1"
+      noValidate
+      onSubmit={(event) => {
+        if (!window.confirm(getAnnouncementDeleteConfirmCopy(locale))) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <input name="activityId" type="hidden" value={activityId} />
+      <input name="announcementId" type="hidden" value={announcementId} />
+      <input name="locale" type="hidden" value={locale} />
+      <DeleteActivityAnnouncementSubmitButton locale={locale} />
+      {state.formError ? (
+        <p className="max-w-[8rem] text-right text-[11px] font-semibold leading-4 text-red-700">
+          {state.formError || copy.deleteFailed}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 function ActivityRoomAnnouncementNotice({
+  activityId,
   announcements,
+  canDelete = false,
   locale,
   variant = "bar",
 }: {
+  activityId?: string;
   announcements: ActivityRoomAnnouncementViewModel[];
+  canDelete?: boolean;
   locale: string;
   variant?: "bar" | "row";
 }) {
@@ -1148,21 +1247,30 @@ function ActivityRoomAnnouncementNotice({
                     className="rounded-[1rem] border border-[#E7E2D6] bg-[#FEFFF9] px-3.5 py-3"
                     key={announcement.id}
                   >
-                    <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
-                      <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
-                        {announcement.authorName}
-                      </span>
-                      {index === 0 ? (
-                        <span className="rounded-full bg-[#E7457A] px-2 py-1 text-white">
-                          {copy.latest}
+                    <div className="flex min-w-0 items-start gap-2">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-[11px] font-bold text-[#8B907F]">
+                        <span className="rounded-full bg-white px-2 py-1 text-[#156240] ring-1 ring-[#D8E8DC]">
+                          {announcement.authorName}
                         </span>
+                        {index === 0 ? (
+                          <span className="rounded-full bg-[#E7457A] px-2 py-1 text-white">
+                            {copy.latest}
+                          </span>
+                        ) : null}
+                        <span>
+                          {formatChatListTimestamp(
+                            announcement.createdAt,
+                            locale,
+                          )}
+                        </span>
+                      </div>
+                      {canDelete && activityId ? (
+                        <DeleteActivityAnnouncementForm
+                          activityId={activityId}
+                          announcementId={announcement.id}
+                          locale={locale}
+                        />
                       ) : null}
-                      <span>
-                        {formatChatListTimestamp(
-                          announcement.createdAt,
-                          locale,
-                        )}
-                      </span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#111210]">
                       {announcement.content}
@@ -1223,7 +1331,9 @@ export function ActivityRoomManagePage({
   activityId,
   locale,
   management,
+  onClose,
   policy,
+  presentation = "page",
   signInHref,
   viewer,
 }: ActivityRoomManagePageProps) {
@@ -1266,11 +1376,26 @@ export function ActivityRoomManagePage({
     memberPreview.length > 0 ? ` (${memberPreview.length})` : "";
 
   return (
-    <section className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210] md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2]">
-      <header className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-[#EFEFEA] bg-white p-4 max-md:pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <section
+      className={cn(
+        "mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-white text-[#111210]",
+        presentation === "page"
+          ? "md:h-[calc(100dvh-8rem)] md:rounded-[1.45rem] md:border md:border-[#D6D5B2]"
+          : "rounded-t-[1.35rem]",
+      )}
+    >
+      <header
+        className={cn(
+          "grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-2 border-b border-[#EFEFEA] bg-white p-4",
+          presentation === "page"
+            ? "max-md:pt-[calc(env(safe-area-inset-top)+1rem)]"
+            : "pt-3",
+        )}
+      >
         <ActivityRoomManageBackButton
           fallbackHref={roomHref}
           label={copy.backToRoom}
+          onClose={onClose}
         />
         <h1 className="truncate text-center text-lg font-black text-[#111210]">
           {copy.infoTitle}
@@ -1308,7 +1433,9 @@ export function ActivityRoomManagePage({
             </ActivityRoomInfoRow>
             {activity?.announcements.length ? (
               <ActivityRoomAnnouncementNotice
+                activityId={activity?.id ?? activityId}
                 announcements={activity.announcements}
+                canDelete={canManageRoom}
                 locale={locale}
                 variant="row"
               />
@@ -1335,15 +1462,6 @@ export function ActivityRoomManagePage({
                     locale={locale}
                     compact
                   />
-                  {management.contactableParticipants.length > 0 ? (
-                    <ActivityParticipantContactDialog
-                      activityId={activity?.id ?? activityId}
-                      buttonClassName="min-h-10 bg-white px-4 text-sm font-black"
-                      buttonLabel={copy.contactParticipants}
-                      locale={locale}
-                      participants={management.contactableParticipants}
-                    />
-                  ) : null}
                   <ActivityCheckInReviewPanel
                     activityId={activity?.id ?? activityId}
                     locale={locale}
@@ -1363,6 +1481,15 @@ export function ActivityRoomManagePage({
                       locale={locale}
                     />
                   </div>
+                  {policy.role === "ORGANIZER" ? (
+                    <div className="rounded-[1rem] border border-red-100 bg-white p-2">
+                      <DeleteActivityForm
+                        activityId={activity?.id ?? activityId}
+                        activityTitle={management.activityTitle}
+                        locale={locale}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </section>
             </>
@@ -1554,6 +1681,41 @@ function MessageRow({
   );
 }
 
+function ActivityRoomManageSheet({
+  activity,
+  activityId,
+  locale,
+  management,
+  onClose,
+  policy,
+  signInHref,
+  viewer,
+}: ActivityRoomManagePageProps & {
+  onClose: () => void;
+}) {
+  return (
+    <MobileBottomSheet
+      ariaLabel={getRoomManagementCopy(locale).label}
+      bodyClassName="overflow-hidden"
+      closeLabel={getRoomManagementCopy(locale).close}
+      onClose={onClose}
+      open
+    >
+      <ActivityRoomManagePage
+        activity={activity}
+        activityId={activityId}
+        locale={locale}
+        management={management}
+        onClose={onClose}
+        policy={policy}
+        presentation="sheet"
+        signInHref={signInHref}
+        viewer={viewer}
+      />
+    </MobileBottomSheet>
+  );
+}
+
 function RoomComposer({
   activityId,
   disabled,
@@ -1677,6 +1839,7 @@ export function ActivityRoomChatPage({
   activity,
   activityId,
   locale,
+  management,
   messages: initialMessages,
   policy,
   signInHref,
@@ -1688,6 +1851,7 @@ export function ActivityRoomChatPage({
     useState<ActivityRoomMessageViewModel[]>(initialMessages);
   const [deleteError, setDeleteError] = useState("");
   const [deletingId, setDeletingId] = useState("");
+  const [manageSheetOpen, setManageSheetOpen] = useState(false);
   const canManage = policy.role === "ORGANIZER" || policy.role === "CO_MANAGER";
   const lastMessageId = messages[messages.length - 1]?.id;
   const activityHref = withLocale(
@@ -1771,8 +1935,8 @@ export function ActivityRoomChatPage({
         <div className="flex shrink-0 items-center gap-1.5">
           {activity && policy.canView ? (
             <ActivityRoomManagementMenu
-              activityId={activity.id}
               locale={locale}
+              onOpen={() => setManageSheetOpen(true)}
             />
           ) : null}
         </div>
@@ -1780,7 +1944,9 @@ export function ActivityRoomChatPage({
 
       {activity?.announcements.length ? (
         <ActivityRoomAnnouncementNotice
+          activityId={activity.id}
           announcements={activity.announcements}
+          canDelete={canManage}
           locale={locale}
         />
       ) : null}
@@ -1857,6 +2023,19 @@ export function ActivityRoomChatPage({
         <div className="shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-center text-xs font-black text-[#6C746A] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
           {getPolicyNotice(policy, locale, copy.readOnly)}
         </div>
+      ) : null}
+
+      {activity && policy.canView && manageSheetOpen ? (
+        <ActivityRoomManageSheet
+          activity={activity}
+          activityId={activity.id}
+          locale={locale}
+          management={management}
+          onClose={() => setManageSheetOpen(false)}
+          policy={policy}
+          signInHref={signInHref}
+          viewer={viewer}
+        />
       ) : null}
     </section>
   );

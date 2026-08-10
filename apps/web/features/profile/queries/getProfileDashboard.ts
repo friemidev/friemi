@@ -1,9 +1,9 @@
 import { getPublicEventFavoriteDelegate, prisma } from "@/lib/prisma";
-import type {
-  ActivityVisibility,
-  MomentVisibility,
-  ParticipantStatus,
+import {
   Prisma,
+  type ActivityVisibility,
+  type MomentVisibility,
+  type ParticipantStatus,
 } from "@prisma/client";
 import {
   activityCardSelect,
@@ -27,6 +27,11 @@ import {
   type UserPresenceDisplayStatus,
   type UserPresenceStatusValue,
 } from "../presence";
+import {
+  getProfileRemarkMap,
+  getProfileRemarkName,
+  resolveRemarkedProfileName,
+} from "../services/profileRemarks";
 
 export const profileActivityListLimit = 12;
 export const profileCharmGiftListLimit = 6;
@@ -70,17 +75,34 @@ const publicPastParticipationStatuses: ParticipantStatus[] = [
   "APPROVED",
 ];
 
-const publicProfileSelect = {
+function hasGeneratedPrismaField(modelName: string, fieldName: string) {
+  return Prisma.dmmf.datamodel.models.some(
+    (model) =>
+      model.name === modelName &&
+      model.fields.some((field) => field.name === fieldName),
+  );
+}
+
+const canSelectUserProfileHomeCity = hasGeneratedPrismaField(
+  "UserProfile",
+  "homeCity",
+);
+
+const publicProfileBaseSelect = {
   id: true,
   nickname: true,
   friendCode: true,
   avatarUrl: true,
   bio: true,
-  homeCity: true,
   isCoCreator: true,
   presenceStatus: true,
   lastActiveAt: true,
   status: true,
+} satisfies Prisma.UserProfileSelect;
+
+const publicProfileSelect = {
+  ...publicProfileBaseSelect,
+  ...(canSelectUserProfileHomeCity ? { homeCity: true } : {}),
 } satisfies Prisma.UserProfileSelect;
 
 const profileParticipationSelect = {
@@ -248,6 +270,8 @@ export type ProfileCharmGiftViewModel = {
 export type PublicProfileViewModel = {
   id: string;
   nickname: string;
+  publicNickname: string;
+  remarkName: string | null;
   friendCode: string | null;
   avatarUrl: string | null;
   bio: string | null;
@@ -261,6 +285,8 @@ export type PublicProfileViewModel = {
 export type ProfileFollowUserViewModel = {
   id: string;
   nickname: string;
+  publicNickname: string;
+  remarkName: string | null;
   bio: string | null;
   avatarUrl: string | null;
   isCoCreator: boolean;
@@ -293,16 +319,23 @@ function mapPublicProfile(
     friendCode: string | null;
     avatarUrl: string | null;
     bio: string | null;
-    homeCity: string | null;
+    homeCity?: string | null;
     isCoCreator: boolean;
     lastActiveAt: Date | null;
     presenceStatus: string | null;
   },
   options: {
     canViewPresence?: boolean;
+    remarkName?: string | null;
   } = {},
 ): PublicProfileViewModel {
   const hasPublicNickname = profile.nickname.trim().length > 0;
+  const publicNickname = hasPublicNickname
+    ? profile.nickname
+    : profile.friendCode
+      ? `NF ${profile.friendCode}`
+      : "NF";
+  const remarkName = options.remarkName?.trim() || null;
   const presence = getUserPresenceState({
     lastActiveAt: profile.lastActiveAt,
     status: profile.presenceStatus,
@@ -311,11 +344,12 @@ function mapPublicProfile(
 
   return {
     id: profile.id,
-    nickname: hasPublicNickname
-      ? profile.nickname
-      : profile.friendCode
-        ? `NF ${profile.friendCode}`
-        : "NF",
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName,
+    }),
+    publicNickname,
+    remarkName,
     friendCode: profile.friendCode,
     avatarUrl: hasPublicNickname ? profile.avatarUrl : null,
     bio: profile.bio,
@@ -446,10 +480,18 @@ function mapFollowUser(user: {
   bio: string | null;
   avatarUrl: string | null;
   isCoCreator: boolean;
-}): ProfileFollowUserViewModel {
+}, remarkName?: string | null): ProfileFollowUserViewModel {
+  const publicNickname = user.nickname.trim() || "NF";
+  const normalizedRemarkName = remarkName?.trim() || null;
+
   return {
     id: user.id,
-    nickname: user.nickname,
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName: normalizedRemarkName,
+    }),
+    publicNickname,
+    remarkName: normalizedRemarkName,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     isCoCreator: user.isCoCreator,
@@ -657,6 +699,7 @@ async function getProfileViewerRelationship(
 
 async function getProfileFollowNetwork(
   profileId: string,
+  remarkOwnerProfileId?: string | null,
 ): Promise<ProfileFollowNetworkViewModel> {
   const buckets = await getFollowRelationshipBuckets(profileId);
   const [mutual, followers, following] = await Promise.all([
@@ -712,14 +755,29 @@ async function getProfileFollowNetwork(
         })
       : Promise.resolve([]),
   ]);
+  const mutualUsers = mutual.map((item) => item.following);
+  const followerUsers = followers.map((item) => item.follower);
+  const followingUsers = following.map((item) => item.following);
+  const remarkMap = await getProfileRemarkMap({
+    ownerProfileId: remarkOwnerProfileId,
+    targetProfileIds: [
+      ...mutualUsers,
+      ...followerUsers,
+      ...followingUsers,
+    ].map((user) => user.id),
+  });
 
   return {
     mutualCount: buckets.mutualFollowIds.length,
     followersCount: buckets.followerOnlyIds.length,
     followingCount: buckets.followingOnlyIds.length,
-    mutual: mutual.map((item) => mapFollowUser(item.following)),
-    followers: followers.map((item) => mapFollowUser(item.follower)),
-    following: following.map((item) => mapFollowUser(item.following)),
+    mutual: mutualUsers.map((user) => mapFollowUser(user, remarkMap.get(user.id))),
+    followers: followerUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
+    following: followingUsers.map((user) =>
+      mapFollowUser(user, remarkMap.get(user.id)),
+    ),
   };
 }
 
@@ -843,7 +901,7 @@ export async function getProfileDashboard(
       take: profileCharmGiftListLimit,
       select: profileCharmGiftSelect,
     }),
-    getProfileFollowNetwork(profileId),
+    getProfileFollowNetwork(profileId, profileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -1002,7 +1060,7 @@ export async function getPublicProfileDashboard(
       take: profileCharmGiftListLimit,
       select: profileCharmGiftSelect,
     }),
-    getProfileFollowNetwork(profileId),
+    getProfileFollowNetwork(profileId, viewerProfileId),
   ]);
 
   const createdActivityCards = await applyOrganizerParticipationDefaults(
@@ -1067,16 +1125,20 @@ export async function getPublicProfileById(
     return null;
   }
 
+  const [relation, remarkName] = await Promise.all([
+    options.viewerProfileId && options.viewerProfileId !== profileId
+      ? getFollowRelationState({
+          targetProfileId: profileId,
+          viewerProfileId: options.viewerProfileId,
+        })
+      : Promise.resolve(null),
+    getProfileRemarkName({
+      ownerProfileId: options.viewerProfileId,
+      targetProfileId: profileId,
+    }),
+  ]);
   const canViewPresence =
-    options.viewerProfileId === profileId ||
-    (options.viewerProfileId
-      ? (
-          await getFollowRelationState({
-            targetProfileId: profileId,
-            viewerProfileId: options.viewerProfileId,
-          })
-        ).isMutualFollow
-      : false);
+    options.viewerProfileId === profileId || Boolean(relation?.isMutualFollow);
 
-  return mapPublicProfile(profile, { canViewPresence });
+  return mapPublicProfile(profile, { canViewPresence, remarkName });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -17,23 +17,14 @@ export function SearchBackButton({
   className,
   fallbackHref,
 }: SearchBackButtonProps) {
-  const router = useRouter();
-
   return (
-    <button
+    <Link
       aria-label={ariaLabel}
       className={cn(className)}
-      type="button"
-      onClick={() => {
-        if (window.history.length > 1) {
-          router.back();
-          return;
-        }
-
-        router.replace(fallbackHref);
-      }}
+      href={fallbackHref}
+      replace
     >
       {children}
-    </button>
+    </Link>
   );
 }

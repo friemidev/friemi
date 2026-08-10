@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
@@ -99,6 +100,7 @@ export function FollowButton({
   targetUserProfileId,
   unfollowConfirm,
 }: FollowButtonProps) {
+  const router = useRouter();
   const [state, formAction] = useActionState(
     toggleFollowUserAction,
     initialState,
@@ -136,6 +138,7 @@ export function FollowButton({
         setMutualPromptOpen(true);
       }
       setIsSubmitting(false);
+      router.refresh();
       return;
     }
 
@@ -145,6 +148,7 @@ export function FollowButton({
   }, [
     isFollowing,
     onStateChange,
+    router,
     state.formError,
     state.isFollowing,
     state.becameMutualFollow,

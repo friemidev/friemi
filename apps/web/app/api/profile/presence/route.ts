@@ -4,7 +4,17 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+async function getPresenceEvent(request: Request) {
+  try {
+    const payload = (await request.json()) as { state?: unknown };
+
+    return payload.state === "offline" ? "offline" : "online";
+  } catch {
+    return "online";
+  }
+}
+
+export async function POST(request: Request) {
   try {
     const profile = await getOptionalCurrentUserProfileSnapshot();
 
@@ -12,6 +22,7 @@ export async function POST() {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
 
+    const presenceEvent = await getPresenceEvent(request);
     const updatedAt = new Date();
 
     await prisma.userProfile.update({
@@ -19,13 +30,15 @@ export async function POST() {
         id: profile.id,
       },
       data: {
-        lastActiveAt: updatedAt,
+        lastActiveAt: presenceEvent === "offline" ? null : updatedAt,
       },
     });
 
     return NextResponse.json({
       ok: true,
-      updatedAt: updatedAt.toISOString(),
+      state: presenceEvent,
+      updatedAt:
+        presenceEvent === "offline" ? null : updatedAt.toISOString(),
     });
   } catch (error) {
     console.error("Failed to update profile presence", error);
