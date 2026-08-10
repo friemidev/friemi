@@ -64,11 +64,15 @@ import {
   getShareDateLabel,
   getSharePriceLabel,
 } from "@/lib/share-metadata";
+import { cn } from "@/lib/utils";
 
 type PublicEventDetailPageProps = {
   params: Promise<{
     locale: string;
     publicEventId: string;
+  }>;
+  searchParams?: Promise<{
+    sheet?: string | string[];
   }>;
 };
 
@@ -140,8 +144,14 @@ export async function generateMetadata({
 
 export default async function PublicEventDetailPage({
   params,
+  searchParams,
 }: PublicEventDetailPageProps) {
   const { locale, publicEventId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const sheet = Array.isArray(resolvedSearchParams?.sheet)
+    ? resolvedSearchParams?.sheet[0]
+    : resolvedSearchParams?.sheet;
+  const isSheetPresentation = sheet === "1";
   const perf = createPerformanceTracker({
     locale,
     route: "/public-events/[publicEventId]",
@@ -261,20 +271,31 @@ export default async function PublicEventDetailPage({
 
   return (
     <PageContainer
-      className="space-y-5 py-4 sm:space-y-6 sm:py-8"
-      mobileSafeBottom
-      mobileSafeTop
+      className={cn(
+        "space-y-5 sm:space-y-6",
+        isSheetPresentation
+          ? "mobile-v23-lobby-detail-sheet h-full max-w-none overflow-y-auto px-4 pb-6 pt-0 sm:px-4"
+          : "py-4 sm:py-8",
+      )}
+      mobileSafeBottom={!isSheetPresentation}
+      mobileSafeTop={!isSheetPresentation}
     >
-      <MobileNavSectionOverride section="activities" />
+      {isSheetPresentation ? null : (
+        <MobileNavSectionOverride section="activities" />
+      )}
       <DetailSourceRestore sourceKey="public_event" />
-      <PublicEventDetailHeader
-        backHref={withLocale(locale, "/activities")}
-        title={getPublicEventDetailLayerTitle(locale)}
-      />
-      <DetailSourceReturnLink
-        className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
-        locale={locale}
-      />
+      {isSheetPresentation ? null : (
+        <PublicEventDetailHeader
+          backHref={withLocale(locale, "/activities")}
+          title={getPublicEventDetailLayerTitle(locale)}
+        />
+      )}
+      {isSheetPresentation ? null : (
+        <DetailSourceReturnLink
+          className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
+          locale={locale}
+        />
+      )}
       <div className="space-y-2 px-1 sm:px-0">
         <h1 className="text-[1.7rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {publicEvent.title}

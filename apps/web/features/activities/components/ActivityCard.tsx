@@ -852,7 +852,7 @@ export function ActivityCard({
   const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
   const shouldShowInactiveCardState = isInactiveCard && !searchResultStyle;
   const shouldUseMobileDetailSheet =
-    mobileDetailSheet && !isActivityInfo && !showPrimaryAction && !copyActivityHref;
+    mobileDetailSheet && !showPrimaryAction && !copyActivityHref;
 
   return (
     <Card
