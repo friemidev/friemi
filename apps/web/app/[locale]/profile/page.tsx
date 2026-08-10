@@ -63,6 +63,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Visiteur",
+      publicNickname: "Visiteur",
+      remarkName: null,
       friendCode: null,
       avatarUrl: null,
       bio: "Connectez-vous quand vous voulez retrouver vos sorties, traces et relations.",
@@ -78,6 +80,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
     return {
       id: "guest",
       nickname: "Guest",
+      publicNickname: "Guest",
+      remarkName: null,
       friendCode: null,
       avatarUrl: null,
       bio: "Sign in when you want to keep your plans, traces, and follows together.",
@@ -92,6 +96,8 @@ function getGuestProfile(locale: string): PublicProfileViewModel {
   return {
     id: "guest",
     nickname: "游客",
+    publicNickname: "游客",
+    remarkName: null,
     friendCode: null,
     avatarUrl: null,
     bio: "登录后可以同步你的聚吧、足迹和关注关系。",
@@ -148,6 +154,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     ? {
         id: profile.id,
         nickname: profile.nickname,
+        publicNickname: profile.nickname,
+        remarkName: null,
         friendCode: profile.friendCode,
         avatarUrl: profile.avatarUrl,
         bio: profile.bio,

@@ -14,6 +14,8 @@ export function ProfileFollowUserCard({
 }: ProfileFollowUserCardProps) {
   const t = getProfileFollowCopy(locale);
   const userInitial = user.nickname.trim().slice(0, 1) || "N";
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
     <Card className="h-full border-black/10 bg-white/75">
@@ -36,6 +38,11 @@ export function ProfileFollowUserCard({
               <CoCreatorIdentityBadge locale={locale} variant="icon" />
             ) : null}
           </div>
+          {showPublicNickname ? (
+            <p className="mt-0.5 truncate text-xs font-semibold text-zinc-500">
+              {user.publicNickname}
+            </p>
+          ) : null}
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-600">
             {user.bio ?? t.noBio}
           </p>

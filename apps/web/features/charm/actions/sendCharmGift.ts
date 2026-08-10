@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCharmGiftDefinition } from "@/features/charm/charm";
+import { getFriemiCoinBalance } from "@/features/charm/queries/getFriemiCoinBalance";
 import {
   CharmGiftUnavailableError,
   InsufficientFriemiCoinBalanceError,
@@ -26,9 +27,11 @@ const sendCharmGiftSchema = z.object({
 
 export type SendCharmGiftState = {
   attemptId?: string;
+  balance?: number;
   eventId?: string;
   formError?: string;
   ok?: boolean;
+  required?: number;
 };
 
 function getString(formData: FormData, key: string) {
@@ -67,6 +70,23 @@ function getSendGiftCopy(locale: string) {
     invalidRequest: "请求无效。",
     targetUnavailable: "这个用户暂不可用。",
     unavailableGift: "这个礼物暂不可用。",
+  };
+}
+
+export async function getViewerFriemiCoinBalanceClientAction(
+  locale: string,
+  redirectPath: string,
+) {
+  const normalizedLocale = locale || "zh-CN";
+  const profile = await ensureCurrentUserProfile(
+    normalizedLocale,
+    redirectPath || "/profile",
+  );
+  const balance = await getFriemiCoinBalance(profile.id);
+
+  return {
+    balance: balance.balance,
+    ok: true as const,
   };
 }
 
@@ -143,9 +163,10 @@ export async function sendCharmGiftAction(
   }
 
   let eventId: string;
+  let senderBalance: number | undefined;
 
   try {
-    const result = await recordReceivedCharmGift({
+    const giftResult = await recordReceivedCharmGift({
       giftId,
       locale,
       recipientProfileId,
@@ -154,7 +175,8 @@ export async function sendCharmGiftAction(
       sourceSurface,
     });
 
-    eventId = result.event.id;
+    eventId = giftResult.event.id;
+    senderBalance = giftResult.senderBalance?.balance;
   } catch (error) {
     if (error instanceof CharmGiftUnavailableError) {
       return {
@@ -166,7 +188,9 @@ export async function sendCharmGiftAction(
     if (error instanceof InsufficientFriemiCoinBalanceError) {
       return {
         attemptId,
+        balance: error.balance,
         formError: copy.insufficientCoins,
+        required: error.required,
       };
     }
 
@@ -185,6 +209,7 @@ export async function sendCharmGiftAction(
 
   return {
     attemptId,
+    balance: senderBalance,
     eventId,
     ok: true,
   };

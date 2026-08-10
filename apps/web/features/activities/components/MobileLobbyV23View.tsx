@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
+import { MobileActivityDetailSheetLink } from "@/features/activities/components/MobileActivityDetailSheetLink";
 import { ActivitySwipeDiscovery } from "@/features/activities/components/ActivitySwipeDiscovery";
 import type { ActivityCardViewModel } from "@/features/activities/types";
 import {
@@ -716,12 +717,13 @@ function MobileLobbyV23ActivityRow({
     displayStatus === "ENDED" || displayStatus === "CANCELLED";
 
   return (
-    <Link
+    <MobileActivityDetailSheetLink
       className={cn(
         "group grid grid-cols-[clamp(5.15rem,23.5vw,5.75rem)_minmax(0,1fr)_auto] items-stretch gap-x-3.5 rounded-[1.1rem] px-2.5 py-2.5 transition active:scale-[0.985]",
         isInactiveActivity ? "bg-zinc-50 text-zinc-500" : "bg-white",
       )}
       href={getActivityHref(activity, locale)}
+      label={activity.title}
     >
       <div
         className={cn(
@@ -806,7 +808,7 @@ function MobileLobbyV23ActivityRow({
           </span>
         ) : null}
       </div>
-    </Link>
+    </MobileActivityDetailSheetLink>
   );
 }
 

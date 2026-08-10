@@ -1,22 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
-  detectActivityCoverMimeType,
   getActivityCoverStorageConfig,
-  maxActivityCoverFileSize,
   uploadMomentImageBuffer,
+  validateImageUploadFile,
   type ActivityCoverStorageErrorCode,
 } from "@/lib/activity-cover-storage";
 import { hasClerkKeys } from "@/lib/clerk";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const allowedMimeTypes = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-} as const;
 
 function uploadError(error: ActivityCoverStorageErrorCode, status: number) {
   return NextResponse.json({ error }, { status });
@@ -50,31 +43,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "MISSING_FILE" }, { status: 400 });
   }
 
-  if (!(file.type in allowedMimeTypes)) {
-    return NextResponse.json(
-      { error: "UNSUPPORTED_FILE_TYPE" },
-      { status: 400 },
-    );
-  }
+  const validated = await validateImageUploadFile(file);
 
-  if (file.size > maxActivityCoverFileSize) {
-    return NextResponse.json({ error: "FILE_TOO_LARGE" }, { status: 400 });
-  }
-
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
-  const detectedMimeType = detectActivityCoverMimeType(fileBuffer);
-
-  if (detectedMimeType !== file.type) {
-    return NextResponse.json(
-      { error: "INVALID_IMAGE_CONTENT" },
-      { status: 400 },
-    );
+  if ("error" in validated) {
+    return NextResponse.json({ error: validated.error }, { status: 400 });
   }
 
   const uploaded = await uploadMomentImageBuffer(
     userId,
-    fileBuffer,
-    detectedMimeType,
+    validated.fileBuffer,
+    validated.detectedMimeType,
   );
 
   if ("error" in uploaded) {

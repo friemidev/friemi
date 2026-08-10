@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  AlertCircle,
   ArrowLeft,
   BadgeCheck,
   Box,
@@ -832,7 +833,7 @@ function MetricPill({
   value: number | string;
 }) {
   return (
-    <div className="min-w-0 rounded-[1.1rem] bg-white/82 px-3 py-3 ring-1 ring-[#E3DCC5]">
+    <div className="min-w-0 border-b border-[#E3DCC5]/70 px-1 py-3">
       <div className="flex items-center gap-1.5 text-[11px] font-black text-[#6C746A]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
@@ -847,18 +848,27 @@ function MetricPill({
 function StatusPanel({
   description,
   icon: Icon,
+  minimal = false,
   title,
   tone = "green",
 }: {
   description?: string;
   icon: LucideIcon;
+  minimal?: boolean;
   title: string;
   tone?: SubpageTone;
 }) {
   const toneClasses = getToneClasses(tone);
 
   return (
-    <section className="mt-6 rounded-[1.35rem] bg-white/82 px-4 py-8 text-center ring-1 ring-[#E3DCC5]">
+    <section
+      className={cn(
+        "mt-6 px-4 py-8 text-center",
+        minimal
+          ? "border-t border-[#E3DCC5]/70"
+          : "rounded-[1.35rem] bg-white/82 ring-1 ring-[#E3DCC5]",
+      )}
+    >
       <span
         className={cn(
           "mx-auto flex h-12 w-12 items-center justify-center rounded-[1.1rem] ring-1",
@@ -1277,6 +1287,10 @@ function GiftAvailabilityBadge({
   const disabled = gift.availability === "disabled";
   const locked = gift.availability === "seasonal_locked";
 
+  if (!disabled && !locked) {
+    return null;
+  }
+
   return (
     <span
       className={cn(
@@ -1295,6 +1309,18 @@ function GiftAvailabilityBadge({
           : copy.shop.available}
     </span>
   );
+}
+
+function getShopCharmUnit(locale: string) {
+  if (locale === "fr") {
+    return "charme";
+  }
+
+  if (locale === "en") {
+    return "charm";
+  }
+
+  return "魅力值";
 }
 
 const shopGiftInitialState: SendCharmGiftState = {};
@@ -1321,17 +1347,21 @@ function ShopGiftSubmitButton({
 
 function ShopGiftRecipientDialog({
   attemptId,
+  coinBalance,
   gift,
   locale,
   onClose,
+  onBalanceChange,
   onSent,
   open,
   recipients,
 }: {
   attemptId: string;
+  coinBalance: number;
   gift: ProfileShopGiftItem | null;
   locale: string;
   onClose: () => void;
+  onBalanceChange: (balance: number) => void;
   onSent: () => void;
   open: boolean;
   recipients: ProfileShopGiftRecipient[];
@@ -1343,23 +1373,58 @@ function ShopGiftRecipientDialog({
   );
   const router = useRouter();
   const formError = state.attemptId === attemptId ? state.formError : null;
+  const visibleCoinBalance =
+    state.attemptId === attemptId && typeof state.balance === "number"
+      ? state.balance
+      : coinBalance;
+  const charmUnit =
+    locale === "en" ? "charm" : locale === "fr" ? "charme" : "魅力值";
+  const failureTitle =
+    locale === "en"
+      ? "Gift not sent"
+      : locale === "fr"
+        ? "Cadeau non envoyé"
+        : "礼物没有送出";
+  const requiredLabel =
+    locale === "en" ? "Required" : locale === "fr" ? "Requis" : "需要";
 
   useEffect(() => {
     if (!state.ok || !state.eventId || state.attemptId !== attemptId) {
       return;
     }
 
+    if (typeof state.balance === "number") {
+      onBalanceChange(state.balance);
+    }
     onClose();
     onSent();
     router.refresh();
   }, [
     attemptId,
     onClose,
+    onBalanceChange,
     onSent,
     router,
     state.attemptId,
+    state.balance,
     state.eventId,
     state.ok,
+  ]);
+
+  useEffect(() => {
+    if (
+      state.attemptId === attemptId &&
+      state.formError &&
+      typeof state.balance === "number"
+    ) {
+      onBalanceChange(state.balance);
+    }
+  }, [
+    attemptId,
+    onBalanceChange,
+    state.attemptId,
+    state.balance,
+    state.formError,
   ]);
 
   useEffect(() => {
@@ -1412,6 +1477,10 @@ function ShopGiftRecipientDialog({
               <p className="mt-0.5 text-xs font-black text-[#7A8276]">
                 {copy.shop.chooseFriend}
               </p>
+              <p className="mt-1 truncate text-[11px] font-black text-[#7A8276]">
+                {gift.coinCost ?? "-"} {copy.shop.fc} · +{gift.charmValue}{" "}
+                {charmUnit}
+              </p>
             </div>
           </div>
           <button
@@ -1425,6 +1494,12 @@ function ShopGiftRecipientDialog({
         </header>
 
         <div className="max-h-[min(70dvh,30rem)] overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EAF5E8] px-3 py-1.5 text-[11px] font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+            <Coins className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {copy.shop.coinTitle}: {visibleCoinBalance} {copy.shop.fc}
+            </span>
+          </div>
           {recipients.length > 0 ? (
             <div className="grid gap-2">
               {recipients.map((recipient) => (
@@ -1476,9 +1551,21 @@ function ShopGiftRecipientDialog({
             </div>
           )}
           {formError ? (
-            <p className="mt-3 rounded-full bg-[#FFF0F3] px-3 py-2 text-xs font-black text-[#9A2135] ring-1 ring-[#F5C5D7]">
-              {formError}
-            </p>
+            <div
+              className="mt-3 flex items-start gap-2 rounded-[1rem] bg-[#FFF0F3] px-3 py-2.5 text-[#9A2135] ring-1 ring-[#F5C5D7]"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 text-xs font-bold leading-5">
+                <p className="font-black">{failureTitle}</p>
+                <p>{formError}</p>
+                {typeof state.required === "number" ? (
+                  <p className="mt-0.5 text-[#9A2135]/78">
+                    {requiredLabel}: {state.required} {copy.shop.fc}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
       </section>
@@ -1522,6 +1609,7 @@ export function ProfileAchievementsPageView({
           icon={BadgeCheck}
           title={copy.errorTitle}
           description={copy.errorDescription}
+          minimal
           tone="gold"
         />
       ) : null}
@@ -1540,20 +1628,20 @@ export function ProfileAchievementsPageView({
       </section>
 
       {recentUnlocked.length > 0 ? (
-        <section className="mt-6 rounded-[1.35rem] bg-[#FFF9E8] p-3 ring-1 ring-[#E8D59D]">
+        <section className="mt-6 border-t border-[#E8D59D]/62 pt-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8A641A]">
               {copy.achievements.recent}
             </p>
             <Star className="h-4 w-4 text-[#D69D26]" />
           </div>
-          <div className="mt-3 grid gap-2">
+          <div className="mt-3 divide-y divide-[#EFE0AF]/72">
             {recentUnlocked.map((item) => {
               const text = getAchievementText(item, locale);
 
               return (
                 <div
-                  className="flex items-center gap-3 rounded-[1rem] bg-white/78 px-3 py-2 ring-1 ring-[#EFE0AF]"
+                  className="flex items-center gap-3 py-2.5"
                   key={item.definition.key}
                 >
                   <AchievementIcon item={item} unlocked />
@@ -1579,7 +1667,7 @@ export function ProfileAchievementsPageView({
               <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
                 {copy.achievementGroups[group.groupKey]}
               </h2>
-              <div className="grid gap-3">
+              <div className="divide-y divide-[#E8E1CF]/72">
                 {group.items.map((item) => {
                   const text = getAchievementText(item, locale);
                   const progressWidth = `${Math.round(
@@ -1590,10 +1678,10 @@ export function ProfileAchievementsPageView({
                   return (
                     <article
                       className={cn(
-                        "rounded-[1.2rem] p-3 ring-1",
+                        "py-3",
                         unlocked
-                          ? "bg-white/90 ring-[#E3DCC5]"
-                          : "bg-[#F7F5EA]/82 ring-[#E8E1CF]",
+                          ? "bg-transparent"
+                          : "bg-transparent opacity-82",
                       )}
                       key={item.definition.key}
                     >
@@ -1662,6 +1750,7 @@ export function ProfileAchievementsPageView({
             icon={Medal}
             title={copy.achievements.emptyTitle}
             description={copy.achievements.emptyDescription}
+            minimal
             tone="gold"
           />
         )}
@@ -2393,8 +2482,12 @@ export function ProfileShopPageView({
   negativeGifts: ProfileShopGiftItem[];
 }) {
   const copy = getProfilePrivateSubpageCopy(locale);
+  const charmUnit = getShopCharmUnit(locale);
   const [dialogGiftId, setDialogGiftId] = useState<string | null>(null);
   const [dialogAttemptId, setDialogAttemptId] = useState("");
+  const [localCoinBalance, setLocalCoinBalance] = useState(
+    coinBalance.balance,
+  );
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -2427,6 +2520,10 @@ export function ProfileShopPageView({
     },
     [],
   );
+
+  useEffect(() => {
+    setLocalCoinBalance(coinBalance.balance);
+  }, [coinBalance.balance]);
 
   return (
     <ProfilePrivatePageShell
@@ -2464,7 +2561,7 @@ export function ProfileShopPageView({
                 {copy.shop.coinTitle}
               </p>
               <p className="mt-0.5 text-2xl font-black leading-none text-[#111210]">
-                {coinBalance.balance}
+                {localCoinBalance} {copy.shop.fc}
               </p>
             </div>
           </div>
@@ -2504,12 +2601,12 @@ export function ProfileShopPageView({
                     <span className="block truncate text-sm font-black text-[#111210]">
                       {gift.label}
                     </span>
-                    <span className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] font-black">
-                      <span className="truncate rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
+                    <span className="mt-2 grid gap-1.5 text-[11px] font-black">
+                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
                         {gift.coinCost ?? "-"} {copy.shop.fc}
                       </span>
-                      <span className="truncate rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
-                        +{gift.charmValue}
+                      <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F4F0FF] px-2 py-1 text-[#8D62DC]">
+                        +{gift.charmValue} {charmUnit}
                       </span>
                     </span>
                   </span>
@@ -2558,7 +2655,7 @@ export function ProfileShopPageView({
                   {gift.label}
                 </span>
                 <span className="text-[11px] font-black text-[#9A2135]">
-                  {gift.charmValue}
+                  {gift.charmValue} {charmUnit}
                 </span>
                 <span className="text-[10px] font-bold text-[#7A8276]">
                   {gift.coinCost} {copy.shop.fc}
@@ -2647,8 +2744,10 @@ export function ProfileShopPageView({
       ) : null}
       <ShopGiftRecipientDialog
         attemptId={dialogAttemptId}
+        coinBalance={localCoinBalance}
         gift={dialogGift}
         locale={locale}
+        onBalanceChange={setLocalCoinBalance}
         onClose={closeGiftDialog}
         onSent={() => showToast(copy.shop.sent)}
         open={Boolean(dialogGift)}

@@ -38,6 +38,7 @@ import { ActivityStatusBadge } from "@/features/activities/components/ActivitySt
 import { ClaimAutoCreatedActivityCelebration } from "@/features/activities/components/ClaimAutoCreatedActivityCelebration";
 import { ClaimAutoCreatedActivityButton } from "@/features/activities/components/ClaimAutoCreatedActivityButton";
 import { ActivityCheckInForm } from "@/features/activities/components/ActivityCheckInForm";
+import { ActivityCheckInReviewPanel } from "@/features/activities/components/ActivityCheckInReviewPanel";
 import { ActivityCopyButton } from "@/features/activities/components/ActivityCopyButton";
 import { ActivityCoverImage } from "@/features/activities/components/ActivityCoverImage";
 import { ActivityCoverImageManager } from "@/features/activities/components/ActivityCoverImageManager";
@@ -56,10 +57,12 @@ import {
   getActivityShareMetadataById,
 } from "@/features/activities/queries/getActivityById";
 import { getActivityViewerParticipation } from "@/features/activities/queries/getActivityViewerParticipation";
+import { getActivityCheckInRoster } from "@/features/activities/queries/getActivityCheckInRoster";
 import { getPendingParticipants } from "@/features/activities/queries/getPendingParticipants";
 import {
   getActivityDateLabel,
   getActivityDisplayStatus,
+  getActivityEndBoundary,
   getActivityLocationLabel,
   getActivityOrganizerInitial,
   getActivityParticipantPercent,
@@ -126,6 +129,7 @@ type ActivityDetailPageProps = {
   searchParams: Promise<{
     access?: string;
     claimed?: string;
+    sheet?: string;
   }>;
 };
 
@@ -843,7 +847,12 @@ export async function ActivityDetailPageContent({
   routeKind = "legacy",
 }: ActivityDetailPageContentProps) {
   const { locale, activityId } = await params;
-  const { access: accessToken, claimed: claimedSuccess } = await searchParams;
+  const {
+    access: accessToken,
+    claimed: claimedSuccess,
+    sheet,
+  } = await searchParams;
+  const isSheetPresentation = sheet === "1";
   const perf = createPerformanceTracker({
     locale,
     route: getActivityRoutePattern(routeKind),
@@ -1003,7 +1012,7 @@ export async function ActivityDetailPageContent({
       ? t.activityDetail.onlineLink
       : activityLocationLabel;
     const activityPriceLabel = getActivityPriceLabel(activity, locale);
-    const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+    const activityEndBoundary = getActivityEndBoundary(activity);
     const isCancelled = activity.status === "CANCELLED";
     const isEndedByTime = activityEndBoundary <= new Date();
     const canCreateTeam = !isCancelled && !isEndedByTime;
@@ -1395,7 +1404,7 @@ export async function ActivityDetailPageContent({
   ]);
   const participantPercent = getActivityParticipantPercent(activity);
   const displayStatus = getActivityDisplayStatus(activity);
-  const activityEndBoundary = new Date(activity.endAt ?? activity.startAt);
+  const activityEndBoundary = getActivityEndBoundary(activity);
   const isEndedByTime = activityEndBoundary <= new Date();
   const isClosed =
     !["RECRUITING", "CONFIRMED"].includes(activity.status) || isEndedByTime;
@@ -1526,18 +1535,24 @@ export async function ActivityDetailPageContent({
       viewerParticipation?.status === "APPROVED");
   const avalonToolHref = withLocale(locale, "/game-tools/avalon");
   const werewolfToolHref = withLocale(locale, "/game-tools/werewolf");
-  const [pendingParticipants, analyticsSummary] = await Promise.all([
-    isTeamOperator && activity.requiresApproval && viewerProfile
-      ? perf.measure("activity.pendingParticipants", () =>
-          getPendingParticipants(activity.id, viewerProfile.id),
-        )
-      : Promise.resolve([]),
-    isTeamOperator && !isMobileRequest
-      ? perf.measure("activity.analyticsSummary", () =>
-          getActivityAnalyticsSummary(activity.id),
-        )
-      : Promise.resolve(null),
-  ]);
+  const [pendingParticipants, analyticsSummary, activityCheckInRoster] =
+    await Promise.all([
+      isTeamOperator && activity.requiresApproval && viewerProfile
+        ? perf.measure("activity.pendingParticipants", () =>
+            getPendingParticipants(activity.id, viewerProfile.id),
+          )
+        : Promise.resolve([]),
+      isTeamOperator && !isMobileRequest
+        ? perf.measure("activity.analyticsSummary", () =>
+            getActivityAnalyticsSummary(activity.id),
+          )
+        : Promise.resolve(null),
+      isTeamOperator && viewerProfile
+        ? perf.measure("activity.checkInRoster", () =>
+            getActivityCheckInRoster(activity.id, viewerProfile.id),
+          )
+        : Promise.resolve([]),
+    ]);
   perf.finish(
     {
       commentCount: 0,
@@ -1829,32 +1844,48 @@ export async function ActivityDetailPageContent({
     ) : null;
 
   return (
-    <PageContainer className="mobile-v23-lobby-detail app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] space-y-4 max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)] md:space-y-6 md:py-8">
-      <MobileNavSectionOverride section="lobby" />
+    <PageContainer
+      className={cn(
+        "mobile-v23-lobby-detail space-y-4 md:space-y-6 md:py-8",
+        isSheetPresentation
+          ? "mobile-v23-lobby-detail-sheet h-full max-w-none overflow-y-auto px-4 pb-6 pt-0 sm:px-4"
+          : "app-mobile-page-shell [--app-mobile-page-top-gap:2rem] [--app-mobile-page-bottom-gap:1.1rem] max-md:pt-[calc(var(--app-top-safe-area)+2rem)] max-md:pb-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+1.1rem)]",
+      )}
+    >
+      {isSheetPresentation ? null : <MobileNavSectionOverride section="lobby" />}
       <DetailSourceRestore sourceKey="activity_detail" />
       <ClaimAutoCreatedActivityCelebration
         active={claimedSuccess === "1"}
         editHref={activityEditHref}
         locale={locale}
       />
-      <ActivityLayerHeader
-        action={
-          <ActivityShareDialogButton
-            className="h-9 w-9 bg-white text-[#111210]/70 shadow-none ring-[#E7E1CA] hover:bg-white hover:text-[#156240]"
-            closeLabel={mobileCloseLabel}
-            label={mobileShareLabel}
-          >
-            {renderTeamShareTools({ collapsible: false })}
-          </ActivityShareDialogButton>
-        }
-        backHref={withLocale(locale, "/lobby")}
-        title={mobileDetailTitle}
-      />
-      <DetailSourceReturnLink
-        className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
-        locale={locale}
-      />
-      <div className="space-y-2 px-1 sm:px-0">
+      {isSheetPresentation ? null : (
+        <ActivityLayerHeader
+          action={
+            <ActivityShareDialogButton
+              className="h-9 w-9 bg-white text-[#111210]/70 shadow-none ring-[#E7E1CA] hover:bg-white hover:text-[#156240]"
+              closeLabel={mobileCloseLabel}
+              label={mobileShareLabel}
+            >
+              {renderTeamShareTools({ collapsible: false })}
+            </ActivityShareDialogButton>
+          }
+          backHref={withLocale(locale, "/lobby")}
+          title={mobileDetailTitle}
+        />
+      )}
+      {isSheetPresentation ? null : (
+        <DetailSourceReturnLink
+          className="hidden h-8 bg-white/60 px-3 text-xs shadow-none sm:h-9 sm:text-sm md:inline-flex"
+          locale={locale}
+        />
+      )}
+      <div
+        className={cn(
+          "space-y-2 px-1 sm:px-0",
+          isSheetPresentation ? "pt-1" : null,
+        )}
+      >
         <h1 className="text-[1.65rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
@@ -2049,6 +2080,13 @@ export async function ActivityDetailPageContent({
                     unreadCount={activityRoomUnreadCount}
                   />
                 ) : null}
+              </div>
+              <div className="[&>button]:w-full">
+                <ActivityCheckInReviewPanel
+                  activityId={activity.id}
+                  locale={locale}
+                  participants={activityCheckInRoster}
+                />
               </div>
             </>
           ) : showActivityRoomEntry ? (
@@ -2246,6 +2284,13 @@ export async function ActivityDetailPageContent({
                     unreadCount={activityRoomUnreadCount}
                   />
                 ) : null}
+                <div className="[&>button]:w-full">
+                  <ActivityCheckInReviewPanel
+                    activityId={activity.id}
+                    locale={locale}
+                    participants={activityCheckInRoster}
+                  />
+                </div>
               </div>
               {showActivityRoomEntry ? (
                 <ActivityPlayAgainLink

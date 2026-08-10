@@ -117,6 +117,9 @@ function MobileFriendChatRow({
     : t.startChat;
   const time =
     lastMessage?.createdAt ?? friend.lastMessageAt ?? friend.createdAt;
+  const showPublicNickname =
+    Boolean(friend.friend.remarkName) &&
+    friend.friend.publicNickname !== friend.friend.nickname;
   const content = (
     <>
       <MessageAvatar
@@ -138,12 +141,17 @@ function MobileFriendChatRow({
           <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-[#8E8383]">
             {formatChatListTimestamp(time, locale)}
           </span>
-          {unreadCount > 0 ? (
-            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
-              {unreadBadgeText}
-            </span>
-          ) : null}
-        </span>
+            {unreadCount > 0 ? (
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+                {unreadBadgeText}
+              </span>
+            ) : null}
+          </span>
+        {showPublicNickname ? (
+          <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8E8383]">
+            {friend.friend.publicNickname}
+          </span>
+        ) : null}
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",

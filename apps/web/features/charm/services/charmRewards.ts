@@ -203,6 +203,7 @@ export async function recordReceivedCharmGift({
       0,
       (giftDelta.gift.coinCost ?? 0) * giftDelta.quantity,
     );
+    let senderCoinBalance: { balance: number } | null = null;
 
     if (senderProfileId && senderProfileId !== recipientProfileId) {
       const senderBalance =
@@ -282,6 +283,7 @@ export async function recordReceivedCharmGift({
           balance: true,
         },
       });
+      senderCoinBalance = senderBalance;
 
       await tx.friemiCoinTransaction.create({
         data: {
@@ -332,6 +334,7 @@ export async function recordReceivedCharmGift({
       balance,
       event,
       progress: getCharmProgress(balance.score),
+      senderBalance: senderCoinBalance,
     };
   });
 }

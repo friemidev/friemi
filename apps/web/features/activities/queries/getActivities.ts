@@ -33,6 +33,7 @@ import {
   hasPartialActivityTimeStatesFilter,
   isEndedOnlyActivityTimeStatesFilter,
 } from "../utils/activityFilters";
+import { getActivityEndBoundary } from "../utils/activityDisplay";
 import {
   AUTO_CREATED_TEAM_SOURCE,
   getAutoCreatedTeamMetadata,
@@ -500,6 +501,21 @@ function getActivityFloatingNow(reference = new Date()) {
   return createActivityFloatingDate(year, month - 1, day, hour, minute, second);
 }
 
+function getActivityFloatingDayStart(now = getActivityFloatingNow()) {
+  const { year, month, day } = getTimeZoneDateParts(
+    now,
+    activityFloatingTimeZone,
+  );
+
+  return createActivityFloatingDate(year, month - 1, day);
+}
+
+function getPublicEventParisDayStart(now = new Date()) {
+  const { year, month, day } = getTimeZoneDateParts(now, parisTimeZone);
+
+  return createDateInTimeZone(parisTimeZone, year, month - 1, day);
+}
+
 function getTimeZoneWeekdayIndex(date: Date, timeZone: string) {
   const weekday = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -686,6 +702,7 @@ export function getVisibleActivityWhere(
   options: VisibleActivityWhereOptions = {},
 ): Prisma.ActivityWhereInput {
   const now = options.now ?? getActivityFloatingNow();
+  const todayStart = getActivityFloatingDayStart(now);
 
   return {
     ...(options.includePast
@@ -701,6 +718,18 @@ export function getVisibleActivityWhere(
               endAt: {
                 gte: now,
               },
+            },
+            {
+              AND: [
+                {
+                  endAt: null,
+                },
+                {
+                  startAt: {
+                    gte: todayStart,
+                  },
+                },
+              ],
             },
           ],
         }),
@@ -726,6 +755,7 @@ function getVisiblePublicEventWhere(
   options: VisibleActivityWhereOptions = {},
 ): Prisma.PublicEventWhereInput {
   const now = options.now ?? new Date();
+  const todayStart = getPublicEventParisDayStart(now);
 
   return {
     ...(options.includePast
@@ -741,6 +771,18 @@ function getVisiblePublicEventWhere(
               endAt: {
                 gte: now,
               },
+            },
+            {
+              AND: [
+                {
+                  endAt: null,
+                },
+                {
+                  startAt: {
+                    gte: todayStart,
+                  },
+                },
+              ],
             },
           ],
         }),
@@ -859,6 +901,8 @@ function getPublicEventTimeStateWhere(
   timeState: ActivityTimeState,
   now = new Date(),
 ): Prisma.PublicEventWhereInput {
+  const todayStart = getPublicEventParisDayStart(now);
+
   if (timeState === "UPCOMING") {
     return {
       startAt: {
@@ -869,12 +913,34 @@ function getPublicEventTimeStateWhere(
 
   if (timeState === "ONGOING") {
     return {
-      startAt: {
-        lte: now,
-      },
-      endAt: {
-        gt: now,
-      },
+      AND: [
+        {
+          startAt: {
+            lte: now,
+          },
+        },
+        {
+          OR: [
+            {
+              endAt: {
+                gt: now,
+              },
+            },
+            {
+              AND: [
+                {
+                  endAt: null,
+                },
+                {
+                  startAt: {
+                    gte: todayStart,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
     };
   }
 
@@ -892,7 +958,7 @@ function getPublicEventTimeStateWhere(
           },
           {
             startAt: {
-              lte: now,
+              lt: todayStart,
             },
           },
         ],
@@ -1027,6 +1093,8 @@ export function getActivityTimeStateWhere(
   timeState: ActivityTimeState,
   now = getActivityFloatingNow(),
 ): Prisma.ActivityWhereInput {
+  const todayStart = getActivityFloatingDayStart(now);
+
   if (timeState === "UPCOMING") {
     return {
       startAt: {
@@ -1040,12 +1108,34 @@ export function getActivityTimeStateWhere(
 
   if (timeState === "ONGOING") {
     return {
-      startAt: {
-        lte: now,
-      },
-      endAt: {
-        gt: now,
-      },
+      AND: [
+        {
+          startAt: {
+            lte: now,
+          },
+        },
+        {
+          OR: [
+            {
+              endAt: {
+                gt: now,
+              },
+            },
+            {
+              AND: [
+                {
+                  endAt: null,
+                },
+                {
+                  startAt: {
+                    gte: todayStart,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
       status: {
         not: "ENDED",
       },
@@ -1069,7 +1159,7 @@ export function getActivityTimeStateWhere(
           },
           {
             startAt: {
-              lte: now,
+              lt: todayStart,
             },
           },
         ],
@@ -1670,7 +1760,7 @@ function getRankedActivityNearNowSortKey(
   const comparisonNow = getRankedActivityReferenceNow(card, referenceNow);
   const nowTime = comparisonNow.getTime();
   const startTime = new Date(card.startAt).getTime();
-  const endTime = card.endAt ? new Date(card.endAt).getTime() : startTime;
+  const endTime = getActivityEndBoundary(card).getTime();
   const isEnded =
     card.status === "ENDED" ||
     card.status === "CANCELLED" ||
@@ -1701,7 +1791,7 @@ function getNearestTimeRangeDistanceMs(
 
 function getActivityDurationMs(card: RankedActivityCard["card"]) {
   const startAt = new Date(card.startAt).getTime();
-  const endAt = card.endAt ? new Date(card.endAt).getTime() : startAt;
+  const endAt = getActivityEndBoundary(card).getTime();
 
   return Math.max(endAt - startAt, 0);
 }
@@ -1946,9 +2036,17 @@ function isLongRunningAgendaIndexItem(item: AgendaIndexItem) {
 }
 
 function getAgendaIndexDurationMs(item: AgendaIndexItem) {
-  const endAt = item.endAt ?? item.startAt;
+  const endAt = getAgendaIndexEndBoundary(item);
 
   return Math.max(endAt.getTime() - item.startAt.getTime(), 0);
+}
+
+function getAgendaIndexEndBoundary(item: AgendaIndexItem) {
+  return getActivityEndBoundary({
+    endAt: item.endAt,
+    startAt: item.startAt,
+    type: item.kind === "publicEvent" ? "PUBLIC_EVENT" : "USER_HOSTED",
+  });
 }
 
 function compareAgendaIndexItems(
@@ -2014,7 +2112,7 @@ function getAgendaIndexNearNowSortKey(
   const comparisonNow = getAgendaIndexReferenceNow(item, referenceNow);
   const nowTime = comparisonNow.getTime();
   const startTime = item.startAt.getTime();
-  const endTime = (item.endAt ?? item.startAt).getTime();
+  const endTime = getAgendaIndexEndBoundary(item).getTime();
 
   return {
     distanceMs: getNearestTimeRangeDistanceMs(startTime, endTime, nowTime),
@@ -2606,23 +2704,28 @@ function getRecommendedActivityRank(
   dailySeed: string,
 ) {
   const startAt = new Date(rankedActivity.card.startAt);
-  const endAt = rankedActivity.card.endAt
-    ? new Date(rankedActivity.card.endAt)
-    : null;
+  const endAt = getActivityEndBoundary(rankedActivity.card);
+  const comparisonNow = getRankedActivityReferenceNow(
+    rankedActivity.card,
+    now,
+  );
   const isActive = visibleActivityStatusSet.has(rankedActivity.card.status);
-  const freshOngoingBoundary = addDays(now, -freshOngoingWindowDays);
-  const endingSoonBoundary = addDays(now, endingSoonWindowDays);
-  const upcomingSoonBoundary = addDays(now, upcomingSoonWindowDays);
-  const upcomingWeekBoundary = addDays(now, upcomingWeekWindowDays);
-  const upcomingMonthBoundary = addDays(now, upcomingMonthWindowDays);
+  const freshOngoingBoundary = addDays(
+    comparisonNow,
+    -freshOngoingWindowDays,
+  );
+  const endingSoonBoundary = addDays(comparisonNow, endingSoonWindowDays);
+  const upcomingSoonBoundary = addDays(comparisonNow, upcomingSoonWindowDays);
+  const upcomingWeekBoundary = addDays(comparisonNow, upcomingWeekWindowDays);
+  const upcomingMonthBoundary = addDays(comparisonNow, upcomingMonthWindowDays);
   const isFreshOngoing =
     isActive &&
-    startAt <= now &&
-    endAt !== null &&
-    endAt > now &&
+    startAt <= comparisonNow &&
+    endAt > comparisonNow &&
     startAt >= freshOngoingBoundary;
-  const isUpcoming = isActive && startAt > now;
-  const isOngoing = isActive && startAt <= now && endAt !== null && endAt > now;
+  const isUpcoming = isActive && startAt > comparisonNow;
+  const isOngoing =
+    isActive && startAt <= comparisonNow && endAt > comparisonNow;
   const recommendationGroup = isFreshOngoing
     ? 0
     : isUpcoming
@@ -2633,7 +2736,7 @@ function getRecommendedActivityRank(
   let proximityGroup = 0;
 
   if (isFreshOngoing) {
-    proximityGroup = endAt !== null && endAt <= endingSoonBoundary ? 0 : 1;
+    proximityGroup = endAt <= endingSoonBoundary ? 0 : 1;
   } else if (isUpcoming) {
     proximityGroup =
       startAt <= upcomingSoonBoundary

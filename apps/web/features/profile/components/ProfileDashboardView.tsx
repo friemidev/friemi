@@ -12,13 +12,16 @@ import {
   Crown,
   Gift,
   Heart,
+  HeartHandshake,
   Info,
   Lock,
+  LoaderCircle,
   MapPin,
   Medal,
   MessageCircle,
   MoreHorizontal,
   Package,
+  PencilLine,
   ScanLine,
   Settings,
   Share2,
@@ -30,8 +33,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { openDirectConversationAction } from "@/features/direct-messages/actions/directMessageActions";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
+import {
+  updateProfileRemarkAction,
+  type UpdateProfileRemarkState,
+} from "@/features/profile/actions/updateProfileRemark";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import {
   isDetailSourceReturnPage,
@@ -101,6 +108,7 @@ type ProfileDashboardViewProps = {
 };
 
 const profilePresenceInitialState: UpdateProfilePresenceState = {};
+const profileRemarkInitialState: UpdateProfileRemarkState = {};
 
 function getSelfProfileMetricLabels(locale: string) {
   if (locale === "fr") {
@@ -849,23 +857,40 @@ function MobileProfileSummaryStrip({
 }) {
   const copy = getProfileSummaryCopy(locale);
   const stats = [
-    { label: copy.hangouts, value: dashboard.createdActivityCount },
-    { label: copy.friends, value: dashboard.friendCount },
-    { label: copy.moments, value: dashboard.momentCount },
+    {
+      href: withLocale(locale, "/profile/hangouts"),
+      label: copy.hangouts,
+      value: dashboard.createdActivityCount,
+    },
+    {
+      href: withLocale(locale, "/profile/network"),
+      label: copy.friends,
+      value: dashboard.friendCount,
+    },
+    {
+      href: withLocale(locale, "/profile/moments"),
+      label: copy.moments,
+      value: dashboard.momentCount,
+    },
   ];
 
   return (
     <div className="mt-5 grid grid-cols-[minmax(0,1fr)_5.65rem] items-center gap-3">
       <div className="grid min-w-0 grid-cols-3">
         {stats.map((item) => (
-          <div className="min-w-0 px-1.5 py-1.5 text-center" key={item.label}>
+          <Link
+            aria-label={`${item.label}: ${item.value}`}
+            className="min-w-0 rounded-2xl px-1.5 py-1.5 text-center transition active:scale-[0.98]"
+            href={item.href}
+            key={item.label}
+          >
             <p className="text-[21px] font-black leading-[1.08] text-[#111210]">
               {item.value}
             </p>
             <p className="mt-1 truncate text-[10px] font-bold leading-4 text-[#4F574F]">
               {item.label}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -1286,16 +1311,6 @@ function getTimelineDateParts(value: string, locale: string) {
   };
 }
 
-function truncateProfileDisplayName(value: string, maxLength = 15) {
-  const characters = Array.from(value.trim());
-
-  if (characters.length <= maxLength) {
-    return value;
-  }
-
-  return `${characters.slice(0, maxLength).join("")}...`;
-}
-
 function PublicMobileProfileActions({
   isAuthenticated,
   locale,
@@ -1315,14 +1330,18 @@ function PublicMobileProfileActions({
   const inactiveLabel = relationship.targetFollowsViewer
     ? copy.followBack
     : copy.addFriend;
+  const FollowIcon =
+    relationship.isFollowing && relationship.targetFollowsViewer
+      ? HeartHandshake
+      : undefined;
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="grid grid-cols-2 items-start gap-2">
       <FollowButton
-        activeButtonClassName="!h-8 !min-h-8 min-w-[5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeButtonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
         activeLabel={activeLabel}
-        buttonClassName="!h-8 !min-h-8 min-w-[4.5rem] rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
-        fullWidth={false}
+        buttonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        icon={FollowIcon}
         inactiveLabel={inactiveLabel}
         isAuthenticated={isAuthenticated}
         isFollowing={relationship.isFollowing}
@@ -1337,17 +1356,14 @@ function PublicMobileProfileActions({
         }}
       />
       {isAuthenticated ? (
-        <form action={openDirectConversationAction}>
-          <input name="locale" type="hidden" value={locale} />
-          <input name="friendProfileId" type="hidden" value={profileId} />
-          <input name="redirectPath" type="hidden" value={redirectPath} />
-          <button
-            className="inline-flex h-8 items-center justify-center rounded-full bg-[#156240] px-3 text-[11px] font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.16)] active:scale-[0.98]"
-            type="submit"
-          >
-            {copy.message}
-          </button>
-        </form>
+        <StartDirectConversationButton
+          buttonClassName="h-9 w-full px-3 text-[11px]"
+          errorClassName="col-span-2 text-center"
+          label={copy.message}
+          locale={locale}
+          peerProfileId={profileId}
+          redirectPath={redirectPath}
+        />
       ) : null}
     </div>
   );
@@ -1714,6 +1730,162 @@ function PublicMobileTimeline({
   );
 }
 
+function getProfileRemarkCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      clear: "Effacer",
+      cleared: "Note effacee.",
+      label: "Note privee",
+      originalName: "Nom public",
+      placeholder: "Ex. partenaire jeux",
+      save: "Enregistrer",
+      saved: "Note enregistree.",
+      saving: "Enregistrement...",
+    };
+  }
+
+  if (locale === "en") {
+    return {
+      clear: "Clear",
+      cleared: "Remark cleared.",
+      label: "Private remark",
+      originalName: "Public name",
+      placeholder: "E.g. board game friend",
+      save: "Save",
+      saved: "Remark saved.",
+      saving: "Saving...",
+    };
+  }
+
+  return {
+    clear: "清除",
+    cleared: "备注已清除。",
+    label: "备注名",
+    originalName: "公开昵称",
+    placeholder: "例如：桌游搭子",
+    save: "保存",
+    saved: "备注已保存。",
+    saving: "保存中...",
+  };
+}
+
+function ProfileRemarkSubmitButton({ locale }: { locale: string }) {
+  const { pending } = useFormStatus();
+  const copy = getProfileRemarkCopy(locale);
+
+  return (
+    <button
+      aria-busy={pending}
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? (
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <PencilLine className="h-3.5 w-3.5" />
+      )}
+      {pending ? copy.saving : copy.save}
+    </button>
+  );
+}
+
+function ProfileRemarkEditor({
+  className,
+  locale,
+  profile,
+}: {
+  className?: string;
+  locale: string;
+  profile: PublicProfileViewModel;
+}) {
+  const copy = getProfileRemarkCopy(locale);
+  const [state, formAction] = useActionState(
+    updateProfileRemarkAction,
+    profileRemarkInitialState,
+  );
+  const router = useRouter();
+  const [value, setValue] = useState(profile.remarkName ?? "");
+  const savedRemark = state.ok ? (state.remarkName ?? "") : (profile.remarkName ?? "");
+  const hasSavedRemark = savedRemark.trim().length > 0;
+
+  useEffect(() => {
+    setValue(profile.remarkName ?? "");
+  }, [profile.id, profile.remarkName]);
+
+  useEffect(() => {
+    if (state.ok) {
+      setValue(state.remarkName ?? "");
+      router.refresh();
+    }
+  }, [router, state.ok, state.remarkName]);
+
+  return (
+    <div
+      className={cn(
+        "grid gap-2 rounded-[1rem] bg-[#F7F7F0] px-3 py-3 ring-1 ring-[#E7E2D6]",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <label
+          className="text-xs font-black text-[#156240]"
+          htmlFor={`profile-remark-${profile.id}`}
+        >
+          {copy.label}
+        </label>
+        {profile.publicNickname !== profile.nickname || hasSavedRemark ? (
+          <span className="min-w-0 truncate text-[11px] font-semibold text-[#6C746A]">
+            {copy.originalName}: {profile.publicNickname}
+          </span>
+        ) : null}
+      </div>
+      <form action={formAction} className="flex min-w-0 items-center gap-2">
+        <input name="locale" type="hidden" value={locale} />
+        <input name="redirectPath" type="hidden" value={`/profile/${profile.id}`} />
+        <input name="targetProfileId" type="hidden" value={profile.id} />
+        <input
+          className="h-10 min-w-0 flex-1 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#111210] outline-none placeholder:text-[#9BA08E] focus:border-[#8AB68E] focus:ring-2 focus:ring-[#8AB68E]/20"
+          id={`profile-remark-${profile.id}`}
+          maxLength={32}
+          name="remarkName"
+          onChange={(event) => setValue(event.target.value)}
+          placeholder={copy.placeholder}
+          value={value}
+        />
+        <ProfileRemarkSubmitButton locale={locale} />
+      </form>
+      {hasSavedRemark ? (
+        <form
+          action={formAction}
+          className="flex justify-end"
+          onSubmit={() => setValue("")}
+        >
+          <input name="locale" type="hidden" value={locale} />
+          <input name="redirectPath" type="hidden" value={`/profile/${profile.id}`} />
+          <input name="targetProfileId" type="hidden" value={profile.id} />
+          <input name="remarkName" type="hidden" value="" />
+          <button
+            className="inline-flex h-7 items-center justify-center rounded-full px-2.5 text-[11px] font-black text-[#6C746A] transition active:bg-white"
+            type="submit"
+          >
+            {copy.clear}
+          </button>
+        </form>
+      ) : null}
+      {state.formError ? (
+        <p className="text-xs font-bold leading-5 text-[#B5301F]">
+          {state.formError}
+        </p>
+      ) : state.ok ? (
+        <p className="text-xs font-bold leading-5 text-[#156240]">
+          {state.remarkName ? copy.saved : copy.cleared}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function PublicMobileProfileHome({
   dashboard,
   isAuthenticated,
@@ -1730,7 +1902,6 @@ function PublicMobileProfileHome({
   publicAchievements: PublicAchievementWallItem[];
 }) {
   const copy = getMobileProfileCopy(locale);
-  const displayNickname = truncateProfileDisplayName(profile.nickname);
 
   return (
     <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5">
@@ -1779,26 +1950,18 @@ function PublicMobileProfileHome({
             size="sm"
           />
           <div className="min-w-0 pt-0.5">
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center">
-                  <h1
-                    className="min-w-0 max-w-full truncate text-lg font-black leading-tight text-[#111210]"
-                    title={profile.nickname}
-                  >
-                    {displayNickname}
-                  </h1>
-                </div>
-              </div>
-              <div className="shrink-0 pt-0.5">
-                <PublicMobileProfileActions
-                  isAuthenticated={isAuthenticated}
-                  locale={locale}
-                  profileId={profile.id}
-                  relationship={dashboard.viewerRelationship}
-                />
-              </div>
-            </div>
+            <h1
+              className="min-w-0 max-w-full truncate text-lg font-black leading-tight text-[#111210]"
+              title={profile.nickname}
+            >
+              {profile.nickname}
+            </h1>
+            {profile.remarkName &&
+            profile.publicNickname !== profile.nickname ? (
+              <p className="mt-0.5 truncate text-xs font-bold text-[#6C746A]">
+                {profile.publicNickname}
+              </p>
+            ) : null}
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
               {profile.isCoCreator ? (
                 <CoCreatorIdentityBadge locale={locale} variant="icon" />
@@ -1818,6 +1981,23 @@ function PublicMobileProfileHome({
             ) : null}
           </div>
         </div>
+
+        <div className="mt-4">
+          <PublicMobileProfileActions
+            isAuthenticated={isAuthenticated}
+            locale={locale}
+            profileId={profile.id}
+            relationship={dashboard.viewerRelationship}
+          />
+        </div>
+
+        {isAuthenticated ? (
+          <ProfileRemarkEditor
+            className="mt-3"
+            locale={locale}
+            profile={profile}
+          />
+        ) : null}
 
         <CharmProgressPanel
           className="mt-5 border-b border-[#E3DCC5] pb-5"
@@ -1939,7 +2119,7 @@ function MobileProfileAboutCard({
   const displayBio = bio.trim() || copy.empty;
 
   return (
-    <section className="mt-6 rounded-[1.35rem] border border-[#EEE7D5] bg-white px-4 py-4">
+    <section className="mt-6 border-t border-[#EEE7D5] bg-white pt-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <h3 className="min-w-0 truncate text-[16px] font-black leading-6 text-[#111210]">
           {getProfileAboutTitle(locale, nickname)}
@@ -3042,6 +3222,12 @@ export function ProfileDashboardView({
                       locale={locale}
                     />
                   </div>
+                  {profile.remarkName &&
+                  profile.publicNickname !== profile.nickname ? (
+                    <p className="mt-1 truncate text-xs font-semibold text-[#6C746A]">
+                      {profile.publicNickname}
+                    </p>
+                  ) : null}
                   {profile.isCoCreator ? (
                     <CoCreatorIdentityBadge className="mt-2" locale={locale} />
                   ) : null}
@@ -3095,6 +3281,9 @@ export function ProfileDashboardView({
                   profileId={profile.id}
                   relationship={dashboard.viewerRelationship}
                 />
+                {isAuthenticated ? (
+                  <ProfileRemarkEditor locale={locale} profile={profile} />
+                ) : null}
                 <CharmProgressPanel
                   className="border-t border-[#D6D5B2]/55 pt-2"
                   dashboard={dashboard}

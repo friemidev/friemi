@@ -402,6 +402,7 @@ export function SearchActivityResultsFeed({
                 Boolean(viewerProfileId) && activity.organizerId === viewerProfileId
               }
               locale={locale}
+              searchResultStyle
               showFavoriteButton
               showPrimaryAction={!isPublicEventCard(activity)}
               sourceSurface="global_search"
@@ -415,15 +416,7 @@ export function SearchActivityResultsFeed({
       ) : null}
 
       {relatedStarted && relatedActivities.length > 0 ? (
-        <section className="space-y-3 border-t border-sand pt-4">
-          <div className="rounded-xl border border-dashed border-sand-strong bg-white/55 px-3 py-3">
-            <h3 className="text-base font-semibold tracking-normal text-ink">
-              {t.relatedMainResultsTitle}
-            </h3>
-            <p className="text-xs leading-5 text-zinc-500">
-              {t.relatedMainResultsDescription}
-            </p>
-          </div>
+        <section className="border-t border-sand pt-4">
           <ActivityCardMasonryGrid
             gridClassName="lg:grid-cols-3 xl:grid-cols-3"
             mobileColumnWeights={relatedMobileColumnWeights}
@@ -438,6 +431,7 @@ export function SearchActivityResultsFeed({
                   activity.organizerId === viewerProfileId
                 }
                 locale={locale}
+                searchResultStyle
                 showFavoriteButton
                 showPrimaryAction={!isPublicEventCard(activity)}
                 sourceSurface="global_search"

@@ -41,6 +41,14 @@ test("presence shows away as a visible yellow status", () => {
   assert.equal(presence.status, "AWAY");
   assert.equal(presence.displayStatus, "AWAY");
   assert.equal(presence.isOnline, false);
+  assert.equal(
+    getUserPresenceState({
+      lastActiveAt: new Date(now.getTime() - presenceOnlineWindowMs - 1),
+      now,
+      status: "AWAY" satisfies UserPresenceStatusValue,
+    }).displayStatus,
+    null,
+  );
 });
 
 test("presence hides invisible status", () => {

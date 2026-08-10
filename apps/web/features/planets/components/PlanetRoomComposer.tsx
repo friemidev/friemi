@@ -6,6 +6,10 @@ import {
   createPlanetMomentAction,
   sendPlanetMessageAction,
 } from "@/features/planets/actions/planetActions";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 
 const maxMomentImageCount = 12;
 
@@ -18,7 +22,7 @@ type PlanetRoomComposerProps = {
 
 const copy = {
   "zh-CN": {
-    invalidFile: "请选择 JPG、PNG 或 WebP 图片。",
+    invalidFile: "请选择支持的图片，普通图片最大 10MB，GIF 最大 20MB。",
     partialUploadFailed: "有图片上传失败，请稍后重试。",
     uploadFailed: "图片上传失败，请稍后重试。",
     placeholder: "在群聊里说点什么...",
@@ -34,7 +38,7 @@ const copy = {
     submit: "发布",
   },
   en: {
-    invalidFile: "Please choose JPG, PNG, or WebP images.",
+    invalidFile: "Choose supported images. Regular images max 10 MB, GIF max 20 MB.",
     partialUploadFailed: "Some images failed to upload. Please try again.",
     uploadFailed: "Image upload failed. Please try again.",
     placeholder: "Say something in the chat...",
@@ -50,7 +54,7 @@ const copy = {
     submit: "Post",
   },
   fr: {
-    invalidFile: "Choisissez des images JPG, PNG ou WebP.",
+    invalidFile: "Choisissez des images prises en charge. 10 Mo max, GIF 20 Mo.",
     partialUploadFailed: "Certaines images n'ont pas pu être envoyées. Réessayez plus tard.",
     uploadFailed: "Échec de l'envoi de l'image. Réessayez plus tard.",
     placeholder: "Écrivez un message dans le chat...",
@@ -83,7 +87,9 @@ export function PlanetRoomComposer({
   async function uploadImages(files: FileList) {
     const availableSlots = maxMomentImageCount - imageUrls.length;
     const selectedFiles = Array.from(files).slice(0, availableSlots);
-    const invalidFile = selectedFiles.find((file) => !file.type.match(/^image\/(jpeg|png|webp)$/));
+    const invalidFile = selectedFiles.find((file) =>
+      getImageUploadClientValidationError(file),
+    );
     if (invalidFile) {
       setUploadError(t.invalidFile);
       return;
@@ -189,7 +195,7 @@ export function PlanetRoomComposer({
                 <div className="mt-2 flex items-center justify-between">
                   <input
                     ref={inputRef}
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={acceptedImageInputTypes}
                     className="hidden"
                     multiple
                     type="file"

@@ -3,6 +3,9 @@ import type { ActivityRoomChatErrorCode } from "./services/activityRoomChat";
 type ActivityRoomChatCopy = {
   announcements: {
     close: string;
+    delete: string;
+    deleteFailed: string;
+    deleting: string;
     latest: string;
     open: string;
     title: string;
@@ -41,6 +44,9 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
     return {
       announcements: {
         close: "Fermer",
+        delete: "Supprimer",
+        deleteFailed: "Impossible de supprimer cette annonce.",
+        deleting: "Suppression...",
         latest: "Nouveau",
         open: "Voir les annonces",
         title: "Annonce du groupe",
@@ -94,6 +100,9 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
     return {
       announcements: {
         close: "Close",
+        delete: "Delete",
+        deleteFailed: "Could not delete this announcement.",
+        deleting: "Deleting...",
         latest: "New",
         open: "View announcements",
         title: "Group announcement",
@@ -143,6 +152,9 @@ export function getActivityRoomChatCopy(locale: string): ActivityRoomChatCopy {
   return {
     announcements: {
       close: "关闭",
+      delete: "删除",
+      deleteFailed: "这条公告暂时无法删除。",
+      deleting: "删除中...",
       latest: "最新",
       open: "查看群公告",
       title: "群公告",

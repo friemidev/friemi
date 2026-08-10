@@ -10,6 +10,10 @@ import {
 } from "@/features/activities/utils/activityCategoryVisuals";
 import { getActivityCoverDisplayUrl } from "@/lib/activity-cover-display";
 import { getCopy } from "@/lib/copy";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { cn } from "@/lib/utils";
 
 type ActivityCoverUploadProps = {
@@ -35,9 +39,6 @@ type ActivityCoverUploadProps = {
   uploadEndpoint?: string;
 };
 
-const acceptedImageTypes =
-  "image/*,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp";
-const maxFileSize = 4 * 1024 * 1024;
 type UploadErrorCode =
   | "STORAGE_NOT_CONFIGURED"
   | "MISSING_FILE"
@@ -135,12 +136,14 @@ export function ActivityCoverUpload({
       return;
     }
 
-    if (file.type && !file.type.toLowerCase().startsWith("image/")) {
+    const localValidationError = getImageUploadClientValidationError(file);
+
+    if (localValidationError === "UNSUPPORTED_FILE_TYPE") {
       setError(t.coverTypeError);
       return;
     }
 
-    if (file.size > maxFileSize) {
+    if (localValidationError === "FILE_TOO_LARGE") {
       setError(t.coverSizeError);
       return;
     }
@@ -202,7 +205,7 @@ export function ActivityCoverUpload({
         <input name={name} type="hidden" value={submittedImageUrl} />
         <input
           ref={inputRef}
-          accept={acceptedImageTypes}
+          accept={acceptedImageInputTypes}
           className="hidden"
           type="file"
           onChange={(event) => {
@@ -328,7 +331,7 @@ export function ActivityCoverUpload({
       <input name={name} type="hidden" value={submittedImageUrl} />
       <input
         ref={inputRef}
-        accept={acceptedImageTypes}
+        accept={acceptedImageInputTypes}
         className="hidden"
         type="file"
         onChange={(event) => {

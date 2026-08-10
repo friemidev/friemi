@@ -724,6 +724,8 @@ function NetworkUserRow({
   const isFollowing = activeTab !== "followers";
   const inactiveLabel =
     activeTab === "followers" ? copy.followBack : copy.follow;
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
     <div className="flex items-center gap-3 border-b border-[#E8E1CF] py-4 last:border-b-0">
@@ -753,6 +755,11 @@ function NetworkUserRow({
               <CoCreatorIdentityBadge locale={locale} variant="icon" />
             ) : null}
           </div>
+          {showPublicNickname ? (
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[#8B907F]">
+              {user.publicNickname}
+            </p>
+          ) : null}
           <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-[#7A8276]">
             {user.bio ?? copy.noBio}
           </p>
@@ -838,7 +845,12 @@ export function ProfileNetworkMobilePage({
     }
 
     return activeUsers.filter((friend) => {
-      const searchableText = [friend.nickname, friend.bio ?? ""]
+      const searchableText = [
+        friend.nickname,
+        friend.publicNickname,
+        friend.remarkName ?? "",
+        friend.bio ?? "",
+      ]
         .join(" ")
         .toLocaleLowerCase();
 

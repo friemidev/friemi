@@ -29,6 +29,7 @@ import {
 } from "@/features/activities/components/ActivityShareTools";
 import { getCategoryLabel } from "@/lib/copy";
 import { getActivityShareMetadataById } from "@/features/activities/queries/getActivityById";
+import { getActivityEndBoundary } from "@/features/activities/utils/activityDisplay";
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { getOptionalCurrentUserProfileSnapshot } from "@/lib/auth";
 import { createPerformanceTracker } from "@/lib/performance";
@@ -228,7 +229,11 @@ export default async function PublicEventDetailPage({
     eventPriceLabel,
     publicEventUrl,
   ].join("\n");
-  const eventEndBoundary = new Date(publicEvent.endAt ?? publicEvent.startAt);
+  const eventEndBoundary = getActivityEndBoundary({
+    endAt: publicEvent.endAt,
+    startAt: publicEvent.startAt,
+    type: "PUBLIC_EVENT",
+  });
   const isCancelled = publicEvent.status === "CANCELLED";
   const isEnded = eventEndBoundary <= new Date();
   const canCreateTeam = !isCancelled && !isEnded;

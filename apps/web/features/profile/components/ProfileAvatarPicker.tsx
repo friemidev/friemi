@@ -2,11 +2,12 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { Camera, Check, ImagePlus, Loader2 } from "lucide-react";
+import {
+  acceptedImageInputTypes,
+  getImageUploadClientValidationError,
+} from "@/lib/image-upload-policy";
 import { cn } from "@/lib/utils";
 import { defaultProfileAvatars } from "../defaultAvatars";
-
-const allowedAvatarTypes = ["image/jpeg", "image/png", "image/webp"];
-const maxAvatarFileSize = 2 * 1024 * 1024;
 
 type ProfileAvatarPickerProps = {
   className?: string;
@@ -26,7 +27,7 @@ function getAvatarPickerCopy(locale: string) {
   if (locale === "fr") {
     return {
       current: "Avatar actuel",
-      fileHint: "JPG, PNG, WebP · 2 Mo",
+      fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 Mo",
       fileTooLarge: "Image trop grande.",
       invalidContent: "Image invalide.",
       pickDefault: "Avatar par défaut",
@@ -41,7 +42,7 @@ function getAvatarPickerCopy(locale: string) {
   if (locale === "en") {
     return {
       current: "Current avatar",
-      fileHint: "JPG, PNG, WebP · 2 MB",
+      fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 MB",
       fileTooLarge: "Image is too large.",
       invalidContent: "Invalid image.",
       pickDefault: "Default avatar",
@@ -55,7 +56,7 @@ function getAvatarPickerCopy(locale: string) {
 
   return {
     current: "当前头像",
-    fileHint: "JPG、PNG、WebP · 2 MB",
+    fileHint: "JPG、PNG、WebP、GIF、HEIC · 8 MB",
     fileTooLarge: "图片太大。",
     invalidContent: "图片无效。",
     pickDefault: "默认头像",
@@ -120,12 +121,17 @@ export function ProfileAvatarPicker({
   }
 
   async function uploadFile(file: File) {
-    if (!allowedAvatarTypes.includes(file.type)) {
+    const localValidationError = getImageUploadClientValidationError(
+      file,
+      "avatar",
+    );
+
+    if (localValidationError === "UNSUPPORTED_FILE_TYPE") {
       setError(copy.typeError);
       return;
     }
 
-    if (file.size > maxAvatarFileSize) {
+    if (localValidationError === "FILE_TOO_LARGE") {
       setError(copy.fileTooLarge);
       return;
     }
@@ -171,7 +177,7 @@ export function ProfileAvatarPicker({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={acceptedImageInputTypes}
         className="hidden"
         disabled={isBusy}
         onChange={(event) => {

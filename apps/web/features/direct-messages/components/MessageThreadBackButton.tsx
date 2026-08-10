@@ -21,11 +21,31 @@ export function MessageThreadBackButton({
   title,
 }: MessageThreadBackButtonProps) {
   const router = useRouter();
+  const [canUseHistoryReturn, setCanUseHistoryReturn] = useState(false);
   const [storedHref, setStoredHref] = useState<string | null>(null);
   const href = storedHref ?? fallbackHref;
 
   useEffect(() => {
-    setStoredHref(readMessageThreadReturnHref());
+    const nextStoredHref = readMessageThreadReturnHref();
+    let hasInternalNonMessagesReferrer = false;
+
+    try {
+      const referrer = document.referrer
+        ? new URL(document.referrer)
+        : null;
+
+      hasInternalNonMessagesReferrer =
+        Boolean(referrer) &&
+        referrer?.origin === window.location.origin &&
+        !referrer.pathname.includes("/messages");
+    } catch {
+      hasInternalNonMessagesReferrer = false;
+    }
+
+    setStoredHref(nextStoredHref);
+    setCanUseHistoryReturn(
+      Boolean(nextStoredHref) || hasInternalNonMessagesReferrer,
+    );
   }, []);
 
   return (
@@ -35,7 +55,7 @@ export function MessageThreadBackButton({
       href={href}
       title={title}
       onClick={(event) => {
-        if (!storedHref || window.history.length <= 1) {
+        if (!canUseHistoryReturn || window.history.length <= 1) {
           return;
         }
 

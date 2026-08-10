@@ -59,17 +59,15 @@ export function canUseNativeAndroidQrScanner() {
 }
 
 export function normalizeScannedRoomCode(value: string) {
-  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return value.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
 export function getWerewolfRoomCodeFromScan(value: string) {
-  return (
-    getRoomCodeFromPath(value, "werewolf") ?? normalizeScannedRoomCode(value)
-  );
+  return getRoomCodeFromScanValue(value, "werewolf");
 }
 
 export function getAvalonRoomCodeFromScan(value: string) {
-  return getRoomCodeFromPath(value, "avalon") ?? normalizeScannedRoomCode(value);
+  return getRoomCodeFromScanValue(value, "avalon");
 }
 
 export function resolveGlobalQrScanDestination({
@@ -160,12 +158,30 @@ export function resolveGlobalQrScanDestination({
   return null;
 }
 
+function getRoomCodeFromScanValue(value: string, tool: "avalon" | "werewolf") {
+  const scanValue = value.trim();
+
+  if (!scanValue) {
+    return "";
+  }
+
+  const roomCode = getRoomCodeFromPath(scanValue, tool);
+
+  if (roomCode) {
+    return roomCode;
+  }
+
+  return isLikelyLinkValue(scanValue) ? "" : normalizeScannedRoomCode(scanValue);
+}
+
 function getRoomCodeFromPath(value: string, tool: "avalon" | "werewolf") {
-  if (!isTrustedInternalScanValue(value)) {
+  const scanValue = value.trim();
+
+  if (!isTrustedInternalScanValue(scanValue)) {
     return null;
   }
 
-  const pathname = getPathnameFromScan(value);
+  const pathname = getPathnameFromScan(scanValue);
   const match = pathname.match(
     new RegExp(`^(?:/[^/]+)?/game-tools/${tool}/join/([^/?#]+)`),
   );
@@ -176,13 +192,14 @@ function getRoomCodeFromPath(value: string, tool: "avalon" | "werewolf") {
 }
 
 function getFriendCodeFromScan(value: string) {
-  const url = getUrlFromScan(value);
+  const scanValue = value.trim();
+  const url = getUrlFromScan(scanValue);
   const friendCode = url?.searchParams.get("friendCode")?.trim() ?? "";
   const isFriendPath = url?.pathname
     ? /^(?:\/[^/]+)?\/friends\/?$/.test(url.pathname)
     : false;
 
-  return isTrustedInternalScanValue(value) &&
+  return isTrustedInternalScanValue(scanValue) &&
     isFriendPath &&
     /^(?:\d{6})$/.test(friendCode)
     ? friendCode
@@ -190,17 +207,15 @@ function getFriendCodeFromScan(value: string) {
 }
 
 function getInternalHrefFromScan(value: string) {
-  if (value.startsWith("/") && !value.startsWith("//")) {
-    return value;
+  const scanValue = value.trim();
+
+  if (scanValue.startsWith("/") && !scanValue.startsWith("//")) {
+    return scanValue;
   }
 
-  const url = getUrlFromScan(value);
+  const url = getUrlFromScan(scanValue);
 
-  if (
-    typeof window !== "undefined" &&
-    url &&
-    url.origin === window.location.origin
-  ) {
+  if (url && isTrustedInternalScanValue(scanValue)) {
     return `${url.pathname}${url.search}${url.hash}`;
   }
 
@@ -214,31 +229,78 @@ function getExternalHrefFromScan(value: string) {
 }
 
 function isTrustedInternalScanValue(value: string) {
-  if (value.startsWith("/") && !value.startsWith("//")) {
+  const scanValue = value.trim();
+
+  if (scanValue.startsWith("/") && !scanValue.startsWith("//")) {
     return true;
   }
 
-  const url = getUrlFromScan(value);
+  const url = getUrlFromScan(scanValue);
 
-  return (
-    typeof window !== "undefined" &&
-    Boolean(url) &&
-    url?.origin === window.location.origin
-  );
+  if (!url) {
+    return false;
+  }
+
+  return isCurrentBrowserOrigin(url) || isTrustedFriemiHost(url.hostname);
 }
 
 function getPathnameFromScan(value: string) {
-  if (value.startsWith("/") && !value.startsWith("//")) {
-    return value;
+  const scanValue = value.trim();
+
+  if (scanValue.startsWith("/") && !scanValue.startsWith("//")) {
+    return scanValue;
   }
 
-  return getUrlFromScan(value)?.pathname ?? "";
+  return getUrlFromScan(scanValue)?.pathname ?? "";
+}
+
+function isLikelyLinkValue(value: string) {
+  return (
+    value.startsWith("/") ||
+    /^[a-z][a-z\d+.-]*:\/\//i.test(value) ||
+    isSchemeLessTrustedHostValue(value)
+  );
 }
 
 function getUrlFromScan(value: string) {
+  const scanValue = value.trim();
+
   try {
-    return new URL(value);
+    return new URL(scanValue);
   } catch {
-    return null;
+    if (!isSchemeLessTrustedHostValue(scanValue)) {
+      return null;
+    }
+
+    try {
+      return new URL(`https://${scanValue}`);
+    } catch {
+      return null;
+    }
   }
+}
+
+function isCurrentBrowserOrigin(url: URL) {
+  return (
+    typeof window !== "undefined" && url.origin === window.location.origin
+  );
+}
+
+function isSchemeLessTrustedHostValue(value: string) {
+  const host = value.split(/[/?#]/, 1)[0]?.split(":", 1)[0] ?? "";
+
+  return isTrustedFriemiHost(host);
+}
+
+function isTrustedFriemiHost(hostname: string) {
+  const normalizedHostname = hostname.toLowerCase();
+
+  return (
+    normalizedHostname === "localhost" ||
+    normalizedHostname === "127.0.0.1" ||
+    normalizedHostname === "friemi.com" ||
+    normalizedHostname === "www.friemi.com" ||
+    normalizedHostname === "friemi.vercel.app" ||
+    normalizedHostname.endsWith(".friemi.com")
+  );
 }

@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  HeartHandshake,
+  UserRound,
+} from "lucide-react";
 import { ContextualDetailLink } from "@/features/navigation/components/ContextualDetailLink";
 import { trackClientAnalyticsEvent } from "@/features/analytics/client";
+import { StartDirectConversationButton } from "@/features/direct-messages/components/StartDirectConversationButton";
 import { FollowButton } from "@/features/follow/components/FollowButton";
 import type { GlobalSearchUserViewModel } from "@/features/search/queries/getGlobalSearchResults";
 import { getCopy } from "@/lib/copy";
@@ -97,6 +103,8 @@ function GlobalSearchUserCard({
 }) {
   const t = getCopy(locale).globalSearch;
   const profileHref = withLocale(locale, `/profile/${user.id}`);
+  const showPublicNickname =
+    Boolean(user.remarkName) && user.publicNickname !== user.nickname;
 
   return (
     <article className="flex min-w-0 flex-col gap-4 rounded-xl border border-sand bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center">
@@ -134,6 +142,14 @@ function GlobalSearchUserCard({
               aria-hidden="true"
             />
           </span>
+          {showPublicNickname ? (
+            <span className="mt-0.5 block truncate text-xs font-semibold text-zinc-500">
+              <SearchHighlightedText
+                text={user.publicNickname}
+                query={query}
+              />
+            </span>
+          ) : null}
           <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-team-bg px-2.5 py-1 text-xs font-medium text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">
               {user.friendCode
@@ -144,12 +160,21 @@ function GlobalSearchUserCard({
         </span>
       </ContextualDetailLink>
 
-      <div className="shrink-0 sm:w-32">
+      <div className="grid shrink-0 gap-2 sm:w-36">
         <FollowCta
           locale={locale}
           relationshipStatus={user.relationshipStatus}
           targetProfileId={user.id}
         />
+        {user.relationshipStatus !== "SELF" ? (
+          <StartDirectConversationButton
+            buttonClassName="h-10 w-full bg-white px-3 text-sm font-semibold text-[#156240] shadow-none ring-1 ring-[#D6D5B2] hover:bg-[#F1F2EC]"
+            errorClassName="text-center"
+            locale={locale}
+            peerProfileId={user.id}
+            redirectPath="/search"
+          />
+        ) : null}
       </div>
     </article>
   );
@@ -190,6 +215,7 @@ function FollowCta({
       inactiveLabel={inactiveLabel}
       isAuthenticated
       isFollowing={isFollowing}
+      icon={relationshipStatus === "MUTUAL" ? HeartHandshake : undefined}
       locale={locale}
       redirectPath="/search"
       targetUserProfileId={targetProfileId}

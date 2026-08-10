@@ -23,6 +23,10 @@ import {
 import type { PublicEventCardViewModel } from "@/features/public-events/types";
 import { normalizeFriendRequestSearchTerm } from "@/features/friends/queries/findFriendRequestTarget";
 import {
+  getProfileRemarkMap,
+  resolveRemarkedProfileName,
+} from "@/features/profile/services/profileRemarks";
+import {
   getGlobalSearchTerms,
   normalizeGlobalSearchQuery,
 } from "../utils/searchQuery";
@@ -58,6 +62,8 @@ export type GlobalSearchMerchantViewModel = {
 export type GlobalSearchUserViewModel = {
   id: string;
   nickname: string;
+  publicNickname: string;
+  remarkName: string | null;
   friendCode: string | null;
   avatarUrl: string | null;
   relationshipStatus: GlobalSearchUserRelationshipStatus;
@@ -279,13 +285,24 @@ export async function getGlobalSearchRecommendations(
       }),
     ),
   ]);
-  const [userRelationshipStatuses, hangoutsWithFavoriteState, eventsWithFavoriteState] =
+  const [
+    userRelationshipStatuses,
+    userRemarkMap,
+    hangoutsWithFavoriteState,
+    eventsWithFavoriteState,
+  ] =
     await Promise.all([
       perf.measure("user.relationships", () =>
         getSearchUserRelationshipStatuses(
           currentUserProfileId,
           users.map((user) => user.id),
         ),
+      ),
+      perf.measure("user.remarks", () =>
+        getProfileRemarkMap({
+          ownerProfileId: currentUserProfileId,
+          targetProfileIds: users.map((user) => user.id),
+        }),
       ),
       perf.measure("hangout.favoriteState", () =>
         attachActivityFavoriteStates(
@@ -310,13 +327,13 @@ export async function getGlobalSearchRecommendations(
   return {
     activities: eventsWithFavoriteState.map(mapPublicEventToSearchActivityCard),
     hangouts: hangoutsWithFavoriteState,
-    users: users.map((user) => ({
-      id: user.id,
-      nickname: getSearchUserDisplayName(user),
-      friendCode: user.friendCode,
-      avatarUrl: user.avatarUrl,
-      relationshipStatus: userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
-    })),
+    users: users.map((user) =>
+      mapSearchUser(user, {
+        relationshipStatus:
+          userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+        remarkName: userRemarkMap.get(user.id),
+      }),
+    ),
   };
 }
 
@@ -539,6 +556,21 @@ export async function getGlobalSearchResults(
                 equals: term,
               },
             },
+            ...(currentUserProfileId
+              ? [
+                  {
+                    profileRemarksReceived: {
+                      some: {
+                        ownerId: currentUserProfileId,
+                        remarkName: {
+                          contains: term,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                    },
+                  },
+                ]
+              : []),
           ],
         })),
       };
@@ -590,14 +622,20 @@ export async function getGlobalSearchResults(
     totalCount: merchantCount,
     hasMore: hasMoreMerchants,
   } = splitProbeResults(merchantsWithProbe, merchantResultLimit);
-  const userRelationshipStatuses = await perf.measure(
-    "user.relationships",
-    () =>
+  const [userRelationshipStatuses, userRemarkMap] = await Promise.all([
+    perf.measure("user.relationships", () =>
       getSearchUserRelationshipStatuses(
         currentUserProfileId,
         users.map((user) => user.id),
       ),
-  );
+    ),
+    perf.measure("user.remarks", () =>
+      getProfileRemarkMap({
+        ownerProfileId: currentUserProfileId,
+        targetProfileIds: users.map((user) => user.id),
+      }),
+    ),
+  ]);
   perf.finish({
     hasMoreMerchants,
     hasMoreUsers,
@@ -607,13 +645,13 @@ export async function getGlobalSearchResults(
 
   return {
     query,
-    users: users.map((user) => ({
-      id: user.id,
-      nickname: getSearchUserDisplayName(user),
-      friendCode: user.friendCode,
-      avatarUrl: user.avatarUrl,
-      relationshipStatus: userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
-    })),
+    users: users.map((user) =>
+      mapSearchUser(user, {
+        relationshipStatus:
+          userRelationshipStatuses.get(user.id) ?? "AVAILABLE",
+        remarkName: userRemarkMap.get(user.id),
+      }),
+    ),
     userCount,
     activities: [],
     activityCount: 0,
@@ -830,7 +868,7 @@ async function getSearchUserRelationshipStatuses(
   return statuses;
 }
 
-function getSearchUserDisplayName(user: {
+function getSearchUserPublicName(user: {
   nickname: string;
   friendCode: string | null;
 }) {
@@ -841,6 +879,38 @@ function getSearchUserDisplayName(user: {
   }
 
   return user.friendCode ? `NF ${user.friendCode}` : brand.name;
+}
+
+function mapSearchUser(
+  user: {
+    id: string;
+    nickname: string;
+    friendCode: string | null;
+    avatarUrl: string | null;
+  },
+  {
+    relationshipStatus,
+    remarkName,
+  }: {
+    relationshipStatus: GlobalSearchUserRelationshipStatus;
+    remarkName?: string | null;
+  },
+): GlobalSearchUserViewModel {
+  const publicNickname = getSearchUserPublicName(user);
+  const normalizedRemarkName = remarkName?.trim() || null;
+
+  return {
+    id: user.id,
+    nickname: resolveRemarkedProfileName({
+      publicNickname,
+      remarkName: normalizedRemarkName,
+    }),
+    publicNickname,
+    remarkName: normalizedRemarkName,
+    friendCode: user.friendCode,
+    avatarUrl: user.avatarUrl,
+    relationshipStatus,
+  };
 }
 
 async function getSearchActivityResults(

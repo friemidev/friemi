@@ -43,7 +43,6 @@ import {
 import {
   canUseNativeAndroidQrScanner,
   getWerewolfRoomCodeFromScan,
-  normalizeScannedRoomCode,
   parseAndroidQrScanPayload,
 } from "@/features/scan/globalQrScanner";
 import { withLocale } from "@/lib/routes";
@@ -323,7 +322,7 @@ function WerewolfVariantModeCard({
       />
       <Image
         alt=""
-        className="absolute -left-4 bottom-0 h-[8.4rem] w-[7.5rem] object-contain opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+        className="absolute -bottom-1 -left-4 -top-1 h-[calc(100%+0.5rem)] w-[7.5rem] object-cover object-center opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
         height={360}
         src={heroImage}
         width={252}
@@ -434,7 +433,7 @@ function CustomModeCard({
         />
         <Image
           alt=""
-          className="pointer-events-none absolute -left-4 bottom-0 h-[8.4rem] w-[7.5rem] object-contain opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
+          className="pointer-events-none absolute -bottom-1 -left-4 -top-1 h-[calc(100%+0.5rem)] w-[7.5rem] object-cover object-center opacity-95 drop-shadow-[0_18px_18px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.03]"
           height={360}
           src="/game-tools/werewolf/recto/villager_en.png"
           width={252}
@@ -569,7 +568,7 @@ export function WerewolfCreateRoomPanel({
   const scanHandledRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const t = copies[locale] ?? copies.en;
-  const normalizedJoinCode = normalizeScannedRoomCode(joinCode);
+  const normalizedJoinCode = getWerewolfRoomCodeFromScan(joinCode);
   const featuredVariants = [
     "seven_player_basic",
     defaultWerewolfVariantKey,

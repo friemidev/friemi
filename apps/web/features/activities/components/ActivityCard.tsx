@@ -39,6 +39,7 @@ import {
 } from "../utils/activityDisplay";
 import { ActivityCoverImage } from "./ActivityCoverImage";
 import { ClaimAutoCreatedActivityCardAction } from "./ClaimAutoCreatedActivityCardAction";
+import { MobileActivityDetailSheetLink } from "./MobileActivityDetailSheetLink";
 import { MobileLobbyActionSheet } from "./MobileLobbyActionSheet";
 
 type ActivityCardProps = {
@@ -50,6 +51,8 @@ type ActivityCardProps = {
   isOwnActivity?: boolean;
   locale: string;
   mobileDense?: boolean;
+  mobileDetailSheet?: boolean;
+  searchResultStyle?: boolean;
   showFavoriteButton?: boolean;
   showPrimaryAction?: boolean;
   sourceSurface?: AnalyticsSourceSurface;
@@ -635,6 +638,8 @@ export function ActivityCard({
   isOwnActivity = false,
   locale,
   mobileDense = false,
+  mobileDetailSheet = false,
+  searchResultStyle = false,
   showFavoriteButton = false,
   showPrimaryAction = true,
   sourceSurface = "activity_list",
@@ -757,10 +762,13 @@ export function ActivityCard({
     !isInactiveCard &&
     Boolean(autoCreatedTeam?.isClaimable);
   const countdownLabel =
-    isActivityInfo && timeState === "UPCOMING" && !isInactiveCard
+    !searchResultStyle &&
+    isActivityInfo &&
+    timeState === "UPCOMING" &&
+    !isInactiveCard
       ? getCountdownLabel(activity, locale)
       : null;
-  const relativeTimingLabel = activityListPreview
+  const relativeTimingLabel = activityListPreview && !searchResultStyle
     ? getActivityRelativeTimingLabel(activity, locale)
     : null;
   const friendSignal = !isActivityInfo ? activity.friendSignal : null;
@@ -842,7 +850,9 @@ export function ActivityCard({
     tone: resolvedActionConfig.tone,
   });
   const useCompactDualActions = showPrimaryAction && Boolean(copyActivityHref);
-  const shouldShowInactiveCardState = isInactiveCard;
+  const shouldShowInactiveCardState = isInactiveCard && !searchResultStyle;
+  const shouldUseMobileDetailSheet =
+    mobileDetailSheet && !isActivityInfo && !showPrimaryAction && !copyActivityHref;
 
   return (
     <Card
@@ -927,6 +937,17 @@ export function ActivityCard({
           />
         </div>
       ) : null}
+      {shouldUseMobileDetailSheet ? (
+        <div className="absolute inset-0 z-10 sm:hidden">
+          <MobileActivityDetailSheetLink
+            className="block h-full w-full rounded-[1.15rem]"
+            href={cardHref}
+            label={activityLabel}
+          >
+            <span className="sr-only">{activityLabel}</span>
+          </MobileActivityDetailSheetLink>
+        </div>
+      ) : null}
       <AnalyticsLink
         className="flex flex-1 flex-col"
         href={cardHref}
@@ -971,7 +992,7 @@ export function ActivityCard({
               isTeamCard ? "from-ink/24" : "from-black/10",
             )}
           />
-          {showCoverKindBadge ? (
+          {showCoverKindBadge && !searchResultStyle ? (
             <span
               className={cn(
                 "absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
@@ -1051,7 +1072,7 @@ export function ActivityCard({
               >
                 {getCategoryLabel(activity.category, locale)}
               </span>
-              {showCoverVisibilityBadge ? (
+              {showCoverVisibilityBadge && !searchResultStyle ? (
                 <span
                   className={cn(
                     "rounded-md bg-[rgba(255,245,230,0.94)] px-2.5 py-1 text-[11px] font-medium leading-none text-forest shadow-[0_8px_18px_rgba(0,0,0,0.18)]",
@@ -1064,7 +1085,7 @@ export function ActivityCard({
                 </span>
               ) : null}
             </div>
-            {!isTeamCard ? (
+            {!isTeamCard && !searchResultStyle ? (
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span
                   className={cn(
