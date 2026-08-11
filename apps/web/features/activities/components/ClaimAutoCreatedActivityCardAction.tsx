@@ -94,7 +94,7 @@ function SubmitClaimButton({ locale }: { locale: string }) {
 
   return (
     <button
-      className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-extrabold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.24)] transition hover:-translate-y-0.5 hover:bg-meadow disabled:cursor-not-allowed disabled:opacity-70 motion-reduce:transition-none"
+      className="inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-5 text-sm font-bold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.24)] transition hover:-translate-y-0.5 hover:bg-meadow disabled:cursor-not-allowed disabled:opacity-70 motion-reduce:transition-none"
       disabled={pending}
       type="submit"
     >
@@ -233,10 +233,10 @@ export function ClaimAutoCreatedActivityCardAction({
             <Home className="h-6 w-6" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-meadow">
+            <p className="text-[10px] font-bold uppercase tracking-normal text-meadow">
               {copy.eyebrow}
             </p>
-            <h2 className="mt-1 text-xl font-extrabold leading-tight tracking-normal text-ink">
+            <h2 className="mt-1 text-xl font-bold leading-tight tracking-normal text-ink">
               {copy.title}
             </h2>
           </div>
@@ -277,7 +277,7 @@ export function ClaimAutoCreatedActivityCardAction({
             </form>
           ) : (
             <Link
-              className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-extrabold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.22)] transition hover:-translate-y-0.5 hover:bg-meadow motion-reduce:transition-none"
+              className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-bold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.22)] transition hover:-translate-y-0.5 hover:bg-meadow motion-reduce:transition-none"
               href={signInHref}
             >
               <KeyRound className="h-4 w-4" aria-hidden="true" />
@@ -318,10 +318,10 @@ export function ClaimAutoCreatedActivityCardAction({
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-sand" />
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase leading-none tracking-[0.12em] text-meadow">
+              <p className="text-[10px] font-bold uppercase leading-none tracking-normal text-meadow">
                 {copy.eyebrow}
               </p>
-              <p className="mt-2 line-clamp-2 text-sm font-extrabold leading-snug text-ink">
+              <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug text-ink">
                 {activityTitle}
               </p>
             </div>
@@ -342,7 +342,7 @@ export function ClaimAutoCreatedActivityCardAction({
               type="button"
               onClick={openConfirm}
             >
-              <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-sage bg-fog px-3 text-[13px] font-extrabold leading-tight text-forest shadow-[0_14px_24px_rgba(21,98,64,0.14)] transition group-active/action:translate-y-px">
+              <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-sage bg-fog px-3 text-[13px] font-bold leading-tight text-forest shadow-[0_14px_24px_rgba(21,98,64,0.14)] transition group-active/action:translate-y-px">
                 <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 text-center">{copy.primary}</span>
               </span>
@@ -402,7 +402,7 @@ export function ClaimAutoCreatedActivityCardAction({
             type="button"
             onClick={openConfirm}
           >
-            <span className="pointer-events-none absolute inset-y-0 left-0 z-30 flex w-[calc(200%+2px)] items-center justify-center gap-2 rounded-[1.45rem] border border-sage bg-forest px-4 text-[13px] font-extrabold leading-none text-paper opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-hover:shadow-[0_16px_28px_rgba(21,98,64,0.25)] group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 group-focus-visible:shadow-[0_16px_28px_rgba(21,98,64,0.25)] motion-reduce:transition-none">
+            <span className="pointer-events-none absolute inset-y-0 left-0 z-30 flex w-[calc(200%+2px)] items-center justify-center gap-2 rounded-[1.45rem] border border-sage bg-forest px-4 text-[13px] font-bold leading-none text-paper opacity-0 shadow-none transition-[opacity,transform,box-shadow] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:opacity-100 group-hover:shadow-[0_16px_28px_rgba(21,98,64,0.25)] group-focus-visible:-translate-y-0.5 group-focus-visible:opacity-100 group-focus-visible:shadow-[0_16px_28px_rgba(21,98,64,0.25)] motion-reduce:transition-none">
               <Home
                 className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-rotate-6 group-focus-visible:-rotate-6 motion-reduce:transition-none"
                 aria-hidden="true"
@@ -457,7 +457,7 @@ export function ClaimAutoCreatedActivityCardAction({
               <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
           </span>
-          <span className="relative min-w-0 translate-y-px truncate text-[12px] font-extrabold leading-[1.25]">
+          <span className="relative min-w-0 translate-y-px truncate text-[12px] font-bold leading-[1.25]">
             {copy.mobileOpen}
           </span>
           <span className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-meadow/70" />
@@ -472,7 +472,7 @@ export function ClaimAutoCreatedActivityCardAction({
         type="button"
         onClick={openConfirm}
       >
-        <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-sage bg-fog px-3 text-center text-[13px] font-extrabold leading-none text-forest shadow-[0_10px_22px_rgba(21,98,64,0.12)] transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-meadow/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-4 sm:text-sm">
+        <span className="flex h-10 min-h-10 w-full min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-sage bg-fog px-3 text-center text-[13px] font-bold leading-none text-forest shadow-[0_10px_22px_rgba(21,98,64,0.12)] transition duration-150 ease-out group-hover:-translate-y-0.5 group-active:translate-y-0 group-focus-visible:ring-2 group-focus-visible:ring-meadow/35 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper sm:h-11 sm:min-h-11 sm:px-4 sm:text-sm">
           <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="min-w-0 truncate">{copy.primary}</span>
           <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-meadow" aria-hidden="true" />

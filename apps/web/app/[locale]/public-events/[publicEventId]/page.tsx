@@ -102,7 +102,7 @@ function PublicEventDetailHeader({
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
       </ActivityHistoryBackButton>
-      <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
+      <p className="truncate text-center text-[18px] font-bold leading-none tracking-normal text-[#111210]">
         {title}
       </p>
     </div>
@@ -297,7 +297,7 @@ export default async function PublicEventDetailPage({
         />
       )}
       <div className="space-y-2 px-1 sm:px-0">
-        <h1 className="text-[1.7rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
+        <h1 className="text-[1.7rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {publicEvent.title}
         </h1>
       </div>

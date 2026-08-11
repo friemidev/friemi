@@ -222,7 +222,7 @@ export function ActivityPriorityManagementClient({
                     {item.city ? ` · ${item.city}` : ""} · 更新{" "}
                     {formatDate(item.updatedAt, locale)}
                   </p>
-                  <h2 className="line-clamp-2 text-sm font-black leading-5 text-[#111210] md:text-base md:leading-6">
+                  <h2 className="line-clamp-2 text-sm font-bold leading-5 text-[#111210] md:text-base md:leading-6">
                     {item.title}
                   </h2>
                   <div className="flex min-w-0 items-center gap-1.5 text-[0.7rem] font-semibold text-zinc-500 md:flex-wrap md:gap-2 md:text-xs">
@@ -246,7 +246,7 @@ export function ActivityPriorityManagementClient({
                     {quickBoostOptions.map((boost) => (
                       <button
                         className={cn(
-                          "h-8 rounded-full text-xs font-black ring-1 transition active:scale-95 md:h-9",
+                          "h-8 rounded-full text-xs font-bold ring-1 transition active:scale-95 md:h-9",
                           item.initialBoost === boost
                             ? "bg-[#0F6D46] text-white ring-[#0F6D46]"
                             : "bg-white text-[#0F6D46] ring-[#D6D5B2] hover:bg-[#F5F5F2]",
@@ -262,7 +262,7 @@ export function ActivityPriorityManagementClient({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <a
-                      className="inline-flex h-8 items-center justify-center gap-1 rounded-full bg-white text-xs font-black text-[#0F6D46] ring-1 ring-[#D6D5B2] transition hover:bg-[#F5F5F2] md:h-9"
+                      className="inline-flex h-8 items-center justify-center gap-1 rounded-full bg-white text-xs font-bold text-[#0F6D46] ring-1 ring-[#D6D5B2] transition hover:bg-[#F5F5F2] md:h-9"
                       href={withLocale(
                         locale,
                         getDetailPath(item.targetType, item.targetId),
@@ -272,7 +272,7 @@ export function ActivityPriorityManagementClient({
                       <ArrowUpRight className="h-3.5 w-3.5" />
                     </a>
                     <button
-                      className="inline-flex h-8 items-center justify-center gap-1 rounded-full bg-white text-xs font-black text-[#B5301F] ring-1 ring-[#F09182]/50 transition hover:bg-[#FFF5F0] md:h-9"
+                      className="inline-flex h-8 items-center justify-center gap-1 rounded-full bg-white text-xs font-bold text-[#B5301F] ring-1 ring-[#F09182]/50 transition hover:bg-[#FFF5F0] md:h-9"
                       disabled={isSaving}
                       onClick={() => void saveItem(item, 0)}
                       type="button"
@@ -400,10 +400,10 @@ export function ActivityPriorityAdminMenu({
               <div className="flex max-h-[min(86svh,34rem)] w-full max-w-md flex-col overflow-hidden rounded-[1.35rem] bg-white shadow-[0_24px_70px_rgba(17,18,16,0.2)] ring-1 ring-[#E7E1CA]">
                 <div className="flex items-start justify-between gap-3 px-4 pt-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0F6D46]">
+                    <p className="text-xs font-bold uppercase tracking-normal text-[#0F6D46]">
                       活动权重
                     </p>
-                    <h2 className="mt-1 line-clamp-2 text-lg font-black leading-6 text-[#111210]">
+                    <h2 className="mt-1 line-clamp-2 text-lg font-bold leading-6 text-[#111210]">
                       {targetTitle}
                     </h2>
                   </div>
@@ -434,7 +434,7 @@ export function ActivityPriorityAdminMenu({
                     {quickBoostOptions.map((option) => (
                       <button
                         className={cn(
-                          "h-10 rounded-full text-sm font-black ring-1 transition active:scale-95",
+                          "h-10 rounded-full text-sm font-bold ring-1 transition active:scale-95",
                           boost === option
                             ? "bg-[#0F6D46] text-white ring-[#0F6D46]"
                             : "bg-white text-[#0F6D46] ring-[#D6D5B2]",

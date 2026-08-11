@@ -41,7 +41,7 @@ export function AccountSettingsActionList({
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]/62 transition group-hover:bg-[#FEFFF9]">
           <Settings className="h-[1.125rem] w-[1.125rem]" />
         </span>
-        <span className="min-w-0 flex-1 text-sm font-black text-[#1D1D1B]">
+        <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
           {accountSettingsLabel}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
@@ -54,7 +54,7 @@ export function AccountSettingsActionList({
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F2EC] text-[#156240] ring-1 ring-[#D6D5B2]/62 transition group-hover:bg-[#FEFFF9]">
           <ShieldCheck className="h-[1.125rem] w-[1.125rem]" />
         </span>
-        <span className="min-w-0 flex-1 text-sm font-black text-[#1D1D1B]">
+        <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
           {accountSecurityLabel}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
@@ -68,7 +68,7 @@ export function AccountSettingsActionList({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7F0EA] text-[#0F6D46] ring-1 ring-[#8AB68E]/56 transition group-hover:bg-[#FEFFF9]">
             <Newspaper className="h-[1.125rem] w-[1.125rem]" />
           </span>
-          <span className="min-w-0 flex-1 text-sm font-black text-[#1D1D1B]">
+          <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
             {adminTopNewsLabel}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
@@ -83,7 +83,7 @@ export function AccountSettingsActionList({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E7F0EA] text-[#0F6D46] ring-1 ring-[#8AB68E]/56 transition group-hover:bg-[#FEFFF9]">
             <SlidersHorizontal className="h-[1.125rem] w-[1.125rem]" />
           </span>
-          <span className="min-w-0 flex-1 text-sm font-black text-[#1D1D1B]">
+          <span className="min-w-0 flex-1 text-sm font-bold text-[#1D1D1B]">
             {adminActivityPriorityLabel}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-[#8E8383]/62 transition group-hover:translate-x-0.5 group-hover:text-[#156240]" />
@@ -100,7 +100,7 @@ export function AccountSettingsActionList({
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF5E6] text-[#B5301F] ring-1 ring-[#F09182]/42">
           <LogOut className="h-4 w-4" />
         </span>
-        <span className="min-w-0 flex-1 text-sm font-black text-[#B5301F]">
+        <span className="min-w-0 flex-1 text-sm font-bold text-[#B5301F]">
           {signOutLabel}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-[#B5301F]/48 transition group-hover:translate-x-0.5" />

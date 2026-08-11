@@ -264,7 +264,7 @@ export function AccountMenu({
                       <p className="text-[11px] font-medium leading-none text-zinc-500">
                         {profileCopy.friendCodeLabel}
                       </p>
-                      <p className="mt-1 font-mono text-xs font-semibold tracking-[0.18em] text-ink">
+                      <p className="mt-1 friemi-tabular text-xs font-semibold tracking-[0.18em] text-ink">
                         {viewerFriendCode}
                       </p>
                     </div>

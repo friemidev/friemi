@@ -425,17 +425,17 @@ export function AvalonRoomLobby({
         <div className="relative grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1fr)] xl:items-center">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#156240] px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-[#156240]/15">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#156240] px-3 py-1 text-xs font-bold uppercase tracking-normal text-white shadow-lg shadow-[#156240]/15">
                 <Sparkles className="h-3.5 w-3.5" />
                 {statusLabel}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 py-1 text-xs font-black text-[#156240]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 py-1 text-xs font-bold text-[#156240]">
                 <Users className="h-3.5 w-3.5" />
                 {claimedCount}/{room.playerCount}
               </span>
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#156240]/70">
+              <p className="text-xs font-bold uppercase tracking-normal text-[#156240]/70">
                 Friemi Table Lab
               </p>
               <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-normal text-[#0E2A5A] sm:text-4xl">
@@ -454,10 +454,10 @@ export function AvalonRoomLobby({
                   />
                 </span>
                 <div className="min-w-0">
-                  <span className="text-xs font-black text-[#156240]">
+                  <span className="text-xs font-bold text-[#156240]">
                     {t.code}
                   </span>
-                  <code className="block truncate text-xl font-black tracking-[0.18em] text-[#0E2A5A]">
+                  <code className="block truncate friemi-tabular text-xl font-bold tracking-[0.18em] text-[#0E2A5A]">
                     {room.code}
                   </code>
                 </div>
@@ -547,7 +547,7 @@ export function AvalonRoomLobby({
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-1">
             <AvalonQrCode label={t.scanToJoin} value={joinUrl} />
             <a
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#156240] px-4 text-sm font-black text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#156240] px-4 text-sm font-bold text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5"
               href={screenUrl}
               rel="noreferrer"
               target="_blank"
@@ -562,7 +562,7 @@ export function AvalonRoomLobby({
               {t.screen}
             </a>
             <a
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-sm transition hover:-translate-y-0.5"
               href={recapUrl}
               rel="noreferrer"
               target="_blank"
@@ -599,7 +599,7 @@ export function AvalonRoomLobby({
                   className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border border-[#D6D5B2] bg-white/80 px-3 py-2"
                   key={seat.id}
                 >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-xs font-black text-[#156240]">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F1F2EC] text-xs font-bold text-[#156240]">
                     {seat.seatNumber}
                   </span>
                   <div className="min-w-0">
@@ -629,7 +629,7 @@ export function AvalonRoomLobby({
         <section className="rounded-[2rem] border border-[#D6D5B2] bg-white/75 p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#156240]/70">
+              <p className="text-xs font-bold uppercase tracking-normal text-[#156240]/70">
                 URL
               </p>
               <p className="mt-1 truncate text-sm font-semibold text-[#0E2A5A]">
@@ -677,29 +677,29 @@ function MissionBoard({
       </div>
       <div className="relative mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#156240]/70">
+          <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
             {t.progress}
           </p>
-          <h2 className="text-lg font-black text-[#0E2A5A]">
+          <h2 className="text-lg font-bold text-[#0E2A5A]">
             {t.mission} {state.roundIndex + 1}
           </h2>
           {state.rules.assassination === "disabled" ||
           state.rules.failure === "single_fail" ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {state.rules.assassination === "disabled" ? (
-                <span className="rounded-full bg-[#FFF0EC] px-2 py-0.5 text-[0.62rem] font-black text-[#B5301F]">
+                <span className="rounded-full bg-[#FFF0EC] px-2 py-0.5 text-[0.62rem] font-bold text-[#B5301F]">
                   {t.noAssassinationRule}
                 </span>
               ) : null}
               {state.rules.failure === "single_fail" ? (
-                <span className="rounded-full bg-[#EAF6E7] px-2 py-0.5 text-[0.62rem] font-black text-[#156240]">
+                <span className="rounded-full bg-[#EAF6E7] px-2 py-0.5 text-[0.62rem] font-bold text-[#156240]">
                   {t.singleFailRule}
                 </span>
               ) : null}
             </div>
           ) : null}
         </div>
-        <span className="rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-1 text-xs font-black text-[#156240] shadow-sm">
+        <span className="rounded-full border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-1 text-xs font-bold text-[#156240] shadow-sm">
           {t.team} {progress.requiredTeamSize}
         </span>
       </div>
@@ -731,7 +731,7 @@ function MissionBoard({
                   src={src}
                   width={46}
                 />
-                <span className="absolute -bottom-1.5 rounded-full bg-white px-2 py-0.5 text-[0.62rem] font-black text-[#156240] shadow-sm">
+                <span className="absolute -bottom-1.5 rounded-full bg-white px-2 py-0.5 text-[0.62rem] font-bold text-[#156240] shadow-sm">
                   {index + 1}
                 </span>
               </div>
@@ -751,7 +751,7 @@ function MissionBoard({
       </div>
 
       <div className="relative mt-4 flex items-center justify-center gap-1.5 sm:justify-start">
-        <span className="mr-2 rounded-full bg-[#FEFFF9]/90 px-2 py-1 text-[0.66rem] font-black text-[#156240]/75 shadow-sm">
+        <span className="mr-2 rounded-full bg-[#FEFFF9]/90 px-2 py-1 text-[0.66rem] font-bold text-[#156240]/75 shadow-sm">
           {t.rejectTrack}
         </span>
         {Array.from({ length: 5 }, (_, index) => {
@@ -812,10 +812,10 @@ function PhaseSnapshot({
           />
         </div>
         <div className="min-w-0">
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#156240]/70">
+          <p className="text-[0.68rem] font-bold uppercase tracking-normal text-[#156240]/70">
             {t.current}
           </p>
-          <h2 className="mt-1 text-xl font-black leading-tight tracking-normal text-[#0E2A5A] sm:text-2xl">
+          <h2 className="mt-1 text-xl font-bold leading-tight tracking-normal text-[#0E2A5A] sm:text-2xl">
             {phase.title}
           </h2>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#156240]/75">
@@ -828,10 +828,10 @@ function PhaseSnapshot({
               className="rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-2 py-2 text-center shadow-sm"
               key={chip.label}
             >
-              <p className="text-lg font-black leading-none text-[#0E2A5A]">
+              <p className="text-lg font-bold leading-none text-[#0E2A5A]">
                 {chip.value}
               </p>
-              <p className="mt-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-[#156240]/65">
+              <p className="mt-1 text-[0.58rem] font-bold uppercase tracking-normal text-[#156240]/65">
                 {chip.label}
               </p>
             </div>
@@ -992,8 +992,8 @@ function StatPill({
 
   return (
     <div className={cn("rounded-2xl border px-3 py-2 shadow-sm", toneClass)}>
-      <p className="text-xl font-black leading-none">{value}</p>
-      <p className="mt-1 text-[0.65rem] font-black opacity-75">{label}</p>
+      <p className="text-xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-[0.65rem] font-bold opacity-75">{label}</p>
     </div>
   );
 }
@@ -1133,8 +1133,8 @@ function AvalonEventRail({
   return (
     <div className="relative mt-5 overflow-hidden rounded-[1.75rem] border border-[#D6D5B2] bg-white/72 p-3 shadow-inner sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-black text-[#0E2A5A]">{t.log}</h2>
-        <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-[0.66rem] font-black text-[#156240]/75">
+        <h2 className="text-sm font-bold text-[#0E2A5A]">{t.log}</h2>
+        <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-[0.66rem] font-bold text-[#156240]/75">
           {events.length}
         </span>
       </div>
@@ -1150,7 +1150,7 @@ function AvalonEventRail({
               style={{ animationDelay: `${index * 45}ms` }}
             >
               {roundLabel ? (
-                <span className="absolute left-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-[#156240] text-[0.58rem] font-black text-white">
+                <span className="absolute left-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-[#156240] text-[0.58rem] font-bold text-white">
                   {roundLabel}
                 </span>
               ) : null}
@@ -1161,14 +1161,14 @@ function AvalonEventRail({
                 src={getEventIcon(event.type)}
                 width={56}
               />
-              <span className="mt-1 text-[0.64rem] font-black text-[#156240]">
+              <span className="mt-1 text-[0.64rem] font-bold text-[#156240]">
                 {getEventLabel(event.type, t)}
               </span>
               {seatNumbers.length > 0 ? (
                 <span className="mt-1 flex justify-center gap-0.5">
                   {seatNumbers.map((seatNumber) => (
                     <span
-                      className="grid h-4 min-w-4 place-items-center rounded-full bg-[#F09182] px-1 text-[0.5rem] font-black text-white"
+                      className="grid h-4 min-w-4 place-items-center rounded-full bg-[#F09182] px-1 text-[0.5rem] font-bold text-white"
                       key={`${event.id}-${seatNumber}`}
                     >
                       {seatNumber}
@@ -1200,11 +1200,11 @@ function LobbySeatManagementPanel({
           <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-inner">
             <Users className="h-5 w-5" />
           </span>
-          <h2 className="text-base font-black text-[#1D1D1B]">
+          <h2 className="text-base font-bold text-[#1D1D1B]">
             {t.manageSeats}
           </h2>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
           {room.seats.filter((seat) => seat.isClaimed).length}/
           {room.playerCount}
         </span>
@@ -1243,19 +1243,19 @@ function LobbySeatManagementRow({
   return (
     <div className="rounded-[1.25rem] border border-[#D6D5B2] bg-white/82 p-2.5 shadow-sm">
       <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#F1F2EC] text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#F1F2EC] text-xs font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
           {seat.seatNumber}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-black text-[#0E2A5A]">
+          <p className="truncate text-sm font-bold text-[#0E2A5A]">
             {seat.displayName}
           </p>
-          <p className="text-[0.68rem] font-black text-[#156240]/65">
+          <p className="text-[0.68rem] font-bold text-[#156240]/65">
             {seat.isClaimed ? t.ready : t.emptySeat}
           </p>
         </div>
         {seat.isHostSeat ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF5E6] px-2 py-1 text-[0.62rem] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF5E6] px-2 py-1 text-[0.62rem] font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
             <Crown className="h-3 w-3" />
             {t.host}
           </span>
@@ -1341,7 +1341,7 @@ function SeatManageSubmit({
   return (
     <button
       className={cn(
-        "inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl border bg-white px-3 text-xs font-black shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45",
+        "inline-flex h-9 items-center justify-center gap-1.5 rounded-2xl border bg-white px-3 text-xs font-bold shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45",
         toneClass,
         full && "w-full",
       )}
@@ -1385,7 +1385,7 @@ function HostCorrectionPanel({
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2EC] text-[#156240] shadow-inner">
           <Wrench className="h-5 w-5" />
         </span>
-        <h2 className="text-base font-black text-[#1D1D1B]">{t.repair}</h2>
+        <h2 className="text-base font-bold text-[#1D1D1B]">{t.repair}</h2>
       </div>
       <form action={formAction} className="grid grid-cols-2 gap-2">
         <input name="locale" type="hidden" value={locale} />
@@ -1418,7 +1418,7 @@ function HostCorrectionPanel({
         <input name="roomId" type="hidden" value={room.id} />
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black text-[#0E2A5A]">{t.rollback}</p>
+            <p className="text-sm font-bold text-[#0E2A5A]">{t.rollback}</p>
             <p className="mt-0.5 text-xs font-semibold leading-5 text-[#156240]/68">
               {t.rollbackHint}
             </p>
@@ -1485,7 +1485,7 @@ function RollbackSubmitButton({
         src={image}
         width={44}
       />
-      <span className="mt-1 text-[0.58rem] font-black text-[#156240]">
+      <span className="mt-1 text-[0.58rem] font-bold text-[#156240]">
         {value + 1}
       </span>
     </button>
@@ -1514,7 +1514,7 @@ function CorrectionSubmitButton({
   return (
     <button
       className={cn(
-        "group grid min-h-28 place-items-center overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white px-2 py-3 text-center text-xs font-black text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-45",
+        "group grid min-h-28 place-items-center overflow-hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white px-2 py-3 text-center text-xs font-bold text-[#156240] shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-45",
         toneClass,
       )}
       disabled={disabled || pending}
@@ -1557,7 +1557,7 @@ function HostLifecyclePanel({
           <RefreshCcw className="h-5 w-5" />
         </span>
         <div>
-          <h2 className="text-base font-black text-[#1D1D1B]">{t.lifecycle}</h2>
+          <h2 className="text-base font-bold text-[#1D1D1B]">{t.lifecycle}</h2>
           <p className="text-xs font-semibold leading-5 text-[#B5301F]/70">
             {t.confirmRedeal}
           </p>
@@ -1641,7 +1641,7 @@ function LifecycleSubmitButton({
         />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-black text-[#0E2A5A]">
+        <span className="block text-sm font-bold text-[#0E2A5A]">
           {pending ? "..." : label}
         </span>
         <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#156240]/68">
@@ -1678,7 +1678,7 @@ function GameControlPanel({
           width={420}
         />
         <div className="p-3 text-center">
-          <p className="text-xl font-black text-[#0E2A5A]">
+          <p className="text-xl font-bold text-[#0E2A5A]">
             {isGoodWinner ? t.goodWins : t.evilWins}
           </p>
         </div>
@@ -1765,8 +1765,8 @@ function VoteImageCard({
         />
       </div>
       <div className="px-3 py-2">
-        <p className="text-xl font-black text-[#0E2A5A]">{value}</p>
-        <p className="text-xs font-black text-[#156240]/70">{label}</p>
+        <p className="text-xl font-bold text-[#0E2A5A]">{value}</p>
+        <p className="text-xs font-bold text-[#156240]/70">{label}</p>
       </div>
     </div>
   );
@@ -1781,8 +1781,8 @@ function StatusToken({
 }) {
   return (
     <div className="mt-4 rounded-[1.5rem] border border-[#D6D5B2] bg-[#F1F2EC]/70 p-4 text-center shadow-inner">
-      <p className="text-3xl font-black text-[#0E2A5A]">{value}</p>
-      <p className="mt-1 text-xs font-black text-[#156240]/70">{label}</p>
+      <p className="text-3xl font-bold text-[#0E2A5A]">{value}</p>
+      <p className="mt-1 text-xs font-bold text-[#156240]/70">{label}</p>
     </div>
   );
 }
@@ -1818,14 +1818,14 @@ function TeamProposalForm({
               type="checkbox"
               value={seat.seatNumber}
             />
-            <span className="relative grid h-16 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-white text-sm font-black text-[#156240] shadow-sm transition peer-checked:-translate-y-0.5 peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#156240]/20">
+            <span className="relative grid h-16 place-items-center rounded-[1.25rem] border border-[#D6D5B2] bg-white text-sm font-bold text-[#156240] shadow-sm transition peer-checked:-translate-y-0.5 peer-checked:border-[#156240] peer-checked:bg-[#156240] peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-[#156240]/20">
               {seat.seatNumber === room.state.currentLeaderSeatNumber ? (
                 <Crown className="absolute -top-1.5 h-4 w-4 rounded-full bg-[#FFF5E6] p-0.5 text-[#156240] ring-1 ring-[#D6D5B2]" />
               ) : null}
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#F1F2EC] text-xs text-[#156240] peer-checked:bg-white">
                 {seat.avatarLabel}
               </span>
-              <span className="absolute bottom-1 text-[0.62rem] font-black opacity-80">
+              <span className="absolute bottom-1 text-[0.62rem] font-bold opacity-80">
                 {seat.seatNumber}
               </span>
             </span>
@@ -1833,11 +1833,11 @@ function TeamProposalForm({
         ))}
       </div>
       <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#F1F2EC] px-3 py-2 shadow-inner">
-        <span className="inline-flex items-center gap-2 text-xs font-black text-[#156240]">
+        <span className="inline-flex items-center gap-2 text-xs font-bold text-[#156240]">
           <Shield className="h-3.5 w-3.5" />
           {t.selectTeam}
         </span>
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-black text-[#0E2A5A] shadow-sm">
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-bold text-[#0E2A5A] shadow-sm">
           {room.progress.requiredTeamSize}
         </span>
       </div>
@@ -1856,7 +1856,7 @@ function TeamProposalSubmitButton({ label }: { label: string }) {
 
   return (
     <button
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#156240] px-5 text-sm font-black text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5 disabled:opacity-70"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#156240] px-5 text-sm font-bold text-white shadow-xl shadow-[#156240]/20 transition hover:-translate-y-0.5 disabled:opacity-70"
       disabled={pending}
       type="submit"
     >
@@ -1925,7 +1925,7 @@ function RoundTable({ room, t }: { room: AvalonRoomView; t: Copy }) {
                 src="/game-tools/avalon/player-ready-token.svg"
                 width={48}
               />
-              <span className="absolute bottom-0.5 rounded-full bg-white/90 px-1.5 text-[0.58rem] font-black text-[#156240] shadow-sm sm:bottom-1 sm:text-[0.65rem]">
+              <span className="absolute bottom-0.5 rounded-full bg-white/90 px-1.5 text-[0.58rem] font-bold text-[#156240] shadow-sm sm:bottom-1 sm:text-[0.65rem]">
                 {seat.seatNumber}
               </span>
             </div>
@@ -1982,7 +1982,7 @@ function SeatCard({
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "grid h-14 w-14 shrink-0 place-items-center rounded-2xl border bg-[#FEFFF9] text-lg font-black shadow-md",
+            "grid h-14 w-14 shrink-0 place-items-center rounded-2xl border bg-[#FEFFF9] text-lg font-bold shadow-md",
             seat.roleAlignment === "evil"
               ? "border-[#B5301F]/30"
               : seat.roleAlignment === "good"
@@ -2000,17 +2000,17 @@ function SeatCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className="truncate text-sm font-black text-[#1D1D1B]">
+            <h3 className="truncate text-sm font-bold text-[#1D1D1B]">
               {seat.displayName}
             </h3>
             {seat.isHostSeat ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.68rem] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.68rem] font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
                 <Crown className="h-3 w-3" />
                 {t.host}
               </span>
             ) : null}
             {seat.isViewerSeat ? (
-              <span className="rounded-full bg-[#DEEBFF] px-2 py-0.5 text-[0.68rem] font-black text-[#0E2A5A]">
+              <span className="rounded-full bg-[#DEEBFF] px-2 py-0.5 text-[0.68rem] font-bold text-[#0E2A5A]">
                 {t.viewerSeat}
               </span>
             ) : null}
@@ -2025,7 +2025,7 @@ function SeatCard({
           {seat.privateToken ? (
             <div className={cn("mt-3 grid gap-2", canLeave && "grid-cols-2")}>
               <a
-                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#156240] px-3 text-xs font-black text-white shadow-lg shadow-[#156240]/15 transition hover:-translate-y-0.5"
+                className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl bg-[#156240] px-3 text-xs font-bold text-white shadow-lg shadow-[#156240]/15 transition hover:-translate-y-0.5"
                 href={`/${locale}/game-tools/avalon/seats/${seat.privateToken}`}
               >
                 <LockKeyhole className="h-3.5 w-3.5" />
@@ -2076,7 +2076,7 @@ function LeaveSeatSubmitButton({ label }: { label: string }) {
 
   return (
     <button
-      className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl border border-[#F09182] bg-white px-3 text-xs font-black text-[#B5301F] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF0EC] disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl border border-[#F09182] bg-white px-3 text-xs font-bold text-[#B5301F] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF0EC] disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -2172,7 +2172,7 @@ function StartRoomSubmitButton({ label }: { label: string }) {
 
   return (
     <button
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#F09182] px-5 text-sm font-black text-white shadow-xl shadow-[#F09182]/25 transition hover:-translate-y-0.5 disabled:opacity-70"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#F09182] px-5 text-sm font-bold text-white shadow-xl shadow-[#F09182]/25 transition hover:-translate-y-0.5 disabled:opacity-70"
       disabled={pending}
       type="submit"
     >

@@ -718,7 +718,7 @@ function Avatar({
   }
 
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAF5E8] text-sm font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
       {initial}
     </span>
   );
@@ -782,7 +782,7 @@ export function ProfilePrivatePageShell({
             <ArrowLeft className="h-5 w-5" />
           </Link>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-center text-xl font-black text-[#111210]">
+        <h1 className="min-w-0 flex-1 truncate text-center text-xl font-bold text-[#111210]">
           {title}
         </h1>
         <div className="flex h-10 min-w-10 shrink-0 items-center justify-end">
@@ -807,7 +807,7 @@ export function ProfilePrivatePageShell({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-lg font-black leading-tight text-[#111210]">
+              <p className="truncate text-lg font-bold leading-tight text-[#111210]">
                 {title}
               </p>
               <p className="mt-1 text-xs font-bold leading-5 text-[#5F685F]">
@@ -834,11 +834,11 @@ function MetricPill({
 }) {
   return (
     <div className="min-w-0 border-b border-[#E3DCC5]/70 px-1 py-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-black text-[#6C746A]">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#6C746A]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-2xl font-black leading-none text-[#111210]">
+      <p className="mt-2 truncate text-2xl font-bold leading-none text-[#111210]">
         {value}
       </p>
     </div>
@@ -877,7 +877,7 @@ function StatusPanel({
       >
         <Icon className="h-5 w-5" />
       </span>
-      <h2 className="mt-4 text-base font-black text-[#111210]">{title}</h2>
+      <h2 className="mt-4 text-base font-bold text-[#111210]">{title}</h2>
       {description ? (
         <p className="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-[#6C746A]">
           {description}
@@ -938,7 +938,7 @@ function AchievementEquipSubmitButton({
   return (
     <button
       className={cn(
-        "inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black transition active:scale-95 disabled:active:scale-100",
+        "inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-2.5 text-[10px] font-bold transition active:scale-95 disabled:active:scale-100",
         isEquipped
           ? "bg-[#156240] text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
           : "bg-white text-[#156240] ring-1 ring-[#BFD8B9]",
@@ -999,7 +999,7 @@ function AchievementEquipControl({
         isEquipped={item.isEquipped}
       />
       {state.formError ? (
-        <p className="max-w-[5rem] text-right text-[10px] font-black leading-4 text-[#9A2135]">
+        <p className="max-w-[5rem] text-right text-[10px] font-bold leading-4 text-[#9A2135]">
           {state.formError}
         </p>
       ) : null}
@@ -1160,7 +1160,7 @@ function RedeemBlindBoxSubmitButton({
       type="submit"
       aria-busy={pending}
       disabled={disabled || pending}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.16)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:shadow-none"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_12px_22px_rgba(21,98,64,0.16)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:shadow-none"
     >
       {pending ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -1225,7 +1225,7 @@ function RedeemFriemiCheckSubmitButton({
       type="submit"
       aria-busy={pending}
       disabled={disabled || pending}
-      className="inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition active:scale-95 disabled:bg-[#C8CBB7]"
+      className="inline-flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white transition active:scale-95 disabled:bg-[#C8CBB7]"
     >
       {pending ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -1294,7 +1294,7 @@ function GiftAvailabilityBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+        "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
         disabled
           ? "bg-[#F3F1EB] text-[#7A8276] ring-[#DFDAC5]"
           : locked
@@ -1336,7 +1336,7 @@ function ShopGiftSubmitButton({
 
   return (
     <button
-      className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -1471,13 +1471,13 @@ function ShopGiftRecipientDialog({
               {gift.emoji}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-base font-black text-[#111210]">
+              <p className="truncate text-base font-bold text-[#111210]">
                 {gift.label}
               </p>
-              <p className="mt-0.5 text-xs font-black text-[#7A8276]">
+              <p className="mt-0.5 text-xs font-bold text-[#7A8276]">
                 {copy.shop.chooseFriend}
               </p>
-              <p className="mt-1 truncate text-[11px] font-black text-[#7A8276]">
+              <p className="mt-1 truncate text-[11px] font-bold text-[#7A8276]">
                 {gift.coinCost ?? "-"} {copy.shop.fc} · +{gift.charmValue}{" "}
                 {charmUnit}
               </p>
@@ -1494,7 +1494,7 @@ function ShopGiftRecipientDialog({
         </header>
 
         <div className="max-h-[min(70dvh,30rem)] overflow-y-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EAF5E8] px-3 py-1.5 text-[11px] font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+          <div className="mb-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EAF5E8] px-3 py-1.5 text-[11px] font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
             <Coins className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">
               {copy.shop.coinTitle}: {visibleCoinBalance} {copy.shop.fc}
@@ -1527,7 +1527,7 @@ function ShopGiftRecipientDialog({
                     name={recipient.nickname}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {recipient.nickname}
                     </p>
                     {recipient.friendCode ? (
@@ -1545,7 +1545,7 @@ function ShopGiftRecipientDialog({
             </div>
           ) : (
             <div className="rounded-[1.1rem] bg-[#F8F4EA] px-4 py-7 text-center ring-1 ring-[#E3DCC5]">
-              <p className="text-sm font-black text-[#111210]">
+              <p className="text-sm font-bold text-[#111210]">
                 {copy.shop.noFriends}
               </p>
             </div>
@@ -1557,7 +1557,7 @@ function ShopGiftRecipientDialog({
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <div className="min-w-0 text-xs font-bold leading-5">
-                <p className="font-black">{failureTitle}</p>
+                <p className="font-bold">{failureTitle}</p>
                 <p>{formError}</p>
                 {typeof state.required === "number" ? (
                   <p className="mt-0.5 text-[#9A2135]/78">
@@ -1630,7 +1630,7 @@ export function ProfileAchievementsPageView({
       {recentUnlocked.length > 0 ? (
         <section className="mt-6 border-t border-[#E8D59D]/62 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8A641A]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#8A641A]">
               {copy.achievements.recent}
             </p>
             <Star className="h-4 w-4 text-[#D69D26]" />
@@ -1646,7 +1646,7 @@ export function ProfileAchievementsPageView({
                 >
                   <AchievementIcon item={item} unlocked />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {text.title}
                     </p>
                     <p className="mt-0.5 truncate text-[11px] font-bold text-[#7D641C]">
@@ -1664,7 +1664,7 @@ export function ProfileAchievementsPageView({
         {groupedItems.length > 0 ? (
           groupedItems.map((group) => (
             <section className="grid gap-2" key={group.groupKey}>
-              <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+              <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
                 {copy.achievementGroups[group.groupKey]}
               </h2>
               <div className="divide-y divide-[#E8E1CF]/72">
@@ -1690,7 +1690,7 @@ export function ProfileAchievementsPageView({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h3 className="truncate text-sm font-black text-[#111210]">
+                              <h3 className="truncate text-sm font-bold text-[#111210]">
                                 {text.title}
                               </h3>
                               <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#6C746A]">
@@ -1700,7 +1700,7 @@ export function ProfileAchievementsPageView({
                             <div className="grid shrink-0 justify-items-end gap-1">
                               <span
                                 className={cn(
-                                  "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                                  "inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
                                   unlocked
                                     ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                                     : "bg-white text-[#8B907F] ring-[#DFDAC5]",
@@ -1734,7 +1734,7 @@ export function ProfileAchievementsPageView({
                               style={{ width: progressWidth }}
                             />
                           </div>
-                          <p className="mt-1.5 text-right text-[10px] font-black text-[#8B907F]">
+                          <p className="mt-1.5 text-right text-[10px] font-bold text-[#8B907F]">
                             {item.progress}/{item.target}
                           </p>
                         </div>
@@ -1815,7 +1815,7 @@ function CopyButton({
       type="button"
       disabled={!value}
       onClick={copyValue}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:text-white"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:bg-[#C8CBB7] disabled:text-white"
     >
       {copied ? (
         <Check className="h-3.5 w-3.5" />
@@ -1920,7 +1920,7 @@ function ReferralBindSubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#156240] px-4 text-xs font-bold text-white shadow-[0_10px_20px_rgba(21,98,64,0.14)] transition active:scale-95 disabled:opacity-60"
     >
       {pending ? pendingLabel : label}
     </button>
@@ -1952,10 +1952,10 @@ function ReferralInviteBinder({
             name={boundReferral.inviter.nickname}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-black text-[#8B907F]">
+            <p className="truncate text-[11px] font-bold text-[#8B907F]">
               {copy.invite.inviterLabel}
             </p>
-            <p className="mt-0.5 truncate text-sm font-black text-[#111210]">
+            <p className="mt-0.5 truncate text-sm font-bold text-[#111210]">
               {boundReferral.inviter.nickname}
             </p>
             {boundReferral.inviter.friendCode ? (
@@ -1977,7 +1977,7 @@ function ReferralInviteBinder({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-black text-[#111210]">
+          <h2 className="truncate text-sm font-bold text-[#111210]">
             {copy.invite.bindTitle}
           </h2>
           <p className="mt-1 text-xs font-semibold leading-5 text-[#6C746A]">
@@ -1995,7 +1995,7 @@ function ReferralInviteBinder({
           inputMode="numeric"
           maxLength={240}
           placeholder={copy.invite.bindPlaceholder}
-          className="h-10 min-w-0 flex-1 rounded-full bg-[#FEFFF9] px-3 text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A3A48F] focus:ring-[#E83F83]"
+          className="h-10 min-w-0 flex-1 rounded-full bg-[#FEFFF9] px-3 text-sm font-bold text-[#111210] outline-none ring-1 ring-[#D6D5B2] placeholder:text-[#A3A48F] focus:ring-[#E83F83]"
         />
         <ReferralBindSubmitButton
           label={copy.invite.bindSubmit}
@@ -2023,7 +2023,7 @@ function FriemiToast({ message }: { message: string | null }) {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--app-mobile-nav-height)+var(--app-bottom-safe-area)+0.75rem)] z-[80] flex justify-center px-5 md:bottom-8">
-      <div className="flex max-w-[19rem] items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-2 text-xs font-black text-[#156240] shadow-[0_16px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#BFD8B9]">
+      <div className="flex max-w-[19rem] items-center gap-2 rounded-full bg-[#FEFFF9] px-3 py-2 text-xs font-bold text-[#156240] shadow-[0_16px_38px_rgba(21,98,64,0.16)] ring-1 ring-[#BFD8B9]">
         <Image
           src={brand.logoIconPath}
           alt=""
@@ -2107,10 +2107,10 @@ export function ProfileInvitePageView({
               <Ticket className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-black text-[#8B907F]">
+              <p className="truncate text-[11px] font-bold text-[#8B907F]">
                 Friemi Code
               </p>
-              <p className="mt-1 truncate text-lg font-black text-[#111210]">
+              <p className="mt-1 truncate text-lg font-bold text-[#111210]">
                 {friendCode ? `@${friendCode}` : copy.invite.linkUnavailable}
               </p>
             </div>
@@ -2135,10 +2135,10 @@ export function ProfileInvitePageView({
 
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-sm font-black text-[#111210]">
+            <h2 className="text-sm font-bold text-[#111210]">
               {copy.invite.invited}
             </h2>
-            <span className="rounded-full bg-[#F7F7F0] px-2.5 py-1 text-xs font-black text-[#156240]">
+            <span className="rounded-full bg-[#F7F7F0] px-2.5 py-1 text-xs font-bold text-[#156240]">
               {stats.invitedCount}
             </span>
           </div>
@@ -2155,7 +2155,7 @@ export function ProfileInvitePageView({
                     name={referral.invitee.nickname}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {referral.invitee.nickname}
                     </p>
                     <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">
@@ -2244,12 +2244,12 @@ export function ProfileVisitorsPageView({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate text-sm font-black text-[#111210]">
+                      <p className="truncate text-sm font-bold text-[#111210]">
                         {visit.visitor.nickname}
                       </p>
                       <span
                         className={cn(
-                          "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[9px] font-black ring-1",
+                          "inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[9px] font-bold ring-1",
                           visit.isFriend
                             ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                             : "bg-[#EEF5FF] text-[#143376] ring-[#C8D9F5]",
@@ -2265,7 +2265,7 @@ export function ProfileVisitorsPageView({
                     </p>
                   </div>
                 </Link>
-                <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-black text-[#143376] ring-1 ring-[#C8D9F5]">
+                <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] px-2 text-[11px] font-bold text-[#143376] ring-1 ring-[#C8D9F5]">
                   {visit.viewCount}
                 </span>
                 <StartDirectConversationButton
@@ -2328,14 +2328,14 @@ export function ProfileBagPageView({
       <section className="mt-6 rounded-[1.25rem] bg-white p-4 ring-1 ring-[#D6D5B2]">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#6C746A]">
               {copy.bag.coinBalance}
             </p>
-            <p className="mt-2 text-3xl font-black leading-none text-[#111210]">
+            <p className="mt-2 text-3xl font-bold leading-none text-[#111210]">
               {bag.coinBalance.balance}
             </p>
           </div>
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-black text-[#156240] ring-1 ring-[#BFD8B9]">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-lg font-bold text-[#156240] ring-1 ring-[#BFD8B9]">
             F
           </span>
         </div>
@@ -2344,7 +2344,7 @@ export function ProfileBagPageView({
             <p className="text-[11px] font-bold text-[#7A8276]">
               {copy.bag.coinEarned}
             </p>
-            <p className="mt-1 truncate text-sm font-black text-[#156240]">
+            <p className="mt-1 truncate text-sm font-bold text-[#156240]">
               {bag.coinBalance.earnedTotal}
             </p>
           </div>
@@ -2352,7 +2352,7 @@ export function ProfileBagPageView({
             <p className="text-[11px] font-bold text-[#7A8276]">
               {copy.bag.coinSpent}
             </p>
-            <p className="mt-1 truncate text-sm font-black text-[#111210]">
+            <p className="mt-1 truncate text-sm font-bold text-[#111210]">
               {bag.coinBalance.spentTotal}
             </p>
           </div>
@@ -2360,7 +2360,7 @@ export function ProfileBagPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
           {copy.bag.checkList}
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -2371,7 +2371,7 @@ export function ProfileBagPageView({
               </span>
               <span
                 className={cn(
-                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-black ring-1",
+                  "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-[10px] font-bold ring-1",
                   bag.fragmentBalance.canRedeem
                     ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                     : "bg-white text-[#6C746A] ring-[#DFDAC5]",
@@ -2383,7 +2383,7 @@ export function ProfileBagPageView({
               </span>
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-[#111210]">
+              <p className="truncate text-sm font-bold text-[#111210]">
                 {copy.bag.fragment}
               </p>
               <p className="mt-1 text-xs font-bold text-[#6C746A]">
@@ -2433,7 +2433,7 @@ export function ProfileBagPageView({
                   </span>
                   <span
                     className={cn(
-                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-black ring-1",
+                      "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-full px-2 text-[10px] font-bold ring-1",
                       available
                         ? "bg-[#EAF5E8] text-[#156240] ring-[#BFD8B9]"
                         : "bg-white text-[#6C746A] ring-[#DFDAC5]",
@@ -2443,11 +2443,11 @@ export function ProfileBagPageView({
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-black leading-5 text-[#111210]">
+                  <p className="line-clamp-2 text-sm font-bold leading-5 text-[#111210]">
                     {getCheckTypeCopy(check.type, locale)}
                   </p>
                   {check.coinValue > 0 ? (
-                    <p className="mt-1 text-xs font-black text-[#156240]">
+                    <p className="mt-1 text-xs font-bold text-[#156240]">
                       {copy.bag.checkCoinValue} {check.coinValue}{" "}
                       {copy.bag.coinBalance}
                     </p>
@@ -2532,7 +2532,7 @@ export function ProfileShopPageView({
       right={
         <button
           aria-label={copy.shop.recharge}
-          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-black text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
+          className="inline-flex h-9 max-w-[5.8rem] items-center justify-center gap-1.5 rounded-full bg-[#FFF7DC] px-2.5 text-xs font-bold text-[#7D641C] ring-1 ring-[#E8D59D] transition active:scale-95"
           onClick={() => setRechargeOpen(true)}
           type="button"
         >
@@ -2552,15 +2552,15 @@ export function ProfileShopPageView({
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#EAF5E8] text-[#156240] ring-1 ring-[#BFD8B9]">
               <Coins className="h-6 w-6" />
-              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-black leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
+              <span className="absolute -bottom-1 rounded-full bg-white px-1.5 text-[9px] font-bold leading-4 text-[#156240] ring-1 ring-[#BFD8B9]">
                 FC
               </span>
             </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-black text-[#7A8276]">
+              <p className="truncate text-xs font-bold text-[#7A8276]">
                 {copy.shop.coinTitle}
               </p>
-              <p className="mt-0.5 text-2xl font-black leading-none text-[#111210]">
+              <p className="mt-0.5 text-2xl font-bold leading-none text-[#111210]">
                 {localCoinBalance} {copy.shop.fc}
               </p>
             </div>
@@ -2572,7 +2572,7 @@ export function ProfileShopPageView({
       </section>
 
       <section className="mt-7">
-        <h2 className="px-1 text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+        <h2 className="px-1 text-xs font-bold uppercase tracking-normal text-[#6C746A]">
           {copy.shop.giftCatalog}
         </h2>
         <p className="mt-2 px-1 text-xs font-semibold text-[#7A8276]">
@@ -2598,10 +2598,10 @@ export function ProfileShopPageView({
                     <GiftAvailabilityBadge gift={gift} locale={locale} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-black text-[#111210]">
+                    <span className="block truncate text-sm font-bold text-[#111210]">
                       {gift.label}
                     </span>
-                    <span className="mt-2 grid gap-1.5 text-[11px] font-black">
+                    <span className="mt-2 grid gap-1.5 text-[11px] font-bold">
                       <span className="inline-flex min-w-0 items-center justify-center rounded-full bg-[#F5F1E6] px-2 py-1 text-[#6C5515]">
                         {gift.coinCost ?? "-"} {copy.shop.fc}
                       </span>
@@ -2612,7 +2612,7 @@ export function ProfileShopPageView({
                   </span>
                   {locked ? null : (
                     <button
-                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
+                      className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white shadow-[0_10px_18px_rgba(21,98,64,0.14)] transition active:scale-95"
                       onClick={() => openGiftDialog(gift.id)}
                       type="button"
                     >
@@ -2637,7 +2637,7 @@ export function ProfileShopPageView({
       {negativeGifts.length > 0 ? (
         <section className="mt-8">
           <div className="flex items-end justify-between gap-3 px-1">
-            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-[#6C746A]">
+            <h2 className="text-xs font-bold uppercase tracking-normal text-[#6C746A]">
               {copy.shop.negativeCatalog}
             </h2>
             <span className="text-xs font-bold text-[#9A2135]">
@@ -2651,10 +2651,10 @@ export function ProfileShopPageView({
                 key={gift.id}
               >
                 <span className="text-2xl leading-none">{gift.emoji}</span>
-                <span className="max-w-full truncate text-xs font-black text-[#111210]">
+                <span className="max-w-full truncate text-xs font-bold text-[#111210]">
                   {gift.label}
                 </span>
-                <span className="text-[11px] font-black text-[#9A2135]">
+                <span className="text-[11px] font-bold text-[#9A2135]">
                   {gift.charmValue} {charmUnit}
                 </span>
                 <span className="text-[10px] font-bold text-[#7A8276]">
@@ -2679,10 +2679,10 @@ export function ProfileShopPageView({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7D641C]">
+                <p className="text-xs font-bold uppercase tracking-normal text-[#7D641C]">
                   {copy.shop.rechargeTitle}
                 </p>
-                <h2 className="mt-1 text-xl font-black text-[#111210]">
+                <h2 className="mt-1 text-xl font-bold text-[#111210]">
                   {copy.shop.fc}
                 </h2>
               </div>
@@ -2697,7 +2697,7 @@ export function ProfileShopPageView({
             </div>
 
             <div className="mt-4 rounded-[1rem] bg-[#F8F7F2] px-4 py-3">
-              <p className="text-sm font-black leading-6 text-[#156240]">
+              <p className="text-sm font-bold leading-6 text-[#156240]">
                 {copy.shop.rechargeContact}
               </p>
               <p className="mt-1 text-xs font-semibold leading-5 text-[#7A8276]">
@@ -2718,16 +2718,16 @@ export function ProfileShopPageView({
                   key={plan.priceEur}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-black text-[#111210]">
+                    <span className="text-sm font-bold text-[#111210]">
                       €{plan.priceEur}
                     </span>
                     {plan.recommended ? (
-                      <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-black text-[#156240]">
+                      <span className="rounded-full bg-[#EAF5E8] px-2 py-0.5 text-[10px] font-bold text-[#156240]">
                         {copy.shop.recommended}
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-2 block text-xs font-black text-[#156240]">
+                  <span className="mt-2 block text-xs font-bold text-[#156240]">
                     {plan.totalCoins} {copy.shop.fc}
                   </span>
                   <span className="mt-1 block text-[11px] font-semibold text-[#7A8276]">
@@ -2769,11 +2769,11 @@ function GiftWallMetric({
 }) {
   return (
     <div className="min-w-0 px-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#6C746A]">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#6C746A]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-xl font-black leading-none text-[#111210]">
+      <p className="mt-2 truncate text-xl font-bold leading-none text-[#111210]">
         {value}
       </p>
     </div>
@@ -2807,7 +2807,7 @@ function GiftWallRoomGift({
       >
         {gift.giftEmoji}
       </span>
-      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-black text-[#6C5515] ring-1 ring-[#E8D59D]">
+      <span className="max-w-[4.8rem] truncate rounded-full bg-[#FFF7DC] px-2 py-0.5 text-[10px] font-bold text-[#6C5515] ring-1 ring-[#E8D59D]">
         x{gift.quantity}
       </span>
     </div>
@@ -2823,7 +2823,7 @@ function GiftWallLeaderboardRow({
 }) {
   return (
     <li className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 py-3">
-      <span className="text-center text-sm font-black text-[#B7892A]">
+      <span className="text-center text-sm font-bold text-[#B7892A]">
         {index + 1}
       </span>
       <div className="flex min-w-0 items-center gap-3">
@@ -2832,7 +2832,7 @@ function GiftWallLeaderboardRow({
           name={item.sender.nickname}
         />
         <div className="min-w-0">
-          <p className="truncate text-sm font-black text-[#111210]">
+          <p className="truncate text-sm font-bold text-[#111210]">
             {item.sender.nickname}
           </p>
           <p className="mt-0.5 text-xs font-semibold text-[#6C746A]">
@@ -2891,10 +2891,10 @@ export function ProfileGiftWallPageView({
       <section className="mt-6">
         <div className="flex items-end justify-between gap-3 px-1">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#B7892A]">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[#B7892A]">
               {copy.giftWall.giftStats}
             </p>
-            <h2 className="mt-1 truncate text-lg font-black text-[#111210]">
+            <h2 className="mt-1 truncate text-lg font-bold text-[#111210]">
               {copy.giftWall.roomTitle}
             </h2>
           </div>
@@ -2930,7 +2930,7 @@ export function ProfileGiftWallPageView({
               <span className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-[#FFF7DC] text-3xl ring-1 ring-[#E8D59D]">
                 🎁
               </span>
-              <p className="text-sm font-black leading-6 text-[#6C746A]">
+              <p className="text-sm font-bold leading-6 text-[#6C746A]">
                 {copy.giftWall.emptyRoom}
               </p>
             </div>
@@ -2957,7 +2957,7 @@ export function ProfileGiftWallPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-sm font-black text-[#111210]">
+        <h2 className="px-1 text-sm font-bold text-[#111210]">
           {copy.giftWall.leaderboard}
         </h2>
         {giftWall.topSenders.length > 0 ? (
@@ -2978,7 +2978,7 @@ export function ProfileGiftWallPageView({
       </section>
 
       <section className="mt-6">
-        <h2 className="px-1 text-sm font-black text-[#111210]">
+        <h2 className="px-1 text-sm font-bold text-[#111210]">
           {copy.giftWall.giftCount}
         </h2>
         {giftWall.topGifts.length > 0 ? (
@@ -2993,7 +2993,7 @@ export function ProfileGiftWallPageView({
                     {gift.giftEmoji}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {gift.giftLabel}
                     </p>
                     <p className="mt-0.5 text-xs font-bold text-[#6C746A]">
@@ -3001,7 +3001,7 @@ export function ProfileGiftWallPageView({
                     </p>
                   </div>
                 </div>
-                <p className="mt-2 truncate text-sm font-black text-[#111210]">
+                <p className="mt-2 truncate text-sm font-bold text-[#111210]">
                   +{gift.charm}
                 </p>
               </article>

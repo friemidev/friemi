@@ -116,7 +116,7 @@ export function ProfileIdentityForm({
           <p className="text-xs font-medium text-zinc-500">
             {t.friendCodeLabel}
           </p>
-          <p className="mt-0.5 font-mono text-base font-semibold tracking-[0.18em] text-ink">
+          <p className="mt-0.5 friemi-tabular text-base font-semibold tracking-[0.18em] text-ink">
             {friendCode}
           </p>
         </div>

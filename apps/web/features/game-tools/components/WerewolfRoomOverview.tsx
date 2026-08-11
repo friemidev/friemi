@@ -238,7 +238,7 @@ function WerewolfAvatar({
           src={avatarUrl}
         />
       ) : (
-        <span className="relative font-black">{avatarLabel}</span>
+        <span className="relative font-bold">{avatarLabel}</span>
       )}
     </span>
   );
@@ -492,7 +492,7 @@ function SubmitButton({
     <button
       className={
         className ??
-        "inline-flex h-9 items-center justify-center rounded-full bg-[#7A1F2B] px-3 text-xs font-black text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
+        "inline-flex h-9 items-center justify-center rounded-full bg-[#7A1F2B] px-3 text-xs font-semibold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
       }
       disabled={pending || disabled}
       type="submit"
@@ -567,7 +567,7 @@ function WerewolfAtmospherePicker({
       </button>
 
       {showHint ? (
-        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-black text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
+        <div className="pointer-events-none absolute right-0 top-[calc(100%+0.55rem)] z-50 max-w-[12rem] rounded-full bg-[#062A24]/94 px-3 py-1.5 text-right text-[11px] font-semibold text-[#F8DDA8] shadow-[0_12px_30px_rgba(0,0,0,0.26)]">
           <span className="block truncate">{selectedAtmosphere.name}</span>
         </div>
       ) : null}
@@ -610,7 +610,7 @@ function WerewolfRoomQrDialog({
             role="dialog"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="truncate text-sm font-black">{t.scanJoin}</p>
+              <p className="truncate text-sm font-bold">{t.scanJoin}</p>
               <button
                 aria-label="Close"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EDF3EA] text-[#153B31] transition active:scale-95"
@@ -1363,12 +1363,12 @@ export function WerewolfRoomOverview({
     } ${
       seat.isDead ? "grayscale opacity-55" : ""
     } ${isCurrentSeat ? "drop-shadow-[0_0_14px_rgba(240,195,106,0.62)]" : ""}`;
-    const seatNumberClass = `absolute -left-0.5 -top-0.5 z-20 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black ring-1 ${
+    const seatNumberClass = `absolute -left-0.5 -top-0.5 z-20 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-bold ring-1 friemi-tabular ${
       isCurrentSeat
         ? "bg-[#F8DDA8]/28 text-[#FFF8DC] ring-[#FFF8DC]/70 shadow-[0_0_12px_rgba(248,221,168,0.38)]"
         : "bg-white/18 text-[#FFF8DC] ring-white/38"
     }`;
-    const seatNameClass = `mt-1 block max-w-full truncate px-1 font-black leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
+    const seatNameClass = `mt-1 block max-w-full truncate px-1 font-bold leading-tight [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
       isDenseTable ? "text-[9.5px]" : "text-[10.5px]"
     } ${
       seat.isDead
@@ -1380,7 +1380,7 @@ export function WerewolfRoomOverview({
     const readyBadge =
       isLobby && seat.isClaimed && seat.readyAt ? (
         <span
-          className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
+          className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-semibold leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
             isDenseTable ? "h-3.5 px-1 text-[8px]" : "h-4 px-1.5 text-[9px]"
           }`}
         >
@@ -1389,7 +1389,7 @@ export function WerewolfRoomOverview({
       ) : null;
     const judgeRoleBadge =
       judgeIsViewer && !isLobby && seat.isPlayerSeat ? (
-        <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#F8DDA8]/92 px-1.5 py-0.5 text-[9px] font-black leading-tight text-[#153B31]">
+        <span className="mt-0.5 block max-w-full truncate rounded-full bg-[#F8DDA8]/92 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-[#153B31]">
           {seat.roleLabel ?? "-"}
         </span>
       ) : null;
@@ -1459,7 +1459,7 @@ export function WerewolfRoomOverview({
             )
           ) : (
             <span
-              className={`relative grid place-items-center rounded-full bg-[#102F29] font-black text-[#F8DDA8] shadow-sm ${
+              className={`relative grid place-items-center rounded-full bg-[#102F29] font-bold text-[#F8DDA8] shadow-sm friemi-tabular ${
                 isDenseTable ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-xs"
               }`}
             >
@@ -1512,12 +1512,12 @@ export function WerewolfRoomOverview({
             </button>
 
             <div className="min-w-0 px-1 text-center">
-              <p className="truncate text-sm font-black tracking-normal text-[#FFE1A6] [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
+              <p className="truncate text-sm font-bold tracking-normal text-[#FFE1A6] [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
                 {room.variant.label}
               </p>
-              <p className="mt-0.5 text-[10px] font-black text-white/88 [text-shadow:0_1px_1px_rgba(0,0,0,0.62)]">
+              <p className="mt-0.5 text-[10px] font-semibold text-white/88 [text-shadow:0_1px_1px_rgba(0,0,0,0.62)]">
                 {t.code} ·{" "}
-                <span className="font-mono tracking-[0.18em] text-[#FFE1A6]">
+                <span className="friemi-tabular tracking-[0.18em] text-[#FFE1A6]">
                   {room.code}
                 </span>
               </p>
@@ -1572,7 +1572,7 @@ export function WerewolfRoomOverview({
                     <LogOut className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-base font-black leading-6">
+                    <h2 className="text-base font-bold leading-6">
                       {t.exitGameTitle}
                     </h2>
                     <p className="mt-1 text-sm font-semibold leading-6 text-[#153B31]/66">
@@ -1591,7 +1591,7 @@ export function WerewolfRoomOverview({
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#F7FAF4] active:scale-[0.98]"
                     onClick={handleTemporaryLeave}
                     type="button"
                   >
@@ -1626,7 +1626,7 @@ export function WerewolfRoomOverview({
                       </>
                     )}
                     <SubmitButton
-                      className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#B5301F] px-4 text-sm font-black text-white transition hover:bg-[#9F281B] disabled:cursor-not-allowed disabled:opacity-55"
+                      className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#B5301F] px-4 text-sm font-semibold text-white transition hover:bg-[#9F281B] disabled:cursor-not-allowed disabled:opacity-55"
                       disabled={!canExitRoom}
                       label={t.exitGame}
                     />
@@ -1634,7 +1634,7 @@ export function WerewolfRoomOverview({
                 </div>
 
                 <button
-                  className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-black text-[#153B31]/62 transition hover:bg-[#EDF3EA]"
+                  className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-semibold text-[#153B31]/62 transition hover:bg-[#EDF3EA]"
                   onClick={() => setExitDialogOpen(false)}
                   type="button"
                 >
@@ -1645,7 +1645,7 @@ export function WerewolfRoomOverview({
           ) : null}
 
           {noticeLabel ? (
-            <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#D8A84E]/28 bg-[#F8DDA8]/12 px-3 py-2 text-xs font-black text-[#F8DDA8]">
+            <div className="relative z-10 mt-3 flex items-center gap-2 rounded-2xl border border-[#D8A84E]/28 bg-[#F8DDA8]/12 px-3 py-2 text-xs font-semibold text-[#F8DDA8]">
               <Check className="h-4 w-4" />
               {noticeLabel}
             </div>
@@ -1665,7 +1665,7 @@ export function WerewolfRoomOverview({
                   }`}
                 >
                   <span
-                    className={`mb-0.5 px-2 font-black text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)] ${
+                    className={`mb-0.5 px-2 font-bold text-[#F0C36A] [text-shadow:0_2px_7px_rgba(0,0,0,0.95)] ${
                       isDenseTable ? "text-[10px]" : "text-[11px]"
                     }`}
                   >
@@ -1746,13 +1746,13 @@ export function WerewolfRoomOverview({
                         draggable={false}
                         src={werewolfUiAssets.seatJudge}
                       />
-                      <span className="relative text-xs font-black text-[#F8DDA8]">
+                      <span className="relative text-xs font-bold text-[#F8DDA8]">
                         {t.empty}
                       </span>
                     </span>
                   )}
                   <span
-                    className={`mt-1 block truncate px-1 font-black leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
+                    className={`mt-1 block truncate px-1 font-bold leading-tight text-white [text-shadow:0_2px_7px_rgba(0,0,0,0.96)] ${
                       isDenseTable
                         ? "max-w-[4.65rem] text-[9.5px]"
                         : "max-w-[5.2rem] text-[10.5px]"
@@ -1762,7 +1762,7 @@ export function WerewolfRoomOverview({
                   </span>
                   {isLobby && judgeSeat.isClaimed && judgeSeat.readyAt ? (
                     <span
-                      className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-black leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
+                      className={`mt-0.5 inline-flex items-center justify-center rounded-full bg-[#38A96D] font-semibold leading-none text-white shadow-[0_5px_12px_rgba(0,0,0,0.22)] ${
                         isDenseTable
                           ? "h-3.5 px-1 text-[8px]"
                           : "h-4 px-1.5 text-[9px]"
@@ -1810,10 +1810,10 @@ export function WerewolfRoomOverview({
                       />
                       <div className="absolute h-16 w-16 rounded-full bg-[#062A24]/42" />
                     </div>
-                    <p className="max-w-[5rem] text-center text-lg font-black leading-tight text-[#F8DDA8] [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
+                    <p className="max-w-[5rem] text-center text-lg font-bold leading-tight text-[#F8DDA8] [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
                       {centerTitle}
                     </p>
-                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-black leading-tight text-white/76 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
+                    <p className="mt-1 max-w-[5rem] text-center text-[10px] font-semibold leading-tight text-white/76 [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
                       {centerSubtitle}
                     </p>
                   </div>
@@ -1843,13 +1843,13 @@ export function WerewolfRoomOverview({
                 <input name="locale" type="hidden" value={locale} />
                 <input name="roomId" type="hidden" value={room.id} />
                 <input
-                  className="h-12 min-w-0 rounded-full border border-[#D8A84E]/45 bg-[#F8DDA8]/95 px-4 text-sm font-black text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F0C36A]"
+                  className="h-12 min-w-0 rounded-full border border-[#D8A84E]/45 bg-[#F8DDA8]/95 px-4 text-sm font-semibold text-[#153B31] outline-none placeholder:text-[#153B31]/45 focus:border-[#F0C36A]"
                   maxLength={40}
                   name="displayName"
                   placeholder={t.joinName}
                 />
                 <SubmitButton
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F8DDA8] px-4 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#F8DDA8] px-4 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
                   label={t.enterMember}
                 />
                 {joinState.formError ? (
@@ -1897,7 +1897,7 @@ export function WerewolfRoomOverview({
                       />
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
-                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
                         label={
                           currentViewerSeat.readyAt
                             ? t.unreadyAction
@@ -1933,7 +1933,7 @@ export function WerewolfRoomOverview({
                       ) : null}
                       <input name="responseMode" type="hidden" value="inline" />
                       <SubmitButton
-                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
+                        className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-55"
                         label={t.leaveSeat}
                       />
                     </form>
@@ -1941,7 +1941,7 @@ export function WerewolfRoomOverview({
                 ) : currentViewerSeat.privateToken ? (
                   <div className="grid grid-cols-2 gap-2">
                     <Link
-                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7]"
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7]"
                       href={withLocale(
                         locale,
                         `/game-tools/werewolf/seats/${currentViewerSeat.privateToken}`,
@@ -1951,7 +1951,7 @@ export function WerewolfRoomOverview({
                       {t.openSeat}
                     </Link>
                     <button
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-black text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 active:scale-[0.98]"
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#F8DDA8]/55 bg-transparent px-5 text-sm font-semibold text-[#F8DDA8] transition hover:bg-[#F8DDA8]/10 active:scale-[0.98]"
                       onClick={() => setExitDialogOpen(true)}
                       type="button"
                     >
@@ -1981,7 +1981,7 @@ export function WerewolfRoomOverview({
                       value={judgeSeat.privateToken}
                     />
                     <SubmitButton
-                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-black text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#F8DDA8] px-5 text-sm font-semibold text-[#153B31] transition hover:bg-[#FFE7B7] disabled:cursor-not-allowed disabled:opacity-45"
                       disabled={!allSeatsReady}
                       label={t.start}
                     />

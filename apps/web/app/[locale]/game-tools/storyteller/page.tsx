@@ -173,7 +173,7 @@ export default async function StorytellerToolPage({
         <div className="absolute -bottom-28 left-8 h-72 w-72 rounded-full bg-[#F09182]/16 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(20rem,0.58fr)] lg:items-center">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/50 bg-white/82 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#156240]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/50 bg-white/82 px-3 py-1.5 text-[11px] font-bold uppercase tracking-normal text-[#156240]">
               <BookOpenCheck className="h-3.5 w-3.5" />
               {copy.eyebrow}
             </span>
@@ -197,14 +197,14 @@ export default async function StorytellerToolPage({
             </div>
             <div className="mt-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#156240]/65">
+                <p className="text-xs font-bold uppercase tracking-normal text-[#156240]/65">
                   {getGameToolLabel(tool.phase, locale)}
                 </p>
-                <h2 className="mt-1 text-2xl font-extrabold text-[#0E2A5C]">
+                <h2 className="mt-1 text-2xl font-bold text-[#0E2A5C]">
                   {getGameToolLabel(tool.title, locale)}
                 </h2>
               </div>
-              <span className="rounded-full bg-[#156240] px-3 py-1.5 text-xs font-extrabold text-white">
+              <span className="rounded-full bg-[#156240] px-3 py-1.5 text-xs font-bold text-white">
                 {tool.minPlayers}-{tool.maxPlayers} {hubCopy.range}
               </span>
             </div>
@@ -224,7 +224,7 @@ export default async function StorytellerToolPage({
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F1F2EC] text-[#156240] ring-1 ring-[#8AB68E]/45">
                 <Icon className="h-5 w-5" />
               </span>
-              <h2 className="mt-4 text-lg font-extrabold text-[#0E2A5C]">
+              <h2 className="mt-4 text-lg font-bold text-[#0E2A5C]">
                 {section.title}
               </h2>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#156240]/72">

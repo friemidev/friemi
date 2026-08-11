@@ -258,7 +258,7 @@ function RoomAvatar({
   name: string;
 }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.1)] ring-1 ring-[#D6D5B2]">
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -426,7 +426,7 @@ function RoomInfoAvatarVisual({
   return (
     <span
       className={cn(
-        "flex h-12 w-12 items-center justify-center overflow-hidden text-base font-black ring-1",
+        "flex h-12 w-12 items-center justify-center overflow-hidden text-base font-bold ring-1",
         role === "ORGANIZER"
           ? "rounded-[0.9rem] bg-[#156240] text-white ring-[#156240]/25"
           : "rounded-[0.85rem] bg-[#F7F7F0] text-[#156240] ring-[#E7E2D6]",
@@ -601,7 +601,7 @@ function ActivityRoomGridRemoveMemberButton({
               <AlertTriangle className="h-5 w-5" />
             </span>
             <h2
-              className="mt-4 text-lg font-black text-[#111210]"
+              className="mt-4 text-lg font-bold text-[#111210]"
               id="activity-room-kick-title"
             >
               {copy.kickTitle}
@@ -612,7 +612,7 @@ function ActivityRoomGridRemoveMemberButton({
             >
               {copy.kickDescription}
             </p>
-            <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-black text-[#4F574F]">
+            <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-bold text-[#4F574F]">
               {member.user.nickname}
             </p>
             {state.formError ? (
@@ -622,7 +622,7 @@ function ActivityRoomGridRemoveMemberButton({
             ) : null}
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
-                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#4F574F] transition active:scale-[0.98]"
+                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-bold text-[#4F574F] transition active:scale-[0.98]"
                 disabled={isPending}
                 onClick={() => setConfirmOpen(false)}
                 type="button"
@@ -630,7 +630,7 @@ function ActivityRoomGridRemoveMemberButton({
                 {copy.kickCancel}
               </button>
               <button
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-black text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-bold text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
                 disabled={isPending}
                 type="submit"
               >
@@ -690,7 +690,7 @@ function ActivityRoomInviteCandidateForm({
             name={candidate.nickname}
           />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-black text-[#111210]">
+            <span className="block truncate text-sm font-bold text-[#111210]">
               {candidate.nickname}
             </span>
             {candidate.friendCode ? (
@@ -700,7 +700,7 @@ function ActivityRoomInviteCandidateForm({
             ) : null}
           </span>
         </span>
-        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white">
+        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-bold text-white">
           {isPending ? (
             <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
           ) : (
@@ -755,7 +755,7 @@ function ActivityRoomInviteDialog({
                   <UserPlus className="h-4 w-4" />
                 </span>
                 <h2
-                  className="truncate text-base font-black text-[#111210]"
+                  className="truncate text-base font-bold text-[#111210]"
                   id="activity-room-invite-title"
                 >
                   {copy.inviteTitle}
@@ -884,7 +884,7 @@ function ActivityRoomInfoRow({
 }) {
   return (
     <div className="flex min-h-14 items-center justify-between gap-4 border-b border-[#EFEFEA] bg-white px-5 py-3 last:border-b-0">
-      <span className="shrink-0 text-[15px] font-black text-[#111210]">
+      <span className="shrink-0 text-[15px] font-bold text-[#111210]">
         {label}
       </span>
       <span className="min-w-0 text-right text-sm font-semibold text-[#8B907F]">
@@ -921,7 +921,7 @@ function ActivityRoomInfoContextualLinkRow({
       }}
       href={activityHref}
     >
-      <span className="shrink-0 text-[15px] font-black text-[#111210]">
+      <span className="shrink-0 text-[15px] font-bold text-[#111210]">
         {label}
       </span>
       <span className="flex min-w-0 items-center justify-end gap-2 text-right text-sm font-semibold text-[#8B907F]">
@@ -971,7 +971,7 @@ function ActivityRoomLeaveAction({
         </p>
       ) : null}
       <button
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#F0B7AE] bg-white px-4 text-sm font-black text-[#B5301F] transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#F0B7AE] bg-white px-4 text-sm font-bold text-[#B5301F] transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
         disabled={isPending}
         onClick={() => setConfirmOpen(true)}
         type="button"
@@ -999,7 +999,7 @@ function ActivityRoomLeaveAction({
               <AlertTriangle className="h-5 w-5" />
             </span>
             <h2
-              className="mt-4 text-lg font-black text-[#111210]"
+              className="mt-4 text-lg font-bold text-[#111210]"
               id="activity-room-leave-title"
             >
               {copy.leaveTitle}
@@ -1011,13 +1011,13 @@ function ActivityRoomLeaveAction({
               {copy.leaveDescription}
             </p>
             {activityTitle ? (
-              <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-black text-[#4F574F]">
+              <p className="mt-3 truncate rounded-xl bg-[#F7F7F0] px-3 py-2 text-xs font-bold text-[#4F574F]">
                 {activityTitle}
               </p>
             ) : null}
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
-                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#4F574F] transition active:scale-[0.98]"
+                className="h-11 rounded-full border border-[#D6D5B2] bg-white text-sm font-bold text-[#4F574F] transition active:scale-[0.98]"
                 disabled={isPending}
                 onClick={() => setConfirmOpen(false)}
                 type="button"
@@ -1025,7 +1025,7 @@ function ActivityRoomLeaveAction({
                 {copy.leaveCancel}
               </button>
               <button
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-black text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#B5301F] text-sm font-bold text-white transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
                 disabled={isPending}
                 type="submit"
               >
@@ -1068,7 +1068,7 @@ function ChatDateSeparator({
   return (
     <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
       <span className="h-px flex-1 bg-[#E7E2D6]" />
-      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#8B907F] ring-1 ring-[#E7E2D6]">
+      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#8B907F] ring-1 ring-[#E7E2D6]">
         {label}
       </span>
       <span className="h-px flex-1 bg-[#E7E2D6]" />
@@ -1095,7 +1095,7 @@ function DeleteActivityAnnouncementSubmitButton({ locale }: { locale: string }) 
   return (
     <button
       aria-busy={pending}
-      className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-red-100 bg-white px-2.5 text-[11px] font-black text-red-700 transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-red-100 bg-white px-2.5 text-[11px] font-bold text-red-700 transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -1198,7 +1198,7 @@ function ActivityRoomAnnouncementNotice({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-[12px] font-black text-[#156240]">
+            <span className="shrink-0 text-[12px] font-bold text-[#156240]">
               {copy.title}
             </span>
             <span className="min-w-0 truncate text-[12px] font-semibold text-[#5F635E]">
@@ -1226,14 +1226,14 @@ function ActivityRoomAnnouncementNotice({
                   <Bell className="h-4 w-4" />
                 </span>
                 <h2
-                  className="truncate text-base font-black text-[#111210]"
+                  className="truncate text-base font-bold text-[#111210]"
                   id="activity-room-announcement-title"
                 >
                   {copy.title}
                 </h2>
               </div>
               <button
-                className="h-8 shrink-0 rounded-full px-3 text-xs font-black text-[#6C746A] transition active:bg-[#F7F7F0]"
+                className="h-8 shrink-0 rounded-full px-3 text-xs font-bold text-[#6C746A] transition active:bg-[#F7F7F0]"
                 onClick={() => setOpen(false)}
                 type="button"
               >
@@ -1301,13 +1301,13 @@ function StatusPanel({
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#156240] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]">
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="mt-4 text-lg font-black text-[#111210]">{title}</h2>
+        <h2 className="mt-4 text-lg font-bold text-[#111210]">{title}</h2>
         <p className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]">
           {description}
         </p>
         {actionHref && actionLabel ? (
           <Link
-            className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition active:scale-95"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition active:scale-95"
             href={actionHref}
           >
             {actionLabel}
@@ -1397,7 +1397,7 @@ export function ActivityRoomManagePage({
           label={copy.backToRoom}
           onClose={onClose}
         />
-        <h1 className="truncate text-center text-lg font-black text-[#111210]">
+        <h1 className="truncate text-center text-lg font-bold text-[#111210]">
           {copy.infoTitle}
           {titleSuffix}
         </h1>
@@ -1453,7 +1453,7 @@ export function ActivityRoomManagePage({
             <>
               <div className="h-2 bg-[#F2F2EF]" />
               <section className="bg-white px-4 py-4">
-                <p className="mb-3 px-1 text-xs font-black uppercase tracking-[0.14em] text-[#8B907F]">
+                <p className="mb-3 px-1 text-xs font-bold uppercase tracking-normal text-[#8B907F]">
                   {canManageRoom ? copy.manageTitle : copy.label}
                 </p>
                 <div className="grid gap-3">
@@ -1618,7 +1618,7 @@ function MessageRow({
         )}
       >
         {!message.isMine ? (
-          <p className="max-w-full truncate pl-1 text-[11px] font-black leading-4 text-[#6C746A]">
+          <p className="max-w-full truncate pl-1 text-[11px] font-bold leading-4 text-[#6C746A]">
             {sender.nickname}
           </p>
         ) : null}
@@ -1924,11 +1924,11 @@ export function ActivityRoomChatPage({
           label={copy.backToActivity}
         />
         <div className="min-w-0 text-center">
-          <p className="mx-auto flex max-w-full items-center justify-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#156240]">
+          <p className="mx-auto flex max-w-full items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-normal text-[#156240]">
             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{copy.title}</span>
           </p>
-          <h1 className="mt-1 truncate text-lg font-black text-[#111210]">
+          <h1 className="mt-1 truncate text-lg font-bold text-[#111210]">
             {activity?.title ?? copy.title}
           </h1>
         </div>
@@ -2020,7 +2020,7 @@ export function ActivityRoomChatPage({
           viewer={viewer}
         />
       ) : policy.canView ? (
-        <div className="shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-center text-xs font-black text-[#6C746A] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
+        <div className="shrink-0 border-t border-[#D6D5B2] bg-white/94 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-center text-xs font-bold text-[#6C746A] backdrop-blur md:rounded-b-[1.45rem] md:pb-3">
           {getPolicyNotice(policy, locale, copy.readOnly)}
         </div>
       ) : null}

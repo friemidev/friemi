@@ -136,7 +136,7 @@ export function ParticipationApprovalPanel({
                     </p>
                   </div>
                   {participant.user.friendCode ? (
-                    <p className="mt-1 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+                    <p className="mt-1 truncate friemi-tabular text-xs font-medium tracking-[0.12em] text-zinc-500">
                       {participant.user.friendCode}
                     </p>
                   ) : null}

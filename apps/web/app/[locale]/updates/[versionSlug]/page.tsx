@@ -85,7 +85,7 @@ export default async function VersionUpdateDetailPage({
           </div>
 
           <div className="mt-5 max-w-4xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Release Notes
             </p>
@@ -114,7 +114,7 @@ export default async function VersionUpdateDetailPage({
 
         <section className="mt-8 space-y-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#156240]">
+            <p className="text-sm font-semibold uppercase tracking-normal text-[#156240]">
               本次更新
             </p>
             <h2 className="mt-2 font-serif text-3xl leading-tight text-[#1D1D1B]">

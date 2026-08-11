@@ -31,12 +31,12 @@ export default async function PlanetInvitePage({ params }: PlanetInvitePageProps
     <main className="flex min-h-[100svh] items-center justify-center bg-[#f6f1ea] px-4 text-[#151713]">
       <section className="w-full max-w-sm rounded-3xl bg-[#fffefb] p-7 text-center shadow-xl">
         <Orbit className="mx-auto h-12 w-12 text-[#246c4b]" />
-        <h1 className="mt-3 text-xl font-black">{t.title}</h1>
+        <h1 className="mt-3 text-xl font-bold">{t.title}</h1>
         <p className="mt-2 text-sm leading-6 text-[#718075]">{t.body}</p>
         <form action={joinPlanetByInviteAction} className="mt-6">
           <input name="locale" type="hidden" value={locale} />
           <input name="inviteCode" type="hidden" value={inviteCode} />
-          <button className="w-full rounded-xl bg-[#246c4b] py-3 font-black text-white">{t.action}</button>
+          <button className="w-full rounded-xl bg-[#246c4b] py-3 font-bold text-white">{t.action}</button>
         </form>
       </section>
     </main>

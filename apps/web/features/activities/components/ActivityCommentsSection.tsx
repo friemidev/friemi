@@ -36,7 +36,7 @@ export function ActivityCommentsSection({
           <MessageCircleQuestion className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-[1.35rem] font-black leading-tight text-ink sm:text-lg sm:font-semibold">
+          <h2 className="text-[1.35rem] font-bold leading-tight text-ink sm:text-lg sm:font-semibold">
             {t.title}
           </h2>
           <p className="mt-1 max-w-[22rem] text-sm font-medium leading-6 text-zinc-500">
@@ -51,7 +51,7 @@ export function ActivityCommentsSection({
         ) : (
           <div className="flex flex-col gap-3 rounded-[1rem] bg-[#FEFFF9]/64 px-4 py-3 text-sm sm:rounded-xl sm:border sm:border-[#D6D5B2] sm:bg-[#FEFFF9]/72 sm:p-3 sm:shadow-sm">
             <div className="min-w-0">
-              <p className="font-black text-ink sm:font-medium">
+              <p className="font-bold text-ink sm:font-medium">
                 {t.signInTitle}
               </p>
               <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm sm:leading-6">
@@ -87,7 +87,7 @@ export function ActivityCommentsSection({
         ) : (
           <div className="rounded-[1.1rem] bg-[#FEFFF9]/62 px-5 py-6 text-center">
             <UserRound className="mx-auto h-6 w-6 text-[#8AB68E]" />
-            <p className="mt-2 font-black text-ink">{t.emptyTitle}</p>
+            <p className="mt-2 font-bold text-ink">{t.emptyTitle}</p>
             <p className="mx-auto mt-1 max-w-[18rem] text-sm leading-6 text-zinc-500">
               {t.emptyDescription}
             </p>

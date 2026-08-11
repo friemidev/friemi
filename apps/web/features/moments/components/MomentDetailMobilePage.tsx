@@ -36,7 +36,7 @@ export function MomentDetailMobilePage({
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-[17px] font-black leading-none tracking-normal text-[#111210]">
+          <h1 className="text-[17px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
           </h1>
           <span aria-hidden className="h-11 w-11" />

@@ -32,7 +32,7 @@ export default async function AdminActivityPriorityPage({
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </ActivityHistoryBackButton>
         <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
-          <h1 className="truncate text-2xl font-black leading-none tracking-normal text-ink md:text-4xl">
+          <h1 className="truncate text-2xl font-bold leading-none tracking-normal text-ink md:text-4xl">
             <span className="md:hidden">活动权重</span>
             <span className="hidden md:inline">活动权重总控台</span>
           </h1>

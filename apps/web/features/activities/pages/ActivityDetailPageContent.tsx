@@ -203,7 +203,7 @@ function ActivityLayerHeader({
           <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
         </ActivityHistoryBackButton>
       )}
-      <p className="truncate text-center text-[18px] font-black leading-none tracking-normal text-[#111210]">
+      <p className="truncate text-center text-[18px] font-bold leading-none tracking-normal text-[#111210]">
         {title}
       </p>
       <div className="flex justify-end">{action}</div>
@@ -504,7 +504,7 @@ function ActivityRoomEntryLink({
   return (
     <Link
       className={cn(
-        "relative inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758] active:scale-[0.98]",
+        "relative inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(21,98,64,0.18)] transition hover:-translate-y-0.5 hover:bg-[#369758] active:scale-[0.98]",
         className,
       )}
       href={href}
@@ -517,7 +517,7 @@ function ActivityRoomEntryLink({
         </span>
       ) : null}
       {unreadCount > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1.5 text-[10px] font-black leading-none text-white ring-2 ring-white">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">
           {unreadBadgeText}
         </span>
       ) : null}
@@ -549,7 +549,7 @@ function ActivityPlayAgainLink({
   return (
     <Link
       className={cn(
-        "mx-auto mt-2 hidden w-fit items-center justify-center gap-1.5 bg-transparent text-xs font-black leading-6 text-[#156240] transition hover:text-[#0F4D32] active:scale-[0.98] md:inline-flex",
+        "mx-auto mt-2 hidden w-fit items-center justify-center gap-1.5 bg-transparent text-xs font-semibold leading-6 text-[#156240] transition hover:text-[#0F4D32] active:scale-[0.98] md:inline-flex",
         className,
       )}
       href={withLocale(
@@ -669,7 +669,7 @@ function ApprovalModeNotice({
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "text-sm font-extrabold leading-5",
+              "text-sm font-bold leading-5",
               requiresApproval ? "text-[#8A3B21]" : "text-[#156240]",
             )}
           >
@@ -682,7 +682,7 @@ function ApprovalModeNotice({
         {hasPendingRequests ? (
           <Link
             href="#participation-approval"
-            className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
+            className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
           >
             {copy.reviewAction}
           </Link>
@@ -710,7 +710,7 @@ function ApprovalModeNotice({
         <Icon className="h-4 w-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-extrabold leading-5">{title}</p>
+        <p className="text-sm font-bold leading-5">{title}</p>
         <p className="mt-0.5 text-xs font-medium leading-5 opacity-[0.82]">
           {description}
         </p>
@@ -718,7 +718,7 @@ function ApprovalModeNotice({
       {hasPendingRequests ? (
         <Link
           href="#participation-approval"
-          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-extrabold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#8AB68E]/55 transition hover:-translate-y-0.5 hover:bg-[#FEFFF9]"
         >
           {copy.reviewAction}
         </Link>
@@ -1052,7 +1052,7 @@ export async function ActivityDetailPageContent({
           locale={locale}
         />
         <div className="space-y-2 px-1 sm:px-0">
-          <h1 className="text-[1.7rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
+          <h1 className="text-[1.7rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
             {activity.title}
           </h1>
         </div>
@@ -1091,10 +1091,10 @@ export async function ActivityDetailPageContent({
             />
           </div>
           <div className="absolute bottom-3 left-3 z-20 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-white/70">
+            <span className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-semibold text-[#156240] ring-1 ring-white/70">
               {activityCategoryLabel}
             </span>
-            <span className="rounded-full bg-white/86 px-2.5 py-1 text-[11px] font-black text-[#111210]/70 ring-1 ring-white/60">
+            <span className="rounded-full bg-white/86 px-2.5 py-1 text-[11px] font-semibold text-[#111210]/70 ring-1 ring-white/60">
               {publicEventCopy.detailSource}
             </span>
           </div>
@@ -1612,7 +1612,7 @@ export async function ActivityDetailPageContent({
                 <span className="truncate">{activityDateLabel}</span>
               </span>
             </div>
-            <span className="shrink-0 whitespace-nowrap text-[12px] font-black text-[#156240] underline-offset-2 group-open:underline">
+            <span className="shrink-0 whitespace-nowrap text-[12px] font-semibold text-[#156240] underline-offset-2 group-open:underline">
               {mobileInlineDetailLabel}
             </span>
           </div>
@@ -1637,7 +1637,7 @@ export async function ActivityDetailPageContent({
           ) : null}
           {hasActivityDescription ? (
             <div className="space-y-3">
-              <h2 className="text-sm font-black text-ink">
+              <h2 className="text-sm font-bold text-ink">
                 {locale === "en"
                   ? "Plan note"
                   : locale === "fr"
@@ -1727,7 +1727,7 @@ export async function ActivityDetailPageContent({
               <span aria-hidden="true" />
             )}
           </span>
-          <span className="inline-flex max-w-[8.25rem] shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap py-0.5 text-[12px] font-black leading-6 text-[#156240] transition active:scale-[0.98]">
+          <span className="inline-flex max-w-[8.25rem] shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap py-0.5 text-[12px] font-semibold leading-6 text-[#156240] transition active:scale-[0.98]">
             <ExternalLink className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate leading-6">
               {publicEventCopy.linkedEventTitle}
@@ -1735,7 +1735,7 @@ export async function ActivityDetailPageContent({
           </span>
         </summary>
         <div className="mt-3 space-y-2 border-t border-[#E7E1CA] pt-3">
-          <p className="line-clamp-2 text-sm font-black leading-5 text-ink">
+          <p className="line-clamp-2 text-sm font-bold leading-5 text-ink">
             {activity.publicEvent.title}
           </p>
           <p className="text-xs font-semibold leading-5 text-[#111210]/55">
@@ -1748,7 +1748,7 @@ export async function ActivityDetailPageContent({
             </p>
           ) : null}
           <Link
-            className="inline-flex h-8 items-center justify-center gap-2 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition hover:bg-[#0F4D32] active:scale-[0.98]"
+            className="inline-flex h-8 items-center justify-center gap-2 rounded-full bg-[#156240] px-3 text-xs font-semibold text-white transition hover:bg-[#0F4D32] active:scale-[0.98]"
             href={withLocale(locale, `/public-events/${activity.publicEvent.id}`)}
           >
             {publicEventCopy.linkedEventCta}
@@ -1763,7 +1763,7 @@ export async function ActivityDetailPageContent({
       <div className="hidden space-y-4 border-y border-[#E7E1CA] py-4 md:block">
         {hasActivityDescription ? (
           <div className="space-y-3">
-            <h2 className="text-sm font-black text-ink">
+            <h2 className="text-sm font-bold text-ink">
               {locale === "en"
                 ? "Details"
                 : locale === "fr"
@@ -1820,15 +1820,15 @@ export async function ActivityDetailPageContent({
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-black text-[#156240]">
+                <p className="text-xs font-semibold text-[#156240]">
                   {publicEventCopy.linkedEventTitle}
                 </p>
-                <p className="mt-1 line-clamp-2 text-sm font-black leading-6 text-ink">
+                <p className="mt-1 line-clamp-2 text-sm font-bold leading-6 text-ink">
                   {activity.publicEvent.title}
                 </p>
               </div>
               <Link
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition hover:bg-[#F6FAF4] active:scale-[0.98]"
                 href={withLocale(
                   locale,
                   `/public-events/${activity.publicEvent.id}`,
@@ -1886,7 +1886,7 @@ export async function ActivityDetailPageContent({
           isSheetPresentation ? "pt-1" : null,
         )}
       >
-        <h1 className="text-[1.65rem] font-black leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
+        <h1 className="text-[1.65rem] font-bold leading-[1.06] tracking-normal text-ink sm:text-4xl md:text-5xl">
           {activity.title}
         </h1>
       </div>
@@ -1954,7 +1954,7 @@ export async function ActivityDetailPageContent({
         <div className="space-y-4 md:hidden">
           <div>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[12px] font-black leading-none text-[#111210]/72">
+              <p className="text-[12px] font-semibold leading-none text-[#111210]/72">
                 {t.activityDetail.organizerTitle}
               </p>
               {showActivityRoomEntry ? (
@@ -1987,7 +1987,7 @@ export async function ActivityDetailPageContent({
                 </span>
               </UserProfilePreviewPopover>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13.5px] font-black leading-tight text-ink">
+                <p className="truncate text-[13.5px] font-bold leading-tight text-ink">
                   {activity.organizer.nickname}
                 </p>
                 <p className="mt-0.5 line-clamp-1 text-[11px] font-semibold leading-4 text-[#111210]/45">
@@ -2011,7 +2011,7 @@ export async function ActivityDetailPageContent({
           </div>
           {mobileParticipantPreview.length > 0 ? (
             <div>
-              <p className="text-[12px] font-black leading-none text-[#111210]/72">
+              <p className="text-[12px] font-semibold leading-none text-[#111210]/72">
                 {t.activityDetail.participants}
               </p>
               <div className="mt-2 flex items-center">
@@ -2049,7 +2049,7 @@ export async function ActivityDetailPageContent({
                   </UserProfilePreviewPopover>
                 ))}
                 {extraParticipantCount > 0 ? (
-                  <span className="-ml-1 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-[#F1F2EC] px-2 text-[11px] font-black text-[#111210]/58 shadow-sm ring-1 ring-[#D6D5B2]">
+                  <span className="-ml-1 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-[#F1F2EC] px-2 text-[11px] font-bold text-[#111210]/58 shadow-sm ring-1 ring-[#D6D5B2] friemi-tabular">
                     +{extraParticipantCount}
                   </span>
                 ) : null}
@@ -2065,7 +2065,7 @@ export async function ActivityDetailPageContent({
                 )}
               >
                 <Link
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-black text-[#156240] transition active:scale-[0.98]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-3 text-sm font-semibold text-[#156240] transition active:scale-[0.98]"
                   href={activityEditHref}
                 >
                   <PencilLine className="h-4 w-4" />
@@ -2103,7 +2103,7 @@ export async function ActivityDetailPageContent({
             <CancelParticipationForm
               activityId={activity.id}
               activityTitle={activity.title}
-              buttonClassName="min-h-11 border-transparent bg-[#F09182] px-10 text-[15px] font-black text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] hover:bg-[#F09182] active:scale-[0.98]"
+              buttonClassName="min-h-11 border-transparent bg-[#F09182] px-10 text-[15px] font-semibold text-white shadow-[0_12px_26px_rgba(240,145,130,0.22)] hover:bg-[#F09182] active:scale-[0.98]"
               locale={locale}
             />
           ) : !isTeamOperator ? (
@@ -2270,7 +2270,7 @@ export async function ActivityDetailPageContent({
             <div className="order-1 hidden rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3 md:block">
               <div className="grid gap-2">
                 <Link
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98]"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-semibold text-[#156240] transition hover:border-[#8AB68E] hover:bg-[#F6FAF4] active:scale-[0.98]"
                   href={activityEditHref}
                 >
                   <PencilLine className="h-4 w-4" />
@@ -2302,10 +2302,10 @@ export async function ActivityDetailPageContent({
           ) : (
             <div className="order-1 hidden rounded-[1.35rem] border border-[#D6D5B2] bg-white p-4 md:block">
               <div className="mb-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-forest">
+                <p className="text-[11px] font-semibold uppercase tracking-normal text-forest">
                   {teamDetailCtaCopy.eyebrow}
                 </p>
-                <h2 className="mt-1 text-xl font-extrabold leading-tight text-ink">
+                <h2 className="mt-1 text-xl font-bold leading-tight text-ink">
                   {teamDetailCtaTitle}
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-forest">
@@ -2404,7 +2404,7 @@ export async function ActivityDetailPageContent({
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+                  <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
                     {t.activityDetail.participants}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-zinc-600">

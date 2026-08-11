@@ -2,8 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Friemi Latin";
+  src: url("/font/Plus_Jakarta_Sans/PlusJakartaSans-FriemiLatin.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF,
+    U+0100-024F,
+    U+1E00-1EFF,
+    U+2000-206F,
+    U+20A0-20CF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Regular.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Medium.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Medium.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: "Friemi CJK";
+  src: url("/font/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_FriemiUI-Bold.woff2")
+    format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF,
+    U+2F00-2FDF,
+    U+3000-303F,
+    U+3040-30FF,
+    U+3100-312F,
+    U+31A0-31BF,
+    U+31F0-31FF,
+    U+3400-4DBF,
+    U+4E00-9FFF,
+    U+F900-FAFF,
+    U+FF00-FFEF;
+}
+
 :root {
-  --font-sans: "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    "Friemi Latin", "Plus Jakarta Sans", "Friemi CJK", "HarmonyOS Sans SC",
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif, system-ui,
+    sans-serif;
+  --friemi-font-latin:
+    "Friemi Latin", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --friemi-font-cjk:
+    "Friemi CJK", "HarmonyOS Sans SC", "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --friemi-tracking-normal: 0;
+  --friemi-text-display-1-size: 2rem;
+  --friemi-text-display-1-line: 2.5rem;
+  --friemi-text-display-1-weight: 700;
+  --friemi-text-display-2-size: 1.75rem;
+  --friemi-text-display-2-line: 2.25rem;
+  --friemi-text-display-2-weight: 700;
+  --friemi-text-title-1-size: 1.5rem;
+  --friemi-text-title-1-line: 2rem;
+  --friemi-text-title-1-weight: 600;
+  --friemi-text-title-2-size: 1.25rem;
+  --friemi-text-title-2-line: 1.75rem;
+  --friemi-text-title-2-weight: 600;
+  --friemi-text-body-1-size: 1rem;
+  --friemi-text-body-1-line: 1.5rem;
+  --friemi-text-body-1-weight: 400;
+  --friemi-text-body-2-size: 0.875rem;
+  --friemi-text-body-2-line: 1.375rem;
+  --friemi-text-body-2-weight: 400;
+  --friemi-text-caption-size: 0.75rem;
+  --friemi-text-caption-line: 1.125rem;
+  --friemi-text-caption-weight: 400;
+  --friemi-text-overline-size: 0.6875rem;
+  --friemi-text-overline-line: 1rem;
+  --friemi-text-overline-weight: 500;
   --friemi-palette-forest: #156240;
   --friemi-palette-sage: #8ab68e;
   --friemi-palette-rose: #deaab3;
@@ -57,6 +190,69 @@ body {
   margin: 0;
   background: #ffffff;
   color: var(--friemi-palette-ink);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+.friemi-display-1 {
+  font-size: var(--friemi-text-display-1-size);
+  font-weight: var(--friemi-text-display-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-display-1-line);
+}
+
+.friemi-display-2 {
+  font-size: var(--friemi-text-display-2-size);
+  font-weight: var(--friemi-text-display-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-display-2-line);
+}
+
+.friemi-title-1 {
+  font-size: var(--friemi-text-title-1-size);
+  font-weight: var(--friemi-text-title-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-title-1-line);
+}
+
+.friemi-title-2 {
+  font-size: var(--friemi-text-title-2-size);
+  font-weight: var(--friemi-text-title-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-title-2-line);
+}
+
+.friemi-body-1 {
+  font-size: var(--friemi-text-body-1-size);
+  font-weight: var(--friemi-text-body-1-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-body-1-line);
+}
+
+.friemi-body-2 {
+  font-size: var(--friemi-text-body-2-size);
+  font-weight: var(--friemi-text-body-2-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-body-2-line);
+}
+
+.friemi-caption {
+  font-size: var(--friemi-text-caption-size);
+  font-weight: var(--friemi-text-caption-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-caption-line);
+}
+
+.friemi-overline {
+  font-size: var(--friemi-text-overline-size);
+  font-weight: var(--friemi-text-overline-weight);
+  letter-spacing: var(--friemi-tracking-normal);
+  line-height: var(--friemi-text-overline-line);
+}
+
+.friemi-tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 .friemi-alert-overlay {
@@ -109,15 +305,7 @@ html[data-friemi-android-app="true"] * {
 }
 
 html[data-friemi-ios-app="true"] {
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
-    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", ui-sans-serif,
-    system-ui, sans-serif;
   overscroll-behavior-y: contain;
-}
-
-html[data-friemi-ios-app="true"] body {
-  font-family: var(--font-sans);
 }
 
 html[data-friemi-ios-app="true"] * {

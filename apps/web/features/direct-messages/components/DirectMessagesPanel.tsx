@@ -153,7 +153,7 @@ function ConversationListItem({
             <span
               className={cn(
                 "truncate text-sm",
-                unreadCount > 0 ? "font-black" : "font-semibold",
+                unreadCount > 0 ? "font-bold" : "font-semibold",
               )}
             >
               {conversation.peer.nickname}
@@ -167,7 +167,7 @@ function ConversationListItem({
               {formatChatListTimestamp(time, locale)}
             </span>
             {unreadCount > 0 ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
             ) : null}
@@ -181,7 +181,7 @@ function ConversationListItem({
             className={cn(
               "mt-1 block truncate text-xs leading-5",
               unreadCount > 0
-                ? "font-black text-ink"
+                ? "font-bold text-ink"
                 : isActive
                   ? "text-[#156240]"
                   : "text-[#156240]",

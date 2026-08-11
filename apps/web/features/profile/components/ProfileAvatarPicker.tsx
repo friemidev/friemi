@@ -236,7 +236,7 @@ export function ProfileAvatarPicker({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="grid h-full w-full place-items-center bg-[#F4F5F0] text-xl font-black text-[#156240]">
+            <span className="grid h-full w-full place-items-center bg-[#F4F5F0] text-xl font-bold text-[#156240]">
               {initial || <Camera className="h-6 w-6" aria-hidden />}
             </span>
           )}
@@ -254,7 +254,7 @@ export function ProfileAvatarPicker({
           <div className="min-w-0">
             <button
               type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-full bg-[#156240] px-4 text-xs font-black text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-[#156240] px-4 text-xs font-bold text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
               disabled={isBusy}
               onClick={openFilePicker}
             >
@@ -291,7 +291,7 @@ export function ProfileAvatarPicker({
                   key={gender}
                   type="button"
                   className={cn(
-                    "h-9 rounded-full text-sm font-black transition active:scale-[0.98] disabled:opacity-60",
+                    "h-9 rounded-full text-sm font-bold transition active:scale-[0.98] disabled:opacity-60",
                     active
                       ? "bg-white text-[#156240] shadow-[0_6px_14px_rgba(21,98,64,0.12)]"
                       : "text-[#697066] hover:bg-white/54",

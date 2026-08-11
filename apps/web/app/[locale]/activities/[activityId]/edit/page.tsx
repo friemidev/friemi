@@ -46,7 +46,7 @@ function EditActivityUnavailablePage({
         >
           <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
         </Link>
-        <p className="truncate text-center text-[18px] font-black leading-none text-[#111210]">
+        <p className="truncate text-center text-[18px] font-bold leading-none text-[#111210]">
           {title}
         </p>
       </div>

@@ -329,7 +329,7 @@ export function MobileActivitiesToolbar({
         >
           <SlidersHorizontal className="h-[1.05rem] w-[1.05rem]" />
           {activeFilterChips.length > 0 ? (
-            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-black leading-none text-white">
+            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white">
               {activeFilterChips.length}
             </span>
           ) : null}
@@ -371,12 +371,12 @@ export function MobileActivitiesToolbar({
           <aside className="absolute inset-y-0 right-0 flex w-[min(88vw,23rem)] flex-col overflow-hidden border-l border-[#D6D5B2] bg-[#FEFFF9] pb-[calc(1.1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[-26px_0_48px_rgba(17,18,16,0.16)]">
             <div className="flex items-center justify-between gap-3 px-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#096B45]/62">
+                <p className="text-[11px] font-semibold uppercase tracking-normal text-[#096B45]/62">
                   Friemi
                 </p>
                 <p
                   id="mobile-activities-filter-title"
-                  className="mt-1 truncate text-[22px] font-black leading-none text-[#111210]"
+                  className="mt-1 truncate text-[22px] font-bold leading-none text-[#111210]"
                 >
                   {copy.filters}
                 </p>
@@ -395,7 +395,7 @@ export function MobileActivitiesToolbar({
               <div className="space-y-4">
                 <section className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-[15px] font-black text-[#111210]">
+                    <h2 className="text-[15px] font-bold text-[#111210]">
                       {t.activityFilters.categoryLabel}
                     </h2>
                     <button
@@ -477,7 +477,7 @@ export function MobileActivitiesToolbar({
                               )}
                             </span>
                             <span className="relative flex min-w-0 items-center justify-between gap-1">
-                              <span className="min-w-0 truncate text-[13px] font-black leading-tight">
+                              <span className="min-w-0 truncate text-[13px] font-semibold leading-tight">
                                 {label}
                               </span>
                               {active ? (
@@ -493,7 +493,7 @@ export function MobileActivitiesToolbar({
 
                 {cityOptions.length > 0 ? (
                   <section className="space-y-2">
-                    <h2 className="text-[15px] font-black text-[#111210]">
+                    <h2 className="text-[15px] font-bold text-[#111210]">
                       {t.activityFilters.cityLabel}
                     </h2>
                     <div className="flex flex-wrap gap-2">
@@ -515,7 +515,7 @@ export function MobileActivitiesToolbar({
                 ) : null}
 
                 <section className="space-y-2">
-                  <h2 className="text-[15px] font-black text-[#111210]">
+                  <h2 className="text-[15px] font-bold text-[#111210]">
                     {t.activityFilters.dateRangeLabel}
                   </h2>
                   <div className="flex flex-wrap gap-2">
@@ -541,7 +541,7 @@ export function MobileActivitiesToolbar({
                 </section>
 
                 <section className="space-y-2">
-                  <h2 className="text-[15px] font-black text-[#111210]">
+                  <h2 className="text-[15px] font-bold text-[#111210]">
                     {t.activityFilters.timeStateLabel}
                   </h2>
                   <div className="flex flex-wrap gap-2">

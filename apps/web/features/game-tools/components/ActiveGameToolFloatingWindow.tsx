@@ -216,7 +216,7 @@ export function ActiveGameToolFloatingWindow({
       <span className="absolute inset-1 rounded-full bg-[#F2CF7C]/12" />
       <Icon className="relative h-5 w-5 text-[#F2CF7C]" strokeWidth={2.35} />
       {currentRoom.seatNumber ? (
-        <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F2CF7C] px-1 text-[10px] font-black leading-none text-[#052F28] ring-2 ring-white">
+        <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#F2CF7C] px-1 text-[10px] font-bold leading-none text-[#052F28] ring-2 ring-white">
           {currentRoom.seatNumber}
         </span>
       ) : null}

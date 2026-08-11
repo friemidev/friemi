@@ -114,7 +114,7 @@ export function ActivityTextImportPanel({
     <>
       <button
         type="button"
-        className="inline-flex h-8 max-w-[8.25rem] shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-[#8AB68E]/70 bg-[#E7F1E7] px-2.5 text-xs font-black leading-none text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] transition hover:border-[#156240] hover:bg-[#DDECDD] focus:outline-none focus:ring-2 focus:ring-[#8AB68E]/35 sm:h-9 sm:max-w-[9rem] sm:px-3 sm:text-sm"
+        className="inline-flex h-8 max-w-[8.25rem] shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border border-[#8AB68E]/70 bg-[#E7F1E7] px-2.5 text-xs font-bold leading-none text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.08)] transition hover:border-[#156240] hover:bg-[#DDECDD] focus:outline-none focus:ring-2 focus:ring-[#8AB68E]/35 sm:h-9 sm:max-w-[9rem] sm:px-3 sm:text-sm"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         onClick={() => setIsOpen(true)}
@@ -147,7 +147,7 @@ export function ActivityTextImportPanel({
                   </span>
                   <div className="min-w-0">
                     <h2
-                      className="truncate text-base font-black text-ink sm:text-lg"
+                      className="truncate text-base font-bold text-ink sm:text-lg"
                       id="activity-text-import-title"
                     >
                       {copy.title}

@@ -292,7 +292,7 @@ function SearchRecommendationSection({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[1.05rem] font-black tracking-normal text-[#111210]">
+      <h2 className="text-[1.05rem] font-bold tracking-normal text-[#111210]">
         {title}
       </h2>
       <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -321,7 +321,7 @@ function SearchUserAvatar({ user }: { user: GlobalSearchUserViewModel }) {
   }
 
   return (
-    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0A8D70] text-xl font-black text-white">
+    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0A8D70] text-xl font-bold text-white">
       {initial}
     </span>
   );
@@ -435,12 +435,12 @@ function SearchRecommendedActivityCard({
           src={activity.coverImageUrl}
           alt={activity.title}
         />
-        <span className="absolute left-2 top-2 max-w-[7.2rem] truncate rounded-full bg-white/92 px-2 py-0.5 text-[10px] font-black text-[#0A7652]">
+        <span className="absolute left-2 top-2 max-w-[7.2rem] truncate rounded-full bg-white/92 px-2 py-0.5 text-[10px] font-semibold text-[#0A7652]">
           {getCategoryLabel(activity.category, locale)}
         </span>
       </div>
       <div className="min-h-[5.75rem] px-2.5 py-2.5">
-        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+        <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
           {activity.title}
         </h3>
         <p className="mt-2 flex min-w-0 items-center gap-1 text-[10px] font-bold text-[#111210]/62">
@@ -523,7 +523,7 @@ function SearchRecommendationsView({
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F6F7F2] text-[#0A7652]">
           <Search className="h-5 w-5" aria-hidden="true" />
         </span>
-        <h2 className="mt-4 text-base font-black text-[#111210]">
+        <h2 className="mt-4 text-base font-bold text-[#111210]">
           {t.recommendationsEmptyTitle}
         </h2>
         <p className="mt-2 max-w-xs text-sm leading-6 text-zinc-500">

@@ -659,7 +659,7 @@ function ProfilePresenceControl({
             name="status"
             value={presenceStatus}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black transition active:scale-[0.98]",
+              "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition active:scale-[0.98]",
               active
                 ? "bg-[#156240] text-white"
                 : "border border-[#E7E2D6] bg-white text-[#4F574F]",
@@ -710,7 +710,7 @@ function GuestProfilePlaceholder({
     <div className="mx-auto w-full max-w-7xl pb-8">
       <div className="app-mobile-page-shell [--app-mobile-page-top-gap:1rem] [--app-mobile-page-bottom-gap:1.75rem] bg-white px-5 md:hidden">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="text-[18px] font-black leading-tight tracking-normal text-[#111210]">
+          <h1 className="text-[18px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.title}
           </h1>
         </header>
@@ -726,7 +726,7 @@ function GuestProfilePlaceholder({
               size="sm"
             />
             <div className="min-w-0">
-              <h2 className="truncate text-[18px] font-black leading-tight text-[#111210]">
+              <h2 className="truncate text-[18px] font-bold leading-tight text-[#111210]">
                 {profile.nickname}
               </h2>
               {profile.bio ? (
@@ -740,7 +740,7 @@ function GuestProfilePlaceholder({
           <div className="mt-6 grid grid-cols-3">
             {stats.map((item) => (
               <div className="min-w-0 px-2 py-2 text-center" key={item.label}>
-                <p className="text-[22px] font-black leading-none text-[#111210]">
+                <p className="text-[22px] font-bold leading-none text-[#111210] friemi-tabular">
                   {item.value}
                 </p>
                 <p className="mt-1 text-[10px] font-bold leading-3 text-[#4F574F]">
@@ -753,19 +753,19 @@ function GuestProfilePlaceholder({
           <div className="mt-7 grid gap-3">
             <Link
               href={signInHref}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-semibold text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95"
             >
               {copy.signIn}
             </Link>
             <Link
               href={planetsHref}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
             >
               {copy.browsePlanets}
             </Link>
             <Link
               href={settingsHref}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#5F5743] ring-1 ring-[#E8D59D] transition active:scale-95"
             >
               <Settings className="h-4 w-4" />
               {copy.settings}
@@ -884,7 +884,7 @@ function MobileProfileSummaryStrip({
             href={item.href}
             key={item.label}
           >
-            <p className="text-[21px] font-black leading-[1.08] text-[#111210]">
+            <p className="text-[21px] font-bold leading-[1.08] text-[#111210] friemi-tabular">
               {item.value}
             </p>
             <p className="mt-1 truncate text-[10px] font-bold leading-4 text-[#4F574F]">
@@ -903,7 +903,7 @@ function MobileProfileSummaryStrip({
             <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
               {copy.trust}
             </span>
-            <span className="mt-1 block text-[16px] font-black leading-none text-[#156240] tabular-nums">
+            <span className="mt-1 block text-[16px] font-bold leading-none text-[#156240] friemi-tabular">
               {dashboard.trustScore}
             </span>
           </span>
@@ -916,7 +916,7 @@ function MobileProfileSummaryStrip({
             <span className="block truncate pt-px text-[10px] font-bold leading-[1.15] text-[#5F665F]">
               {copy.charm}
             </span>
-            <span className="mt-1 block text-[16px] font-black leading-none text-[#111210] tabular-nums">
+            <span className="mt-1 block text-[16px] font-bold leading-none text-[#111210] friemi-tabular">
               {formatCharmScore(dashboard.charmScore)}
             </span>
           </span>
@@ -1247,7 +1247,7 @@ function ProfileFeatureLink({
             <Lock className="h-3 w-3" strokeWidth={2.4} />
           </span>
         ) : status ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-black leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 max-w-[3rem] items-center rounded-full bg-white px-1.5 text-[9px] font-semibold leading-none text-[#156240] ring-1 ring-[#D6D5B2]">
             <span className="truncate">{status}</span>
           </span>
         ) : null}
@@ -1338,9 +1338,9 @@ function PublicMobileProfileActions({
   return (
     <div className="grid grid-cols-2 items-start gap-2">
       <FollowButton
-        activeButtonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        activeButtonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-semibold text-[#156240] shadow-none active:scale-[0.98]"
         activeLabel={activeLabel}
-        buttonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-black text-[#156240] shadow-none active:scale-[0.98]"
+        buttonClassName="!h-9 !min-h-9 w-full rounded-full border border-[#8AB68E] bg-white !px-3 !text-[11px] font-semibold text-[#156240] shadow-none active:scale-[0.98]"
         icon={FollowIcon}
         inactiveLabel={inactiveLabel}
         isAuthenticated={isAuthenticated}
@@ -1393,7 +1393,7 @@ function RecentCharmGifts({
       </span>
       {visibleGifts.map((gift) => (
         <span
-          className="inline-flex h-7 items-center gap-1 rounded-full bg-white/78 px-2 text-[11px] font-black text-[#1D1D1B] ring-1 ring-[#E8E0C8]"
+          className="inline-flex h-7 items-center gap-1 rounded-full bg-white/78 px-2 text-[11px] font-semibold text-[#1D1D1B] ring-1 ring-[#E8E0C8]"
           key={gift.id}
           title={`${gift.giftLabel} +${gift.totalCharmDelta}`}
         >
@@ -1459,11 +1459,11 @@ function CharmLevelsDialog({
       <div className="w-full max-w-sm rounded-[1.4rem] bg-[#FEFFF9] p-4 shadow-[0_18px_54px_rgba(17,18,16,0.22)] ring-1 ring-[#D6D5B2]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#8A61CE]">
+            <p className="text-[11px] font-semibold uppercase tracking-normal text-[#8A61CE]">
               {copy.charmLevelsCurrent}
             </p>
             <h2
-              className="mt-1 text-xl font-black leading-tight text-[#111210]"
+              className="mt-1 text-xl font-bold leading-tight text-[#111210]"
               id="charm-levels-dialog-title"
             >
               {copy.charmLevelsTitle}
@@ -1500,11 +1500,11 @@ function CharmLevelsDialog({
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-black">
+                    <p className="truncate text-sm font-bold">
                       {getCharmLevelLabel(level, locale)}
                     </p>
                     {active ? (
-                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-[#8A61CE] ring-1 ring-[#DBC8F3]">
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#8A61CE] ring-1 ring-[#DBC8F3]">
                         {copy.charmLevelsCurrent}
                       </span>
                     ) : null}
@@ -1513,7 +1513,7 @@ function CharmLevelsDialog({
                     {getCharmLevelDescription(level, locale)}
                   </p>
                 </div>
-                <p className="whitespace-nowrap text-xs font-black text-[#8A61CE]">
+                <p className="whitespace-nowrap text-xs font-semibold text-[#8A61CE] friemi-tabular">
                   {copy.charmLevelsStartingAt}{" "}
                   {formatCharmScore(level.minScore)}
                 </p>
@@ -1523,7 +1523,7 @@ function CharmLevelsDialog({
         </div>
 
         <button
-          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+          className="mt-4 h-11 w-full rounded-full bg-[#156240] px-5 text-sm font-semibold text-white transition active:scale-[0.98]"
           onClick={onClose}
           type="button"
         >
@@ -1567,12 +1567,12 @@ function CharmProgressPanel({
       <div className={cn("min-w-0", className)}>
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[26px] font-black leading-none text-[#A57AEB]">
+            <p className="text-[26px] font-bold leading-none text-[#A57AEB] friemi-tabular">
               {formatCharmScore(progress.score)}
             </p>
             <button
               aria-label={copy.charmLevelsOpen}
-              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-black text-[#8B78B9] transition active:scale-[0.98]"
+              className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full text-left text-xs font-semibold text-[#8B78B9] transition active:scale-[0.98]"
               onClick={() => setLevelsOpen(true)}
               type="button"
             >
@@ -1695,7 +1695,7 @@ function PublicMobileTimeline({
                 <div className="pt-0.5 text-center">
                   {showDate ? (
                     <>
-                      <p className="text-[25px] font-black leading-none text-[#111210]">
+                      <p className="text-[25px] font-bold leading-none text-[#111210] friemi-tabular">
                         {item.dateParts.day}
                       </p>
                       <p className="mt-1 text-[11px] font-bold leading-4 text-[#7A8276]">
@@ -1705,7 +1705,7 @@ function PublicMobileTimeline({
                   ) : null}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[12px] font-black text-[#156240]">
+                  <p className="text-[12px] font-semibold text-[#156240]">
                     {item.type}
                   </p>
                   <p className="mt-1 line-clamp-2 text-[15px] font-bold leading-5 text-[#1D1D1B]">
@@ -1776,7 +1776,7 @@ function ProfileRemarkSubmitButton({ locale }: { locale: string }) {
   return (
     <button
       aria-busy={pending}
-      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-black text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-xs font-semibold text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
       disabled={pending}
       type="submit"
     >
@@ -1829,7 +1829,7 @@ function ProfileRemarkEditor({
     >
       <div className="flex min-w-0 items-center justify-between gap-3">
         <label
-          className="text-xs font-black text-[#156240]"
+          className="text-xs font-semibold text-[#156240]"
           htmlFor={`profile-remark-${profile.id}`}
         >
           {copy.label}
@@ -1866,7 +1866,7 @@ function ProfileRemarkEditor({
           <input name="targetProfileId" type="hidden" value={profile.id} />
           <input name="remarkName" type="hidden" value="" />
           <button
-            className="inline-flex h-7 items-center justify-center rounded-full px-2.5 text-[11px] font-black text-[#6C746A] transition active:bg-white"
+            className="inline-flex h-7 items-center justify-center rounded-full px-2.5 text-[11px] font-semibold text-[#6C746A] transition active:bg-white"
             type="submit"
           >
             {copy.clear}
@@ -1951,7 +1951,7 @@ function PublicMobileProfileHome({
           />
           <div className="min-w-0 pt-0.5">
             <h1
-              className="min-w-0 max-w-full truncate text-lg font-black leading-tight text-[#111210]"
+              className="min-w-0 max-w-full truncate text-lg font-bold leading-tight text-[#111210]"
               title={profile.nickname}
             >
               {profile.nickname}
@@ -2038,7 +2038,7 @@ function TrustScoreBadge({
       aria-expanded={active}
       aria-label={copy.label}
       className={cn(
-        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-black text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+        "relative inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-white/84 px-2 text-[11px] font-semibold text-[#156240] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
         active ? "z-20" : "",
         className,
       )}
@@ -2049,7 +2049,7 @@ function TrustScoreBadge({
       <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={2.35} />
       <span className="leading-none">{score}</span>
       {active ? (
-        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+        <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[5rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
           {copy.tooltip}
         </span>
       ) : null}
@@ -2121,7 +2121,7 @@ function MobileProfileAboutCard({
   return (
     <section className="mt-6 border-t border-[#EEE7D5] bg-white pt-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
-        <h3 className="min-w-0 truncate text-[16px] font-black leading-6 text-[#111210]">
+        <h3 className="min-w-0 truncate text-[16px] font-bold leading-6 text-[#111210]">
           {getProfileAboutTitle(locale, nickname)}
         </h3>
         {editButton}
@@ -2174,7 +2174,7 @@ function MobileProfileBioEditor({
         bio={savedBio}
         editButton={
           <button
-            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95"
             type="button"
             onClick={() => setOpen(true)}
           >
@@ -2203,11 +2203,11 @@ function MobileProfileBioEditor({
             noValidate
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black text-[#111210]">
+              <h3 className="text-lg font-bold text-[#111210]">
                 {copy.bioLabel}
               </h3>
               <button
-                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                className="h-9 rounded-full bg-white px-4 text-xs font-semibold text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
                 type="button"
                 onClick={() => {
                   setBioValue(savedBio);
@@ -2261,7 +2261,7 @@ function MobileProfileBioSubmitButton({
 
   return (
     <button
-      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -2359,7 +2359,7 @@ function ProfileCityPickerField({
   return (
     <>
       <button
-        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-black text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
+        className="flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-full bg-white px-3 text-left text-sm font-semibold text-[#111210] outline-none ring-1 ring-[#D6D5B2] transition active:scale-[0.98]"
         type="button"
         onClick={() => setOpen(true)}
       >
@@ -2385,7 +2385,7 @@ function ProfileCityPickerField({
         >
           <div className="max-h-[82dvh] w-full overflow-hidden rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="text-lg font-black text-[#111210]">
+              <h4 className="text-lg font-bold text-[#111210]">
                 {copy.cityPickerTitle}
               </h4>
               <button
@@ -2418,7 +2418,7 @@ function ProfileCityPickerField({
             <div className="mt-4 max-h-[58dvh] overflow-y-auto pr-1">
               {canUseCustomCity ? (
                 <button
-                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-black text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
+                  className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-[#F4F8F1] px-3 py-3 text-left text-sm font-semibold text-[#0B7A4B] ring-1 ring-[#C8DFC7] transition active:scale-[0.98]"
                   type="button"
                   onClick={() => handleSelect(normalizedQuery)}
                 >
@@ -2453,7 +2453,7 @@ function ProfileCityPickerField({
 
                   return (
                     <section key={country.key} className="grid gap-2">
-                      <p className="px-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#7B8178]">
+                      <p className="px-1 text-[11px] font-semibold uppercase tracking-normal text-[#7B8178]">
                         {countryLabel}
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -2464,7 +2464,7 @@ function ProfileCityPickerField({
                             <button
                               key={`${country.key}-${city}`}
                               className={cn(
-                                "rounded-full px-3 py-2 text-xs font-black transition active:scale-[0.98]",
+                                "rounded-full px-3 py-2 text-xs font-semibold transition active:scale-[0.98]",
                                 active
                                   ? "bg-[#0B7A4B] text-white"
                                   : "bg-white text-[#111210] ring-1 ring-[#E1DEC9]",
@@ -2595,11 +2595,11 @@ function MobileProfileAvatarEditor({
         >
           <div className="w-full rounded-[1.6rem] bg-white p-4 shadow-[0_20px_54px_rgba(17,18,16,0.18)] ring-1 ring-[#E6E6E0]">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black text-[#111210]">
+              <h3 className="text-lg font-bold text-[#111210]">
                 {copy.title}
               </h3>
               <button
-                className="h-9 rounded-full bg-white px-4 text-xs font-black text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
+                className="h-9 rounded-full bg-white px-4 text-xs font-semibold text-[#4F574F] ring-1 ring-[#D6D5B2] transition active:scale-95"
                 type="button"
                 onClick={() => setOpen(false)}
               >
@@ -2623,7 +2623,7 @@ function MobileProfileAvatarEditor({
                 sideContent={
                   <div className="grid gap-3">
                     <div className="grid gap-1.5">
-                      <p className="text-[11px] font-black text-[#4F574F]">
+                      <p className="text-[11px] font-semibold text-[#4F574F]">
                         {copy.status}
                       </p>
                       <ProfilePresenceControl
@@ -2693,7 +2693,7 @@ function MobileProfileAvatarSubmitButton({
 
   return (
     <button
-      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      className="h-9 rounded-full bg-[#156240] px-5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
       disabled={pending || disabled}
       type="submit"
     >
@@ -2848,7 +2848,7 @@ function SelfMobileProfileHome({
 
             <div className="min-w-0 flex-1 pt-2">
               <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-[22px] font-black leading-tight text-[#111210]">
+                <h2 className="truncate text-[22px] font-bold leading-tight text-[#111210]">
                   {profile.nickname}
                 </h2>
                 <ProfileAchievementBadgeStrip
@@ -2867,7 +2867,7 @@ function SelfMobileProfileHome({
                     title={copied ? copy.copied : copy.copyCode}
                     type="button"
                   >
-                    <span className="tabular-nums">{profile.friendCode}</span>
+                    <span className="friemi-tabular">{profile.friendCode}</span>
                     <Copy className="h-3.5 w-3.5 shrink-0" />
                   </button>
                 ) : null}
@@ -3208,7 +3208,7 @@ export function ProfileDashboardView({
                   presenceDisplayStatus={profile.presenceDisplayStatus}
                 />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-moss/75 sm:text-xs sm:tracking-[0.16em]">
+                  <p className="text-[11px] font-semibold uppercase tracking-normal text-moss/75 sm:text-xs sm:tracking-normal">
                     {t.profile.title}
                   </p>
                   <div className="mt-0.5 flex min-w-0 items-center gap-2 sm:mt-1">

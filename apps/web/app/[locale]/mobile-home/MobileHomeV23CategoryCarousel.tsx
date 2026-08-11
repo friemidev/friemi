@@ -96,7 +96,7 @@ export function MobileHomeV23CategoryCarousel({
                     className="h-full w-full object-contain object-bottom transition duration-300 group-active:scale-95"
                   />
                 </span>
-                <span className="mt-1 max-w-full truncate px-1 text-[10px] font-extrabold text-[#123D31]">
+                <span className="mt-1 max-w-full truncate px-1 text-[10px] font-semibold text-[#123D31]">
                   {item.label}
                 </span>
               </Link>

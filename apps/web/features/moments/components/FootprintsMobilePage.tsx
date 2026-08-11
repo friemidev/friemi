@@ -501,7 +501,7 @@ function ProfileAvatar({
   return (
     <span
       className={cn(
-        "inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#E7457A] text-sm font-black text-white shadow-[0_6px_16px_rgba(21,98,64,0.14)]",
+        "inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#E7457A] text-sm font-bold text-white shadow-[0_6px_16px_rgba(21,98,64,0.14)]",
         className,
       )}
     >
@@ -511,7 +511,7 @@ function ProfileAvatar({
 }
 
 const momentActionButtonClassName =
-  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-black text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
+  "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-bold text-[#51594F] transition hover:bg-[#F7F7F0] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/24";
 
 function MomentActionBar({
   className,
@@ -537,7 +537,7 @@ function MomentActionBar({
   const commentContent = (
     <>
       <MessageCircle className="h-[18px] w-[18px] shrink-0" />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {moment.commentCount}
       </span>
     </>
@@ -650,7 +650,7 @@ function MomentMoreMenu({
             tabIndex={-1}
             type="button"
           />
-          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-black text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
+          <div className="absolute right-0 top-11 z-20 min-w-40 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 text-sm font-bold text-[#1D1D1B] shadow-[0_16px_40px_rgba(29,29,27,0.16)]">
             {showDetailAction ? (
               <Link
                 className="flex items-center gap-2 px-3 py-2.5 transition hover:bg-[#F7F7F0]"
@@ -697,7 +697,7 @@ function MomentMoreMenu({
               </form>
             ) : (
               <ReportDialog
-                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-black text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
+                className="flex h-auto w-full justify-start gap-2 rounded-none bg-transparent px-3 py-2.5 text-sm font-bold text-[#9A2135] ring-0 hover:bg-[#FFF0F0]"
                 isAuthenticated={isAuthenticated}
                 locale={locale}
                 redirectPath={`/footprints/${moment.id}`}
@@ -786,7 +786,7 @@ export function FeedCard({
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
+                  <p className="truncate text-[15px] font-bold leading-5 text-[#111210]">
                     {moment.author.nickname}
                   </p>
                   <p className="text-xs font-semibold text-[#6C746A]">
@@ -860,7 +860,7 @@ export function FeedCard({
                 key={comment.id}
                 className="block truncate text-[12px] font-semibold leading-5 text-[#1D1D1B]/78"
               >
-                <span className="font-black text-[#156240]">
+                <span className="font-bold text-[#156240]">
                   {comment.author.nickname}
                 </span>
                 <span className="mx-1">:</span>
@@ -868,7 +868,7 @@ export function FeedCard({
               </span>
             ))}
             {moment.commentCount > 2 ? (
-              <span className="mt-1 block text-[12px] font-black text-[#156240]">
+              <span className="mt-1 block text-[12px] font-bold text-[#156240]">
                 {copy.loadMoreComments}
               </span>
             ) : null}
@@ -934,7 +934,7 @@ export function MomentDetailContent({
             />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-black leading-5 text-[#111210]">
+            <p className="truncate text-[15px] font-bold leading-5 text-[#111210]">
               {moment.author.nickname}
             </p>
             <p className="text-xs font-semibold text-[#6C746A]">
@@ -993,10 +993,10 @@ export function MomentDetailContent({
 
       <section id="moment-comments" className="border-t border-[#E8E4D4] pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[18px] font-black leading-none text-[#111210]">
+          <h2 className="text-[18px] font-bold leading-none text-[#111210]">
             {copy.commentSheetTitle}
           </h2>
-          <span className="rounded-full bg-[#F3F8EB] px-2.5 py-1 text-xs font-black text-[#156240]">
+          <span className="rounded-full bg-[#F3F8EB] px-2.5 py-1 text-xs font-bold text-[#156240]">
             {moment.commentCount}
           </span>
         </div>
@@ -1012,7 +1012,7 @@ export function MomentDetailContent({
             <div className="bg-white/88 px-4 py-3">
               <Link
                 href={signInHref}
-                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+                className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
               >
                 {copy.signInToInteract}
               </Link>
@@ -1031,7 +1031,7 @@ export function MomentDetailContent({
                 />
                 <div className="min-w-0 flex-1 border-b border-[#E8E4D4]/72 pb-4">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-[13px] font-black text-[#111210]">
+                    <p className="truncate text-[13px] font-bold text-[#111210]">
                       {comment.author.nickname}
                     </p>
                     <span className="shrink-0 text-[11px] font-semibold text-[#A49A8E]">
@@ -1059,7 +1059,7 @@ export function MomentDetailContent({
           </div>
         ) : (
           <div className="rounded-[1.15rem] border border-[#E3DCC5] bg-white/72 px-4 py-7 text-center">
-            <p className="text-sm font-black text-[#111210]">
+            <p className="text-sm font-bold text-[#111210]">
               {copy.emptyComments}
             </p>
             <p className="mt-1 text-xs font-semibold text-[#8E8383]">
@@ -1116,7 +1116,7 @@ function OptimisticMomentLikeButton({
           optimisticLike.isLiked ? "fill-current" : null,
         )}
       />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {optimisticLike.count}
       </span>
     </>
@@ -1184,7 +1184,7 @@ function MomentGiftAction({
   const triggerContent = (
     <>
       <Gift className="h-[18px] w-[18px] shrink-0" />
-      <span className="min-w-0 tabular-nums leading-none">
+      <span className="min-w-0 friemi-tabular leading-none">
         {moment.giftCount}
       </span>
     </>
@@ -1252,7 +1252,7 @@ function SharedMomentPreview({
         </span>
       ) : null}
       <span className="min-w-0 flex-1">
-        <span className="block text-[11px] font-black text-[#156240]">
+        <span className="block text-[11px] font-bold text-[#156240]">
           {copy.originalMoment} · {moment.author.nickname}
         </span>
         <span className="mt-1 line-clamp-2 block text-[13px] font-semibold leading-5 text-[#1D1D1B]/82">
@@ -1296,7 +1296,7 @@ function MomentCommentSheet({
         <header className="px-4 pb-2 pt-3">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#D9D4BE]" />
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-black text-[#111210]">
+            <h2 className="text-[15px] font-bold text-[#111210]">
               {copy.commentSheetTitle}
               <span className="ml-1 text-xs font-bold text-[#8E8383]">
                 {moment.commentCount}
@@ -1323,7 +1323,7 @@ function MomentCommentSheet({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-[13px] font-black text-[#111210]">
+                      <p className="truncate text-[13px] font-bold text-[#111210]">
                         {comment.author.nickname}
                       </p>
                       <span className="shrink-0 text-[11px] font-semibold text-[#A49A8E]">
@@ -1357,7 +1357,7 @@ function MomentCommentSheet({
           {hasMore ? (
             <Link
               href={withLocale(locale, `/footprints/${moment.id}`)}
-              className="mx-auto mt-5 flex h-9 w-fit items-center justify-center rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#156240]"
+              className="mx-auto mt-5 flex h-9 w-fit items-center justify-center rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#156240]"
             >
               {copy.loadMoreComments}
             </Link>
@@ -1369,7 +1369,7 @@ function MomentCommentSheet({
           <div className="border-t border-[#E8E4D4]/70 bg-white/88 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             <Link
               href={signInHref}
-              className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-black text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
+              className="flex h-11 items-center justify-center rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(21,98,64,0.14)]"
             >
               {copy.signInToInteract}
             </Link>
@@ -1490,7 +1490,7 @@ function MomentImageFrame({
         className="absolute inset-0 h-full w-full object-cover"
       />
       {moreCount > 0 ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-[#1D1D1B]/42 text-2xl font-black text-white">
+        <span className="absolute inset-0 flex items-center justify-center bg-[#1D1D1B]/42 text-2xl font-bold text-white">
           +{moreCount}
         </span>
       ) : null}
@@ -1579,7 +1579,7 @@ function MomentImagePreview({
       onClick={onClose}
     >
       <header className="flex h-[calc(env(safe-area-inset-top)+3.5rem)] shrink-0 items-end justify-between px-4 pb-3">
-        <span className="text-sm font-black">
+        <span className="text-sm font-bold">
           {activeIndex + 1}/{images.length}
         </span>
         <button
@@ -1752,7 +1752,7 @@ function MomentCommentInlineAction({
         <input name="momentId" type="hidden" value={momentId} />
         <button
           type="submit"
-          className="text-[11px] font-black text-[#9A2135]/82"
+          className="text-[11px] font-bold text-[#9A2135]/82"
         >
           {copy.delete}
         </button>
@@ -1762,7 +1762,7 @@ function MomentCommentInlineAction({
 
   return (
     <ReportDialog
-      className="h-auto rounded-none bg-transparent px-0 text-[11px] font-black text-[#9A2135]/82 ring-0"
+      className="h-auto rounded-none bg-transparent px-0 text-[11px] font-bold text-[#9A2135]/82 ring-0"
       isAuthenticated={isAuthenticated}
       locale={locale}
       redirectPath={`/footprints/${momentId}`}
@@ -1872,7 +1872,7 @@ function MomentImageUploadGrid({
           locale={locale}
           name="imageUrls"
           onChange={(url) => updateUrl(index, url)}
-          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-black text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
+          splitEmptyButtonClassName="h-10 w-auto rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-3 text-xs font-bold text-[#8E8383] shadow-none hover:bg-[#F1F2EC] hover:text-[#156240]"
           splitEmptyContainerClassName="contents"
           splitEmptyIconClassName="h-7 w-7 text-[#156240]/62 shadow-none"
           splitPreviewButtonClassName="h-20 sm:h-20"
@@ -1918,7 +1918,7 @@ function MomentVisibilitySelector({
     >
       <button
         type="button"
-        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-2.5 text-[11px] font-black text-[#156240]/82 transition active:scale-[0.98]"
+        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E3DCC5] bg-[#F7F7F0] px-2.5 text-[11px] font-bold text-[#156240]/82 transition active:scale-[0.98]"
         onClick={() => setIsOpen((current) => !current)}
         aria-label={copy.visibilityLabel}
       >
@@ -1938,7 +1938,7 @@ function MomentVisibilitySelector({
 
       {isOpen ? (
         <div className="absolute right-0 z-20 mt-2 w-32 overflow-hidden rounded-2xl border border-[#E3DCC5] bg-white py-1 shadow-[0_16px_34px_rgba(21,98,64,0.14)]">
-          <p className="px-3 py-1.5 text-[10px] font-black text-[#8E8383]">
+          <p className="px-3 py-1.5 text-[10px] font-bold text-[#8E8383]">
             {copy.visibilityLabel}
           </p>
           {options.map((option) => (
@@ -1946,7 +1946,7 @@ function MomentVisibilitySelector({
               key={option.value}
               type="button"
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-black transition",
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold transition",
                 value === option.value
                   ? "bg-[#F3F8EB] text-[#156240]"
                   : "text-[#1D1D1B]/72",
@@ -2047,7 +2047,7 @@ function MomentComposer({
             name={profile.nickname}
           />
           <div className="min-w-0 flex-1">
-            <p className="min-w-0 text-[15px] font-black leading-5 text-[#111210]">
+            <p className="min-w-0 text-[15px] font-bold leading-5 text-[#111210]">
               {copy.composerTitle}
             </p>
           </div>
@@ -2081,7 +2081,7 @@ function MomentComposer({
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-black text-[#1D1D1B]/70 transition active:scale-[0.98]"
+            className="h-10 rounded-full bg-[#F7F7F0] px-4 text-xs font-bold text-[#1D1D1B]/70 transition active:scale-[0.98]"
             onClick={() => setIsExpanded(false)}
           >
             {locale === "fr" ? "Annuler" : locale === "en" ? "Cancel" : "取消"}
@@ -2089,7 +2089,7 @@ function MomentComposer({
           <button
             type="submit"
             disabled={isPending}
-            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
+            className="h-10 rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-none transition active:scale-[0.98] disabled:opacity-60"
           >
             {isPending ? copy.composerSubmitting : copy.composerSubmit}
           </button>
@@ -2118,13 +2118,13 @@ function FootprintsAuthPrompt({
 }) {
   return (
     <section className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-5 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)]">
-      <p className="text-[16px] font-black leading-6 text-[#111210]">{title}</p>
+      <p className="text-[16px] font-bold leading-6 text-[#111210]">{title}</p>
       <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-[#8E8383]">
         {description}
       </p>
       <Link
         href={href}
-        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
+        className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
       >
         {actionLabel}
       </Link>
@@ -2319,7 +2319,7 @@ function FootprintsMessageList({
               key={filter.key}
               type="button"
               className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-black transition duration-150 active:scale-[0.98]",
+                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 pr-3 text-[12px] font-bold transition duration-150 active:scale-[0.98]",
                 isActive
                   ? "border-[#156240] bg-[#156240] text-white"
                   : "border border-[#E7E2D6] bg-white text-[#111210]",
@@ -2374,7 +2374,7 @@ function FootprintsMessageList({
       <section>
         {toolbar}
         <div className="mt-3 border-y border-[#EFE9DE] bg-transparent px-1 py-6">
-          <h2 className="text-[16px] font-black leading-6 text-[#111210]">
+          <h2 className="text-[16px] font-bold leading-6 text-[#111210]">
             {t.emptyFriendListTitle}
           </h2>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#777A74]">
@@ -2458,7 +2458,7 @@ function FootprintsRoomChatRow({
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-start gap-2">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[14px] font-black leading-5 text-[#111210]">
+              <span className="block truncate text-[14px] font-bold leading-5 text-[#111210]">
                 {room.title}
               </span>
             </span>
@@ -2471,14 +2471,14 @@ function FootprintsRoomChatRow({
               className={cn(
                 "min-w-0 flex-1 truncate text-[13px] leading-5",
                 unreadCount > 0
-                  ? "font-black text-[#111210]"
+                  ? "font-bold text-[#111210]"
                   : "font-semibold text-[#5F635E]",
               )}
             >
               {preview}
             </span>
             {unreadCount > 0 ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
             ) : null}
@@ -2526,7 +2526,7 @@ function FootprintsMessageRow({
       />
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 flex-1 truncate text-[14px] font-black leading-5 text-[#111210]">
+          <span className="min-w-0 flex-1 truncate text-[14px] font-bold leading-5 text-[#111210]">
             {friend.friend.nickname}
           </span>
           <span className="ml-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#8F9189]">
@@ -2538,14 +2538,14 @@ function FootprintsMessageRow({
             className={cn(
               "min-w-0 flex-1 truncate text-[13px] leading-5",
               unreadCount > 0
-                ? "font-black text-[#111210]"
+                ? "font-bold text-[#111210]"
                 : "font-semibold text-[#5F635E]",
             )}
           >
             {preview}
           </span>
           {unreadCount > 0 ? (
-            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
               {unreadBadgeText}
             </span>
           ) : null}
@@ -2556,9 +2556,9 @@ function FootprintsMessageRow({
   const backFollowAction = shouldShowBackFollow ? (
     <div className="shrink-0 self-center">
       <FollowButton
-        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        activeButtonClassName="!h-8 !min-h-8 rounded-full border border-[#D8E8DC] bg-[#ECF5EF] !px-3 text-[11px] font-bold text-[#156240] shadow-none"
         activeLabel={mutualLabel}
-        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-black text-[#156240] shadow-none"
+        buttonClassName="!h-8 !min-h-8 rounded-full border border-[#8AB68E] bg-white !px-3 text-[11px] font-bold text-[#156240] shadow-none"
         fullWidth={false}
         inactiveLabel={followBackLabel}
         isAuthenticated
@@ -2797,7 +2797,7 @@ export function FootprintsMobilePage({
       <main className="min-h-screen bg-white pb-28 text-[#111210] md:bg-[#EEF4FB] md:px-8 md:py-8">
         <div className="mx-auto min-h-screen max-w-md bg-white px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:min-h-[calc(100vh-4rem)] md:max-w-6xl md:rounded-[2rem] md:px-8 md:pb-12 md:pt-8 md:shadow-[0_22px_70px_rgba(15,23,42,0.1)]">
           <header className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 border-b border-[#E3DCC5] pb-5">
-            <h1 className="pb-3 text-[30px] font-black leading-none tracking-normal text-[#111210]">
+            <h1 className="pb-3 text-[30px] font-bold leading-none tracking-normal text-[#111210]">
               {copy.title}
             </h1>
             <nav className="grid min-w-0 translate-y-4 grid-cols-3 text-center">
@@ -2809,7 +2809,7 @@ export function FootprintsMobilePage({
                     key={tab.key}
                     type="button"
                     className={cn(
-                      "relative min-w-0 px-1 pb-3 text-[13px] font-black tracking-normal transition",
+                      "relative min-w-0 px-1 pb-3 text-[13px] font-bold tracking-normal transition",
                       active ? "text-[#111210]" : "text-[#1D1D1B]/58",
                     )}
                     onClick={() => handleTopTabChange(tab.key)}
@@ -2843,7 +2843,7 @@ export function FootprintsMobilePage({
                 <MomentComposer copy={copy} locale={locale} profile={profile} />
               </div>
 
-              <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-black text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#E3DCC5] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {feedScopeTabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -2880,7 +2880,7 @@ export function FootprintsMobilePage({
                 </div>
               ) : (
                 <div className="rounded-[1.35rem] border border-[#E3DCC5] bg-white px-4 py-6 text-center shadow-[0_12px_34px_rgba(21,98,64,0.06)] md:mx-auto md:max-w-2xl">
-                  <p className="text-[15px] font-black text-[#111210]">
+                  <p className="text-[15px] font-bold text-[#111210]">
                     {copy.emptyFeedTitle}
                   </p>
                   <p className="mx-auto mt-2 max-w-[17rem] text-sm font-semibold leading-6 text-[#8E8383]">

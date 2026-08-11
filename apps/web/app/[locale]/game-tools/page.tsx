@@ -124,13 +124,13 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
               fallbackHref={withLocale(locale, "/activities/new")}
               locale={locale}
             />
-            <h1 className="text-[31px] font-black leading-none tracking-normal">
+            <h1 className="text-[31px] font-bold leading-none tracking-normal">
               {mobileCopy.title}
             </h1>
           </header>
 
           <section className="mt-7">
-            <h2 className="text-[18px] font-black leading-none tracking-normal text-[#0D5A3C]">
+            <h2 className="text-[18px] font-bold leading-none tracking-normal text-[#0D5A3C]">
               {mobileCopy.toolList}
             </h2>
             <div className="mt-4 space-y-3">
@@ -157,17 +157,17 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                     </div>
 
                     <div className="min-w-0">
-                      <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#F1F2EC] px-2 text-[10.5px] font-extrabold text-[#0D5A3C]">
+                      <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#F1F2EC] px-2 text-[10.5px] font-bold text-[#0D5A3C]">
                         <Icon className="h-3.5 w-3.5" />
                         {isAvailable ? mobileCopy.available : mobileCopy.coming}
                       </span>
-                      <h3 className="mt-2 truncate text-[18px] font-black leading-tight tracking-normal text-[#111210]">
+                      <h3 className="mt-2 truncate text-[18px] font-bold leading-tight tracking-normal text-[#111210]">
                         {getGameToolLabel(tool.title, locale)}
                       </h3>
                       <p className="mt-1 line-clamp-1 text-[12.5px] font-semibold leading-5 text-[#123D31]/62">
                         {mobileCopy.intros[tool.kind]}
                       </p>
-                      <span className="mt-2 inline-flex rounded-full border border-[#D6D5B2]/70 bg-[#FEFFF9] px-2 py-0.5 text-[11px] font-extrabold text-[#0D5A3C]">
+                      <span className="mt-2 inline-flex rounded-full border border-[#D6D5B2]/70 bg-[#FEFFF9] px-2 py-0.5 text-[11px] font-bold text-[#0D5A3C]">
                         {tool.minPlayers === tool.maxPlayers
                           ? tool.minPlayers
                           : `${tool.minPlayers}-${tool.maxPlayers}`}{" "}
@@ -215,7 +215,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
 
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-end">
             <div className="space-y-5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/50 bg-white/82 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#156240]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/50 bg-white/82 px-3 py-1.5 text-[11px] font-bold uppercase tracking-normal text-[#156240]">
                 <Layers3 className="h-3.5 w-3.5" />
                 {copy.eyebrow}
               </span>
@@ -259,7 +259,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                     <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#F1F2EC] blur-2xl transition group-hover:bg-[#DEEBFF]" />
                     <div className="relative flex h-full flex-col">
                       <div className="flex items-start justify-between gap-3">
-                        <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/45 bg-[#FEFFF9]/90 px-2.5 text-xs font-extrabold text-[#156240]">
+                        <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#8AB68E]/45 bg-[#FEFFF9]/90 px-2.5 text-xs font-bold text-[#156240]">
                           <Icon className="h-3.5 w-3.5" />
                           {getGameToolLabel(tool.phase, locale)}
                         </span>
@@ -288,7 +288,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                       </div>
 
                       <div className="mt-auto">
-                        <h2 className="text-2xl font-extrabold tracking-normal text-[#0E2A5C]">
+                        <h2 className="text-2xl font-bold tracking-normal text-[#0E2A5C]">
                           {getGameToolLabel(tool.title, locale)}
                         </h2>
                         <p className="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-[#156240]/70">
@@ -297,8 +297,8 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
                         <span
                           className={
                             isAvailable
-                              ? "mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] transition group-hover:bg-[#369758]"
-                              : "mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-4 text-sm font-extrabold text-[#156240]"
+                              ? "mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-[#156240] px-4 text-sm font-bold text-white shadow-[0_12px_24px_rgba(21,98,64,0.18)] transition group-hover:bg-[#369758]"
+                              : "mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-4 text-sm font-bold text-[#156240]"
                           }
                         >
                           {isAvailable ? copy.primary : copy.planned}
@@ -340,7 +340,7 @@ export default async function GameToolsPage({ params }: GameToolsPageProps) {
             <Layers3 className="h-6 w-6" />
           </span>
           <div>
-            <h2 className="text-xl font-extrabold text-[#0E2A5C]">
+            <h2 className="text-xl font-bold text-[#0E2A5C]">
               {copy.foundation}
             </h2>
             <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-[#156240]/72">

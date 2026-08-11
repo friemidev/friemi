@@ -198,7 +198,7 @@ function MobileCreateOption({
         <Icon className="h-9 w-9" strokeWidth={2.35} />
       </span>
       <span className="min-w-0">
-        <span className="block text-[18px] font-extrabold leading-tight tracking-normal text-[#111210]">
+        <span className="block text-[18px] font-bold leading-tight tracking-normal text-[#111210]">
           {title}
         </span>
         <span className="mt-1.5 block text-[13px] font-semibold leading-5 text-[#111210]/58">
@@ -260,7 +260,7 @@ function MobileActivityPreviewCard({
       <div className="flex min-h-0 flex-1 flex-col justify-between px-2.5 py-2">
         <h3
           className={cn(
-            "line-clamp-2 overflow-hidden text-[12px] font-extrabold leading-[0.95rem]",
+            "line-clamp-2 overflow-hidden text-[12px] font-bold leading-[0.95rem]",
             isInactive ? "text-zinc-600" : "text-[#111210]",
           )}
         >
@@ -296,10 +296,10 @@ export function MobileNewActivityEntryView({
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <header className="space-y-8">
           <div>
-            <h1 className="text-[31px] font-black leading-none tracking-normal">
+            <h1 className="text-[31px] font-bold leading-none tracking-normal">
               {copy.title}
             </h1>
-            <p className="mt-8 text-[25px] font-black leading-tight tracking-normal text-[#0D5A3C]">
+            <p className="mt-8 text-[25px] font-bold leading-tight tracking-normal text-[#0D5A3C]">
               {copy.question}
             </p>
           </div>
@@ -325,11 +325,11 @@ export function MobileNewActivityEntryView({
         {activities.length > 0 ? (
           <section className="mt-10">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-[24px] font-black leading-none tracking-normal text-[#111210]">
+              <h2 className="text-[24px] font-bold leading-none tracking-normal text-[#111210]">
                 {copy.activity}
               </h2>
               <Link
-                className="text-[15px] font-extrabold text-[#0D5A3C]/72"
+                className="text-[15px] font-semibold text-[#0D5A3C]/72"
                 href={withLocale(locale, "/activities")}
               >
                 {copy.seeAll}

@@ -112,7 +112,7 @@ function SendGiftSubmitButton({
 
   return (
     <button
-      className="inline-flex h-10 min-w-24 items-center justify-center rounded-full bg-[#156240] px-5 text-xs font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
+      className="inline-flex h-10 min-w-24 items-center justify-center rounded-full bg-[#156240] px-5 text-xs font-bold text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition active:scale-95 disabled:opacity-60"
       disabled={pending}
       type="submit"
     >
@@ -252,7 +252,7 @@ export function CharmGiftDialog({
         href={getSignInHref(locale, giftRedirectPath)}
         aria-label={triggerLabel}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
+          "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold text-[#9A2135] transition active:scale-95",
           triggerClassName,
         )}
       >
@@ -270,7 +270,7 @@ export function CharmGiftDialog({
       <button
         aria-label={triggerLabel}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black text-[#9A2135] transition active:scale-95",
+          "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold text-[#9A2135] transition active:scale-95",
           triggerClassName,
         )}
         onClick={() => {
@@ -298,7 +298,7 @@ export function CharmGiftDialog({
               >
                 <div className="flex items-start justify-between gap-3 border-b border-[#ECE5CD] px-5 pb-4 pt-5">
                   <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-[17px] font-black leading-tight text-[#111210]">
+                    <p className="flex items-center gap-2 text-[17px] font-bold leading-tight text-[#111210]">
                       <Sparkles className="h-4 w-4 text-[#A57AEB]" />
                       {copy.title}
                     </p>
@@ -308,7 +308,7 @@ export function CharmGiftDialog({
                     <p className="mt-2 text-[11px] font-semibold leading-4 text-[#7A8276]">
                       {copy.testMode}
                     </p>
-                    <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-[#156240] ring-1 ring-[#D8E4C9]">
+                    <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#156240] ring-1 ring-[#D8E4C9]">
                       <Coins className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">
                         {copy.balanceLabel}:{" "}
@@ -378,7 +378,7 @@ export function CharmGiftDialog({
                           <span className="text-[22px] leading-none">
                             {gift.emoji}
                           </span>
-                          <span className="max-w-full truncate text-[11px] font-black text-[#1D1D1B]">
+                          <span className="max-w-full truncate text-[11px] font-bold text-[#1D1D1B]">
                             {getCharmGiftLabel(gift, locale)}
                           </span>
                           <span className="grid gap-0.5 text-[10px] font-bold text-[#7A8276]">
@@ -401,7 +401,7 @@ export function CharmGiftDialog({
                     >
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       <div className="min-w-0 text-xs font-bold leading-5">
-                        <p className="font-black">{copy.failureTitle}</p>
+                        <p className="font-bold">{copy.failureTitle}</p>
                         <p>{formError}</p>
                         {typeof state.required === "number" ? (
                           <p className="mt-0.5 text-[#9A2135]/78">
@@ -415,7 +415,7 @@ export function CharmGiftDialog({
 
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      className="inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-black text-[#4F574F] transition active:scale-95"
+                      className="inline-flex h-10 items-center justify-center rounded-full px-4 text-xs font-bold text-[#4F574F] transition active:scale-95"
                       onClick={() => setOpen(false)}
                       type="button"
                     >

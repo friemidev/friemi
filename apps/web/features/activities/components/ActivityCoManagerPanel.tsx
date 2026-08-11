@@ -102,7 +102,7 @@ function Avatar({
       src={avatarUrl}
     />
   ) : (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#156240] text-sm font-extrabold text-white ring-1 ring-[#8AB68E]/45">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#156240] text-sm font-bold text-white ring-1 ring-[#8AB68E]/45">
       {getInitial(nickname)}
     </span>
   );
@@ -206,7 +206,7 @@ export function ActivityCoManagerPanel({
     <section className="rounded-[1.15rem] border border-[#D6D5B2] bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-black text-[#156240]">
+          <p className="flex items-center gap-2 text-sm font-bold text-[#156240]">
             <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{copy.title}</span>
           </p>
@@ -214,7 +214,7 @@ export function ActivityCoManagerPanel({
             {dashboard.canEditManagers ? copy.availableHint : copy.organizerOnly}
           </p>
         </div>
-        <span className="shrink-0 text-sm font-black text-[#E7457A]">
+        <span className="shrink-0 text-sm font-bold text-[#E7457A]">
           {dashboard.coManagers.length}/{dashboard.maxManagers}
         </span>
       </div>
@@ -236,7 +236,7 @@ export function ActivityCoManagerPanel({
                     nickname={coManager.user.nickname}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-[#111210]">
+                    <p className="truncate text-sm font-bold text-[#111210]">
                       {coManager.user.nickname}
                     </p>
                     <p className="flex items-center gap-1.5 text-xs font-semibold text-[#156240]/72">
@@ -297,7 +297,7 @@ export function ActivityCoManagerPanel({
                         nickname={participant.nickname}
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-[#111210]">
+                        <p className="truncate text-sm font-bold text-[#111210]">
                           {participant.nickname}
                         </p>
                         {participant.friendCode ? (

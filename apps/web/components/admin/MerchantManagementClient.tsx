@@ -473,7 +473,7 @@ function InfoLine({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
 
 function FormSectionTitle({ title }: { title: string }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+    <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
       {title}
     </p>
   );

@@ -169,7 +169,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                   strokeWidth={active ? 2.4 : 2}
                 />
                 {showUnreadBadge ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
                     {unreadBadgeText}
                   </span>
                 ) : null}
@@ -178,7 +178,7 @@ export function MobileNav({ locale }: MobileNavProps) {
                 <span
                   className={cn(
                     "max-w-full whitespace-nowrap transition",
-                    active ? "font-extrabold text-forest" : null,
+                    active ? "font-semibold text-forest" : null,
                   )}
                 >
                   {item.label}
