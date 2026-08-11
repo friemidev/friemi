@@ -10,6 +10,7 @@ import { isPublicEventCard } from "@/features/activities/utils/activityCardKind"
 import { getActivityDetailPath } from "@/features/activities/utils/activityRoutes";
 import { withLocale } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { MobileActivityDetailSheetLink } from "./MobileActivityDetailSheetLink";
 
 type MobileNewActivityEntryViewProps = {
   activities: ActivityCardViewModel[];
@@ -222,16 +223,24 @@ function MobileActivityPreviewCard({
   statusLabel: string;
 }) {
   const isInactive = getActivityTimeState(activity) === "ENDED";
+  const activityHref = getPreviewActivityHref(activity, locale);
+  const activityLabel =
+    locale === "fr"
+      ? `Voir ${activity.title}`
+      : locale === "en"
+        ? `View ${activity.title}`
+        : `查看${activity.title}`;
 
   return (
-    <Link
+    <MobileActivityDetailSheetLink
       className={cn(
         "group flex aspect-square min-w-0 flex-col overflow-hidden rounded-[1rem] border transition active:scale-[0.985]",
         isInactive
           ? "border-zinc-200 bg-zinc-50 text-zinc-500 shadow-none"
           : "border-[#D6D5B2]/78 bg-white shadow-[0_10px_22px_rgba(29,29,27,0.07)]",
       )}
-      href={getPreviewActivityHref(activity, locale)}
+      href={activityHref}
+      label={activityLabel}
     >
       <div
         className={cn(
@@ -272,7 +281,7 @@ function MobileActivityPreviewCard({
           <span className="truncate">{statusLabel}</span>
         </p>
       </div>
-    </Link>
+    </MobileActivityDetailSheetLink>
   );
 }
 
