@@ -1,13 +1,18 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Camera, Check, ImagePlus, Loader2 } from "lucide-react";
 import {
   acceptedImageInputTypes,
   getImageUploadClientValidationError,
 } from "@/lib/image-upload-policy";
 import { cn } from "@/lib/utils";
-import { defaultProfileAvatars } from "../defaultAvatars";
+import {
+  defaultProfileAvatars,
+  defaultProfileAvatarsByGender,
+  getDefaultProfileAvatarGender,
+  type DefaultProfileAvatarGender,
+} from "../defaultAvatars";
 
 type ProfileAvatarPickerProps = {
   className?: string;
@@ -29,8 +34,11 @@ function getAvatarPickerCopy(locale: string) {
       current: "Avatar actuel",
       fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 Mo",
       fileTooLarge: "Image trop grande.",
+      female: "Femme",
+      gender: "Genre",
       invalidContent: "Image invalide.",
-      pickDefault: "Avatar par défaut",
+      male: "Homme",
+      pickDefault: "Choisir un avatar",
       storageUnavailable: "Import indisponible.",
       typeError: "Format non accepté.",
       upload: "Importer",
@@ -44,8 +52,11 @@ function getAvatarPickerCopy(locale: string) {
       current: "Current avatar",
       fileHint: "JPG, PNG, WebP, GIF, HEIC · 8 MB",
       fileTooLarge: "Image is too large.",
+      female: "Female",
+      gender: "Gender",
       invalidContent: "Invalid image.",
-      pickDefault: "Default avatar",
+      male: "Male",
+      pickDefault: "Choose avatar",
       storageUnavailable: "Upload unavailable.",
       typeError: "Unsupported format.",
       upload: "Upload",
@@ -58,8 +69,11 @@ function getAvatarPickerCopy(locale: string) {
     current: "当前头像",
     fileHint: "JPG、PNG、WebP、GIF、HEIC · 8 MB",
     fileTooLarge: "图片太大。",
+    female: "女生",
+    gender: "选择性别",
     invalidContent: "图片无效。",
-    pickDefault: "默认头像",
+    male: "男生",
+    pickDefault: "选择头像",
     storageUnavailable: "暂时无法上传。",
     typeError: "格式不支持。",
     upload: "上传照片",
@@ -106,11 +120,23 @@ export function ProfileAvatarPicker({
   const copy = getAvatarPickerCopy(locale);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeGender, setActiveGender] = useState<DefaultProfileAvatarGender>(
+    () => getDefaultProfileAvatarGender(value) ?? "female",
+  );
   const [isUploading, setIsUploading] = useState(false);
   const selectedDefaultAvatar = defaultProfileAvatars.find(
     (avatar) => avatar.src === value,
   );
+  const visibleDefaultAvatars = defaultProfileAvatarsByGender[activeGender];
   const isBusy = disabled || isUploading;
+
+  useEffect(() => {
+    const nextGender = getDefaultProfileAvatarGender(value);
+
+    if (nextGender) {
+      setActiveGender(nextGender);
+    }
+  }, [value]);
 
   function openFilePicker() {
     if (isBusy) {
@@ -247,16 +273,49 @@ export function ProfileAvatarPicker({
       </div>
 
       <div className="grid gap-2">
+        <div className="grid gap-2">
+          <span className="text-xs font-bold text-[#767A70]">
+            {copy.gender}
+          </span>
+          <div className="grid grid-cols-2 gap-2 rounded-full bg-[#F4F5F0] p-1 ring-1 ring-[#E6E6E0]">
+            {(
+              [
+                ["female", copy.female],
+                ["male", copy.male],
+              ] satisfies Array<[DefaultProfileAvatarGender, string]>
+            ).map(([gender, label]) => {
+              const active = activeGender === gender;
+
+              return (
+                <button
+                  key={gender}
+                  type="button"
+                  className={cn(
+                    "h-9 rounded-full text-sm font-black transition active:scale-[0.98] disabled:opacity-60",
+                    active
+                      ? "bg-white text-[#156240] shadow-[0_6px_14px_rgba(21,98,64,0.12)]"
+                      : "text-[#697066] hover:bg-white/54",
+                  )}
+                  disabled={isBusy}
+                  onClick={() => setActiveGender(gender)}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <span className="text-xs font-bold text-[#767A70]">
           {copy.pickDefault}
         </span>
         <div
           className={cn(
-            "grid gap-2",
-            variant === "sheet" ? "grid-cols-6" : "grid-cols-6",
+            "grid gap-3",
+            variant === "sheet" ? "grid-cols-3" : "grid-cols-6",
           )}
         >
-          {defaultProfileAvatars.map((avatar) => {
+          {visibleDefaultAvatars.map((avatar) => {
             const selected = selectedDefaultAvatar?.src === avatar.src;
 
             return (
@@ -274,7 +333,7 @@ export function ProfileAvatarPicker({
                   onChange(avatar.src);
                 }}
               >
-                {/* Default avatar assets are local public SVGs. */}
+                {/* Default avatar assets are local public PNGs. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={avatar.src}
