@@ -163,10 +163,10 @@ export function BoardGameToolFloatingEntry({
             <div className="absolute -bottom-20 -left-14 h-36 w-36 rounded-full bg-[#8AB68E]/22 blur-2xl" />
             <div className="relative flex items-start justify-between gap-3 border-b border-[#D6D5B2]/70 px-5 pb-4 pt-5">
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#156240]/72">
+                <p className="text-[10px] font-bold uppercase tracking-normal text-[#156240]/72">
                   {copy.eyebrow}
                 </p>
-                <h2 className="mt-1 text-2xl font-black leading-tight text-[#0E2A5C] md:text-xl">
+                <h2 className="mt-1 text-2xl font-bold leading-tight text-[#0E2A5C] md:text-xl">
                   {copy.title}
                 </h2>
                 <p className="mt-2 max-w-[20rem] text-sm font-semibold leading-6 text-[#156240]/70 md:text-xs md:leading-5">
@@ -204,10 +204,10 @@ export function BoardGameToolFloatingEntry({
                         />
                       </span>
                       <span className="grid min-w-0 max-w-[5.6rem] gap-1">
-                        <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
+                        <span className="text-[0.76rem] font-bold leading-tight text-[#0E2A5C]">
                           {tool.title}
                         </span>
-                        <span className="text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#156240]/64">
+                        <span className="text-[0.62rem] font-bold uppercase leading-none tracking-normal text-[#156240]/64">
                           {tool.status}
                         </span>
                       </span>
@@ -231,10 +231,10 @@ export function BoardGameToolFloatingEntry({
                         />
                       </span>
                       <span className="grid min-w-0 max-w-[5.6rem] gap-1">
-                        <span className="text-[0.76rem] font-black leading-tight text-[#0E2A5C]">
+                        <span className="text-[0.76rem] font-bold leading-tight text-[#0E2A5C]">
                           {tool.title}
                         </span>
-                        <span className="inline-flex items-center justify-center gap-1 text-[0.62rem] font-black uppercase leading-none tracking-[0.08em] text-[#B5301F]/72">
+                        <span className="inline-flex items-center justify-center gap-1 text-[0.62rem] font-bold uppercase leading-none tracking-normal text-[#B5301F]/72">
                           <LockKeyhole className="h-3 w-3" />
                           {tool.status}
                         </span>
@@ -268,7 +268,7 @@ export function BoardGameToolFloatingEntry({
               className="h-9 w-9 object-cover"
             />
           </span>
-          <span className="max-w-[5.5rem] truncate text-sm font-extrabold">
+          <span className="max-w-[5.5rem] truncate text-sm font-bold">
             {copy.open}
           </span>
           <ChevronUp

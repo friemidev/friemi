@@ -21,7 +21,7 @@ export default async function AdminMerchantsPage({
   return (
     <PageContainer className="space-y-5 pb-32 md:space-y-6 md:pb-10 lg:max-w-7xl">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
           运营工具 · 合作商家 · {locale}
         </p>
         <h1 className="text-3xl font-semibold tracking-normal text-ink">

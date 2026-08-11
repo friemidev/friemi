@@ -625,7 +625,7 @@ function FriendPreviewCard({
             {preview.user.nickname}
           </p>
           {preview.user.friendCode ? (
-            <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500">
+            <p className="mt-0.5 truncate friemi-tabular text-xs font-medium tracking-[0.12em] text-zinc-500">
               {preview.user.friendCode}
             </p>
           ) : null}
@@ -925,7 +925,7 @@ function OwnFriendCodeBlock({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-zinc-500">{t.ownFriendCode}</p>
-          <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-ink">
+          <p className="mt-1 friemi-tabular text-lg font-semibold tracking-[0.18em] text-ink">
             {friendCode}
           </p>
         </div>
@@ -978,7 +978,7 @@ function OwnFriendCodeBlock({
               <LoaderCircle className="h-6 w-6 animate-spin text-zinc-400" />
             )}
           </div>
-          <p className="mt-3 font-mono text-base font-semibold tracking-[0.18em] text-ink">
+          <p className="mt-3 friemi-tabular text-base font-semibold tracking-[0.18em] text-ink">
             {friendCode}
           </p>
           <p className="mt-1 text-xs text-zinc-500">{t.myQrFallback}</p>
@@ -1651,7 +1651,7 @@ function UserSummary({
           {user.nickname}
         </h3>
         {user.friendCode ? (
-          <p className="mt-0.5 truncate font-mono text-xs font-medium tracking-[0.12em] text-zinc-500 transition hover:text-zinc-700">
+          <p className="mt-0.5 truncate friemi-tabular text-xs font-medium tracking-[0.12em] text-zinc-500 transition hover:text-zinc-700">
             {t.friendCodeLabel} {user.friendCode}
           </p>
         ) : null}

@@ -253,10 +253,10 @@ export function WerewolfRecapView({
       <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(24rem,1fr)] lg:p-8">
         <div className="grid content-start gap-5">
           <div className="rounded-[1.5rem] border border-[#D9C7B4] bg-[#1E1718] p-5 text-white shadow-xl">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/55">
+            <p className="text-xs font-bold uppercase tracking-normal text-white/55">
               {locale === "zh-CN" ? "狼人杀" : "Friemi Werewolf"}
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight tracking-normal sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold leading-tight tracking-normal sm:text-5xl">
               {t.recap}
             </h1>
             <p className="mt-2 line-clamp-2 text-base font-bold leading-7 text-white/72">
@@ -264,14 +264,14 @@ export function WerewolfRecapView({
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#1E1718] transition hover:bg-[#F4ECE6]"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-[#1E1718] transition hover:bg-[#F4ECE6]"
                 href={roomHref}
               >
                 <ArrowLeft className="h-4 w-4" />
                 {t.backRoom}
               </Link>
               <Link
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/16"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/16"
                 href={screenHref}
                 target="_blank"
               >
@@ -303,7 +303,7 @@ export function WerewolfRecapView({
           </div>
 
           <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-inner">
-            <h2 className="mb-3 text-sm font-black text-[#1E1718]">
+            <h2 className="mb-3 text-sm font-bold text-[#1E1718]">
               {t.events}
             </h2>
             {room.events.length ? (
@@ -323,14 +323,14 @@ export function WerewolfRecapView({
         <section className="rounded-[1.5rem] border border-[#D9C7B4] bg-white p-4 shadow-xl shadow-[#1E1718]/6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7A1F2B]/68">
+              <p className="text-xs font-bold uppercase tracking-normal text-[#7A1F2B]/68">
                 {room.code}
               </p>
-              <h2 className="mt-1 text-2xl font-black text-[#1E1718]">
+              <h2 className="mt-1 text-2xl font-bold text-[#1E1718]">
                 {t.seats}
               </h2>
             </div>
-            <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-black text-[#7A1F2B]">
+            <span className="rounded-full bg-[#F4ECE6] px-3 py-1 text-xs font-bold text-[#7A1F2B]">
               {claimedPlayerCount}/{room.variant.playerSeatCount}
             </span>
           </div>
@@ -357,17 +357,17 @@ export function WerewolfRecapView({
                   key={seat.id}
                 >
                   {seat.isJudgeSeat ? (
-                    <span className="absolute -top-2 left-3 inline-flex items-center gap-1 rounded-full bg-[#1E1718] px-2 py-0.5 text-[0.58rem] font-black text-white">
+                    <span className="absolute -top-2 left-3 inline-flex items-center gap-1 rounded-full bg-[#1E1718] px-2 py-0.5 text-[0.58rem] font-bold text-white">
                       <Crown className="h-3 w-3 text-[#F0C36A]" />
                       {t.judge}
                     </span>
                   ) : null}
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#7A1F2B] text-xs font-black text-white">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#7A1F2B] text-xs font-bold text-white">
                       {seat.seatNumber}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#1E1718]">
+                      <p className="truncate text-sm font-bold text-[#1E1718]">
                         {seat.displayName}
                       </p>
                       <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-bold text-[#7A1F2B]/68">
@@ -402,7 +402,7 @@ export function WerewolfRecapView({
                         />
                       </div>
                     ) : null}
-                    <p className="truncate rounded-full bg-white px-2 py-1 text-xs font-black text-[#7A1F2B]">
+                    <p className="truncate rounded-full bg-white px-2 py-1 text-xs font-bold text-[#7A1F2B]">
                       {finished
                         ? seat.isJudgeSeat
                           ? t.judge
@@ -412,7 +412,7 @@ export function WerewolfRecapView({
                     {!seat.isJudgeSeat && finished && won !== null ? (
                       <p
                         className={cn(
-                          "inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-xs font-black",
+                          "inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
                           won
                             ? "bg-[#EAF6E7] text-[#36624A]"
                             : "bg-[#FFF0EC] text-[#7A1F2B]",
@@ -477,8 +477,8 @@ function SummaryTile({
         draggable={false}
         src={iconSrc}
       />
-      <p className="text-lg font-black leading-tight text-[#1E1718]">{value}</p>
-      <p className="mt-1 text-[0.66rem] font-black uppercase tracking-[0.08em] text-[#7A1F2B]/70">
+      <p className="text-lg font-bold leading-tight text-[#1E1718]">{value}</p>
+      <p className="mt-1 text-[0.66rem] font-bold uppercase tracking-normal text-[#7A1F2B]/70">
         {label}
       </p>
     </div>
@@ -506,7 +506,7 @@ function TimelineEvent({
         />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-sm font-black text-[#1E1718]">
+        <p className="truncate text-sm font-bold text-[#1E1718]">
           {getEventLabel(event.type, locale)}
         </p>
         <p className="mt-0.5 truncate text-xs font-bold text-[#7A1F2B]/64">

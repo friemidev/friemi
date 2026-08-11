@@ -53,7 +53,7 @@ export function AvalonQrCode({ label, value }: AvalonQrCodeProps) {
             width={28}
           />
         </span>
-        <p className="text-xs font-black text-[#156240]">{label}</p>
+        <p className="text-xs font-bold text-[#156240]">{label}</p>
       </div>
       <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center rounded-[1.3rem] border border-[#8AB68E]/35 bg-white p-2 shadow-sm">
         {dataUrl ? (

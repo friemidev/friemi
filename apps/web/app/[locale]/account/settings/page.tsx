@@ -97,7 +97,7 @@ export default async function AccountSettingsPage({
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
-        <h1 className="mt-8 text-[2.75rem] font-black leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
+        <h1 className="mt-8 text-[2.75rem] font-bold leading-none tracking-normal text-[#1D1D1B] md:text-5xl">
           {copy.title}
         </h1>
         <p className="mt-3 max-w-[24rem] text-[15px] font-semibold leading-7 text-[#156240]/78 md:text-base">

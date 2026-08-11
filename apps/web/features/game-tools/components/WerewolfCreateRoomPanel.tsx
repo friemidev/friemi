@@ -328,14 +328,14 @@ function WerewolfVariantModeCard({
         width={252}
       />
       <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
-        <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-black leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+        <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
           {title}
         </span>
-        <p className="max-w-[10.5rem] truncate text-[11px] font-black text-[#F5E7C8]/82">
+        <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F5E7C8]/82">
           {coreRoles}
         </p>
         <VariantSeatDots variant={variant} />
-        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-black text-[#F2E1B8]/76">
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F2E1B8]/76">
           <span className="inline-flex items-center gap-1">
             <UsersRound className="h-3 w-3 text-[#EAC36D]" />
             {variant.totalSeats}
@@ -386,7 +386,7 @@ function CustomSubmitButton({
 
   return (
     <button
-      className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-black text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-10 min-w-[8.4rem] items-center justify-center rounded-xl bg-[#EAF5FF] px-4 text-sm font-semibold text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.38)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
       disabled={disabled || pending}
       type="submit"
     >
@@ -439,14 +439,14 @@ function CustomModeCard({
           width={252}
         />
         <div className="relative ml-[5.4rem] grid min-h-[6.5rem] content-center justify-items-center gap-1.5 text-center">
-          <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-black leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
+          <span className="inline-flex h-11 min-w-[8.4rem] items-center justify-center rounded-xl border border-[#CFA76A]/75 bg-[#EAF5FF] px-4 text-center text-sm font-bold leading-tight text-[#173346] shadow-[0_8px_0_rgba(8,22,28,0.45),0_0_18px_rgba(234,245,255,0.25)] transition group-hover:bg-white">
             {t.customTitle}
           </span>
-          <p className="max-w-[10.5rem] truncate text-[11px] font-black text-[#F5E7C8]/82">
+          <p className="max-w-[10.5rem] truncate text-[11px] font-semibold text-[#F5E7C8]/82">
             {t.customSubtitle}
           </p>
           <RoleSeatDots roles={roleDeck} />
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-black text-[#F2E1B8]/76">
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-0.5 text-[10px] font-semibold text-[#F2E1B8]/76">
             <span className="inline-flex items-center gap-1">
               <UsersRound className="h-3 w-3 text-[#EAC36D]" />
               {roleDeck.length}
@@ -486,7 +486,7 @@ function CustomModeCard({
       />
       <div className="relative flex items-start justify-between gap-3 pt-1">
         <div>
-          <h3 className="text-lg font-black text-[#F8E9C8]">{t.customTitle}</h3>
+          <h3 className="text-lg font-bold text-[#F8E9C8]">{t.customTitle}</h3>
           <p className="text-xs font-bold text-[#F5E7C8]/68">
             {roleDeck.length}
             {locale === "zh-CN" ? "人" : ` ${t.roleCount}`}
@@ -508,25 +508,25 @@ function CustomModeCard({
             className="rounded-2xl border border-[#CFA76A]/28 bg-[#F9ECD2]/8 p-2"
             key={role}
           >
-            <p className="truncate text-[11px] font-black text-[#F8E9C8]">
+            <p className="truncate text-[11px] font-semibold text-[#F8E9C8]">
               {getWerewolfRoleLabel(locale, role)}
             </p>
             <div className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-1">
               <button
                 aria-label={`${t.decrease} ${getWerewolfRoleLabel(locale, role)}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-black text-[#F8E9C8] disabled:opacity-35"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-bold text-[#F8E9C8] disabled:opacity-35 friemi-tabular"
                 disabled={roleCounts[role] <= 0}
                 onClick={() => updateRoleCount(role, roleCounts[role] - 1)}
                 type="button"
               >
                 -
               </button>
-              <span className="text-center text-sm font-black text-[#F4C76D]">
+              <span className="text-center text-sm font-bold text-[#F4C76D] friemi-tabular">
                 {roleCounts[role]}
               </span>
               <button
                 aria-label={`${t.increase} ${getWerewolfRoleLabel(locale, role)}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-black text-[#F8E9C8] disabled:opacity-35"
+                className="grid h-7 w-7 place-items-center rounded-full border border-[#CFA76A]/36 bg-[#061E1B] text-sm font-bold text-[#F8E9C8] disabled:opacity-35 friemi-tabular"
                 disabled={roleDeck.length >= 15}
                 onClick={() => updateRoleCount(role, roleCounts[role] + 1)}
                 type="button"
@@ -803,10 +803,10 @@ export function WerewolfCreateRoomPanel({
               <Sparkles className="h-3.5 w-3.5" />
               <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#DAB866]/75" />
             </div>
-            <p className="mt-1 text-[11px] font-black uppercase tracking-[0.24em] text-[#DAB866]/90">
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-normal text-[#DAB866]/90">
               {locale === "zh-CN" ? "WEREWOLF" : t.eyebrow}
             </p>
-            <h1 className="mt-0.5 text-2xl font-black tracking-[0.18em] text-[#F8E9C8]">
+            <h1 className="mt-0.5 text-2xl font-bold tracking-normal text-[#F8E9C8]">
               {t.eyebrow}
             </h1>
           </div>
@@ -821,7 +821,7 @@ export function WerewolfCreateRoomPanel({
                 <span className="sr-only">{t.joinCodeLabel}</span>
                 <input
                   autoCapitalize="characters"
-                  className="h-10 w-full rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] pl-8 pr-2 text-xs font-black uppercase tracking-[0.18em] text-[#10332D] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#10332D]/42 focus:border-[#F4C76D] focus:ring-2 focus:ring-[#F4C76D]/20"
+                  className="h-10 w-full rounded-xl border border-[#CFA76A]/42 bg-[#F9ECD2] pl-8 pr-2 text-xs font-semibold uppercase tracking-normal text-[#10332D] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#10332D]/42 focus:border-[#F4C76D] focus:ring-2 focus:ring-[#F4C76D]/20"
                   inputMode="text"
                   maxLength={12}
                   onChange={(event) => {
@@ -845,7 +845,7 @@ export function WerewolfCreateRoomPanel({
                 <ScanLine className="h-4 w-4" />
               </button>
               <button
-                className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#EAF5FF] px-2 text-[11px] font-black text-[#173346] shadow-[0_6px_0_rgba(8,22,28,0.35)] transition hover:bg-white"
+                className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#EAF5FF] px-2 text-[11px] font-semibold text-[#173346] shadow-[0_6px_0_rgba(8,22,28,0.35)] transition hover:bg-white"
                 type="submit"
               >
                 {t.joinCodeAction}
@@ -861,7 +861,7 @@ export function WerewolfCreateRoomPanel({
 
           <div className="mx-auto mt-3 flex max-w-[17rem] items-center gap-2">
             <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#CFA76A]/65" />
-            <span className="rounded-full border border-[#CFA76A]/50 bg-[#F7DCA0] px-8 py-2 text-sm font-black text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
+            <span className="rounded-full border border-[#CFA76A]/50 bg-[#F7DCA0] px-8 py-2 text-sm font-bold text-[#3B2317] shadow-[0_8px_0_rgba(8,22,28,0.36)]">
               {t.selectMode}
             </span>
             <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#CFA76A]/65" />
@@ -893,7 +893,7 @@ export function WerewolfCreateRoomPanel({
           <div className="w-full max-w-sm overflow-hidden rounded-[1.5rem] border border-white/16 bg-[#141820] text-white shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
             <div className="flex items-start justify-between gap-3 p-4">
               <div>
-                <h2 className="text-base font-black">{t.scannerTitle}</h2>
+                <h2 className="text-base font-bold">{t.scannerTitle}</h2>
                 <p className="mt-1 text-xs font-semibold leading-5 text-white/62">
                   {t.scannerHelper}
                 </p>
@@ -926,7 +926,7 @@ export function WerewolfCreateRoomPanel({
                   {scannerError}
                 </p>
               ) : (
-                <p className="text-center text-xs font-black uppercase tracking-[0.16em] text-[#F0C36A]">
+                <p className="text-center text-xs font-semibold uppercase tracking-normal text-[#F0C36A]">
                   {t.scannerSearching}
                 </p>
               )}

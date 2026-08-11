@@ -225,7 +225,7 @@ export function PlanetSquareMobilePage({
         <header className="mt-1 flex items-center gap-2">
           <span className="text-[13px]">✨</span>
           <div>
-            <p className="text-[17px] font-black text-[#2d6c50]">星际之间</p>
+            <p className="text-[17px] font-bold text-[#2d6c50]">星际之间</p>
             <p className="text-[11px] font-semibold text-[#8d8f85]">汇聚你所想象</p>
           </div>
         </header>
@@ -257,7 +257,7 @@ export function PlanetSquareMobilePage({
         >
           <Plus className="h-8 w-8 stroke-[2.5]" />
           <div className="text-left">
-            <p className="text-[18px] font-black leading-5">创建星球</p>
+            <p className="text-[18px] font-bold leading-5">创建星球</p>
             <p className="mt-1 text-[12px] font-semibold text-[#7f8d82]">星球聚变</p>
           </div>
         </Link>
@@ -287,7 +287,7 @@ export function PlanetRoomMobilePage({
           </Link>
           <PlanetAvatar planet={planet} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[16px] font-black text-[#22211d]">
+            <p className="truncate text-[16px] font-bold text-[#22211d]">
               {planet.title}
             </p>
             <p className="text-[11px] text-[#8b8d86]">{planet.members} 成员</p>
@@ -301,7 +301,7 @@ export function PlanetRoomMobilePage({
         </header>
 
         <section className="mt-4">
-          <p className="text-[12px] font-black text-[#2d6c50]">星球轨迹</p>
+          <p className="text-[12px] font-bold text-[#2d6c50]">星球轨迹</p>
           <div className="mt-2 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {planetCards.slice(0, 5).map((item) => (
               <Link
@@ -330,7 +330,7 @@ export function PlanetRoomMobilePage({
         </section>
 
         <section className="mt-4">
-          <p className="text-[12px] font-black text-[#2d6c50]">星球轨迹</p>
+          <p className="text-[12px] font-bold text-[#2d6c50]">星球轨迹</p>
           <div className="mt-2 space-y-3">
             {chatMessages.map((message) => (
               <article
@@ -407,7 +407,7 @@ export function PlanetMomentMobilePage({
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[16px] font-black text-[#22211d]">
+            <p className="truncate text-[16px] font-bold text-[#22211d]">
               {momentPlanet.momentTitle}
             </p>
             <p className="text-[11px] text-[#8b8d86]">{planet.title} · 05:25</p>
@@ -477,7 +477,7 @@ export function PlanetCreateMobilePage({
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-black text-[#22211d]">创建星球</p>
+            <p className="text-[16px] font-bold text-[#22211d]">创建星球</p>
             <p className="text-[11px] text-[#8b8d86]">星球聚变</p>
           </div>
         </header>

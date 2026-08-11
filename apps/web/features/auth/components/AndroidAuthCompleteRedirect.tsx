@@ -60,7 +60,7 @@ export function AndroidAuthCompleteRedirect({
     <main className="flex min-h-[100svh] items-center justify-center bg-white px-5 py-8">
       <section className="w-full max-w-sm rounded-[2rem] border border-[#D6D5B2] bg-white/85 p-6 text-center shadow-[0_24px_70px_rgba(21,98,64,0.14)]">
         <BrandLoader label={copy.title} size="sm" />
-        <h1 className="mt-5 text-xl font-black text-[#0B2B66]">
+        <h1 className="mt-5 text-xl font-bold text-[#0B2B66]">
           {copy.title}
         </h1>
         <p className="mt-2 text-sm font-medium leading-6 text-[#156240]">
@@ -68,7 +68,7 @@ export function AndroidAuthCompleteRedirect({
         </p>
         <div className="mt-6 grid gap-3">
           <a
-            className="inline-flex h-12 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-black text-white"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-[#156240] px-5 text-sm font-bold text-white"
             href={appHref}
           >
             {copy.openApp}

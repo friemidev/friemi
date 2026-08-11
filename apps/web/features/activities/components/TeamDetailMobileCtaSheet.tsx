@@ -155,7 +155,7 @@ export function TeamDetailMobileCtaSheet({
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-coral/40" />
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
-              <h2 className="line-clamp-2 text-base font-extrabold leading-tight text-ink">
+              <h2 className="line-clamp-2 text-base font-bold leading-tight text-ink">
                 {activityTitle}
               </h2>
             </div>
@@ -192,11 +192,11 @@ export function TeamDetailMobileCtaSheet({
           setOpen(true);
         }}
       >
-        <span className="min-w-0 truncate text-center text-[15px] font-black leading-none">
+        <span className="min-w-0 truncate text-center text-[15px] font-bold leading-none">
           {triggerLabel}
         </span>
         <span className="absolute right-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/42 transition group-active:translate-x-0.5">
-          <span className="text-sm font-black leading-none" aria-hidden="true">
+          <span className="text-sm font-bold leading-none" aria-hidden="true">
             &gt;
           </span>
         </span>
@@ -237,7 +237,7 @@ export function TeamDetailMobileCtaSheet({
           )}
         </span>
         <span className="grid min-w-0 text-left">
-          <span className="text-sm font-extrabold leading-tight text-[#156240]">
+          <span className="text-sm font-bold leading-tight text-[#156240]">
             {triggerLabel}
           </span>
         </span>

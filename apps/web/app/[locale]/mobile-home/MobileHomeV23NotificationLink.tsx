@@ -32,7 +32,7 @@ export function MobileHomeV23NotificationLink({ locale }: { locale: string }) {
       {hasUnread ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F09182] px-1 text-[10px] font-extrabold leading-none text-white shadow-[0_6px_12px_rgba(176,49,31,0.24)] ring-2 ring-[#FEFFF9] outline outline-1 outline-[#156240]/20"
+          className="pointer-events-none absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F09182] px-1 text-[10px] font-bold leading-none text-white shadow-[0_6px_12px_rgba(176,49,31,0.24)] ring-2 ring-[#FEFFF9] outline outline-1 outline-[#156240]/20"
         >
           {unreadBadgeText}
         </span>

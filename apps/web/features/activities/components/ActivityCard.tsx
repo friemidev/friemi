@@ -995,7 +995,7 @@ export function ActivityCard({
           {showCoverKindBadge && !searchResultStyle ? (
             <span
               className={cn(
-                "absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-extrabold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
+                "absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold leading-none shadow-[0_10px_24px_rgba(29,29,27,0.18)] ring-1 ring-white/75 sm:left-4 sm:top-4",
                 mobileDenseClass(
                   "max-[639px]:left-2 max-[639px]:top-2 max-[639px]:gap-1 max-[639px]:px-2 max-[639px]:py-1 max-[639px]:text-[10px]",
                 ),
@@ -1116,7 +1116,7 @@ export function ActivityCard({
         >
           <CardTitle
             className={cn(
-              "line-clamp-2 text-base font-extrabold leading-snug tracking-normal sm:text-[1.08rem]",
+              "line-clamp-2 text-base font-bold leading-snug tracking-normal sm:text-[1.08rem]",
               mobileDenseClass(
                 "max-[639px]:text-[0.86rem] max-[639px]:leading-snug",
               ),

@@ -78,7 +78,7 @@ function Avatar({ avatarUrl, name }: { avatarUrl: string | null; name: string })
   }
 
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#d9ead8] text-xs font-black text-[#246044]">
+    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#d9ead8] text-xs font-bold text-[#246044]">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -145,7 +145,7 @@ export function PlanetRoomFloatingActions({
                   </span>
                   <span>{copy.reviewTitle}</span>
                 </span>
-                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-black leading-none text-[#8d641f]">
+                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-bold leading-none text-[#8d641f]">
                   {pendingMembers.length}
                 </span>
               </button>
@@ -164,7 +164,7 @@ export function PlanetRoomFloatingActions({
               </span>
               <span className="text-sm font-bold">{copy.manage}</span>
               {pendingMembers.length ? (
-                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-black leading-none text-[#8d641f]">
+                <span className="rounded-full bg-[#f3e4c5] px-2 py-1 text-[11px] font-bold leading-none text-[#8d641f]">
                   {pendingMembers.length}
                 </span>
               ) : null}
@@ -185,7 +185,7 @@ export function PlanetRoomFloatingActions({
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#ddd1bf] sm:hidden" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-black text-[#7a5623]">{copy.reviewTitle}</p>
+                <p className="text-sm font-bold text-[#7a5623]">{copy.reviewTitle}</p>
                 <p className="mt-1 text-xs text-[#8b8578]">{copy.reviewHint}</p>
               </div>
               <button
@@ -205,7 +205,7 @@ export function PlanetRoomFloatingActions({
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar avatarUrl={member.avatarUrl} name={member.nickname} />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-[#2c312b]">{member.nickname}</p>
+                        <p className="truncate text-sm font-bold text-[#2c312b]">{member.nickname}</p>
                         <p className="text-[11px] text-[#8b8578]">{member.joinedAtLabel}</p>
                       </div>
                     </div>

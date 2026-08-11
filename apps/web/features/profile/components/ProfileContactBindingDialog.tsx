@@ -139,7 +139,7 @@ export function ProfileContactBindingDialog({
           <input name="locale" type="hidden" value={locale} />
 
           <div className="rounded-2xl border border-[#D6D5B2] bg-white/75 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#156240]/70">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]/70">
               {t.loginEmailLabel}
             </p>
             <p className="mt-1 truncate text-sm font-medium text-[#1D1D1B]">

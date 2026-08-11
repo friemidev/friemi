@@ -79,7 +79,7 @@ function ChatDateSeparator({
   return (
     <div className="my-1 flex items-center gap-3 px-8" aria-label={label}>
       <span className="h-px flex-1 bg-[#E7E2D6]" />
-      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#8B907F] ring-1 ring-[#E7E2D6]">
+      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#8B907F] ring-1 ring-[#E7E2D6]">
         {label}
       </span>
       <span className="h-px flex-1 bg-[#E7E2D6]" />
@@ -381,7 +381,7 @@ function ActivityContextCard({
           <CalendarDays className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {t.activityContextLabel}
           </p>
           <h2 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-ink">
@@ -452,7 +452,7 @@ function getSendPolicyNotice(
 
 function SendPolicyNotice({ label }: { label: string }) {
   return (
-    <div className="rounded-[1rem] border border-[#D6D5B2] bg-white/78 px-3 py-2.5 text-xs font-black leading-5 text-[#6C746A] shadow-[0_10px_24px_rgba(21,98,64,0.06)]">
+    <div className="rounded-[1rem] border border-[#D6D5B2] bg-white/78 px-3 py-2.5 text-xs font-semibold leading-5 text-[#6C746A] shadow-[0_10px_24px_rgba(21,98,64,0.06)]">
       {label}
     </div>
   );

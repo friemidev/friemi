@@ -323,10 +323,10 @@ export function AvalonRecapView({
 
         <div className="relative grid content-start gap-5">
           <div className="rounded-[2rem] border border-[#D6D5B2] bg-white/82 p-5 shadow-xl shadow-[#156240]/10">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#156240]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#156240]">
               Friemi Avalon
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight tracking-normal text-[#0E2A5A] sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold leading-tight tracking-normal text-[#0E2A5A] sm:text-5xl">
               {t.recap}
             </h1>
             <p className="mt-2 line-clamp-2 text-base font-bold leading-7 text-[#156240]/80">
@@ -334,20 +334,20 @@ export function AvalonRecapView({
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#156240] px-4 text-sm font-black text-white shadow-lg shadow-[#156240]/20 transition hover:-translate-y-0.5"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#156240] px-4 text-sm font-bold text-white shadow-lg shadow-[#156240]/20 transition hover:-translate-y-0.5"
                 href={roomHref}
               >
                 {t.backRoom}
               </Link>
               <Link
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] transition hover:-translate-y-0.5"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#D6D5B2] bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] transition hover:-translate-y-0.5"
                 href={screenHref}
                 target="_blank"
               >
                 {t.publicScreen}
               </Link>
               <Link
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#8AB68E] bg-[#EAF6E7] px-4 text-sm font-black text-[#156240] transition hover:-translate-y-0.5"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#8AB68E] bg-[#EAF6E7] px-4 text-sm font-bold text-[#156240] transition hover:-translate-y-0.5"
                 href={posterHref}
                 target="_blank"
               >
@@ -384,8 +384,8 @@ export function AvalonRecapView({
 
           <div className="rounded-[2rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-inner">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-black text-[#0E2A5A]">{t.mission}</h2>
-              <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-[0.68rem] font-black text-[#156240]">
+              <h2 className="text-sm font-bold text-[#0E2A5A]">{t.mission}</h2>
+              <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-[0.68rem] font-bold text-[#156240]">
                 {room.code}
               </span>
             </div>
@@ -417,7 +417,7 @@ export function AvalonRecapView({
                       src={src}
                       width={52}
                     />
-                    <span className="mt-2 text-[0.62rem] font-black text-[#156240]">
+                    <span className="mt-2 text-[0.62rem] font-bold text-[#156240]">
                       {t.round} {index + 1}
                     </span>
                   </div>
@@ -431,14 +431,14 @@ export function AvalonRecapView({
           <section className="rounded-[2rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-xl shadow-[#156240]/8">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[0.66rem] font-black uppercase tracking-[0.2em] text-[#156240]/70">
+                <p className="text-[0.66rem] font-bold uppercase tracking-normal text-[#156240]/70">
                   {t.summary}
                 </p>
-                <h2 className="mt-1 text-xl font-black text-[#0E2A5A]">
+                <h2 className="mt-1 text-xl font-bold text-[#0E2A5A]">
                   {t.latest}
                 </h2>
               </div>
-              <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-xs font-black text-[#156240]">
+              <span className="rounded-full bg-[#F1F2EC] px-3 py-1 text-xs font-bold text-[#156240]">
                 {room.events.length}
               </span>
             </div>
@@ -458,7 +458,7 @@ export function AvalonRecapView({
 
           {missionEvents.length > 0 ? (
             <section className="rounded-[2rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-inner">
-              <h2 className="mb-3 text-sm font-black text-[#0E2A5A]">
+              <h2 className="mb-3 text-sm font-bold text-[#0E2A5A]">
                 {t.mission}
               </h2>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -475,7 +475,7 @@ export function AvalonRecapView({
           ) : null}
 
           <section className="rounded-[2rem] border border-[#D6D5B2] bg-white/78 p-4 shadow-inner">
-            <h2 className="mb-3 text-sm font-black text-[#0E2A5A]">{t.seats}</h2>
+            <h2 className="mb-3 text-sm font-bold text-[#0E2A5A]">{t.seats}</h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {room.seats.map((seat) => (
                 <div
@@ -486,17 +486,17 @@ export function AvalonRecapView({
                   key={seat.id}
                 >
                   {seat.isHostSeat ? (
-                    <span className="absolute -top-2 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.58rem] font-black text-[#156240] ring-1 ring-[#D6D5B2]">
+                    <span className="absolute -top-2 rounded-full bg-[#FFF5E6] px-2 py-0.5 text-[0.58rem] font-bold text-[#156240] ring-1 ring-[#D6D5B2]">
                       HOST
                     </span>
                   ) : null}
-                  <span className="grid h-12 w-12 place-items-center rounded-full bg-[#156240] text-lg font-black text-white shadow-md">
+                  <span className="grid h-12 w-12 place-items-center rounded-full bg-[#156240] text-lg font-bold text-white shadow-md">
                     {seat.avatarLabel}
                   </span>
-                  <span className="mt-1 line-clamp-1 max-w-full text-xs font-black text-[#0E2A5A]">
+                  <span className="mt-1 line-clamp-1 max-w-full text-xs font-bold text-[#0E2A5A]">
                     {seat.displayName}
                   </span>
-                  <span className="absolute bottom-1 right-2 text-[0.62rem] font-black text-[#156240]/60">
+                  <span className="absolute bottom-1 right-2 text-[0.62rem] font-bold text-[#156240]/60">
                     {seat.seatNumber}
                   </span>
                 </div>
@@ -532,8 +532,8 @@ function SummaryTile({
       )}
     >
       <Image alt="" className="h-12 w-12 object-contain" height={56} src={image} width={56} />
-      <p className="mt-2 text-lg font-black leading-tight text-[#0E2A5A]">{value}</p>
-      <p className="mt-1 text-[0.62rem] font-black uppercase tracking-[0.08em] text-[#156240]/68">
+      <p className="mt-2 text-lg font-bold leading-tight text-[#0E2A5A]">{value}</p>
+      <p className="mt-1 text-[0.62rem] font-bold uppercase tracking-normal text-[#156240]/68">
         {label}
       </p>
     </div>
@@ -556,7 +556,7 @@ function TimelineEvent({
     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[1.35rem] border border-[#D6D5B2] bg-[#FEFFF9] px-3 py-2 shadow-sm">
       <span className="relative grid h-12 w-12 place-items-center rounded-2xl bg-white shadow-inner">
         {roundLabel ? (
-          <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#156240] px-1 text-[0.56rem] font-black text-white">
+          <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#156240] px-1 text-[0.56rem] font-bold text-white">
             {roundLabel}
           </span>
         ) : null}
@@ -569,7 +569,7 @@ function TimelineEvent({
         />
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-black text-[#0E2A5A]">
+        <p className="text-sm font-bold text-[#0E2A5A]">
           {getEventLabel(event.type, t)}
         </p>
         <p className="mt-0.5 truncate text-xs font-semibold text-[#156240]/64">
@@ -581,7 +581,7 @@ function TimelineEvent({
       <div className="flex max-w-28 flex-wrap justify-end gap-1">
         {seatNumbers.map((seatNumber) => (
           <span
-            className="grid h-6 min-w-6 place-items-center rounded-full bg-[#F09182] px-1 text-[0.58rem] font-black text-white"
+            className="grid h-6 min-w-6 place-items-center rounded-full bg-[#F09182] px-1 text-[0.58rem] font-bold text-white"
             key={`${event.id}-${seatNumber}`}
           >
             {seatNumber}
@@ -615,12 +615,12 @@ function MissionRevealSummary({
   return (
     <div className="rounded-[1.45rem] border border-[#D6D5B2] bg-[#FEFFF9] p-3 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-black text-[#0E2A5A]">
+        <span className="text-xs font-bold text-[#0E2A5A]">
           {t.round} {details.roundIndex + 1}
         </span>
         <span
           className={cn(
-            "rounded-full px-2 py-0.5 text-[0.62rem] font-black",
+            "rounded-full px-2 py-0.5 text-[0.62rem] font-bold",
             details.missionResult === "fail"
               ? "bg-[#FFF0EC] text-[#B5301F]"
               : "bg-[#EAF6E7] text-[#156240]",

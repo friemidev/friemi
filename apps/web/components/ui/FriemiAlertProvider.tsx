@@ -154,7 +154,7 @@ export function FriemiAlertProvider({ locale }: FriemiAlertProviderProps) {
           </div>
 
           <p
-            className="mt-6 whitespace-pre-wrap break-words text-[17px] font-black leading-7 tracking-normal text-[#111210]"
+            className="mt-6 whitespace-pre-wrap break-words text-[17px] font-bold leading-7 tracking-normal text-[#111210]"
             id={messageId}
           >
             {currentAlert.message}
@@ -162,7 +162,7 @@ export function FriemiAlertProvider({ locale }: FriemiAlertProviderProps) {
 
           <div className="mt-5 flex justify-end">
             <button
-              className="inline-flex h-10 min-w-[6.4rem] items-center justify-center rounded-full bg-[#156240] px-5 text-[14px] font-black text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#369758] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8AB68E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FEFFF9] active:translate-y-0 active:scale-[0.98]"
+              className="inline-flex h-10 min-w-[6.4rem] items-center justify-center rounded-full bg-[#156240] px-5 text-[14px] font-bold text-white shadow-[0_12px_22px_rgba(21,98,64,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#369758] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8AB68E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FEFFF9] active:translate-y-0 active:scale-[0.98]"
               onClick={closeAlert}
               ref={closeButtonRef}
               type="button"

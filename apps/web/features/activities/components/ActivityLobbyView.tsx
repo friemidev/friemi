@@ -820,7 +820,7 @@ function getActivityLobbyPreviewCopy(locale: string) {
 function FilterGroupRow({ children, label }: FilterGroupRowProps) {
   return (
     <div className="grid gap-0.5 sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center sm:gap-2">
-      <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#156240] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-[0.08em]">
+      <p className="px-1 text-[10px] font-semibold uppercase tracking-normal text-[#156240] sm:whitespace-nowrap sm:px-0 sm:text-left sm:text-[11px] sm:tracking-normal">
         {label}
       </p>
       <div className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
@@ -910,7 +910,7 @@ function MobileLobbyFilterSheet({
 
         <div className="mt-4 space-y-4">
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
               {filterCopy.category}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -958,7 +958,7 @@ function MobileLobbyFilterSheet({
           </div>
 
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
               {filterCopy.type}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
@@ -988,7 +988,7 @@ function MobileLobbyFilterSheet({
           </div>
 
           <div>
-            <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#156240]">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
               {filterCopy.status}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
@@ -1484,7 +1484,7 @@ function CategoryFallbackSection({
       />
       <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#156240]">
+          <p className="text-[11px] font-bold uppercase tracking-normal text-[#156240]">
             {copy.eyebrow}
           </p>
           <h3
@@ -2981,7 +2981,7 @@ export function ActivityLobbyView({
             <section className="space-y-3 rounded-[1.25rem] border border-[#8AB68E] bg-white/78 p-4 shadow-sm shadow-black/5 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#156240]">
+                  <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
                     {locale === "fr"
                       ? "Pour remplir votre hall"
                       : locale === "en"
@@ -3051,7 +3051,7 @@ export function ActivityLobbyView({
               </div>
               <Link
                 href={withLocale(locale, "/activities/new")}
-                className="mobile-home-quick-action inline-flex h-9 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-extrabold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] sm:h-10 sm:min-w-[6.2rem] sm:px-4 sm:text-sm"
+                className="mobile-home-quick-action inline-flex h-9 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-bold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] sm:h-10 sm:min-w-[6.2rem] sm:px-4 sm:text-sm"
                 title={appCopy.nav.newActivity}
               >
                 <CalendarPlus

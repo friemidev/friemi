@@ -314,7 +314,7 @@ function ReportCard({
       <div className="grid min-w-0 gap-3 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
         <div className="space-y-3 sm:space-y-4">
           <div className="rounded-2xl bg-paper/80 p-3 sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
               {t.admin.reporter}
             </p>
             <div className="mt-3 flex items-center gap-3">
@@ -345,7 +345,7 @@ function ReportCard({
           </div>
 
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-white/70 p-3 sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
               {t.descriptionLabel}
             </p>
             <p className="mt-2 whitespace-pre-line text-sm leading-7 text-zinc-700">
@@ -396,7 +396,7 @@ export default async function AdminReportsPage({
       <DetailSourceRestore sourceKey="admin_reports" />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
             {t.eyebrow}
           </p>
           <h1 className="text-3xl font-semibold tracking-normal text-ink">

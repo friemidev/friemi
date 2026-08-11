@@ -188,12 +188,12 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
               width={450}
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(21,98,64,0.02),rgba(21,98,64,0.18)_58%,rgba(14,42,90,0.46))]" />
-            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/65 bg-[#FEFFF9]/95 px-3 py-1.5 text-xs font-black tracking-[0.12em] text-[#156240] shadow-[0_12px_26px_rgba(21,98,64,0.16)] backdrop-blur">
+            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-[#8AB68E]/65 bg-[#FEFFF9]/95 px-3 py-1.5 text-xs font-bold tracking-normal text-[#156240] shadow-[0_12px_26px_rgba(21,98,64,0.16)] backdrop-blur">
               <Sparkles className="h-3.5 w-3.5" />
               {t.eyebrow}
             </span>
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-              <h2 className="max-w-xl break-words text-2xl font-black leading-tight tracking-normal text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.36)] sm:text-3xl">
+              <h2 className="max-w-xl break-words text-2xl font-bold leading-tight tracking-normal text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.36)] sm:text-3xl">
                 {t.title}
               </h2>
             </div>
@@ -315,8 +315,8 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
                 }}
                 type="button"
               >
-                <span className="block text-2xl font-black leading-none">{count}</span>
-                <span className="mt-1 block text-[0.64rem] font-black uppercase tracking-[0.12em] opacity-75">
+                <span className="block text-2xl font-bold leading-none">{count}</span>
+                <span className="mt-1 block text-[0.64rem] font-bold uppercase tracking-normal opacity-75">
                   {t.players}
                 </span>
                 {count === playerCount ? (
@@ -355,7 +355,7 @@ export function AvalonCreateRoomPanel({ locale }: AvalonCreateRoomPanelProps) {
                   <Image alt="" height={34} src={option.icon} width={34} />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-black">{option.label}</span>
+                  <span className="block text-sm font-bold">{option.label}</span>
                   <span className="mt-0.5 block text-xs font-semibold leading-5 opacity-75">
                     {option.hint}
                   </span>
@@ -393,7 +393,7 @@ function PickerButton({
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#F1F2EC] text-[#156240] shadow-inner">
         {image ? <Image alt="" height={24} src={image} width={24} /> : icon}
       </span>
-      <span className="truncate text-sm font-black text-[#0E2A5A]">{value}</span>
+      <span className="truncate text-sm font-bold text-[#0E2A5A]">{value}</span>
       <ArrowRight className="h-3.5 w-3.5 text-[#156240]/55 transition group-hover:text-[#156240]" />
     </button>
   );
@@ -430,7 +430,7 @@ function RuleToggle({
         <Check className="h-4 w-4" />
       </span>
       <span className="min-w-0">
-        <span className="block text-xs font-black text-[#0E2A5A]">{label}</span>
+        <span className="block text-xs font-bold text-[#0E2A5A]">{label}</span>
         <span className="mt-0.5 block text-[0.68rem] font-semibold leading-4 text-[#156240]/68">
           {hint}
         </span>
@@ -475,10 +475,10 @@ function ChoiceSheet({
               {icon}
             </span>
             <div className="min-w-0">
-              <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-[#156240]/65">
+              <p className="text-[0.64rem] font-bold uppercase tracking-normal text-[#156240]/65">
                 {t.choose}
               </p>
-              <h3 className="text-lg font-black leading-tight text-[#0E2A5A]">
+              <h3 className="text-lg font-bold leading-tight text-[#0E2A5A]">
                 {title}
               </h3>
               <p className="mt-1 text-xs font-semibold leading-5 text-[#156240]/72">

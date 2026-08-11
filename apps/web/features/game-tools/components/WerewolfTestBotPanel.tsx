@@ -116,7 +116,7 @@ function TestBotButton({
     <button
       className={
         className ??
-        "inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-black text-white transition hover:bg-[#3A2A2D] disabled:cursor-not-allowed disabled:opacity-55"
+        "inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#1E1718] px-3 text-xs font-bold text-white transition hover:bg-[#3A2A2D] disabled:cursor-not-allowed disabled:opacity-55"
       }
       disabled={pending}
       name="operation"
@@ -162,7 +162,7 @@ export function WerewolfTestBotPanel({
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#F0C36A] px-2.5 py-1 text-[11px] font-black text-[#1E1718]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#F0C36A] px-2.5 py-1 text-[11px] font-bold text-[#1E1718]">
             <img
               alt=""
               aria-hidden="true"
@@ -194,7 +194,7 @@ export function WerewolfTestBotPanel({
             draggable={false}
             src={werewolfUiAssets.seatPlayerOccupied}
           />
-          <p className="mt-1 text-sm font-black">
+          <p className="mt-1 text-sm font-bold">
             {claimedSeats}/{room.variant.totalSeats}
           </p>
         </div>
@@ -206,7 +206,7 @@ export function WerewolfTestBotPanel({
             draggable={false}
             src={werewolfUiAssets.seatPlayerReady}
           />
-          <p className="mt-1 text-sm font-black">{readySeats}</p>
+          <p className="mt-1 text-sm font-bold">{readySeats}</p>
         </div>
         <div className="rounded-[0.9rem] bg-white/8 px-3 py-2">
           <img
@@ -216,7 +216,7 @@ export function WerewolfTestBotPanel({
             draggable={false}
             src={werewolfUiAssets.seatPlayerDead}
           />
-          <p className="mt-1 text-sm font-black">
+          <p className="mt-1 text-sm font-bold">
             {deadSeats}/{playerSeats.length}
           </p>
         </div>
@@ -225,7 +225,7 @@ export function WerewolfTestBotPanel({
       {room.status === "LOBBY" ? (
         <div className="mt-4 grid gap-2">
           <TestBotButton
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#F0C36A] px-4 text-sm font-black text-[#1E1718] transition hover:bg-[#FFD77E] disabled:cursor-not-allowed disabled:opacity-55"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#F0C36A] px-4 text-sm font-bold text-[#1E1718] transition hover:bg-[#FFD77E] disabled:cursor-not-allowed disabled:opacity-55"
             operation="fill_ready_start"
           >
             <FastForward className="h-4 w-4" />
@@ -256,7 +256,7 @@ export function WerewolfTestBotPanel({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <TestBotButton
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#36624A] px-3 text-xs font-black text-white transition hover:bg-[#467B5D] disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#36624A] px-3 text-xs font-bold text-white transition hover:bg-[#467B5D] disabled:cursor-not-allowed disabled:opacity-55"
               confirmMessage={t.finishGoodConfirm}
               operation="finish_good"
             >
@@ -264,7 +264,7 @@ export function WerewolfTestBotPanel({
               {t.finishGood}
             </TestBotButton>
             <TestBotButton
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#7A1F2B] px-3 text-xs font-black text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#7A1F2B] px-3 text-xs font-bold text-white transition hover:bg-[#9B2D3C] disabled:cursor-not-allowed disabled:opacity-55"
               confirmMessage={t.finishWerewolfConfirm}
               operation="finish_werewolf"
             >
@@ -279,7 +279,7 @@ export function WerewolfTestBotPanel({
       ) : null}
 
       {state.formError ? (
-        <p className="mt-3 rounded-[0.9rem] border border-[#F09182]/45 bg-[#F09182]/14 px-3 py-2 text-xs font-black text-[#FFE8E4]">
+        <p className="mt-3 rounded-[0.9rem] border border-[#F09182]/45 bg-[#F09182]/14 px-3 py-2 text-xs font-bold text-[#FFE8E4]">
           {state.formError}
         </p>
       ) : null}

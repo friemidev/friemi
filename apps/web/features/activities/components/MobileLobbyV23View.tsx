@@ -578,12 +578,12 @@ function MobileLobbyV23CategoryRail({
       <aside className="mobile-lobby-category-drawer__panel absolute inset-y-0 right-0 flex w-[min(68vw,15.75rem)] flex-col overflow-hidden border-l border-[#D6D5B2] bg-white pb-[calc(1.1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] shadow-[-18px_0_34px_rgba(17,18,16,0.12)]">
         <div className="flex items-center justify-between gap-3 px-3.5">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#096B45]/62">
+            <p className="text-[11px] font-semibold uppercase tracking-normal text-[#096B45]/62">
               Friemi
             </p>
             <p
               id="mobile-lobby-category-rail-title"
-              className="mt-1 truncate text-[22px] font-black leading-none text-[#111210]"
+              className="mt-1 truncate text-[22px] font-bold leading-none text-[#111210]"
             >
               {title}
             </p>
@@ -671,7 +671,7 @@ function MobileLobbyV23CategoryRail({
                   >
                     <span
                       className={cn(
-                        "min-w-0 truncate text-[15px] font-black leading-tight",
+                        "min-w-0 truncate text-[15px] font-semibold leading-tight",
                         isAll && "text-[15px]",
                       )}
                     >
@@ -767,7 +767,7 @@ function MobileLobbyV23ActivityRow({
               {participantText} · {activity.city || copy.participants}
             </span>
             {showHostedBadge ? (
-              <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-black leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
+              <span className="shrink-0 rounded-full bg-[#EAF5E8] px-1.5 py-0.5 text-[9.5px] font-semibold leading-none text-[#096B45] ring-1 ring-[#BFD8B9]">
                 {copy.hostedBadge}
               </span>
             ) : null}
@@ -799,11 +799,11 @@ function MobileLobbyV23ActivityRow({
           )}
         />
         {isInactiveActivity ? (
-          <span className="max-w-[5.9rem] truncate rounded-full bg-zinc-200 px-2 py-1 text-[10px] font-extrabold leading-none text-zinc-600">
+          <span className="max-w-[5.9rem] truncate rounded-full bg-zinc-200 px-2 py-1 text-[10px] font-semibold leading-none text-zinc-600">
             {copy.endedLabel}
           </span>
         ) : friendCount > 0 ? (
-          <span className="max-w-[5.9rem] truncate rounded-full bg-[#EAF7EA] px-2 py-1 text-[10px] font-extrabold leading-none text-[#138456]">
+          <span className="max-w-[5.9rem] truncate rounded-full bg-[#EAF7EA] px-2 py-1 text-[10px] font-semibold leading-none text-[#138456]">
             {copy.friendGoing(friendCount)}
           </span>
         ) : null}
@@ -1031,14 +1031,14 @@ export function MobileLobbyV23View({
       />
       <div className="mx-auto flex w-full max-w-[430px] flex-col px-5">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[39px] font-black leading-none tracking-normal text-[#111210]">
+          <h1 className="text-[39px] font-bold leading-none tracking-normal text-[#111210]">
             {copy.title}
           </h1>
           <div className="flex shrink-0 items-center gap-2">
             <button
               aria-label={getMobileLobbyCategoryFilterLabel(locale)}
               className={cn(
-                "mt-1 inline-flex h-10 items-center justify-center gap-1 rounded-full px-3 text-[12px] font-black shadow-[0_12px_24px_rgba(17,18,16,0.08)] transition active:scale-[0.96]",
+                "mt-1 inline-flex h-10 items-center justify-center gap-1 rounded-full px-3 text-[12px] font-semibold shadow-[0_12px_24px_rgba(17,18,16,0.08)] transition active:scale-[0.96]",
                 activeCategory === "all"
                   ? "border border-[#D6D5B2] bg-white text-[#096B45]"
                   : "bg-[#096B45] text-white",
@@ -1062,7 +1062,7 @@ export function MobileLobbyV23View({
             <button
               aria-current={displayedActiveTab === tab ? "page" : undefined}
               className={cn(
-                "relative shrink-0 pb-4 text-left text-[19px] font-black tracking-normal transition active:scale-[0.98]",
+                "relative shrink-0 pb-4 text-left text-[19px] font-bold tracking-normal transition active:scale-[0.98]",
                 displayedActiveTab === tab
                   ? "text-[#111210]"
                   : "text-[#111210]/28",
@@ -1082,13 +1082,13 @@ export function MobileLobbyV23View({
         {shouldShowFriendLoading ? (
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
             <span className="mx-auto block h-6 w-6 animate-spin rounded-full border-2 border-[#D6D5B2] border-t-[#096B45]" />
-            <p className="mt-3 text-[16px] font-black">{copy.loadingLabel}</p>
+            <p className="mt-3 text-[16px] font-bold">{copy.loadingLabel}</p>
           </div>
         ) : shouldShowFriendFailed ? (
           <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
-            <p className="text-[18px] font-black">{copy.loadFailedTitle}</p>
+            <p className="text-[18px] font-bold">{copy.loadFailedTitle}</p>
             <button
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#096B45] px-5 text-sm font-black text-white shadow-[0_10px_20px_rgba(9,107,69,0.18)] active:scale-[0.98]"
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#096B45] px-5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(9,107,69,0.18)] active:scale-[0.98]"
               type="button"
               onClick={() => loadFriendActivities({ visual: true })}
             >
@@ -1129,7 +1129,7 @@ export function MobileLobbyV23View({
           <>
             <div className="mt-10 rounded-[1.35rem] border border-[#D7D5C8] bg-white px-5 py-6 text-center shadow-[0_16px_38px_rgba(17,18,16,0.05)]">
               <MapPin className="mx-auto h-7 w-7 text-[#096B45]" />
-              <p className="mt-3 text-[18px] font-black">{emptyTitle}</p>
+              <p className="mt-3 text-[18px] font-bold">{emptyTitle}</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#111210]/58">
                 {emptyDescription}
               </p>

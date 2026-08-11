@@ -93,7 +93,7 @@ function ConfirmRosterButton({
 
   return (
     <Button
-      className="min-h-9 rounded-full border border-[#8AB68E]/80 bg-white px-3 text-xs font-black text-[#156240] shadow-none hover:bg-[#FEFFF9]"
+      className="min-h-9 rounded-full border border-[#8AB68E]/80 bg-white px-3 text-xs font-bold text-[#156240] shadow-none hover:bg-[#FEFFF9]"
       disabled={disabled || pending}
       type="submit"
       variant="secondary"
@@ -277,7 +277,7 @@ export function ActivityCheckInReviewPanel({
   return (
     <>
       <Button
-        className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-black text-[#156240] shadow-none hover:bg-[#F1F2EC]"
+        className="relative min-h-11 rounded-full border border-[#8AB68E]/80 bg-[#FEFFF9] px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F1F2EC]"
         onClick={() => setIsOpen(true)}
         type="button"
         variant="secondary"
@@ -285,7 +285,7 @@ export function ActivityCheckInReviewPanel({
         <CheckCircle2 className="mr-2 h-4 w-4" />
         {copy.open}
         {pendingRequestCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-black leading-none text-white ring-2 ring-white">
+          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
             {pendingRequestCount}
           </span>
         ) : null}
@@ -303,7 +303,7 @@ export function ActivityCheckInReviewPanel({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-black text-[#111210]">
+                <h2 className="text-xl font-bold text-[#111210]">
                   {copy.title}
                 </h2>
               </div>
@@ -318,11 +318,11 @@ export function ActivityCheckInReviewPanel({
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#D6D5B2] bg-white px-4 py-3">
-              <span className="text-sm font-black text-[#156240]">
+              <span className="text-sm font-bold text-[#156240]">
                 {copy.confirmed} {confirmedCount}/{participants.length} 人
               </span>
               {pendingRequestCount > 0 ? (
-                <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-black text-[#E7457A]">
+                <span className="rounded-full bg-[#FFF1EF] px-2.5 py-1 text-xs font-bold text-[#E7457A]">
                   {copy.pendingRequests} {pendingRequestCount}
                 </span>
               ) : null}
@@ -366,15 +366,15 @@ export function ActivityCheckInReviewPanel({
                           className={
                             confirmed
                               ? focused
-                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-black text-white ring-4 ring-[#8AB68E]"
-                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-black text-white ring-2 ring-[#8AB68E]"
+                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-4 ring-[#8AB68E]"
+                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#156240] text-base font-bold text-white ring-2 ring-[#8AB68E]"
                               : needsReview
                                 ? focused
-                                  ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-black text-[#111210] ring-4 ring-[#F2B1A7]"
-                                  : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-black text-[#111210] ring-2 ring-[#F2B1A7]"
+                                  ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-4 ring-[#F2B1A7]"
+                                  : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white text-base font-bold text-[#111210] ring-2 ring-[#F2B1A7]"
                               : focused
-                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-black text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
-                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-black text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
+                                ? "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-70 grayscale ring-4 ring-[#D6D5B2]"
+                                : "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-base font-bold text-zinc-500 opacity-60 grayscale ring-1 ring-zinc-300"
                           }
                         >
                           {participant.user.avatarUrl ? (
@@ -402,8 +402,8 @@ export function ActivityCheckInReviewPanel({
                           <span
                             className={
                               confirmed
-                                ? "mt-0.5 text-[9px] font-black leading-none text-[#156240]"
-                                : "mt-0.5 text-[9px] font-black leading-none text-[#E7457A]"
+                                ? "mt-0.5 text-[9px] font-bold leading-none text-[#156240]"
+                                : "mt-0.5 text-[9px] font-bold leading-none text-[#E7457A]"
                             }
                           >
                             {confirmed ? copy.confirmed : copy.needsReview}
@@ -417,7 +417,7 @@ export function ActivityCheckInReviewPanel({
                           ref={actionPopoverRef}
                         >
                           <button
-                            className="inline-flex min-h-8 w-full items-center justify-center rounded-full border border-red-200 bg-white px-2 text-[11px] font-black text-red-700"
+                            className="inline-flex min-h-8 w-full items-center justify-center rounded-full border border-red-200 bg-white px-2 text-[11px] font-bold text-red-700"
                             onClick={() => toggleParticipant(participant.id)}
                             type="button"
                           >

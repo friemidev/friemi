@@ -424,7 +424,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
         <div className="home-mobile-hero-content relative z-10 mx-auto flex min-h-[calc(68vh-4rem)] w-full max-w-7xl flex-col justify-end px-5 pb-9 pt-16 sm:px-6">
           <div className="home-luxury-reveal max-w-4xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+            <p className="text-xs font-semibold uppercase tracking-normal text-white/70">
               {t.heroEyebrow}
             </p>
             <h1 className="mt-5 max-w-3xl font-serif text-[2.35rem] leading-[1.02] tracking-normal text-white min-[390px]:text-[2.55rem] sm:text-6xl">
@@ -451,7 +451,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             </div>
           </div>
 
-          <div className="home-luxury-reveal mt-7 flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/76 sm:mt-10 sm:text-xs">
+          <div className="home-luxury-reveal mt-7 flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-normal text-white/76 sm:mt-10 sm:text-xs">
             {t.heroNotes.map((note) => (
               <span
                 key={note}
@@ -473,7 +473,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           className="relative z-10 mx-auto max-w-4xl text-center"
           data-home-reveal="up"
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {t.introEyebrow}
           </p>
           <h2 className="mt-5 font-serif text-[2rem] leading-tight text-[#1D1D1B] sm:text-5xl">
@@ -505,7 +505,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
 
         <div className="mt-8 max-w-2xl" data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {t.valueEyebrow}
           </p>
           <h2 className="mt-4 font-serif text-[2rem] leading-tight text-[#1D1D1B] sm:text-5xl">
@@ -556,7 +556,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
         <div className="relative z-10 mx-auto grid max-w-7xl gap-10">
           <div data-home-reveal="up">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
               {t.activityEyebrow}
             </p>
             <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#1D1D1B] sm:text-5xl">
@@ -602,7 +602,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
 
         <div className="mt-8" data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {t.ipEyebrow}
           </p>
           <h2 className="mt-4 font-serif text-[2.15rem] leading-tight text-[#1D1D1B] sm:text-5xl">
@@ -646,7 +646,7 @@ function MobileLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         />
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,29,27,0.94),rgba(29,29,27,0.76)_54%,rgba(29,29,27,0.56))]" />
         <div data-home-reveal="up">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#F09182]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#F09182]">
             {t.identityEyebrow}
           </p>
           <h2 className="mt-4 max-w-3xl font-serif text-[2.15rem] leading-tight text-white sm:text-6xl">
@@ -709,7 +709,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col justify-end px-8 pb-16 pt-16 lg:px-10">
           <div className="home-luxury-reveal max-w-4xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+            <p className="text-xs font-semibold uppercase tracking-normal text-white/70">
               {t.heroEyebrow}
             </p>
             <h1 className="mt-5 max-w-3xl font-serif text-7xl leading-[1.02] tracking-normal text-white lg:text-[5.8rem]">
@@ -736,7 +736,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
             </div>
           </div>
 
-          <div className="home-luxury-reveal mt-10 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/76">
+          <div className="home-luxury-reveal mt-10 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-normal text-white/76">
             {t.heroNotes.map((note) => (
               <span
                 key={note}
@@ -759,7 +759,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           className="relative z-10 mx-auto max-w-4xl text-center"
           data-home-reveal="up"
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {t.introEyebrow}
           </p>
           <h2 className="mt-5 font-serif text-5xl leading-tight text-[#1D1D1B]">
@@ -795,7 +795,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
 
           <div className="self-center lg:pt-4 xl:pt-6">
             <div className="max-w-2xl" data-home-reveal="right">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+              <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
                 {t.valueEyebrow}
               </p>
               <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
@@ -850,7 +850,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         </div>
         <div className="relative z-10 mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.32fr_minmax(0,0.68fr)] lg:items-center">
           <div data-home-reveal="left">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
               {t.activityEyebrow}
             </p>
             <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
@@ -897,7 +897,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
           </div>
 
           <div data-home-reveal="right">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#156240]">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
               {t.ipEyebrow}
             </p>
             <h2 className="mt-4 font-serif text-5xl leading-tight text-[#1D1D1B]">
@@ -942,7 +942,7 @@ function DesktopLuxuryHome({ activities, locale, t }: LuxuryHomeLayoutProps) {
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(29,29,27,0.94),rgba(29,29,27,0.76)_54%,rgba(29,29,27,0.56))]" />
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.56fr_0.44fr] lg:items-end">
           <div data-home-reveal="left">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#F09182]">
+            <p className="text-xs font-semibold uppercase tracking-normal text-[#F09182]">
               {t.identityEyebrow}
             </p>
             <h2 className="mt-4 max-w-3xl font-serif text-6xl leading-tight text-white">

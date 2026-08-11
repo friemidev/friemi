@@ -1282,7 +1282,7 @@ export default async function AdminAnalyticsPage({
     <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[92rem]">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
             {t.subtitle} · {t.dataWindow(dashboard.windowDays)}
           </p>
           <h1 className="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
@@ -1557,7 +1557,7 @@ export default async function AdminAnalyticsPage({
                   </div>
                   <div className="mt-4 hidden rounded-2xl ring-1 ring-black/10 md:block">
                     <table className="min-w-full divide-y divide-black/10 text-left text-sm">
-                      <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      <thead className="bg-paper/80 text-xs font-semibold uppercase tracking-normal text-zinc-500">
                         <tr>
                           <th className="px-4 py-3">{t.importSource}</th>
                           <th className="px-4 py-3">{t.imported}</th>

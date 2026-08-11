@@ -75,10 +75,10 @@ export function WerewolfQrCode({
   return (
     <div className="relative overflow-hidden rounded-[1.35rem] border border-[#D9C7B4] bg-[#FFFDF7] p-3 text-center shadow-inner">
       <div className="relative mb-2 flex items-center justify-center gap-2">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F4ECE6] text-sm font-black text-[#7A1F2B]">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F4ECE6] text-sm font-bold text-[#7A1F2B]">
           QR
         </span>
-        <p className="text-xs font-black text-[#7A1F2B]">{label}</p>
+        <p className="text-xs font-semibold text-[#7A1F2B]">{label}</p>
       </div>
       <div className="relative mx-auto grid aspect-square max-w-[12.5rem] place-items-center rounded-[1.1rem] border border-[#D9C7B4] bg-white p-3 shadow-sm">
         <img
@@ -99,22 +99,22 @@ export function WerewolfQrCode({
           />
         ) : (
           <div className="grid h-full w-full place-items-center rounded-[0.9rem] bg-[#F4ECE6] p-3">
-            <p className="text-xs font-black leading-5 text-[#7A1F2B]">
+            <p className="text-xs font-semibold leading-5 text-[#7A1F2B]">
               {hasQrError ? unavailableLabel : roomCode}
             </p>
           </div>
         )}
       </div>
       <div className="mt-3 grid gap-2 rounded-[1rem] border border-[#D9C7B4] bg-white px-3 py-2 text-left">
-        <p className="text-[11px] font-black text-[#7A1F2B]/62">
+        <p className="text-[11px] font-semibold text-[#7A1F2B]/62">
           {codeLabel}
         </p>
-        <p className="font-mono text-lg font-black tracking-[0.2em] text-[#7A1F2B]">
+        <p className="text-lg font-bold tracking-[0.2em] text-[#7A1F2B] friemi-tabular">
           {roomCode}
         </p>
       </div>
       <button
-        className="mt-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-white px-3 text-xs font-black text-[#1E1718] transition hover:bg-[#FFF7F1]"
+        className="mt-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-[#D9C7B4] bg-white px-3 text-xs font-semibold text-[#1E1718] transition hover:bg-[#FFF7F1]"
         onClick={handleCopy}
         type="button"
       >

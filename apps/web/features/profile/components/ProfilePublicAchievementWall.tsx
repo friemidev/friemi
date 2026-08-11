@@ -192,7 +192,7 @@ export function ProfileAchievementBadgeStrip({
             aria-expanded={active}
             aria-label={title}
             className={cn(
-              "relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/84 text-[11px] font-black text-[#111210] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
+              "relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/84 text-[11px] font-bold text-[#111210] shadow-[0_8px_18px_rgba(21,98,64,0.06)] ring-1 ring-[#E3DCC5] transition active:scale-95",
               active ? "z-20" : "",
             )}
             key={item.definition.key}
@@ -207,7 +207,7 @@ export function ProfileAchievementBadgeStrip({
               iconClassName="h-3.5 w-3.5"
             />
             {active ? (
-              <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[9rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-black text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
+              <span className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 max-w-[9rem] -translate-x-1/2 truncate rounded-full bg-[#111210] px-2.5 py-1 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(17,18,16,0.16)]">
                 {title}
               </span>
             ) : null}
@@ -215,7 +215,7 @@ export function ProfileAchievementBadgeStrip({
         );
       })}
       {moreCount > 0 ? (
-        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#F8F4EA] px-3 text-[11px] font-black text-[#6C746A] ring-1 ring-[#E3DCC5]">
+        <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#F8F4EA] px-3 text-[11px] font-bold text-[#6C746A] ring-1 ring-[#E3DCC5]">
           +{moreCount}
         </span>
       ) : null}
@@ -242,7 +242,7 @@ export function ProfilePublicAchievementWall({
 
   return (
     <section className="mt-5">
-      <h2 className="text-sm font-black text-[#111210]">{copy.title}</h2>
+      <h2 className="text-sm font-bold text-[#111210]">{copy.title}</h2>
       <div className="mt-3 grid gap-2">
         {items.slice(0, 4).map((item) => (
           <div
@@ -254,7 +254,7 @@ export function ProfilePublicAchievementWall({
               className="h-11 w-11"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-[#111210]">
+              <p className="truncate text-sm font-bold text-[#111210]">
                 {getAchievementTitle(copy, item)}
               </p>
               <p className="mt-0.5 truncate text-xs font-semibold text-[#6C746A]">

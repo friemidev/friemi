@@ -190,7 +190,7 @@ function Avatar({ avatarUrl, name }: { avatarUrl: string | null; name: string })
   }
 
   return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9ead8] text-xs font-black text-[#246044]">
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9ead8] text-xs font-bold text-[#246044]">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -243,7 +243,7 @@ export function PlanetSquarePage({
       <div className="mb-5 flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-[#1f6a4a]" />
         <div>
-          <h1 className="text-xl font-black">{copy.title}</h1>
+          <h1 className="text-xl font-bold">{copy.title}</h1>
           <p className="text-xs font-semibold text-[#718075]">{copy.subtitle}</p>
         </div>
       </div>
@@ -252,7 +252,7 @@ export function PlanetSquarePage({
           {planets.map((planet, index) => (
             <Link className="group min-w-0" href={withLocale(locale, `/planets/${planet.slug}`)} key={planet.id}>
               <PlanetCover coverImageUrl={planet.coverImageUrl} index={index} />
-              <h2 className="mt-2 truncate text-sm font-black group-hover:text-[#1f6a4a]">
+              <h2 className="mt-2 truncate text-sm font-bold group-hover:text-[#1f6a4a]">
                 {getPlanetName(planet, locale)}
               </h2>
               <p className="text-[11px] font-semibold text-[#7e827d]">
@@ -306,7 +306,7 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
         <input name="locale" type="hidden" value={locale} />
         <input name="planetId" type="hidden" value={planet.id} />
         <input name="planetSlug" type="hidden" value={planet.slug} />
-        <button className="rounded-full border border-[#e7c58d] bg-[#fff9ef] px-3 py-1.5 text-xs font-black text-[#9a6a21]" type="submit">
+        <button className="rounded-full border border-[#e7c58d] bg-[#fff9ef] px-3 py-1.5 text-xs font-bold text-[#9a6a21]" type="submit">
           {copy.cancelRequest}
         </button>
       </form>
@@ -318,7 +318,7 @@ function MembershipButton({ locale, planet }: { locale: string; planet: PlanetRo
       <input name="locale" type="hidden" value={locale} />
       <input name="planetId" type="hidden" value={planet.id} />
       <input name="planetSlug" type="hidden" value={planet.slug} />
-      <button className="rounded-full bg-[#246c4b] px-3 py-1.5 text-xs font-black text-white" type="submit">
+      <button className="rounded-full bg-[#246c4b] px-3 py-1.5 text-xs font-bold text-white" type="submit">
         {copy.apply}
       </button>
     </form>
@@ -339,7 +339,7 @@ function PlanetChatLockedNotice({
           <Lock className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-[#9a6a21]">{hint}</p>
+          <p className="text-xs font-bold uppercase tracking-normal text-[#9a6a21]">{hint}</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#7d5d2d]">{body}</p>
         </div>
       </div>
@@ -418,7 +418,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#152d4b,#4b7690)] text-lg">{"\u{1F680}"}</span>
             <div className="min-w-0">
-              <h1 className="truncate text-sm font-black">{getPlanetName(planet, locale)}</h1>
+              <h1 className="truncate text-sm font-bold">{getPlanetName(planet, locale)}</h1>
               <p className="text-[10px] text-[#7d877e]">
                 {planet._count.members} {copy.memberUnit}
               </p>
@@ -434,7 +434,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
         ) : null}
 
         <section className="mt-5">
-          <p className="text-sm font-black text-[#17583d]">{copy.orbit}</p>
+          <p className="text-sm font-bold text-[#17583d]">{copy.orbit}</p>
           {planet.moments.length ? (
             <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
               {planet.moments.map((moment, index) => (
@@ -447,7 +447,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
         </section>
 
         <section className="mt-5 border-t border-[#ece8dc] pt-4">
-          <h2 className="text-sm font-black">{copy.chat}</h2>
+          <h2 className="text-sm font-bold">{copy.chat}</h2>
           {canViewChat ? (
             <div className="mt-3 space-y-3">
               {planet.messages.length ? (
@@ -455,7 +455,7 @@ export function PlanetRoomPage({ locale, planet }: { locale: string; planet: Pla
                   <div className="flex gap-2" key={message.id}>
                     <Avatar avatarUrl={message.author.avatarUrl} name={message.author.nickname} />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-black">
+                      <p className="text-[11px] font-bold">
                         {message.author.nickname}
                         <span className="ml-1 font-normal text-[#929892]">
                           {message.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -516,7 +516,7 @@ export function PlanetMomentPage({ locale, moment }: { locale: string; moment: P
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-sm font-black">{getPlanetName(moment.planet, locale)}</h1>
+            <h1 className="text-sm font-bold">{getPlanetName(moment.planet, locale)}</h1>
             <p className="text-[10px] text-[#778178]">{copy.planetMoment}</p>
           </div>
         </header>
@@ -579,7 +579,7 @@ export function PlanetCreatePage({ locale }: { locale: string }) {
         </Link>
         <div className="mt-6 rounded-3xl bg-[linear-gradient(135deg,#163250,#3c6e75)] p-6 text-center text-white">
           <Orbit className="mx-auto h-12 w-12" />
-          <h1 className="mt-2 text-xl font-black">{copy.createTitle}</h1>
+          <h1 className="mt-2 text-xl font-bold">{copy.createTitle}</h1>
           <p className="mt-1 text-xs text-white/75">{copy.createSubtitle}</p>
         </div>
         <form action={createPlanetAction} className="mt-5 space-y-4">
@@ -597,7 +597,7 @@ export function PlanetCreatePage({ locale }: { locale: string }) {
             <input className="mt-2 w-full rounded-xl border border-[#dfdbcf] px-3 py-3 font-normal outline-none" maxLength={160} name="tags" placeholder={copy.tagsPlaceholder} />
           </label>
           <PlanetCoverUpload name="coverImageUrl" />
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#246c4b] py-3 font-black text-white">
+          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#246c4b] py-3 font-bold text-white">
             <UsersRound className="h-4 w-4" />
             {copy.createButton}
           </button>

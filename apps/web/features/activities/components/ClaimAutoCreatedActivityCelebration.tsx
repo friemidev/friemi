@@ -168,10 +168,10 @@ export function ClaimAutoCreatedActivityCelebration({
             aria-hidden="true"
           />
         </div>
-        <p className="relative mt-5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-meadow">
+        <p className="relative mt-5 text-[10px] font-bold uppercase tracking-normal text-meadow">
           {copy.eyebrow}
         </p>
-        <h2 className="relative mt-2 text-2xl font-extrabold leading-tight tracking-normal text-ink">
+        <h2 className="relative mt-2 text-2xl font-bold leading-tight tracking-normal text-ink">
           {copy.title}
         </h2>
         <p className="relative mx-auto mt-3 max-w-[19rem] text-sm font-medium leading-6 text-ink/68">
@@ -188,7 +188,7 @@ export function ClaimAutoCreatedActivityCelebration({
             {copy.close}
           </button>
           <Link
-            className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-extrabold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.22)] transition hover:-translate-y-0.5 hover:bg-meadow motion-reduce:transition-none"
+            className="inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-full bg-forest px-4 text-sm font-bold leading-none text-paper shadow-[0_16px_30px_rgba(21,98,64,0.22)] transition hover:-translate-y-0.5 hover:bg-meadow motion-reduce:transition-none"
             href={editHref}
           >
             <Pencil className="h-4 w-4" aria-hidden="true" />

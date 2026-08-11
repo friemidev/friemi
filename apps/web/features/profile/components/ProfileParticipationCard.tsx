@@ -69,7 +69,7 @@ export function ProfileParticipationCard({
     >
       <div className="grid gap-3">
         <div className="min-w-0">
-          <p className="line-clamp-2 text-[16px] font-black leading-6 text-[#111210] sm:text-lg">
+          <p className="line-clamp-2 text-[16px] font-bold leading-6 text-[#111210] sm:text-lg">
             {activity.title}
           </p>
           <p className="mt-2 line-clamp-2 text-[14px] font-semibold leading-6 text-[#6C746A]">
@@ -80,20 +80,20 @@ export function ProfileParticipationCard({
         <div className="flex flex-wrap gap-2">
           <span
             className={cn(
-              "inline-flex h-7 items-center rounded-full px-3 text-[12px] font-black",
+              "inline-flex h-7 items-center rounded-full px-3 text-[12px] font-bold",
               participationStatusColors[participation.status],
             )}
           >
             {statusLabel}
           </span>
-          <span className="inline-flex h-7 items-center rounded-full bg-[#F1F2EC] px-3 text-[12px] font-black text-[#4F574F]">
+          <span className="inline-flex h-7 items-center rounded-full bg-[#F1F2EC] px-3 text-[12px] font-bold text-[#4F574F]">
             {activityStatusLabel}
           </span>
         </div>
       </div>
 
       <div className="mt-4 grid gap-2.5 text-[14px] font-semibold leading-5 text-[#4F574F]">
-        <span className="font-black text-[#1D1D1B]/82">
+        <span className="font-bold text-[#1D1D1B]/82">
           {participationDateLabel}
         </span>
         <span className="flex items-start gap-2">

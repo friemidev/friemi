@@ -183,10 +183,10 @@ export function FollowButton({
               className="w-full max-w-[19rem] rounded-[1.4rem] border border-[#E8B8B1] bg-white p-4 shadow-[0_18px_42px_rgba(17,18,16,0.2)]"
               role="dialog"
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF0EE] text-lg font-black text-[#D94A38]">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF0EE] text-lg font-bold text-[#D94A38]">
                 !
               </div>
-              <h2 className="text-base font-black text-[#111210]">
+              <h2 className="text-base font-bold text-[#111210]">
                 {unfollowConfirm.title}
               </h2>
               {unfollowConfirm.description ? (
@@ -196,14 +196,14 @@ export function FollowButton({
               ) : null}
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <button
-                  className="h-10 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#156240] active:scale-[0.98]"
+                  className="h-10 rounded-full border border-[#D6D5B2] bg-white text-sm font-bold text-[#156240] active:scale-[0.98]"
                   onClick={() => setConfirmOpen(false)}
                   type="button"
                 >
                   {unfollowConfirm.cancelLabel}
                 </button>
                 <button
-                  className="h-10 rounded-full bg-[#E86D60] text-sm font-black text-white shadow-[0_10px_22px_rgba(232,109,96,0.22)] active:scale-[0.98]"
+                  className="h-10 rounded-full bg-[#E86D60] text-sm font-bold text-white shadow-[0_10px_22px_rgba(232,109,96,0.22)] active:scale-[0.98]"
                   onClick={() => {
                     skipConfirmRef.current = true;
                     setConfirmOpen(false);
@@ -243,7 +243,7 @@ export function FollowButton({
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#ECF5EF] text-[#156240] ring-1 ring-[#CFE3D2]">
                 <MessageCircle className="h-5 w-5" />
               </div>
-              <h2 className="text-base font-black text-[#111210]">
+              <h2 className="text-base font-bold text-[#111210]">
                 {t.mutualPromptTitle}
               </h2>
               <p className="mt-2 text-sm font-semibold leading-5 text-[#6C746A]">
@@ -251,7 +251,7 @@ export function FollowButton({
               </p>
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <button
-                  className="h-10 rounded-full border border-[#D6D5B2] bg-white text-sm font-black text-[#156240] active:scale-[0.98]"
+                  className="h-10 rounded-full border border-[#D6D5B2] bg-white text-sm font-bold text-[#156240] active:scale-[0.98]"
                   onClick={() => setMutualPromptOpen(false)}
                   type="button"
                 >
@@ -270,7 +270,7 @@ export function FollowButton({
                     value={redirectPath}
                   />
                   <button
-                    className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-sm font-black text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)] active:scale-[0.98]"
+                    className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-[#156240] px-3 text-sm font-bold text-white shadow-[0_10px_22px_rgba(21,98,64,0.18)] active:scale-[0.98]"
                     type="submit"
                   >
                     <MessageCircle className="h-4 w-4" />

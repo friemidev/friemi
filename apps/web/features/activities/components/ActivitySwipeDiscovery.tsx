@@ -802,7 +802,7 @@ export function ActivitySwipeDiscovery({
                   >
                     <span
                       className={cn(
-                        "inline-flex min-h-[1.75rem] items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] ring-1 ring-white/70",
+                        "inline-flex min-h-[1.75rem] items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] ring-1 ring-white/70",
                         isActivityInfo ? "bg-[#0E2A66]" : "bg-[#1D1D1B]",
                         isHomeVariant
                           ? "min-h-[1.15rem] gap-1 px-2 py-0.5 text-[9px] shadow-[0_6px_16px_rgba(0,0,0,0.26)] md:min-h-[1.55rem] md:px-2.5 md:py-1 md:text-[10px]"
@@ -886,7 +886,7 @@ export function ActivitySwipeDiscovery({
                     <div className="hidden min-w-0 items-center justify-between gap-3 md:flex">
                       <span
                         className={cn(
-                          "inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold",
+                          "inline-flex h-8 items-center rounded-full px-3 text-[11px] font-bold",
                           isActivityInfo
                             ? "bg-[#EAF2FF] text-[#0E2A66] ring-1 ring-[#BFD4F4]"
                             : "bg-[#FFEAD5] text-[#7A341A] ring-1 ring-[#F2C28D]",

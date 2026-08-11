@@ -110,7 +110,7 @@ export function AvalonLiveRefresh({
     <button
       aria-live="polite"
       className={cn(
-        "flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9]/92 text-xs font-black text-[#156240] shadow-lg shadow-[#156240]/10 backdrop-blur transition active:scale-95",
+        "flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#FEFFF9]/92 text-xs font-bold text-[#156240] shadow-lg shadow-[#156240]/10 backdrop-blur transition active:scale-95",
         variant === "floating"
           ? "fixed right-3 top-24 z-40 px-2.5 py-1.5 hover:-translate-y-0.5 sm:right-4"
           : "h-10 shrink-0 px-2.5 py-1",

@@ -51,7 +51,7 @@ export function MobileFriendChatRoster({
           </Link>
         </div>
         <div className="min-w-0">
-          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-moss">
+          <p className="mt-4 text-xs font-semibold uppercase tracking-normal text-moss">
             {t.friendListTitle}
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-ink">
@@ -133,7 +133,7 @@ function MobileFriendChatRow({
           <span
             className={cn(
               "truncate text-sm text-ink",
-              unreadCount > 0 ? "font-black" : "font-semibold",
+              unreadCount > 0 ? "font-bold" : "font-semibold",
             )}
           >
             {friend.friend.nickname}
@@ -142,7 +142,7 @@ function MobileFriendChatRow({
             {formatChatListTimestamp(time, locale)}
           </span>
             {unreadCount > 0 ? (
-              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-black leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
+              <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#E7457A] px-1 text-[9px] font-bold leading-none text-white shadow-[0_3px_8px_rgba(231,69,122,0.22)]">
                 {unreadBadgeText}
               </span>
             ) : null}
@@ -155,7 +155,7 @@ function MobileFriendChatRow({
         <span
           className={cn(
             "mt-1 block truncate text-xs leading-5",
-            unreadCount > 0 ? "font-black text-ink" : "text-[#156240]",
+            unreadCount > 0 ? "font-bold text-ink" : "text-[#156240]",
           )}
         >
           {sourceLabel ? `${sourceLabel} · ${preview}` : preview}

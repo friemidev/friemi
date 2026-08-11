@@ -187,22 +187,22 @@ function JoinStatusPage({
       />
       <section className="mt-5 overflow-hidden rounded-[1.6rem] border border-[#D9C7B4] bg-[#FFFDF7] shadow-[0_18px_48px_rgba(30,23,24,0.08)]">
         <div className="bg-[#1E1718] px-5 py-6 text-white">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/58">
+          <p className="text-[11px] font-semibold uppercase tracking-normal text-white/58">
             {label}
           </p>
-          <p className="mt-1 font-mono text-2xl font-black tracking-[0.2em] text-[#F0C36A]">
+          <p className="mt-1 text-2xl font-bold tracking-[0.2em] text-[#F0C36A] friemi-tabular">
             {code}
           </p>
         </div>
         <div className="p-5">
-          <h1 className="text-2xl font-black leading-tight text-[#1E1718]">
+          <h1 className="text-2xl font-bold leading-tight text-[#1E1718]">
             {title}
           </h1>
           <p className="mt-3 text-sm font-bold leading-6 text-[#7A1F2B]/72">
             {body}
           </p>
           <Link
-            className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#7A1F2B] px-5 text-sm font-black text-white transition hover:bg-[#9B2D3C]"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#7A1F2B] px-5 text-sm font-semibold text-white transition hover:bg-[#9B2D3C]"
             href={ctaHref}
           >
             {cta}

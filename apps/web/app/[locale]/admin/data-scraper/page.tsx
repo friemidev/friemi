@@ -21,7 +21,7 @@ export default async function AdminDataScraperPage({
   return (
     <PageContainer className="max-w-full space-y-5 overflow-x-hidden px-3 pb-32 md:space-y-6 md:pb-10 lg:!max-w-[110rem]">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        <p className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
           运营工具 · {locale}
         </p>
         <h1 className="text-3xl font-semibold tracking-normal text-ink">

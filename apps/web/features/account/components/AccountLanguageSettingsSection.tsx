@@ -44,7 +44,7 @@ export function AccountLanguageSettingsSection({
             <Languages className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-base font-black text-[#1D1D1B]">
+            <h2 className="truncate text-base font-bold text-[#1D1D1B]">
               {label}
             </h2>
             <p className="mt-0.5 truncate text-xs font-bold text-[#8E8383]">
@@ -64,7 +64,7 @@ export function AccountLanguageSettingsSection({
               key={nextLocale}
               href={getLocaleHref(nextLocale)}
               className={cn(
-                "inline-flex h-12 min-w-0 items-center justify-center gap-2 rounded-full px-2.5 text-sm font-black ring-1 transition active:scale-[0.98] sm:px-3.5",
+                "inline-flex h-12 min-w-0 items-center justify-center gap-2 rounded-full px-2.5 text-sm font-bold ring-1 transition active:scale-[0.98] sm:px-3.5",
                 active
                   ? "bg-[#156240] text-white shadow-[0_16px_34px_rgba(21,98,64,0.2)] ring-[#156240]"
                   : "bg-[#FEFFF9]/54 text-[#1D1D1B] ring-[#D6D5B2]/60 hover:bg-[#FEFFF9] hover:ring-[#8AB68E]/70",

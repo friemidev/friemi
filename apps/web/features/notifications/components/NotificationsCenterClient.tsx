@@ -1000,7 +1000,7 @@ function NotificationCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-[15px] font-black leading-5 text-ink sm:text-base">
+                <h2 className="text-[15px] font-bold leading-5 text-ink sm:text-base">
                   {text.title}
                 </h2>
                 <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6C746A]">
@@ -1201,7 +1201,7 @@ function NotificationBulkConfirmDialog({
             <AlertTriangle className="h-5 w-5" strokeWidth={2.6} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-black leading-6 text-[#111210]">
+            <h2 className="text-lg font-bold leading-6 text-[#111210]">
               {copy.title}
             </h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#6C746A]">
@@ -1211,7 +1211,7 @@ function NotificationBulkConfirmDialog({
         </div>
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button
-            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-[0.98]"
             disabled={pending}
             onClick={onCancel}
             type="button"
@@ -1219,7 +1219,7 @@ function NotificationBulkConfirmDialog({
             {copy.cancel}
           </button>
           <button
-            className="inline-flex h-11 items-center justify-center rounded-full bg-[#D52E3F] px-4 text-sm font-black text-white transition hover:bg-[#B82434] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-[#D52E3F] px-4 text-sm font-semibold text-white transition hover:bg-[#B82434] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={pending}
             onClick={onConfirm}
             type="button"
@@ -1696,12 +1696,12 @@ export function NotificationsCenterClient({
 
       <section className="space-y-4 border-b border-[#EEEDE4] pb-4">
         <div className="relative flex items-center justify-between gap-3">
-          <h1 className="min-w-0 text-3xl font-black tracking-normal text-[#111210] sm:text-4xl">
+          <h1 className="min-w-0 text-3xl font-bold tracking-normal text-[#111210] sm:text-4xl">
             {t.title}
           </h1>
           {isSelecting ? (
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#111210] ring-1 ring-[#D6D5B2] transition hover:bg-[#F7F7F0] active:scale-95"
               onClick={handleCancelSelection}
               type="button"
             >
@@ -1728,7 +1728,7 @@ export function NotificationsCenterClient({
           {!isSelecting && isActionMenuOpen ? (
             <div className="absolute right-0 top-11 z-30 grid w-[min(15rem,calc(100vw-2rem))] gap-2 rounded-[1rem] border border-[#D6D5B2] bg-white p-2 shadow-[0_18px_42px_rgba(17,18,16,0.14)]">
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || notifications.length === 0}
                 onClick={() => {
                   setIsSelecting(true);
@@ -1741,7 +1741,7 @@ export function NotificationsCenterClient({
                 {selectionCopy.select}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#156240] transition hover:bg-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || unreadCount === 0}
                 onClick={() => {
                   setPendingBulkAction("mark-all-read");
@@ -1753,7 +1753,7 @@ export function NotificationsCenterClient({
                 {t.markAllRead}
               </button>
               <button
-                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-black text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-10 w-full items-center justify-start gap-2 rounded-full px-3 text-sm font-semibold text-[#9A2135] transition hover:bg-[#FFF0F0] disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={isPending || readNotifications.length === 0}
                 onClick={() => {
                   setPendingBulkAction("delete-read");
@@ -1773,11 +1773,11 @@ export function NotificationsCenterClient({
             className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
             data-no-swipe
           >
-            <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#156240] px-3 text-xs font-black text-white">
+            <span className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#156240] px-3 text-xs font-semibold text-white">
               {selectedCountLabel}
             </span>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
               disabled={visibleNotificationIds.length === 0 || isPending}
               onClick={handleToggleVisibleSelection}
               type="button"
@@ -1787,7 +1787,7 @@ export function NotificationsCenterClient({
                 : selectionCopy.selectAll}
             </button>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-semibold text-[#156240] ring-1 ring-[#D6D5B2] transition active:scale-95 disabled:opacity-45"
               disabled={selectedUnreadCount === 0 || isPending}
               onClick={() => setPendingBulkAction("mark-selected-read")}
               type="button"
@@ -1796,7 +1796,7 @@ export function NotificationsCenterClient({
               {selectionCopy.markRead}
             </button>
             <button
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-black text-[#B5301F] ring-1 ring-[#F09182]/50 transition active:scale-95 disabled:opacity-45"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-white px-3 text-xs font-semibold text-[#B5301F] ring-1 ring-[#F09182]/50 transition active:scale-95 disabled:opacity-45"
               disabled={selectedCount === 0 || isPending}
               onClick={() => setPendingBulkAction("delete-selected")}
               type="button"
@@ -1819,7 +1819,7 @@ export function NotificationsCenterClient({
               <button
                 key={filter}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
+                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#369758]/30",
                   active
                     ? "bg-[#156240] text-white shadow-[0_10px_24px_rgba(21,98,64,0.16)]"
                     : "bg-white text-[#111210] ring-1 ring-[#EEEDE4] hover:bg-[#F7F7F0]",

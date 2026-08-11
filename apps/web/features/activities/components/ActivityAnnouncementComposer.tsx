@@ -115,7 +115,7 @@ export function ActivityAnnouncementComposer({
         <div className="flex w-full shrink-0 flex-col gap-2">
           <Button
             type="button"
-            className="h-10 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-black text-[#156240] shadow-none hover:bg-[#F6FAF4]"
+            className="h-10 w-full gap-1.5 rounded-full border border-[#D6D5B2] bg-white px-4 text-sm font-bold text-[#156240] shadow-none hover:bg-[#F6FAF4]"
             onClick={() => setIsOpen(true)}
             variant="secondary"
           >
@@ -171,7 +171,7 @@ export function ActivityAnnouncementComposer({
           >
             <div className="flex items-start justify-between gap-4 border-b border-black/10 px-5 py-5">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-moss">
+                <p className="text-xs font-semibold uppercase tracking-normal text-moss">
                   {t.title}
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold tracking-normal text-ink">

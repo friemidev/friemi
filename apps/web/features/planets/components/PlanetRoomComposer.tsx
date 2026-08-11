@@ -164,7 +164,7 @@ export function PlanetRoomComposer({
                 <input name="planetSlug" type="hidden" value={planetSlug} />
                 <input name="imageUrls" type="hidden" value={JSON.stringify(imageUrls)} />
                 <div className="flex items-center justify-between">
-                  <p className="text-base font-black text-[#276949]">{t.createMoment}</p>
+                  <p className="text-base font-bold text-[#276949]">{t.createMoment}</p>
                   <button aria-label={t.close} className="rounded-full p-2 text-[#8c938b]" onClick={() => setIsMomentComposerOpen(false)} type="button">
                     <X className="h-5 w-5" />
                   </button>
@@ -215,7 +215,7 @@ export function PlanetRoomComposer({
                       ? t.uploading
                       : `${t.addImage}${imageUrls.length ? ` (${imageUrls.length}/${maxMomentImageCount})` : ""}`}
                   </button>
-                  <button className="rounded-xl bg-[#246c4b] px-4 py-2 text-xs font-black text-white">{t.submit}</button>
+                  <button className="rounded-xl bg-[#246c4b] px-4 py-2 text-xs font-bold text-white">{t.submit}</button>
                 </div>
                 {uploadError ? <p className="mt-2 text-xs font-semibold text-[#ba4439]">{uploadError}</p> : null}
               </form>

@@ -2053,7 +2053,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      className="mx-auto h-12 w-full min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-base font-black text-white shadow-[0_12px_28px_rgba(54,151,88,0.24)] hover:bg-[#156240] sm:mx-0 sm:w-auto sm:min-w-0"
+      className="mx-auto h-12 w-full min-w-[11rem] gap-2 rounded-full bg-[#369758] px-6 text-base font-semibold text-white shadow-[0_12px_28px_rgba(54,151,88,0.24)] hover:bg-[#156240] sm:mx-0 sm:w-auto sm:min-w-0"
       disabled={pending || disabled}
       aria-busy={pending || disabled}
     >
@@ -2127,7 +2127,7 @@ function LongDurationConfirmDialog({
         role="alertdialog"
       >
         <div className="border-b border-[#D6D5B2] bg-[linear-gradient(135deg,#FEFFF9,#FEFFF9)] px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+          <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
             {copy.eyebrow}
           </p>
           <h2
@@ -2148,7 +2148,7 @@ function LongDurationConfirmDialog({
 
           <div className="grid gap-2 rounded-2xl border border-[#D6D5B2] bg-white/75 p-3 text-sm">
             <div className="grid gap-1 rounded-xl bg-[#FEFFF9] px-3 py-2 ring-1 ring-[#8AB68E]">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#156240]">
+              <span className="text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
                 {copy.start}
               </span>
               <span className="font-semibold text-ink">
@@ -2156,7 +2156,7 @@ function LongDurationConfirmDialog({
               </span>
             </div>
             <div className="grid gap-1 rounded-xl bg-[#FEFFF9] px-3 py-2 ring-1 ring-[#8AB68E]">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#156240]">
+              <span className="text-[11px] font-semibold uppercase tracking-normal text-[#156240]">
                 {copy.end}
               </span>
               <span className="font-semibold text-ink">
@@ -2164,7 +2164,7 @@ function LongDurationConfirmDialog({
               </span>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+              <span className="text-xs font-semibold uppercase tracking-normal text-red-700">
                 {copy.duration}
               </span>
               <span className="text-base font-bold text-red-700">

@@ -527,7 +527,7 @@ function MobileHomeV23Experience({
         </header>
 
         <section className="pr-5">
-          <h1 className="text-[23px] font-black leading-tight tracking-normal text-[#111210]">
+          <h1 className="text-[23px] font-bold leading-tight tracking-normal text-[#111210]">
             {copy.greeting}
           </h1>
           <p className="mt-0.5 text-[14px] font-medium leading-5 text-[#111210]/72">
@@ -543,7 +543,7 @@ function MobileHomeV23Experience({
           />
 
           <div className="mt-4 flex items-end justify-between gap-3">
-            <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
+            <h2 className="text-[16px] font-bold tracking-normal text-[#111210]">
               {copy.activityCategoriesTitle}
             </h2>
           </div>
@@ -553,7 +553,7 @@ function MobileHomeV23Experience({
               <Link
                 key={filter.label}
                 href={withLocale(locale, filter.href)}
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-3.5 text-[13px] font-extrabold text-[#123D31] transition active:scale-[0.96]"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-[#D7D5C8] bg-white px-3.5 text-[13px] font-semibold text-[#123D31] transition active:scale-[0.96]"
               >
                 {filter.label}
               </Link>
@@ -562,7 +562,7 @@ function MobileHomeV23Experience({
         </section>
 
         <section className="mt-5 pr-5">
-          <h2 className="text-[16px] font-black tracking-normal text-[#111210]">
+          <h2 className="text-[16px] font-bold tracking-normal text-[#111210]">
             {copy.categoriesTitle}
           </h2>
           <MobileHomeV23CategoryCarousel
@@ -573,7 +573,7 @@ function MobileHomeV23Experience({
 
         {topNewsItems.length > 0 ? (
           <section className="mt-3">
-            <h2 className="text-[17px] font-black tracking-normal text-[#064133]">
+            <h2 className="text-[17px] font-bold tracking-normal text-[#064133]">
               {copy.topNewsTitle}
             </h2>
             <div className="mt-3 flex snap-x gap-2.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -590,12 +590,12 @@ function MobileHomeV23Experience({
 
         <section className="mt-4">
           <div className="flex items-center justify-between gap-3 pr-5">
-            <h2 className="text-[17px] font-black tracking-normal text-[#111210]">
+            <h2 className="text-[17px] font-bold tracking-normal text-[#111210]">
               {copy.trendingTitle}
             </h2>
             <Link
               href={withLocale(locale, "/lobby")}
-              className="text-[13px] font-extrabold text-[#096B45]"
+              className="text-[13px] font-semibold text-[#096B45]"
             >
               {copy.seeAll}
             </Link>
@@ -645,7 +645,7 @@ function MobileHomeV23NewsCard({
         className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/34 via-transparent to-black/8" />
-      <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-extrabold text-[#123D31] shadow-sm">
+      <span className="absolute bottom-2.5 left-2.5 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold text-[#123D31] shadow-sm">
         {title}
       </span>
     </article>
@@ -655,7 +655,7 @@ function MobileHomeV23NewsCard({
 function MobileHomeV23CitySelector({ currentCity }: { currentCity: string }) {
   return (
     <span
-      className="inline-flex h-9 min-w-0 cursor-default select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-extrabold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
+      className="inline-flex h-9 min-w-0 cursor-default select-none items-center gap-1 rounded-full bg-white/78 px-2.5 text-[13px] font-semibold text-[#123D31] shadow-[0_10px_24px_rgba(21,98,64,0.08)] ring-1 ring-[#D6D5B2]/62"
       aria-label={currentCity}
       title={currentCity}
     >
@@ -696,7 +696,7 @@ function MobileHomeV23ActivityCard({
         </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
-        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+        <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
           {activity.title}
         </h3>
         <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
@@ -743,7 +743,7 @@ function MobileHomeV23FallbackCard({
         </span>
       </div>
       <div className="min-h-[5.1rem] px-2.5 pb-2.5 pt-2">
-        <h3 className="line-clamp-2 text-[12px] font-black leading-4 text-[#111210]">
+        <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-[#111210]">
           {card.title}
         </h3>
         <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-[#096B45]">
@@ -783,7 +783,7 @@ function MobileHomeExperience({
               } as CSSProperties
             }
           >
-            <p className="text-xs font-extrabold uppercase tracking-[0.42em] text-forest">
+            <p className="text-xs font-semibold uppercase tracking-normal text-forest">
               {mobile.featureKicker}
             </p>
             <h1 className="mt-4 max-w-3xl font-serif text-[clamp(3.3rem,7vw,6.7rem)] leading-[0.9] text-[#0E2A66]">
@@ -812,7 +812,7 @@ function MobileHomeExperience({
 
             <Link
               href={withLocale(locale, "/activities/new")}
-              className="mobile-home-quick-action inline-flex h-10 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-extrabold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] md:h-12 md:min-w-[7.2rem] md:px-4 md:text-sm"
+              className="mobile-home-quick-action inline-flex h-10 min-w-[5.35rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-coral px-3 text-[11px] font-semibold leading-none text-white transition hover:-translate-y-0.5 active:scale-[0.94] md:h-12 md:min-w-[7.2rem] md:px-4 md:text-sm"
               title={mobile.createPlanLabel}
             >
               <CalendarPlus
@@ -889,7 +889,7 @@ function MobileHomeExperience({
                 key={item.label}
                 className="rounded-[1.25rem] border border-[#D6D5B2]/70 bg-[#FEFFF9]/72 px-3 py-3 shadow-[0_14px_28px_rgba(21,98,64,0.08)] backdrop-blur-sm"
               >
-                <p className="text-xs font-extrabold text-[#156240]">
+                <p className="text-xs font-semibold text-[#156240]">
                   {item.label}
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-[#156240]/78">
@@ -942,7 +942,7 @@ function MobileHomeExperience({
               />
             </div>
             <div className="relative min-w-0 self-center">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-[#156240]">
+              <p className="text-[10px] font-semibold uppercase tracking-normal text-[#156240]">
                 {mobile.activityEyebrow}
               </p>
               <h2 className="mt-3 max-w-[15rem] font-serif text-[clamp(2rem,4vw,3.2rem)] leading-[0.95] text-[#1D1D1B]">

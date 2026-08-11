@@ -62,7 +62,7 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
         <header className="grid gap-7 rounded-[2rem] border border-[#D6D5B2] bg-white/[0.78] p-5 shadow-[0_24px_70px_rgba(21,98,64,0.08)] backdrop-blur sm:p-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div className="min-w-0">
             <BrandLockup size="sm" />
-            <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+            <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D6D5B2] bg-[#F1F2EC] px-3 py-1 text-xs font-semibold uppercase tracking-normal text-[#156240]">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Product Notes
             </p>
@@ -76,7 +76,7 @@ export default async function UpdatesPage({ params }: UpdatesPageProps) {
 
           {latestUpdate ? (
             <div className="rounded-[1.35rem] border border-[#8AB68E] bg-[#FFF5E6]/[0.86] p-4 shadow-[0_18px_42px_rgba(29,29,27,0.06)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#156240]">
+              <p className="text-xs font-semibold uppercase tracking-normal text-[#156240]">
                 最新版本
               </p>
               <p className="mt-2 font-serif text-4xl text-[#1D1D1B]">
