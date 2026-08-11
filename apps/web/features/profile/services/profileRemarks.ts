@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getUserProfileRemarkDelegate } from "@/lib/prisma";
 
 export const maxProfileRemarkNameLength = 32;
 
@@ -22,6 +22,14 @@ export function resolveRemarkedProfileName({
   return normalizedRemark || publicNickname;
 }
 
+export function isMissingProfileRemarkStorageError(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+
+  return error.code === "P2021" || error.code === "P2022";
+}
+
 export async function getProfileRemarkName({
   ownerProfileId,
   targetProfileId,
@@ -33,19 +41,33 @@ export async function getProfileRemarkName({
     return null;
   }
 
-  const remark = await prisma.userProfileRemark.findUnique({
-    where: {
-      ownerId_targetId: {
-        ownerId: ownerProfileId,
-        targetId: targetProfileId,
-      },
-    },
-    select: {
-      remarkName: true,
-    },
-  });
+  const userProfileRemark = getUserProfileRemarkDelegate();
 
-  return remark?.remarkName ?? null;
+  if (!userProfileRemark) {
+    return null;
+  }
+
+  try {
+    const remark = await userProfileRemark.findUnique({
+      where: {
+        ownerId_targetId: {
+          ownerId: ownerProfileId,
+          targetId: targetProfileId,
+        },
+      },
+      select: {
+        remarkName: true,
+      },
+    });
+
+    return remark?.remarkName ?? null;
+  } catch (error) {
+    if (isMissingProfileRemarkStorageError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getProfileRemarkMap({
@@ -67,20 +89,34 @@ export async function getProfileRemarkMap({
     return new Map<string, string>();
   }
 
-  const remarks = await prisma.userProfileRemark.findMany({
-    where: {
-      ownerId: ownerProfileId,
-      targetId: {
-        in: uniqueTargetIds,
-      },
-    },
-    select: {
-      targetId: true,
-      remarkName: true,
-    },
-  });
+  const userProfileRemark = getUserProfileRemarkDelegate();
 
-  return new Map(
-    remarks.map((remark) => [remark.targetId, remark.remarkName]),
-  );
+  if (!userProfileRemark) {
+    return new Map<string, string>();
+  }
+
+  try {
+    const remarks = await userProfileRemark.findMany({
+      where: {
+        ownerId: ownerProfileId,
+        targetId: {
+          in: uniqueTargetIds,
+        },
+      },
+      select: {
+        targetId: true,
+        remarkName: true,
+      },
+    });
+
+    return new Map(
+      remarks.map((remark) => [remark.targetId, remark.remarkName]),
+    );
+  } catch (error) {
+    if (isMissingProfileRemarkStorageError(error)) {
+      return new Map<string, string>();
+    }
+
+    throw error;
+  }
 }

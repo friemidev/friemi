@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUserProfileForMutation } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getUserProfileRemarkDelegate, prisma } from "@/lib/prisma";
 import { withLocale } from "@/lib/routes";
 import {
+  isMissingProfileRemarkStorageError,
   maxProfileRemarkNameLength,
   normalizeProfileRemarkName,
 } from "../services/profileRemarks";
@@ -112,28 +113,42 @@ export async function updateProfileRemarkAction(
     };
   }
 
+  const userProfileRemark = getUserProfileRemarkDelegate();
+
+  if (!userProfileRemark) {
+    return {
+      formError: getProfileRemarkActionCopy(locale).invalidRequest,
+      remarkName,
+    };
+  }
+
   if (!remarkName) {
-    await prisma.userProfileRemark
-      .delete({
+    try {
+      await userProfileRemark.delete({
         where: {
           ownerId_targetId: {
             ownerId: viewerProfile.id,
             targetId: targetProfileId,
           },
         },
-      })
-      .catch((error: unknown) => {
-        if (
-          typeof error === "object" &&
-          error &&
-          "code" in error &&
-          error.code === "P2025"
-        ) {
-          return null;
-        }
-
-        throw error;
       });
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error &&
+        "code" in error &&
+        error.code === "P2025"
+      ) {
+        // No existing remark is already the desired cleared state.
+      } else if (isMissingProfileRemarkStorageError(error)) {
+        return {
+          formError: getProfileRemarkActionCopy(locale).invalidRequest,
+          remarkName,
+        };
+      } else {
+        throw error;
+      }
+    }
 
     revalidateProfileRemarkPaths(locale, targetProfileId);
 
@@ -143,22 +158,33 @@ export async function updateProfileRemarkAction(
     };
   }
 
-  await prisma.userProfileRemark.upsert({
-    where: {
-      ownerId_targetId: {
+  try {
+    await userProfileRemark.upsert({
+      where: {
+        ownerId_targetId: {
+          ownerId: viewerProfile.id,
+          targetId: targetProfileId,
+        },
+      },
+      create: {
         ownerId: viewerProfile.id,
+        remarkName,
         targetId: targetProfileId,
       },
-    },
-    create: {
-      ownerId: viewerProfile.id,
-      remarkName,
-      targetId: targetProfileId,
-    },
-    update: {
-      remarkName,
-    },
-  });
+      update: {
+        remarkName,
+      },
+    });
+  } catch (error) {
+    if (isMissingProfileRemarkStorageError(error)) {
+      return {
+        formError: getProfileRemarkActionCopy(locale).invalidRequest,
+        remarkName,
+      };
+    }
+
+    throw error;
+  }
 
   revalidateProfileRemarkPaths(locale, targetProfileId);
 

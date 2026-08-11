@@ -1392,11 +1392,15 @@ export function ActivityRoomManagePage({
             : "pt-3",
         )}
       >
-        <ActivityRoomManageBackButton
-          fallbackHref={roomHref}
-          label={copy.backToRoom}
-          onClose={onClose}
-        />
+        {presentation === "page" ? (
+          <ActivityRoomManageBackButton
+            fallbackHref={roomHref}
+            label={copy.backToRoom}
+            onClose={onClose}
+          />
+        ) : (
+          <span aria-hidden="true" />
+        )}
         <h1 className="truncate text-center text-lg font-bold text-[#111210]">
           {copy.infoTitle}
           {titleSuffix}

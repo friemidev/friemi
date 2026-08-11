@@ -20,6 +20,14 @@ export function getPublicEventFavoriteDelegate() {
   }).publicEventFavorite;
 }
 
+type UserProfileRemarkDelegate = PrismaClient["userProfileRemark"];
+
+export function getUserProfileRemarkDelegate() {
+  return (prisma as PrismaClient & {
+    userProfileRemark?: UserProfileRemarkDelegate;
+  }).userProfileRemark;
+}
+
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
